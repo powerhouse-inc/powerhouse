@@ -3,6 +3,7 @@ import {
     _getActionsToApplyWithRedo,
     undo,
     redo,
+    setName,
 } from '../../src';
 import { emptyReducer } from '../helpers';
 
@@ -75,5 +76,14 @@ describe('REDO operation', () => {
             { type: 'TEST_1', index: 0 },
             { type: 'TEST_2', index: 1 },
         ]);
+    });
+
+    it('should redo SET_NAME', () => {
+        let state = createDocument();
+        state = emptyReducer(state, setName('TEST_1'));
+        state = emptyReducer(state, setName('TEST_2'));
+        state = emptyReducer(state, undo(1));
+        state = emptyReducer(state, redo(1));
+        expect(state.name).toBe('TEST_2');
     });
 });

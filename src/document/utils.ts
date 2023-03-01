@@ -1,7 +1,8 @@
+import { BaseAction } from './actions';
 import { baseReducer } from './reducer';
 import { Action, Document, Reducer } from './types';
 
-export function createAction<T extends string, P>(type: T, input: P) {
+export function createAction<T extends string, P>(type: T, input: P = {} as P) {
     if (!type) {
         throw new Error('Empty action type');
     }
@@ -16,10 +17,10 @@ export function createAction<T extends string, P>(type: T, input: P) {
 export function createReducer<T = unknown, A extends Action = Action>(
     reducer: Reducer<Document<T, A>, A>,
     documentReducer = baseReducer
-): Reducer<Document<T, A>, A> {
-    return (state: Document<T, A>, action: A) => {
+): Reducer<Document<T, A | BaseAction>, A | BaseAction> {
+    return (state, action) => {
         const newState = documentReducer<T, A>(state, action, reducer);
-        return reducer(newState, action);
+        return reducer(newState as Document<T, A>, action as A);
     };
 }
 

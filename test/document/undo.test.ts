@@ -2,6 +2,7 @@ import {
     UNDO,
     _getActionsToApplyWithUndo,
     createDocument,
+    setName,
     undo,
 } from '../../src';
 import { emptyReducer } from '../helpers';
@@ -54,5 +55,18 @@ describe('UNDO operation', () => {
             { type: 'TEST_2', index: 1 },
             { type: UNDO, input: 1, index: 2 },
         ]);
+    });
+
+    it('should undo SET_NAME operations', () => {
+        let state = createDocument();
+        state = emptyReducer(state, setName('TEST_1'));
+        state = emptyReducer(state, setName('TEST_2'));
+        state = emptyReducer(state, undo(1));
+        expect(state.operations).toStrictEqual([
+            { ...setName('TEST_1'), index: 0 },
+            { ...setName('TEST_2'), index: 1 },
+            { type: UNDO, input: 1, index: 2 },
+        ]);
+        expect(state.name).toBe('TEST_1');
     });
 });

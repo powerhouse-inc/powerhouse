@@ -1,5 +1,5 @@
 import { Action, Document, Reducer } from '../types';
-import { createAction, createDocument } from '../utils';
+import { createAction, createDocument, createReducer } from '../utils';
 import { SET_NAME, UNDO, REDO, PRUNE, BaseAction, UndoAction } from './types';
 
 export const setName = (name: string) => createAction(SET_NAME, name);
@@ -56,40 +56,65 @@ export function _getActionsToApplyWithRedo<A extends Action>(
     return _getActionsToApplyWithUndo(newActions, 0);
 }
 
+export function replayOperations<T, A extends Action>(
+    state: Document<T, A | BaseAction>,
+    actions: Array<A | BaseAction>,
+    reducer: Reducer<Document<T, A>, A>
+): Document<T, A | BaseAction> {
+    const composedReducer = createReducer(reducer);
+    return actions.reduce(
+        (acc, curr) => composedReducer(acc, curr),
+        createDocument({ data: state.initialData })
+    );
+}
+
 export function setNameOperation<T, A extends Action>(
-    state: Document<T, A>,
+    state: Document<T, A | BaseAction>,
     name: string
-): Document<T, A> {
+): Document<T, A | BaseAction> {
     return { ...state, name };
 }
 
 export function undoOperation<T, A extends Action>(
-    state: Document<T, A>,
+    state: Document<T, A | BaseAction>,
     count: number,
     composedReducer: Reducer<Document<T, A>, A>
-): Document<T, A> {
+): Document<T, A | BaseAction> {
     const actions = _getActionsToApplyWithUndo(state.operations, count);
-    const newState = actions.reduce(
-        (acc, curr) => composedReducer(acc, curr),
-        createDocument<T, A>({ data: state.initialData })
-    );
-    return { ...state, data: newState.data };
+    const newState = replayOperations(state, actions, composedReducer);
+    return { ...newState, data: newState.data, operations: state.operations };
 }
 
 export function redoOperation<T, A extends Action>(
-    state: Document<T, A>,
+    state: Document<T, A | BaseAction>,
     count: number,
     composedReducer: Reducer<Document<T, A>, A>
-): Document<T, A> {
+): Document<T, A | BaseAction> {
     const actions = _getActionsToApplyWithRedo(state.operations, count);
-    const newState = actions.reduce(
-        (acc, curr) => composedReducer(acc, curr),
-        createDocument<T, A>({ data: state.initialData })
-    );
+    const newState = replayOperations(state, actions, composedReducer);
     return {
-        ...state,
+        ...newState,
         data: newState.data,
         operations: actions.map((action, index) => ({ ...action, index })),
+    };
+}
+
+export function pruneOperation<T, A extends Action>(
+    state: Document<T, A | BaseAction>,
+    count: number,
+    composedReducer: Reducer<Document<T, A>, A>
+): Document<T, A | BaseAction> {
+    const actionsToPrune = state.operations.slice(0, count);
+    const actionsToKeep = state.operations.slice(count);
+    const newState = replayOperations(state, actionsToPrune, composedReducer);
+    return {
+        ...newState,
+        initialData: newState.data,
+        operations: actionsToKeep.map((action, index) => ({
+            ...action,
+            index,
+        })),
+        data: state.data,
     };
 }
 

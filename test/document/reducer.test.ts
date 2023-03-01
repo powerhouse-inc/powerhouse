@@ -1,5 +1,11 @@
-import { SET_NAME, createDocument, setName } from '../../src';
-import { emptyReducer } from '../helpers';
+import { SET_NAME, createDocument, prune, setName } from '../../src';
+import {
+    CountAction,
+    CountState,
+    countReducer,
+    emptyReducer,
+    increment,
+} from '../helpers';
 
 describe('Base reducer', () => {
     it('should update revision', async () => {
@@ -38,5 +44,24 @@ describe('Base reducer', () => {
         const state = createDocument();
         const newState = emptyReducer(state, setName('Document'));
         expect(newState.name).toBe('Document');
+    });
+
+    it('should prune operations history', async () => {
+        const state = createDocument<CountState, CountAction>({
+            data: { count: 0 },
+        });
+        let newState = countReducer(state, increment());
+        newState = countReducer(newState, setName('Document'));
+        newState = countReducer(newState, increment());
+        newState = countReducer(newState, increment());
+        newState = countReducer(newState, increment());
+        newState = countReducer(newState, prune(4));
+
+        expect(newState.name).toBe('Document');
+        expect(newState.data.count).toBe(4);
+        expect(newState.operations).toStrictEqual([
+            { ...increment(), index: 0 },
+        ]);
+        expect(newState.initialData).toStrictEqual({ count: 3 });
     });
 });
