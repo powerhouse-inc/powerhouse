@@ -1,6 +1,6 @@
 export type Action<T = string> = {
     type: T;
-    input: unknown;
+    input?: unknown;
 };
 
 export type Reducer<State, A extends Action> = (
@@ -8,7 +8,7 @@ export type Reducer<State, A extends Action> = (
     action: A
 ) => State;
 
-export type Operation = Action & { index: number };
+export type Operation<A extends Action = Action> = A & { index: number };
 
 export type DocumentHeader = {
     name: string;
@@ -18,7 +18,11 @@ export type DocumentHeader = {
     lastModified: string;
 };
 
-export type Document<Data = unknown> = DocumentHeader & {
+export type Document<
+    Data = unknown,
+    A extends Action = Action
+> = DocumentHeader & {
     data: Data;
-    operations: Operation[];
+    operations: Operation<A>[];
+    initialData: Data;
 };

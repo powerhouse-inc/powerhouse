@@ -13,18 +13,19 @@ export function action<T extends string, P>(type: T, input: P) {
     return { type, input };
 }
 
-export function createReducer<A extends Action, T = unknown>(
-    reducer: Reducer<Document<T>, A>
-): Reducer<Document<T>, A> {
-    return (state: Document<T>, action: A) => {
-        const newState = baseReducer<T>(state, action);
+export function createReducer<T = unknown, A extends Action = Action>(
+    reducer: Reducer<Document<T, A>, A>,
+    documentReducer = baseReducer
+): Reducer<Document<T, A>, A> {
+    return (state: Document<T, A>, action: A) => {
+        const newState = documentReducer<T, A>(state, action, reducer);
         return reducer(newState, action);
     };
 }
 
-export const initDocument = <T>(
-    initialState?: Partial<Document<T>>
-): Document<T> => ({
+export const initDocument = <T, A extends Action>(
+    initialState?: Partial<Document<T, A>>
+): Document<T, A> => ({
     name: '',
     documentType: '',
     revision: 0,
@@ -32,6 +33,7 @@ export const initDocument = <T>(
     lastModified: new Date().toISOString(),
     data: {} as T,
     operations: [],
+    initialData: initialState?.data ?? ({} as T),
     ...initialState,
 });
 
