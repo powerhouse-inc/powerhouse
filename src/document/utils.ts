@@ -1,7 +1,7 @@
 import { baseReducer } from './reducer';
 import { Action, Document, Reducer } from './types';
 
-export function action<T extends string, P>(type: T, input: P) {
+export function createAction<T extends string, P>(type: T, input: P) {
     if (!type) {
         throw new Error('Empty action type');
     }
@@ -23,7 +23,7 @@ export function createReducer<T = unknown, A extends Action = Action>(
     };
 }
 
-export const initDocument = <T, A extends Action>(
+export const createDocument = <T, A extends Action>(
     initialState?: Partial<Document<T, A>>
 ): Document<T, A> => ({
     name: '',
@@ -37,7 +37,7 @@ export const initDocument = <T, A extends Action>(
     ...initialState,
 });
 
-// export function createDocument<State, A extends Action>(
+// export function createStore<State, A extends Action>(
 //     reducer: Reducer<State, A>,
 //     initialState: State
 // ) {

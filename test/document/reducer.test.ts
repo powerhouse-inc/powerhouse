@@ -1,16 +1,16 @@
-import { SET_NAME, initDocument, setName } from '../../src';
+import { SET_NAME, createDocument, setName } from '../../src';
 import { emptyReducer } from '../helpers';
 
 describe('Base reducer', () => {
     it('should update revision', async () => {
-        const state = initDocument();
+        const state = createDocument();
         const newState = emptyReducer(state, { type: 'TEST' });
         expect(newState.revision).toBe(1);
     });
 
     it('should update lastModified', async () => {
         jest.useFakeTimers();
-        const state = initDocument();
+        const state = createDocument();
         await new Promise(r => {
             setTimeout(r, 100);
             jest.runOnlyPendingTimers();
@@ -21,7 +21,7 @@ describe('Base reducer', () => {
     });
 
     it('should update operations list', async () => {
-        const state = initDocument();
+        const state = createDocument();
         const newState = emptyReducer(state, { type: 'TEST' });
         expect(newState.operations).toStrictEqual([{ type: 'TEST', index: 0 }]);
     });
@@ -35,7 +35,7 @@ describe('Base reducer', () => {
     });
 
     it('should set document name', async () => {
-        const state = initDocument();
+        const state = createDocument();
         const newState = emptyReducer(state, setName('Document'));
         expect(newState.name).toBe('Document');
     });

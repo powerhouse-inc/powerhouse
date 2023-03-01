@@ -1,12 +1,14 @@
+import { Action, Document, Reducer } from './types';
 import {
     BaseAction,
+    REDO,
     SET_NAME,
     UNDO,
-    UndoAction,
     isBaseAction,
+    redoOperation,
+    setNameOperation,
+    undoOperation,
 } from './actions';
-import { Action, Document, Reducer } from './types';
-import { initDocument } from './utils';
 
 function updateHeader<T, A extends Action>(
     state: Document<T, A>
@@ -22,6 +24,11 @@ function updateOperations<T, A extends Action>(
     state: Document<T, A>,
     action: A
 ): Document<T, A> {
+    // REDO operations are not added to the history
+    if (action.type === REDO) {
+        return state;
+    }
+
     return {
         ...state,
         operations: [
@@ -43,34 +50,6 @@ function updateDocument<T, A extends Action>(
     return newState;
 }
 
-export function getActionsToApplyWithUndo<A extends Action>(
-    actions: A[],
-    undoCount: number
-): A[] {
-    return actions
-        .reduce(
-            (acc, curr) =>
-                curr.type === UNDO
-                    ? acc.slice(0, -(curr as UndoAction).input)
-                    : [...acc, curr],
-            new Array<A>()
-        )
-        .slice(0, undoCount > 0 ? -undoCount : undefined);
-}
-
-function undoOperations<T, A extends Action>(
-    state: Document<T, A>,
-    count: number,
-    composedReducer: Reducer<Document<T, A>, A>
-): Document<T, A> {
-    const actions = getActionsToApplyWithUndo(state.operations, count);
-    const newState = actions.reduce(
-        (acc, curr) => composedReducer(acc, curr),
-        initDocument<T, A>({ data: state.initialData })
-    );
-    return { ...state, data: newState.data };
-}
-
 function _baseReducer<T, A extends Action>(
     state: Document<T, A>,
     action: BaseAction,
@@ -78,12 +57,11 @@ function _baseReducer<T, A extends Action>(
 ): Document<T, A> {
     switch (action.type) {
         case SET_NAME:
-            return {
-                ...state,
-                name: action.input,
-            };
+            return setNameOperation(state, action.input);
         case UNDO:
-            return undoOperations(state, action.input, composedReducer);
+            return undoOperation(state, action.input, composedReducer);
+        case REDO:
+            return redoOperation(state, action.input, composedReducer);
         default:
             return state;
     }

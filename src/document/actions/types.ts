@@ -1,5 +1,4 @@
-import { Action } from './types';
-import { action } from './utils';
+import { Action } from '../types';
 
 export const INIT = 'INIT';
 export const SET_NAME = 'SET_NAME';
@@ -32,12 +31,3 @@ export interface PruneAction extends Action {
 }
 
 export type BaseAction = SetNameAction | UndoAction | RedoAction | PruneAction;
-
-export const setName = (name: string) => action(SET_NAME, name);
-export const undo = (count = 1) => action(UNDO, count);
-export const redo = (count = 1) => action(REDO, count);
-export const prune = (count: number) => action(PRUNE, count);
-
-export function isBaseAction(action: Action): action is BaseAction {
-    return [SET_NAME, UNDO, REDO, PRUNE].includes(action.type);
-}
