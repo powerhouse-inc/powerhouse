@@ -1,37 +1,33 @@
-import { createReducer } from '../document';
-import { BudgetStatementAction, State } from './types';
+import { createReducer } from '../../document';
 import {
     ADD_ACCOUNT,
-    DELETE_ACCOUNT,
     UPDATE_ACCOUNT,
-    addAccountOperation,
-    deleteAccountOperation,
-    updateAccountOperation,
-} from './account';
-import {
+    DELETE_ACCOUNT,
     ADD_LINE_ITEM,
-    DELETE_LINE_ITEM,
     UPDATE_LINE_ITEM,
-    addLineItemOperation,
-    deleteLineItemOperation,
-    updateLineItemOperation,
-} from './line-item';
-import {
-    APPROVE,
-    ESCALATE,
-    REOPEN,
+    DELETE_LINE_ITEM,
     SUBMIT_FOR_REVIEW,
-    approveOperation,
-    escalateOperation,
-    reopenOperation,
-    submitForReviewOperation,
-} from './status';
-import {
+    ESCALATE,
+    APPROVE,
+    REOPEN,
     REQUEST_TOPUP,
     TRANSFER_TOPUP,
+} from '../gen';
+import {
+    addAccountOperation,
+    updateAccountOperation,
+    deleteAccountOperation,
+    addLineItemOperation,
+    updateLineItemOperation,
+    deleteLineItemOperation,
+    submitForReviewOperation,
+    escalateOperation,
+    approveOperation,
+    reopenOperation,
     requestTopupOperation,
     transferTopupOperation,
-} from './topup';
+} from './actions';
+import { State, BudgetStatementAction } from './types';
 
 export const reducer = createReducer<State, BudgetStatementAction>(
     (state, action) => {

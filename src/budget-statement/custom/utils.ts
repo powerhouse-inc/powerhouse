@@ -1,5 +1,5 @@
 import { BudgetStatement } from './types';
-import { createDocument } from '../document';
+import { createDocument } from '../../document';
 import { BudgetStatementAction } from './types';
 import { Account, AccountInput, LineItem, LineItemInput, State } from './types';
 

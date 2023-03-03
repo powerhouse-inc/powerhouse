@@ -1,5 +1,5 @@
-import { Action } from '../../document';
-import { Account } from '../types';
+import { Action } from '../../../document';
+import { Account } from '../../custom';
 
 export const REQUEST_TOPUP = 'REQUEST_TOPUP';
 export const TRANSFER_TOPUP = 'TRANSFER_TOPUP';

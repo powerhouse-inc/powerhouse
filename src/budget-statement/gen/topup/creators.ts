@@ -1,5 +1,5 @@
-import { createAction } from '../../document';
-import { Account } from '../types';
+import { createAction } from '../../../document';
+import { Account } from '../../custom';
 import {
     RequestTopupAction,
     REQUEST_TOPUP,

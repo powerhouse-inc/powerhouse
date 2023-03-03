@@ -1,8 +1,10 @@
-import { Document } from '..';
-import { BudgetStatementAccountAction } from './account';
-import { BudgetStatementLineItemAction } from './line-item';
-import { BudgetStatementStatusAction } from './status';
-import { BudgetStatementTopupAction } from './topup';
+import { Document } from '../../document';
+import {
+    BudgetStatementAccountAction,
+    BudgetStatementLineItemAction,
+    BudgetStatementStatusAction,
+    BudgetStatementTopupAction,
+} from '../gen';
 
 export type LineItem = {
     category: {

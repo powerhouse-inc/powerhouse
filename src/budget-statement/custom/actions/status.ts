@@ -1,10 +1,10 @@
-import { BudgetStatement } from '../types';
 import {
-    ApproveAction,
-    EscalateAction,
-    ReopenAction,
     SubmitForReviewAction,
-} from './types';
+    EscalateAction,
+    ApproveAction,
+    ReopenAction,
+} from '../../gen';
+import { BudgetStatement } from '../types';
 
 export const submitForReviewOperation = (
     state: BudgetStatement,
@@ -53,10 +53,7 @@ export const reopenOperation = (
         ...state,
         data: {
             ...state.data,
-            status: 'Review',
+            status: state.data.status === 'Final' ? 'Draft' : 'Review',
         },
     };
 };
-
-export * from './creators';
-export * from './types';

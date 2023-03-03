@@ -1,6 +1,6 @@
-import { createAction } from '../../document';
-import { AccountInput, Account } from '../types';
-import { createAccount } from '../utils';
+import { createAction } from '../../../document';
+import { AccountInput, Account, createAccount } from '../../custom';
+
 import {
     ADD_ACCOUNT,
     AddAccountAction,

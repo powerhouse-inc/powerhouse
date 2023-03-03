@@ -1,5 +1,5 @@
-import { Action } from '../../document';
-import { LineItemInput, LineItem, Account } from '../types';
+import { Action } from '../../../document';
+import { LineItemInput, LineItem, Account } from '../../custom';
 
 export const ADD_LINE_ITEM = 'ADD_LINE_ITEM';
 export const UPDATE_LINE_ITEM = 'UPDATE_LINE_ITEM';

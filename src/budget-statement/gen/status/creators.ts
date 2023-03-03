@@ -1,4 +1,4 @@
-import { createAction } from '../../document';
+import { createAction } from '../../../document';
 import {
     SubmitForReviewAction,
     SUBMIT_FOR_REVIEW,

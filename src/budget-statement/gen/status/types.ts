@@ -1,4 +1,4 @@
-import { Action } from '../../document';
+import { Action } from '../../../document';
 
 export const SUBMIT_FOR_REVIEW = 'SUBMIT_FOR_REVIEW';
 export const ESCALATE = 'ESCALATE';
