@@ -10,8 +10,6 @@ import {
     UpdateLineItemAction,
 } from './types';
 
-export * from './types';
-
 export const addLineItem = (
     account: Account['address'],
     lineItems: LineItemInput[]

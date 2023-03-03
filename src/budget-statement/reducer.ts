@@ -16,6 +16,22 @@ import {
     deleteLineItemOperation,
     updateLineItemOperation,
 } from './line-item';
+import {
+    APPROVE,
+    ESCALATE,
+    REOPEN,
+    SUBMIT_FOR_REVIEW,
+    approveOperation,
+    escalateOperation,
+    reopenOperation,
+    submitForReviewOperation,
+} from './status';
+import {
+    REQUEST_TOPUP,
+    TRANSFER_TOPUP,
+    requestTopupOperation,
+    transferTopupOperation,
+} from './topup';
 
 export const reducer = createReducer<State, BudgetStatementAction>(
     (state, action) => {
@@ -32,6 +48,18 @@ export const reducer = createReducer<State, BudgetStatementAction>(
                 return updateLineItemOperation(state, action);
             case DELETE_LINE_ITEM:
                 return deleteLineItemOperation(state, action);
+            case SUBMIT_FOR_REVIEW:
+                return submitForReviewOperation(state, action);
+            case ESCALATE:
+                return escalateOperation(state, action);
+            case APPROVE:
+                return approveOperation(state, action);
+            case REOPEN:
+                return reopenOperation(state, action);
+            case REQUEST_TOPUP:
+                return requestTopupOperation(state, action);
+            case TRANSFER_TOPUP:
+                return transferTopupOperation(state, action);
             default:
                 return state;
         }

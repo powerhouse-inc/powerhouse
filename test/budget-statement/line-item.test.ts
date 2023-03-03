@@ -1,15 +1,13 @@
 import {
     addAccount,
     addLineItem,
-    deleteAccount,
     deleteLineItem,
-    updateAccount,
     updateLineItem,
 } from '../../src/budget-statement';
 
 import { createBudgetStatement, reducer } from '../../src/budget-statement';
 
-describe('Budget Statement lien item reducer', () => {
+describe('Budget Statement line item reducer', () => {
     it('should add line item', async () => {
         let state = createBudgetStatement();
         state = reducer(
