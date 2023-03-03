@@ -22,51 +22,6 @@ export function isBaseAction(action: Action): action is BaseAction {
     return [SET_NAME, UNDO, REDO, PRUNE].includes(action.type);
 }
 
-export function _getActionsToApplyWithUndo<A extends Action>(
-    actions: A[],
-    undoCount: number
-): A[] {
-    return actions
-        .reduce(
-            (acc, curr) =>
-                curr.type === UNDO
-                    ? acc.slice(0, -(curr as UndoAction).input)
-                    : [...acc, curr],
-            new Array<A>()
-        )
-        .slice(0, undoCount > 0 ? -undoCount : undefined);
-}
-
-export function _getActionsToApplyWithRedo<A extends Action>(
-    actions: A[],
-    redoCount: number
-): A[] {
-    const lastAction = actions.length ? actions[actions.length - 1] : undefined;
-    if (lastAction?.type !== UNDO) {
-        throw new Error('There is no UNDO operation to REDO');
-    }
-
-    let newActions = actions.slice();
-    let count = redoCount;
-    for (let i = newActions.length - 1; i >= 0; i--) {
-        const action = newActions[i];
-        if (action.type !== UNDO) {
-            break;
-        }
-        const undoCount = action.input as number;
-        action.input = undoCount - count;
-        count -= undoCount;
-        if (count < 1) {
-            break;
-        }
-    }
-
-    newActions = newActions.filter(
-        action => !(action.type === UNDO && (action.input as number) < 1)
-    );
-    return _getActionsToApplyWithUndo(newActions, 0);
-}
-
 export function replayOperations<T, A extends Action>(
     state: Document<T, A | BaseAction>,
     actions: Array<A | BaseAction>,
@@ -91,9 +46,21 @@ export function undoOperation<T, A extends Action>(
     count: number,
     composedReducer: Reducer<Document<T, A>, A>
 ): Document<T, A | BaseAction> {
-    const actions = _getActionsToApplyWithUndo(state.operations, count);
+    // undo can't be higher than the number of operations
+    const undoCount = Math.min(count, state.revision);
+
+    // builds the state from the initial data without the
+    // undone operations
+    const actions = state.operations.slice(0, state.revision - undoCount);
     const newState = replayOperations(state, actions, composedReducer);
-    return { ...newState, data: newState.data, operations: state.operations };
+
+    // updates the state and the revision number but
+    // keeps the operations history to allow REDO
+    return {
+        ...newState,
+        operations: state.operations,
+        revision: state.revision - undoCount,
+    };
 }
 
 export function redoOperation<T, A extends Action>(
@@ -101,12 +68,18 @@ export function redoOperation<T, A extends Action>(
     count: number,
     composedReducer: Reducer<Document<T, A>, A>
 ): Document<T, A | BaseAction> {
-    const actions = _getActionsToApplyWithRedo(state.operations, count);
+    const undoCount = state.operations.length - state.revision;
+    if (!undoCount) {
+        throw new Error('There is no UNDO operation to REDO');
+    }
+    const redoCount = count < undoCount ? count : undoCount;
+    const actions = state.operations.slice(0, state.revision + redoCount);
     const newState = replayOperations(state, actions, composedReducer);
     return {
         ...newState,
+        operations: state.operations,
         data: newState.data,
-        operations: actions.map((action, index) => ({ ...action, index })),
+        revision: state.revision + redoCount,
     };
 }
 

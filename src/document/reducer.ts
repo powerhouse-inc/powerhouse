@@ -12,12 +12,23 @@ import {
     undoOperation,
 } from './actions';
 
+function getNextRevision<T, A extends Action>(
+    state: Document<T, A>,
+    action: A
+): number {
+    // UNDO, REDO and PRUNE alter the revision themselves
+    return [UNDO, REDO, PRUNE].includes(action.type)
+        ? state.revision
+        : state.revision + 1;
+}
+
 function updateHeader<T, A extends Action>(
-    state: Document<T, A>
+    state: Document<T, A>,
+    action: A
 ): Document<T, A> {
     return {
         ...state,
-        revision: state.operations.length,
+        revision: getNextRevision(state, action),
         lastModified: new Date().toISOString(),
     };
 }
@@ -26,18 +37,22 @@ function updateOperations<T, A extends Action>(
     state: Document<T, A>,
     action: A
 ): Document<T, A> {
-    // REDO and PRUNE operations alter the operations history themselves
-    if ([REDO, PRUNE].includes(action.type)) {
+    // UNDO, REDO and PRUNE are meta operations
+    // that alter the operations history themselves
+    if ([UNDO, REDO, PRUNE].includes(action.type)) {
         return state;
     }
 
+    // removes undone operations from history if there
+    // is a new operation after an UNDO
+    const operations = state.operations.slice(0, state.revision);
     return {
         ...state,
         operations: [
-            ...state.operations,
+            ...operations,
             {
                 ...action,
-                index: state.operations.length,
+                index: operations.length,
             },
         ],
     };
@@ -48,7 +63,7 @@ function updateDocument<T, A extends Action>(
     action: A | BaseAction
 ): Document<T, A | BaseAction> {
     let newState = updateOperations(state, action);
-    newState = updateHeader(newState);
+    newState = updateHeader(newState, action);
     return newState;
 }
 
