@@ -1,4 +1,10 @@
-import { SET_NAME, createDocument, prune, setName } from '../../src';
+import {
+    SET_NAME,
+    createAction,
+    createDocument,
+    prune,
+    setName,
+} from '../../src';
 import {
     CountAction,
     CountState,
@@ -44,6 +50,14 @@ describe('Base reducer', () => {
         const state = createDocument();
         const newState = emptyReducer(state, setName('Document'));
         expect(newState.name).toBe('Document');
+    });
+
+    it('should throw error when creating action with non-string type', () => {
+        expect(() => createAction(1 as any)).toThrow();
+    });
+
+    it('should throw error when creating action with empty type', () => {
+        expect(() => createAction('')).toThrow();
     });
 
     it('should prune operations history', async () => {

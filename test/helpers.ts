@@ -1,9 +1,9 @@
 import { createReducer, createAction, Action } from '../src';
 
-// Empty reducer that supports base actions for testing
+// Empty reducer that supports base actions
 export const emptyReducer = createReducer(state => state);
 
-// Counter reducer that supports increment/decrement actions for testing
+// Counter reducer that supports increment/decrement actions
 export interface IncrementAction extends Action {
     type: 'INCREMENT';
 }
@@ -14,8 +14,8 @@ export type CountAction = IncrementAction | DecrementAction;
 
 export type CountState = { count: number };
 
-export const increment = () => createAction('INCREMENT');
-export const decrement = () => createAction('INCREMENT');
+export const increment = () => createAction<IncrementAction>('INCREMENT');
+export const decrement = () => createAction<DecrementAction>('DECREMENT');
 
 export const countReducer = createReducer<CountState, CountAction>(
     (state, action) => {

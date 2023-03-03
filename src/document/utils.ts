@@ -2,7 +2,10 @@ import { BaseAction } from './actions';
 import { baseReducer } from './reducer';
 import { Action, Document, Reducer } from './types';
 
-export function createAction<T extends string, P>(type: T, input: P = {} as P) {
+export function createAction<A extends Action>(
+    type: A['type'],
+    input: A['input'] = {} as A['input']
+): A {
     if (!type) {
         throw new Error('Empty action type');
     }
@@ -11,7 +14,7 @@ export function createAction<T extends string, P>(type: T, input: P = {} as P) {
         throw new Error(`Invalid action type: ${type}`);
     }
 
-    return { type, input };
+    return { type, input } as A;
 }
 
 export function createReducer<T = unknown, A extends Action = Action>(
@@ -25,7 +28,7 @@ export function createReducer<T = unknown, A extends Action = Action>(
 }
 
 export const createDocument = <T, A extends Action>(
-    initialState?: Partial<Document<T, A>>
+    initialState?: Partial<Document<T, A>> & { data: T }
 ): Document<T, A> => ({
     name: '',
     documentType: '',
