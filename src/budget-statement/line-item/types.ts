@@ -1,5 +1,5 @@
 import { Action } from '../../document';
-import { LineItemInput, LineItem } from '../types';
+import { LineItemInput, LineItem, Account } from '../types';
 
 export const ADD_LINE_ITEM = 'ADD_LINE_ITEM';
 export const UPDATE_LINE_ITEM = 'UPDATE_LINE_ITEM';
@@ -7,17 +7,20 @@ export const DELETE_LINE_ITEM = 'DELETE_LINE_ITEM';
 
 export interface AddLineItemAction extends Action {
     type: typeof ADD_LINE_ITEM;
-    input: { lineItems: LineItemInput[] };
+    input: { account: Account['address']; lineItems: LineItemInput[] };
 }
 
 export interface UpdateLineItemAction extends Action {
     type: typeof UPDATE_LINE_ITEM;
-    input: { lineItems: LineItemInput[] };
+    input: { account: Account['address']; lineItems: LineItemInput[] };
 }
 
 export interface DeleteLineItemAction extends Action {
     type: typeof DELETE_LINE_ITEM;
-    input: { lineItems: Pick<LineItem, 'category' | 'group'>[] };
+    input: {
+        account: Account['address'];
+        lineItems: Pick<LineItem, 'category' | 'group'>[];
+    };
 }
 
 export type BudgetStatementLineItemAction =

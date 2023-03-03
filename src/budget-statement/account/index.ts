@@ -1,32 +1,11 @@
-import { createAction } from '../../document';
-import { AccountInput, Account, BudgetStatement } from '../types';
+import { BudgetStatement } from '../types';
 import { createAccount } from '../utils';
 import {
-    ADD_ACCOUNT,
     AddAccountAction,
-    DELETE_ACCOUNT,
     DeleteAccountAction,
-    UPDATE_ACCOUNT,
     UpdateAccountAction,
 } from './types';
 
-/*
- *   Account action creators
- */
-export const addAccount = (accounts: AccountInput[]) =>
-    createAction<AddAccountAction>(ADD_ACCOUNT, {
-        accounts: accounts.map(createAccount),
-    });
-
-export const updateAccount = (accounts: AccountInput[]) =>
-    createAction<UpdateAccountAction>(UPDATE_ACCOUNT, { accounts });
-
-export const deleteAccount = (accounts: Account['address'][]) =>
-    createAction<DeleteAccountAction>(DELETE_ACCOUNT, { accounts });
-
-/*
- *   Account operations
- */
 export const addAccountOperation = (
     state: BudgetStatement,
     action: AddAccountAction
@@ -79,4 +58,5 @@ export const deleteAccountOperation = (
     };
 };
 
+export * from './creators';
 export * from './types';

@@ -38,12 +38,13 @@ describe('Budget Statement account reducer', () => {
                 lineItems: [],
             },
         ]);
+        expect(state.data.accounts).toStrictEqual([]);
     });
 
     it('should update account', async () => {
-        const state = createBudgetStatement();
-        let newState = reducer(
-            state,
+        let state = createBudgetStatement();
+        state = reducer(
+            createBudgetStatement(),
             addAccount([
                 {
                     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
@@ -51,8 +52,8 @@ describe('Budget Statement account reducer', () => {
                 },
             ])
         );
-        newState = reducer(
-            newState,
+        const newState = reducer(
+            state,
             updateAccount([
                 {
                     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
@@ -61,11 +62,12 @@ describe('Budget Statement account reducer', () => {
             ])
         );
         expect(newState.data.accounts[0].name).toBe('Incubation');
+        expect(state.data.accounts[0].name).toBe('Grants Program');
     });
 
     it('should delete account', async () => {
-        const state = createBudgetStatement();
-        let newState = reducer(
+        let state = createBudgetStatement();
+        state = reducer(
             state,
             addAccount([
                 {
@@ -74,10 +76,11 @@ describe('Budget Statement account reducer', () => {
                 },
             ])
         );
-        newState = reducer(
-            newState,
+        const newState = reducer(
+            state,
             deleteAccount(['eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f'])
         );
         expect(newState.data.accounts.length).toBe(0);
+        expect(state.data.accounts.length).toBe(1);
     });
 });
