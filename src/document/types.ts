@@ -1,12 +1,14 @@
+import { BaseAction } from './actions';
+
 export type Action<T = string> = {
     type: T;
     input?: unknown;
 };
 
 export type Reducer<State, A extends Action> = (
-    state: State,
+    state: Document<State, A>,
     action: A
-) => State;
+) => Document<State, A>;
 
 export type Operation<A extends Action = Action> = A & { index: number };
 
@@ -23,6 +25,6 @@ export type Document<
     A extends Action = Action
 > = DocumentHeader & {
     data: Data;
-    operations: Operation<A>[];
+    operations: Operation<A | BaseAction>[];
     initialData: Data;
 };

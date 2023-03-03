@@ -1,4 +1,4 @@
-import { Action, Document, Reducer } from './types';
+import { Action, Document, DocumentHeader, Reducer } from './types';
 import {
     BaseAction,
     PRUNE,
@@ -12,16 +12,15 @@ import {
     undoOperation,
 } from './actions';
 
-function getNextRevision<T, A extends Action>(
-    state: Document<T, A>,
-    action: A
-): number {
+function getNextRevision(state: Document, action: Action): number {
     // UNDO, REDO and PRUNE alter the revision themselves
     return [UNDO, REDO, PRUNE].includes(action.type)
         ? state.revision
         : state.revision + 1;
 }
 
+// updates the document revision number and
+// the date of the last modification
 function updateHeader<T, A extends Action>(
     state: Document<T, A>,
     action: A
@@ -33,6 +32,8 @@ function updateHeader<T, A extends Action>(
     };
 }
 
+// updates the operations history according to the
+// provided action
 function updateOperations<T, A extends Action>(
     state: Document<T, A>,
     action: A
@@ -46,6 +47,9 @@ function updateOperations<T, A extends Action>(
     // removes undone operations from history if there
     // is a new operation after an UNDO
     const operations = state.operations.slice(0, state.revision);
+
+    // adds the action to the operations history with
+    // the latest index
     return {
         ...state,
         operations: [
@@ -59,43 +63,50 @@ function updateOperations<T, A extends Action>(
 }
 
 function updateDocument<T, A extends Action>(
-    state: Document<T, A | BaseAction>,
+    state: Document<T, A>,
     action: A | BaseAction
-): Document<T, A | BaseAction> {
+): Document<T, A> {
     let newState = updateOperations(state, action);
     newState = updateHeader(newState, action);
     return newState;
 }
 
+// reducer for the base document actions
 function _baseReducer<T, A extends Action>(
-    state: Document<T, A | BaseAction>,
+    state: Document<T, A>,
     action: BaseAction,
-    composedReducer: Reducer<Document<T, A>, A>
-): Document<T, A | BaseAction> {
+    wrappedReducer: Reducer<T, A>
+): Document<T, A> {
     switch (action.type) {
         case SET_NAME:
             return setNameOperation(state, action.input);
         case UNDO:
-            return undoOperation(state, action.input, composedReducer);
+            return undoOperation(state, action.input, wrappedReducer);
         case REDO:
-            return redoOperation(state, action.input, composedReducer);
+            return redoOperation(state, action.input, wrappedReducer);
         case PRUNE:
-            return pruneOperation(state, action.input, composedReducer);
+            return pruneOperation(state, action.input, wrappedReducer);
         default:
             return state;
     }
 }
 
+// Base document reducer that wraps a custom document reducer
 export function baseReducer<T, A extends Action>(
-    state: Document<T, A | BaseAction>,
+    state: Document<T, A>,
     action: A | BaseAction,
-    composedReducer: Reducer<Document<T, A>, A>
-): Document<T, A | BaseAction> {
+    customReducer: Reducer<T, A>
+) {
     let newState = state;
 
+    // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
+    // then runs the base reducer first
     if (isBaseAction(action)) {
-        newState = _baseReducer<T, A>(newState, action, composedReducer);
+        newState = _baseReducer(newState, action, customReducer);
     }
-    newState = updateDocument<T, A>(newState, action);
+
+    // updates the document revision number, last modified date
+    // and operation history
+    newState = updateDocument(newState, action);
     return newState;
 }

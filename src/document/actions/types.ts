@@ -31,3 +31,7 @@ export interface PruneAction extends Action {
 }
 
 export type BaseAction = SetNameAction | UndoAction | RedoAction | PruneAction;
+
+export function isBaseAction(action: Action): action is BaseAction {
+    return [SET_NAME, UNDO, REDO, PRUNE].includes(action.type);
+}

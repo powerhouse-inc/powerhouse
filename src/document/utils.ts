@@ -2,6 +2,7 @@ import { BaseAction } from './actions';
 import { baseReducer } from './reducer';
 import { Action, Document, Reducer } from './types';
 
+// helper to be used by action creators
 export function createAction<A extends Action>(
     type: A['type'],
     input: A['input'] = {} as A['input']
@@ -17,16 +18,21 @@ export function createAction<A extends Action>(
     return { type, input } as A;
 }
 
+// wraps reducer with documentReducer, adding support for
+// document actions: SET_NAME, UNDO, REDO, PRUNE
+// Also updates the document-related attributes on every operation
 export function createReducer<T = unknown, A extends Action = Action>(
-    reducer: Reducer<Document<T, A>, A>,
+    reducer: Reducer<T, A>,
     documentReducer = baseReducer
-): Reducer<Document<T, A | BaseAction>, A | BaseAction> {
+): Reducer<T, A | BaseAction> {
     return (state, action) => {
+        // the document reducer
         const newState = documentReducer<T, A>(state, action, reducer);
-        return reducer(newState as Document<T, A>, action as A);
+        return reducer(newState, action as A);
     };
 }
 
+// builds the initial document state from the provided data
 export const createDocument = <T, A extends Action>(
     initialState?: Partial<Document<T, A>> & { data: T }
 ): Document<T, A> => ({
@@ -40,20 +46,3 @@ export const createDocument = <T, A extends Action>(
     initialData: initialState?.data ?? ({} as T),
     ...initialState,
 });
-
-// export function createStore<State, A extends Action>(
-//     reducer: Reducer<State, A>,
-//     initialState: State
-// ) {
-//     let state = initialState;
-
-//     function getState() {
-//         return state;
-//     }
-
-//     function dispatch(action: A) {
-//         state = reducer(state, action);
-//     }
-
-//     return { getState, dispatch };
-// }
