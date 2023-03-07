@@ -1,4 +1,4 @@
-import { Action } from '../types';
+import { Action, Document } from '../types';
 
 export const INIT = 'INIT';
 export const SET_NAME = 'SET_NAME';
@@ -8,6 +8,7 @@ export const PRUNE = 'PRUNE';
 
 export interface InitAction extends Action {
     type: typeof INIT;
+    input: Partial<Document>;
 }
 
 export interface SetNameAction extends Action {
@@ -30,8 +31,13 @@ export interface PruneAction extends Action {
     input: number;
 }
 
-export type BaseAction = SetNameAction | UndoAction | RedoAction | PruneAction;
+export type BaseAction =
+    | InitAction
+    | SetNameAction
+    | UndoAction
+    | RedoAction
+    | PruneAction;
 
 export function isBaseAction(action: Action): action is BaseAction {
-    return [SET_NAME, UNDO, REDO, PRUNE].includes(action.type);
+    return [INIT, SET_NAME, UNDO, REDO, PRUNE].includes(action.type);
 }

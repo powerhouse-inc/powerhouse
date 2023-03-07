@@ -26,6 +26,13 @@ function replayOperations<T, A extends Action>(
     );
 }
 
+export function initOperation<T, A extends Action>(
+    state: Document<T, A>,
+    input: Partial<Document<any>>
+): Document<T, A> {
+    return { ...state, ...input, data: { ...state.data, ...input.data } };
+}
+
 // updates the name of the document
 export function setNameOperation<T, A extends Action>(
     state: Document<T, A>,

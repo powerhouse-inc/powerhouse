@@ -1,10 +1,12 @@
 import { Action, Document, DocumentHeader, Reducer } from './types';
 import {
     BaseAction,
+    INIT,
     PRUNE,
     REDO,
     SET_NAME,
     UNDO,
+    initOperation,
     isBaseAction,
     pruneOperation,
     redoOperation,
@@ -78,6 +80,8 @@ function _baseReducer<T, A extends Action>(
     wrappedReducer: Reducer<T, A>
 ): Document<T, A> {
     switch (action.type) {
+        case INIT:
+            return initOperation(state, action.input);
         case SET_NAME:
             return setNameOperation(state, action.input);
         case UNDO:
