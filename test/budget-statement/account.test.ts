@@ -2,9 +2,9 @@ import {
     addAccount,
     deleteAccount,
     updateAccount,
+    createBudgetStatement,
+    reducer,
 } from '../../src/budget-statement';
-
-import { createBudgetStatement, reducer } from '../../src/budget-statement';
 
 describe('Budget Statement account reducer', () => {
     it('should add account', async () => {

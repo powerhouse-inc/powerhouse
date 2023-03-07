@@ -4,10 +4,15 @@ import { BudgetStatementAction } from './types';
 import { Account, AccountInput, LineItem, LineItemInput, State } from './types';
 
 export const createBudgetStatement = (
-    initialState?: Partial<BudgetStatement>
+    initialState?: Partial<
+        Omit<BudgetStatement, 'data'> & {
+            data: Partial<BudgetStatement['data']>;
+        }
+    >
 ): BudgetStatement =>
     createDocument<State, BudgetStatementAction>({
         documentType: 'powerhouse/budget-statement',
+        ...initialState,
         data: {
             owner: {
                 ref: null,
@@ -18,8 +23,8 @@ export const createBudgetStatement = (
             status: 'Draft',
             quoteCurrency: null,
             accounts: [],
+            ...initialState?.data,
         },
-        ...initialState,
     });
 
 export const createAccount = (input: AccountInput): Account => ({
