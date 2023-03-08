@@ -3,13 +3,13 @@ import {
     UpdateLineItemAction,
     DeleteLineItemAction,
 } from '../../gen';
-import { LineItemInput, BudgetStatement } from '../types';
+import { LineItemInput, BudgetStatement, LineItem } from '../types';
 import { createLineItem } from '../utils';
 
-function isEqual(lineItemA: LineItemInput, lineItemB: LineItemInput) {
+function isEqual(lineItemInput: LineItemInput, lineItem: LineItem) {
     return (
-        lineItemA.category.id === lineItemB.category.id &&
-        lineItemA.group.id === lineItemB.group.id
+        lineItemInput.category === lineItem.category.id &&
+        lineItemInput.group === lineItem.group.id
     );
 }
 
@@ -58,10 +58,34 @@ export const updateLineItemOperation = (
     }
 
     const newAccount = Object.assign({}, newAccounts[accountIndex]);
-    newAccount.lineItems = newAccount.lineItems.map(lineItem => ({
-        ...lineItem,
-        ...action.input.lineItems.find(l => isEqual(l, lineItem)),
-    }));
+    newAccount.lineItems = newAccount.lineItems.map(lineItem => {
+        const input = action.input.lineItems.find(l => isEqual(l, lineItem));
+        if (!input) {
+            return lineItem;
+        } else {
+            return {
+                ...lineItem,
+                ...input,
+                category: lineItem.category,
+                group: lineItem.group,
+                forecast: [
+                    // replace old forecasts with new forecasts
+                    ...(input.forecast ?? []),
+                    ...lineItem.forecast.filter(
+                        oldForecast =>
+                            !input.forecast?.find(
+                                newForecast =>
+                                    newForecast.month === oldForecast.month
+                            )
+                    ),
+                ]
+                    // remove forecasts with null value
+                    .filter(forecast => forecast.value !== null)
+                    // sort forecasts by month
+                    .sort((f1, f2) => f1.month.localeCompare(f2.month)),
+            };
+        }
+    });
     newAccounts[accountIndex] = newAccount;
 
     return {

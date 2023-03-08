@@ -1,7 +1,7 @@
 import { BudgetStatement } from './types';
 import { createDocument } from '../../document';
 import { BudgetStatementAction } from './types';
-import { Account, AccountInput, LineItem, LineItemInput, State } from './types';
+import { Account, AccountInput, LineItem, State } from './types';
 
 export const createBudgetStatement = (
     initialState?: Partial<
@@ -46,7 +46,9 @@ export const createAccount = (input: AccountInput): Account => ({
     ...input,
 });
 
-export const createLineItem = (input: LineItemInput): LineItem => ({
+export const createLineItem = (
+    input: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>
+): LineItem => ({
     budgetCap: null,
     payment: null,
     actual: null,

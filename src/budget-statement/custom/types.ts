@@ -27,8 +27,10 @@ export type LineItem = {
     }[];
 };
 
-export type LineItemInput = Partial<LineItem> &
-    Pick<LineItem, 'category' | 'group'>;
+export type LineItemInput = Partial<Omit<LineItem, 'category' | 'group'>> & {
+    category: string;
+    group: string;
+};
 
 export type Account = {
     address: string;

@@ -7,7 +7,10 @@ export const DELETE_LINE_ITEM = 'DELETE_LINE_ITEM';
 
 export interface AddLineItemAction extends Action {
     type: typeof ADD_LINE_ITEM;
-    input: { account: Account['address']; lineItems: LineItemInput[] };
+    input: {
+        account: Account['address'];
+        lineItems: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>[];
+    };
 }
 
 export interface UpdateLineItemAction extends Action {
@@ -19,7 +22,7 @@ export interface DeleteLineItemAction extends Action {
     type: typeof DELETE_LINE_ITEM;
     input: {
         account: Account['address'];
-        lineItems: Pick<LineItem, 'category' | 'group'>[];
+        lineItems: { category: string; group: string }[];
     };
 }
 

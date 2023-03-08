@@ -17,7 +17,7 @@ export interface TransferTopupAction extends Action {
     input: {
         account: Account['address'];
         value: number;
-        id: string;
+        transaction: string;
     };
 }
 

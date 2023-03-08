@@ -92,17 +92,8 @@ describe('Budget Statement line item reducer', () => {
             state,
             updateLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 {
-                    category: {
-                        ref: 'makerdao/budget-category',
-                        id: 'TravelAndEntertainment',
-                        title: 'Travel & Entertainment',
-                        headcountExpense: true,
-                    },
-                    group: {
-                        ref: 'makerdao/project',
-                        id: 'core-unit/SES/2023/005',
-                        title: 'Core Unit Operational Support',
-                    },
+                    category: 'TravelAndEntertainment',
+                    group: 'core-unit/SES/2023/005',
                     budgetCap: 1000,
                     actual: 100,
                     forecast: [
@@ -189,17 +180,8 @@ describe('Budget Statement line item reducer', () => {
             state,
             deleteLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 {
-                    category: {
-                        ref: 'makerdao/budget-category',
-                        id: 'TravelAndEntertainment',
-                        title: 'Travel & Entertainment',
-                        headcountExpense: true,
-                    },
-                    group: {
-                        ref: 'makerdao/project',
-                        id: 'core-unit/SES/2023/005',
-                        title: 'Core Unit Operational Support',
-                    },
+                    category: 'TravelAndEntertainment',
+                    group: 'core-unit/SES/2023/005',
                 },
             ])
         );

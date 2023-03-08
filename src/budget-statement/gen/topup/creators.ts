@@ -13,10 +13,10 @@ export const requestTopup = (account: Account['address'], value: number) =>
 export const transferTopup = (
     account: Account['address'],
     value: number,
-    transactionId: string
+    transaction: string
 ) =>
     createAction<TransferTopupAction>(TRANSFER_TOPUP, {
         account,
         value,
-        id: transactionId,
+        transaction,
     });

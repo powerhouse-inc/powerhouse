@@ -12,7 +12,7 @@ import {
 
 export const addLineItem = (
     account: Account['address'],
-    lineItems: LineItemInput[]
+    lineItems: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>[]
 ) =>
     createAction<AddLineItemAction>(ADD_LINE_ITEM, {
         account,
@@ -30,7 +30,7 @@ export const updateLineItem = (
 
 export const deleteLineItem = (
     account: Account['address'],
-    lineItems: Pick<LineItem, 'category' | 'group'>[]
+    lineItems: { category: string; group: string }[]
 ) =>
     createAction<DeleteLineItemAction>(DELETE_LINE_ITEM, {
         account,

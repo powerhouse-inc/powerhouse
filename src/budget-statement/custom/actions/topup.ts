@@ -49,7 +49,7 @@ export const transferTopupOperation = (
     const newAccount = Object.assign({}, newAccounts[accountIndex]);
     newAccount.topupTransaction = {
         ...newAccount.topupTransaction,
-        id: action.input.id,
+        id: action.input.transaction,
         value: action.input.value,
     };
     newAccounts[accountIndex] = newAccount;
