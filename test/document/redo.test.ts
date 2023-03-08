@@ -98,7 +98,7 @@ describe('REDO operation', () => {
     });
 
     it('should throw error when there are no operations', () => {
-        let state = createDocument();
+        const state = createDocument();
         expect(() => emptyReducer(state, redo(1))).toThrow();
     });
 });

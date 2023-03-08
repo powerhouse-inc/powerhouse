@@ -30,7 +30,7 @@ describe('Budget Statement status reducer', () => {
         expect(state.data.status).toBe('Draft');
     });
 
-    it('should set status to Review', async () => {
+    it('should reset status to Review', async () => {
         let state = createBudgetStatement();
         state = reducer(state, escalate());
         const newState = reducer(state, reopen());
