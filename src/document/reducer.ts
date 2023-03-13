@@ -1,4 +1,4 @@
-import { Action, Document, DocumentHeader, Reducer } from './types';
+import { Action, Document, Reducer } from './types';
 import {
     BaseAction,
     INIT,

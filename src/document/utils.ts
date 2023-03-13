@@ -35,14 +35,17 @@ export function createReducer<T = unknown, A extends Action = Action>(
 // builds the initial document state from the provided data
 export const createDocument = <T, A extends Action>(
     initialState?: Partial<Document<T, A>> & { data: T }
-): Document<T, A> => ({
-    name: '',
-    documentType: '',
-    revision: 0,
-    created: new Date().toISOString(),
-    lastModified: new Date().toISOString(),
-    data: {} as T,
-    operations: [],
-    initialData: initialState?.data ?? ({} as T),
-    ...initialState,
-});
+): Document<T, A> => {
+    const state = {
+        name: '',
+        documentType: '',
+        revision: 0,
+        created: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        data: {} as T,
+        operations: [],
+        ...initialState,
+    };
+    // saves the initial state
+    return { ...state, initialState: { ...state } };
+};

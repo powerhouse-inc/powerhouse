@@ -1,5 +1,11 @@
 import { createDocument, setName, undo } from '../../src';
-import { emptyReducer } from '../helpers';
+import {
+    CountAction,
+    CountState,
+    countReducer,
+    emptyReducer,
+    increment,
+} from '../helpers';
 
 describe('UNDO operation', () => {
     it('should undo last operation', () => {
@@ -66,5 +72,16 @@ describe('UNDO operation', () => {
         ]);
         expect(state.name).toBe('');
         expect(state.revision).toBe(0);
+    });
+
+    it('should keep document attributes', () => {
+        let state = createDocument<CountState, CountAction>({
+            documentType: 'powerhouse/counter',
+            data: { count: 0 },
+        });
+        state = countReducer(state, increment());
+        state = countReducer(state, undo(1));
+        expect(state.data.count).toBe(0);
+        expect(state.documentType).toBe('powerhouse/counter');
     });
 });

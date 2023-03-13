@@ -12,7 +12,7 @@ function replayOperations<T, A extends Action>(
     reducer: Reducer<T, A>
 ): Document<T, A> {
     // builds a new document from the initial data
-    const initialState = createDocument({ data: state.initialData });
+    const initialState = createDocument(state.initialState);
 
     // wraps the provided custom reducer with the
     // base document reducer
@@ -102,9 +102,11 @@ export function pruneOperation<T, A extends Action>(
     const actionsToKeep = state.operations.slice(count);
     const newState = replayOperations(state, actionsToPrune, wrappedReducer);
 
+    // removes the initial state from the new state to use as
+    const { initialState: oldInitialState, ...initialState } = newState;
     return {
         ...newState,
-        initialData: newState.data,
+        initialState: initialState,
         data: state.data,
         operations: actionsToKeep.map((action, index) => ({
             ...action,

@@ -26,5 +26,5 @@ export type Document<
 > = DocumentHeader & {
     data: Data;
     operations: Operation<A | BaseAction>[];
-    initialData: Data;
+    initialState: Omit<Document<Data, A>, 'initialState'>;
 };

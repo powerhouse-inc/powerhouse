@@ -76,6 +76,7 @@ describe('Base reducer', () => {
 
     it('should prune operations history', async () => {
         const state = createDocument<CountState, CountAction>({
+            documentType: 'powerhouse/counter',
             data: { count: 0 },
         });
         let newState = countReducer(state, increment());
@@ -90,6 +91,7 @@ describe('Base reducer', () => {
         expect(newState.operations).toStrictEqual([
             { ...increment(), index: 0 },
         ]);
-        expect(newState.initialData).toStrictEqual({ count: 3 });
+        expect(newState.documentType).toBe('powerhouse/counter');
+        expect(newState.initialState.data).toStrictEqual({ count: 3 });
     });
 });
