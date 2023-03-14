@@ -19,5 +19,7 @@
         "project": ["./tsconfig.spec.json"]
     },
     "plugins": ["@typescript-eslint", "jest"],
-    "rules": {}
+    "rules": {
+        "@typescript-eslint/no-unused-vars": [1, { "ignoreRestSiblings": true }]
+    }
 }

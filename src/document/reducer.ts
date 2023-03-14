@@ -1,11 +1,13 @@
 import { Action, Document, ImmutableReducer } from './types';
 import {
     BaseAction,
+    LOAD_STATE,
     PRUNE,
     REDO,
     SET_NAME,
     UNDO,
     isBaseAction,
+    loadStateOperation,
     pruneOperation,
     redoOperation,
     setNameOperation,
@@ -40,7 +42,7 @@ function updateOperations<T, A extends Action>(
 ): Document<T, A> {
     // UNDO, REDO and PRUNE are meta operations
     // that alter the operations history themselves
-    if ([UNDO, REDO, PRUNE].includes(action.type)) {
+    if ([UNDO, REDO, PRUNE, PRUNE].includes(action.type)) {
         return state;
     }
 
@@ -85,7 +87,14 @@ function _baseReducer<T, A extends Action>(
         case REDO:
             return redoOperation(state, action.input, wrappedReducer);
         case PRUNE:
-            return pruneOperation(state, action.input, wrappedReducer);
+            return pruneOperation(
+                state,
+                action.input.start,
+                action.input.end,
+                wrappedReducer
+            );
+        case LOAD_STATE:
+            return loadStateOperation(state, action.input.state);
         default:
             return state;
     }

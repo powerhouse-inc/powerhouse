@@ -1,5 +1,6 @@
 import { Action, Document, ImmutableReducer } from '../types';
 import { createDocument, createReducer } from '../utils';
+import { loadState } from './creators';
 import { BaseAction } from './types';
 
 // Runs the operations on the initial data using the
@@ -7,12 +8,12 @@ import { BaseAction } from './types';
 // This produces and alternate version of the document
 // according to the provided actions.
 function replayOperations<T, A extends Action>(
-    state: Document<T, A>,
+    initialState: Partial<Document<T, A>> & { data: T },
     operations: Array<A | BaseAction>,
     reducer: ImmutableReducer<T, A>
 ): Document<T, A> {
     // builds a new document from the initial data
-    const initialState = createDocument(state.initialState);
+    const state = createDocument(initialState);
 
     // wraps the provided custom reducer with the
     // base document reducer
@@ -22,7 +23,7 @@ function replayOperations<T, A extends Action>(
     // and returns the resulting state
     return operations.reduce(
         (state, operation) => wrappedReducer(state, operation),
-        initialState
+        state
     );
 }
 
@@ -46,7 +47,11 @@ export function undoOperation<T, A extends Action>(
     // builds the state from the initial data without the
     // undone operations
     const operations = state.operations.slice(0, state.revision - undoCount);
-    const newState = replayOperations(state, operations, wrappedReducer);
+    const newState = replayOperations(
+        state.initialState,
+        operations,
+        wrappedReducer
+    );
 
     // updates the state and the revision number but
     // keeps the operations history to allow REDO
@@ -75,7 +80,11 @@ export function redoOperation<T, A extends Action>(
     // builds state from the initial date taking
     // into account the redone operations
     const operations = state.operations.slice(0, state.revision + redoCount);
-    const newState = replayOperations(state, operations, wrappedReducer);
+    const newState = replayOperations(
+        state.initialState,
+        operations,
+        wrappedReducer
+    );
 
     // updates the state and the revision number but
     // keeps the operations history to allow more REDOs
@@ -88,23 +97,46 @@ export function redoOperation<T, A extends Action>(
 
 export function pruneOperation<T, A extends Action>(
     state: Document<T, A>,
-    count: number,
+    start: number | undefined,
+    end: number | undefined,
     wrappedReducer: ImmutableReducer<T, A>
 ): Document<T, A> {
-    const actionsToPrune = state.operations.slice(0, count);
-    const actionsToKeep = state.operations.slice(count);
-    const newState = replayOperations(state, actionsToPrune, wrappedReducer);
+    start = start || 0;
+    end = end || state.operations.length;
+    const actionsToPrune = state.operations.slice(start, end);
+    const actionsToKeepStart = state.operations.slice(0, start);
+    const actionsToKeepEnd = state.operations.slice(end);
 
-    // removes the initial state from the new state to use as
-    const { initialState: oldInitialState, ...initialState } = newState;
+    // runs all operations from the initial state to
+    // the end of prune to get name and data
+    const { name, data } = replayOperations(
+        state.initialState,
+        actionsToKeepStart.concat(actionsToPrune),
+        wrappedReducer
+    );
+
+    // replaces pruned operations with LOAD_STATE
+    const newState = replayOperations(
+        state.initialState,
+        [
+            ...actionsToKeepStart,
+            loadState({ name, data }, actionsToPrune.length),
+            ...actionsToKeepEnd,
+        ],
+        wrappedReducer
+    );
+
+    return newState;
+}
+
+export function loadStateOperation<T, A extends Action>(
+    oldState: Document<T, A>,
+    newState: Pick<Document, 'data' | 'name'>
+): Document<T, A> {
     return {
-        ...newState,
-        initialState: initialState,
-        data: state.data,
-        operations: actionsToKeep.map((action, index) => ({
-            ...action,
-            index,
-        })),
+        ...oldState,
+        name: newState.name,
+        data: newState.data as T,
     };
 }
 
