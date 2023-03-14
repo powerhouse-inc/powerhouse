@@ -1,6 +1,6 @@
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 import dts from 'rollup-plugin-dts';
 import esbuild from 'rollup-plugin-esbuild';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
 import pkg from './package.json' assert { type: 'json' };
 
 const name = pkg.main.replace(/\.js$/, '');

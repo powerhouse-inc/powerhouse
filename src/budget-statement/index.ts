@@ -1,2 +1,2 @@
-export * from './gen';
 export * from './custom';
+export * from './gen';

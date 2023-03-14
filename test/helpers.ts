@@ -1,4 +1,4 @@
-import { createReducer, createAction, Action } from '../src';
+import { Action, createAction, createReducer } from '../src';
 
 // Empty reducer that supports base actions
 export const emptyReducer = createReducer(state => state);

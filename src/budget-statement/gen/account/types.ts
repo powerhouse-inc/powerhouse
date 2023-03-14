@@ -1,5 +1,5 @@
 import { Action } from '../../../document';
-import { AccountInput, Account } from '../../custom';
+import { Account, AccountInput } from '../../custom';
 
 export const ADD_ACCOUNT = 'ADD_ACCOUNT';
 export const UPDATE_ACCOUNT = 'UPDATE_ACCOUNT';

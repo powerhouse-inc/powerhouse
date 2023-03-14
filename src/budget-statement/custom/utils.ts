@@ -1,7 +1,12 @@
-import { BudgetStatement } from './types';
 import { createDocument } from '../../document';
-import { BudgetStatementAction } from './types';
-import { Account, AccountInput, LineItem, State } from './types';
+import {
+    Account,
+    AccountInput,
+    BudgetStatement,
+    BudgetStatementAction,
+    LineItem,
+    State,
+} from './types';
 
 export const createBudgetStatement = (
     initialState?: Partial<

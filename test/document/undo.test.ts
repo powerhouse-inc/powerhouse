@@ -1,8 +1,8 @@
 import { createDocument, setName, undo } from '../../src';
 import {
     CountAction,
-    CountState,
     countReducer,
+    CountState,
     emptyReducer,
     increment,
 } from '../helpers';

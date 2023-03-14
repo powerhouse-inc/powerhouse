@@ -1,13 +1,13 @@
 import { createAction } from '../../../document';
-import { AccountInput, Account, createAccount } from '../../custom';
+import { Account, AccountInput, createAccount } from '../../custom';
 
 import {
-    ADD_ACCOUNT,
     AddAccountAction,
-    DELETE_ACCOUNT,
+    ADD_ACCOUNT,
     DeleteAccountAction,
-    UPDATE_ACCOUNT,
+    DELETE_ACCOUNT,
     UpdateAccountAction,
+    UPDATE_ACCOUNT,
 } from './types';
 
 export const addAccount = (accounts: AccountInput[]) =>

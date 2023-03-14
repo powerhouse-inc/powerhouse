@@ -1,6 +1,6 @@
 import fs from 'fs';
-import path from 'path';
 import { parse } from 'jsonc-parser';
+import path from 'path';
 import { createBudgetStatement, reducer } from '../../src/budget-statement';
 
 // loads scenario from jsonc files

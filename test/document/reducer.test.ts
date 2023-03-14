@@ -1,4 +1,4 @@
-import { SET_NAME, createAction, createDocument, setName } from '../../src';
+import { createAction, createDocument, setName, SET_NAME } from '../../src';
 import { emptyReducer } from '../helpers';
 
 describe('Base reducer', () => {

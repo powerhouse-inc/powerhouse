@@ -4,9 +4,9 @@ import {
     AccountInput,
     BudgetStatement,
     BudgetStatementAction,
-    State,
     createBudgetStatement,
     reducer,
+    State,
 } from '../custom';
 import { addAccount, deleteAccount, updateAccount } from '../gen';
 

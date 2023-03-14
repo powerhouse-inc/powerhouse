@@ -1,9 +1,9 @@
 import {
     AddLineItemAction,
-    UpdateLineItemAction,
     DeleteLineItemAction,
+    UpdateLineItemAction,
 } from '../../gen';
-import { LineItemInput, BudgetStatement, LineItem } from '../types';
+import { BudgetStatement, LineItem, LineItemInput } from '../types';
 import { createLineItem } from '../utils';
 
 function isEqual(lineItemInput: LineItemInput, lineItem: LineItem) {

@@ -1,12 +1,12 @@
 import {
     createDocument,
-    setName,
-    prune,
     loadState,
-    undo,
+    prune,
     redo,
+    setName,
+    undo,
 } from '../../src';
-import { CountState, CountAction, countReducer, increment } from '../helpers';
+import { CountAction, countReducer, CountState, increment } from '../helpers';
 
 describe('PRUNE operation', () => {
     it('should prune first 4 operations', async () => {

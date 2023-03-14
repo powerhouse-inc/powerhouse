@@ -1,15 +1,15 @@
 import { createAction } from '../../../document';
 import {
-    SubmitForReviewAction,
-    SUBMIT_FOR_REVIEW,
-    EscalateAction,
-    ESCALATE,
     APPROVE,
-    REOPEN_TO_DRAFT,
-    REOPEN_TO_REVIEW,
     ApproveAction,
+    ESCALATE,
+    EscalateAction,
     ReopenToDraftAction,
     ReopenToReviewAction,
+    REOPEN_TO_DRAFT,
+    REOPEN_TO_REVIEW,
+    SubmitForReviewAction,
+    SUBMIT_FOR_REVIEW,
 } from './types';
 
 export const submitForReview = () =>

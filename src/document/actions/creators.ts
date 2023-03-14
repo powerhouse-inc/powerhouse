@@ -1,15 +1,15 @@
 import { createAction, Document } from '..';
 import {
-    SET_NAME,
-    UNDO,
-    REDO,
-    PRUNE,
-    UndoAction,
-    SetNameAction,
-    RedoAction,
-    PruneAction,
     LoadStateAction,
     LOAD_STATE,
+    PRUNE,
+    PruneAction,
+    REDO,
+    RedoAction,
+    SetNameAction,
+    SET_NAME,
+    UNDO,
+    UndoAction,
 } from './types';
 
 export const setName = (name: string) =>
