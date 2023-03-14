@@ -2,7 +2,6 @@ import {
     SET_NAME,
     createAction,
     createDocument,
-    init,
     prune,
     setName,
 } from '../../src';
@@ -40,24 +39,11 @@ describe('Base reducer', () => {
     });
 
     it('should throw error when creating action with non-string type', () => {
-        expect(() => createAction(1 as any)).toThrow();
+        expect(() => createAction(1 as never)).toThrow();
     });
 
     it('should throw error when creating action with empty type', () => {
         expect(() => createAction('')).toThrow();
-    });
-
-    it('should init document', () => {
-        const state = createDocument();
-        const newState = emptyReducer(
-            state,
-            init({
-                name: 'test',
-                data: { test: true },
-            })
-        );
-        expect(newState.name).toBe('test');
-        expect((newState.data as any).test).toBe(true);
     });
 
     it('should create SET_NAME action', () => {

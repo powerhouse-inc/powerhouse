@@ -1,37 +1,43 @@
 import { createReducer } from '../../document';
 import {
     ADD_ACCOUNT,
-    UPDATE_ACCOUNT,
-    DELETE_ACCOUNT,
     ADD_LINE_ITEM,
-    UPDATE_LINE_ITEM,
-    DELETE_LINE_ITEM,
-    SUBMIT_FOR_REVIEW,
-    ESCALATE,
     APPROVE,
-    REOPEN,
+    DELETE_ACCOUNT,
+    DELETE_LINE_ITEM,
+    ESCALATE,
+    INIT,
+    REOPEN_TO_DRAFT,
+    REOPEN_TO_REVIEW,
     REQUEST_TOPUP,
+    SUBMIT_FOR_REVIEW,
     TRANSFER_TOPUP,
+    UPDATE_ACCOUNT,
+    UPDATE_LINE_ITEM,
 } from '../gen';
 import {
     addAccountOperation,
-    updateAccountOperation,
-    deleteAccountOperation,
     addLineItemOperation,
-    updateLineItemOperation,
-    deleteLineItemOperation,
-    submitForReviewOperation,
-    escalateOperation,
     approveOperation,
-    reopenOperation,
+    deleteAccountOperation,
+    deleteLineItemOperation,
+    escalateOperation,
+    initOperation,
+    reopenToDraftOperation,
+    reopenToReviewOperation,
     requestTopupOperation,
+    submitForReviewOperation,
     transferTopupOperation,
+    updateAccountOperation,
+    updateLineItemOperation,
 } from './actions';
-import { State, BudgetStatementAction } from './types';
+import { BudgetStatementAction, State } from './types';
 
 export const reducer = createReducer<State, BudgetStatementAction>(
     (state, action) => {
         switch (action.type) {
+            case INIT:
+                return initOperation(state, action);
             case ADD_ACCOUNT:
                 return addAccountOperation(state, action);
             case UPDATE_ACCOUNT:
@@ -45,13 +51,15 @@ export const reducer = createReducer<State, BudgetStatementAction>(
             case DELETE_LINE_ITEM:
                 return deleteLineItemOperation(state, action);
             case SUBMIT_FOR_REVIEW:
-                return submitForReviewOperation(state, action);
+                return submitForReviewOperation(state);
             case ESCALATE:
-                return escalateOperation(state, action);
+                return escalateOperation(state);
             case APPROVE:
-                return approveOperation(state, action);
-            case REOPEN:
-                return reopenOperation(state, action);
+                return approveOperation(state);
+            case REOPEN_TO_DRAFT:
+                return reopenToDraftOperation(state);
+            case REOPEN_TO_REVIEW:
+                return reopenToReviewOperation(state);
             case REQUEST_TOPUP:
                 return requestTopupOperation(state, action);
             case TRANSFER_TOPUP:

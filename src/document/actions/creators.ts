@@ -1,4 +1,4 @@
-import { createAction, Document } from '..';
+import { createAction } from '..';
 import {
     SET_NAME,
     UNDO,
@@ -8,12 +8,8 @@ import {
     SetNameAction,
     RedoAction,
     PruneAction,
-    INIT,
-    InitAction,
 } from './types';
 
-export const init = (input: Partial<Document>) =>
-    createAction<InitAction>(INIT, input);
 export const setName = (name: string) =>
     createAction<SetNameAction>(SET_NAME, name);
 export const undo = (count = 1) => createAction<UndoAction>(UNDO, count);

@@ -1,4 +1,4 @@
-import { Action, Document, ImmutableReducer, Reducer } from '../types';
+import { Action, Document, ImmutableReducer } from '../types';
 import { createDocument, createReducer } from '../utils';
 import { BaseAction } from './types';
 
@@ -24,13 +24,6 @@ function replayOperations<T, A extends Action>(
         (state, operation) => wrappedReducer(state, operation),
         initialState
     );
-}
-
-export function initOperation<T, A extends Action>(
-    state: Document<T, A>,
-    input: Partial<Document<any>>
-): Document<T, A> {
-    return { ...state, ...input, data: { ...state.data, ...input.data } };
 }
 
 // updates the name of the document

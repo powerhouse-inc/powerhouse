@@ -5,9 +5,11 @@ import {
     EscalateAction,
     ESCALATE,
     APPROVE,
-    REOPEN,
+    REOPEN_TO_DRAFT,
+    REOPEN_TO_REVIEW,
     ApproveAction,
-    ReopenAction,
+    ReopenToDraftAction,
+    ReopenToReviewAction,
 } from './types';
 
 export const submitForReview = () =>
@@ -17,4 +19,8 @@ export const escalate = () => createAction<EscalateAction>(ESCALATE);
 
 export const approve = () => createAction<ApproveAction>(APPROVE);
 
-export const reopen = () => createAction<ReopenAction>(REOPEN);
+export const reopenToDraft = () =>
+    createAction<ReopenToDraftAction>(REOPEN_TO_DRAFT);
+
+export const reopenToReview = () =>
+    createAction<ReopenToReviewAction>(REOPEN_TO_REVIEW);

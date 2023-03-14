@@ -1,6 +1,7 @@
 import { Document } from '../../document';
 import {
     BudgetStatementAccountAction,
+    BudgetStatementInitAction,
     BudgetStatementLineItemAction,
     BudgetStatementStatusAction,
     BudgetStatementTopupAction,
@@ -69,6 +70,7 @@ export type State = {
 
 export type BudgetStatementAction =
     | BudgetStatementAccountAction
+    | BudgetStatementInitAction
     | BudgetStatementLineItemAction
     | BudgetStatementStatusAction
     | BudgetStatementTopupAction;

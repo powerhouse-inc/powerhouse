@@ -3,7 +3,8 @@ import {
     createBudgetStatement,
     escalate,
     reducer,
-    reopen,
+    reopenToDraft,
+    reopenToReview,
     submitForReview,
 } from '../../src/budget-statement';
 
@@ -29,10 +30,18 @@ describe('Budget Statement status reducer', () => {
         expect(state.data.status).toBe('Draft');
     });
 
+    it('should reset status to Draft', async () => {
+        let state = createBudgetStatement();
+        state = reducer(state, escalate());
+        const newState = reducer(state, reopenToDraft());
+        expect(newState.data.status).toBe('Draft');
+        expect(state.data.status).toBe('Escalated');
+    });
+
     it('should reset status to Review', async () => {
         let state = createBudgetStatement();
         state = reducer(state, escalate());
-        const newState = reducer(state, reopen());
+        const newState = reducer(state, reopenToReview());
         expect(newState.data.status).toBe('Review');
         expect(state.data.status).toBe('Escalated');
     });
