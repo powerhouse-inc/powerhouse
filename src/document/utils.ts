@@ -1,6 +1,7 @@
+import produce, { castDraft } from 'immer';
 import { BaseAction } from './actions';
 import { baseReducer } from './reducer';
-import { Action, Document, Reducer } from './types';
+import { Action, Document, ImmutableReducer } from './types';
 
 // helper to be used by action creators
 export function createAction<A extends Action>(
@@ -22,13 +23,29 @@ export function createAction<A extends Action>(
 // document actions: SET_NAME, UNDO, REDO, PRUNE
 // Also updates the document-related attributes on every operation
 export function createReducer<T = unknown, A extends Action = Action>(
-    reducer: Reducer<T, A>,
+    reducer: ImmutableReducer<T, A>,
     documentReducer = baseReducer
-): Reducer<T, A | BaseAction> {
-    return (state, action) => {
-        // the document reducer
+) {
+    return (state: Document<T, A | BaseAction>, action: A | BaseAction) => {
+        // first runs the action by the document reducer to
+        // update document fields and support base actions
         const newState = documentReducer<T, A>(state, action, reducer);
-        return reducer(newState, action as A);
+
+        // wraps the custom reducer with Immer to avoid
+        // mutation bugs and allow writing reducers with
+        // mutating code
+        return produce(newState, draft => {
+            // the reducer runs on a immutable version of
+            // provided state
+            const newDraft = reducer(draft, action as A);
+
+            // if the reducer creates a new state object instead
+            // of mutating the draft then returns the new state
+            if (newDraft) {
+                // casts new state as draft to comply with typescript
+                return castDraft(newDraft);
+            }
+        });
     };
 }
 

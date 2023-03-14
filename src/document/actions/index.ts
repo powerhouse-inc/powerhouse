@@ -1,4 +1,4 @@
-import { Action, Document, Reducer } from '../types';
+import { Action, Document, ImmutableReducer, Reducer } from '../types';
 import { createDocument, createReducer } from '../utils';
 import { BaseAction } from './types';
 
@@ -9,7 +9,7 @@ import { BaseAction } from './types';
 function replayOperations<T, A extends Action>(
     state: Document<T, A>,
     operations: Array<A | BaseAction>,
-    reducer: Reducer<T, A>
+    reducer: ImmutableReducer<T, A>
 ): Document<T, A> {
     // builds a new document from the initial data
     const initialState = createDocument(state.initialState);
@@ -45,7 +45,7 @@ export function setNameOperation<T, A extends Action>(
 export function undoOperation<T, A extends Action>(
     state: Document<T, A>,
     count: number,
-    wrappedReducer: Reducer<T, A>
+    wrappedReducer: ImmutableReducer<T, A>
 ): Document<T, A> {
     // undo can't be higher than the number of active operations
     const undoCount = Math.min(count, state.revision);
@@ -68,7 +68,7 @@ export function undoOperation<T, A extends Action>(
 export function redoOperation<T, A extends Action>(
     state: Document<T, A>,
     count: number,
-    wrappedReducer: Reducer<T, A>
+    wrappedReducer: ImmutableReducer<T, A>
 ): Document<T, A> {
     // the number of undone operations is retrieved from the revision number
     const undoCount = state.operations.length - state.revision;
@@ -96,7 +96,7 @@ export function redoOperation<T, A extends Action>(
 export function pruneOperation<T, A extends Action>(
     state: Document<T, A>,
     count: number,
-    wrappedReducer: Reducer<T, A>
+    wrappedReducer: ImmutableReducer<T, A>
 ): Document<T, A> {
     const actionsToPrune = state.operations.slice(0, count);
     const actionsToKeep = state.operations.slice(count);

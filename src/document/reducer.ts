@@ -1,4 +1,4 @@
-import { Action, Document, Reducer } from './types';
+import { Action, Document, ImmutableReducer } from './types';
 import {
     BaseAction,
     INIT,
@@ -77,7 +77,7 @@ function updateDocument<T, A extends Action>(
 function _baseReducer<T, A extends Action>(
     state: Document<T, A>,
     action: BaseAction,
-    wrappedReducer: Reducer<T, A>
+    wrappedReducer: ImmutableReducer<T, A>
 ): Document<T, A> {
     switch (action.type) {
         case INIT:
@@ -99,7 +99,7 @@ function _baseReducer<T, A extends Action>(
 export function baseReducer<T, A extends Action>(
     state: Document<T, A>,
     action: A | BaseAction,
-    customReducer: Reducer<T, A>
+    customReducer: ImmutableReducer<T, A>
 ) {
     let newState = state;
 

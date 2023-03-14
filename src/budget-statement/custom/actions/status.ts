@@ -22,14 +22,8 @@ export const submitForReviewOperation = (
 export const escalateOperation = (
     state: BudgetStatement,
     action: EscalateAction
-): BudgetStatement => {
-    return {
-        ...state,
-        data: {
-            ...state.data,
-            status: 'Escalated',
-        },
-    };
+) => {
+    state.data.status = 'Escalated';
 };
 
 export const approveOperation = (

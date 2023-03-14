@@ -1,3 +1,4 @@
+import { WritableDraft } from 'immer/dist/internal';
 import { BaseAction } from './actions';
 
 export type Action<T = string> = {
@@ -9,6 +10,11 @@ export type Reducer<State, A extends Action> = (
     state: Document<State, A>,
     action: A
 ) => Document<State, A>;
+
+export type ImmutableReducer<State, A extends Action> = (
+    state: WritableDraft<Document<State, A>>,
+    action: A
+) => Document<State, A> | void;
 
 export type Operation<A extends Action = Action> = A & { index: number };
 

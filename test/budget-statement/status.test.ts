@@ -1,4 +1,3 @@
-import { setName } from '../../src';
 import {
     approve,
     createBudgetStatement,

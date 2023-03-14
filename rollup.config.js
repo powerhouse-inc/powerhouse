@@ -1,18 +1,14 @@
 import dts from 'rollup-plugin-dts';
 import esbuild from 'rollup-plugin-esbuild';
-import packageJson from './package.json' assert { type: 'json' };
+import { nodeResolve } from '@rollup/plugin-node-resolve';
+import pkg from './package.json' assert { type: 'json' };
 
-const name = packageJson.main.replace(/\.js$/, '');
-
-const bundle = config => ({
-    ...config,
-    input: 'src/index.ts',
-    external: id => !/^[./]/.test(id),
-});
+const name = pkg.main.replace(/\.js$/, '');
 
 export default [
-    bundle({
-        plugins: [esbuild()],
+    {
+        input: 'src/index.ts',
+        plugins: [nodeResolve(), esbuild()],
         output: [
             {
                 file: `${name}.js`,
@@ -25,12 +21,13 @@ export default [
                 sourcemap: true,
             },
         ],
-    }),
-    bundle({
-        plugins: [dts()],
+    },
+    {
+        input: 'src/index.ts',
+        plugins: [nodeResolve(), dts({ respectExternal: true })],
         output: {
             file: `${name}.d.ts`,
             format: 'es',
         },
-    }),
+    },
 ];
