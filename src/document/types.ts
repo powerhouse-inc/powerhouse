@@ -34,3 +34,5 @@ export type Document<
     operations: Operation<A | BaseAction>[];
     initialState: Omit<Document<Data, A>, 'initialState'>;
 };
+
+export type Attachment = `attachment://${string}`;

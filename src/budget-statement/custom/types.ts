@@ -1,4 +1,4 @@
-import { Document } from '../../document';
+import { Attachment, Document } from '../../document';
 import {
     BudgetStatementAccountAction,
     BudgetStatementInitAction,
@@ -6,6 +6,7 @@ import {
     BudgetStatementStatusAction,
     BudgetStatementTopupAction,
 } from '../gen';
+import { BudgetStatementAuditReportAction } from '../gen/audit';
 
 export type LineItem = {
     category: {
@@ -56,6 +57,23 @@ export type AccountInput = Partial<Account> & Pick<Account, 'address'>;
 
 export type BudgetStatus = 'Draft' | 'Review' | 'Final' | 'Escalated';
 
+export type AuditReportStatus =
+    | 'Approved'
+    | 'ApprovedWithComments'
+    | 'NeedsAction'
+    | 'Escalated';
+
+export type AuditReport = {
+    timestamp: string;
+    report: Attachment;
+    status: AuditReportStatus;
+};
+
+export type AuditReportInput =
+    | Pick<AuditReport, 'report' | 'status'> & {
+          timestamp?: AuditReport['timestamp'] | undefined;
+      };
+
 export type State = {
     owner: {
         ref: string | null;
@@ -66,6 +84,7 @@ export type State = {
     status: BudgetStatus;
     quoteCurrency: string | null;
     accounts: Account[];
+    auditReports: AuditReport[];
 };
 
 export type BudgetStatementAction =
@@ -73,6 +92,7 @@ export type BudgetStatementAction =
     | BudgetStatementInitAction
     | BudgetStatementLineItemAction
     | BudgetStatementStatusAction
-    | BudgetStatementTopupAction;
+    | BudgetStatementTopupAction
+    | BudgetStatementAuditReportAction;
 
 export type BudgetStatement = Document<State, BudgetStatementAction>;

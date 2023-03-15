@@ -28,6 +28,7 @@ export const createBudgetStatement = (
             status: 'Draft',
             quoteCurrency: null,
             accounts: [],
+            auditReports: [],
             ...initialState?.data,
         },
     });

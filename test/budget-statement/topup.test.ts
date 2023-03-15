@@ -10,7 +10,7 @@ describe('Budget Statement topup reducer', () => {
     it('should request topup', async () => {
         let state = createBudgetStatement();
         state = reducer(
-            createBudgetStatement(),
+            state,
             addAccount([
                 {
                     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
@@ -34,7 +34,7 @@ describe('Budget Statement topup reducer', () => {
     it('should transfer topup', async () => {
         let state = createBudgetStatement();
         state = reducer(
-            createBudgetStatement(),
+            state,
             addAccount([
                 {
                     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',

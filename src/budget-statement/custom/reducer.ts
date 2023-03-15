@@ -1,15 +1,20 @@
 import { createReducer } from '../../document';
 import {
     ADD_ACCOUNT,
+    ADD_AUDIT_REPORT,
     ADD_LINE_ITEM,
     APPROVE,
+    APPROVE_AUDIT_REPORT,
     DELETE_ACCOUNT,
+    DELETE_AUDIT_REPORT,
     DELETE_LINE_ITEM,
     ESCALATE,
+    ESCALATE_AUDIT_REPORT,
     INIT,
     REOPEN_TO_DRAFT,
     REOPEN_TO_REVIEW,
     REQUEST_TOPUP,
+    SET_NEEDS_ACTION_AUDIT_REPORT,
     SUBMIT_FOR_REVIEW,
     TRANSFER_TOPUP,
     UPDATE_ACCOUNT,
@@ -31,6 +36,13 @@ import {
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
+import {
+    addAuditReportOperation,
+    approveAuditReportOperation,
+    deleteAuditReportOperation,
+    escalateAuditReportOperation,
+    setNeedsActionAuditReportOperation,
+} from './actions/audit';
 import { BudgetStatementAction, State } from './types';
 
 export const reducer = createReducer<State, BudgetStatementAction>(
@@ -64,6 +76,16 @@ export const reducer = createReducer<State, BudgetStatementAction>(
                 return requestTopupOperation(state, action);
             case TRANSFER_TOPUP:
                 return transferTopupOperation(state, action);
+            case ADD_AUDIT_REPORT:
+                return addAuditReportOperation(state, action);
+            case DELETE_AUDIT_REPORT:
+                return deleteAuditReportOperation(state, action);
+            case APPROVE_AUDIT_REPORT:
+                return approveAuditReportOperation(state, action);
+            case SET_NEEDS_ACTION_AUDIT_REPORT:
+                return setNeedsActionAuditReportOperation(state, action);
+            case ESCALATE_AUDIT_REPORT:
+                return escalateAuditReportOperation(state, action);
             default:
                 return state;
         }
