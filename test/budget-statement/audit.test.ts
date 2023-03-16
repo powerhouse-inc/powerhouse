@@ -1,11 +1,8 @@
 import {
     addAuditReport,
-    approveAuditReport,
     createBudgetStatement,
     deleteAuditReport,
-    escalateAuditReport,
     reducer,
-    setNeedsActionAuditReport,
 } from '../../src/budget-statement';
 
 describe('Budget Statement Audit Report reducer', () => {
@@ -18,7 +15,7 @@ describe('Budget Statement Audit Report reducer', () => {
         const state = createBudgetStatement();
         const newState = reducer(
             state,
-            addAuditReport([
+            await addAuditReport([
                 {
                     report: 'attachment://audit.pdf',
                     status: 'Approved',
@@ -38,7 +35,7 @@ describe('Budget Statement Audit Report reducer', () => {
         let state = createBudgetStatement();
         state = reducer(
             state,
-            addAuditReport([
+            await addAuditReport([
                 {
                     report: 'attachment://audit.pdf',
                     status: 'Escalated',

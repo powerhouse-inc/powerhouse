@@ -69,10 +69,11 @@ export type AuditReport = {
     status: AuditReportStatus;
 };
 
-export type AuditReportInput =
-    | Pick<AuditReport, 'report' | 'status'> & {
-          timestamp?: AuditReport['timestamp'] | undefined;
-      };
+export type AuditReportInput = {
+    timestamp?: string | undefined;
+    report: string;
+    status: AuditReportStatus;
+};
 
 export type State = {
     owner: {
