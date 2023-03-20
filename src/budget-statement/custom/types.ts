@@ -70,8 +70,11 @@ export type AuditReport = {
 };
 
 export type AuditReportInput = {
-    timestamp?: string | undefined;
-    report: string;
+    timestamp: string;
+    report: {
+        data: string;
+        mimeType: string;
+    };
     status: AuditReportStatus;
 };
 

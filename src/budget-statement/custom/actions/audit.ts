@@ -5,7 +5,18 @@ export const addAuditReportOperation = (
     state: BudgetStatement,
     action: AddAuditReportAction
 ) => {
-    state.data.auditReports.push(...action.input.reports);
+    action.input.reports.forEach(audit => {
+        const attachmentKey = `attachment://${audit.timestamp}` as const;
+        state.fileRegistry[attachmentKey] = {
+            data: audit.report.data,
+            mimeType: audit.report.mimeType,
+        };
+        state.data.auditReports.push({
+            timestamp: audit.timestamp,
+            status: audit.status,
+            report: attachmentKey,
+        });
+    });
 };
 
 export const deleteAuditReportOperation = (

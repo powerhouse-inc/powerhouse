@@ -1,5 +1,5 @@
 import { createAction, fetchAttachment } from '../../../document';
-import { AuditReport, AuditReportInput } from '../../custom';
+import { AuditReport, AuditReportStatus } from '../../custom';
 import {
     AddAuditReportAction,
     ADD_AUDIT_REPORT,
@@ -7,7 +7,13 @@ import {
     DELETE_AUDIT_REPORT,
 } from './types';
 
-export const addAuditReport = async (reports: AuditReportInput[]) => {
+export const addAuditReport = async (
+    reports: {
+        timestamp?: string;
+        status: AuditReportStatus;
+        report: string;
+    }[]
+) => {
     const newTimestamp = new Date();
     const newReports = await Promise.all(
         reports.map(async ({ timestamp, report, status }) => ({

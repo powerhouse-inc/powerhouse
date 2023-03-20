@@ -1,6 +1,11 @@
-import { BudgetStatementObject } from '../../src/budget-statement/gen/object';
+import fs from 'fs';
+import { BudgetStatementObject } from '../../src/budget-statement/';
 
 describe('Budget Statement Class', () => {
+    afterAll(() => {
+        fs.unlinkSync('./test/budget-statement/temp/march.phbs.zip');
+    });
+
     it('should set initial state', async () => {
         const budgetStatement = new BudgetStatementObject({
             data: { month: '03/2023' },

@@ -26,6 +26,11 @@ export type DocumentHeader = {
     lastModified: string;
 };
 
+export type FileRegistry = Record<
+    Attachment,
+    { data: string; mimeType: string }
+>;
+
 export type Document<
     Data = unknown,
     A extends Action = Action
@@ -33,6 +38,7 @@ export type Document<
     data: Data;
     operations: Operation<A | BaseAction>[];
     initialState: Omit<Document<Data, A>, 'initialState'>;
+    fileRegistry: FileRegistry;
 };
 
 export type Attachment = `attachment://${string}`;

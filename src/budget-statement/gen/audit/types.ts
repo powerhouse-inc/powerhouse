@@ -1,5 +1,5 @@
 import { Action } from '../../../document';
-import { AuditReport } from '../../custom';
+import { AuditReport, AuditReportInput } from '../../custom';
 
 export const ADD_AUDIT_REPORT = 'ADD_AUDIT_REPORT';
 export const DELETE_AUDIT_REPORT = 'DELETE_AUDIT_REPORT';
@@ -7,7 +7,7 @@ export const DELETE_AUDIT_REPORT = 'DELETE_AUDIT_REPORT';
 export interface AddAuditReportAction extends Action {
     type: typeof ADD_AUDIT_REPORT;
     input: {
-        reports: AuditReport[];
+        reports: AuditReportInput[];
     };
 }
 

@@ -1,11 +1,12 @@
 import { nodeResolve } from '@rollup/plugin-node-resolve';
+import { RollupOptions } from 'rollup';
 import dts from 'rollup-plugin-dts';
 import esbuild from 'rollup-plugin-esbuild';
 import pkg from './package.json' assert { type: 'json' };
 
 const name = pkg.main.replace(/\.js$/, '');
 
-export default [
+const options: RollupOptions[] = [
     {
         input: 'src/index.ts',
         plugins: [nodeResolve(), esbuild()],
@@ -31,3 +32,5 @@ export default [
         },
     },
 ];
+
+export default options;
