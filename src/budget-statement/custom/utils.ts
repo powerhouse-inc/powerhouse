@@ -1,4 +1,5 @@
-import { createDocument } from '../../document';
+import { createDocument, loadFromFile, saveToFile } from '../../document';
+import { reducer } from './reducer';
 import {
     Account,
     AccountInput,
@@ -61,3 +62,16 @@ export const createLineItem = (
     forecast: [],
     ...input,
 });
+
+export const saveBudgetStatementToFile = (
+    document: BudgetStatement,
+    path: string
+): Promise<string> => {
+    return saveToFile(document, path, 'phbs');
+};
+
+export const loadBudgetStatementFromFile = (
+    path: string
+): Promise<BudgetStatement> => {
+    return loadFromFile<State, BudgetStatementAction>(path, reducer);
+};

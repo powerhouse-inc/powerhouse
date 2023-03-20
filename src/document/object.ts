@@ -1,8 +1,8 @@
 import { BaseAction } from './actions';
 import { Action, Document, Reducer } from './types';
-import { createDocument } from './utils';
+import { createDocument, loadFromFile, saveToFile } from './utils';
 
-export class DocumentObject<T, A extends Action> {
+export abstract class DocumentObject<T, A extends Action> {
     private state: Document<T, A>;
     private reducer: Reducer<T, A | BaseAction>;
 
@@ -21,5 +21,21 @@ export class DocumentObject<T, A extends Action> {
     protected dispatch(action: A | BaseAction) {
         this.state = this.reducer(this.state, action);
         return this;
+    }
+
+    protected saveToFile(path: string, extension: string) {
+        return saveToFile(this.state, path, extension);
+    }
+
+    async loadFromFile(path: string) {
+        this.state = await loadFromFile<T, A | BaseAction>(path, this.reducer);
+    }
+
+    protected static async stateFromFile<T, A extends Action>(
+        path: string,
+        reducer: Reducer<T, A | BaseAction>
+    ) {
+        const state = await loadFromFile<T, A>(path, reducer);
+        return state;
     }
 }

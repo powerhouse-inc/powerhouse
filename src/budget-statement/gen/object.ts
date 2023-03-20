@@ -14,6 +14,8 @@ export class BudgetStatementObject extends DocumentObject<
     State,
     BudgetStatementAction
 > {
+    static fileExtension = 'phbs';
+
     constructor(
         initialState?: Partial<
             Omit<BudgetStatement, 'data'> & {
@@ -34,5 +36,19 @@ export class BudgetStatementObject extends DocumentObject<
 
     public deleteAccount(accounts: Account['address'][]) {
         return this.dispatch(deleteAccount(accounts));
+    }
+
+    public saveToFile(path: string) {
+        return super.saveToFile(path, BudgetStatementObject.fileExtension);
+    }
+
+    public loadFromFile(path: string) {
+        return super.loadFromFile(path);
+    }
+
+    static async fromFile(path: string) {
+        const budgetStatement = new this();
+        await budgetStatement.loadFromFile(path);
+        return budgetStatement;
     }
 }
