@@ -6,7 +6,7 @@ export const addAuditReportOperation = (
     action: AddAuditReportAction
 ) => {
     action.input.reports.forEach(audit => {
-        const attachmentKey = `attachment://${audit.timestamp}` as const;
+        const attachmentKey = `attachment://audits/${audit.timestamp}` as const;
         state.fileRegistry[attachmentKey] = {
             data: audit.report.data,
             mimeType: audit.report.mimeType,
@@ -16,6 +16,12 @@ export const addAuditReportOperation = (
             status: audit.status,
             report: attachmentKey,
         });
+
+        // const operation = state.operations[
+        //     state.operations.length - 1
+        // ] as Operation<AddAuditReportAction>;
+
+        // operation.input.reports[index].report = attachmentKey as any; // TODO
     });
 };
 

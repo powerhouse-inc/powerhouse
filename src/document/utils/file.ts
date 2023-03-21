@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import { BaseAction } from '../actions';
-import { Action, Document, Reducer } from '../types';
+import { Action, Attachment, Document, Reducer } from '../types';
 import { getFile, readFile, writeFile } from './node';
 
 export const saveToFile = (
@@ -12,6 +12,17 @@ export const saveToFile = (
     const zip = new JSZip();
     zip.file('state.json', JSON.stringify(document.initialState, null, 2));
     zip.file('operations.json', JSON.stringify(document.operations, null, 2));
+
+    const attachments = Object.keys(document.fileRegistry) as Attachment[];
+    attachments.forEach(key => {
+        const file = document.fileRegistry[key];
+        const path = key.slice('attachment://'.length);
+        zip.file(path, file.data, {
+            base64: true,
+            createFolders: true,
+            comment: file.mimeType,
+        });
+    });
     const stream = zip.generateNodeStream({
         type: 'nodebuffer',
         streamFiles: true,

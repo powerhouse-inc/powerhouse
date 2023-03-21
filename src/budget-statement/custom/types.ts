@@ -1,4 +1,4 @@
-import { Attachment, Document } from '../../document';
+import { Document } from '../../document';
 import {
     BudgetStatementAccountAction,
     BudgetStatementInitAction,
@@ -63,9 +63,11 @@ export type AuditReportStatus =
     | 'NeedsAction'
     | 'Escalated';
 
+export type AuditAttachment = `attachment://audits/${string}`;
+
 export type AuditReport = {
     timestamp: string;
-    report: Attachment;
+    report: AuditAttachment;
     status: AuditReportStatus;
 };
 

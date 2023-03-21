@@ -1,13 +1,17 @@
 import fs from 'fs';
+import JSZip from 'jszip';
 import {
     addAuditReport,
     createBudgetStatement,
     deleteAuditReport,
+    loadBudgetStatementFromFile,
     reducer,
+    saveBudgetStatementToFile,
 } from '../../src/budget-statement';
+import { readFile } from '../../src/document/utils/node';
 
 describe('Budget Statement Audit Report reducer', () => {
-    const tempDir = './test/budget-statement/temp/';
+    const tempDir = './test/budget-statement/temp/audit/';
     const tempFile = `${tempDir}report.pdf`;
 
     beforeAll(() => {
@@ -19,7 +23,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     afterAll(() => {
-        fs.unlinkSync(tempFile);
+        fs.rmSync(tempDir, { recursive: true, force: true });
     });
 
     it('should start as empty array', async () => {
@@ -40,7 +44,7 @@ describe('Budget Statement Audit Report reducer', () => {
             ])
         );
         expect(newState.data.auditReports[0]).toStrictEqual({
-            report: 'attachment://2023-03-15T17:46:22.754Z',
+            report: 'attachment://audits/2023-03-15T17:46:22.754Z',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
@@ -61,7 +65,9 @@ describe('Budget Statement Audit Report reducer', () => {
         );
 
         expect(
-            newState.fileRegistry['attachment://2023-03-15T17:46:22.754Z']
+            newState.fileRegistry[
+                'attachment://audits/2023-03-15T17:46:22.754Z'
+            ]
         ).toStrictEqual({ data: 'VEVTVA==', mimeType: 'application/pdf' });
         expect(state.fileRegistry).toStrictEqual({});
     });
@@ -80,7 +86,7 @@ describe('Budget Statement Audit Report reducer', () => {
         );
         state = reducer(
             state,
-            deleteAuditReport(['attachment://2023-03-15T17:46:22.754Z'])
+            deleteAuditReport(['attachment://audits/2023-03-15T17:46:22.754Z'])
         );
         expect(state.data.auditReports).toStrictEqual([]);
     });
@@ -154,19 +160,55 @@ describe('Budget Statement Audit Report reducer', () => {
             ])
         );
         expect(newState.data.auditReports[0]).toStrictEqual({
-            report: 'attachment://2023-03-15T17:46:22.754Z',
+            report: 'attachment://audits/2023-03-15T17:46:22.754Z',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
         expect(
-            newState.fileRegistry['attachment://2023-03-15T17:46:22.754Z'].data
-                .length
+            newState.fileRegistry[
+                'attachment://audits/2023-03-15T17:46:22.754Z'
+            ].data.length
         ).toBeGreaterThan(0);
         expect(
-            newState.fileRegistry['attachment://2023-03-15T17:46:22.754Z']
-                .mimeType
+            newState.fileRegistry[
+                'attachment://audits/2023-03-15T17:46:22.754Z'
+            ].mimeType
         ).toBe('application/pdf');
         expect(state.data.auditReports).toStrictEqual([]);
         expect(state.fileRegistry).toStrictEqual({});
+    });
+
+    it('should save attachment to zip', async () => {
+        const state = reducer(
+            createBudgetStatement({ name: 'march' }),
+            await addAuditReport([
+                {
+                    report: tempFile,
+                    status: 'NeedsAction',
+                },
+            ])
+        );
+        const zipPath = await saveBudgetStatementToFile(state, tempDir);
+        const file = readFile(zipPath);
+        const zip = new JSZip();
+        await zip.loadAsync(file);
+
+        const report = state.data.auditReports[0].report;
+        const path = report.slice('attachment://'.length);
+
+        expect(await zip.file(path)?.async('string')).toBe('TEST');
+        expect(zip.file(path)?.comment).toBe(
+            state.fileRegistry[report].mimeType
+        );
+    });
+
+    it('should load attachment from zip', async () => {
+        const state = await loadBudgetStatementFromFile(
+            `${tempDir}march.phbs.zip`
+        );
+        expect(state.data.auditReports[0].status).toBe('NeedsAction');
+        expect(
+            state.fileRegistry[state.data.auditReports[0].report]
+        ).toStrictEqual({ data: 'VEVTVA==', mimeType: 'application/pdf' });
     });
 });

@@ -3,7 +3,7 @@ import { BudgetStatementObject } from '../../src/budget-statement/';
 
 describe('Budget Statement Class', () => {
     afterAll(() => {
-        fs.unlinkSync('./test/budget-statement/temp/march.phbs.zip');
+        fs.rmSync('./test/budget-statement/temp/march.phbs.zip');
     });
 
     it('should set initial state', async () => {
