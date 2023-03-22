@@ -1,15 +1,30 @@
 {
     "packageManager": "yarn@1.22.19",
-    "name": "document-model-libs",
-    "version": "1.0.0",
+    "name": "@acaldas/temp-document-model-libs",
+    "version": "1.0.1",
     "main": "dist/index.js",
     "module": "dist/es/index.js",
     "types": "dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js",
+        "./budget-statement": "./dist/budget-statement.js",
+        "./document": "./dist/document.js"
+    },
+    "typesVersions": {
+        "*": {
+            "budget-statement": [
+                "dist/budget-statement"
+            ],
+            "document": [
+                "dist/document"
+            ]
+        }
+    },
     "files": [
         "/dist"
     ],
     "repository": "https://github.com/makerdao-ses/document-model-libs",
-    "author": "makerdao-ses",
+    "author": "acaldas",
     "license": "AGPL-3.0-only",
     "private": false,
     "scripts": {
