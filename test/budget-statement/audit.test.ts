@@ -208,6 +208,11 @@ describe('Budget Statement Audit Report reducer', () => {
         );
         expect(state.data.auditReports[0].status).toBe('NeedsAction');
         expect(
+            (state.operations[0] as any).input.reports[0].report.startsWith(
+                'attachment://'
+            )
+        ).toBe(true);
+        expect(
             state.fileRegistry[state.data.auditReports[0].report]
         ).toStrictEqual({ data: 'VEVTVA==', mimeType: 'application/pdf' });
     });

@@ -1,27 +1,37 @@
-import { AddAuditReportAction, DeleteAuditReportAction } from '../../gen/audit';
+import { Operation } from '../../../document';
+import {
+    AddAuditReportAction,
+    DeleteAuditReportAction,
+    isAuditReport,
+} from '../../gen/audit';
 import { BudgetStatement } from '../types';
 
 export const addAuditReportOperation = (
     state: BudgetStatement,
     action: AddAuditReportAction
 ) => {
-    action.input.reports.forEach(audit => {
+    const operation = state.operations[
+        state.operations.length - 1
+    ] as Operation<AddAuditReportAction>;
+
+    action.input.reports.forEach((audit, index) => {
         const attachmentKey = `attachment://audits/${audit.timestamp}` as const;
-        state.fileRegistry[attachmentKey] = {
-            data: audit.report.data,
-            mimeType: audit.report.mimeType,
-        };
-        state.data.auditReports.push({
-            timestamp: audit.timestamp,
-            status: audit.status,
-            report: attachmentKey,
-        });
 
-        // const operation = state.operations[
-        //     state.operations.length - 1
-        // ] as Operation<AddAuditReportAction>;
+        if (isAuditReport(audit)) {
+            state.data.auditReports.push(audit);
+        } else {
+            state.fileRegistry[attachmentKey] = {
+                data: audit.report.data,
+                mimeType: audit.report.mimeType,
+            };
+            state.data.auditReports.push({
+                timestamp: audit.timestamp,
+                status: audit.status,
+                report: attachmentKey,
+            });
 
-        // operation.input.reports[index].report = attachmentKey as any; // TODO
+            operation.input.reports[index].report = attachmentKey;
+        }
     });
 };
 
