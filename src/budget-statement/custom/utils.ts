@@ -1,4 +1,6 @@
+import JSZip from 'jszip';
 import { createDocument, loadFromFile, saveToFile } from '../../document';
+import { readFile } from '../../document/utils/node';
 import { reducer } from './reducer';
 import {
     Account,
@@ -70,8 +72,34 @@ export const saveBudgetStatementToFile = (
     return saveToFile(document, path, 'phbs');
 };
 
-export const loadBudgetStatementFromFile = (
+export const loadBudgetStatementFromFile = async (
     path: string
 ): Promise<BudgetStatement> => {
-    return loadFromFile<State, BudgetStatementAction>(path, reducer);
+    const state = await loadFromFile<State, BudgetStatementAction>(
+        path,
+        reducer
+    );
+
+    const auditReports = state.data.auditReports;
+    if (!auditReports.length) {
+        return state;
+    }
+
+    const file = readFile(path);
+    const zip = new JSZip();
+    await zip.loadAsync(file);
+    const fileRegistry = { ...state.fileRegistry };
+    await Promise.all(
+        auditReports.map(async audit => {
+            const path = audit.report.slice('attachment://'.length);
+            const file = await zip.file(path);
+            if (!file) {
+                throw new Error(`Attachment ${audit.report} not found`);
+            }
+            const data = await file.async('base64');
+            const mimeType = file.comment;
+            fileRegistry[audit.report] = { data, mimeType };
+        })
+    );
+    return { ...state, fileRegistry };
 };

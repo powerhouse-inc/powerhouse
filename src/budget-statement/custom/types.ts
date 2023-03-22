@@ -71,12 +71,14 @@ export type AuditReport = {
     status: AuditReportStatus;
 };
 
+export type AuditReportData = {
+    data: string;
+    mimeType: string;
+};
+
 export type AuditReportInput = {
     timestamp: string;
-    report: {
-        data: string;
-        mimeType: string;
-    };
+    report: AuditReportData;
     status: AuditReportStatus;
 };
 
