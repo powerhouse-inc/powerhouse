@@ -1,4 +1,4 @@
-import { Operation } from '../../../document';
+import { hashAttachment, Operation } from '../../../document';
 import {
     AddAuditReportAction,
     DeleteAuditReportAction,
@@ -15,11 +15,11 @@ export const addAuditReportOperation = (
     ] as Operation<AddAuditReportAction>;
 
     action.input.reports.forEach((audit, index) => {
-        const attachmentKey = `attachment://audits/${audit.timestamp}` as const;
-
         if (isAuditReport(audit)) {
             state.data.auditReports.push(audit);
         } else {
+            const hash = hashAttachment(audit.report.data);
+            const attachmentKey = `attachment://audits/${hash}` as const;
             state.fileRegistry[attachmentKey] = {
                 data: audit.report.data,
                 mimeType: audit.report.mimeType,

@@ -1,4 +1,4 @@
-import { createAction, fetchAttachment } from '../../../document';
+import { createAction } from '../../../document';
 import { AuditReport, AuditReportStatus } from '../../custom';
 import {
     AddAuditReportAction,
@@ -7,21 +7,22 @@ import {
     DELETE_AUDIT_REPORT,
 } from './types';
 
-export const addAuditReport = async (
+export const addAuditReport = (
     reports: {
         timestamp?: string;
         status: AuditReportStatus;
-        report: string;
+        report: {
+            data: string;
+            mimeType: string;
+        };
     }[]
 ) => {
     const newTimestamp = new Date();
-    const newReports = await Promise.all(
-        reports.map(async ({ timestamp, report, status }) => ({
-            report: await fetchAttachment(report),
-            timestamp: timestamp ?? newTimestamp.toISOString(),
-            status,
-        }))
-    );
+    const newReports = reports.map(({ timestamp, report, status }) => ({
+        report,
+        timestamp: timestamp ?? newTimestamp.toISOString(),
+        status,
+    }));
     return createAction<AddAuditReportAction>(ADD_AUDIT_REPORT, {
         reports: newReports,
     });
