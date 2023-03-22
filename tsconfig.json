@@ -9,7 +9,8 @@
         "forceConsistentCasingInFileNames": true,
         "strict": true,
         "noImplicitAny": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "emitDeclarationOnly": true
     },
-    "include": ["src/**/*"]
+    "include": ["src/**/*", "rollup.config.ts"]
 }

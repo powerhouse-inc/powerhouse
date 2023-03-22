@@ -1,36 +1,70 @@
-import { nodeResolve } from '@rollup/plugin-node-resolve';
-import { RollupOptions } from 'rollup';
+import type { Plugin, RollupOptions } from 'rollup';
 import dts from 'rollup-plugin-dts';
 import esbuild from 'rollup-plugin-esbuild';
-import pkg from './package.json' assert { type: 'json' };
 
-const name = pkg.main.replace(/\.js$/, '');
+function emitModulePackageFile(): Plugin {
+    return {
+        generateBundle() {
+            this.emitFile({
+                fileName: 'package.json',
+                source: `{"type":"module"}`,
+                type: 'asset',
+            });
+        },
+        name: 'emit-module-package-file',
+    };
+}
 
-const options: RollupOptions[] = [
+const input = {
+    index: 'src/index.ts',
+    'budget-statement': 'src/budget-statement/index.ts',
+    document: 'src/document/index.ts',
+};
+
+const outputs: RollupOptions[] = [
     {
-        input: 'src/index.ts',
-        plugins: [nodeResolve(), esbuild()],
-        output: [
-            {
-                file: `${name}.js`,
-                format: 'cjs',
-                sourcemap: true,
-            },
-            {
-                file: `${name}.mjs`,
-                format: 'es',
-                sourcemap: true,
-            },
+        input,
+        plugins: [
+            // nodeResolve(),
+            esbuild({
+                optimizeDeps: {
+                    include: ['mime/lite', 'jszip'],
+                },
+            }),
         ],
+        output: {
+            dir: 'dist/',
+            entryFileNames: '[name].js',
+            format: 'cjs',
+            sourcemap: true,
+        },
+    },
+    {
+        input,
+        plugins: [
+            // nodeResolve(),
+            esbuild({
+                optimizeDeps: {
+                    include: ['mime/lite', 'jszip'],
+                },
+            }),
+            emitModulePackageFile(),
+        ],
+        output: {
+            dir: 'dist/es/',
+            entryFileNames: '[name].js',
+            format: 'es',
+            sourcemap: true,
+        },
     },
     {
         input: 'src/index.ts',
-        plugins: [nodeResolve(), dts({ respectExternal: true })],
+        plugins: [dts({ respectExternal: true })],
         output: {
-            file: `${name}.d.ts`,
+            file: 'dist/index.d.ts',
             format: 'es',
         },
     },
 ];
 
-export default options;
+export default outputs;

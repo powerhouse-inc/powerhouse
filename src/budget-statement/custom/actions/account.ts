@@ -2,7 +2,7 @@ import {
     AddAccountAction,
     DeleteAccountAction,
     UpdateAccountAction,
-} from '../..';
+} from '../../gen';
 import { BudgetStatement } from '../types';
 import { createAccount } from '../utils';
 
