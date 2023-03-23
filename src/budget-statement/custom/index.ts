@@ -1,3 +1,3 @@
 export * from './reducer';
 export * from './types';
-export * from './utils';
+export * as utils from './utils';

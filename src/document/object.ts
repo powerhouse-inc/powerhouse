@@ -1,4 +1,4 @@
-import { BaseAction } from './actions';
+import { BaseAction } from './actions/types';
 import { Action, Document, Reducer } from './types';
 import { createDocument, loadFromFile, saveToFile } from './utils';
 

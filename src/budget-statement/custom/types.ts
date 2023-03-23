@@ -1,12 +1,10 @@
 import { Document } from '../../document';
-import {
-    BudgetStatementAccountAction,
-    BudgetStatementInitAction,
-    BudgetStatementLineItemAction,
-    BudgetStatementStatusAction,
-    BudgetStatementTopupAction,
-} from '../gen';
-import { BudgetStatementAuditReportAction } from '../gen/audit';
+import { BudgetStatementAccountAction } from '../gen/account/types';
+import { BudgetStatementAuditReportAction } from '../gen/audit/types';
+import { BudgetStatementInitAction } from '../gen/init/types';
+import { BudgetStatementLineItemAction } from '../gen/line-item/types';
+import { BudgetStatementStatusAction } from '../gen/status/types';
+import { BudgetStatementTopupAction } from '../gen/topup/types';
 
 export type LineItem = {
     category: {

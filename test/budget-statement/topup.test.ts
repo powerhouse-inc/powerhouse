@@ -1,10 +1,10 @@
+import { reducer } from '../../src/budget-statement';
+import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 import {
     addAccount,
-    createBudgetStatement,
-    reducer,
     requestTopup,
     transferTopup,
-} from '../../src/budget-statement';
+} from '../../src/budget-statement/gen';
 
 describe('Budget Statement topup reducer', () => {
     it('should request topup', async () => {

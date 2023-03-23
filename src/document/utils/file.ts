@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { BaseAction } from '../actions';
+import { BaseAction } from '../actions/types';
 import { Action, Attachment, Document, Reducer } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 

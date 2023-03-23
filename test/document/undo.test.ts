@@ -1,4 +1,5 @@
-import { createDocument, setName, undo } from '../../src';
+import { setName, undo } from '../../src/document/actions';
+import { createDocument } from '../../src/document/utils';
 import {
     CountAction,
     countReducer,

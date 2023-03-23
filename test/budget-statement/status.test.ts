@@ -1,12 +1,12 @@
+import { reducer } from '../../src/budget-statement';
+import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 import {
     approve,
-    createBudgetStatement,
     escalate,
-    reducer,
     reopenToDraft,
     reopenToReview,
     submitForReview,
-} from '../../src/budget-statement';
+} from '../../src/budget-statement/gen';
 
 describe('Budget Statement status reducer', () => {
     it('should set status to Review', async () => {

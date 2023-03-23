@@ -1,9 +1,7 @@
-import { setName } from '../../src';
-import {
-    createBudgetStatement,
-    init,
-    reducer,
-} from '../../src/budget-statement';
+import { reducer } from '../../src/budget-statement';
+import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
+import { init } from '../../src/budget-statement/gen';
+import { setName } from '../../src/document/actions';
 
 describe('Budget Statement reducer', () => {
     it('should create initial state', async () => {

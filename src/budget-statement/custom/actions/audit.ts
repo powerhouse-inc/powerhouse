@@ -1,9 +1,10 @@
-import { hashAttachment, Operation } from '../../../document';
+import { Operation } from '../../../document';
+import { hashAttachment } from '../../../document/utils';
 import {
     AddAuditReportAction,
     DeleteAuditReportAction,
     isAuditReport,
-} from '../../gen/audit';
+} from '../../gen/audit/types';
 import { BudgetStatement } from '../types';
 
 export const addAuditReportOperation = (

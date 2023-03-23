@@ -1,4 +1,4 @@
-import { createAction } from '../../../document';
+import { createAction } from '../../../document/utils';
 import { Account } from '../../custom';
 import {
     RequestTopupAction,

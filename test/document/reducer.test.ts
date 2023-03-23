@@ -1,4 +1,6 @@
-import { createAction, createDocument, setName, SET_NAME } from '../../src';
+import { setName } from '../../src/document/actions';
+import { SET_NAME } from '../../src/document/actions/types';
+import { createAction, createDocument } from '../../src/document/utils';
 import { emptyReducer } from '../helpers';
 
 describe('Base reducer', () => {

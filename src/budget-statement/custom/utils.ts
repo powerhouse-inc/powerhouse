@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { createDocument, loadFromFile, saveToFile } from '../../document';
+import { createDocument, loadFromFile, saveToFile } from '../../document/utils';
 import { readFile } from '../../document/utils/node';
 import { reducer } from './reducer';
 import {

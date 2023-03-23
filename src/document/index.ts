@@ -1,5 +1,5 @@
-export * from './actions';
+export * as actions from './actions/creators';
 export * from './object';
 export * from './reducer';
 export * from './types';
-export * from './utils';
+export * as utils from './utils';

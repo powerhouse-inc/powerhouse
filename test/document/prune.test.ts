@@ -1,11 +1,11 @@
 import {
-    createDocument,
     loadState,
     prune,
     redo,
     setName,
     undo,
-} from '../../src';
+} from '../../src/document/actions';
+import { createDocument } from '../../src/document/utils';
 import { CountAction, countReducer, CountState, increment } from '../helpers';
 
 describe('PRUNE operation', () => {

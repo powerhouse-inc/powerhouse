@@ -4,10 +4,10 @@ import {
     AccountInput,
     BudgetStatement,
     BudgetStatementAction,
-    createBudgetStatement,
     reducer,
     State,
 } from '../custom';
+import { createBudgetStatement } from '../custom/utils';
 import { addAccount, deleteAccount, updateAccount } from '../gen';
 
 export class BudgetStatementObject extends DocumentObject<

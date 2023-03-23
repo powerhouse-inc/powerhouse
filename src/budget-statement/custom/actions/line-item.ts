@@ -2,7 +2,7 @@ import {
     AddLineItemAction,
     DeleteLineItemAction,
     UpdateLineItemAction,
-} from '../../gen';
+} from '../../gen/line-item/types';
 import { BudgetStatement, LineItem, LineItemInput } from '../types';
 import { createLineItem } from '../utils';
 

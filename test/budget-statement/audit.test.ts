@@ -1,14 +1,16 @@
 import fs from 'fs';
 import JSZip from 'jszip';
+import { reducer } from '../../src/budget-statement';
+import {
+    createBudgetStatement,
+    loadBudgetStatementFromFile,
+    saveBudgetStatementToFile,
+} from '../../src/budget-statement/custom/utils';
 import {
     addAuditReport,
-    createBudgetStatement,
     deleteAuditReport,
-    loadBudgetStatementFromFile,
-    reducer,
-    saveBudgetStatementToFile,
-} from '../../src/budget-statement';
-import { fetchAttachment, readAttachment } from '../../src/document';
+} from '../../src/budget-statement/gen';
+import { fetchAttachment, readAttachment } from '../../src/document/utils';
 import { readFile } from '../../src/document/utils/node';
 
 describe('Budget Statement Audit Report reducer', () => {

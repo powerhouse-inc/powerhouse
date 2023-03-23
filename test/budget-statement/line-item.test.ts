@@ -1,11 +1,11 @@
+import { reducer } from '../../src/budget-statement';
+import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 import {
     addAccount,
     addLineItem,
     deleteLineItem,
     updateLineItem,
-} from '../../src/budget-statement';
-
-import { createBudgetStatement, reducer } from '../../src/budget-statement';
+} from '../../src/budget-statement/gen';
 
 describe('Budget Statement line item reducer', () => {
     it('should add line item', async () => {
