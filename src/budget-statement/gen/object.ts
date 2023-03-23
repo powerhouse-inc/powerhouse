@@ -1,16 +1,27 @@
-import { DocumentObject } from '../../document';
+import { applyMixins, DocumentObject } from '../../document';
 import {
-    Account,
-    AccountInput,
     BudgetStatement,
     BudgetStatementAction,
     reducer,
     State,
 } from '../custom';
 import { createBudgetStatement } from '../custom/utils';
-import { addAccount, deleteAccount, updateAccount } from '../gen';
+import AccountObject from './account/object';
+import AuditObject from './audit/object';
+import InitObject from './init/object';
+import LineItemObject from './line-item/object';
+import StatusObject from './status/object';
+import TopupObject from './topup/object';
 
-export class BudgetStatementObject extends DocumentObject<
+interface BudgetStatementObject
+    extends AccountObject,
+        AuditObject,
+        InitObject,
+        LineItemObject,
+        StatusObject,
+        TopupObject {}
+
+class BudgetStatementObject extends DocumentObject<
     State,
     BudgetStatementAction
 > {
@@ -26,16 +37,16 @@ export class BudgetStatementObject extends DocumentObject<
         super(reducer, createBudgetStatement(initialState));
     }
 
-    public addAccount(accounts: AccountInput[]) {
-        return this.dispatch(addAccount(accounts));
+    get month() {
+        return this.state.data.month;
     }
 
-    public updateAccount(accounts: AccountInput[]) {
-        return this.dispatch(updateAccount(accounts));
+    get owner() {
+        return this.state.data.owner;
     }
 
-    public deleteAccount(accounts: Account['address'][]) {
-        return this.dispatch(deleteAccount(accounts));
+    get quoteCurrency() {
+        return this.state.data.quoteCurrency;
     }
 
     public saveToFile(path: string) {
@@ -52,3 +63,14 @@ export class BudgetStatementObject extends DocumentObject<
         return budgetStatement;
     }
 }
+
+applyMixins(BudgetStatementObject, [
+    AccountObject,
+    AuditObject,
+    InitObject,
+    LineItemObject,
+    StatusObject,
+    TopupObject,
+]);
+
+export { BudgetStatementObject };
