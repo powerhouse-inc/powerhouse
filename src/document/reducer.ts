@@ -15,6 +15,7 @@ import {
     UNDO,
 } from './actions/types';
 import { Action, Document, ImmutableReducer } from './types';
+import { hash } from './utils/node';
 
 function getNextRevision(state: Document, action: Action): number {
     // UNDO, REDO and PRUNE alter the revision themselves
@@ -61,6 +62,8 @@ function updateOperations<T, A extends Action>(
             {
                 ...action,
                 index: operations.length,
+                timestamp: new Date().toISOString(),
+                hash: hash(state),
             },
         ],
     };

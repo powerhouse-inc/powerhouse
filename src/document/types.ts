@@ -16,7 +16,11 @@ export type ImmutableReducer<State, A extends Action> = (
     action: A
 ) => Document<State, A> | void;
 
-export type Operation<A extends Action = Action> = A & { index: number };
+export type Operation<A extends Action = Action> = A & {
+    index: number;
+    timestamp: string;
+    hash: string;
+};
 
 export type DocumentHeader = {
     name: string;

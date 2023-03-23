@@ -29,12 +29,12 @@ export function createReducer<T = unknown, A extends Action = Action>(
     return (state: Document<T, A | BaseAction>, action: A | BaseAction) => {
         // first runs the action by the document reducer to
         // update document fields and support base actions
-        const newState = documentReducer<T, A>(state, action, reducer);
+        let newState = documentReducer<T, A>(state, action, reducer);
 
         // wraps the custom reducer with Immer to avoid
         // mutation bugs and allow writing reducers with
         // mutating code
-        return produce(newState, draft => {
+        newState = produce(newState, draft => {
             // the reducer runs on a immutable version of
             // provided state
             const newDraft = reducer(draft, action as A);
@@ -46,6 +46,8 @@ export function createReducer<T = unknown, A extends Action = Action>(
                 return castDraft(newDraft);
             }
         });
+
+        return newState;
     };
 }
 
