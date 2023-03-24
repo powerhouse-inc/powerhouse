@@ -1,4 +1,4 @@
-import { RequestTopupAction, TransferTopupAction } from '../../gen';
+import { RequestTopupAction, TransferTopupAction } from '../../gen/topup/types';
 import { BudgetStatement } from '../types';
 
 export const requestTopupOperation = (

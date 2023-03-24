@@ -1,5 +1,5 @@
 import { WritableDraft } from 'immer/dist/internal';
-import { BaseAction } from './actions';
+import { BaseAction } from './actions/types';
 
 export type Action<T = string> = {
     type: T;

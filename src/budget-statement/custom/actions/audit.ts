@@ -1,9 +1,10 @@
 import { Operation } from '../../../document';
+import { hashAttachment } from '../../../document/utils';
 import {
     AddAuditReportAction,
     DeleteAuditReportAction,
     isAuditReport,
-} from '../../gen/audit';
+} from '../../gen/audit/types';
 import { BudgetStatement } from '../types';
 
 export const addAuditReportOperation = (
@@ -15,11 +16,11 @@ export const addAuditReportOperation = (
     ] as Operation<AddAuditReportAction>;
 
     action.input.reports.forEach((audit, index) => {
-        const attachmentKey = `attachment://audits/${audit.timestamp}` as const;
-
         if (isAuditReport(audit)) {
             state.data.auditReports.push(audit);
         } else {
+            const hash = hashAttachment(audit.report.data);
+            const attachmentKey = `attachment://audits/${hash}` as const;
             state.fileRegistry[attachmentKey] = {
                 data: audit.report.data,
                 mimeType: audit.report.mimeType,

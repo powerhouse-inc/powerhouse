@@ -58,10 +58,11 @@ const outputs: RollupOptions[] = [
         },
     },
     {
-        input: 'src/index.ts',
+        input,
         plugins: [dts({ respectExternal: true })],
         output: {
-            file: 'dist/index.d.ts',
+            dir: 'dist/',
+            entryFileNames: '[name].d.ts',
             format: 'es',
         },
     },

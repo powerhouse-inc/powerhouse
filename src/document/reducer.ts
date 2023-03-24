@@ -1,17 +1,19 @@
 import {
-    BaseAction,
-    isBaseAction,
     loadStateOperation,
-    LOAD_STATE,
-    PRUNE,
     pruneOperation,
-    REDO,
     redoOperation,
     setNameOperation,
-    SET_NAME,
-    UNDO,
     undoOperation,
 } from './actions';
+import {
+    BaseAction,
+    isBaseAction,
+    LOAD_STATE,
+    PRUNE,
+    REDO,
+    SET_NAME,
+    UNDO,
+} from './actions/types';
 import { Action, Document, ImmutableReducer } from './types';
 
 function getNextRevision(state: Document, action: Action): number {

@@ -1,4 +1,5 @@
-import { createAction, Document } from '..';
+import { Document } from '..';
+import { createAction } from '../utils';
 import {
     LoadStateAction,
     LOAD_STATE,

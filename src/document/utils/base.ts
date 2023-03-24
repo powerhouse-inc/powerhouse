@@ -1,5 +1,5 @@
 import produce, { castDraft } from 'immer';
-import { BaseAction } from '../actions';
+import { BaseAction } from '../actions/types';
 import { baseReducer } from '../reducer';
 import { Action, Document, ImmutableReducer } from '../types';
 

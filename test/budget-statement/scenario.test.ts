@@ -1,7 +1,8 @@
 import fs from 'fs';
 import { parse } from 'jsonc-parser';
 import path from 'path';
-import { createBudgetStatement, reducer } from '../../src/budget-statement';
+import { reducer } from '../../src/budget-statement';
+import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 
 // loads scenario from jsonc files
 const testFolder =

@@ -1,4 +1,5 @@
-import { createDocument, redo, setName, undo } from '../../src';
+import { redo, setName, undo } from '../../src/document/actions';
+import { createDocument } from '../../src/document/utils';
 import { emptyReducer } from '../helpers';
 
 describe('REDO operation', () => {

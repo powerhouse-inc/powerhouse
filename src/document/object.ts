@@ -1,9 +1,10 @@
-import { BaseAction } from './actions';
-import { Action, Document, Reducer } from './types';
+import { loadState, prune, redo, setName, undo } from './actions';
+import { BaseAction } from './actions/types';
+import { Action, Attachment, Document, Reducer } from './types';
 import { createDocument, loadFromFile, saveToFile } from './utils';
 
 export abstract class DocumentObject<T, A extends Action> {
-    private state: Document<T, A>;
+    protected state: Document<T, A>;
     private reducer: Reducer<T, A | BaseAction>;
 
     constructor(
@@ -12,10 +13,6 @@ export abstract class DocumentObject<T, A extends Action> {
     ) {
         this.reducer = reducer;
         this.state = createDocument(initialState);
-    }
-
-    public getState(): Document<T, A> {
-        return JSON.parse(JSON.stringify(this.state));
     }
 
     protected dispatch(action: A | BaseAction) {
@@ -38,4 +35,79 @@ export abstract class DocumentObject<T, A extends Action> {
         const state = await loadFromFile<T, A>(path, reducer);
         return state;
     }
+
+    get name() {
+        return this.state.name;
+    }
+
+    get documentType() {
+        return this.state.documentType;
+    }
+
+    get created() {
+        return this.state.created;
+    }
+
+    get lastModified() {
+        return this.state.lastModified;
+    }
+
+    get revision() {
+        return this.state.revision;
+    }
+
+    get initialState() {
+        return this.state.initialState;
+    }
+
+    get operations() {
+        return this.state.operations;
+    }
+
+    public getAttachment(attachment: Attachment) {
+        return this.state.fileRegistry[attachment];
+    }
+
+    /*
+     *   Base operations
+     */
+
+    public setName(name: string) {
+        this.dispatch(setName(name));
+    }
+
+    public undo(count: number) {
+        this.dispatch(undo(count));
+    }
+
+    public redo(count: number) {
+        this.dispatch(redo(count));
+    }
+
+    public prune(start?: number | undefined, end?: number | undefined) {
+        this.dispatch(prune(start, end));
+    }
+
+    public loadState(
+        state: Pick<Document, 'data' | 'name'>,
+        operations: number
+    ) {
+        this.dispatch(loadState(state, operations));
+    }
+}
+
+// Applies multiple mixins to the base class
+// https://www.typescriptlang.org/docs/handbook/mixins.html#alternative-pattern
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function applyMixins(derivedCtor: any, constructors: any[]) {
+    constructors.forEach(baseCtor => {
+        Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
+            Object.defineProperty(
+                derivedCtor.prototype,
+                name,
+                Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
+                    Object.create(null)
+            );
+        });
+    });
 }

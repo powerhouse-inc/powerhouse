@@ -1,4 +1,4 @@
-import { InitAction } from '../../gen';
+import { InitAction } from '../../gen/init/types';
 import { BudgetStatement } from '../types';
 import { createBudgetStatement } from '../utils';
 

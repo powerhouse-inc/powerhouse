@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import https from 'https';
 import mime from 'mime/lite';
@@ -57,11 +58,11 @@ export function fetchFile(
 export const getFile = async (
     file: string
 ): Promise<{ data: Buffer; mimeType?: string }> => {
-    if (fs.existsSync(file)) {
-        return {
-            data: readFile(file),
-            mimeType: mime.getType(file) || undefined,
-        };
-    }
-    return fetchFile(file);
+    return {
+        data: readFile(file),
+        mimeType: mime.getType(file) || undefined,
+    };
 };
+
+export const hash = (data: string, algorithm = 'md5') =>
+    crypto.createHash(algorithm).update(data).digest('base64');

@@ -11,8 +11,8 @@ describe('Budget Statement Class', () => {
             data: { month: '03/2023' },
         });
 
-        expect(budgetStatement.getState().data.month).toBe('03/2023');
-        expect(budgetStatement.getState().data.quoteCurrency).toBe(null);
+        expect(budgetStatement.month).toBe('03/2023');
+        expect(budgetStatement.quoteCurrency).toBe(null);
     });
 
     it('should add account', async () => {
@@ -24,7 +24,12 @@ describe('Budget Statement Class', () => {
             },
         ]);
 
-        expect(budgetStatement.getState().data.accounts).toStrictEqual([
+        expect(budgetStatement.getAccounts()).toStrictEqual([
+            budgetStatement.getAccount(
+                'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f'
+            ),
+        ]);
+        expect(budgetStatement.getAccounts()).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
@@ -62,7 +67,7 @@ describe('Budget Statement Class', () => {
                 },
             ]);
 
-        expect(budgetStatement.getState().data.accounts).toStrictEqual([
+        expect(budgetStatement.getAccounts()).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
@@ -123,10 +128,9 @@ describe('Budget Statement Class', () => {
         const budgetStatement = await BudgetStatementObject.fromFile(
             './test/budget-statement/temp/march.phbs.zip'
         );
-        const state = budgetStatement.getState();
-        expect(state.name).toBe('march');
-        expect(state.data.month).toBe('03/2023');
-        expect(budgetStatement.getState().data.accounts).toStrictEqual([
+        expect(budgetStatement.name).toBe('march');
+        expect(budgetStatement.month).toBe('03/2023');
+        expect(budgetStatement.getAccounts()).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',

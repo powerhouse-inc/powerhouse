@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
-import { BaseAction } from '../actions';
+import { BaseAction } from '../actions/types';
 import { Action, Attachment, Document, Reducer } from '../types';
-import { getFile, readFile, writeFile } from './node';
+import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 
 export const saveToFile = (
     document: Document,
@@ -62,7 +62,18 @@ export const loadFromFile = async <S, A extends Action>(
     );
 };
 
-export async function fetchAttachment(file: string) {
-    const { data, mimeType = 'application/octet-stream' } = await getFile(file);
+export async function fetchAttachment(url: string) {
+    const { data, mimeType = 'application/octet-stream' } = await fetchFile(
+        url
+    );
     return { data: data.toString('base64'), mimeType };
+}
+
+export async function readAttachment(path: string) {
+    const { data, mimeType = 'application/octet-stream' } = await getFile(path);
+    return { data: data.toString('base64'), mimeType };
+}
+
+export function hashAttachment(data: string) {
+    return hash(data);
 }

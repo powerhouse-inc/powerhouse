@@ -1,27 +1,31 @@
-import { createReducer } from '../../document';
+import { createReducer } from '../../document/utils';
 import {
     ADD_ACCOUNT,
-    ADD_AUDIT_REPORT,
-    ADD_LINE_ITEM,
-    APPROVE,
     DELETE_ACCOUNT,
-    DELETE_AUDIT_REPORT,
+    UPDATE_ACCOUNT,
+} from '../gen/account/types';
+import { ADD_AUDIT_REPORT, DELETE_AUDIT_REPORT } from '../gen/audit/types';
+import { INIT } from '../gen/init/types';
+import {
+    ADD_LINE_ITEM,
     DELETE_LINE_ITEM,
+    UPDATE_LINE_ITEM,
+} from '../gen/line-item/types';
+import {
+    APPROVE,
     ESCALATE,
-    INIT,
     REOPEN_TO_DRAFT,
     REOPEN_TO_REVIEW,
-    REQUEST_TOPUP,
     SUBMIT_FOR_REVIEW,
-    TRANSFER_TOPUP,
-    UPDATE_ACCOUNT,
-    UPDATE_LINE_ITEM,
-} from '../gen';
+} from '../gen/status/types';
+import { REQUEST_TOPUP, TRANSFER_TOPUP } from '../gen/topup/types';
 import {
     addAccountOperation,
+    addAuditReportOperation,
     addLineItemOperation,
     approveOperation,
     deleteAccountOperation,
+    deleteAuditReportOperation,
     deleteLineItemOperation,
     escalateOperation,
     initOperation,
@@ -33,10 +37,6 @@ import {
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
-import {
-    addAuditReportOperation,
-    deleteAuditReportOperation,
-} from './actions/audit';
 import { BudgetStatementAction, State } from './types';
 
 export const reducer = createReducer<State, BudgetStatementAction>(

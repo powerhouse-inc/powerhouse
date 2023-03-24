@@ -141,4 +141,3 @@ export function loadStateOperation<T, A extends Action>(
 }
 
 export * from './creators';
-export * from './types';
