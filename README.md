@@ -7,8 +7,10 @@ Because these different applications, and potentially others, use the same busin
 
 Install the library:
 
--   NPM: `npm install @acaldas/temp-document-model-libs`
--   Yarn: `yarn add @acaldas/temp-document-model-libs`
+-   NPM: `npm install @acaldas/document-model-libs`
+-   Yarn: `yarn add @acaldas/document-model-libs`
+
+There are two ways to interact with a document:
 
 ### Functional:
 
@@ -17,7 +19,7 @@ import {
     actions,
     reducer,
     utils,
-} from '@acaldas/temp-document-model-libs/budget-statement';
+} from '@acaldas/document-model-libs/budget-statement';
 
 let budgetStatement = utils.createBudgetStatement({
     name: 'March report',
@@ -33,7 +35,7 @@ budgetStatement = reducer(
 ### Object oriented:
 
 ```javascript
-import { BudgetStatementObject } from '@acaldas/temp-document-model-libs/budget-statement';
+import { BudgetStatementObject } from '@acaldas/document-model-libs/budget-statement';
 
 const budgetStatement = new BudgetStatementObject({
     name: 'march',
