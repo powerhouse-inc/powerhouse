@@ -1,8 +1,5 @@
 # Powerhouse Document Model
 
-This library enables document-based business processes. A documents consists of a JSON
-Because these different applications, and potentially others, use the same business logic component, they will be guaranteed to use the exact same rules for modifying the documents, ensuring that the data structure doesn’t get corrupted. And saving a lot of time in the development of the software (less bugs, less explanation needed.)
-
 ## Getting started
 
 Install the library:
@@ -56,11 +53,11 @@ The business logic is implemented in pure functions, making it easy to test and 
 
 An action is a JSON object with the action name and payload:
 
-```JSON
+```javascript
 {
-    type: "SET_NAME"
+    type: 'SET_NAME';
     input: {
-        name: "March report"
+        name: 'March report';
     }
 }
 ```
@@ -82,7 +79,7 @@ document.setName('March report');
 
 All document models extend the Base Document model, which provides some common features. A document has the following structure:
 
-```JSON
+```javascript
 {
     name: "SES 2023-01 expense report", // name of the document
     documentType: "powerhouse/budget-statement", // type of the document model
@@ -119,4 +116,127 @@ redo(count: number);
 
 ```javascript
 prune(start?: number, end?: number);
+```
+
+## Budget Statement Model
+
+A Budget statement follows the following data structure:
+
+```javascript
+{
+    name: "SES January 2023",
+    documentType: "powerhouse/budget-statement",
+    revision: 10,
+    created: "2023-02-21 10:15:26",
+    lastModified: "2023-02-21 13:12:49",
+    data: {
+        owner: {
+            ref: "makerdao/core-unit",
+            id: "SES-001",
+            title: "Sustainable Ecosystem Scaling"
+        },
+        month: "2023/01",
+        status: "Draft" | "Review" | "Final" | "Escalated",
+        quoteCurrency: "DAI",
+        auditReports: [
+            {
+                timestamp: "2023-02-21 13:12:49",
+                report: "attachment://audits/report.pdf",
+                status: "Approved" | "ApprovedWithComments" | "NeedsAction" | "Escalated"
+            }
+        ],
+        accounts: [
+            {
+                address: "eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f",
+                name: "Grants Program",
+                accountBalance: {
+                    timestamp: "2023-02-21 11:22:09",
+                    value: 4048.02
+                },
+                targetBalance: {
+                    comment: "3 months of operational runway",
+                    value: 5048.02
+                },
+                topupTransaction: {
+                    id: "eth:0x3F23D0E301C458B095A02b12E3bC4c752a844eD9",
+                    requestedValue: 1000,
+                    value: 1000
+                },
+                lineItems: [
+                    {
+                        category: {
+                            ref: "makerdao/budget-category",
+                            id: "TravelAndEntertainment",
+                            title: "Travel & Entertainment",
+                            headcountExpense: true
+                        },
+                        group: {
+                            ref: "makerdao/project",
+                            id: "core-unit/SES/2023/005",
+                            title: "Core Unit Operational Support"
+                        },
+                        budgetCap: 10000,
+                        payment: 0,
+                        actual: 4000,
+                        forecast: [
+                            {
+                                month: "2023/02",
+                                value: 30000
+                            },
+                            {
+                                month: "2023/03",
+                                value: 40000
+                            },
+                            {
+                                month: "2023/04",
+                                value: 30000
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
+```
+
+### Budget Statement Actions
+
+#### Account
+
+A budget statement might have multiple accounts, each with its own expenses.
+
+-   `ADD_ACCOUNT`: Adds an account to the budget. This action accepts an array of accounts, so multiple accounts can be added in one action. The account can be initialized with all attributes but the only required attribute is an unique account address, which should follow a Gnosis-like format: `eth:0x...`.
+
+```javascript
+addAccount([{ address: string }]);
+```
+
+-   `UPDATE_ACCOUNT`: Edits existing accounts. Accounts are referenced by their address.
+
+```javascript
+updateAccount([{ address: string, ...account }]);
+```
+
+-   `DELETE_ACCOUNT`: Deletes the accounts with the provided addresses.
+
+```javascript
+deleteAccount(accounts: string[]);
+```
+
+#### Status
+
+The budget goes through various status as it is reviewed by auditors.
+It starts as a `Draft` which can then be submitted for `Review`. The auditor then either approves with or raises issues.
+
+-   `SUBMIT_FOR_REVIEW`: Sets the budget as ready to be reviewed.
+
+```javascript
+submitForReview();
+```
+
+-   `ESCALATE`: Used by the auditor if there is any issue during the review
+
+```javascript
+escalate();
 ```
