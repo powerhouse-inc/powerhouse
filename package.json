@@ -31,7 +31,8 @@
         "build": "rollup --config rollup.config.ts --configPlugin typescript",
         "lint": "eslint --ext .js,.ts .",
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
-        "test": "jest"
+        "test": "jest",
+        "docs": "typedoc src/index.doc.ts"
     },
     "devDependencies": {
         "@rollup/plugin-node-resolve": "^15.0.1",
