@@ -16,7 +16,7 @@ import {
  *
  * @param account - The account to add line items to.
  * @param lineItems - An array of line items to add to the account.
- * @category Actions
+ * @group Line Item
  */
 export const addLineItem = (
     account: Account['address'],
@@ -32,7 +32,7 @@ export const addLineItem = (
  *
  * @param account - The account containing the line items to update.
  * @param lineItems - An array of line items to update in the account.
- * @category Actions
+ * @group Line Item
  */
 export const updateLineItem = (
     account: Account['address'],
@@ -48,7 +48,7 @@ export const updateLineItem = (
  *
  * @param account - The account containing the line items to delete.
  * @param lineItems - An array of line items to delete from the account.
- * @category Actions
+ * @group Line Item
  */
 export const deleteLineItem = (
     account: Account['address'],

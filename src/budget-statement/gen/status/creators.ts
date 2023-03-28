@@ -15,7 +15,7 @@ import {
 /**
  * Submits the budget statement for review.
  *
- * @category Actions
+ * @group Status
  */
 export const submitForReview = () =>
     createAction<SubmitForReviewAction>(SUBMIT_FOR_REVIEW);
@@ -23,21 +23,21 @@ export const submitForReview = () =>
 /**
  * Escalates the budget statement if there is any issue.
  *
- * @category Actions
+ * @group Status
  */
 export const escalate = () => createAction<EscalateAction>(ESCALATE);
 
 /**
  * Approves the budget statement.
  *
- * @category Actions
+ * @group Status
  */
 export const approve = () => createAction<ApproveAction>(APPROVE);
 
 /**
  * Reopens the budget statement to draft state.
  *
- * @category Actions
+ * @group Status
  */
 export const reopenToDraft = () =>
     createAction<ReopenToDraftAction>(REOPEN_TO_DRAFT);
@@ -45,7 +45,7 @@ export const reopenToDraft = () =>
 /**
  * Reopens the budget statement to review state.
  *
- * @category Actions
+ * @group Status
  */
 export const reopenToReview = () =>
     createAction<ReopenToReviewAction>(REOPEN_TO_REVIEW);
