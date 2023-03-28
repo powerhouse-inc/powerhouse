@@ -11,6 +11,13 @@ import {
     UPDATE_LINE_ITEM,
 } from './types';
 
+/**
+ * Creates an action to add one or more line items to an account.
+ *
+ * @param account - The account to add line items to.
+ * @param lineItems - An array of line items to add to the account.
+ * @category Actions
+ */
 export const addLineItem = (
     account: Account['address'],
     lineItems: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>[]
@@ -20,6 +27,13 @@ export const addLineItem = (
         lineItems: lineItems.map(createLineItem),
     });
 
+/**
+ * Creates an action to update one or more line items in an account.
+ *
+ * @param account - The account containing the line items to update.
+ * @param lineItems - An array of line items to update in the account.
+ * @category Actions
+ */
 export const updateLineItem = (
     account: Account['address'],
     lineItems: LineItemInput[]
@@ -29,6 +43,13 @@ export const updateLineItem = (
         lineItems,
     });
 
+/**
+ * Creates an action to delete one or more line items from an account.
+ *
+ * @param account - The account containing the line items to delete.
+ * @param lineItems - An array of line items to delete from the account.
+ * @category Actions
+ */
 export const deleteLineItem = (
     account: Account['address'],
     lineItems: { category: string; group: string }[]
