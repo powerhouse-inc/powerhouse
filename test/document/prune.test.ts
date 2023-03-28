@@ -6,7 +6,13 @@ import {
     undo,
 } from '../../src/document/actions';
 import { createDocument } from '../../src/document/utils';
-import { CountAction, countReducer, CountState, increment } from '../helpers';
+import {
+    CountAction,
+    countReducer,
+    CountState,
+    increment,
+    mapOperations,
+} from '../helpers';
 
 describe('PRUNE operation', () => {
     it('should prune first 4 operations', async () => {
@@ -24,7 +30,7 @@ describe('PRUNE operation', () => {
         expect(newState.name).toBe('Document');
         expect(newState.data.count).toBe(4);
         expect(newState.revision).toBe(2);
-        expect(newState.operations).toStrictEqual([
+        expect(mapOperations(newState.operations)).toStrictEqual([
             {
                 ...loadState(
                     {
@@ -57,7 +63,7 @@ describe('PRUNE operation', () => {
         expect(newState.name).toBe('Document');
         expect(newState.data.count).toBe(4);
         expect(newState.revision).toBe(3);
-        expect(newState.operations).toStrictEqual([
+        expect(mapOperations(newState.operations)).toStrictEqual([
             { ...increment(), index: 0 },
             { ...setName('Document'), index: 1 },
             {
@@ -91,7 +97,7 @@ describe('PRUNE operation', () => {
         expect(newState.name).toBe('Document');
         expect(newState.data.count).toBe(4);
         expect(newState.revision).toBe(4);
-        expect(newState.operations).toStrictEqual([
+        expect(mapOperations(newState.operations)).toStrictEqual([
             { ...increment(), index: 0 },
             { ...setName('Document'), index: 1 },
             {
@@ -127,7 +133,7 @@ describe('PRUNE operation', () => {
         expect(newState.name).toBe('');
         expect(newState.data.count).toBe(1);
         expect(newState.revision).toBe(1);
-        expect(newState.operations).toStrictEqual([
+        expect(mapOperations(newState.operations)).toStrictEqual([
             { ...increment(), index: 0 },
             {
                 ...loadState(
@@ -162,7 +168,7 @@ describe('PRUNE operation', () => {
         expect(newState.name).toBe('Document');
         expect(newState.data.count).toBe(4);
         expect(newState.revision).toBe(2);
-        expect(newState.operations).toStrictEqual([
+        expect(mapOperations(newState.operations)).toStrictEqual([
             { ...increment(), index: 0 },
             {
                 ...loadState(

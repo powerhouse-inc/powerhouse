@@ -1,3 +1,4 @@
+import produce, { castDraft } from 'immer';
 import {
     loadStateOperation,
     pruneOperation,
@@ -15,7 +16,7 @@ import {
     UNDO,
 } from './actions/types';
 import { Action, Document, ImmutableReducer } from './types';
-import { hash } from './utils/node';
+import { hashDocument } from './utils';
 
 function getNextRevision(state: Document, action: Action): number {
     // UNDO, REDO and PRUNE alter the revision themselves
@@ -54,7 +55,7 @@ function updateOperations<T, A extends Action>(
     const operations = state.operations.slice(0, state.revision);
 
     // adds the action to the operations history with
-    // the latest index
+    // the latest index and current timestamp
     return {
         ...state,
         operations: [
@@ -63,7 +64,7 @@ function updateOperations<T, A extends Action>(
                 ...action,
                 index: operations.length,
                 timestamp: new Date().toISOString(),
-                hash: hash(state),
+                hash: '',
             },
         ],
     };
@@ -111,10 +112,9 @@ export function baseReducer<T, A extends Action>(
     action: A | BaseAction,
     customReducer: ImmutableReducer<T, A>
 ) {
-    let newState = state;
-
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first
+    let newState = state;
     if (isBaseAction(action)) {
         newState = _baseReducer(newState, action, customReducer);
     }
@@ -122,5 +122,26 @@ export function baseReducer<T, A extends Action>(
     // updates the document revision number, last modified date
     // and operation history
     newState = updateDocument(newState, action);
-    return newState;
+
+    // wraps the custom reducer with Immer to avoid
+    // mutation bugs and allow writing reducers with
+    // mutating code
+    newState = produce(newState, draft => {
+        // the reducer runs on a immutable version of
+        // provided state
+        const returnedDraft = customReducer(draft, action as A);
+
+        // if the reducer creates a new state object instead
+        // of mutating the draft then returns the new state
+        if (returnedDraft) {
+            // casts new state as draft to comply with typescript
+            return castDraft(returnedDraft);
+        }
+    });
+
+    // updates the last operation with the hash of the resulting state
+    return produce(newState, draft => {
+        draft.operations[draft.operations.length - 1].hash =
+            hashDocument(draft);
+    });
 }

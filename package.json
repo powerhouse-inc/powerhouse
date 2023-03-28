@@ -57,6 +57,7 @@
     },
     "dependencies": {
         "immer": "^9.0.19",
+        "json-stringify-deterministic": "^1.0.8",
         "jszip": "^3.10.1",
         "mime": "^3.0.0"
     }

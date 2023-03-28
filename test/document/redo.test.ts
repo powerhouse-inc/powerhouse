@@ -1,6 +1,6 @@
 import { redo, setName, undo } from '../../src/document/actions';
 import { createDocument } from '../../src/document/utils';
-import { emptyReducer } from '../helpers';
+import { emptyReducer, mapOperations } from '../helpers';
 
 describe('REDO operation', () => {
     it('should redo previous UNDO operation', () => {
@@ -10,7 +10,7 @@ describe('REDO operation', () => {
         state = emptyReducer(state, redo(1));
 
         expect(state.name).toBe('TEST_1');
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
         ]);
         expect(state.revision).toBe(1);
@@ -25,7 +25,7 @@ describe('REDO operation', () => {
         state = emptyReducer(state, redo(2));
 
         expect(state.name).toBe('TEST_2');
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -40,7 +40,7 @@ describe('REDO operation', () => {
         state = emptyReducer(state, redo(1));
 
         expect(state.name).toBe('TEST_1');
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -56,7 +56,7 @@ describe('REDO operation', () => {
         state = emptyReducer(state, redo(1));
 
         expect(state.name).toBe('TEST_2');
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -71,7 +71,7 @@ describe('REDO operation', () => {
         state = emptyReducer(state, redo(5));
 
         expect(state.name).toBe('TEST_2');
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -85,7 +85,7 @@ describe('REDO operation', () => {
         state = emptyReducer(state, setName('TEST_2'));
         state = emptyReducer(state, undo(1));
         state = emptyReducer(state, redo(1));
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_2'), index: 0 },
         ]);
         expect(state.name).toBe('TEST_2');

@@ -1,7 +1,8 @@
-import produce, { castDraft } from 'immer';
+import JSONDeterministic from 'json-stringify-deterministic';
 import { BaseAction } from '../actions/types';
 import { baseReducer } from '../reducer';
 import { Action, Document, ImmutableReducer } from '../types';
+import { hash } from './node';
 
 // helper to be used by action creators
 export function createAction<A extends Action>(
@@ -27,27 +28,7 @@ export function createReducer<T = unknown, A extends Action = Action>(
     documentReducer = baseReducer
 ) {
     return (state: Document<T, A | BaseAction>, action: A | BaseAction) => {
-        // first runs the action by the document reducer to
-        // update document fields and support base actions
-        let newState = documentReducer<T, A>(state, action, reducer);
-
-        // wraps the custom reducer with Immer to avoid
-        // mutation bugs and allow writing reducers with
-        // mutating code
-        newState = produce(newState, draft => {
-            // the reducer runs on a immutable version of
-            // provided state
-            const newDraft = reducer(draft, action as A);
-
-            // if the reducer creates a new state object instead
-            // of mutating the draft then returns the new state
-            if (newDraft) {
-                // casts new state as draft to comply with typescript
-                return castDraft(newDraft);
-            }
-        });
-
-        return newState;
+        return documentReducer<T, A>(state, action, reducer);
     };
 }
 
@@ -73,4 +54,9 @@ export const createDocument = <T, A extends Action>(
         ...state,
         initialState: newInitialState,
     };
+};
+
+export const hashDocument = (state: Document) => {
+    const { fileRegistry, ...document } = state;
+    return hash(JSONDeterministic(document));
 };

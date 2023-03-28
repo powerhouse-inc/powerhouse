@@ -6,5 +6,5 @@ export const initOperation = (
     state: BudgetStatement,
     action: InitAction
 ): BudgetStatement => {
-    return createBudgetStatement(action.input);
+    return createBudgetStatement({ ...state, ...action.input });
 };
