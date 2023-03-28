@@ -16,6 +16,13 @@ import {
 } from './actions/types';
 import { Action, Document, ImmutableReducer } from './types';
 
+/**
+ * Gets the next revision number based on the provided action.
+ *
+ * @param state The current state of the document.
+ * @param action The action being applied to the document.
+ * @returns The next revision number.
+ */
 function getNextRevision(state: Document, action: Action): number {
     // UNDO, REDO and PRUNE alter the revision themselves
     return [UNDO, REDO, PRUNE].includes(action.type)
@@ -23,8 +30,14 @@ function getNextRevision(state: Document, action: Action): number {
         : state.revision + 1;
 }
 
-// updates the document revision number and
-// the date of the last modification
+/**
+ * Updates the document header with the latest revision number and
+ * date of last modification.
+ *
+ * @param state The current state of the document.
+ * @param action The action being applied to the document.
+ * @returns The updated document state.
+ */
 function updateHeader<T, A extends Action>(
     state: Document<T, A>,
     action: A
@@ -36,8 +49,13 @@ function updateHeader<T, A extends Action>(
     };
 }
 
-// updates the operations history according to the
-// provided action
+/**
+ * Updates the operations history of the document based on the provided action.
+ *
+ * @param state The current state of the document.
+ * @param action The action being applied to the document.
+ * @returns The updated document state.
+ */
 function updateOperations<T, A extends Action>(
     state: Document<T, A>,
     action: A
@@ -66,6 +84,13 @@ function updateOperations<T, A extends Action>(
     };
 }
 
+/**
+ * Updates the document state based on the provided action.
+ *
+ * @param state The current state of the document.
+ * @param action The action being applied to the document.
+ * @returns The updated document state.
+ */
 function updateDocument<T, A extends Action>(
     state: Document<T, A>,
     action: A | BaseAction
@@ -75,7 +100,14 @@ function updateDocument<T, A extends Action>(
     return newState;
 }
 
-// reducer for the base document actions
+/**
+ * The base document reducer function that wraps a custom reducer function.
+ *
+ * @param state The current state of the document.
+ * @param action The action being applied to the document.
+ * @param wrappedReducer The custom reducer function being wrapped by the base reducer.
+ * @returns The updated document state.
+ */
 function _baseReducer<T, A extends Action>(
     state: Document<T, A>,
     action: BaseAction,
@@ -102,7 +134,18 @@ function _baseReducer<T, A extends Action>(
     }
 }
 
-// Base document reducer that wraps a custom document reducer
+/**
+ * Base document reducer that wraps a custom document reducer and handles
+ * document-level actions such as undo, redo, prune, and set name.
+ *
+ * @template T - The type of the state of the custom reducer.
+ * @template A - The type of the actions of the custom reducer.
+ * @param state - The current state of the document.
+ * @param action - The action object to apply to the state.
+ * @param customReducer - The custom reducer that implements the application logic
+ * specific to the document's state.
+ * @returns The new state of the document.
+ */
 export function baseReducer<T, A extends Action>(
     state: Document<T, A>,
     action: A | BaseAction,

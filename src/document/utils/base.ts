@@ -3,7 +3,22 @@ import { BaseAction } from '../actions/types';
 import { baseReducer } from '../reducer';
 import { Action, Document, ImmutableReducer } from '../types';
 
-// helper to be used by action creators
+/**
+ * Helper function to be used by action creators.
+ *
+ * @remarks
+ * Creates an action with the given type and input properties. The input
+ * properties default to an empty object.
+ *
+ * @typeParam A - Type of the action to be returned.
+ *
+ * @param type - The type of the action.
+ * @param input - The input properties of the action.
+ *
+ * @throws Error if the type is empty or not a string.
+ *
+ * @returns The new action.
+ */
 export function createAction<A extends Action>(
     type: A['type'],
     input: A['input'] = {} as A['input']
@@ -19,9 +34,24 @@ export function createAction<A extends Action>(
     return { type, input } as A;
 }
 
-// wraps reducer with documentReducer, adding support for
-// document actions: SET_NAME, UNDO, REDO, PRUNE
-// Also updates the document-related attributes on every operation
+/**
+ * Helper function to create a document model reducer.
+ *
+ * @remarks
+ * This function creates a new reducer that wraps the provided `reducer` with
+ * `documentReducer`, adding support for document actions:
+ *   - `SET_NAME`
+ *   - `UNDO`
+ *   - `REDO`
+ *   - `PRUNE`
+ *
+ * It also updates the document-related attributes on every operation.
+ *
+ * @param reducer - The custom reducer to wrap.
+ * @param documentReducer - The document reducer to use.
+ *
+ * @returns The new reducer.
+ */
 export function createReducer<T = unknown, A extends Action = Action>(
     reducer: ImmutableReducer<T, A>,
     documentReducer = baseReducer
@@ -49,7 +79,17 @@ export function createReducer<T = unknown, A extends Action = Action>(
     };
 }
 
-// builds the initial document state from the provided data
+/**
+ * Builds the initial document state from the provided data.
+ *
+ * @typeParam T - The type of the data.
+ * @typeParam A - The type of the actions.
+ *
+ * @param initialState - The initial state of the document. The `data` property
+ *   is required, but all other properties are optional.
+ *
+ * @returns The new document state.
+ */
 export const createDocument = <T, A extends Action>(
     initialState?: Partial<Document<T, A>> & { data: T }
 ): Document<T, A> => {

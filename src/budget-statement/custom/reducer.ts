@@ -39,6 +39,30 @@ import {
 } from './actions';
 import { BudgetStatementAction, State } from './types';
 
+/**
+ * Reducer for the BudgetStatement module, which handles operations related to budget statements.
+ * @remarks
+ * This reducer handles the following actions:
+ * - `INIT: initializes the state of the module.
+ * - `ADD_ACCOUNT`: adds an account to the state.
+ * - `UPDATE_ACCOUNT`: updates an account in the state.
+ * - `DELETE_ACCOUNT`: removes an account from the state.
+ * - `ADD_LINE_ITEM`: adds a line item to an account in the state.
+ * - `UPDATE_LINE_ITEM`: updates a line item in an account in the state.
+ * - `DELETE_LINE_ITEM`: removes a line item from an account in the state.
+ * - `SUBMIT_FOR_REVIEW`: updates the status of the budget statement to "Under Review".
+ * - `ESCALATE`: escalates the budget statement to a higher authority.
+ * - `APPROVE`: approves the budget statement.
+ * - `REOPEN_TO_DRAFT`: changes the status of the budget statement to "Draft".
+ * - `REOPEN_TO_REVIEW`: changes the status of the budget statement to "Under Review".
+ * - `REQUEST_TOPUP`: requests a top-up of an account.
+ * - `TRANSFER_TOPUP`: transfers a top-up to an account.
+ * - `ADD_AUDIT_REPORT`: adds an audit report to an account in the state.
+ * - `DELETE_AUDIT_REPORT`: removes an audit report from an account in the state.
+ * @param state - The current state of the module.
+ * @param action - The action to be performed on the state.
+ * @returns The new state after applying the action.
+ */
 export const reducer = createReducer<State, BudgetStatementAction>(
     (state, action) => {
         switch (action.type) {

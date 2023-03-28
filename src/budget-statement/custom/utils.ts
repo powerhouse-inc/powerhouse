@@ -11,6 +11,12 @@ import {
     State,
 } from './types';
 
+/**
+ *
+ * Creates a new BudgetStatement document with an initial state.
+ * @param initialState - The initial state of the document.
+ * @returns {BudgetStatement} The new BudgetStatement document.
+ */
 export const createBudgetStatement = (
     initialState?: Partial<
         Omit<BudgetStatement, 'data'> & {
@@ -36,6 +42,11 @@ export const createBudgetStatement = (
         },
     });
 
+/**
+ * Creates a new Account with default properties and the given input properties.
+ * @param {AccountInput} input - The input properties of the account.
+ * @returns {Account} The new Account object.
+ */
 export const createAccount = (input: AccountInput): Account => ({
     name: '',
     accountBalance: {
@@ -55,6 +66,11 @@ export const createAccount = (input: AccountInput): Account => ({
     ...input,
 });
 
+/**
+ * Creates a new LineItem with default properties and the given input properties.
+ * @param input - The input properties of the line item.
+ * @returns {LineItem} The new LineItem object.
+ */
 export const createLineItem = (
     input: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>
 ): LineItem => ({
@@ -65,6 +81,12 @@ export const createLineItem = (
     ...input,
 });
 
+/**
+ * Saves the BudgetStatement document to the specified file path.
+ * @param {BudgetStatement} document - The BudgetStatement document to save.
+ * @param {string} path - The file path to save the document to.
+ * @returns {Promise<string>} A promise that resolves with the saved file path.
+ */
 export const saveBudgetStatementToFile = (
     document: BudgetStatement,
     path: string
@@ -72,6 +94,11 @@ export const saveBudgetStatementToFile = (
     return saveToFile(document, path, 'phbs');
 };
 
+/**
+ * Loads the BudgetStatement document from the specified file path.
+ * @param {string} path - The file path to load the document from.
+ * @returns {Promise<BudgetStatement>} A promise that resolves with the loaded BudgetStatement document.
+ */
 export const loadBudgetStatementFromFile = async (
     path: string
 ): Promise<BudgetStatement> => {
