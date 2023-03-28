@@ -13,6 +13,7 @@ import {
  * @param account - The address of the account to top-up.
  * @param value - The amount to top-up the account by.
  *
+ * @group Topup
  */
 export const requestTopup = (account: Account['address'], value: number) =>
     createAction<RequestTopupAction>(REQUEST_TOPUP, { account, value });
@@ -24,6 +25,7 @@ export const requestTopup = (account: Account['address'], value: number) =>
  * @param value - The amount of top-up to transfer.
  * @param transaction - The transaction ID of the transfer.
  *
+ * @group Topup
  */
 export const transferTopup = (
     account: Account['address'],

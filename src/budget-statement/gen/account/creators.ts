@@ -19,7 +19,7 @@ import {
 /**
  * Action creator for adding accounts to the budget statement.
  * @param accounts Array of account inputs to be added.
- * @group Actions
+ * @group Account
  */
 export const addAccount = (accounts: AccountInput[]) =>
     createAction<AddAccountAction>(ADD_ACCOUNT, {
@@ -29,7 +29,7 @@ export const addAccount = (accounts: AccountInput[]) =>
 /**
  * Action creator for updating accounts in the budget statement.
  * @param accounts Array of account inputs to be updated.
- * @group Actions
+ * @group Account
  */
 export const updateAccount = (accounts: AccountInput[]) =>
     createAction<UpdateAccountAction>(UPDATE_ACCOUNT, { accounts });
@@ -37,7 +37,7 @@ export const updateAccount = (accounts: AccountInput[]) =>
 /**
  * Action creator for deleting accounts from the budget statement.
  * @param accounts Array of addresses of the accounts to be deleted.
- * @group asdasdasd
+ * @group Account
  */
 export const deleteAccount = (accounts: Account['address'][]) =>
     createAction<DeleteAccountAction>(DELETE_ACCOUNT, { accounts });

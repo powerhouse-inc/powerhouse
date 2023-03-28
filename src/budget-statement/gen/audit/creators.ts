@@ -15,7 +15,7 @@ import {
  *
  * @param reports - An array of objects representing the audit reports to add.
  *
- * @category Actions
+ * @group Audit
  */
 export const addAuditReport = (
     reports: {
@@ -43,7 +43,7 @@ export const addAuditReport = (
  *
  * @param reports - An array of reports to be deleted.
  * @returns The created action.
- * @category Actions
+ * @group Audit
  */
 export const deleteAuditReport = (reports: AuditReport['report'][]) =>
     createAction<DeleteAuditReportAction>(DELETE_AUDIT_REPORT, { reports });
