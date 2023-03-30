@@ -22,13 +22,14 @@ documents
 
 ### Classes
 
-- [DocumentObject](../classes/Document.DocumentObject.md)
+- [BaseDocument](../classes/Document.BaseDocument.md)
 
 ### Type Aliases
 
 - [Action](Document.md#action)
 - [Attachment](Document.md#attachment)
 - [Document](Document.md#document)
+- [DocumentFile](Document.md#documentfile)
 - [DocumentHeader](Document.md#documentheader)
 - [FileRegistry](Document.md#fileregistry)
 - [ImmutableReducer](Document.md#immutablereducer)
@@ -63,7 +64,7 @@ Defines the basic structure of an action.
 
 #### Defined in
 
-[document/types.ts:9](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/types.ts#L9)
+[document/types.ts:9](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L9)
 
 ___
 
@@ -79,7 +80,7 @@ Attachment string is formatted as `attachment://<filename>`.
 
 #### Defined in
 
-[document/types.ts:123](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/types.ts#L123)
+[document/types.ts:126](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L126)
 
 ___
 
@@ -102,7 +103,28 @@ This type is extended by all Document models.
 
 #### Defined in
 
-[document/types.ts:103](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/types.ts#L103)
+[document/types.ts:106](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L106)
+
+___
+
+### DocumentFile
+
+Ƭ **DocumentFile**: `Object`
+
+The attributes stored for a file. Namely, attachments of a document.
+
+#### Type declaration
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `data` | `string` | The binary data of the attachment in Base64 |
+| `extension?` | `string` | - |
+| `fileName?` | `string` | - |
+| `mimeType` | `string` | The MIME type of the attachment |
+
+#### Defined in
+
+[document/types.ts:76](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L76)
 
 ___
 
@@ -124,13 +146,13 @@ The base attributes of a [Document](Document.md#document).
 
 #### Defined in
 
-[document/types.ts:60](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/types.ts#L60)
+[document/types.ts:60](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L60)
 
 ___
 
 ### FileRegistry
 
-Ƭ **FileRegistry**: `Record`<[`Attachment`](Document.md#attachment), { `data`: `string` ; `mimeType`: `string`  }\>
+Ƭ **FileRegistry**: `Record`<[`Attachment`](Document.md#attachment), [`DocumentFile`](Document.md#documentfile)\>
 
 Object that indexes attachments of a Document.
 
@@ -139,13 +161,9 @@ Object that indexes attachments of a Document.
 This is used to reduce memory usage to avoid
 multiple instances of the binary data of the attachments.
 
-data - Binary data of the attachment in Base64
-
-mimeType - MIME type of the attachment
-
 #### Defined in
 
-[document/types.ts:84](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/types.ts#L84)
+[document/types.ts:95](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L95)
 
 ___
 
@@ -186,7 +204,7 @@ The returned state will always be a new object.
 
 #### Defined in
 
-[document/types.ts:40](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/types.ts#L40)
+[document/types.ts:40](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L40)
 
 ___
 
@@ -210,7 +228,7 @@ document's history from the beginning.
 
 #### Defined in
 
-[document/types.ts:55](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/types.ts#L55)
+[document/types.ts:55](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L55)
 
 ___
 
@@ -245,7 +263,7 @@ of the document and returns the new state.
 
 #### Defined in
 
-[document/types.ts:23](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/types.ts#L23)
+[document/types.ts:23](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L23)
 
 ## Functions
 
@@ -273,7 +291,7 @@ Used to have separate mixins to group methods by actions.
 
 #### Defined in
 
-[document/object.ts:183](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L183)
+[document/object.ts:183](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L183)
 
 ___
 
@@ -307,4 +325,4 @@ The new state of the document.
 
 #### Defined in
 
-[document/reducer.ts:149](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/reducer.ts#L149)
+[document/reducer.ts:149](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/reducer.ts#L149)

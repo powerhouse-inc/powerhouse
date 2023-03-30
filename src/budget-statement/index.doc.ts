@@ -1,3 +1,3 @@
 export * from './custom';
 export * as actions from './gen/action';
-export * from './gen/object';
+export { BudgetStatement } from './gen/object';

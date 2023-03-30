@@ -36,9 +36,9 @@ budgetStatement = reducer(
 ### Object oriented:
 
 ```javascript
-import { BudgetStatementObject } from '@acaldas/document-model-libs/budget-statement';
+import { BudgetStatement } from '@acaldas/document-model-libs/budget-statement';
 
-const budgetStatement = new BudgetStatementObject({
+const budgetStatement = new BudgetStatement({
     name: 'march',
     data: { month: '2023/01' },
 });

@@ -1,4 +1,4 @@
-import { DocumentObject } from '../../../document';
+import { BaseDocument } from '../../../document';
 import {
     Account,
     AccountInput,
@@ -7,13 +7,18 @@ import {
 } from '../../custom';
 import { addAccount, deleteAccount, updateAccount } from './creators';
 
-export default class AccountObject extends DocumentObject<
+/**
+ * Account related methods and getters
+ */
+export default class AccountObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {
     /**
      * Adds one or more accounts to the budget statement.
      * @param accounts An array of AccountInput objects to add.
+     *
+     * @category Account
      */
     public addAccount(accounts: AccountInput[]) {
         return this.dispatch(addAccount(accounts));
@@ -22,6 +27,8 @@ export default class AccountObject extends DocumentObject<
     /**
      * Updates one or more existing accounts in the budget statement.
      * @param accounts An array of AccountInput objects to update.
+     *
+     * @category Account
      */
     public updateAccount(accounts: AccountInput[]) {
         return this.dispatch(updateAccount(accounts));
@@ -30,6 +37,8 @@ export default class AccountObject extends DocumentObject<
     /**
      * Deletes one or more accounts from the budget statement.
      * @param addresses An array of addresses of the accounts to delete.
+     *
+     * @category Account
      */
     public deleteAccount(accounts: Account['address'][]) {
         return this.dispatch(deleteAccount(accounts));
@@ -37,16 +46,20 @@ export default class AccountObject extends DocumentObject<
 
     /**
      * Returns an array of all accounts in the budget statement.
+     *
+     * @category Account
      */
-    public getAccounts() {
+    get accounts() {
         return this.state.data.accounts;
     }
 
     /**
      * Returns the Account object with the specified address.
      * @param address The address of the Account to retrieve.
+     *
+     * @category Account
      */
     public getAccount(address: Account['address']) {
-        return this.getAccounts().find(account => account.address === address);
+        return this.accounts.find(account => account.address === address);
     }
 }

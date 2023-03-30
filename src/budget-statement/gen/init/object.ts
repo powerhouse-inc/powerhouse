@@ -1,8 +1,12 @@
-import { DocumentObject } from '../../../document';
-import { BudgetStatement, BudgetStatementAction, State } from '../../custom';
+import { BaseDocument } from '../../../document';
+import {
+    BudgetStatementAction,
+    BudgetStatementDocument,
+    State,
+} from '../../custom';
 import { init } from './creators';
 
-export default class InitObject extends DocumentObject<
+export default class InitObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {
@@ -13,8 +17,8 @@ export default class InitObject extends DocumentObject<
      */
     public init(
         budgetStatement: Partial<
-            Omit<BudgetStatement, 'data'> & {
-                data: Partial<BudgetStatement['data']>;
+            Omit<BudgetStatementDocument, 'data'> & {
+                data: Partial<BudgetStatementDocument['data']>;
             }
         >
     ) {

@@ -39,7 +39,7 @@ This action shouldn't be used directly. It is dispatched by the [prune](Document
 
 #### Defined in
 
-[document/actions/creators.ts:65](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/actions/creators.ts#L65)
+[document/actions/creators.ts:65](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/actions/creators.ts#L65)
 
 ___
 
@@ -67,7 +67,7 @@ similar to the [slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 #### Defined in
 
-[document/actions/creators.ts:52](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/actions/creators.ts#L52)
+[document/actions/creators.ts:52](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/actions/creators.ts#L52)
 
 ___
 
@@ -89,7 +89,7 @@ Cancels the last `count` [UNDO](Document.actions.md#undo) operations.
 
 #### Defined in
 
-[document/actions/creators.ts:39](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/actions/creators.ts#L39)
+[document/actions/creators.ts:39](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/actions/creators.ts#L39)
 
 ___
 
@@ -111,7 +111,7 @@ Changes the name of the document.
 
 #### Defined in
 
-[document/actions/creators.ts:22](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/actions/creators.ts#L22)
+[document/actions/creators.ts:22](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/actions/creators.ts#L22)
 
 ___
 
@@ -133,4 +133,4 @@ Cancels the last `count` operations.
 
 #### Defined in
 
-[document/actions/creators.ts:31](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/actions/creators.ts#L31)
+[document/actions/creators.ts:31](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/actions/creators.ts#L31)

@@ -1,4 +1,4 @@
-import { DocumentObject } from '../../../document';
+import { BaseDocument } from '../../../document';
 import {
     Account,
     BudgetStatementAction,
@@ -8,7 +8,7 @@ import {
 } from '../../custom';
 import { addLineItem, deleteLineItem, updateLineItem } from './creators';
 
-export default class LineItemObject extends DocumentObject<
+export default class LineItemObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {

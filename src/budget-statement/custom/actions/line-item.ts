@@ -3,7 +3,7 @@ import {
     DeleteLineItemAction,
     UpdateLineItemAction,
 } from '../../gen/line-item/types';
-import { BudgetStatement, LineItem, LineItemInput } from '../types';
+import { BudgetStatementDocument, LineItem, LineItemInput } from '../types';
 import { createLineItem } from '../utils';
 
 function isEqual(lineItemInput: LineItemInput, lineItem: LineItem) {
@@ -14,9 +14,9 @@ function isEqual(lineItemInput: LineItemInput, lineItem: LineItem) {
 }
 
 export const addLineItemOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: AddLineItemAction
-): BudgetStatement => {
+): BudgetStatementDocument => {
     const newAccounts = state.data.accounts.slice();
     const accountIndex = newAccounts.findIndex(
         a => a.address === action.input.account
@@ -44,9 +44,9 @@ export const addLineItemOperation = (
 };
 
 export const updateLineItemOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: UpdateLineItemAction
-): BudgetStatement => {
+): BudgetStatementDocument => {
     const newAccounts = state.data.accounts.slice();
     const accountIndex = newAccounts.findIndex(
         a => a.address === action.input.account
@@ -98,9 +98,9 @@ export const updateLineItemOperation = (
 };
 
 export const deleteLineItemOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: DeleteLineItemAction
-): BudgetStatement => {
+): BudgetStatementDocument => {
     const newAccounts = state.data.accounts.slice();
     const accountIndex = newAccounts.findIndex(
         a => a.address === action.input.account

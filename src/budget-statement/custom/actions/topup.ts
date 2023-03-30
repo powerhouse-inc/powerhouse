@@ -1,10 +1,10 @@
 import { RequestTopupAction, TransferTopupAction } from '../../gen/topup/types';
-import { BudgetStatement } from '../types';
+import { BudgetStatementDocument } from '../types';
 
 export const requestTopupOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: RequestTopupAction
-): BudgetStatement => {
+): BudgetStatementDocument => {
     const newAccounts = state.data.accounts.slice();
     const accountIndex = newAccounts.findIndex(
         a => a.address === action.input.account
@@ -33,9 +33,9 @@ export const requestTopupOperation = (
 };
 
 export const transferTopupOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: TransferTopupAction
-): BudgetStatement => {
+): BudgetStatementDocument => {
     const newAccounts = state.data.accounts.slice();
     const accountIndex = newAccounts.findIndex(
         a => a.address === action.input.account
