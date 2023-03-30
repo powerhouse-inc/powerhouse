@@ -1,4 +1,4 @@
-import { Document } from '../../document';
+import { Document, DocumentFile } from '../../document';
 import { BudgetStatementAccountAction } from '../gen/account/types';
 import { BudgetStatementAuditReportAction } from '../gen/audit/types';
 import { BudgetStatementInitAction } from '../gen/init/types';
@@ -128,16 +128,6 @@ export type AuditReport = {
 };
 
 /**
- * Represents the data for an audit report attachment.
- */
-export type AuditReportData = {
-    // The Base64-encoded binary date of the report.
-    data: string;
-    // The MIME type of the report file.
-    mimeType: string;
-};
-
-/**
  * Represents the input for an audit report to be added to a budget statement.
  */
 export type AuditReportInput = {
@@ -148,7 +138,7 @@ export type AuditReportInput = {
     /**
      * The data for the audit report.
      */
-    report: AuditReportData;
+    report: DocumentFile;
     /**
      * The status of the audit report.
      */

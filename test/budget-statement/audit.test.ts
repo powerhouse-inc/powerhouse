@@ -10,7 +10,7 @@ import {
     addAuditReport,
     deleteAuditReport,
 } from '../../src/budget-statement/gen';
-import { fetchAttachment, readAttachment } from '../../src/document/utils';
+import { getLocalFile, getRemoteFile } from '../../src/document/utils';
 import { readFile } from '../../src/document/utils/node';
 
 describe('Budget Statement Audit Report reducer', () => {
@@ -36,7 +36,7 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should add audit report', async () => {
         const state = createBudgetStatement();
-        const file = await readAttachment(tempFile);
+        const file = await getLocalFile(tempFile);
         const newState = reducer(
             state,
             await addAuditReport([
@@ -48,7 +48,7 @@ describe('Budget Statement Audit Report reducer', () => {
             ])
         );
         expect(newState.data.auditReports[0]).toStrictEqual({
-            report: 'attachment://audits/PRNd3dDq5BhDEqjoQ2+gng==',
+            report: 'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
@@ -57,7 +57,7 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should add attachment to file registry', async () => {
         const state = createBudgetStatement();
-        const file = await readAttachment(tempFile);
+        const file = await getLocalFile(tempFile);
         const newState = reducer(
             state,
             await addAuditReport([
@@ -71,15 +71,20 @@ describe('Budget Statement Audit Report reducer', () => {
 
         expect(
             newState.fileRegistry[
-                'attachment://audits/PRNd3dDq5BhDEqjoQ2+gng=='
+                'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8='
             ]
-        ).toStrictEqual({ data: 'VEVTVA==', mimeType: 'application/pdf' });
+        ).toStrictEqual({
+            data: 'VEVTVA==',
+            mimeType: 'application/pdf',
+            extension: 'pdf',
+            fileName: 'report.pdf',
+        });
         expect(state.fileRegistry).toStrictEqual({});
     });
 
     it('should delete audit report', async () => {
         let state = createBudgetStatement();
-        const file = await readAttachment(tempFile);
+        const file = await getLocalFile(tempFile);
         state = reducer(
             state,
             await addAuditReport([
@@ -92,7 +97,9 @@ describe('Budget Statement Audit Report reducer', () => {
         );
         state = reducer(
             state,
-            deleteAuditReport(['attachment://audits/PRNd3dDq5BhDEqjoQ2+gng=='])
+            deleteAuditReport([
+                'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
+            ])
         );
         expect(state.data.auditReports).toStrictEqual([]);
     });
@@ -100,7 +107,7 @@ describe('Budget Statement Audit Report reducer', () => {
     it('should set default timestamp on audit report', async () => {
         const state = createBudgetStatement();
         const date = new Date();
-        const file = await readAttachment(tempFile);
+        const file = await getLocalFile(tempFile);
         const newState = reducer(
             state,
             await addAuditReport([
@@ -116,7 +123,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should add approved audit report', async () => {
-        const file = await readAttachment(tempFile);
+        const file = await getLocalFile(tempFile);
         const state = reducer(
             createBudgetStatement(),
             await addAuditReport([
@@ -130,7 +137,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should add approved with comments audit report', async () => {
-        const file = await readAttachment(tempFile);
+        const file = await getLocalFile(tempFile);
         const state = reducer(
             createBudgetStatement(),
             await addAuditReport([
@@ -144,7 +151,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should add needs action audit report', async () => {
-        const file = await readAttachment(tempFile);
+        const file = await getLocalFile(tempFile);
         const state = reducer(
             createBudgetStatement(),
             await addAuditReport([
@@ -158,7 +165,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should fetch attachment from URL', async () => {
-        const file = await fetchAttachment(
+        const file = await getRemoteFile(
             'https://makerdao.com/whitepaper/DaiDec17WP.pdf'
         );
         const state = createBudgetStatement();
@@ -173,18 +180,18 @@ describe('Budget Statement Audit Report reducer', () => {
             ])
         );
         expect(newState.data.auditReports[0]).toStrictEqual({
-            report: 'attachment://audits/7wvuIJl/PQDJZ2fMB3xhJA==',
+            report: 'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
         expect(
             newState.fileRegistry[
-                'attachment://audits/7wvuIJl/PQDJZ2fMB3xhJA=='
+                'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0='
             ].data.length
         ).toBeGreaterThan(0);
         expect(
             newState.fileRegistry[
-                'attachment://audits/7wvuIJl/PQDJZ2fMB3xhJA=='
+                'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0='
             ].mimeType
         ).toBe('application/pdf');
         expect(state.data.auditReports).toStrictEqual([]);
@@ -192,7 +199,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should save attachment to zip', async () => {
-        const attachment = await readAttachment(tempFile);
+        const attachment = await getLocalFile(tempFile);
         const state = reducer(
             createBudgetStatement({ name: 'march' }),
             await addAuditReport([
@@ -211,14 +218,15 @@ describe('Budget Statement Audit Report reducer', () => {
         const path = report.slice('attachment://'.length);
         const attachmentZip = zip.file(path);
 
+        const { data, ...attributes } = state.fileRegistry[report];
         expect(await attachmentZip?.async('string')).toBe('TEST');
-        expect(attachmentZip?.comment).toBe(
-            state.fileRegistry[report].mimeType
+        expect(JSON.parse(attachmentZip?.comment ?? '')).toStrictEqual(
+            attributes
         );
     });
 
     it('should load attachment from zip', async () => {
-        const attachment = await readAttachment(tempFile);
+        const attachment = await getLocalFile(tempFile);
         const state = await loadBudgetStatementFromFile(
             `${tempDir}march.phbs.zip`
         );

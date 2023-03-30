@@ -1,4 +1,4 @@
-import { DocumentObject } from '../../../document';
+import { DocumentFile, DocumentObject } from '../../../document';
 import {
     AuditReport,
     AuditReportStatus,
@@ -19,10 +19,7 @@ export default class AuditObject extends DocumentObject<
         reports: {
             timestamp?: string;
             status: AuditReportStatus;
-            report: {
-                data: string;
-                mimeType: string;
-            };
+            report: DocumentFile;
         }[]
     ) {
         return this.dispatch(addAuditReport(reports));

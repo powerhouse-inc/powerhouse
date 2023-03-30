@@ -21,10 +21,7 @@ export const addAuditReportOperation = (
         } else {
             const hash = hashAttachment(audit.report.data);
             const attachmentKey = `attachment://audits/${hash}` as const;
-            state.fileRegistry[attachmentKey] = {
-                data: audit.report.data,
-                mimeType: audit.report.mimeType,
-            };
+            state.fileRegistry[attachmentKey] = { ...audit.report };
             state.data.auditReports.push({
                 timestamp: audit.timestamp,
                 status: audit.status,
