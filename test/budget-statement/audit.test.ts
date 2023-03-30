@@ -48,7 +48,7 @@ describe('Budget Statement Audit Report reducer', () => {
             ])
         );
         expect(newState.data.auditReports[0]).toStrictEqual({
-            report: 'attachment://audits/PRNd3dDq5BhDEqjoQ2+gng==',
+            report: 'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
@@ -71,7 +71,7 @@ describe('Budget Statement Audit Report reducer', () => {
 
         expect(
             newState.fileRegistry[
-                'attachment://audits/PRNd3dDq5BhDEqjoQ2+gng=='
+                'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8='
             ]
         ).toStrictEqual({ data: 'VEVTVA==', mimeType: 'application/pdf' });
         expect(state.fileRegistry).toStrictEqual({});
@@ -92,7 +92,9 @@ describe('Budget Statement Audit Report reducer', () => {
         );
         state = reducer(
             state,
-            deleteAuditReport(['attachment://audits/PRNd3dDq5BhDEqjoQ2+gng=='])
+            deleteAuditReport([
+                'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
+            ])
         );
         expect(state.data.auditReports).toStrictEqual([]);
     });
@@ -173,18 +175,18 @@ describe('Budget Statement Audit Report reducer', () => {
             ])
         );
         expect(newState.data.auditReports[0]).toStrictEqual({
-            report: 'attachment://audits/7wvuIJl/PQDJZ2fMB3xhJA==',
+            report: 'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
         expect(
             newState.fileRegistry[
-                'attachment://audits/7wvuIJl/PQDJZ2fMB3xhJA=='
+                'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0='
             ].data.length
         ).toBeGreaterThan(0);
         expect(
             newState.fileRegistry[
-                'attachment://audits/7wvuIJl/PQDJZ2fMB3xhJA=='
+                'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0='
             ].mimeType
         ).toBe('application/pdf');
         expect(state.data.auditReports).toStrictEqual([]);

@@ -57,6 +57,5 @@ export const createDocument = <T, A extends Action>(
 };
 
 export const hashDocument = (state: Document) => {
-    const { fileRegistry, ...document } = state;
-    return hash(JSONDeterministic(document));
+    return hash(JSONDeterministic(state.data));
 };

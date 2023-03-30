@@ -36,7 +36,7 @@ describe('Base reducer', () => {
                 type: 'TEST',
                 timestamp: new Date().toISOString(),
                 index: 0,
-                hash: 'BQ4ZKqKZEKMUNq107drPOg==',
+                hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
             },
         ]);
     });

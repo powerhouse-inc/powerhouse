@@ -64,5 +64,5 @@ export const getFile = async (
     };
 };
 
-export const hash = (data: string, algorithm = 'md5') =>
+export const hash = (data: string, algorithm = 'sha1') =>
     crypto.createHash(algorithm).update(data).digest('base64');
