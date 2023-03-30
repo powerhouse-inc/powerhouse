@@ -1,8 +1,8 @@
-import { DocumentObject } from '../../../document';
+import { BaseDocument } from '../../../document';
 import { Account, BudgetStatementAction, State } from '../../custom';
 import { requestTopup, transferTopup } from './creators';
 
-export default class TopupObject extends DocumentObject<
+export default class TopupObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {

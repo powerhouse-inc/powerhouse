@@ -36,13 +36,13 @@ The new Account object.
 
 #### Defined in
 
-[budget-statement/custom/utils.ts:50](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/custom/utils.ts#L50)
+[budget-statement/custom/utils.ts:50](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/utils.ts#L50)
 
 ___
 
 ### createBudgetStatement
 
-▸ **createBudgetStatement**(`initialState?`): [`BudgetStatement`](BudgetStatement.md#budgetstatement)
+▸ **createBudgetStatement**(`initialState?`): [`BudgetStatementDocument`](BudgetStatement.md#budgetstatementdocument)
 
 Creates a new BudgetStatement document with an initial state.
 
@@ -50,17 +50,17 @@ Creates a new BudgetStatement document with an initial state.
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `initialState?` | `Partial`<`Omit`<[`BudgetStatement`](BudgetStatement.md#budgetstatement), ``"data"``\> & { `data`: `Partial`<[`State`](BudgetStatement.md#state)\>  }\> | The initial state of the document. |
+| `initialState?` | `Partial`<`Omit`<[`BudgetStatementDocument`](BudgetStatement.md#budgetstatementdocument), ``"data"``\> & { `data`: `Partial`<[`State`](BudgetStatement.md#state)\>  }\> | The initial state of the document. |
 
 #### Returns
 
-[`BudgetStatement`](BudgetStatement.md#budgetstatement)
+[`BudgetStatementDocument`](BudgetStatement.md#budgetstatementdocument)
 
 The new BudgetStatement document.
 
 #### Defined in
 
-[budget-statement/custom/utils.ts:20](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/custom/utils.ts#L20)
+[budget-statement/custom/utils.ts:20](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/utils.ts#L20)
 
 ___
 
@@ -84,13 +84,13 @@ The new LineItem object.
 
 #### Defined in
 
-[budget-statement/custom/utils.ts:74](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/custom/utils.ts#L74)
+[budget-statement/custom/utils.ts:74](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/utils.ts#L74)
 
 ___
 
 ### loadBudgetStatementFromFile
 
-▸ **loadBudgetStatementFromFile**(`path`): `Promise`<[`BudgetStatement`](BudgetStatement.md#budgetstatement)\>
+▸ **loadBudgetStatementFromFile**(`path`): `Promise`<[`BudgetStatementDocument`](BudgetStatement.md#budgetstatementdocument)\>
 
 Loads the BudgetStatement document from the specified file path.
 
@@ -102,13 +102,13 @@ Loads the BudgetStatement document from the specified file path.
 
 #### Returns
 
-`Promise`<[`BudgetStatement`](BudgetStatement.md#budgetstatement)\>
+`Promise`<[`BudgetStatementDocument`](BudgetStatement.md#budgetstatementdocument)\>
 
 A promise that resolves with the loaded BudgetStatement document.
 
 #### Defined in
 
-[budget-statement/custom/utils.ts:102](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/custom/utils.ts#L102)
+[budget-statement/custom/utils.ts:102](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/utils.ts#L102)
 
 ___
 
@@ -122,7 +122,7 @@ Saves the BudgetStatement document to the specified file path.
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `document` | [`BudgetStatement`](BudgetStatement.md#budgetstatement) | The BudgetStatement document to save. |
+| `document` | [`BudgetStatementDocument`](BudgetStatement.md#budgetstatementdocument) | The BudgetStatement document to save. |
 | `path` | `string` | The file path to save the document to. |
 
 #### Returns
@@ -133,4 +133,4 @@ A promise that resolves with the saved file path.
 
 #### Defined in
 
-[budget-statement/custom/utils.ts:90](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/custom/utils.ts#L90)
+[budget-statement/custom/utils.ts:90](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/utils.ts#L90)

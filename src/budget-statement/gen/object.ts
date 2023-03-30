@@ -1,7 +1,7 @@
-import { applyMixins, DocumentObject } from '../../document';
+import { applyMixins, BaseDocument } from '../../document';
 import {
-    BudgetStatement,
     BudgetStatementAction,
+    BudgetStatementDocument,
     reducer,
     State,
 } from '../custom';
@@ -14,7 +14,7 @@ import StatusObject from './status/object';
 import TopupObject from './topup/object';
 
 /**
- * Represents a BudgetStatement object that extends the DocumentObject class to provide a convenient
+ * Represents a BudgetStatement object that extends the {@link BaseDocument} class to provide a convenient
  * interface for managing a budget statement.
  * @extends AccountObject
  * @extends AuditObject
@@ -23,7 +23,7 @@ import TopupObject from './topup/object';
  * @extends StatusObject
  * @extends TopupObject
  */
-interface BudgetStatementObject
+interface BudgetStatement
     extends AccountObject,
         AuditObject,
         InitObject,
@@ -34,13 +34,10 @@ interface BudgetStatementObject
 /**
  * Represents a budget statement document.
  *
- * @extends DocumentObject<State, BudgetStatementAction>
+ * @extends BaseDocument<State, BudgetStatementAction>
  * @implements AccountObject, AuditObject, InitObject, LineItemObject, StatusObject, TopupObject
  */
-class BudgetStatementObject extends DocumentObject<
-    State,
-    BudgetStatementAction
-> {
+class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
     /**
      * The file extension used to save budget statements.
      */
@@ -48,13 +45,13 @@ class BudgetStatementObject extends DocumentObject<
 
     /**
      *
-     * Creates a new BudgetStatementObject instance.
-     * @param initialState - An optional object representing the initial state of the BudgetStatementObject.
+     * Creates a new BudgetStatement instance.
+     * @param initialState - An optional object representing the initial state of the BudgetStatement.
      */
     constructor(
         initialState?: Partial<
-            Omit<BudgetStatement, 'data'> & {
-                data: Partial<BudgetStatement['data']>;
+            Omit<BudgetStatementDocument, 'data'> & {
+                data: Partial<BudgetStatementDocument['data']>;
             }
         >
     ) {
@@ -89,24 +86,24 @@ class BudgetStatementObject extends DocumentObject<
      * @returns A promise that resolves when the save operation completes.
      */
     public saveToFile(path: string) {
-        return super.saveToFile(path, BudgetStatementObject.fileExtension);
+        return super.saveToFile(path, BudgetStatement.fileExtension);
     }
 
     /**
      * Loads the budget statement from a file.
      *
      * @param path The path to the file to load.
-     * @returns A promise that resolves with the loaded `BudgetStatementObject` instance.
+     * @returns A promise that resolves with the loaded `BudgetStatement` instance.
      */
     public loadFromFile(path: string) {
         return super.loadFromFile(path);
     }
 
     /**
-     * Creates a new `BudgetStatementObject` instance from a file.
+     * Creates a new `BudgetStatement` instance from a file.
      *
      * @param path The path to the file to load.
-     * @returns A promise that resolves with the loaded `BudgetStatementObject` instance.
+     * @returns A promise that resolves with the loaded `BudgetStatement` instance.
      */
     static async fromFile(path: string) {
         const budgetStatement = new this();
@@ -115,7 +112,7 @@ class BudgetStatementObject extends DocumentObject<
     }
 }
 
-applyMixins(BudgetStatementObject, [
+applyMixins(BudgetStatement, [
     AccountObject,
     AuditObject,
     InitObject,
@@ -125,7 +122,7 @@ applyMixins(BudgetStatementObject, [
 ]);
 
 /**
- * Represents a BudgetStatement object that extends the DocumentObject class to provide a convenient
+ * Represents a BudgetStatement object that extends the {@link BaseDocument} class to provide a convenient
  * interface for managing a budget statement.
  * @extends AccountObject
  * @extends AuditObject
@@ -134,4 +131,4 @@ applyMixins(BudgetStatementObject, [
  * @extends StatusObject
  * @extends TopupObject
  */
-export { BudgetStatementObject };
+export { BudgetStatement };

@@ -9,12 +9,12 @@ import { createDocument, loadFromFile, saveToFile } from './utils';
  * @typeparam T - The type of data stored in the document.
  * @typeparam A - The type of action the document can take.
  */
-export abstract class DocumentObject<T, A extends Action> {
+export abstract class BaseDocument<T, A extends Action> {
     protected state: Document<T, A>;
     private reducer: Reducer<T, A | BaseAction>;
 
     /**
-     * Constructs a DocumentObject instance with an initial state.
+     * Constructs a BaseDocument instance with an initial state.
      * @param reducer - The reducer function that updates the state.
      * @param initialState - The initial state of the document.
      */
@@ -29,7 +29,7 @@ export abstract class DocumentObject<T, A extends Action> {
     /**
      * Dispatches an action to update the state of the document.
      * @param action - The action to dispatch.
-     * @returns The DocumentObject instance.
+     * @returns The Document instance.
      */
     protected dispatch(action: A | BaseAction) {
         this.state = this.reducer(this.state, action);

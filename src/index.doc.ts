@@ -27,7 +27,7 @@ export { Document };
  * This module exports the following:
  * - All the actions available of the BudgetStatement model, as well as those from the base document.
  * - The reducer which implements the business logic for each action.
- * - BudgetStatementObject: A class representing a budget statement object, to manage a budget statement in an imperative way.
+ * - BudgetStatement: A class representing a budget statement object, to manage a budget statement in an imperative way.
  * - Utility functions to create Budget Statements and load/save to file.
  */
 export { BudgetStatement };

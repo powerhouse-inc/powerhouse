@@ -5,8 +5,8 @@ import { reducer } from './reducer';
 import {
     Account,
     AccountInput,
-    BudgetStatement,
     BudgetStatementAction,
+    BudgetStatementDocument,
     LineItem,
     State,
 } from './types';
@@ -15,15 +15,15 @@ import {
  *
  * Creates a new BudgetStatement document with an initial state.
  * @param initialState - The initial state of the document.
- * @returns {BudgetStatement} The new BudgetStatement document.
+ * @returns {BudgetStatementDocument} The new BudgetStatement document.
  */
 export const createBudgetStatement = (
     initialState?: Partial<
-        Omit<BudgetStatement, 'data'> & {
-            data: Partial<BudgetStatement['data']>;
+        Omit<BudgetStatementDocument, 'data'> & {
+            data: Partial<BudgetStatementDocument['data']>;
         }
     >
-): BudgetStatement =>
+): BudgetStatementDocument =>
     createDocument<State, BudgetStatementAction>({
         documentType: 'powerhouse/budget-statement',
         ...initialState,
@@ -83,12 +83,12 @@ export const createLineItem = (
 
 /**
  * Saves the BudgetStatement document to the specified file path.
- * @param {BudgetStatement} document - The BudgetStatement document to save.
+ * @param {BudgetStatementDocument} document - The BudgetStatement document to save.
  * @param {string} path - The file path to save the document to.
  * @returns {Promise<string>} A promise that resolves with the saved file path.
  */
 export const saveBudgetStatementToFile = (
-    document: BudgetStatement,
+    document: BudgetStatementDocument,
     path: string
 ): Promise<string> => {
     return saveToFile(document, path, 'phbs');
@@ -97,11 +97,11 @@ export const saveBudgetStatementToFile = (
 /**
  * Loads the BudgetStatement document from the specified file path.
  * @param {string} path - The file path to load the document from.
- * @returns {Promise<BudgetStatement>} A promise that resolves with the loaded BudgetStatement document.
+ * @returns {Promise<BudgetStatementDocument>} A promise that resolves with the loaded BudgetStatement document.
  */
 export const loadBudgetStatementFromFile = async (
     path: string
-): Promise<BudgetStatement> => {
+): Promise<BudgetStatementDocument> => {
     const state = await loadFromFile<State, BudgetStatementAction>(
         path,
         reducer

@@ -1,4 +1,4 @@
-import { DocumentFile, DocumentObject } from '../../../document';
+import { BaseDocument, DocumentFile } from '../../../document';
 import {
     AuditReport,
     AuditReportStatus,
@@ -7,7 +7,7 @@ import {
 } from '../../custom';
 import { addAuditReport, deleteAuditReport } from './creators';
 
-export default class AuditObject extends DocumentObject<
+export default class AuditObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {

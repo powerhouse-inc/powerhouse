@@ -1,8 +1,8 @@
-[@acaldas/document-model-libs](../README.md) / [Exports](../modules.md) / [Document](../modules/Document.md) / DocumentObject
+[@acaldas/document-model-libs](../README.md) / [Exports](../modules.md) / [Document](../modules/Document.md) / BaseDocument
 
-# Class: DocumentObject<T, A\>
+# Class: BaseDocument<T, A\>
 
-[Document](../modules/Document.md).DocumentObject
+[Document](../modules/Document.md).BaseDocument
 
 This is an abstract class representing a document and provides methods
 for creating and manipulating documents.
@@ -24,51 +24,51 @@ A - The type of action the document can take.
 
 ## Hierarchy
 
-- **`DocumentObject`**
+- **`BaseDocument`**
 
-  ↳ [`BudgetStatementObject`](BudgetStatement.BudgetStatementObject.md)
+  ↳ [`BudgetStatement`](BudgetStatement.BudgetStatement.md)
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](Document.DocumentObject.md#constructor)
+- [constructor](Document.BaseDocument.md#constructor)
 
 ### Properties
 
-- [reducer](Document.DocumentObject.md#reducer)
-- [state](Document.DocumentObject.md#state)
+- [reducer](Document.BaseDocument.md#reducer)
+- [state](Document.BaseDocument.md#state)
 
 ### Accessors
 
-- [created](Document.DocumentObject.md#created)
-- [documentType](Document.DocumentObject.md#documenttype)
-- [initialState](Document.DocumentObject.md#initialstate)
-- [lastModified](Document.DocumentObject.md#lastmodified)
-- [name](Document.DocumentObject.md#name)
-- [operations](Document.DocumentObject.md#operations)
-- [revision](Document.DocumentObject.md#revision)
+- [created](Document.BaseDocument.md#created)
+- [documentType](Document.BaseDocument.md#documenttype)
+- [initialState](Document.BaseDocument.md#initialstate)
+- [lastModified](Document.BaseDocument.md#lastmodified)
+- [name](Document.BaseDocument.md#name)
+- [operations](Document.BaseDocument.md#operations)
+- [revision](Document.BaseDocument.md#revision)
 
 ### Methods
 
-- [dispatch](Document.DocumentObject.md#dispatch)
-- [getAttachment](Document.DocumentObject.md#getattachment)
-- [loadFromFile](Document.DocumentObject.md#loadfromfile)
-- [loadState](Document.DocumentObject.md#loadstate)
-- [prune](Document.DocumentObject.md#prune)
-- [redo](Document.DocumentObject.md#redo)
-- [saveToFile](Document.DocumentObject.md#savetofile)
-- [setName](Document.DocumentObject.md#setname)
-- [undo](Document.DocumentObject.md#undo)
-- [stateFromFile](Document.DocumentObject.md#statefromfile)
+- [dispatch](Document.BaseDocument.md#dispatch)
+- [getAttachment](Document.BaseDocument.md#getattachment)
+- [loadFromFile](Document.BaseDocument.md#loadfromfile)
+- [loadState](Document.BaseDocument.md#loadstate)
+- [prune](Document.BaseDocument.md#prune)
+- [redo](Document.BaseDocument.md#redo)
+- [saveToFile](Document.BaseDocument.md#savetofile)
+- [setName](Document.BaseDocument.md#setname)
+- [undo](Document.BaseDocument.md#undo)
+- [stateFromFile](Document.BaseDocument.md#statefromfile)
 
 ## Constructors
 
 ### constructor
 
-• **new DocumentObject**<`T`, `A`\>(`reducer`, `initialState?`)
+• **new BaseDocument**<`T`, `A`\>(`reducer`, `initialState?`)
 
-Constructs a DocumentObject instance with an initial state.
+Constructs a BaseDocument instance with an initial state.
 
 #### Type parameters
 
@@ -86,7 +86,7 @@ Constructs a DocumentObject instance with an initial state.
 
 #### Defined in
 
-[document/object.ts:21](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L21)
+[document/object.ts:21](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L21)
 
 ## Properties
 
@@ -96,7 +96,7 @@ Constructs a DocumentObject instance with an initial state.
 
 #### Defined in
 
-[document/object.ts:14](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L14)
+[document/object.ts:14](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L14)
 
 ___
 
@@ -106,7 +106,7 @@ ___
 
 #### Defined in
 
-[document/object.ts:13](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L13)
+[document/object.ts:13](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L13)
 
 ## Accessors
 
@@ -122,7 +122,7 @@ Gets the timestamp of the date the document was created.
 
 #### Defined in
 
-[document/object.ts:88](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L88)
+[document/object.ts:88](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L88)
 
 ___
 
@@ -138,7 +138,7 @@ Gets the type of document.
 
 #### Defined in
 
-[document/object.ts:81](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L81)
+[document/object.ts:81](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L81)
 
 ___
 
@@ -154,7 +154,7 @@ Gets the initial state of the document.
 
 #### Defined in
 
-[document/object.ts:109](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L109)
+[document/object.ts:109](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L109)
 
 ___
 
@@ -170,7 +170,7 @@ Gets the timestamp of the date the document was last modified.
 
 #### Defined in
 
-[document/object.ts:95](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L95)
+[document/object.ts:95](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L95)
 
 ___
 
@@ -186,7 +186,7 @@ Gets the name of the document.
 
 #### Defined in
 
-[document/object.ts:74](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L74)
+[document/object.ts:74](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L74)
 
 ___
 
@@ -202,7 +202,7 @@ Gets the list of operations performed on the document.
 
 #### Defined in
 
-[document/object.ts:116](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L116)
+[document/object.ts:116](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L116)
 
 ___
 
@@ -218,13 +218,13 @@ Gets the revision number of the document.
 
 #### Defined in
 
-[document/object.ts:102](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L102)
+[document/object.ts:102](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L102)
 
 ## Methods
 
 ### dispatch
 
-▸ `Protected` **dispatch**(`action`): [`DocumentObject`](Document.DocumentObject.md)<`T`, `A`\>
+▸ `Protected` **dispatch**(`action`): [`BaseDocument`](Document.BaseDocument.md)<`T`, `A`\>
 
 Dispatches an action to update the state of the document.
 
@@ -236,19 +236,19 @@ Dispatches an action to update the state of the document.
 
 #### Returns
 
-[`DocumentObject`](Document.DocumentObject.md)<`T`, `A`\>
+[`BaseDocument`](Document.BaseDocument.md)<`T`, `A`\>
 
-The DocumentObject instance.
+The Document instance.
 
 #### Defined in
 
-[document/object.ts:34](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L34)
+[document/object.ts:34](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L34)
 
 ___
 
 ### getAttachment
 
-▸ **getAttachment**(`attachment`): `Object`
+▸ **getAttachment**(`attachment`): [`DocumentFile`](../modules/Document.md#documentfile)
 
 Gets the attachment associated with the given key.
 
@@ -260,16 +260,11 @@ Gets the attachment associated with the given key.
 
 #### Returns
 
-`Object`
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `data` | `string` | The binary data of the attachment in Base64 |
-| `mimeType` | `string` | The MIME type of the attachment |
+[`DocumentFile`](../modules/Document.md#documentfile)
 
 #### Defined in
 
-[document/object.ts:124](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L124)
+[document/object.ts:124](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L124)
 
 ___
 
@@ -291,7 +286,7 @@ Loads the state of the document from a file.
 
 #### Defined in
 
-[document/object.ts:53](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L53)
+[document/object.ts:53](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L53)
 
 ___
 
@@ -314,7 +309,7 @@ Loads a document state and a set of operations.
 
 #### Defined in
 
-[document/object.ts:165](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L165)
+[document/object.ts:165](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L165)
 
 ___
 
@@ -337,7 +332,7 @@ Removes a range of operations from the document.
 
 #### Defined in
 
-[document/object.ts:156](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L156)
+[document/object.ts:156](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L156)
 
 ___
 
@@ -359,7 +354,7 @@ Reapplies a number of actions to the document.
 
 #### Defined in
 
-[document/object.ts:148](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L148)
+[document/object.ts:148](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L148)
 
 ___
 
@@ -384,7 +379,7 @@ The file path where the state was saved.
 
 #### Defined in
 
-[document/object.ts:45](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L45)
+[document/object.ts:45](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L45)
 
 ___
 
@@ -406,7 +401,7 @@ Sets the name of the document.
 
 #### Defined in
 
-[document/object.ts:132](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L132)
+[document/object.ts:132](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L132)
 
 ___
 
@@ -428,7 +423,7 @@ Reverts a number of actions from the document.
 
 #### Defined in
 
-[document/object.ts:140](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L140)
+[document/object.ts:140](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L140)
 
 ___
 
@@ -460,4 +455,4 @@ The state of the document.
 
 #### Defined in
 
-[document/object.ts:63](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/object.ts#L63)
+[document/object.ts:63](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L63)

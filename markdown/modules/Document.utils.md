@@ -11,10 +11,10 @@
 - [createAction](Document.utils.md#createaction)
 - [createDocument](Document.utils.md#createdocument)
 - [createReducer](Document.utils.md#createreducer)
-- [fetchAttachment](Document.utils.md#fetchattachment)
+- [getLocalFile](Document.utils.md#getlocalfile)
+- [getRemoteFile](Document.utils.md#getremotefile)
 - [hashAttachment](Document.utils.md#hashattachment)
 - [loadFromFile](Document.utils.md#loadfromfile)
-- [readAttachment](Document.utils.md#readattachment)
 - [saveToFile](Document.utils.md#savetofile)
 
 ## Functions
@@ -55,7 +55,7 @@ The new action.
 
 #### Defined in
 
-[document/utils/base.ts:22](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/utils/base.ts#L22)
+[document/utils/base.ts:22](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/base.ts#L22)
 
 ___
 
@@ -86,7 +86,7 @@ The new document state.
 
 #### Defined in
 
-[document/utils/base.ts:93](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/utils/base.ts#L93)
+[document/utils/base.ts:93](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/base.ts#L93)
 
 ___
 
@@ -142,13 +142,37 @@ The new reducer.
 
 #### Defined in
 
-[document/utils/base.ts:55](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/utils/base.ts#L55)
+[document/utils/base.ts:55](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/base.ts#L55)
 
 ___
 
-### fetchAttachment
+### getLocalFile
 
-▸ **fetchAttachment**(`url`): `Promise`<{ `data`: `string` ; `mimeType`: `string`  }\>
+▸ **getLocalFile**(`path`): `Promise`<[`DocumentFile`](Document.md#documentfile)\>
+
+Reads an attachment from a file and returns its base64-encoded data and MIME type.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `path` | `string` | The path of the attachment file to read. |
+
+#### Returns
+
+`Promise`<[`DocumentFile`](Document.md#documentfile)\>
+
+A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
+
+#### Defined in
+
+[document/utils/file.ts:123](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L123)
+
+___
+
+### getRemoteFile
+
+▸ **getRemoteFile**(`url`): `Promise`<[`DocumentFile`](Document.md#documentfile)\>
 
 Fetches an attachment from a URL and returns its base64-encoded data and MIME type.
 
@@ -160,13 +184,13 @@ Fetches an attachment from a URL and returns its base64-encoded data and MIME ty
 
 #### Returns
 
-`Promise`<{ `data`: `string` ; `mimeType`: `string`  }\>
+`Promise`<[`DocumentFile`](Document.md#documentfile)\>
 
 A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
 
 #### Defined in
 
-[document/utils/file.ts:97](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/utils/file.ts#L97)
+[document/utils/file.ts:106](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L106)
 
 ___
 
@@ -174,7 +198,7 @@ ___
 
 ▸ **hashAttachment**(`data`): `string`
 
-Returns the md5 hash of the given attachment data.
+Returns the SHA1 hash of the given attachment data.
 
 #### Parameters
 
@@ -190,7 +214,7 @@ The hash of the attachment data.
 
 #### Defined in
 
-[document/utils/file.ts:119](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/utils/file.ts#L119)
+[document/utils/file.ts:135](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L135)
 
 ___
 
@@ -231,31 +255,7 @@ A promise that resolves to the document state after applying all the operations.
 
 #### Defined in
 
-[document/utils/file.ts:60](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/utils/file.ts#L60)
-
-___
-
-### readAttachment
-
-▸ **readAttachment**(`path`): `Promise`<{ `data`: `string` ; `mimeType`: `string`  }\>
-
-Reads an attachment from a file and returns its base64-encoded data and MIME type.
-
-#### Parameters
-
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `path` | `string` | The path of the attachment file to read. |
-
-#### Returns
-
-`Promise`<{ `data`: `string` ; `mimeType`: `string`  }\>
-
-A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
-
-#### Defined in
-
-[document/utils/file.ts:109](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/utils/file.ts#L109)
+[document/utils/file.ts:61](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L61)
 
 ___
 
@@ -286,4 +286,4 @@ A promise that resolves to the path of the saved file.
 
 #### Defined in
 
-[document/utils/file.ts:18](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/document/utils/file.ts#L18)
+[document/utils/file.ts:19](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L19)

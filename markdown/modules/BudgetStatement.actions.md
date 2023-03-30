@@ -60,7 +60,7 @@ Action creator for adding accounts to the budget statement.
 
 #### Defined in
 
-[budget-statement/gen/account/creators.ts:24](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/account/creators.ts#L24)
+[budget-statement/gen/account/creators.ts:24](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/account/creators.ts#L24)
 
 ___
 
@@ -82,7 +82,7 @@ Action creator for deleting accounts from the budget statement.
 
 #### Defined in
 
-[budget-statement/gen/account/creators.ts:42](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/account/creators.ts#L42)
+[budget-statement/gen/account/creators.ts:42](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/account/creators.ts#L42)
 
 ___
 
@@ -104,7 +104,7 @@ Action creator for updating accounts in the budget statement.
 
 #### Defined in
 
-[budget-statement/gen/account/creators.ts:34](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/account/creators.ts#L34)
+[budget-statement/gen/account/creators.ts:34](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/account/creators.ts#L34)
 
 ## Audit
 
@@ -122,7 +122,7 @@ The `timestamp` property in each report is optional. If not provided, the curren
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `reports` | { `report`: { `data`: `string` ; `mimeType`: `string`  } ; `status`: [`AuditReportStatus`](BudgetStatement.md#auditreportstatus) ; `timestamp?`: `string`  }[] | An array of objects representing the audit reports to add. |
+| `reports` | { `report`: [`DocumentFile`](Document.md#documentfile) ; `status`: [`AuditReportStatus`](BudgetStatement.md#auditreportstatus) ; `timestamp?`: `string`  }[] | An array of objects representing the audit reports to add. |
 
 #### Returns
 
@@ -130,7 +130,7 @@ The `timestamp` property in each report is optional. If not provided, the curren
 
 #### Defined in
 
-[budget-statement/gen/audit/creators.ts:20](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/audit/creators.ts#L20)
+[budget-statement/gen/audit/creators.ts:21](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/audit/creators.ts#L21)
 
 ___
 
@@ -154,7 +154,7 @@ The created action.
 
 #### Defined in
 
-[budget-statement/gen/audit/creators.ts:48](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/audit/creators.ts#L48)
+[budget-statement/gen/audit/creators.ts:46](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/audit/creators.ts#L46)
 
 ## Line Item
 
@@ -177,7 +177,7 @@ Creates an action to add one or more line items to an account.
 
 #### Defined in
 
-[budget-statement/gen/line-item/creators.ts:21](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/line-item/creators.ts#L21)
+[budget-statement/gen/line-item/creators.ts:21](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/line-item/creators.ts#L21)
 
 ___
 
@@ -200,7 +200,7 @@ Creates an action to delete one or more line items from an account.
 
 #### Defined in
 
-[budget-statement/gen/line-item/creators.ts:53](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/line-item/creators.ts#L53)
+[budget-statement/gen/line-item/creators.ts:53](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/line-item/creators.ts#L53)
 
 ___
 
@@ -223,7 +223,7 @@ Creates an action to update one or more line items in an account.
 
 #### Defined in
 
-[budget-statement/gen/line-item/creators.ts:37](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/line-item/creators.ts#L37)
+[budget-statement/gen/line-item/creators.ts:37](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/line-item/creators.ts#L37)
 
 ## Status
 
@@ -239,7 +239,7 @@ Approves the budget statement.
 
 #### Defined in
 
-[budget-statement/gen/status/creators.ts:35](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/status/creators.ts#L35)
+[budget-statement/gen/status/creators.ts:35](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/status/creators.ts#L35)
 
 ___
 
@@ -255,7 +255,7 @@ Escalates the budget statement if there is any issue.
 
 #### Defined in
 
-[budget-statement/gen/status/creators.ts:28](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/status/creators.ts#L28)
+[budget-statement/gen/status/creators.ts:28](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/status/creators.ts#L28)
 
 ___
 
@@ -271,7 +271,7 @@ Reopens the budget statement to draft state.
 
 #### Defined in
 
-[budget-statement/gen/status/creators.ts:42](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/status/creators.ts#L42)
+[budget-statement/gen/status/creators.ts:42](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/status/creators.ts#L42)
 
 ___
 
@@ -287,7 +287,7 @@ Reopens the budget statement to review state.
 
 #### Defined in
 
-[budget-statement/gen/status/creators.ts:50](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/status/creators.ts#L50)
+[budget-statement/gen/status/creators.ts:50](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/status/creators.ts#L50)
 
 ___
 
@@ -303,7 +303,7 @@ Submits the budget statement for review.
 
 #### Defined in
 
-[budget-statement/gen/status/creators.ts:20](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/status/creators.ts#L20)
+[budget-statement/gen/status/creators.ts:20](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/status/creators.ts#L20)
 
 ## Init
 
@@ -317,7 +317,7 @@ Initializes the budget statement state with the provided data.
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
-| `budgetStatement` | `Partial`<`Omit`<[`BudgetStatement`](BudgetStatement.md#budgetstatement), ``"data"``\> & { `data`: `Partial`<[`State`](BudgetStatement.md#state)\>  }\> | Partial budget statement data to initialize the state with. |
+| `budgetStatement` | `Partial`<`Omit`<[`BudgetStatementDocument`](BudgetStatement.md#budgetstatementdocument), ``"data"``\> & { `data`: `Partial`<[`State`](BudgetStatement.md#state)\>  }\> | Partial budget statement data to initialize the state with. |
 
 #### Returns
 
@@ -325,7 +325,7 @@ Initializes the budget statement state with the provided data.
 
 #### Defined in
 
-[budget-statement/gen/init/creators.ts:11](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/init/creators.ts#L11)
+[budget-statement/gen/init/creators.ts:11](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/init/creators.ts#L11)
 
 ## Topup
 
@@ -348,7 +348,7 @@ Action creator for requesting a top-up for an account.
 
 #### Defined in
 
-[budget-statement/gen/topup/creators.ts:18](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/topup/creators.ts#L18)
+[budget-statement/gen/topup/creators.ts:18](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/topup/creators.ts#L18)
 
 ___
 
@@ -372,4 +372,4 @@ Action creator for transferring top-up to an account.
 
 #### Defined in
 
-[budget-statement/gen/topup/creators.ts:30](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/budget-statement/gen/topup/creators.ts#L30)
+[budget-statement/gen/topup/creators.ts:30](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/gen/topup/creators.ts#L30)

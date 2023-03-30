@@ -1,7 +1,5 @@
 @acaldas/document-model-libs / [Exports](modules.md)
 
-@acaldas/document-model-libs / [Exports](modules.md)
-
 # Powerhouse Document Model
 
 ## Getting started
@@ -40,9 +38,9 @@ budgetStatement = reducer(
 ### Object oriented:
 
 ```javascript
-import { BudgetStatementObject } from '@acaldas/document-model-libs/budget-statement';
+import { BudgetStatement } from '@acaldas/document-model-libs/budget-statement';
 
-const budgetStatement = new BudgetStatementObject({
+const budgetStatement = new BudgetStatement({
     name: 'march',
     data: { month: '2023/01' },
 });

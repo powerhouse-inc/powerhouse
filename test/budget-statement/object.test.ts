@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { BudgetStatementObject } from '../../src/budget-statement/';
+import { BudgetStatement } from '../../src/budget-statement';
 
 describe('Budget Statement Class', () => {
     afterAll(() => {
@@ -7,7 +7,7 @@ describe('Budget Statement Class', () => {
     });
 
     it('should set initial state', async () => {
-        const budgetStatement = new BudgetStatementObject({
+        const budgetStatement = new BudgetStatement({
             data: { month: '03/2023' },
         });
 
@@ -16,7 +16,7 @@ describe('Budget Statement Class', () => {
     });
 
     it('should add account', async () => {
-        const budgetStatement = new BudgetStatementObject();
+        const budgetStatement = new BudgetStatement();
         budgetStatement.addAccount([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
@@ -24,12 +24,12 @@ describe('Budget Statement Class', () => {
             },
         ]);
 
-        expect(budgetStatement.getAccounts()).toStrictEqual([
+        expect(budgetStatement.accounts).toStrictEqual([
             budgetStatement.getAccount(
                 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f'
             ),
         ]);
-        expect(budgetStatement.getAccounts()).toStrictEqual([
+        expect(budgetStatement.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
@@ -52,7 +52,7 @@ describe('Budget Statement Class', () => {
     });
 
     it('should chain add account calls', async () => {
-        const budgetStatement = new BudgetStatementObject();
+        const budgetStatement = new BudgetStatement();
         budgetStatement
             .addAccount([
                 {
@@ -67,7 +67,7 @@ describe('Budget Statement Class', () => {
                 },
             ]);
 
-        expect(budgetStatement.getAccounts()).toStrictEqual([
+        expect(budgetStatement.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
@@ -108,7 +108,7 @@ describe('Budget Statement Class', () => {
     });
 
     it('should save to file', async () => {
-        const budgetStatement = new BudgetStatementObject({
+        const budgetStatement = new BudgetStatement({
             name: 'march',
             data: { month: '03/2023' },
         });
@@ -125,12 +125,12 @@ describe('Budget Statement Class', () => {
     });
 
     it('should load from file', async () => {
-        const budgetStatement = await BudgetStatementObject.fromFile(
+        const budgetStatement = await BudgetStatement.fromFile(
             './test/budget-statement/temp/march.phbs.zip'
         );
         expect(budgetStatement.name).toBe('march');
         expect(budgetStatement.month).toBe('03/2023');
-        expect(budgetStatement.getAccounts()).toStrictEqual([
+        expect(budgetStatement.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',

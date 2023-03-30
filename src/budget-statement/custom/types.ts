@@ -193,4 +193,4 @@ export type BudgetStatementAction =
 /**
  * Represents a budget statement document, which extends the base Document type.
  */
-export type BudgetStatement = Document<State, BudgetStatementAction>;
+export type BudgetStatementDocument = Document<State, BudgetStatementAction>;

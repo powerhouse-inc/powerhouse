@@ -28,4 +28,4 @@
 
 #### Defined in
 
-[index.doc.ts:35](https://github.com/acaldas/document-model-libs/blob/52ea82d/src/index.doc.ts#L35)
+[index.doc.ts:35](https://github.com/acaldas/document-model-libs/blob/7166330/src/index.doc.ts#L35)

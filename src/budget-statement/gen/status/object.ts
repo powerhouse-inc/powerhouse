@@ -1,4 +1,4 @@
-import { DocumentObject } from '../../../document';
+import { BaseDocument } from '../../../document';
 import { BudgetStatementAction, State } from '../../custom';
 import {
     approve,
@@ -8,7 +8,7 @@ import {
     submitForReview,
 } from './creators';
 
-export default class StatusObject extends DocumentObject<
+export default class StatusObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {

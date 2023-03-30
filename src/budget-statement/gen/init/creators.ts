@@ -1,5 +1,5 @@
 import { createAction } from '../../../document/utils';
-import { BudgetStatement } from '../../custom';
+import { BudgetStatementDocument } from '../../custom';
 
 import { INIT, InitAction } from './types';
 
@@ -10,8 +10,8 @@ import { INIT, InitAction } from './types';
  */
 export const init = (
     budgetStatement: Partial<
-        Omit<BudgetStatement, 'data'> & {
-            data: Partial<BudgetStatement['data']>;
+        Omit<BudgetStatementDocument, 'data'> & {
+            data: Partial<BudgetStatementDocument['data']>;
         }
     >
 ) => createAction<InitAction>(INIT, budgetStatement);
