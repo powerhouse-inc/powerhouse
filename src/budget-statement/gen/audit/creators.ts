@@ -1,3 +1,4 @@
+import { DocumentFile } from '../../../document';
 import { createAction } from '../../../document/utils';
 import { AuditReport, AuditReportStatus } from '../../custom';
 import {
@@ -21,10 +22,7 @@ export const addAuditReport = (
     reports: {
         timestamp?: string;
         status: AuditReportStatus;
-        report: {
-            data: string;
-            mimeType: string;
-        };
+        report: DocumentFile;
     }[]
 ) => {
     const newTimestamp = new Date();

@@ -124,8 +124,13 @@ export const loadBudgetStatementFromFile = async (
                 throw new Error(`Attachment ${audit.report} not found`);
             }
             const data = await file.async('base64');
-            const mimeType = file.comment;
-            fileRegistry[audit.report] = { data, mimeType };
+            const { mimeType, extension, fileName } = JSON.parse(file.comment);
+            fileRegistry[audit.report] = {
+                data,
+                mimeType,
+                extension,
+                fileName,
+            };
         })
     );
     return { ...state, fileRegistry };

@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
+import mime from 'mime/lite';
 import { BaseAction } from '../actions/types';
-import { Action, Attachment, Document, Reducer } from '../types';
+import { Action, Attachment, Document, DocumentFile, Reducer } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 
 /**
@@ -27,12 +28,12 @@ export const saveToFile = (
 
     const attachments = Object.keys(document.fileRegistry) as Attachment[];
     attachments.forEach(key => {
-        const file = document.fileRegistry[key];
+        const { data, ...attributes } = document.fileRegistry[key];
         const path = key.slice('attachment://'.length);
-        zip.file(path, file.data, {
+        zip.file(path, data, {
             base64: true,
             createFolders: true,
-            comment: file.mimeType,
+            comment: JSON.stringify(attributes),
         });
     });
     const stream = zip.generateNodeStream({
@@ -89,16 +90,29 @@ export const loadFromFile = async <S, A extends Action>(
     );
 };
 
+function getFileAttributes(
+    file: string
+): Omit<DocumentFile, 'data' | 'mimeType'> {
+    const extension = file.replace(/^.*\./, '') || undefined;
+    const fileName = file.replace(/^.*[/\\]/, '') || undefined;
+    return { extension, fileName };
+}
+
 /**
  * Fetches an attachment from a URL and returns its base64-encoded data and MIME type.
  * @param url - The URL of the attachment to fetch.
  * @returns A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
  */
-export async function fetchAttachment(url: string) {
+export async function getRemoteFile(url: string): Promise<DocumentFile> {
     const { data, mimeType = 'application/octet-stream' } = await fetchFile(
         url
     );
-    return { data: data.toString('base64'), mimeType };
+    const attributes = getFileAttributes(url);
+    return {
+        data: data.toString('base64'),
+        mimeType,
+        ...attributes,
+    };
 }
 
 /**
@@ -106,13 +120,15 @@ export async function fetchAttachment(url: string) {
  * @param path - The path of the attachment file to read.
  * @returns A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
  */
-export async function readAttachment(path: string) {
-    const { data, mimeType = 'application/octet-stream' } = await getFile(path);
-    return { data: data.toString('base64'), mimeType };
+export async function getLocalFile(path: string): Promise<DocumentFile> {
+    const data = await getFile(path);
+    const mimeType = mime.getType(path) || 'application/octet-stream';
+    const attributes = getFileAttributes(path);
+    return { data: data.toString('base64'), mimeType, ...attributes };
 }
 
 /**
- * Returns the md5 hash of the given attachment data.
+ * Returns the SHA1 hash of the given attachment data.
  * @param data - The base64-encoded data of the attachment to hash.
  * @returns The hash of the attachment data.
  */

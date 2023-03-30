@@ -75,25 +75,28 @@ export type DocumentHeader = {
 };
 
 /**
+ * The attributes stored for a file. Namely, attachments of a document.
+ */
+export type DocumentFile = {
+    /** The binary data of the attachment in Base64 */
+    data: string;
+    /** The MIME type of the attachment */
+    mimeType: string;
+    // The extension of the attachment.
+    extension?: string;
+    // The file name of the attachment.
+    fileName?: string;
+};
+
+/**
  * Object that indexes attachments of a Document.
  *
  * @remarks
  * This is used to reduce memory usage to avoid
  * multiple instances of the binary data of the attachments.
  *
- * data - Binary data of the attachment in Base64
- *
- * mimeType - MIME type of the attachment
  */
-export type FileRegistry = Record<
-    Attachment,
-    {
-        /** The binary data of the attachment in Base64 */
-        data: string;
-        /** The MIME type of the attachment */
-        mimeType: string;
-    }
->;
+export type FileRegistry = Record<Attachment, DocumentFile>;
 
 /**
  * The base type of a document model.

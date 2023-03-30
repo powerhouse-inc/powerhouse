@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import https from 'https';
-import mime from 'mime/lite';
 import { join } from 'path';
 
 export function writeFile(
@@ -14,7 +13,6 @@ export function writeFile(
 
     return new Promise((resolve, reject) => {
         try {
-            // file.generateNodeStream({ type: 'nodebuffer', streamFiles: true })
             stream
                 .pipe(fs.createWriteStream(filePath))
                 .on('finish', () => {
@@ -55,13 +53,8 @@ export function fetchFile(
     });
 }
 
-export const getFile = async (
-    file: string
-): Promise<{ data: Buffer; mimeType?: string }> => {
-    return {
-        data: readFile(file),
-        mimeType: mime.getType(file) || undefined,
-    };
+export const getFile = async (file: string) => {
+    return readFile(file);
 };
 
 export const hash = (data: string, algorithm = 'sha1') =>
