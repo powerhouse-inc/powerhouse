@@ -86,7 +86,7 @@ Constructs a BaseDocument instance with an initial state.
 
 #### Defined in
 
-[document/object.ts:21](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L21)
+[document/object.ts:21](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L21)
 
 ## Properties
 
@@ -96,7 +96,7 @@ Constructs a BaseDocument instance with an initial state.
 
 #### Defined in
 
-[document/object.ts:14](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L14)
+[document/object.ts:14](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L14)
 
 ___
 
@@ -106,7 +106,7 @@ ___
 
 #### Defined in
 
-[document/object.ts:13](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L13)
+[document/object.ts:13](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L13)
 
 ## Accessors
 
@@ -122,7 +122,7 @@ Gets the timestamp of the date the document was created.
 
 #### Defined in
 
-[document/object.ts:88](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L88)
+[document/object.ts:88](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L88)
 
 ___
 
@@ -138,7 +138,7 @@ Gets the type of document.
 
 #### Defined in
 
-[document/object.ts:81](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L81)
+[document/object.ts:81](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L81)
 
 ___
 
@@ -154,7 +154,7 @@ Gets the initial state of the document.
 
 #### Defined in
 
-[document/object.ts:109](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L109)
+[document/object.ts:109](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L109)
 
 ___
 
@@ -170,7 +170,7 @@ Gets the timestamp of the date the document was last modified.
 
 #### Defined in
 
-[document/object.ts:95](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L95)
+[document/object.ts:95](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L95)
 
 ___
 
@@ -186,7 +186,7 @@ Gets the name of the document.
 
 #### Defined in
 
-[document/object.ts:74](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L74)
+[document/object.ts:74](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L74)
 
 ___
 
@@ -202,7 +202,7 @@ Gets the list of operations performed on the document.
 
 #### Defined in
 
-[document/object.ts:116](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L116)
+[document/object.ts:116](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L116)
 
 ___
 
@@ -218,7 +218,7 @@ Gets the revision number of the document.
 
 #### Defined in
 
-[document/object.ts:102](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L102)
+[document/object.ts:102](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L102)
 
 ## Methods
 
@@ -242,7 +242,7 @@ The Document instance.
 
 #### Defined in
 
-[document/object.ts:34](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L34)
+[document/object.ts:34](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L34)
 
 ___
 
@@ -264,7 +264,7 @@ Gets the attachment associated with the given key.
 
 #### Defined in
 
-[document/object.ts:124](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L124)
+[document/object.ts:124](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L124)
 
 ___
 
@@ -286,7 +286,7 @@ Loads the state of the document from a file.
 
 #### Defined in
 
-[document/object.ts:53](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L53)
+[document/object.ts:53](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L53)
 
 ___
 
@@ -309,7 +309,7 @@ Loads a document state and a set of operations.
 
 #### Defined in
 
-[document/object.ts:165](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L165)
+[document/object.ts:165](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L165)
 
 ___
 
@@ -332,7 +332,7 @@ Removes a range of operations from the document.
 
 #### Defined in
 
-[document/object.ts:156](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L156)
+[document/object.ts:156](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L156)
 
 ___
 
@@ -354,7 +354,7 @@ Reapplies a number of actions to the document.
 
 #### Defined in
 
-[document/object.ts:148](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L148)
+[document/object.ts:148](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L148)
 
 ___
 
@@ -379,7 +379,7 @@ The file path where the state was saved.
 
 #### Defined in
 
-[document/object.ts:45](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L45)
+[document/object.ts:45](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L45)
 
 ___
 
@@ -401,7 +401,7 @@ Sets the name of the document.
 
 #### Defined in
 
-[document/object.ts:132](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L132)
+[document/object.ts:132](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L132)
 
 ___
 
@@ -423,7 +423,7 @@ Reverts a number of actions from the document.
 
 #### Defined in
 
-[document/object.ts:140](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L140)
+[document/object.ts:140](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L140)
 
 ___
 
@@ -455,4 +455,4 @@ The state of the document.
 
 #### Defined in
 
-[document/object.ts:63](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L63)
+[document/object.ts:63](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L63)

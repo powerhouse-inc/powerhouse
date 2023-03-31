@@ -16,12 +16,6 @@ import TopupObject from './topup/object';
 /**
  * Represents a BudgetStatement object that extends the {@link BaseDocument} class to provide a convenient
  * interface for managing a budget statement.
- * @extends AccountObject
- * @extends AuditObject
- * @extends InitObject
- * @extends LineItemObject
- * @extends StatusObject
- * @extends TopupObject
  */
 interface BudgetStatement
     extends AccountObject,
@@ -35,7 +29,7 @@ interface BudgetStatement
  * Represents a budget statement document.
  *
  * @extends BaseDocument<State, BudgetStatementAction>
- * @implements AccountObject, AuditObject, InitObject, LineItemObject, StatusObject, TopupObject
+ * @module
  */
 class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
     /**
@@ -60,6 +54,7 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
 
     /**
      * Gets the month of the budget statement.
+     * @category Budget Statement
      */
     get month() {
         return this.state.data.month;
@@ -67,6 +62,7 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
 
     /**
      * Gets the owner of the budget statement.
+     * @category Budget Statement
      */
     get owner() {
         return this.state.data.owner;
@@ -74,6 +70,7 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
 
     /**
      * Gets the quote currency of the budget statement.
+     * @category Budget Statement
      */
     get quoteCurrency() {
         return this.state.data.quoteCurrency;

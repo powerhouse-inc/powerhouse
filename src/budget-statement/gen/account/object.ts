@@ -18,7 +18,7 @@ export default class AccountObject extends BaseDocument<
      * Adds one or more accounts to the budget statement.
      * @param accounts An array of AccountInput objects to add.
      *
-     * @category Account
+     * @group Account
      */
     public addAccount(accounts: AccountInput[]) {
         return this.dispatch(addAccount(accounts));
@@ -28,7 +28,7 @@ export default class AccountObject extends BaseDocument<
      * Updates one or more existing accounts in the budget statement.
      * @param accounts An array of AccountInput objects to update.
      *
-     * @category Account
+     * @group Account
      */
     public updateAccount(accounts: AccountInput[]) {
         return this.dispatch(updateAccount(accounts));
@@ -38,7 +38,7 @@ export default class AccountObject extends BaseDocument<
      * Deletes one or more accounts from the budget statement.
      * @param addresses An array of addresses of the accounts to delete.
      *
-     * @category Account
+     * @group Account
      */
     public deleteAccount(accounts: Account['address'][]) {
         return this.dispatch(deleteAccount(accounts));
@@ -47,7 +47,7 @@ export default class AccountObject extends BaseDocument<
     /**
      * Returns an array of all accounts in the budget statement.
      *
-     * @category Account
+     * @group Account
      */
     get accounts() {
         return this.state.data.accounts;
@@ -57,7 +57,7 @@ export default class AccountObject extends BaseDocument<
      * Returns the Account object with the specified address.
      * @param address The address of the Account to retrieve.
      *
-     * @category Account
+     * @group Account
      */
     public getAccount(address: Account['address']) {
         return this.accounts.find(account => account.address === address);

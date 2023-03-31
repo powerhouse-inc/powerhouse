@@ -16,6 +16,8 @@ export default class LineItemObject extends BaseDocument<
      * Adds a line item to the specified account.
      * @param account The address of the account to which the line item will be added.
      * @param lineItems An array of line item objects to be added to the account.
+     *
+     * @group Line Item
      */
     public addLineItem(
         account: Account['address'],
@@ -28,6 +30,8 @@ export default class LineItemObject extends BaseDocument<
      * Updates line items for the specified account.
      * @param account The address of the account for which line items will be updated.
      * @param lineItems An array of line item input objects to be updated.
+     *
+     * @group Line Item
      */
     public updateLineItem(
         account: Account['address'],
@@ -40,6 +44,8 @@ export default class LineItemObject extends BaseDocument<
      * Deletes line items for the specified account.
      * @param account The address of the account for which line items will be deleted.
      * @param lineItems An array of objects that contain the category and group of the line items to be deleted.
+     *
+     * @group Line Item
      */
     public deleteLineItem(
         account: Account['address'],
@@ -52,6 +58,8 @@ export default class LineItemObject extends BaseDocument<
      * Retrieves line items for the specified account.
      * @param account The address of the account for which line items will be retrieved.
      * @returns An array of line item objects for the specified account, or undefined if the account does not exist.
+     *
+     * @group Line Item
      */
     public getLineItems(account: Account['address']) {
         return this.state.data.accounts.find(
@@ -64,6 +72,8 @@ export default class LineItemObject extends BaseDocument<
      * @param account The address of the account for which the line item will be retrieved.
      * @param lineItem An object that contains the category and group of the line item to be retrieved.
      * @returns The line item object that matches the specified category and group, or undefined if it does not exist.
+     *
+     * @group Line Item
      */
     public getLineItem(
         account: Account['address'],

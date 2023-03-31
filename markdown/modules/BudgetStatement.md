@@ -70,7 +70,7 @@ Represents an account for which expenses are managed in a budget statement.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:59](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L59)
+[budget-statement/custom/types.ts:59](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L59)
 
 ___
 
@@ -87,7 +87,7 @@ as it is an unique attribute used to identify the account.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:97](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L97)
+[budget-statement/custom/types.ts:97](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L97)
 
 ___
 
@@ -99,7 +99,7 @@ A string literal type representing the format for attaching audit reports to a b
 
 #### Defined in
 
-[budget-statement/custom/types.ts:116](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L116)
+[budget-statement/custom/types.ts:116](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L116)
 
 ___
 
@@ -119,7 +119,7 @@ Represents an audit report for a budget statement.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:121](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L121)
+[budget-statement/custom/types.ts:121](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L121)
 
 ___
 
@@ -139,7 +139,7 @@ Represents the input for an audit report to be added to a budget statement.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:133](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L133)
+[budget-statement/custom/types.ts:133](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L133)
 
 ___
 
@@ -151,7 +151,7 @@ Represents the status of an audit report: 'Approved', 'ApprovedWithComments', 'N
 
 #### Defined in
 
-[budget-statement/custom/types.ts:107](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L107)
+[budget-statement/custom/types.ts:107](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L107)
 
 ___
 
@@ -163,7 +163,7 @@ Represents the possible actions that can be performed on a budget statement.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:185](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L185)
+[budget-statement/custom/types.ts:185](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L185)
 
 ___
 
@@ -175,7 +175,7 @@ Represents a budget statement document, which extends the base Document type.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:196](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L196)
+[budget-statement/custom/types.ts:196](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L196)
 
 ___
 
@@ -187,7 +187,7 @@ Represents the status of the budget statement: 'Draft', 'Review', 'Final', or 'E
 
 #### Defined in
 
-[budget-statement/custom/types.ts:102](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L102)
+[budget-statement/custom/types.ts:102](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L102)
 
 ___
 
@@ -217,7 +217,7 @@ Represents an expense item for a specific account.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:12](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L12)
+[budget-statement/custom/types.ts:12](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L12)
 
 ___
 
@@ -234,7 +234,7 @@ as they are used to identify the line item.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:46](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L46)
+[budget-statement/custom/types.ts:46](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L46)
 
 ___
 
@@ -260,7 +260,7 @@ Represents the state of a budget statement.
 
 #### Defined in
 
-[budget-statement/custom/types.ts:151](https://github.com/acaldas/document-model-libs/blob/7166330/src/budget-statement/custom/types.ts#L151)
+[budget-statement/custom/types.ts:151](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/budget-statement/custom/types.ts#L151)
 
 ## Functions
 
@@ -305,4 +305,4 @@ The new state after applying the action.
 
 #### Defined in
 
-[document/utils/base.ts:59](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/base.ts#L59)
+[document/utils/base.ts:59](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/base.ts#L59)
