@@ -11,6 +11,8 @@ export default class TopupObject extends BaseDocument<
      *
      * @param account - The address of the account to add the top-up request.
      * @param value - The value of the top-up request.
+     *
+     * @group Topup
      */
     public requestTopup(account: Account['address'], value: number) {
         return this.dispatch(requestTopup(account, value));
@@ -22,6 +24,8 @@ export default class TopupObject extends BaseDocument<
      * @param account - The address of the account to add the top-up transfer.
      * @param value - The value of the top-up transfer.
      * @param transaction - The transaction ID of the transfer.
+     *
+     * @group Topup
      *
      */
     public transferTopup(
@@ -36,8 +40,9 @@ export default class TopupObject extends BaseDocument<
      * Gets the top-up transaction for the specified account.
      *
      * @param account - The address of the account to get the top-up transaction for.
-     *
      * @returns The top-up transaction for the specified account, if it exists.
+     *
+     * @group Topup
      */
     public getTopupTransaction(account: Account['address']) {
         return this.state.data.accounts.find(

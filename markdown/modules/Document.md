@@ -64,7 +64,7 @@ Defines the basic structure of an action.
 
 #### Defined in
 
-[document/types.ts:9](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L9)
+[document/types.ts:9](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L9)
 
 ___
 
@@ -80,7 +80,7 @@ Attachment string is formatted as `attachment://<filename>`.
 
 #### Defined in
 
-[document/types.ts:126](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L126)
+[document/types.ts:126](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L126)
 
 ___
 
@@ -103,7 +103,7 @@ This type is extended by all Document models.
 
 #### Defined in
 
-[document/types.ts:106](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L106)
+[document/types.ts:106](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L106)
 
 ___
 
@@ -124,7 +124,7 @@ The attributes stored for a file. Namely, attachments of a document.
 
 #### Defined in
 
-[document/types.ts:76](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L76)
+[document/types.ts:76](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L76)
 
 ___
 
@@ -146,7 +146,7 @@ The base attributes of a [Document](Document.md#document).
 
 #### Defined in
 
-[document/types.ts:60](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L60)
+[document/types.ts:60](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L60)
 
 ___
 
@@ -163,7 +163,7 @@ multiple instances of the binary data of the attachments.
 
 #### Defined in
 
-[document/types.ts:95](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L95)
+[document/types.ts:95](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L95)
 
 ___
 
@@ -204,7 +204,7 @@ The returned state will always be a new object.
 
 #### Defined in
 
-[document/types.ts:40](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L40)
+[document/types.ts:40](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L40)
 
 ___
 
@@ -228,7 +228,7 @@ document's history from the beginning.
 
 #### Defined in
 
-[document/types.ts:55](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L55)
+[document/types.ts:55](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L55)
 
 ___
 
@@ -263,7 +263,7 @@ of the document and returns the new state.
 
 #### Defined in
 
-[document/types.ts:23](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/types.ts#L23)
+[document/types.ts:23](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/types.ts#L23)
 
 ## Functions
 
@@ -291,7 +291,7 @@ Used to have separate mixins to group methods by actions.
 
 #### Defined in
 
-[document/object.ts:183](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/object.ts#L183)
+[document/object.ts:183](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/object.ts#L183)
 
 ___
 
@@ -325,4 +325,4 @@ The new state of the document.
 
 #### Defined in
 
-[document/reducer.ts:149](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/reducer.ts#L149)
+[document/reducer.ts:149](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/reducer.ts#L149)

@@ -55,7 +55,7 @@ The new action.
 
 #### Defined in
 
-[document/utils/base.ts:22](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/base.ts#L22)
+[document/utils/base.ts:22](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/base.ts#L22)
 
 ___
 
@@ -86,7 +86,7 @@ The new document state.
 
 #### Defined in
 
-[document/utils/base.ts:93](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/base.ts#L93)
+[document/utils/base.ts:93](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/base.ts#L93)
 
 ___
 
@@ -142,7 +142,7 @@ The new reducer.
 
 #### Defined in
 
-[document/utils/base.ts:55](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/base.ts#L55)
+[document/utils/base.ts:55](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/base.ts#L55)
 
 ___
 
@@ -166,7 +166,7 @@ A Promise that resolves to an object containing the base64-encoded data and MIME
 
 #### Defined in
 
-[document/utils/file.ts:123](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L123)
+[document/utils/file.ts:123](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/file.ts#L123)
 
 ___
 
@@ -190,7 +190,7 @@ A Promise that resolves to an object containing the base64-encoded data and MIME
 
 #### Defined in
 
-[document/utils/file.ts:106](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L106)
+[document/utils/file.ts:106](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/file.ts#L106)
 
 ___
 
@@ -214,7 +214,7 @@ The hash of the attachment data.
 
 #### Defined in
 
-[document/utils/file.ts:135](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L135)
+[document/utils/file.ts:135](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/file.ts#L135)
 
 ___
 
@@ -255,7 +255,7 @@ A promise that resolves to the document state after applying all the operations.
 
 #### Defined in
 
-[document/utils/file.ts:61](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L61)
+[document/utils/file.ts:61](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/file.ts#L61)
 
 ___
 
@@ -286,4 +286,4 @@ A promise that resolves to the path of the saved file.
 
 #### Defined in
 
-[document/utils/file.ts:19](https://github.com/acaldas/document-model-libs/blob/7166330/src/document/utils/file.ts#L19)
+[document/utils/file.ts:19](https://github.com/acaldas/document-model-libs/blob/4ee6940/src/document/utils/file.ts#L19)

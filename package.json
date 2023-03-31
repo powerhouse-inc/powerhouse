@@ -32,10 +32,11 @@
         "lint": "eslint --ext .js,.ts .",
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
         "test": "jest",
-        "docs": "typedoc src/index.doc.ts --plugin none",
+        "docs": "typedoc src/index.doc.ts --plugin @bangjelkoski/typedoc-theme --theme fons",
         "docs:markdown": "typedoc src/index.doc.ts --plugin typedoc-plugin-markdown --out markdown"
     },
     "devDependencies": {
+        "@bangjelkoski/typedoc-theme": "^0.0.2",
         "@rollup/plugin-node-resolve": "^15.0.1",
         "@rollup/plugin-typescript": "^11.0.0",
         "@types/jest": "^29.4.0",

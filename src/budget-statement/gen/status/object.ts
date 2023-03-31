@@ -14,6 +14,8 @@ export default class StatusObject extends BaseDocument<
 > {
     /**
      * Submits the budget statement for review.
+     *
+     * @group Status
      */
     public submitForReview() {
         return this.dispatch(submitForReview());
@@ -21,6 +23,8 @@ export default class StatusObject extends BaseDocument<
 
     /**
      * Escalates the budget statement.
+     *
+     * @group Status
      */
     public escalate() {
         return this.dispatch(escalate());
@@ -28,6 +32,8 @@ export default class StatusObject extends BaseDocument<
 
     /**
      * Approves the budget statement.
+     *
+     * @group Status
      */
     public approve() {
         return this.dispatch(approve());
@@ -36,6 +42,8 @@ export default class StatusObject extends BaseDocument<
     /**
      * Reopens the budget statement to draft status.
      * @returns A promise that resolves when the action is complete.
+     *
+     * @group Status
      */
     public reopenToDraft() {
         return this.dispatch(reopenToDraft());
@@ -44,6 +52,8 @@ export default class StatusObject extends BaseDocument<
     /**
      * Reopens the budget statement to review status.
      * @returns A promise that resolves when the action is complete.
+     *
+     * @group Status
      */
     public reopenToReview() {
         return this.dispatch(reopenToReview());
@@ -52,6 +62,8 @@ export default class StatusObject extends BaseDocument<
     /**
      * Gets the current status of the budget statement.
      * @returns The status of the budget statement.
+     *
+     * @group Status
      */
     get status() {
         return this.state.data.status;
