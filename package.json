@@ -37,11 +37,14 @@
     },
     "devDependencies": {
         "@bangjelkoski/typedoc-theme": "^0.0.2",
+        "@rollup/plugin-commonjs": "^24.0.1",
         "@rollup/plugin-node-resolve": "^15.0.1",
         "@rollup/plugin-typescript": "^11.0.0",
         "@types/jest": "^29.4.0",
         "@types/mime": "^3.0.1",
         "@types/node": "^18.14.6",
+        "@types/sha.js": "^2.4.0",
+        "@types/web": "^0.0.99",
         "@typescript-eslint/eslint-plugin": "^5.53.0",
         "@typescript-eslint/parser": "^5.53.0",
         "esbuild": "^0.17.11",
@@ -56,6 +59,7 @@
         "rollup": "^3.19.1",
         "rollup-plugin-dts": "^5.2.0",
         "rollup-plugin-esbuild": "^5.0.0",
+        "rollup-plugin-polyfill-node": "^0.12.0",
         "ts-jest": "^29.0.5",
         "typedoc": "^0.23.28",
         "typedoc-plugin-markdown": "^3.14.0",
@@ -65,6 +69,7 @@
         "immer": "^9.0.19",
         "json-stringify-deterministic": "^1.0.8",
         "jszip": "^3.10.1",
-        "mime": "^3.0.0"
+        "mime": "^3.0.0",
+        "sha.js": "^2.4.11"
     }
 }

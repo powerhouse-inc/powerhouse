@@ -1,6 +1,20 @@
+import commonjs from '@rollup/plugin-commonjs';
+import nodeResolve from '@rollup/plugin-node-resolve';
 import type { Plugin, RollupOptions } from 'rollup';
 import dts from 'rollup-plugin-dts';
 import esbuild from 'rollup-plugin-esbuild';
+import nodePolyfills from 'rollup-plugin-polyfill-node';
+
+function replaceBrowserModules(): Plugin {
+    return {
+        name: 'replace-browser-modules',
+        resolveId(source) {
+            if (source.endsWith('/node')) {
+                return 'src/document/utils/browser.ts';
+            }
+        },
+    };
+}
 
 function emitModulePackageFile(): Plugin {
     return {
@@ -65,6 +79,36 @@ const outputs: RollupOptions[] = [
             entryFileNames: '[name].d.ts',
             format: 'es',
         },
+    },
+    {
+        input: 'src/index.ts',
+        plugins: [
+            replaceBrowserModules(),
+            nodePolyfills(),
+            nodeResolve({ browser: true, preferBuiltins: false }),
+            commonjs(),
+            esbuild({
+                optimizeDeps: {
+                    include: ['immer', 'jszip', 'mime/lite'],
+                    esbuildOptions: {
+                        treeShaking: true,
+                    },
+                },
+            }),
+        ],
+        output: [
+            {
+                file: 'dist/document-model.browser.js',
+                format: 'umd',
+                name: 'DocumentModel',
+                sourcemap: true,
+                exports: 'named',
+            },
+            {
+                file: 'dist/es/rollup.browser.js',
+                format: 'es',
+            },
+        ],
     },
 ];
 
