@@ -2,23 +2,31 @@
     "packageManager": "yarn@1.22.19",
     "name": "@acaldas/document-model-libs",
     "version": "1.0.0",
-    "main": "dist/index.js",
-    "module": "dist/es/index.js",
+    "main": "dist/node/cjs/index.js",
+    "module": "dist/node/es/index.js",
     "types": "dist/index.d.ts",
     "exports": {
-        ".": "./dist/index.js",
-        "./budget-statement": "./dist/budget-statement.js",
-        "./document": "./dist/document.js"
+        ".": "./dist/node/index.js",
+        "./budget-statement": "./dist/node/budget-statement.js",
+        "./document": "./dist/node/document.js",
+        "./browser": "./dist/browser/es/document-model.browser.js"
     },
     "typesVersions": {
         "*": {
             "budget-statement": [
-                "dist/budget-statement"
+                "dist/node/types/budget-statement"
             ],
             "document": [
-                "dist/document"
+                "dist/node/types/document"
+            ],
+            "browser": [
+                "dist/browser/types/"
             ]
         }
+    },
+    "browser": {
+        "./node-cjs.js": "./browser-cjs.js",
+        "./node-esm.js": "./browser-esm.js"
     },
     "files": [
         "/dist"
@@ -51,7 +59,6 @@
         "eslint": "^8.35.0",
         "eslint-config-prettier": "^8.6.0",
         "eslint-plugin-jest": "^27.2.1",
-        "eslint-plugin-tsdoc": "^0.2.17",
         "jest": "^29.4.3",
         "jsonc-parser": "^3.2.0",
         "prettier": "^2.8.4",

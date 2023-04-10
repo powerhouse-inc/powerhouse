@@ -4,6 +4,8 @@ import { BaseAction } from '../actions/types';
 import { Action, Attachment, Document, DocumentFile, Reducer } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 
+export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
+
 /**
  * Saves a document to a ZIP file.
  *
@@ -63,9 +65,22 @@ export const loadFromFile = async <S, A extends Action>(
     reducer: Reducer<S, A | BaseAction>
 ) => {
     const file = readFile(path);
-    const zip = new JSZip();
-    await zip.loadAsync(file);
+    return loadFromInput(file, reducer);
+};
 
+export const loadFromInput = async <S, A extends Action>(
+    input: FileInput,
+    reducer: Reducer<S, A | BaseAction>
+) => {
+    const zip = new JSZip();
+    await zip.loadAsync(input);
+    return loadFromZip(zip, reducer);
+};
+
+async function loadFromZip<S, A extends Action>(
+    zip: JSZip,
+    reducer: Reducer<S, A | BaseAction>
+) {
     const stateZip = zip.file('state.json');
     if (!stateZip) {
         throw new Error('Initial state not found');
@@ -88,7 +103,7 @@ export const loadFromFile = async <S, A extends Action>(
         (state, operation) => reducer(state, operation),
         state
     );
-};
+}
 
 function getFileAttributes(
     file: string

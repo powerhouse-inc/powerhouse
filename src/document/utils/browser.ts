@@ -12,9 +12,7 @@ export function writeFile(
 }
 
 export function readFile(path: string) {
-    // throw FileSystemError;
-    // @ts-ignore
-    return Buffer.from('test');
+    throw FileSystemError;
 }
 
 export function fetchFile(
@@ -28,8 +26,8 @@ export const getFile = async (file: string) => {
 };
 
 function hexToBase64(str: string) {
-    var bString = '';
-    for (var i = 0; i < str.length; i += 2) {
+    let bString = '';
+    for (let i = 0; i < str.length; i += 2) {
         bString += String.fromCharCode(parseInt(str.substr(i, 2), 16));
     }
     return btoa(bString);

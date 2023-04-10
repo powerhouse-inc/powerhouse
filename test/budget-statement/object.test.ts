@@ -1,5 +1,11 @@
 import fs from 'fs';
-import { BudgetStatement } from '../../src/budget-statement';
+import {
+    BudgetStatement,
+    BudgetStatementAction,
+    reducer,
+    State,
+} from '../../src/budget-statement';
+import { loadFromInput } from '../../src/document/utils/file';
 
 describe('Budget Statement Class', () => {
     afterAll(() => {
@@ -150,5 +156,17 @@ describe('Budget Statement Class', () => {
                 lineItems: [],
             },
         ]);
+    });
+
+    it('should load from stream', async () => {
+        const file = fs.readFileSync(
+            './test/budget-statement/temp/march.phbs.zip'
+        );
+        const budgetStatement = await loadFromInput<
+            State,
+            BudgetStatementAction
+        >(file.buffer, reducer);
+        expect(budgetStatement.name).toBe('march');
+        expect(budgetStatement.data.month).toBe('03/2023');
     });
 });

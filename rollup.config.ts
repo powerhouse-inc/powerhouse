@@ -1,7 +1,7 @@
 import commonjs from '@rollup/plugin-commonjs';
 import nodeResolve from '@rollup/plugin-node-resolve';
+import dts from '@rollup/plugin-typescript';
 import type { Plugin, RollupOptions } from 'rollup';
-import dts from 'rollup-plugin-dts';
 import esbuild from 'rollup-plugin-esbuild';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 
@@ -47,7 +47,7 @@ const outputs: RollupOptions[] = [
             }),
         ],
         output: {
-            dir: 'dist/',
+            dir: 'dist/node/cjs',
             entryFileNames: '[name].js',
             format: 'cjs',
             sourcemap: true,
@@ -65,7 +65,7 @@ const outputs: RollupOptions[] = [
             emitModulePackageFile(),
         ],
         output: {
-            dir: 'dist/es/',
+            dir: 'dist/node/es/',
             entryFileNames: '[name].js',
             format: 'es',
             sourcemap: true,
@@ -73,9 +73,9 @@ const outputs: RollupOptions[] = [
     },
     {
         input,
-        plugins: [dts({ respectExternal: true })],
+        plugins: [dts({ outDir: 'dist/node/types' })],
         output: {
-            dir: 'dist/',
+            dir: 'dist/node/types/',
             entryFileNames: '[name].d.ts',
             format: 'es',
         },
@@ -98,17 +98,31 @@ const outputs: RollupOptions[] = [
         ],
         output: [
             {
-                file: 'dist/document-model.browser.js',
+                file: 'dist/browser/umd/document-model.browser.js',
                 format: 'umd',
                 name: 'DocumentModel',
                 sourcemap: true,
                 exports: 'named',
             },
             {
-                file: 'dist/es/rollup.browser.js',
+                file: 'dist/browser/es/document-model.browser.js',
                 format: 'es',
             },
         ],
+    },
+    {
+        input,
+        plugins: [
+            nodePolyfills(),
+            dts({
+                outDir: 'dist/browser/types',
+            }),
+        ],
+        output: {
+            dir: 'dist/browser/types/',
+            entryFileNames: '[name].d.ts',
+            format: 'es',
+        },
     },
 ];
 

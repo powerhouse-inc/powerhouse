@@ -29,8 +29,8 @@ describe('Base utils', () => {
         });
     });
 
-    it('should parse file attributes', async () => {
-        expect(getLocalFile('as')).rejects.toBeDefined();
+    it("should throw exception when file doesn't exists", async () => {
+        await expect(getLocalFile('as')).rejects.toBeDefined();
     });
 
     it('should hash in browser and node', async () => {

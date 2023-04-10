@@ -1,5 +1,11 @@
 import JSZip from 'jszip';
-import { createDocument, loadFromFile, saveToFile } from '../../document/utils';
+import {
+    createDocument,
+    FileInput,
+    loadFromFile,
+    loadFromInput,
+    saveToFile,
+} from '../../document/utils';
 import { readFile } from '../../document/utils/node';
 import { reducer } from './reducer';
 import {
@@ -115,6 +121,42 @@ export const loadBudgetStatementFromFile = async (
     const file = readFile(path);
     const zip = new JSZip();
     await zip.loadAsync(file);
+    const fileRegistry = { ...state.fileRegistry };
+    await Promise.all(
+        auditReports.map(async audit => {
+            const path = audit.report.slice('attachment://'.length);
+            const file = await zip.file(path);
+            if (!file) {
+                throw new Error(`Attachment ${audit.report} not found`);
+            }
+            const data = await file.async('base64');
+            const { mimeType, extension, fileName } = JSON.parse(file.comment);
+            fileRegistry[audit.report] = {
+                data,
+                mimeType,
+                extension,
+                fileName,
+            };
+        })
+    );
+    return { ...state, fileRegistry };
+};
+
+export const loadBudgetStatementFromInput = async (
+    input: FileInput
+): Promise<BudgetStatementDocument> => {
+    const state = await loadFromInput<State, BudgetStatementAction>(
+        input,
+        reducer
+    );
+
+    const auditReports = state.data.auditReports;
+    if (!auditReports.length) {
+        return state;
+    }
+
+    const zip = new JSZip();
+    await zip.loadAsync(input);
     const fileRegistry = { ...state.fileRegistry };
     await Promise.all(
         auditReports.map(async audit => {
