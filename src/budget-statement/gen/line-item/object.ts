@@ -21,7 +21,7 @@ export default class LineItemObject extends BaseDocument<
      */
     public addLineItem(
         account: Account['address'],
-        lineItems: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>[]
+        lineItems: (Partial<LineItem> & Pick<LineItem, 'category' | 'group'>)[]
     ) {
         return this.dispatch(addLineItem(account, lineItems));
     }

@@ -20,7 +20,7 @@ import {
  */
 export const addLineItem = (
     account: Account['address'],
-    lineItems: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>[]
+    lineItems: (Partial<LineItem> & Pick<LineItem, 'category' | 'group'>)[]
 ) =>
     createAction<AddLineItemAction>(ADD_LINE_ITEM, {
         account,

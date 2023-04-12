@@ -1,7 +1,7 @@
 import commonjs from '@rollup/plugin-commonjs';
 import nodeResolve from '@rollup/plugin-node-resolve';
-import dts from '@rollup/plugin-typescript';
 import type { Plugin, RollupOptions } from 'rollup';
+import dts from 'rollup-plugin-dts';
 import esbuild from 'rollup-plugin-esbuild';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 
@@ -73,7 +73,7 @@ const outputs: RollupOptions[] = [
     },
     {
         input,
-        plugins: [dts({ outDir: 'dist/node/types' })],
+        plugins: [dts()],
         output: {
             dir: 'dist/node/types/',
             entryFileNames: '[name].d.ts',
@@ -96,31 +96,77 @@ const outputs: RollupOptions[] = [
                 },
             }),
         ],
-        output: [
-            {
-                file: 'dist/browser/umd/document-model.browser.js',
-                format: 'umd',
-                name: 'DocumentModel',
-                sourcemap: true,
-                exports: 'named',
-            },
-            {
-                file: 'dist/browser/es/document-model.browser.js',
-                format: 'es',
-            },
-        ],
+        output: {
+            file: 'dist/browser/umd/document-model.browser.js',
+            format: 'umd',
+            name: 'DocumentModel',
+            sourcemap: true,
+            exports: 'named',
+        },
     },
     {
         input,
         plugins: [
+            replaceBrowserModules(),
             nodePolyfills(),
-            dts({
-                outDir: 'dist/browser/types',
+            nodeResolve({ browser: true, preferBuiltins: false }),
+            commonjs(),
+            esbuild({
+                optimizeDeps: {
+                    include: ['immer', 'jszip', 'mime/lite'],
+                    esbuildOptions: {
+                        treeShaking: true,
+                    },
+                },
             }),
+        ],
+        output: {
+            dir: 'dist/browser/es/',
+            entryFileNames: '[name].js',
+            format: 'es',
+            sourcemap: true,
+        },
+    },
+    {
+        input,
+        plugins: [
+            replaceBrowserModules(),
+            nodePolyfills(),
+            nodeResolve({ browser: true, preferBuiltins: false }),
+            esbuild({
+                optimizeDeps: {
+                    include: ['immer', 'jszip', 'mime/lite'],
+                    esbuildOptions: {
+                        treeShaking: true,
+                    },
+                },
+            }),
+            dts(),
         ],
         output: {
             dir: 'dist/browser/types/',
             entryFileNames: '[name].d.ts',
+            format: 'es',
+        },
+    },
+    {
+        input: 'src/index.ts',
+        plugins: [
+            replaceBrowserModules(),
+            nodePolyfills(),
+            nodeResolve({ browser: true, preferBuiltins: false }),
+            esbuild({
+                optimizeDeps: {
+                    include: ['immer', 'jszip', 'mime/lite'],
+                    esbuildOptions: {
+                        treeShaking: true,
+                    },
+                },
+            }),
+            dts(),
+        ],
+        output: {
+            dir: 'dist/browser',
             format: 'es',
         },
     },

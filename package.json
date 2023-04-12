@@ -5,11 +5,14 @@
     "main": "dist/node/cjs/index.js",
     "module": "dist/node/es/index.js",
     "types": "dist/index.d.ts",
+    "./browser": "dist/browser/es/index.js",
     "exports": {
         ".": "./dist/node/index.js",
-        "./budget-statement": "./dist/node/budget-statement.js",
-        "./document": "./dist/node/document.js",
-        "./browser": "./dist/browser/es/document-model.browser.js"
+        "./budget-statement": "./dist/node/es/budget-statement.js",
+        "./document": "./dist/node/es/document.js",
+        "./browser": "./dist/browser/es/index.js",
+        "./browser/budget-statement": "./dist/browser/es/budget-statement.js",
+        "./browser/document": "./dist/browser/es/document.js"
     },
     "typesVersions": {
         "*": {
@@ -20,13 +23,12 @@
                 "dist/node/types/document"
             ],
             "browser": [
-                "dist/browser/types/"
+                "dist/browser/index.d.ts"
+            ],
+            "browser/budget-statement": [
+                "dist/browser/types/budget-statement"
             ]
         }
-    },
-    "browser": {
-        "./node-cjs.js": "./browser-cjs.js",
-        "./node-esm.js": "./browser-esm.js"
     },
     "files": [
         "/dist"
