@@ -8,10 +8,12 @@ import {
 import { createBudgetStatement } from '../custom/utils';
 import AccountObject from './account/object';
 import AuditObject from './audit/object';
+import CommentObject from './comment/object';
 import InitObject from './init/object';
 import LineItemObject from './line-item/object';
 import StatusObject from './status/object';
 import TopupObject from './topup/object';
+import VestingObject from './vesting/object';
 
 /**
  * Represents a BudgetStatement object that extends the {@link BaseDocument} class to provide a convenient
@@ -20,10 +22,12 @@ import TopupObject from './topup/object';
 interface BudgetStatement
     extends AccountObject,
         AuditObject,
+        CommentObject,
         InitObject,
         LineItemObject,
         StatusObject,
-        TopupObject {}
+        TopupObject,
+        VestingObject {}
 
 /**
  * Represents a budget statement document.
@@ -112,10 +116,12 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
 applyMixins(BudgetStatement, [
     AccountObject,
     AuditObject,
+    CommentObject,
     InitObject,
     LineItemObject,
     StatusObject,
     TopupObject,
+    VestingObject,
 ]);
 
 /**
@@ -123,9 +129,11 @@ applyMixins(BudgetStatement, [
  * interface for managing a budget statement.
  * @extends AccountObject
  * @extends AuditObject
+ * @extends CommentObject
  * @extends InitObject
  * @extends LineItemObject
  * @extends StatusObject
  * @extends TopupObject
+ * @extends VestingObject
  */
 export { BudgetStatement };
