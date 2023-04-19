@@ -18,6 +18,7 @@ export type LineItem = {
         id: string;
         title: string;
     };
+    /** If the expense is related to the headcount. */
     headcountExpense: boolean;
     /** The reference to the category of the expense. */
     category: {

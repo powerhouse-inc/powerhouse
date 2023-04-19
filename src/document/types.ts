@@ -53,8 +53,11 @@ export type ImmutableReducer<State, A extends Action> = (
  * @typeParam A - The type of the action.
  */
 export type Operation<A extends Action = Action> = A & {
+    /** Position of the operation in the history */
     index: number;
+    /** Timestamp of when the operation was added */
     timestamp: string;
+    /** Hash of the resulting document data after the operation */
     hash: string;
 };
 

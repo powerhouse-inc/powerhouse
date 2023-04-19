@@ -10,7 +10,8 @@
         "eslint:recommended",
         "plugin:jest/recommended",
         "prettier",
-        "plugin:@typescript-eslint/recommended"
+        "plugin:@typescript-eslint/recommended",
+        "eslint-plugin-tsdoc"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
@@ -24,6 +25,7 @@
             1,
             { "ignoreRestSiblings": true }
         ],
-        "@typescript-eslint/ban-ts-comment": "warn"
+        "@typescript-eslint/ban-ts-comment": "warn",
+        "tsdoc/syntax": "warn"
     }
 }
