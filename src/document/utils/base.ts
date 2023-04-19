@@ -99,3 +99,8 @@ export const createDocument = <T, A extends Action>(
 export const hashDocument = (state: Document) => {
     return hash(JSONDeterministic(state.data));
 };
+
+export const hashKey = (date?: Date, randomLimit = 1000) => {
+    const random = Math.random() * randomLimit;
+    return hash(`${(date ?? new Date()).toISOString()}${random}`);
+};

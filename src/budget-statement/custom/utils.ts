@@ -42,8 +42,11 @@ export const createBudgetStatement = (
             month: null,
             status: 'Draft',
             quoteCurrency: null,
+            vesting: [],
+            ftes: null,
             accounts: [],
             auditReports: [],
+            comments: [],
             ...initialState?.data,
         },
     });
@@ -84,6 +87,8 @@ export const createLineItem = (
     payment: null,
     actual: null,
     forecast: [],
+    comment: null,
+    headcountExpense: false,
     ...input,
 });
 

@@ -1,24 +1,26 @@
 import { Document, DocumentFile } from '../../document';
 import { BudgetStatementAccountAction } from '../gen/account/types';
 import { BudgetStatementAuditReportAction } from '../gen/audit/types';
+import { BudgetStatementCommentAction } from '../gen/comment/types';
 import { BudgetStatementInitAction } from '../gen/init/types';
 import { BudgetStatementLineItemAction } from '../gen/line-item/types';
 import { BudgetStatementStatusAction } from '../gen/status/types';
 import { BudgetStatementTopupAction } from '../gen/topup/types';
+import { BudgetStatementVestingAction } from '../gen/vesting/types';
 
 /**
  * Represents an expense item for a specific account.
  */
 export type LineItem = {
-    /** The reference to the category of the expense. */
-    category: {
+    /** The reference to the group of the expense. */
+    group: {
         ref: string;
         id: string;
         title: string;
-        headcountExpense: boolean;
     };
-    /** The reference to the group of the expense. */
-    group: {
+    headcountExpense: boolean;
+    /** The reference to the category of the expense. */
+    category: {
         ref: string;
         id: string;
         title: string;
@@ -33,7 +35,9 @@ export type LineItem = {
     forecast: {
         month: string;
         value: number;
+        budgetCap: number;
     }[];
+    comment: string | null;
 };
 
 /**
@@ -145,6 +149,41 @@ export type AuditReportInput = {
     status: AuditReportStatus;
 };
 
+export type Comment = {
+    key: string;
+    author: {
+        ref: string | null;
+        id: string | null;
+        username: string | null;
+        roleLabel: string | null;
+    };
+    comment: string;
+    timestamp: string;
+};
+
+export type VestingInput = Partial<Omit<Vesting, 'key'>> & {
+    key: Vesting['key'];
+};
+
+export type Vesting = {
+    key: string;
+    date: string;
+    amount: string;
+    amountOld: string;
+    comment: string;
+    currency: string;
+    vested: boolean;
+};
+
+export type CommentInput = Partial<Omit<Comment, 'key'>> & {
+    key: Comment['key'];
+};
+
+export type FTEs = {
+    value: string;
+    forecast: { month: string; value: number }[];
+};
+
 /**
  * Represents the state of a budget statement.
  */
@@ -169,6 +208,10 @@ export type State = {
      * The quote currency for the budget statement.
      */
     quoteCurrency: string | null;
+
+    vesting: Vesting[];
+
+    ftes: FTEs | null;
     /**
      * The list of accounts in the budget statement.
      */
@@ -177,6 +220,8 @@ export type State = {
      * The list of audit reports for the budget statement.
      */
     auditReports: AuditReport[];
+
+    comments: Comment[];
 };
 
 /**
@@ -188,7 +233,9 @@ export type BudgetStatementAction =
     | BudgetStatementLineItemAction
     | BudgetStatementStatusAction
     | BudgetStatementTopupAction
-    | BudgetStatementAuditReportAction;
+    | BudgetStatementAuditReportAction
+    | BudgetStatementVestingAction
+    | BudgetStatementCommentAction;
 
 /**
  * Represents a budget statement document, which extends the base Document type.

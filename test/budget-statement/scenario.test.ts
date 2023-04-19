@@ -21,7 +21,6 @@ describe('Budget Statement scenario 1', () => {
     // creates budget statement using initial state
     const initialStep = steps[0].json;
     let budgetStatement = createBudgetStatement({ data: initialStep.state });
-
     // tests each scenario step in sequence
     it.each(steps.slice(1))('should verify $file', ({ json }) => {
         expect.assertions(1);

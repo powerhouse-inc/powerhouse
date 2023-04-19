@@ -5,6 +5,11 @@ import {
     UPDATE_ACCOUNT,
 } from '../gen/account/types';
 import { ADD_AUDIT_REPORT, DELETE_AUDIT_REPORT } from '../gen/audit/types';
+import {
+    ADD_COMMENT,
+    DELETE_COMMENT,
+    UPDATE_COMMENT,
+} from '../gen/comment/types';
 import { INIT } from '../gen/init/types';
 import {
     ADD_LINE_ITEM,
@@ -19,6 +24,11 @@ import {
     SUBMIT_FOR_REVIEW,
 } from '../gen/status/types';
 import { REQUEST_TOPUP, TRANSFER_TOPUP } from '../gen/topup/types';
+import {
+    ADD_VESTING,
+    DELETE_VESTING,
+    UPDATE_VESTING,
+} from '../gen/vesting/types';
 import {
     addAccountOperation,
     addAuditReportOperation,
@@ -37,6 +47,16 @@ import {
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
+import {
+    addCommentOperation,
+    deleteCommentOperation,
+    updateCommentOperation,
+} from './actions/comment';
+import {
+    addVestingOperation,
+    deleteVestingOperation,
+    updateVestingOperation,
+} from './actions/vesting';
 import { BudgetStatementAction, State } from './types';
 
 /**
@@ -98,6 +118,18 @@ export const reducer = createReducer<State, BudgetStatementAction>(
                 return addAuditReportOperation(state, action);
             case DELETE_AUDIT_REPORT:
                 return deleteAuditReportOperation(state, action);
+            case ADD_VESTING:
+                return addVestingOperation(state, action);
+            case UPDATE_VESTING:
+                return updateVestingOperation(state, action);
+            case DELETE_VESTING:
+                return deleteVestingOperation(state, action);
+            case ADD_COMMENT:
+                return addCommentOperation(state, action);
+            case UPDATE_COMMENT:
+                return updateCommentOperation(state, action);
+            case DELETE_COMMENT:
+                return deleteCommentOperation(state, action);
             default:
                 return state;
         }
