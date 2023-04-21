@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    BudgetStatementAction,
     BudgetStatementDocument,
     actions,
     reducer,
@@ -89,24 +88,27 @@ export default function Editor() {
         <div>
             <div>
                 <button onClick={newDocument}>New document</button>&ensp;
-                {window.electronAPI ? (
-                    <>
-                        <button onClick={loadNode}>Load document</button>&ensp;
-                        <button onClick={saveNode}>Save document</button>
-                    </>
-                ) : (
-                    <>
-                        <button onClick={loadBrowser}>Load document</button>
-                        &ensp;
-                        <button onClick={saveBrowser}>Save document</button>
-                    </>
-                )}
+                {
+                    // @ts-ignore
+                    window.electronAPI ? (
+                        <>
+                            <button onClick={loadNode}>Load document</button>
+                            &ensp;
+                            <button onClick={saveNode}>Save document</button>
+                        </>
+                    ) : (
+                        <>
+                            <button onClick={loadBrowser}>Load document</button>
+                            &ensp;
+                            <button onClick={saveBrowser}>Save document</button>
+                        </>
+                    )
+                }
                 <div
                     style={{ display: "flex", justifyContent: "space-between" }}
                 >
                     <div style={{ width: "50%" }}>
                         <BudgetStatement.Editor
-                            key={initialBudgetStatement?.revision}
                             budgetStatement={initialBudgetStatement}
                             onChange={onChange}
                         />
