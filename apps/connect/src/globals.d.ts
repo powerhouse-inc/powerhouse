@@ -1,5 +1,3 @@
-import { BrowserWindow } from "electron";
-
 export {};
 
 declare global {

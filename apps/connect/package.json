@@ -11,6 +11,9 @@
         "package": "electron-forge package",
         "make": "electron-forge make",
         "publish": "electron-forge publish",
+        "make:mac": "electron-forge make -p darwin",
+        "make:linux": "electron-forge make -p linux",
+        "make:windows": "electron-forge make -p win32",
         "lint": "echo \"No linting configured\""
     },
     "devDependencies": {
