@@ -1,7 +1,15 @@
 import JSZip from 'jszip';
 import mime from 'mime/lite';
 import { BaseAction } from '../actions/types';
-import { Action, Attachment, Document, DocumentFile, Reducer } from '../types';
+import {
+    Action,
+    Attachment,
+    Document,
+    DocumentFile,
+    DocumentHeader,
+    Operation,
+    Reducer,
+} from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
@@ -9,6 +17,16 @@ export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 export const createZip = async (document: Document) => {
     // create zip file
     const zip = new JSZip();
+
+    const { name, revision, documentType, created, lastModified } = document;
+    const header: DocumentHeader = {
+        name,
+        revision,
+        documentType,
+        created,
+        lastModified,
+    };
+    zip.file('header.json', JSON.stringify(header, null, 2));
     zip.file(
         'state.json',
         JSON.stringify(document.initialState || {}, null, 2)
@@ -110,19 +128,34 @@ async function loadFromZip<S, A extends Action>(
     // document is saved without initial state
     state.initialState = JSON.parse(initialStateStr);
 
+    const headerZip = zip.file('header.json');
+    let header: DocumentHeader | null = null;
+    if (headerZip) {
+        header = JSON.parse(await headerZip.async('string'));
+    }
+
     const operationsZip = zip.file('operations.json');
     if (!operationsZip) {
         throw new Error('Operations history not found');
     }
-    const operations = JSON.parse(await operationsZip.async('string')) as (
-        | A
-        | BaseAction
-    )[];
+    const operations = JSON.parse(
+        await operationsZip.async('string')
+    ) as Operation<A | BaseAction>[];
 
-    return operations.reduce(
-        (state, operation) => reducer(state, operation),
-        state
-    );
+    let result = operations
+        .slice(0, header?.revision)
+        .reduce((state, operation) => reducer(state, operation), state);
+
+    if (header) {
+        result = {
+            ...result,
+            operations: [
+                ...result.operations,
+                ...operations.slice(header.revision),
+            ],
+        };
+    }
+    return result;
 }
 
 function getFileAttributes(
