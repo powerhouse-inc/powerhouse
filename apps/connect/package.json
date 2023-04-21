@@ -1,0 +1,36 @@
+{
+    "name": "document-model-electron",
+    "productName": "document-model-electron",
+    "version": "1.0.0",
+    "description": "Budget Statement Editor",
+    "main": ".vite/build/main.js",
+    "license": "AGPL-3.0-only",
+    "author": "acaldas@powerhouse.inc",
+    "scripts": {
+        "start": "electron-forge start",
+        "package": "electron-forge package",
+        "make": "electron-forge make",
+        "publish": "electron-forge publish",
+        "lint": "echo \"No linting configured\""
+    },
+    "devDependencies": {
+        "@electron-forge/cli": "^6.1.1",
+        "@electron-forge/maker-deb": "^6.1.1",
+        "@electron-forge/maker-rpm": "^6.1.1",
+        "@electron-forge/maker-squirrel": "^6.1.1",
+        "@electron-forge/maker-zip": "^6.1.1",
+        "@electron-forge/plugin-vite": "^6.1.1",
+        "@types/react": "^18.0.35",
+        "@types/react-dom": "^18.0.11",
+        "@types/wicg-file-system-access": "^2020.9.6",
+        "@vitejs/plugin-react": "^3.1.0",
+        "electron": "24.0.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
+    },
+    "dependencies": {
+        "document-model-editors": "../document-model-editors/",
+        "document-model-libs": "../document-model-libs/",
+        "electron-squirrel-startup": "^1.0.0"
+    }
+}
