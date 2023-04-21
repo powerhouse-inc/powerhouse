@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import {
     createDocument,
+    createZip,
     FileInput,
     loadFromFile,
     loadFromInput,
@@ -100,9 +101,10 @@ export const createLineItem = (
  */
 export const saveBudgetStatementToFile = (
     document: BudgetStatementDocument,
-    path: string
+    path: string,
+    name?: string
 ): Promise<string> => {
-    return saveToFile(document, path, 'phbs');
+    return saveToFile(document, path, 'phbs', name);
 };
 
 /**
@@ -181,4 +183,15 @@ export const loadBudgetStatementFromInput = async (
         })
     );
     return { ...state, fileRegistry };
+};
+
+export const saveBudgetStatementToFileHandle = async (
+    document: BudgetStatementDocument,
+    input: FileSystemFileHandle
+) => {
+    const zip = await createZip(document);
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const writable = await input.createWritable();
+    await writable.write(blob);
+    await writable.close();
 };

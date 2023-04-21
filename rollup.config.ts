@@ -135,7 +135,7 @@ const outputs: RollupOptions[] = [
             nodeResolve({ browser: true, preferBuiltins: false }),
             esbuild({
                 optimizeDeps: {
-                    include: ['immer', 'jszip', 'mime/lite'],
+                    include: ['immer', 'mime/lite'],
                     esbuildOptions: {
                         treeShaking: true,
                     },
@@ -157,7 +157,7 @@ const outputs: RollupOptions[] = [
             nodeResolve({ browser: true, preferBuiltins: false }),
             esbuild({
                 optimizeDeps: {
-                    include: ['immer', 'jszip', 'mime/lite'],
+                    include: ['immer', 'mime/lite'],
                     esbuildOptions: {
                         treeShaking: true,
                     },

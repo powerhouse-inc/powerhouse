@@ -42,8 +42,8 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param extension - The file extension to use when saving the state.
      * @returns The file path where the state was saved.
      */
-    protected saveToFile(path: string, extension: string) {
-        return saveToFile(this.state, path, extension);
+    protected saveToFile(path: string, extension: string, name?: string) {
+        return saveToFile(this.state, path, extension, name);
     }
 
     /**

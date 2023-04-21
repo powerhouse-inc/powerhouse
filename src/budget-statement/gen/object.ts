@@ -86,8 +86,8 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
      * @param path The path to the file to save.
      * @returns A promise that resolves when the save operation completes.
      */
-    public saveToFile(path: string) {
-        return super.saveToFile(path, BudgetStatement.fileExtension);
+    public saveToFile(path: string, name?: string) {
+        return super.saveToFile(path, BudgetStatement.fileExtension, name);
     }
 
     /**

@@ -772,6 +772,14 @@
     is-module "^1.0.0"
     resolve "^1.22.1"
 
+"@rollup/plugin-typescript@^11.1.0":
+  version "11.1.0"
+  resolved "https://registry.yarnpkg.com/@rollup/plugin-typescript/-/plugin-typescript-11.1.0.tgz#4dd2a98475a791200d3e4dd1b8234073ad96c535"
+  integrity sha512-86flrfE+bSHB69znnTV6kVjkncs2LBMhcTCyxWgRxLyfXfQrxg4UwlAqENnjrrxnSNS/XKCDJCl8EkdFJVHOxw==
+  dependencies:
+    "@rollup/pluginutils" "^5.0.1"
+    resolve "^1.22.1"
+
 "@rollup/pluginutils@^5.0.1":
   version "5.0.2"
   resolved "https://registry.yarnpkg.com/@rollup/pluginutils/-/pluginutils-5.0.2.tgz#012b8f53c71e4f6f9cb317e311df1404f56e7a33"
@@ -923,6 +931,11 @@
   version "0.0.99"
   resolved "https://registry.yarnpkg.com/@types/web/-/web-0.0.99.tgz#a9c3a088e4634f6b08977f4fc733c916c2b0d50e"
   integrity sha512-xMz3tOvtkZzc7RpQrDNiLe5sfMmP+fz8bOxHIZ/U8qXyvzDX4L4Ss1HCjor/O9DSelba+1iXK1VM7lruX28hiQ==
+
+"@types/wicg-file-system-access@^2020.9.6":
+  version "2020.9.6"
+  resolved "https://registry.yarnpkg.com/@types/wicg-file-system-access/-/wicg-file-system-access-2020.9.6.tgz#da34476b1e29451c8b7aa1a6db86b185647cd970"
+  integrity sha512-6hogE75Hl2Ov/jgp8ZhDaGmIF/q3J07GtXf8nCJCwKTHq7971po5+DId7grft09zG7plBwpF6ZU0yx9Du4/e1A==
 
 "@types/yargs-parser@*":
   version "21.0.0"

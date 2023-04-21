@@ -6,26 +6,13 @@ import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
-/**
- * Saves a document to a ZIP file.
- *
- * @remarks
- * This function creates a ZIP file containing the document's state, operations,
- * and file attachments. The file is saved to the specified path.
- *
- * @param document - The document to save to the file.
- * @param path - The path to save the file to.
- * @param extension - The extension to use for the file.
- * @returns A promise that resolves to the path of the saved file.
- */
-export const saveToFile = (
-    document: Document,
-    path: string,
-    extension: string
-): Promise<string> => {
+export const createZip = async (document: Document) => {
     // create zip file
     const zip = new JSZip();
-    zip.file('state.json', JSON.stringify(document.initialState, null, 2));
+    zip.file(
+        'state.json',
+        JSON.stringify(document.initialState || {}, null, 2)
+    );
     zip.file('operations.json', JSON.stringify(document.operations, null, 2));
 
     const attachments = Object.keys(document.fileRegistry) as Attachment[];
@@ -38,11 +25,43 @@ export const saveToFile = (
             comment: JSON.stringify(attributes),
         });
     });
+    return zip;
+};
+
+/**
+ * Saves a document to a ZIP file.
+ *
+ * @remarks
+ * This function creates a ZIP file containing the document's state, operations,
+ * and file attachments. The file is saved to the specified path.
+ *
+ * @param document - The document to save to the file.
+ * @param path - The path to save the file to.
+ * @param extension - The extension to use for the file.
+ * @returns A promise that resolves to the path of the saved file.
+ */
+export const saveToFile = async (
+    document: Document,
+    path: string,
+    extension: string,
+    name?: string
+): Promise<string> => {
+    // create zip file
+    const zip = await createZip(document);
     const stream = zip.generateNodeStream({
         type: 'nodebuffer',
         streamFiles: true,
     });
-    return writeFile(path, `${document.name}.${extension}.zip`, stream);
+    const fileName = name ?? document.name;
+    const fileExtension = `.${extension}.zip`;
+
+    return writeFile(
+        path,
+        fileName.endsWith(fileExtension)
+            ? fileName
+            : `${fileName}${fileExtension}`,
+        stream
+    );
 };
 
 /**
@@ -81,14 +100,15 @@ async function loadFromZip<S, A extends Action>(
     zip: JSZip,
     reducer: Reducer<S, A | BaseAction>
 ) {
-    const stateZip = zip.file('state.json');
-    if (!stateZip) {
+    const initialStateZip = zip.file('state.json');
+    if (!initialStateZip) {
         throw new Error('Initial state not found');
     }
-    const state = JSON.parse(await stateZip.async('string')) as Document<
-        S,
-        A | BaseAction
-    >;
+    const initialStateStr = await initialStateZip.async('string');
+    const state = JSON.parse(initialStateStr) as Document<S, A | BaseAction>;
+
+    // document is saved without initial state
+    state.initialState = JSON.parse(initialStateStr);
 
     const operationsZip = zip.file('operations.json');
     if (!operationsZip) {
