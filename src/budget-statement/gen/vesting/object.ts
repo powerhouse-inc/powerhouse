@@ -7,7 +7,7 @@ import {
 } from '../../custom';
 import { addVesting, deleteVesting, updateVesting } from './creators';
 
-export default class TopupObject extends BaseDocument<
+export default class VestingObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {

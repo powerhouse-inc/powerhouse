@@ -155,19 +155,6 @@ A Budget statement follows the following data structure:
             {
                 address: "eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f",
                 name: "Grants Program",
-                accountBalance: {
-                    timestamp: "2023-02-21 11:22:09",
-                    value: 4048.02
-                },
-                targetBalance: {
-                    comment: "3 months of operational runway",
-                    value: 5048.02
-                },
-                topupTransaction: {
-                    id: "eth:0x3F23D0E301C458B095A02b12E3bC4c752a844eD9",
-                    requestedValue: 1000,
-                    value: 1000
-                },
                 lineItems: [
                     {
                         category: {

@@ -12,7 +12,6 @@ import CommentObject from './comment/object';
 import InitObject from './init/object';
 import LineItemObject from './line-item/object';
 import StatusObject from './status/object';
-import TopupObject from './topup/object';
 import VestingObject from './vesting/object';
 
 /**
@@ -26,7 +25,6 @@ interface BudgetStatement
         InitObject,
         LineItemObject,
         StatusObject,
-        TopupObject,
         VestingObject {}
 
 /**
@@ -120,7 +118,6 @@ applyMixins(BudgetStatement, [
     InitObject,
     LineItemObject,
     StatusObject,
-    TopupObject,
     VestingObject,
 ]);
 
@@ -133,7 +130,6 @@ applyMixins(BudgetStatement, [
  * @extends InitObject
  * @extends LineItemObject
  * @extends StatusObject
- * @extends TopupObject
  * @extends VestingObject
  */
 export { BudgetStatement };

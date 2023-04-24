@@ -22,19 +22,6 @@ describe('Budget Statement account reducer', () => {
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-                accountBalance: {
-                    timestamp: null,
-                    value: null,
-                },
-                targetBalance: {
-                    comment: null,
-                    value: null,
-                },
-                topupTransaction: {
-                    id: null,
-                    requestedValue: null,
-                    value: null,
-                },
                 lineItems: [],
             },
         ]);

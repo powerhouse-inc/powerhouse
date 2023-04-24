@@ -7,7 +7,7 @@ import {
 } from '../../custom';
 import { addComment, deleteComment, updateComment } from './creators';
 
-export default class TopupObject extends BaseDocument<
+export default class CommentObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {

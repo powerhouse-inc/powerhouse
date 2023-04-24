@@ -23,7 +23,6 @@ import {
     REOPEN_TO_REVIEW,
     SUBMIT_FOR_REVIEW,
 } from '../gen/status/types';
-import { REQUEST_TOPUP, TRANSFER_TOPUP } from '../gen/topup/types';
 import {
     ADD_VESTING,
     DELETE_VESTING,
@@ -41,9 +40,7 @@ import {
     initOperation,
     reopenToDraftOperation,
     reopenToReviewOperation,
-    requestTopupOperation,
     submitForReviewOperation,
-    transferTopupOperation,
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
@@ -63,7 +60,7 @@ import { BudgetStatementAction, State } from './types';
  * Reducer for the BudgetStatement module, which handles operations related to budget statements.
  * @remarks
  * This reducer handles the following actions:
- * - `INIT: initializes the state of the module.
+ * - `INIT`: initializes the state of the module.
  * - `ADD_ACCOUNT`: adds an account to the state.
  * - `UPDATE_ACCOUNT`: updates an account in the state.
  * - `DELETE_ACCOUNT`: removes an account from the state.
@@ -75,8 +72,6 @@ import { BudgetStatementAction, State } from './types';
  * - `APPROVE`: approves the budget statement.
  * - `REOPEN_TO_DRAFT`: changes the status of the budget statement to "Draft".
  * - `REOPEN_TO_REVIEW`: changes the status of the budget statement to "Under Review".
- * - `REQUEST_TOPUP`: requests a top-up of an account.
- * - `TRANSFER_TOPUP`: transfers a top-up to an account.
  * - `ADD_AUDIT_REPORT`: adds an audit report to an account in the state.
  * - `DELETE_AUDIT_REPORT`: removes an audit report from an account in the state.
  * @param state - The current state of the module.
@@ -110,10 +105,6 @@ export const reducer = createReducer<State, BudgetStatementAction>(
                 return reopenToDraftOperation(state);
             case REOPEN_TO_REVIEW:
                 return reopenToReviewOperation(state);
-            case REQUEST_TOPUP:
-                return requestTopupOperation(state, action);
-            case TRANSFER_TOPUP:
-                return transferTopupOperation(state, action);
             case ADD_AUDIT_REPORT:
                 return addAuditReportOperation(state, action);
             case DELETE_AUDIT_REPORT:

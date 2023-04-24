@@ -22,7 +22,7 @@ import {
  *
  * Creates a new BudgetStatement document with an initial state.
  * @param initialState - The initial state of the document.
- * @returns {BudgetStatementDocument} The new BudgetStatement document.
+ * @returns The new BudgetStatement document.
  */
 export const createBudgetStatement = (
     initialState?: Partial<
@@ -54,24 +54,11 @@ export const createBudgetStatement = (
 
 /**
  * Creates a new Account with default properties and the given input properties.
- * @param {AccountInput} input - The input properties of the account.
- * @returns {Account} The new Account object.
+ * @param input - The input properties of the account.
+ * @returns The new Account object.
  */
 export const createAccount = (input: AccountInput): Account => ({
     name: '',
-    accountBalance: {
-        timestamp: null,
-        value: null,
-    },
-    targetBalance: {
-        comment: null,
-        value: null,
-    },
-    topupTransaction: {
-        id: null,
-        requestedValue: null,
-        value: null,
-    },
     lineItems: [],
     ...input,
 });
@@ -79,7 +66,7 @@ export const createAccount = (input: AccountInput): Account => ({
 /**
  * Creates a new LineItem with default properties and the given input properties.
  * @param input - The input properties of the line item.
- * @returns {LineItem} The new LineItem object.
+ * @returns The new LineItem object.
  */
 export const createLineItem = (
     input: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>
@@ -95,9 +82,9 @@ export const createLineItem = (
 
 /**
  * Saves the BudgetStatement document to the specified file path.
- * @param {BudgetStatementDocument} document - The BudgetStatement document to save.
- * @param {string} path - The file path to save the document to.
- * @returns {Promise<string>} A promise that resolves with the saved file path.
+ * @param document - The BudgetStatement document to save.
+ * @param path - The file path to save the document to.
+ * @returns  A promise that resolves with the saved file path.
  */
 export const saveBudgetStatementToFile = (
     document: BudgetStatementDocument,
@@ -109,8 +96,8 @@ export const saveBudgetStatementToFile = (
 
 /**
  * Loads the BudgetStatement document from the specified file path.
- * @param {string} path - The file path to load the document from.
- * @returns {Promise<BudgetStatementDocument>} A promise that resolves with the loaded BudgetStatement document.
+ * @param path - The file path to load the document from.
+ * @returns A promise that resolves with the loaded BudgetStatement document.
  */
 export const loadBudgetStatementFromFile = async (
     path: string

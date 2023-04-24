@@ -5,7 +5,6 @@ import { BudgetStatementCommentAction } from '../gen/comment/types';
 import { BudgetStatementInitAction } from '../gen/init/types';
 import { BudgetStatementLineItemAction } from '../gen/line-item/types';
 import { BudgetStatementStatusAction } from '../gen/status/types';
-import { BudgetStatementTopupAction } from '../gen/topup/types';
 import { BudgetStatementVestingAction } from '../gen/vesting/types';
 
 /**
@@ -56,9 +55,6 @@ export type LineItemInput = Partial<Omit<LineItem, 'category' | 'group'>> & {
 };
 
 /**
- * Represents an account with the following information: wallet address, name, current account balance in a given timestamp, target balance, topup transfer information, and expenses.
- */
-/**
  * Represents an account for which expenses are managed in a budget statement.
  */
 export type Account = {
@@ -66,29 +62,6 @@ export type Account = {
     address: string;
     /** The name of the account. */
     name: string;
-    /** The balance of the account. */
-    accountBalance: {
-        /** The timestamp for which the balance is recorded. */
-        timestamp: string | null;
-        /** The balance value. */
-        value: number | null;
-    };
-    /** The target balance of the account. */
-    targetBalance: {
-        /** Any comment associated with the target balance. */
-        comment: string | null;
-        /** The target balance value. */
-        value: number | null;
-    };
-    /** The topup transaction associated with the account. */
-    topupTransaction: {
-        /** The ID of the topup transaction. */
-        id: string | null;
-        /** The requested value for the topup transaction. */
-        requestedValue: number | null;
-        /** The actual value transferred in the topup transaction. */
-        value: number | null;
-    };
     /** The line items associated with the account. */
     lineItems: LineItem[];
 };
@@ -233,7 +206,6 @@ export type BudgetStatementAction =
     | BudgetStatementInitAction
     | BudgetStatementLineItemAction
     | BudgetStatementStatusAction
-    | BudgetStatementTopupAction
     | BudgetStatementAuditReportAction
     | BudgetStatementVestingAction
     | BudgetStatementCommentAction;

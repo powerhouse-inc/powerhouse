@@ -1,5 +1,4 @@
 import { Buffer } from 'buffer';
-// @ts-ignore
 import Sha1 from 'sha.js/sha1';
 const FileSystemError = new Error('File system not available.');
 

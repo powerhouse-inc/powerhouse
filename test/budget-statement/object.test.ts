@@ -39,19 +39,6 @@ describe('Budget Statement Class', () => {
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-                accountBalance: {
-                    timestamp: null,
-                    value: null,
-                },
-                targetBalance: {
-                    comment: null,
-                    value: null,
-                },
-                topupTransaction: {
-                    id: null,
-                    requestedValue: null,
-                    value: null,
-                },
                 lineItems: [],
             },
         ]);
@@ -77,37 +64,11 @@ describe('Budget Statement Class', () => {
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-                accountBalance: {
-                    timestamp: null,
-                    value: null,
-                },
-                targetBalance: {
-                    comment: null,
-                    value: null,
-                },
-                topupTransaction: {
-                    id: null,
-                    requestedValue: null,
-                    value: null,
-                },
                 lineItems: [],
             },
             {
                 address: 'eth:0x7c09ff9b59baaebfd721cbda3676826aa6d7bae8',
                 name: 'Incubation Program',
-                accountBalance: {
-                    timestamp: null,
-                    value: null,
-                },
-                targetBalance: {
-                    comment: null,
-                    value: null,
-                },
-                topupTransaction: {
-                    id: null,
-                    requestedValue: null,
-                    value: null,
-                },
                 lineItems: [],
             },
         ]);
@@ -140,19 +101,6 @@ describe('Budget Statement Class', () => {
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-                accountBalance: {
-                    timestamp: null,
-                    value: null,
-                },
-                targetBalance: {
-                    comment: null,
-                    value: null,
-                },
-                topupTransaction: {
-                    id: null,
-                    requestedValue: null,
-                    value: null,
-                },
                 lineItems: [],
             },
         ]);
