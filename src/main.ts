@@ -3,7 +3,7 @@ import path from "path";
 import {
     BudgetStatementDocument,
     utils,
-} from "document-model-libs/budget-statement";
+} from "@acaldas/document-model-libs/budget-statement";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -63,7 +63,7 @@ const createWindow = () => {
     }
 
     // Open the DevTools.
-    mainWindow.webContents.openDevTools({ mode: "bottom" });
+    // mainWindow.webContents.openDevTools({ mode: "bottom" });
 };
 
 // This method will be called when Electron has finished

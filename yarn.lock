@@ -2,9 +2,16 @@
 # yarn lockfile v1
 
 
-"@acaldas/document-model-libs@link:../document-model-libs":
-  version "0.0.0"
-  uid ""
+"@acaldas/document-model-libs@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-libs/-/document-model-libs-1.0.3.tgz#d91b8c0f5e7d117263ff93a031b58766eb19923a"
+  integrity sha512-vtbnlxsKyRZMmSkdQL2JoNzcx9vJ7L1+8QgWo+40ZsYqVo3laIwT7Okw+vkPyz/ZXesPpXHFZ6vXIdt1ilzKng==
+  dependencies:
+    immer "^9.0.19"
+    json-stringify-deterministic "^1.0.8"
+    jszip "^3.10.1"
+    mime "^3.0.0"
+    sha.js "^2.4.11"
 
 "@ampproject/remapping@^2.2.0":
   version "2.2.1"
@@ -1405,19 +1412,12 @@ dir-compare@^3.0.0:
     buffer-equal "^1.0.0"
     minimatch "^3.0.4"
 
-document-model-editors@../document-model-editors/:
-  version "0.0.0"
+document-model-editors@^0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-0.0.3.tgz#53a464eff6ba7773d71fe5124022a970d145f7f4"
+  integrity sha512-rH/4ziWGhE3cDSex0C3SR79SrH5aGjXKgN/mLVlh8w69ejMgw3Qj8maJKvCiJlZPXFnyx1nyUV67yANwEplMqQ==
   dependencies:
-    "@acaldas/document-model-libs" "link:../../../Library/Caches/Yarn/v6/npm-document-model-editors-0.0.0-afe32065-80b9-4a9c-8eaa-56facbd7798c-1681997873322/node_modules/document-model-libs"
-
-document-model-libs@../document-model-libs/:
-  version "1.0.0"
-  dependencies:
-    immer "^9.0.19"
-    json-stringify-deterministic "^1.0.8"
-    jszip "^3.10.1"
-    mime "^3.0.0"
-    sha.js "^2.4.11"
+    "@acaldas/document-model-libs" "^1.0.3"
 
 ee-first@1.1.1:
   version "1.1.1"
