@@ -5,10 +5,10 @@ import {
     DeleteAuditReportAction,
     isAuditReport,
 } from '../../gen/audit/types';
-import { BudgetStatement } from '../types';
+import { BudgetStatementDocument } from '../types';
 
 export const addAuditReportOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: AddAuditReportAction
 ) => {
     const operation = state.operations[
@@ -21,10 +21,7 @@ export const addAuditReportOperation = (
         } else {
             const hash = hashAttachment(audit.report.data);
             const attachmentKey = `attachment://audits/${hash}` as const;
-            state.fileRegistry[attachmentKey] = {
-                data: audit.report.data,
-                mimeType: audit.report.mimeType,
-            };
+            state.fileRegistry[attachmentKey] = { ...audit.report };
             state.data.auditReports.push({
                 timestamp: audit.timestamp,
                 status: audit.status,
@@ -37,7 +34,7 @@ export const addAuditReportOperation = (
 };
 
 export const deleteAuditReportOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: DeleteAuditReportAction
 ) => {
     action.input.reports.forEach(report => {

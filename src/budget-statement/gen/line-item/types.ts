@@ -9,7 +9,7 @@ export interface AddLineItemAction extends Action {
     type: typeof ADD_LINE_ITEM;
     input: {
         account: Account['address'];
-        lineItems: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>[];
+        lineItems: (Partial<LineItem> & Pick<LineItem, 'category' | 'group'>)[];
     };
 }
 

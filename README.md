@@ -7,6 +7,10 @@ Install the library:
 -   NPM: `npm install @acaldas/document-model-libs`
 -   Yarn: `yarn add @acaldas/document-model-libs`
 
+## Documentation
+
+The full documentation for this package is available at: https://acaldas.github.io/document-model-libs/
+
 There are two ways to interact with a document:
 
 ### Functional:
@@ -32,9 +36,9 @@ budgetStatement = reducer(
 ### Object oriented:
 
 ```javascript
-import { BudgetStatementObject } from '@acaldas/document-model-libs/budget-statement';
+import { BudgetStatement } from '@acaldas/document-model-libs/budget-statement';
 
-const budgetStatement = new BudgetStatementObject({
+const budgetStatement = new BudgetStatement({
     name: 'march',
     data: { month: '2023/01' },
 });
@@ -92,7 +96,9 @@ All document models extend the Base Document model, which provides some common f
 
 ### Base Document Actions
 
-All document reducers are wrapped by the Base Document reducer, which is responsible for updating the document attributes described above and adds support for some base document features.
+Document reducers are wrapped by the Base Document reducer, which is responsible for updating the document attributes described above and adds support for some base document features.
+
+▸ For more information on Document actions, please refer to the [complete documentation](markdown/modules/Document.actions.md).
 
 -   `SET_NAME`: Changes the name of the document
 
@@ -149,19 +155,6 @@ A Budget statement follows the following data structure:
             {
                 address: "eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f",
                 name: "Grants Program",
-                accountBalance: {
-                    timestamp: "2023-02-21 11:22:09",
-                    value: 4048.02
-                },
-                targetBalance: {
-                    comment: "3 months of operational runway",
-                    value: 5048.02
-                },
-                topupTransaction: {
-                    id: "eth:0x3F23D0E301C458B095A02b12E3bC4c752a844eD9",
-                    requestedValue: 1000,
-                    value: 1000
-                },
                 lineItems: [
                     {
                         category: {
@@ -202,41 +195,4 @@ A Budget statement follows the following data structure:
 
 ### Budget Statement Actions
 
-#### Account
-
-A budget statement might have multiple accounts, each with its own expenses.
-
--   `ADD_ACCOUNT`: Adds an account to the budget. This action accepts an array of accounts, so multiple accounts can be added in one action. The account can be initialized with all attributes but the only required attribute is an unique account address, which should follow a Gnosis-like format: `eth:0x...`.
-
-```javascript
-addAccount([{ address: string }]);
-```
-
--   `UPDATE_ACCOUNT`: Edits existing accounts. Accounts are referenced by their address.
-
-```javascript
-updateAccount([{ address: string, ...account }]);
-```
-
--   `DELETE_ACCOUNT`: Deletes the accounts with the provided addresses.
-
-```javascript
-deleteAccount(accounts: string[]);
-```
-
-#### Status
-
-The budget goes through various status as it is reviewed by auditors.
-It starts as a `Draft` which can then be submitted for `Review`. The auditor then either approves with or raises issues.
-
--   `SUBMIT_FOR_REVIEW`: Sets the budget as ready to be reviewed.
-
-```javascript
-submitForReview();
-```
-
--   `ESCALATE`: Used by the auditor if there is any issue during the review
-
-```javascript
-escalate();
-```
+▸ For more information on Budget Statement actions, please refer to the [complete documentation](markdown/modules/BudgetStatement.actions.md).

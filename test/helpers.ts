@@ -1,4 +1,4 @@
-import { Action } from '../src/document';
+import { Action, Operation } from '../src/document';
 import { createAction, createReducer } from '../src/document/utils';
 
 // Empty reducer that supports base actions
@@ -30,3 +30,11 @@ export const countReducer = createReducer<CountState, CountAction>(
         }
     }
 );
+
+export const mapOperations = (operations: Operation[]) => {
+    return operations.map(({ input, type, index }) => ({
+        input,
+        type,
+        index,
+    }));
+};

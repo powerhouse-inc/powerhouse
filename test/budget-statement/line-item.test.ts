@@ -27,13 +27,13 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/budget-category',
                         id: 'TravelAndEntertainment',
                         title: 'Travel & Entertainment',
-                        headcountExpense: true,
                     },
                     group: {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
                     },
+                    headcountExpense: true,
                 },
             ])
         );
@@ -43,7 +43,6 @@ describe('Budget Statement line item reducer', () => {
                     ref: 'makerdao/budget-category',
                     id: 'TravelAndEntertainment',
                     title: 'Travel & Entertainment',
-                    headcountExpense: true,
                 },
                 group: {
                     ref: 'makerdao/project',
@@ -53,6 +52,8 @@ describe('Budget Statement line item reducer', () => {
                 budgetCap: null,
                 payment: null,
                 actual: null,
+                comment: null,
+                headcountExpense: true,
                 forecast: [],
             },
         ]);
@@ -78,13 +79,13 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/budget-category',
                         id: 'TravelAndEntertainment',
                         title: 'Travel & Entertainment',
-                        headcountExpense: true,
                     },
                     group: {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
                     },
+                    headcountExpense: true,
                 },
             ])
         );
@@ -100,6 +101,7 @@ describe('Budget Statement line item reducer', () => {
                         {
                             month: '2023/02',
                             value: 2000,
+                            budgetCap: 2000,
                         },
                     ],
                 },
@@ -111,20 +113,22 @@ describe('Budget Statement line item reducer', () => {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
                 title: 'Travel & Entertainment',
-                headcountExpense: true,
             },
             group: {
                 ref: 'makerdao/project',
                 id: 'core-unit/SES/2023/005',
                 title: 'Core Unit Operational Support',
             },
+            headcountExpense: true,
             budgetCap: 1000,
             actual: 100,
             payment: null,
+            comment: null,
             forecast: [
                 {
                     month: '2023/02',
                     value: 2000,
+                    budgetCap: 2000,
                 },
             ],
         });
@@ -133,16 +137,17 @@ describe('Budget Statement line item reducer', () => {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
                 title: 'Travel & Entertainment',
-                headcountExpense: true,
             },
             group: {
                 ref: 'makerdao/project',
                 id: 'core-unit/SES/2023/005',
                 title: 'Core Unit Operational Support',
             },
+            headcountExpense: true,
             budgetCap: null,
             actual: null,
             payment: null,
+            comment: null,
             forecast: [],
         });
     });
@@ -166,13 +171,13 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/budget-category',
                         id: 'TravelAndEntertainment',
                         title: 'Travel & Entertainment',
-                        headcountExpense: true,
                     },
                     group: {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
                     },
+                    headcountExpense: true,
                 },
             ])
         );

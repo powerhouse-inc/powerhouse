@@ -1,23 +1,36 @@
 import JSZip from 'jszip';
-import { createDocument, loadFromFile, saveToFile } from '../../document/utils';
+import {
+    createDocument,
+    createZip,
+    FileInput,
+    loadFromFile,
+    loadFromInput,
+    saveToFile,
+} from '../../document/utils';
 import { readFile } from '../../document/utils/node';
 import { reducer } from './reducer';
 import {
     Account,
     AccountInput,
-    BudgetStatement,
     BudgetStatementAction,
+    BudgetStatementDocument,
     LineItem,
     State,
 } from './types';
 
+/**
+ *
+ * Creates a new BudgetStatement document with an initial state.
+ * @param initialState - The initial state of the document.
+ * @returns The new BudgetStatement document.
+ */
 export const createBudgetStatement = (
     initialState?: Partial<
-        Omit<BudgetStatement, 'data'> & {
-            data: Partial<BudgetStatement['data']>;
+        Omit<BudgetStatementDocument, 'data'> & {
+            data: Partial<BudgetStatementDocument['data']>;
         }
     >
-): BudgetStatement =>
+): BudgetStatementDocument =>
     createDocument<State, BudgetStatementAction>({
         documentType: 'powerhouse/budget-statement',
         ...initialState,
@@ -30,31 +43,31 @@ export const createBudgetStatement = (
             month: null,
             status: 'Draft',
             quoteCurrency: null,
+            vesting: [],
+            ftes: null,
             accounts: [],
             auditReports: [],
+            comments: [],
             ...initialState?.data,
         },
     });
 
+/**
+ * Creates a new Account with default properties and the given input properties.
+ * @param input - The input properties of the account.
+ * @returns The new Account object.
+ */
 export const createAccount = (input: AccountInput): Account => ({
     name: '',
-    accountBalance: {
-        timestamp: null,
-        value: null,
-    },
-    targetBalance: {
-        comment: null,
-        value: null,
-    },
-    topupTransaction: {
-        id: null,
-        requestedValue: null,
-        value: null,
-    },
     lineItems: [],
     ...input,
 });
 
+/**
+ * Creates a new LineItem with default properties and the given input properties.
+ * @param input - The input properties of the line item.
+ * @returns The new LineItem object.
+ */
 export const createLineItem = (
     input: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>
 ): LineItem => ({
@@ -62,19 +75,33 @@ export const createLineItem = (
     payment: null,
     actual: null,
     forecast: [],
+    comment: null,
+    headcountExpense: false,
     ...input,
 });
 
+/**
+ * Saves the BudgetStatement document to the specified file path.
+ * @param document - The BudgetStatement document to save.
+ * @param path - The file path to save the document to.
+ * @returns  A promise that resolves with the saved file path.
+ */
 export const saveBudgetStatementToFile = (
-    document: BudgetStatement,
-    path: string
+    document: BudgetStatementDocument,
+    path: string,
+    name?: string
 ): Promise<string> => {
-    return saveToFile(document, path, 'phbs');
+    return saveToFile(document, path, 'phbs', name);
 };
 
+/**
+ * Loads the BudgetStatement document from the specified file path.
+ * @param path - The file path to load the document from.
+ * @returns A promise that resolves with the loaded BudgetStatement document.
+ */
 export const loadBudgetStatementFromFile = async (
     path: string
-): Promise<BudgetStatement> => {
+): Promise<BudgetStatementDocument> => {
     const state = await loadFromFile<State, BudgetStatementAction>(
         path,
         reducer
@@ -97,9 +124,61 @@ export const loadBudgetStatementFromFile = async (
                 throw new Error(`Attachment ${audit.report} not found`);
             }
             const data = await file.async('base64');
-            const mimeType = file.comment;
-            fileRegistry[audit.report] = { data, mimeType };
+            const { mimeType, extension, fileName } = JSON.parse(file.comment);
+            fileRegistry[audit.report] = {
+                data,
+                mimeType,
+                extension,
+                fileName,
+            };
         })
     );
     return { ...state, fileRegistry };
+};
+
+export const loadBudgetStatementFromInput = async (
+    input: FileInput
+): Promise<BudgetStatementDocument> => {
+    const state = await loadFromInput<State, BudgetStatementAction>(
+        input,
+        reducer
+    );
+
+    const auditReports = state.data.auditReports;
+    if (!auditReports.length) {
+        return state;
+    }
+
+    const zip = new JSZip();
+    await zip.loadAsync(input);
+    const fileRegistry = { ...state.fileRegistry };
+    await Promise.all(
+        auditReports.map(async audit => {
+            const path = audit.report.slice('attachment://'.length);
+            const file = await zip.file(path);
+            if (!file) {
+                throw new Error(`Attachment ${audit.report} not found`);
+            }
+            const data = await file.async('base64');
+            const { mimeType, extension, fileName } = JSON.parse(file.comment);
+            fileRegistry[audit.report] = {
+                data,
+                mimeType,
+                extension,
+                fileName,
+            };
+        })
+    );
+    return { ...state, fileRegistry };
+};
+
+export const saveBudgetStatementToFileHandle = async (
+    document: BudgetStatementDocument,
+    input: FileSystemFileHandle
+) => {
+    const zip = await createZip(document);
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const writable = await input.createWritable();
+    await writable.write(blob);
+    await writable.close();
 };

@@ -3,13 +3,13 @@ import {
     DeleteAccountAction,
     UpdateAccountAction,
 } from '../../gen/account/types';
-import { BudgetStatement } from '../types';
+import { BudgetStatementDocument } from '../types';
 import { createAccount } from '../utils';
 
 export const addAccountOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: AddAccountAction
-): BudgetStatement => {
+): BudgetStatementDocument => {
     return {
         ...state,
         data: {
@@ -23,9 +23,9 @@ export const addAccountOperation = (
 };
 
 export const updateAccountOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: UpdateAccountAction
-): BudgetStatement => {
+): BudgetStatementDocument => {
     return {
         ...state,
         data: {
@@ -41,9 +41,9 @@ export const updateAccountOperation = (
 };
 
 export const deleteAccountOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: DeleteAccountAction
-): BudgetStatement => {
+): BudgetStatementDocument => {
     return {
         ...state,
         data: {

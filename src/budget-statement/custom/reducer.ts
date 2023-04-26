@@ -5,6 +5,11 @@ import {
     UPDATE_ACCOUNT,
 } from '../gen/account/types';
 import { ADD_AUDIT_REPORT, DELETE_AUDIT_REPORT } from '../gen/audit/types';
+import {
+    ADD_COMMENT,
+    DELETE_COMMENT,
+    UPDATE_COMMENT,
+} from '../gen/comment/types';
 import { INIT } from '../gen/init/types';
 import {
     ADD_LINE_ITEM,
@@ -18,7 +23,11 @@ import {
     REOPEN_TO_REVIEW,
     SUBMIT_FOR_REVIEW,
 } from '../gen/status/types';
-import { REQUEST_TOPUP, TRANSFER_TOPUP } from '../gen/topup/types';
+import {
+    ADD_VESTING,
+    DELETE_VESTING,
+    UPDATE_VESTING,
+} from '../gen/vesting/types';
 import {
     addAccountOperation,
     addAuditReportOperation,
@@ -31,14 +40,44 @@ import {
     initOperation,
     reopenToDraftOperation,
     reopenToReviewOperation,
-    requestTopupOperation,
     submitForReviewOperation,
-    transferTopupOperation,
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
+import {
+    addCommentOperation,
+    deleteCommentOperation,
+    updateCommentOperation,
+} from './actions/comment';
+import {
+    addVestingOperation,
+    deleteVestingOperation,
+    updateVestingOperation,
+} from './actions/vesting';
 import { BudgetStatementAction, State } from './types';
 
+/**
+ * Reducer for the BudgetStatement module, which handles operations related to budget statements.
+ * @remarks
+ * This reducer handles the following actions:
+ * - `INIT`: initializes the state of the module.
+ * - `ADD_ACCOUNT`: adds an account to the state.
+ * - `UPDATE_ACCOUNT`: updates an account in the state.
+ * - `DELETE_ACCOUNT`: removes an account from the state.
+ * - `ADD_LINE_ITEM`: adds a line item to an account in the state.
+ * - `UPDATE_LINE_ITEM`: updates a line item in an account in the state.
+ * - `DELETE_LINE_ITEM`: removes a line item from an account in the state.
+ * - `SUBMIT_FOR_REVIEW`: updates the status of the budget statement to "Under Review".
+ * - `ESCALATE`: escalates the budget statement to a higher authority.
+ * - `APPROVE`: approves the budget statement.
+ * - `REOPEN_TO_DRAFT`: changes the status of the budget statement to "Draft".
+ * - `REOPEN_TO_REVIEW`: changes the status of the budget statement to "Under Review".
+ * - `ADD_AUDIT_REPORT`: adds an audit report to an account in the state.
+ * - `DELETE_AUDIT_REPORT`: removes an audit report from an account in the state.
+ * @param state - The current state of the module.
+ * @param action - The action to be performed on the state.
+ * @returns The new state after applying the action.
+ */
 export const reducer = createReducer<State, BudgetStatementAction>(
     (state, action) => {
         switch (action.type) {
@@ -66,14 +105,22 @@ export const reducer = createReducer<State, BudgetStatementAction>(
                 return reopenToDraftOperation(state);
             case REOPEN_TO_REVIEW:
                 return reopenToReviewOperation(state);
-            case REQUEST_TOPUP:
-                return requestTopupOperation(state, action);
-            case TRANSFER_TOPUP:
-                return transferTopupOperation(state, action);
             case ADD_AUDIT_REPORT:
                 return addAuditReportOperation(state, action);
             case DELETE_AUDIT_REPORT:
                 return deleteAuditReportOperation(state, action);
+            case ADD_VESTING:
+                return addVestingOperation(state, action);
+            case UPDATE_VESTING:
+                return updateVestingOperation(state, action);
+            case DELETE_VESTING:
+                return deleteVestingOperation(state, action);
+            case ADD_COMMENT:
+                return addCommentOperation(state, action);
+            case UPDATE_COMMENT:
+                return updateCommentOperation(state, action);
+            case DELETE_COMMENT:
+                return deleteCommentOperation(state, action);
             default:
                 return state;
         }

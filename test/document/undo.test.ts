@@ -6,6 +6,7 @@ import {
     CountState,
     emptyReducer,
     increment,
+    mapOperations,
 } from '../helpers';
 
 describe('UNDO operation', () => {
@@ -16,7 +17,7 @@ describe('UNDO operation', () => {
 
         state = emptyReducer(state, undo(1));
 
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
         ]);
         expect(state.name).toBe('');
@@ -30,7 +31,7 @@ describe('UNDO operation', () => {
         expect(state.revision).toBe(2);
 
         state = emptyReducer(state, undo(2));
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -42,7 +43,7 @@ describe('UNDO operation', () => {
         state = emptyReducer(state, setName('TEST_1'));
         state = emptyReducer(state, setName('TEST_2'));
         state = emptyReducer(state, undo(5));
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -55,7 +56,7 @@ describe('UNDO operation', () => {
         state = emptyReducer(state, setName('TEST_1'));
         state = emptyReducer(state, undo(1));
         state = emptyReducer(state, setName('TEST_2'));
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_2'), index: 0 },
         ]);
         expect(state.name).toBe('TEST_2');
@@ -68,7 +69,7 @@ describe('UNDO operation', () => {
         state = emptyReducer(state, undo(1));
         state = emptyReducer(state, setName('TEST_2'));
         state = emptyReducer(state, undo(1));
-        expect(state.operations).toStrictEqual([
+        expect(mapOperations(state.operations)).toStrictEqual([
             { ...setName('TEST_2'), index: 0 },
         ]);
         expect(state.name).toBe('');

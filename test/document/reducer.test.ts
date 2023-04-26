@@ -4,6 +4,10 @@ import { createAction, createDocument } from '../../src/document/utils';
 import { emptyReducer } from '../helpers';
 
 describe('Base reducer', () => {
+    beforeAll(() => {
+        jest.useFakeTimers().setSystemTime(new Date('2020-01-01'));
+    });
+
     it('should update revision', async () => {
         const state = createDocument();
         const newState = emptyReducer(state, { type: 'TEST' });
@@ -23,9 +27,18 @@ describe('Base reducer', () => {
     });
 
     it('should update operations list', async () => {
+        jest.useFakeTimers({ now: new Date('2023-01-01') });
         const state = createDocument();
         const newState = emptyReducer(state, { type: 'TEST' });
-        expect(newState.operations).toStrictEqual([{ type: 'TEST', index: 0 }]);
+
+        expect(newState.operations).toStrictEqual([
+            {
+                type: 'TEST',
+                timestamp: new Date().toISOString(),
+                index: 0,
+                hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
+            },
+        ]);
     });
 
     it('should throw error when creating action with non-string type', () => {

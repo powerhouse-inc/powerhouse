@@ -1,10 +1,10 @@
 import { InitAction } from '../../gen/init/types';
-import { BudgetStatement } from '../types';
+import { BudgetStatementDocument } from '../types';
 import { createBudgetStatement } from '../utils';
 
 export const initOperation = (
-    state: BudgetStatement,
+    state: BudgetStatementDocument,
     action: InitAction
-): BudgetStatement => {
-    return createBudgetStatement(action.input);
+): BudgetStatementDocument => {
+    return createBudgetStatement({ ...state, ...action.input });
 };

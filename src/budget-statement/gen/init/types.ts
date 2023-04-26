@@ -1,13 +1,13 @@
 import { Action } from '../../../document';
-import { BudgetStatement } from '../../custom';
+import { BudgetStatementDocument } from '../../custom';
 
 export const INIT = 'INIT';
 
 export interface InitAction extends Action {
     type: typeof INIT;
     input: Partial<
-        Omit<BudgetStatement, 'data'> & {
-            data: Partial<BudgetStatement['data']>;
+        Omit<BudgetStatementDocument, 'data'> & {
+            data: Partial<BudgetStatementDocument['data']>;
         }
     >;
 }

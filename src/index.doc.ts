@@ -1,4 +1,4 @@
-import * as BudgetStatement from './budget-statement';
+import * as BudgetStatement from './budget-statement/index.doc';
 import * as Document from './document';
 
 /**
