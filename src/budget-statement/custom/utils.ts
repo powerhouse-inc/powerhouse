@@ -41,7 +41,6 @@ export const createBudgetStatement = (
                 title: null,
             },
             month: null,
-            status: 'Draft',
             quoteCurrency: null,
             vesting: [],
             ftes: null,

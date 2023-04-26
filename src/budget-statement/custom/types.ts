@@ -1,3 +1,12 @@
+import type {
+    Account,
+    AuditReport,
+    AuditReportStatus,
+    BudgetStatementData,
+    Comment,
+    LineItem,
+    Vesting,
+} from 'document-model-graphql/budget-statement';
 import { Document, DocumentFile } from '../../document';
 import { BudgetStatementAccountAction } from '../gen/account/types';
 import { BudgetStatementAuditReportAction } from '../gen/audit/types';
@@ -7,37 +16,13 @@ import { BudgetStatementLineItemAction } from '../gen/line-item/types';
 import { BudgetStatementStatusAction } from '../gen/status/types';
 import { BudgetStatementVestingAction } from '../gen/vesting/types';
 
-/**
- * Represents an expense item for a specific account.
- */
-export type LineItem = {
-    /** The reference to the group of the expense. */
-    group: {
-        ref: string;
-        id: string;
-        title: string;
-    };
-    /** If the expense is related to the headcount. */
-    headcountExpense: boolean;
-    /** The reference to the category of the expense. */
-    category: {
-        ref: string;
-        id: string;
-        title: string;
-    };
-    /** The budget cap for the expense. */
-    budgetCap: number | null;
-    /** The actual value of the expense. */
-    actual: number | null;
-    /** The payment done to the wallet in that month. */
-    payment: number | null;
-    /** The forecast for the next 3 months for that expense. */
-    forecast: {
-        month: string;
-        value: number;
-        budgetCap: number;
-    }[];
-    comment: string | null;
+export type {
+    Account,
+    LineItem,
+    AuditReportStatus,
+    AuditReport,
+    Comment,
+    Vesting,
 };
 
 /**
@@ -55,18 +40,6 @@ export type LineItemInput = Partial<Omit<LineItem, 'category' | 'group'>> & {
 };
 
 /**
- * Represents an account for which expenses are managed in a budget statement.
- */
-export type Account = {
-    /** The wallet address associated with the account. */
-    address: string;
-    /** The name of the account. */
-    name: string;
-    /** The line items associated with the account. */
-    lineItems: LineItem[];
-};
-
-/**
  * Represents the input for creating or updating an account.
  * @remarks
  * The only necessary attribute is the account address,
@@ -80,30 +53,9 @@ export type AccountInput = Partial<Account> & Pick<Account, 'address'>;
 export type BudgetStatus = 'Draft' | 'Review' | 'Final' | 'Escalated';
 
 /**
- * Represents the status of an audit report: 'Approved', 'ApprovedWithComments', 'NeedsAction', or 'Escalated'.
- */
-export type AuditReportStatus =
-    | 'Approved'
-    | 'ApprovedWithComments'
-    | 'NeedsAction'
-    | 'Escalated';
-
-/**
  * A string literal type representing the format for attaching audit reports to a budget statement.
  */
 export type AuditAttachment = `attachment://audits/${string}`;
-
-/**
- * Represents an audit report for a budget statement.
- */
-export type AuditReport = {
-    /** The timestamp of the audit report. */
-    timestamp: string;
-    /** The attachment for the audit report. */
-    report: AuditAttachment;
-    /** The status of the audit report. */
-    status: AuditReportStatus;
-};
 
 /**
  * Represents the input for an audit report to be added to a budget statement.
@@ -123,80 +75,18 @@ export type AuditReportInput = {
     status: AuditReportStatus;
 };
 
-export type Comment = {
-    key: string;
-    author: {
-        ref: string | null;
-        id: string | null;
-        username: string | null;
-        roleLabel: string | null;
-    };
-    comment: string;
-    timestamp: string;
-};
-
 export type VestingInput = Partial<Omit<Vesting, 'key'>> & {
     key: Vesting['key'];
-};
-
-export type Vesting = {
-    key: string;
-    date: string;
-    amount: string;
-    amountOld: string;
-    comment: string;
-    currency: string;
-    vested: boolean;
 };
 
 export type CommentInput = Partial<Omit<Comment, 'key'>> & {
     key: Comment['key'];
 };
 
-export type FTEs = {
-    value: string;
-    forecast: { month: string; value: number }[];
-};
-
 /**
  * Represents the state of a budget statement.
  */
-export type State = {
-    /**
-     * A reference to the owner of the budget statement.
-     */
-    owner: {
-        ref: string | null;
-        id: string | null;
-        title: string | null;
-    };
-    /**
-     * The month that the budget statement refers to.
-     */
-    month: string | null;
-    /**
-     * The status of the budget statement.
-     */
-    status: BudgetStatus;
-    /**
-     * The quote currency for the budget statement.
-     */
-    quoteCurrency: string | null;
-
-    vesting: Vesting[];
-
-    ftes: FTEs | null;
-    /**
-     * The list of accounts in the budget statement.
-     */
-    accounts: Account[];
-    /**
-     * The list of audit reports for the budget statement.
-     */
-    auditReports: AuditReport[];
-
-    comments: Comment[];
-};
+export type State = BudgetStatementData;
 
 /**
  * Represents the possible actions that can be performed on a budget statement.
