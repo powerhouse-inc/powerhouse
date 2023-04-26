@@ -10,10 +10,10 @@
         "start": "electron-forge start",
         "package": "electron-forge package",
         "make": "electron-forge make",
-        "publish": "electron-forge publish",
         "make:mac": "electron-forge make -p darwin",
         "make:linux": "electron-forge make -p linux",
         "make:windows": "electron-forge make -p win32",
+        "publish": "electron-forge publish",
         "lint": "echo \"No linting configured\""
     },
     "devDependencies": {
@@ -32,8 +32,8 @@
         "react-dom": "^18.2.0"
     },
     "dependencies": {
-        "document-model-editors": "../document-model-editors/",
-        "document-model-libs": "../document-model-libs/",
+        "@acaldas/document-model-libs": "^1.0.3",
+        "document-model-editors": "^0.0.3",
         "electron-squirrel-startup": "^1.0.0"
     }
 }

@@ -4,7 +4,7 @@ import {
     actions,
     reducer,
     utils,
-} from "document-model-libs/browser/budget-statement";
+} from "@acaldas/document-model-libs/browser/budget-statement";
 import { BudgetStatement } from "document-model-editors";
 
 export default function Editor() {
