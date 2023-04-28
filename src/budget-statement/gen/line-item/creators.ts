@@ -1,5 +1,9 @@
+import {
+    LineItemDeleteInput,
+    LineItemUpdateInput,
+} from 'document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
-import { Account, LineItem, LineItemInput } from '../../custom';
+import { Account, LineItem } from '../../custom';
 import { createLineItem } from '../../custom/utils';
 
 import {
@@ -36,7 +40,7 @@ export const addLineItem = (
  */
 export const updateLineItem = (
     account: Account['address'],
-    lineItems: LineItemInput[]
+    lineItems: LineItemUpdateInput[]
 ) =>
     createAction<UpdateLineItemAction>(UPDATE_LINE_ITEM, {
         account,
@@ -52,7 +56,7 @@ export const updateLineItem = (
  */
 export const deleteLineItem = (
     account: Account['address'],
-    lineItems: { category: string; group: string }[]
+    lineItems: LineItemDeleteInput[]
 ) =>
     createAction<DeleteLineItemAction>(DELETE_LINE_ITEM, {
         account,

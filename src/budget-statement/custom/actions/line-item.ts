@@ -1,15 +1,22 @@
 import {
+    LineItemDeleteInput,
+    LineItemUpdateInput,
+} from 'document-model-graphql/budget-statement';
+import {
     AddLineItemAction,
     DeleteLineItemAction,
     UpdateLineItemAction,
 } from '../../gen/line-item/types';
-import { BudgetStatementDocument, LineItem, LineItemInput } from '../types';
+import { BudgetStatementDocument, LineItem } from '../types';
 import { createLineItem } from '../utils';
 
-function isEqual(lineItemInput: LineItemInput, lineItem: LineItem) {
+function isEqual(
+    lineItemInput: LineItemUpdateInput | LineItemDeleteInput,
+    lineItem: LineItem
+) {
     return (
-        lineItemInput.category === lineItem.category.id &&
-        lineItemInput.group === lineItem.group.id
+        lineItemInput.category === lineItem.category?.id &&
+        lineItemInput.group === lineItem.group?.id
     );
 }
 
@@ -67,6 +74,7 @@ export const updateLineItemOperation = (
                 ...lineItem,
                 ...input,
                 category: lineItem.category,
+                headcountExpense: input.headcountExpense ?? false,
                 group: lineItem.group,
                 forecast: [
                     // replace old forecasts with new forecasts

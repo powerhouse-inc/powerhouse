@@ -14,14 +14,14 @@ export const addVestingOperation = (
 ) => {
     state.data.vesting.push(
         ...action.input.vesting.map(input => ({
-            key: hashKey(),
-            date: '',
-            amount: '',
-            amountOld: input.amount ?? '',
-            comment: '',
-            currency: '',
-            vested: false,
             ...input,
+            key: input.key ?? hashKey(),
+            date: input.date ?? '',
+            amount: input.amount ?? '',
+            amountOld: input.amountOld ?? input.amount ?? '',
+            comment: input.comment ?? '',
+            currency: input.currency ?? '',
+            vested: input.vested ?? false,
         }))
     );
     state.data.vesting.sort(sortVesting);
@@ -37,7 +37,16 @@ export const updateVestingOperation = (
             return;
         }
         const vesting = state.data.vesting[index];
-        state.data.vesting[index] = { ...vesting, ...input };
+        state.data.vesting[index] = {
+            ...vesting,
+            ...input,
+            amount: input.amount ?? vesting.amount,
+            amountOld: input.amountOld ?? vesting.amountOld,
+            comment: input.comment ?? vesting.comment,
+            currency: input.currency ?? vesting.currency,
+            date: input.date ?? vesting.date,
+            vested: input.vested ?? vesting.vested,
+        };
     });
     state.data.vesting.sort(sortVesting);
 };

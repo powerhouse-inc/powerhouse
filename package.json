@@ -39,7 +39,7 @@
     "private": false,
     "scripts": {
         "build": "rollup --config rollup.config.ts --configPlugin typescript",
-        "lint": "eslint --ext .js,.ts .",
+        "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
         "test": "jest",
         "docs": "typedoc src/index.doc.ts --plugin @bangjelkoski/typedoc-theme --theme fons",

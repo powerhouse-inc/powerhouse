@@ -1,3 +1,4 @@
+import { AccountUpdateInput } from 'document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
 import {
     Account,
@@ -30,7 +31,7 @@ export default class AccountObject extends BaseDocument<
      *
      * @group Account
      */
-    public updateAccount(accounts: AccountInput[]) {
+    public updateAccount(accounts: AccountUpdateInput[]) {
         return this.dispatch(updateAccount(accounts));
     }
 

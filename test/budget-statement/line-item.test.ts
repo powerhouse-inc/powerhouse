@@ -119,7 +119,7 @@ describe('Budget Statement line item reducer', () => {
                 id: 'core-unit/SES/2023/005',
                 title: 'Core Unit Operational Support',
             },
-            headcountExpense: true,
+            headcountExpense: false,
             budgetCap: 1000,
             actual: 100,
             payment: null,

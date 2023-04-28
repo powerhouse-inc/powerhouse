@@ -23,7 +23,7 @@ export const addAuditReportOperation = (
             const attachmentKey = `attachment://audits/${hash}` as const;
             state.fileRegistry[attachmentKey] = { ...audit.report };
             state.data.auditReports.push({
-                timestamp: audit.timestamp,
+                timestamp: audit.timestamp ?? new Date().toISOString(),
                 status: audit.status,
                 report: attachmentKey,
             });

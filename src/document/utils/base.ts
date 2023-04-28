@@ -22,7 +22,7 @@ import { hash } from './node';
  */
 export function createAction<A extends Action>(
     type: A['type'],
-    input?: unknown,
+    input?: A['input'],
     validator?: () => { parse(v: unknown): A }
 ): A {
     if (!type) {

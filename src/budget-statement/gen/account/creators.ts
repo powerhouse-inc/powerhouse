@@ -3,6 +3,7 @@
  * {@link "with!bang and \"quoted path\""!}
  */
 
+import { AccountUpdateInput } from 'document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
 import { Account, AccountInput } from '../../custom';
 import { createAccount } from '../../custom/utils';
@@ -31,7 +32,7 @@ export const addAccount = (accounts: AccountInput[]) =>
  * @param accounts Array of account inputs to be updated.
  * @group Account
  */
-export const updateAccount = (accounts: AccountInput[]) =>
+export const updateAccount = (accounts: AccountUpdateInput[]) =>
     createAction<UpdateAccountAction>(UPDATE_ACCOUNT, { accounts });
 
 /**

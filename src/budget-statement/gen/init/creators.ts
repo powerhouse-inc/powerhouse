@@ -1,5 +1,5 @@
+import { BudgetStatementInput } from 'document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
-import { BudgetStatementDocument } from '../../custom';
 
 import { INIT, InitAction } from './types';
 
@@ -8,10 +8,5 @@ import { INIT, InitAction } from './types';
  * @param budgetStatement - Partial budget statement data to initialize the state with.
  * @group Init
  */
-export const init = (
-    budgetStatement: Partial<
-        Omit<BudgetStatementDocument, 'data'> & {
-            data: Partial<BudgetStatementDocument['data']>;
-        }
-    >
-) => createAction<InitAction>(INIT, budgetStatement);
+export const init = (budgetStatement: BudgetStatementInput) =>
+    createAction<InitAction>(INIT, budgetStatement);

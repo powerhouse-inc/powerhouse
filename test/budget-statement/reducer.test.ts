@@ -1,6 +1,6 @@
-import { reducer } from '../../src/budget-statement';
+import { AccountInput, reducer } from '../../src/budget-statement';
 import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
-import { init } from '../../src/budget-statement/gen';
+import { addAccount, init } from '../../src/budget-statement/gen';
 import { setName } from '../../src/document/actions';
 
 describe('Budget Statement reducer', () => {
@@ -9,11 +9,6 @@ describe('Budget Statement reducer', () => {
         expect(state.revision).toBe(0);
         expect(state.documentType).toBe('powerhouse/budget-statement');
         expect(state.data).toBeDefined();
-    });
-
-    it('should start as Draft', async () => {
-        const state = createBudgetStatement();
-        expect(state.data.status).toBe('Draft');
     });
 
     it('should update name', async () => {
@@ -60,5 +55,12 @@ describe('Budget Statement reducer', () => {
         });
         expect(newState.name).toBe('March');
         expect(state.name).toBe('');
+    });
+
+    it('should throw error on invalid action', async () => {
+        const state = createBudgetStatement();
+        expect(() =>
+            reducer(state, addAccount([0] as unknown as AccountInput[]))
+        ).toThrow();
     });
 });

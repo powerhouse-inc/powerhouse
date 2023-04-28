@@ -9,7 +9,7 @@ import {
     UPDATE_VESTING,
 } from './types';
 
-export const addVesting = (vesting: Partial<Vesting>[]) =>
+export const addVesting = (vesting: VestingInput[]) =>
     createAction<AddVestingAction>(ADD_VESTING, { vesting });
 
 export const updateVesting = (vesting: VestingInput[]) =>

@@ -11,7 +11,6 @@ import AuditObject from './audit/object';
 import CommentObject from './comment/object';
 import InitObject from './init/object';
 import LineItemObject from './line-item/object';
-import StatusObject from './status/object';
 import VestingObject from './vesting/object';
 
 /**
@@ -24,7 +23,6 @@ interface BudgetStatement
         CommentObject,
         InitObject,
         LineItemObject,
-        StatusObject,
         VestingObject {}
 
 /**
@@ -117,7 +115,6 @@ applyMixins(BudgetStatement, [
     CommentObject,
     InitObject,
     LineItemObject,
-    StatusObject,
     VestingObject,
 ]);
 

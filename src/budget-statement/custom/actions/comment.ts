@@ -25,6 +25,7 @@ export const addCommentOperation = (
             },
             comment: input.comment || '',
             timestamp: input.timestamp || new Date().toISOString(),
+            status: input.status ?? 'Draft',
         }))
     );
     state.data.comments.sort(sortComment);
@@ -40,7 +41,18 @@ export const updateCommentOperation = (
             return;
         }
         const comment = state.data.comments[index];
-        state.data.comments[index] = { ...comment, ...input };
+        state.data.comments[index] = {
+            ...comment,
+            ...input,
+            author: {
+                id: input.author?.id ?? comment.author.id,
+                ref: input.author?.ref ?? comment.author.ref,
+                roleLabel: input.author?.roleLabel ?? comment.author.roleLabel,
+                username: input.author?.username ?? comment.author.username,
+            },
+            comment: input.comment ?? comment.comment,
+            timestamp: input.timestamp ?? comment.timestamp,
+        };
     });
     state.data.comments.sort(sortComment);
 };

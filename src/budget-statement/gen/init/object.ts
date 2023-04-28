@@ -1,9 +1,6 @@
+import { BudgetStatementInput } from 'document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
-import {
-    BudgetStatementAction,
-    BudgetStatementDocument,
-    State,
-} from '../../custom';
+import { BudgetStatementAction, State } from '../../custom';
 import { init } from './creators';
 
 export default class InitObject extends BaseDocument<
@@ -15,13 +12,7 @@ export default class InitObject extends BaseDocument<
      *
      * @param budgetStatement - A partial object of the budget statement to initialize.
      */
-    public init(
-        budgetStatement: Partial<
-            Omit<BudgetStatementDocument, 'data'> & {
-                data: Partial<BudgetStatementDocument['data']>;
-            }
-        >
-    ) {
+    public init(budgetStatement: BudgetStatementInput) {
         return this.dispatch(init(budgetStatement));
     }
 }

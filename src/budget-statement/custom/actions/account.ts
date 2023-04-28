@@ -30,12 +30,16 @@ export const updateAccountOperation = (
         ...state,
         data: {
             ...state.data,
-            accounts: state.data.accounts.map(account => ({
-                ...account,
-                ...action.input.accounts.find(
+            accounts: state.data.accounts.map(account => {
+                const accountUpdate = action.input.accounts.find(
                     a => a.address === account.address
-                ),
-            })),
+                );
+                return {
+                    ...account,
+                    lineItems: accountUpdate?.lineItems ?? account.lineItems,
+                    name: accountUpdate?.name ?? account.name,
+                };
+            }),
         },
     };
 };

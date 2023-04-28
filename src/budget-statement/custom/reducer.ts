@@ -1,3 +1,5 @@
+import { z } from 'document-model-graphql/budget-statement';
+import { isBaseAction } from '../../document/actions/types';
 import { createReducer } from '../../document/utils';
 import {
     ADD_ACCOUNT,
@@ -17,13 +19,6 @@ import {
     UPDATE_LINE_ITEM,
 } from '../gen/line-item/types';
 import {
-    APPROVE,
-    ESCALATE,
-    REOPEN_TO_DRAFT,
-    REOPEN_TO_REVIEW,
-    SUBMIT_FOR_REVIEW,
-} from '../gen/status/types';
-import {
     ADD_VESTING,
     DELETE_VESTING,
     UPDATE_VESTING,
@@ -32,15 +27,10 @@ import {
     addAccountOperation,
     addAuditReportOperation,
     addLineItemOperation,
-    approveOperation,
     deleteAccountOperation,
     deleteAuditReportOperation,
     deleteLineItemOperation,
-    escalateOperation,
     initOperation,
-    reopenToDraftOperation,
-    reopenToReviewOperation,
-    submitForReviewOperation,
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
@@ -80,6 +70,12 @@ import { BudgetStatementAction, State } from './types';
  */
 export const reducer = createReducer<State, BudgetStatementAction>(
     (state, action) => {
+        if (isBaseAction(action)) {
+            return state;
+        }
+
+        z.BudgetStatementActionSchema().parse(action);
+
         switch (action.type) {
             case INIT:
                 return initOperation(state, action);
@@ -95,16 +91,6 @@ export const reducer = createReducer<State, BudgetStatementAction>(
                 return updateLineItemOperation(state, action);
             case DELETE_LINE_ITEM:
                 return deleteLineItemOperation(state, action);
-            case SUBMIT_FOR_REVIEW:
-                return submitForReviewOperation(state);
-            case ESCALATE:
-                return escalateOperation(state);
-            case APPROVE:
-                return approveOperation(state);
-            case REOPEN_TO_DRAFT:
-                return reopenToDraftOperation(state);
-            case REOPEN_TO_REVIEW:
-                return reopenToReviewOperation(state);
             case ADD_AUDIT_REPORT:
                 return addAuditReportOperation(state, action);
             case DELETE_AUDIT_REPORT:

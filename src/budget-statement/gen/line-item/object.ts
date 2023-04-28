@@ -1,11 +1,9 @@
-import { BaseDocument } from '../../../document';
 import {
-    Account,
-    BudgetStatementAction,
-    LineItem,
-    LineItemInput,
-    State,
-} from '../../custom';
+    LineItemDeleteInput,
+    LineItemUpdateInput,
+} from 'document-model-graphql/budget-statement';
+import { BaseDocument } from '../../../document';
+import { Account, BudgetStatementAction, LineItem, State } from '../../custom';
 import { addLineItem, deleteLineItem, updateLineItem } from './creators';
 
 export default class LineItemObject extends BaseDocument<
@@ -35,7 +33,7 @@ export default class LineItemObject extends BaseDocument<
      */
     public updateLineItem(
         account: Account['address'],
-        lineItems: LineItemInput[]
+        lineItems: LineItemUpdateInput[]
     ) {
         return this.dispatch(updateLineItem(account, lineItems));
     }
@@ -49,7 +47,7 @@ export default class LineItemObject extends BaseDocument<
      */
     public deleteLineItem(
         account: Account['address'],
-        lineItems: { category: string; group: string }[]
+        lineItems: LineItemDeleteInput[]
     ) {
         return this.dispatch(deleteLineItem(account, lineItems));
     }
@@ -77,11 +75,12 @@ export default class LineItemObject extends BaseDocument<
      */
     public getLineItem(
         account: Account['address'],
-        lineItem: { category: string; group: string }
+        lineItem: LineItemDeleteInput
     ) {
         return this.getLineItems(account)?.find(
             ({ category, group }) =>
-                category.id === lineItem.category && group.id === lineItem.group
+                category?.id === lineItem.category &&
+                group?.id === lineItem.group
         );
     }
 }

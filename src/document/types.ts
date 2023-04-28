@@ -86,9 +86,9 @@ export type DocumentFile = {
     /** The MIME type of the attachment */
     mimeType: string;
     // The extension of the attachment.
-    extension?: string;
+    extension?: string | null;
     // The file name of the attachment.
-    fileName?: string;
+    fileName?: string | null;
 };
 
 /**
@@ -130,4 +130,4 @@ export type Document<
  * @remarks
  * Attachment string is formatted as `attachment://<filename>`.
  */
-export type Attachment = `attachment://${string}`;
+export type Attachment = string; // TODO `attachment://${string}`;
