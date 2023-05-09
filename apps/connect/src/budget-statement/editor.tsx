@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
 import {
     BudgetStatementDocument,
     actions,
     reducer,
     utils,
-} from "@acaldas/document-model-libs/browser/budget-statement";
-import { BudgetStatement } from "document-model-editors";
+} from '@acaldas/document-model-libs/browser/budget-statement';
+import { BudgetStatement } from 'document-model-editors';
+import { useCallback, useEffect, useState } from 'react';
 
 export default function Editor() {
     const [initialBudgetStatement, setInitialBudgetStatement] =
@@ -18,14 +18,12 @@ export default function Editor() {
     }, [initialBudgetStatement]);
 
     async function loadNode() {
-        // @ts-ignore
-        const budgetStatement = await window.electronAPI.openFile();
+        const budgetStatement = await window.electronAPI?.openFile();
         setInitialBudgetStatement(budgetStatement);
     }
 
     async function saveNode() {
-        // @ts-ignore
-        await window.electronAPI.saveFile(budgetStatement);
+        await window.electronAPI?.saveFile(budgetStatement);
     }
 
     async function loadBrowser() {
@@ -41,10 +39,9 @@ export default function Editor() {
         if (!budgetStatement) {
             return;
         }
-        // @ts-ignore
         const file = await window.showSaveFilePicker({
             suggestedName: `${
-                budgetStatement?.data.month ?? "budget"
+                budgetStatement?.data.month ?? 'budget'
             }.phbs.zip`,
         });
 
@@ -88,32 +85,29 @@ export default function Editor() {
         <div>
             <div>
                 <button onClick={newDocument}>New document</button>&ensp;
-                {
-                    // @ts-ignore
-                    window.electronAPI ? (
-                        <>
-                            <button onClick={loadNode}>Load document</button>
-                            &ensp;
-                            <button onClick={saveNode}>Save document</button>
-                        </>
-                    ) : (
-                        <>
-                            <button onClick={loadBrowser}>Load document</button>
-                            &ensp;
-                            <button onClick={saveBrowser}>Save document</button>
-                        </>
-                    )
-                }
+                {window.electronAPI ? (
+                    <>
+                        <button onClick={loadNode}>Load document</button>
+                        &ensp;
+                        <button onClick={saveNode}>Save document</button>
+                    </>
+                ) : (
+                    <>
+                        <button onClick={loadBrowser}>Load document</button>
+                        &ensp;
+                        <button onClick={saveBrowser}>Save document</button>
+                    </>
+                )}
                 <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
                 >
-                    <div style={{ width: "50%" }}>
+                    <div style={{ width: '50%' }}>
                         <BudgetStatement.Editor
                             budgetStatement={initialBudgetStatement}
                             onChange={onChange}
                         />
                     </div>
-                    <div style={{ width: "40%" }}>
+                    <div style={{ width: '40%' }}>
                         <h3>
                             Operations&emsp;
                             <button disabled={!canUndo} onClick={undo}>
@@ -126,7 +120,7 @@ export default function Editor() {
                         </h3>
                         <div></div>
                         <ul>
-                            {operations.map((o) => (
+                            {operations.map(o => (
                                 <li
                                     key={o.index}
                                     style={{
@@ -139,7 +133,7 @@ export default function Editor() {
                                 >
                                     <b>{`${o.index + 1} - ${o.type}`}</b>
                                     <br />
-                                    <pre style={{ overflow: "auto" }}>
+                                    <pre style={{ overflow: 'auto' }}>
                                         {JSON.stringify(o.input, null, 2)}
                                     </pre>
                                     <hr />

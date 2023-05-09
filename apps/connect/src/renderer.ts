@@ -25,5 +25,5 @@
  *  });
  * ```
  */
-import "./budget-statement/app";
-import "./index.css";
+import './budget-statement/app';
+import './index.css';

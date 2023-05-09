@@ -1,27 +1,27 @@
-import { createRoot } from "react-dom/client";
-import React, { useState } from "react";
-import BudgetStatementEditor from "./editor";
-import { Document } from "document-model-editors";
+import { Document } from 'document-model-editors';
+import React, { useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import BudgetStatementEditor from './editor';
 
 const App: React.FC = () => {
-    const [page, setPage] = useState<"Document" | "BudgetStatement">(
-        "Document"
+    const [page, setPage] = useState<'Document' | 'BudgetStatement'>(
+        'Document'
     );
     return (
         <div>
             <div style={{ marginBottom: 20 }}>
-                <button onClick={() => setPage("Document")}>
+                <button onClick={() => setPage('Document')}>
                     New Document Model
                 </button>
                 <button
-                    onClick={() => setPage("BudgetStatement")}
+                    onClick={() => setPage('BudgetStatement')}
                     style={{ marginLeft: 20 }}
                 >
                     New Budget Statement
                 </button>
             </div>
             <hr />
-            {page === "Document" ? (
+            {page === 'Document' ? (
                 <Document.Editor />
             ) : (
                 <BudgetStatementEditor />
@@ -30,7 +30,7 @@ const App: React.FC = () => {
     );
 };
 
-createRoot(document.getElementById("app") as HTMLElement).render(
+createRoot(document.getElementById('app') as HTMLElement).render(
     <React.StrictMode>
         <App />
     </React.StrictMode>
