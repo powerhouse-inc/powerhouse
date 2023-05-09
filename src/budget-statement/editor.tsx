@@ -7,9 +7,15 @@ import {
 import { BudgetStatement } from 'document-model-editors';
 import { useCallback, useEffect, useState } from 'react';
 
-export default function Editor() {
+export default function Editor({
+    initialBudget,
+}: {
+    initialBudget?: BudgetStatementDocument;
+}) {
     const [initialBudgetStatement, setInitialBudgetStatement] =
-        useState<BudgetStatementDocument>(utils.createBudgetStatement());
+        useState<BudgetStatementDocument>(
+            initialBudget ?? utils.createBudgetStatement()
+        );
     const [budgetStatement, setBudgetStatement] =
         useState<BudgetStatementDocument>();
 
