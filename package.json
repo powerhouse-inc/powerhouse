@@ -1,7 +1,7 @@
 {
     "packageManager": "yarn@1.22.19",
     "name": "@acaldas/document-model-libs",
-    "version": "1.0.3",
+    "version": "1.0.5",
     "main": "dist/node/cjs/index.js",
     "module": "dist/node/es/index.js",
     "types": "dist/index.d.ts",
@@ -16,6 +16,9 @@
     },
     "typesVersions": {
         "*": {
+            ".": [
+                "dist/node/index.d.ts"
+            ],
             "budget-statement": [
                 "dist/node/types/budget-statement"
             ],
