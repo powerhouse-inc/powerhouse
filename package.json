@@ -1,7 +1,7 @@
 {
     "packageManager": "yarn@1.22.19",
     "name": "@acaldas/document-model-libs",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "main": "dist/node/cjs/index.js",
     "module": "dist/node/es/index.js",
     "types": "dist/index.d.ts",
@@ -49,6 +49,7 @@
         "docs:markdown": "typedoc src/index.doc.ts --hideInPageTOC --plugin typedoc-plugin-markdown --out dist/docs"
     },
     "devDependencies": {
+        "@acaldas/document-model-graphql": "^1.0.2",
         "@bangjelkoski/typedoc-theme": "^0.0.2",
         "@rollup/plugin-commonjs": "^24.0.1",
         "@rollup/plugin-node-resolve": "^15.0.1",
@@ -61,7 +62,6 @@
         "@types/wicg-file-system-access": "^2020.9.6",
         "@typescript-eslint/eslint-plugin": "^5.53.0",
         "@typescript-eslint/parser": "^5.53.0",
-        "document-model-graphql": "link:../document-model-graphql",
         "esbuild": "^0.17.11",
         "eslint": "^8.35.0",
         "eslint-config-prettier": "^8.6.0",
