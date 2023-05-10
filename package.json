@@ -1,7 +1,7 @@
 {
     "packageManager": "yarn@1.22.19",
     "name": "@acaldas/document-model-libs",
-    "version": "1.0.7",
+    "version": "1.0.9",
     "main": "dist/node/cjs/index.js",
     "module": "dist/node/es/index.js",
     "types": "dist/index.d.ts",
@@ -17,7 +17,7 @@
     "typesVersions": {
         "*": {
             ".": [
-                "dist/node/index.d.ts"
+                "dist/node/types"
             ],
             "budget-statement": [
                 "dist/node/types/budget-statement"
@@ -26,7 +26,7 @@
                 "dist/node/types/document"
             ],
             "browser": [
-                "dist/browser/index.d.ts"
+                "dist/browser/types"
             ],
             "browser/budget-statement": [
                 "dist/browser/types/budget-statement"
@@ -49,6 +49,7 @@
         "docs:markdown": "typedoc src/index.doc.ts --hideInPageTOC --plugin typedoc-plugin-markdown --out dist/docs"
     },
     "devDependencies": {
+        "@acaldas/document-model-graphql": "^1.0.2",
         "@bangjelkoski/typedoc-theme": "^0.0.2",
         "@rollup/plugin-commonjs": "^24.0.1",
         "@rollup/plugin-node-resolve": "^15.0.1",
@@ -80,7 +81,6 @@
         "typescript": "^4.9.5"
     },
     "dependencies": {
-        "@acaldas/document-model-graphql": "^1.0.2",
         "immer": "^9.0.19",
         "json-stringify-deterministic": "^1.0.8",
         "jszip": "^3.10.1",
