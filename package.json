@@ -1,13 +1,13 @@
 {
     "packageManager": "yarn@1.22.19",
     "name": "@acaldas/document-model-libs",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "main": "dist/node/cjs/index.js",
     "module": "dist/node/es/index.js",
-    "types": "dist/index.d.ts",
-    "./browser": "dist/browser/es/index.js",
+    "types": "dist/node/types/index.d.ts",
+    "browser": "dist/browser/es/index.js",
     "exports": {
-        ".": "./dist/node/index.js",
+        ".": "./dist/node/es/index.js",
         "./budget-statement": "./dist/node/es/budget-statement.js",
         "./document": "./dist/node/es/document.js",
         "./browser": "./dist/browser/es/index.js",
