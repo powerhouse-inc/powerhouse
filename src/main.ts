@@ -11,12 +11,49 @@ if (require('electron-squirrel-startup')) {
 }
 
 const isMac = process.platform === 'darwin';
-let isReady = false;
-let handleFile: Function | undefined;
-let file: string;
+let handleFile: ((file: string) => Promise<void>) | undefined;
 let window: BrowserWindow | undefined;
 
-const createWindow = async () => {
+async function handleFileOpen() {
+    const window = BrowserWindow.getFocusedWindow();
+    if (!window) {
+        return;
+    }
+    const files = await dialog.showOpenDialogSync(window, {
+        properties: ['openFile'],
+    });
+    if (files) {
+        files.map(file => app.addRecentDocument(file));
+        return utils.loadBudgetStatementFromFile(files[0]);
+    }
+}
+
+async function handleFileSave(budgetStatement: BudgetStatementDocument) {
+    if (!window) {
+        return;
+    }
+    const filePath = await dialog.showSaveDialogSync(window, {
+        properties: ['showOverwriteConfirmation', 'createDirectory'],
+        defaultPath: budgetStatement?.data.month ?? 'budget',
+    });
+
+    if (filePath) {
+        const index = filePath.lastIndexOf(path.sep);
+        const dirPath = filePath.slice(0, index);
+        const name = filePath.slice(index);
+        const savedPath = await utils.saveBudgetStatementToFile(
+            budgetStatement,
+            dirPath,
+            name
+        );
+        app.addRecentDocument(savedPath);
+    }
+}
+
+ipcMain.handle('dialog:openFile', handleFileOpen);
+ipcMain.handle('dialog:saveFile', (_, args) => handleFileSave(args));
+
+const createWindow = async (file?: string | undefined) => {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
         width: 1300,
@@ -26,38 +63,6 @@ const createWindow = async () => {
         },
     });
     window = mainWindow;
-
-    async function handleFileOpen() {
-        const files = await dialog.showOpenDialogSync(mainWindow, {
-            properties: ['openFile'],
-        });
-        if (files) {
-            files.map(file => app.addRecentDocument(file));
-            return utils.loadBudgetStatementFromFile(files[0]);
-        }
-    }
-
-    async function handleFileSave(budgetStatement: BudgetStatementDocument) {
-        const filePath = await dialog.showSaveDialogSync(mainWindow, {
-            properties: ['showOverwriteConfirmation', 'createDirectory'],
-            defaultPath: budgetStatement?.data.month ?? 'budget',
-        });
-
-        if (filePath) {
-            const index = filePath.lastIndexOf(path.sep);
-            const dirPath = filePath.slice(0, index);
-            const name = filePath.slice(index);
-            const savedPath = await utils.saveBudgetStatementToFile(
-                budgetStatement,
-                dirPath,
-                name
-            );
-            app.addRecentDocument(savedPath);
-        }
-    }
-
-    ipcMain.handle('dialog:openFile', handleFileOpen);
-    ipcMain.handle('dialog:saveFile', (_, args) => handleFileSave(args));
 
     const template = [
         ...(isMac
@@ -93,11 +98,10 @@ const createWindow = async () => {
                         );
                         if (files) {
                             files.map(file => app.addRecentDocument(file));
-                            file = files[0];
                             if (window) {
-                                handleFile?.();
+                                handleFile?.(files[0]);
                             } else {
-                                createWindow();
+                                createWindow(files[0]);
                             }
                         }
                     },
@@ -201,9 +205,8 @@ const createWindow = async () => {
                 `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`
             )
         );
-        isReady = true;
     }
-    handleFile = async () => {
+    handleFile = async (file: string) => {
         if (file) {
             try {
                 const budget = await utils.loadBudgetStatementFromFile(file);
@@ -214,11 +217,11 @@ const createWindow = async () => {
         }
     };
 
-    file && handleFile();
+    file && handleFile(file);
 
     mainWindow.on('close', () => {
-        ipcMain.removeHandler('dialog:openFile');
-        ipcMain.removeHandler('dialog:saveFile');
+        // ipcMain.removeHandler('dialog:openFile');
+        // ipcMain.removeHandler('dialog:saveFile');
         window = undefined;
         handleFile = undefined;
     });
@@ -227,19 +230,18 @@ const createWindow = async () => {
     // mainWindow.webContents.openDevTools({ mode: "bottom" });
 };
 
-app.on('open-file', (event, path) => {
-    file = path;
-    if (window) {
-        handleFile?.();
-    } else {
-        createWindow();
-    }
+app.on('open-file', (_event, path) => {
+    // if (window) {
+    //     handleFile?.(path);
+    // } else {
+    createWindow(path);
+    // }
 });
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+app.on('ready', () => createWindow());
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

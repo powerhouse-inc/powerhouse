@@ -1,19 +1,66 @@
 import {
     BudgetStatementDocument,
     utils,
-} from '@acaldas/document-model-libs/budget-statement';
+} from '@acaldas/document-model-libs/browser/budget-statement';
 import { Document } from 'document-model-editors';
 import React, { useEffect, useState } from 'react';
+import { useDrop } from 'react-aria';
+import { FileDropItem } from 'react-aria-components';
 import { createRoot } from 'react-dom/client';
 import BudgetStatementEditor from '../budget-statement/editor';
-import Tabs, { ITab } from './tabs';
+import Tabs, { Tab } from './tabs';
 
-type Tab = ITab &
-    ({} | { budget: BudgetStatementDocument } | { document: true });
+class TabBudgetStatement extends Tab {
+    public budgetStatement: BudgetStatementDocument;
+
+    constructor(_budgetStatement?: BudgetStatementDocument, name?: string) {
+        const budgetStatement =
+            _budgetStatement ?? utils.createBudgetStatement();
+        const content = (
+            <BudgetStatementEditor
+                initialBudget={budgetStatement}
+                onChange={budget => {
+                    this.budgetStatement = budget;
+                }}
+            />
+        );
+
+        super(
+            name ||
+                budgetStatement.name ||
+                budgetStatement.data.month ||
+                'Budget',
+            content
+        );
+
+        this.budgetStatement = budgetStatement;
+    }
+}
+
+class TabDocumentModel extends Tab {
+    constructor(name?: string) {
+        super(name || 'Document Model', <Document.Editor />);
+    }
+}
 
 const App: React.FC = () => {
     const [tabs, setTabs] = useState<Tab[]>([newTab()]);
     const [activeTab, setActiveTab] = useState<React.Key>();
+    const ref = React.useRef(null);
+    const { dropProps, isDropTarget } = useDrop({
+        ref,
+        async onDrop(e) {
+            console.log(e);
+            const files = e.items.filter(
+                item => item.kind === 'file'
+            ) as FileDropItem[];
+            files.forEach(async item => {
+                const file = await item.getFile();
+                const budget = await utils.loadBudgetStatementFromInput(file);
+                handleNewBudgetStatement(budget);
+            });
+        },
+    });
 
     useEffect(() => {
         window.electronAPI?.handleFileOpened(file => {
@@ -26,9 +73,8 @@ const App: React.FC = () => {
     useEffect(() => {
         const removeListener = window.electronAPI?.handleFileSaved(() => {
             const tab = tabs.find(({ name }, i) => name + i === activeTab);
-            if (tab && Object.keys(tab).includes('budget')) {
-                // @ts-ignore
-                window.electronAPI?.saveFile(tab.budget);
+            if (tab && tab instanceof TabBudgetStatement) {
+                window.electronAPI?.saveFile(tab.budgetStatement);
             }
         });
         return () => {
@@ -56,22 +102,6 @@ const App: React.FC = () => {
         };
     }
 
-    function newDocumentModel(): Tab {
-        return {
-            name: 'Document Model',
-            content: <Document.Editor />,
-        };
-    }
-
-    function newBudgetStatement(budget?: BudgetStatementDocument): Tab {
-        const newBudget = budget ?? utils.createBudgetStatement();
-        return {
-            name: newBudget.name || newBudget.data.month || 'Budget',
-            budget: newBudget,
-            content: <BudgetStatementEditor initialBudget={newBudget} />,
-        };
-    }
-
     function handleNewTab() {
         const tab = newTab();
         setTabs(tabs => {
@@ -81,7 +111,7 @@ const App: React.FC = () => {
     }
 
     function handleNewBudgetStatement(budget?: BudgetStatementDocument) {
-        const budgetTab = newBudgetStatement(budget);
+        const budgetTab = new TabBudgetStatement(budget);
         setTabs(tabs => {
             setTimeout(() => setActiveTab(budgetTab.name + tabs.length), 100);
             return [...tabs, budgetTab];
@@ -89,14 +119,22 @@ const App: React.FC = () => {
     }
 
     function handleNewDocumentModel() {
-        const document = newDocumentModel();
+        const document = new TabDocumentModel();
         setTabs(tabs => {
             setTimeout(() => setActiveTab(document.name + tabs.length));
             return [...tabs, document];
         });
     }
     return (
-        <div className="h-screen overflow-auto bg-bg py-3 pl-16 text-white">
+        <div
+            className={`h-screen overflow-auto ${
+                isDropTarget ? 'bg-light' : 'bg-bg'
+            } py-3 pl-16 text-white`}
+            {...dropProps}
+            role="presentation"
+            tabIndex={0}
+            ref={ref}
+        >
             <div className="mb-5">
                 <Tabs
                     tabs={tabs}
