@@ -1,5 +1,7 @@
 module.exports = {
-    packagerConfig: {},
+    packagerConfig: {
+        extendInfo: 'assets/Info.plist',
+    },
     rebuildConfig: {},
     makers: [
         {
