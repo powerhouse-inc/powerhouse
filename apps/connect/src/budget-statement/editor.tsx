@@ -9,8 +9,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 export default function Editor({
     initialBudget,
+    onChange,
 }: {
     initialBudget?: BudgetStatementDocument;
+    onChange?: (budget: BudgetStatementDocument) => void;
 }) {
     const [initialBudgetStatement, setInitialBudgetStatement] =
         useState<BudgetStatementDocument>(
@@ -23,44 +25,13 @@ export default function Editor({
         setBudgetStatement(initialBudgetStatement);
     }, [initialBudgetStatement]);
 
-    async function loadNode() {
-        const budgetStatement = await window.electronAPI?.openFile();
-        setInitialBudgetStatement(budgetStatement);
-    }
-
-    async function saveNode() {
-        await window.electronAPI?.saveFile(budgetStatement);
-    }
-
-    async function loadBrowser() {
-        // open file picker, destructure the one element returned array
-        const [fileHandle] = await window.showOpenFilePicker();
-        const file = await fileHandle.getFile();
-
-        const budgetStatement = await utils.loadBudgetStatementFromInput(file);
-        setInitialBudgetStatement(budgetStatement);
-    }
-
-    async function saveBrowser() {
-        if (!budgetStatement) {
-            return;
-        }
-        const file = await window.showSaveFilePicker({
-            suggestedName: `${
-                budgetStatement?.data.month ?? 'budget'
-            }.phbs.zip`,
-        });
-
-        utils.saveBudgetStatementToFileHandle(budgetStatement, file);
-    }
-
-    const onChange = useCallback((budgetStatement: BudgetStatementDocument) => {
-        setBudgetStatement({ ...budgetStatement });
-    }, []);
-
-    const newDocument = () => {
-        setInitialBudgetStatement(utils.createBudgetStatement());
-    };
+    const handleChange = useCallback(
+        (budgetStatement: BudgetStatementDocument) => {
+            setBudgetStatement({ ...budgetStatement });
+            onChange?.(budgetStatement);
+        },
+        []
+    );
 
     const operations = budgetStatement
         ? [...budgetStatement.operations].reverse()
@@ -89,64 +60,46 @@ export default function Editor({
 
     return (
         <div>
-            <div>
-                <button onClick={newDocument}>New document</button>&ensp;
-                {window.electronAPI ? (
-                    <>
-                        <button onClick={loadNode}>Load document</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ width: '50%' }}>
+                    <BudgetStatement.Editor
+                        budgetStatement={initialBudgetStatement}
+                        onChange={handleChange}
+                    />
+                </div>
+                <div style={{ width: '40%' }}>
+                    <h3>
+                        Operations&emsp;
+                        <button disabled={!canUndo} onClick={undo}>
+                            Undo
+                        </button>
                         &ensp;
-                        <button onClick={saveNode}>Save document</button>
-                    </>
-                ) : (
-                    <>
-                        <button onClick={loadBrowser}>Load document</button>
-                        &ensp;
-                        <button onClick={saveBrowser}>Save document</button>
-                    </>
-                )}
-                <div
-                    style={{ display: 'flex', justifyContent: 'space-between' }}
-                >
-                    <div style={{ width: '50%' }}>
-                        <BudgetStatement.Editor
-                            budgetStatement={initialBudgetStatement}
-                            onChange={onChange}
-                        />
-                    </div>
-                    <div style={{ width: '40%' }}>
-                        <h3>
-                            Operations&emsp;
-                            <button disabled={!canUndo} onClick={undo}>
-                                Undo
-                            </button>
-                            &ensp;
-                            <button disabled={!canRedo} onClick={redo}>
-                                Redo
-                            </button>
-                        </h3>
-                        <div></div>
-                        <ul>
-                            {operations.map(o => (
-                                <li
-                                    key={o.index}
-                                    style={{
-                                        opacity:
-                                            budgetStatement &&
-                                            o.index < budgetStatement?.revision
-                                                ? 1
-                                                : 0.5,
-                                    }}
-                                >
-                                    <b>{`${o.index + 1} - ${o.type}`}</b>
-                                    <br />
-                                    <pre style={{ overflow: 'auto' }}>
-                                        {JSON.stringify(o.input, null, 2)}
-                                    </pre>
-                                    <hr />
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                        <button disabled={!canRedo} onClick={redo}>
+                            Redo
+                        </button>
+                    </h3>
+                    <div></div>
+                    <ul>
+                        {operations.map(o => (
+                            <li
+                                key={o.index}
+                                style={{
+                                    opacity:
+                                        budgetStatement &&
+                                        o.index < budgetStatement?.revision
+                                            ? 1
+                                            : 0.5,
+                                }}
+                            >
+                                <b>{`${o.index + 1} - ${o.type}`}</b>
+                                <br />
+                                <pre style={{ overflow: 'auto' }}>
+                                    {JSON.stringify(o.input, null, 2)}
+                                </pre>
+                                <hr />
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </div>
         </div>
