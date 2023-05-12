@@ -1,4 +1,4 @@
-import { AccountUpdateInput } from 'document-model-graphql/budget-statement';
+import { AccountUpdateInput } from '@acaldas/document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
 import {
     Account,

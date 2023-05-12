@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import mime from 'mime/lite';
 import { BaseAction } from '../actions/types';
-import {
+import type {
     Action,
     Attachment,
     Document,
@@ -12,7 +12,7 @@ import {
 } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 
-export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
+type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
 export const createZip = async (document: Document) => {
     // create zip file

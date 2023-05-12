@@ -8,8 +8,8 @@ import {
 import { createBudgetStatement } from '../custom/utils';
 import AccountObject from './account/object';
 import AuditObject from './audit/object';
+import BaseObject from './base/object';
 import CommentObject from './comment/object';
-import InitObject from './init/object';
 import LineItemObject from './line-item/object';
 import VestingObject from './vesting/object';
 
@@ -21,7 +21,7 @@ interface BudgetStatement
     extends AccountObject,
         AuditObject,
         CommentObject,
-        InitObject,
+        BaseObject,
         LineItemObject,
         VestingObject {}
 
@@ -113,7 +113,7 @@ applyMixins(BudgetStatement, [
     AccountObject,
     AuditObject,
     CommentObject,
-    InitObject,
+    BaseObject,
     LineItemObject,
     VestingObject,
 ]);

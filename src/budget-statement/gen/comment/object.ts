@@ -1,4 +1,4 @@
-import { CommentUpdateInput } from 'document-model-graphql/budget-statement';
+import type { CommentUpdateInput } from '@acaldas/document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
 import { BudgetStatementAction, CommentInput, State } from '../../custom';
 import { addComment, deleteComment, updateComment } from './creators';

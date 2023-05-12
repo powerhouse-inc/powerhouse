@@ -1,4 +1,4 @@
-import { Action, Operation } from '../src/document';
+import { Action, Operation } from '../src/document/types';
 import { createAction, createReducer } from '../src/document/utils';
 
 // Empty reducer that supports base actions

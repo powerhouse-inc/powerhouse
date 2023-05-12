@@ -1,7 +1,7 @@
 import {
     LineItemDeleteInput,
     LineItemUpdateInput,
-} from 'document-model-graphql/budget-statement';
+} from '@acaldas/document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
 import { Account, BudgetStatementAction, LineItem, State } from '../../custom';
 import { addLineItem, deleteLineItem, updateLineItem } from './creators';

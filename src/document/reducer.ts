@@ -1,4 +1,4 @@
-import { z } from 'document-model-graphql/document';
+import { z } from '@acaldas/document-model-graphql/document';
 import { castDraft, produce } from 'immer';
 import {
     loadStateOperation,

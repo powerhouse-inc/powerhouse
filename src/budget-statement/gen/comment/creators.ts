@@ -1,4 +1,7 @@
-import { CommentUpdateInput } from 'document-model-graphql/budget-statement';
+import {
+    CommentUpdateInput,
+    z,
+} from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
 import { Comment, CommentInput } from '../../custom';
 import {
@@ -11,10 +14,22 @@ import {
 } from './types';
 
 export const addComment = (comments: CommentInput[]) =>
-    createAction<AddCommentAction>(ADD_COMMENT, { comments });
+    createAction<AddCommentAction>(
+        ADD_COMMENT,
+        { comments },
+        z.AddCommentActionSchema
+    );
 
 export const updateComment = (comments: CommentUpdateInput[]) =>
-    createAction<UpdateCommentAction>(UPDATE_COMMENT, { comments });
+    createAction<UpdateCommentAction>(
+        UPDATE_COMMENT,
+        { comments },
+        z.UpdateCommentActionSchema
+    );
 
 export const deleteComment = (comments: Comment['key'][]) =>
-    createAction<DeleteCommentAction>(DELETE_COMMENT, { comments });
+    createAction<DeleteCommentAction>(
+        DELETE_COMMENT,
+        { comments },
+        z.DeleteCommentActionSchema
+    );

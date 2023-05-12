@@ -9,12 +9,16 @@ import type {
     BudgetStatus,
     Comment,
     CommentInput,
+    Ftes,
+    FtesInput,
     LineItem,
     LineItemInput,
+    Owner,
+    OwnerInput,
     Vesting,
     VestingInput,
-} from 'document-model-graphql/budget-statement';
-import { Document } from '../../document';
+} from '@acaldas/document-model-graphql/budget-statement';
+import { Document } from '../../document/types';
 
 export type {
     Account,
@@ -29,13 +33,12 @@ export type {
     Vesting,
     VestingInput,
     AuditReportInput,
+    Owner,
+    OwnerInput,
+    Ftes,
+    FtesInput,
     BudgetStatementAction,
 };
-
-/**
- * A string literal type representing the format for attaching audit reports to a budget statement.
- */
-export type AuditAttachment = `attachment://audits/${string}`;
 
 /**
  * Represents the state of a budget statement.

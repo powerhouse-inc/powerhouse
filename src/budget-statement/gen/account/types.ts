@@ -1,8 +1,8 @@
-import {
+import type {
     AddAccountAction,
     DeleteAccountAction,
     UpdateAccountAction,
-} from 'document-model-graphql/budget-statement';
+} from '@acaldas/document-model-graphql/budget-statement';
 
 export const ADD_ACCOUNT = 'ADD_ACCOUNT';
 export const UPDATE_ACCOUNT = 'UPDATE_ACCOUNT';

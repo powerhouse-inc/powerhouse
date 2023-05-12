@@ -1,8 +1,8 @@
-import {
+import type {
     AddCommentAction,
     DeleteCommentAction,
     UpdateCommentAction,
-} from 'document-model-graphql/budget-statement';
+} from '@acaldas/document-model-graphql/budget-statement';
 
 export const ADD_COMMENT = 'ADD_COMMENT';
 export const UPDATE_COMMENT = 'UPDATE_COMMENT';

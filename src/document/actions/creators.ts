@@ -1,5 +1,5 @@
-import { z } from 'document-model-graphql/document';
-import { Document } from '..';
+import { z } from '@acaldas/document-model-graphql/document';
+import { Document } from '../types';
 import { createAction } from '../utils';
 import {
     LoadStateAction,

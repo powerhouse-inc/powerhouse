@@ -1,8 +1,8 @@
-import {
+import type {
     AddVestingAction,
     DeleteVestingAction,
     UpdateVestingAction,
-} from 'document-model-graphql/budget-statement';
+} from '@acaldas/document-model-graphql/budget-statement';
 
 export const ADD_VESTING = 'ADD_VESTING';
 export const UPDATE_VESTING = 'UPDATE_VESTING';

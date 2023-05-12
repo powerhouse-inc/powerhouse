@@ -1,4 +1,4 @@
-import { Operation } from '../../../document';
+import { Operation } from '../../../document/types';
 import { hashAttachment } from '../../../document/utils';
 import {
     AddAuditReportAction,

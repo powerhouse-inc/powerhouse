@@ -1,7 +1,8 @@
 import {
     LineItemDeleteInput,
     LineItemUpdateInput,
-} from 'document-model-graphql/budget-statement';
+    z,
+} from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
 import { Account, LineItem } from '../../custom';
 import { createLineItem } from '../../custom/utils';
@@ -26,10 +27,14 @@ export const addLineItem = (
     account: Account['address'],
     lineItems: (Partial<LineItem> & Pick<LineItem, 'category' | 'group'>)[]
 ) =>
-    createAction<AddLineItemAction>(ADD_LINE_ITEM, {
-        account,
-        lineItems: lineItems.map(createLineItem),
-    });
+    createAction<AddLineItemAction>(
+        ADD_LINE_ITEM,
+        {
+            account,
+            lineItems: lineItems.map(createLineItem),
+        },
+        z.AddLineItemActionSchema
+    );
 
 /**
  * Creates an action to update one or more line items in an account.
@@ -42,10 +47,14 @@ export const updateLineItem = (
     account: Account['address'],
     lineItems: LineItemUpdateInput[]
 ) =>
-    createAction<UpdateLineItemAction>(UPDATE_LINE_ITEM, {
-        account,
-        lineItems,
-    });
+    createAction<UpdateLineItemAction>(
+        UPDATE_LINE_ITEM,
+        {
+            account,
+            lineItems,
+        },
+        z.UpdateLineItemActionSchema
+    );
 
 /**
  * Creates an action to delete one or more line items from an account.
@@ -58,7 +67,11 @@ export const deleteLineItem = (
     account: Account['address'],
     lineItems: LineItemDeleteInput[]
 ) =>
-    createAction<DeleteLineItemAction>(DELETE_LINE_ITEM, {
-        account,
-        lineItems,
-    });
+    createAction<DeleteLineItemAction>(
+        DELETE_LINE_ITEM,
+        {
+            account,
+            lineItems,
+        },
+        z.DeleteLineItemActionSchema
+    );

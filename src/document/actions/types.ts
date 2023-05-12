@@ -1,4 +1,4 @@
-import type { BaseAction } from 'document-model-graphql/document';
+import type { BaseAction } from '@acaldas/document-model-graphql/document';
 import { Action } from '../types';
 
 export const SET_NAME = 'SET_NAME';
@@ -13,7 +13,7 @@ export {
     RedoAction,
     SetNameAction,
     UndoAction,
-} from 'document-model-graphql/document';
+} from '@acaldas/document-model-graphql/document';
 export { BaseAction };
 
 // export interface SetNameAction extends Action {

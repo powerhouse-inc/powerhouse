@@ -1,9 +1,7 @@
-/**
- * {@link moduleA!}
- * {@link "with!bang and \"quoted path\""!}
- */
-
-import { AccountUpdateInput } from 'document-model-graphql/budget-statement';
+import {
+    AccountUpdateInput,
+    z,
+} from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
 import { Account, AccountInput } from '../../custom';
 import { createAccount } from '../../custom/utils';
@@ -23,9 +21,13 @@ import {
  * @group Account
  */
 export const addAccount = (accounts: AccountInput[]) =>
-    createAction<AddAccountAction>(ADD_ACCOUNT, {
-        accounts: accounts.map(createAccount),
-    });
+    createAction<AddAccountAction>(
+        ADD_ACCOUNT,
+        {
+            accounts: accounts.map(createAccount),
+        },
+        z.AddAccountActionSchema
+    );
 
 /**
  * Action creator for updating accounts in the budget statement.
@@ -33,7 +35,11 @@ export const addAccount = (accounts: AccountInput[]) =>
  * @group Account
  */
 export const updateAccount = (accounts: AccountUpdateInput[]) =>
-    createAction<UpdateAccountAction>(UPDATE_ACCOUNT, { accounts });
+    createAction<UpdateAccountAction>(
+        UPDATE_ACCOUNT,
+        { accounts },
+        z.UpdateAccountActionSchema
+    );
 
 /**
  * Action creator for deleting accounts from the budget statement.
@@ -41,4 +47,8 @@ export const updateAccount = (accounts: AccountUpdateInput[]) =>
  * @group Account
  */
 export const deleteAccount = (accounts: Account['address'][]) =>
-    createAction<DeleteAccountAction>(DELETE_ACCOUNT, { accounts });
+    createAction<DeleteAccountAction>(
+        DELETE_ACCOUNT,
+        { accounts },
+        z.DeleteAccountActionSchema
+    );

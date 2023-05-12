@@ -1,7 +1,7 @@
-import {
+import type {
     AddAuditReportAction,
     DeleteAuditReportAction,
-} from 'document-model-graphql/budget-statement';
+} from '@acaldas/document-model-graphql/budget-statement';
 import { AuditReport, AuditReportInput } from '../../custom';
 
 export const ADD_AUDIT_REPORT = 'ADD_AUDIT_REPORT';

@@ -1,4 +1,4 @@
-import { z } from 'document-model-graphql/budget-statement';
+import { z } from '@acaldas/document-model-graphql/budget-statement';
 import { isBaseAction } from '../../document/actions/types';
 import { createReducer } from '../../document/utils';
 import {
@@ -8,11 +8,16 @@ import {
 } from '../gen/account/types';
 import { ADD_AUDIT_REPORT, DELETE_AUDIT_REPORT } from '../gen/audit/types';
 import {
+    SET_FTES,
+    SET_MONTH,
+    SET_OWNER,
+    SET_QUOTE_CURRENCY,
+} from '../gen/base/types';
+import {
     ADD_COMMENT,
     DELETE_COMMENT,
     UPDATE_COMMENT,
 } from '../gen/comment/types';
-import { INIT } from '../gen/init/types';
 import {
     ADD_LINE_ITEM,
     DELETE_LINE_ITEM,
@@ -30,7 +35,10 @@ import {
     deleteAccountOperation,
     deleteAuditReportOperation,
     deleteLineItemOperation,
-    initOperation,
+    setFtesOperation,
+    setMonthOperation,
+    setOwnerOperation,
+    setQuoteCurrencyOperation,
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
@@ -77,8 +85,14 @@ export const reducer = createReducer<State, BudgetStatementAction>(
         z.BudgetStatementActionSchema().parse(action);
 
         switch (action.type) {
-            case INIT:
-                return initOperation(state, action);
+            case SET_OWNER:
+                return setOwnerOperation(state, action);
+            case SET_MONTH:
+                return setMonthOperation(state, action);
+            case SET_QUOTE_CURRENCY:
+                return setQuoteCurrencyOperation(state, action);
+            case SET_FTES:
+                return setFtesOperation(state, action);
             case ADD_ACCOUNT:
                 return addAccountOperation(state, action);
             case UPDATE_ACCOUNT:
