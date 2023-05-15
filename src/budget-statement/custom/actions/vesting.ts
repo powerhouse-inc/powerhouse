@@ -12,18 +12,26 @@ export const addVestingOperation = (
     state: BudgetStatementDocument,
     action: AddVestingAction
 ) => {
-    state.data.vesting.push(
-        ...action.input.vesting.map(input => ({
+    action.input.vesting.forEach(input => {
+        const key = input.key ?? hashKey();
+
+        const index = state.data.vesting.findIndex(v => v.key === input.key);
+        if (index > -1) {
+            throw new Error(`Vesting with key ${key} already exists`);
+        }
+
+        state.data.vesting.push({
             ...input,
-            key: input.key ?? hashKey(),
+            key,
             date: input.date ?? '',
             amount: input.amount ?? '',
             amountOld: input.amountOld ?? input.amount ?? '',
             comment: input.comment ?? '',
             currency: input.currency ?? '',
             vested: input.vested ?? false,
-        }))
-    );
+        });
+    });
+
     state.data.vesting.sort(sortVesting);
 };
 

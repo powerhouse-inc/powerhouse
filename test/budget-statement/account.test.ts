@@ -70,4 +70,29 @@ describe('Budget Statement account reducer', () => {
         expect(newState.data.accounts.length).toBe(0);
         expect(state.data.accounts.length).toBe(1);
     });
+
+    it('should throw exception if adding account with same address', async () => {
+        let state = createBudgetStatement();
+        state = reducer(
+            state,
+            addAccount([
+                {
+                    address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+                    name: 'Grants Program',
+                },
+            ])
+        );
+        expect(() =>
+            reducer(
+                state,
+                addAccount([
+                    {
+                        address:
+                            'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+                        name: 'Incubation',
+                    },
+                ])
+            )
+        ).toThrow();
+    });
 });

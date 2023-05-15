@@ -22,7 +22,8 @@ export default class AccountObject extends BaseDocument<
      * @group Account
      */
     public addAccount(accounts: AccountInput[]) {
-        return this.dispatch(addAccount(accounts));
+        const action = addAccount(accounts);
+        return this.dispatch(action);
     }
 
     /**

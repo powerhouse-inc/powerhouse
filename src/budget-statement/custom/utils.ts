@@ -74,7 +74,9 @@ export const createLineItem = (input: LineItemInput): LineItem => ({
     actual: null,
     comment: null,
     ...input,
-    forecast: input.forecast ?? new Array<LineItemForecast>(),
+    forecast:
+        input.forecast?.sort((f1, f2) => f1.month.localeCompare(f2.month)) ??
+        new Array<LineItemForecast>(),
     headcountExpense: input.headcountExpense ?? false,
     group: input.group ?? null,
     category: input.category ?? null,

@@ -164,6 +164,33 @@ describe('Budget Statement Audit Report reducer', () => {
         expect(state.data.auditReports[0].status).toBe('NeedsAction');
     });
 
+    it('should throw if duplicated audit report', async () => {
+        let state = createBudgetStatement();
+        const file = await getLocalFile(tempFile);
+        state = reducer(
+            state,
+            await addAuditReport([
+                {
+                    report: file,
+                    status: 'Approved',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+            ])
+        );
+        await expect(async () =>
+            reducer(
+                state,
+                await addAuditReport([
+                    {
+                        report: file,
+                        status: 'Approved',
+                        timestamp: '2023-03-15T17:46:22.754Z',
+                    },
+                ])
+            )
+        ).rejects.toThrow();
+    });
+
     it('should fetch attachment from URL', async () => {
         const file = await getRemoteFile(
             'https://makerdao.com/whitepaper/DaiDec17WP.pdf'

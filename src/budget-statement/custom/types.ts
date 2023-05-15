@@ -17,6 +17,7 @@ import type {
     OwnerInput,
     Vesting,
     VestingInput,
+    VestingUpdateInput,
 } from '@acaldas/document-model-graphql/budget-statement';
 import { Document } from '../../document/types';
 
@@ -32,6 +33,7 @@ export type {
     CommentInput,
     Vesting,
     VestingInput,
+    VestingUpdateInput,
     AuditReportInput,
     Owner,
     OwnerInput,

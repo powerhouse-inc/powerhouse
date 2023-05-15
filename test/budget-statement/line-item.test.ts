@@ -193,4 +193,55 @@ describe('Budget Statement line item reducer', () => {
         expect(newState.data.accounts[0].lineItems.length).toBe(0);
         expect(state.data.accounts[0].lineItems.length).toBe(1);
     });
+
+    it('should throw if adding duplicated line item', async () => {
+        let state = createBudgetStatement({});
+        state = reducer(
+            state,
+            addAccount([
+                {
+                    address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+                    name: 'Grants Program',
+                },
+            ])
+        );
+        state = reducer(
+            state,
+            addLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
+                {
+                    category: {
+                        ref: 'makerdao/budget-category',
+                        id: 'TravelAndEntertainment',
+                        title: 'Travel & Entertainment',
+                    },
+                    group: {
+                        ref: 'makerdao/project',
+                        id: 'core-unit/SES/2023/005',
+                        title: 'Core Unit Operational Support',
+                    },
+                    headcountExpense: true,
+                },
+            ])
+        );
+        expect(() =>
+            reducer(
+                state,
+                addLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
+                    {
+                        category: {
+                            ref: 'makerdao/budget-category',
+                            id: 'TravelAndEntertainment',
+                            title: 'Travel & Entertainment',
+                        },
+                        group: {
+                            ref: 'makerdao/project',
+                            id: 'core-unit/SES/2023/005',
+                            title: 'Core Unit Operational Support',
+                        },
+                        headcountExpense: true,
+                    },
+                ])
+            )
+        ).toThrow();
+    });
 });

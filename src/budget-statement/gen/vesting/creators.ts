@@ -1,6 +1,6 @@
 import { z } from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
-import { Vesting, VestingInput } from '../../custom';
+import { Vesting, VestingInput, VestingUpdateInput } from '../../custom';
 import {
     AddVestingAction,
     ADD_VESTING,
@@ -17,7 +17,7 @@ export const addVesting = (vesting: VestingInput[]) =>
         z.AddVestingActionSchema
     );
 
-export const updateVesting = (vesting: VestingInput[]) =>
+export const updateVesting = (vesting: VestingUpdateInput[]) =>
     createAction<UpdateVestingAction>(
         UPDATE_VESTING,
         { vesting },

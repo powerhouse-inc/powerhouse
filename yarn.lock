@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@acaldas/document-model-graphql@^1.0.5":
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.5.tgz#ece4b2250b1daae8666d638ba8707703b190535a"
-  integrity sha512-ZPfBqxg8QmRXGjria73gCUulxsPVvvQq6Sv+HOw/BMClbUzoJgpoVFtEaNx+JIl5z96omAKO3Xh4toJDyf6MFQ==
+"@acaldas/document-model-graphql@^1.0.7":
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.7.tgz#a9ab39e2c06893354693a804067f7d6c20cd3f31"
+  integrity sha512-Z46s3Ka/waeLaLXpyVNLxkY+XtJR5XIesJV03nZmyaJelXxKQeiiYeY+SIE+HLS7D42CXA5iseF+Q4Au/U/6Vw==
   dependencies:
     zod "^3.21.4"
 

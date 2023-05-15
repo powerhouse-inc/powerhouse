@@ -36,4 +36,7 @@ export const setFtesOperation = (
     action: SetFtesAction
 ) => {
     state.data.ftes = action.input;
+    state.data.ftes?.forecast.sort((f1, f2) =>
+        f1.month.localeCompare(f2.month)
+    );
 };

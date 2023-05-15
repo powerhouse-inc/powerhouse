@@ -18,4 +18,12 @@ export default class CommentObject extends BaseDocument<
     public deleteComment(comments: string[]) {
         return this.dispatch(deleteComment(comments));
     }
+
+    get comments() {
+        return this.state.data.comments;
+    }
+
+    public getComment(key: string) {
+        return this.state.data.comments.find(v => v.key === key);
+    }
 }

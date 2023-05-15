@@ -11,6 +11,34 @@ export default class BaseObject extends BaseDocument<
     State,
     BudgetStatementAction
 > {
+    /**
+     * Gets the month of the budget statement.
+     * @category Budget Statement
+     */
+    get month() {
+        return this.state.data.month;
+    }
+
+    /**
+     * Gets the owner of the budget statement.
+     * @category Budget Statement
+     */
+    get owner() {
+        return this.state.data.owner;
+    }
+
+    /**
+     * Gets the quote currency of the budget statement.
+     * @category Budget Statement
+     */
+    get quoteCurrency() {
+        return this.state.data.quoteCurrency;
+    }
+
+    get ftes() {
+        return this.state.data.ftes;
+    }
+
     public setOwner(owner: OwnerInput) {
         return this.dispatch(setOwner(owner));
     }

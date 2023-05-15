@@ -53,30 +53,6 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
     }
 
     /**
-     * Gets the month of the budget statement.
-     * @category Budget Statement
-     */
-    get month() {
-        return this.state.data.month;
-    }
-
-    /**
-     * Gets the owner of the budget statement.
-     * @category Budget Statement
-     */
-    get owner() {
-        return this.state.data.owner;
-    }
-
-    /**
-     * Gets the quote currency of the budget statement.
-     * @category Budget Statement
-     */
-    get quoteCurrency() {
-        return this.state.data.quoteCurrency;
-    }
-
-    /**
      * Saves the budget statement to a file.
      *
      * @param path The path to the file to save.
