@@ -1,6 +1,16 @@
 module.exports = {
     packagerConfig: {
         extendInfo: 'assets/Info.plist',
+        ignore: [
+            "^/[.]vs$",
+            "^/public$",
+            "^/src$",
+            "^/[.]browserslistrc$",
+            "^/[.]editorconfig$",
+            "^/tsconfig[.]json$",
+            "[.](cmd|user|DotSettings|njsproj|sln)$",
+        ],
+        asar: true,
     },
     rebuildConfig: {},
     makers: [
