@@ -9,7 +9,8 @@ body {
     height: 100vh;
 }
 
-input[type='text'] {
+input,
+select {
     background-color: transparent;
     border-bottom: 1px solid currentcolor;
     margin: 0 4px;
