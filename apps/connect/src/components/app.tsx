@@ -87,11 +87,14 @@ const App: React.FC = () => {
             name: 'New Document',
             content: (
                 <div>
-                    <button onClick={handleNewDocumentModel}>
+                    <button
+                        className="underline underline-offset-4"
+                        onClick={handleNewDocumentModel}
+                    >
                         New Document Model
                     </button>
                     <button
-                        className="px-0"
+                        className="px-0 underline underline-offset-4"
                         onClick={() => handleNewBudgetStatement()}
                         style={{ marginLeft: 20 }}
                     >
@@ -125,6 +128,7 @@ const App: React.FC = () => {
             return [...tabs, document];
         });
     }
+
     return (
         <div
             className={`h-screen overflow-auto ${
