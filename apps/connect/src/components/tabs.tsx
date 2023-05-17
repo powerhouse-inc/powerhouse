@@ -1,10 +1,13 @@
 import {
+    DroppableCollectionReorderEvent,
     Tab as TabComponent,
     TabList,
     TabPanel,
     TabPanels,
     Tabs,
 } from 'react-aria-components';
+import { Item, useListData } from 'react-stately';
+import { ReorderableTabList } from './list';
 
 export interface ITab {
     name: string;
@@ -28,6 +31,38 @@ export default function ({
     selectedTab,
     onTabSelected,
 }: IProps) {
+    const list = useListData({
+        initialItems: tabs.map((tab, i) => ({
+            id: window.crypto.randomUUID(),
+            ...tab,
+        })),
+    });
+
+    const onReorder = (e: DroppableCollectionReorderEvent) => {
+        if (e.target.dropPosition === 'before') {
+            list.moveBefore(e.target.key, e.keys);
+        } else if (e.target.dropPosition === 'after') {
+            list.moveAfter(e.target.key, e.keys);
+        }
+    };
+
+    return (
+        <ReorderableTabList
+            aria-label="Favorite animals"
+            selectionMode="multiple"
+            selectionBehavior="replace"
+            items={list.items}
+            selectedKey={selectedTab}
+            onSelectionChange={onTabSelected}
+            onReorder={onReorder}
+            onRootDrop={console.log}
+        >
+            {
+                // @ts-ignore
+                item => <Item>{item.name}</Item>
+            }
+        </ReorderableTabList>
+    );
     return (
         <Tabs>
             <div className="mb-4 flex">
