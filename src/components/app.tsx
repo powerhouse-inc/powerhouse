@@ -44,9 +44,15 @@ class TabDocumentModel extends Tab {
 }
 
 const App: React.FC = () => {
-    const [tabs, setTabs] = useState<Tab[]>([newTab()]);
+    const [tabs, setTabs] = useState<Tab[]>([
+        newTab(),
+        new TabBudgetStatement(),
+        new TabDocumentModel(),
+    ]);
     const [activeTab, setActiveTab] = useState<React.Key>();
+
     const ref = React.useRef(null);
+
     const { dropProps, isDropTarget } = useDrop({
         ref,
         async onDrop(e) {
@@ -133,7 +139,7 @@ const App: React.FC = () => {
         <div
             className={`h-screen overflow-auto ${
                 isDropTarget ? 'bg-light' : 'bg-bg'
-            } py-3 pl-16 text-white`}
+            } px-16 py-3 text-white`}
             {...dropProps}
             role="presentation"
             tabIndex={0}
