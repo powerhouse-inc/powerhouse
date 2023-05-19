@@ -2,61 +2,30 @@ import {
     BudgetStatementDocument,
     utils,
 } from '@acaldas/document-model-libs/browser/budget-statement';
-import { Document } from 'document-model-editors';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useDrop } from 'react-aria';
 import { FileDropItem } from 'react-aria-components';
 import { createRoot } from 'react-dom/client';
-import BudgetStatementEditor from '../budget-statement/editor';
-import Tabs, { Tab } from './tabs';
-
-class TabBudgetStatement extends Tab {
-    public budgetStatement: BudgetStatementDocument;
-
-    constructor(_budgetStatement?: BudgetStatementDocument, name?: string) {
-        const budgetStatement =
-            _budgetStatement ?? utils.createBudgetStatement();
-        const content = (
-            <BudgetStatementEditor
-                initialBudget={budgetStatement}
-                onChange={budget => {
-                    this.budgetStatement = budget;
-                }}
-            />
-        );
-
-        super(
-            name ||
-                budgetStatement.name ||
-                budgetStatement.data.month ||
-                'Budget',
-            content
-        );
-
-        this.budgetStatement = budgetStatement;
-    }
-}
-
-class TabDocumentModel extends Tab {
-    constructor(name?: string) {
-        super(name || 'Document Model', <Document.Editor />);
-    }
-}
+import Tabs, {
+    Tab,
+    TabBudgetStatement,
+    TabDocumentModel,
+    TabNew,
+    useTabs,
+} from './tabs';
 
 const App: React.FC = () => {
-    const [tabs, setTabs] = useState<Tab[]>([
-        newTab(),
+    const tabs = useTabs([
+        new TabNew(handleNewDocumentModel, handleNewBudgetStatement),
         new TabBudgetStatement(),
         new TabDocumentModel(),
     ]);
-    const [activeTab, setActiveTab] = useState<React.Key>();
 
     const ref = React.useRef(null);
 
     const { dropProps, isDropTarget } = useDrop({
         ref,
         async onDrop(e) {
-            console.log(e);
             const files = e.items.filter(
                 item => item.kind === 'file'
             ) as FileDropItem[];
@@ -78,61 +47,41 @@ const App: React.FC = () => {
 
     useEffect(() => {
         const removeListener = window.electronAPI?.handleFileSaved(() => {
-            const tab = tabs.find(({ name }, i) => name + i === activeTab);
-            if (tab && tab instanceof TabBudgetStatement) {
-                window.electronAPI?.saveFile(tab.budgetStatement);
+            const selectedTab = tabs.selectedTab;
+            if (!selectedTab) {
+                return;
+            }
+            const tab = tabs.getItem(selectedTab);
+            const file = tab.saveFile();
+            if (file) {
+                window.electronAPI?.saveFile(file);
             }
         });
         return () => {
             removeListener?.();
         };
-    }, [tabs, activeTab]);
+    }, [tabs]);
 
-    function newTab(): Tab {
-        return {
-            name: 'New Document',
-            content: (
-                <div>
-                    <button
-                        className="underline underline-offset-4"
-                        onClick={handleNewDocumentModel}
-                    >
-                        New Document Model
-                    </button>
-                    <button
-                        className="px-0 underline underline-offset-4"
-                        onClick={() => handleNewBudgetStatement()}
-                        style={{ marginLeft: 20 }}
-                    >
-                        New Budget Statement
-                    </button>
-                </div>
-            ),
-        };
-    }
-
-    function handleNewTab() {
-        const tab = newTab();
-        setTabs(tabs => {
-            setTimeout(() => setActiveTab(tab.name + tabs.length));
-            return [...tabs, tab];
-        });
+    function handleNewTab(tab?: Tab, args?: any[]) {
+        const newTab =
+            tab ??
+            new TabNew(
+                handleNewDocumentModel,
+                handleNewBudgetStatement,
+                ...(args ?? [])
+            );
+        tabs.append(newTab);
+        tabs.setSelectedTab(newTab.id);
     }
 
     function handleNewBudgetStatement(budget?: BudgetStatementDocument) {
-        const budgetTab = new TabBudgetStatement(budget);
-        setTabs(tabs => {
-            setTimeout(() => setActiveTab(budgetTab.name + tabs.length), 100);
-            return [...tabs, budgetTab];
-        });
+        const tab = new TabBudgetStatement(budget);
+        handleNewTab(tab);
     }
 
     function handleNewDocumentModel() {
-        const document = new TabDocumentModel();
-        setTabs(tabs => {
-            setTimeout(() => setActiveTab(document.name + tabs.length));
-            return [...tabs, document];
-        });
+        const tab = new TabDocumentModel();
+        handleNewTab(tab);
     }
 
     return (
@@ -146,12 +95,7 @@ const App: React.FC = () => {
             ref={ref}
         >
             <div className="mb-5">
-                <Tabs
-                    tabs={tabs}
-                    onCreate={handleNewTab}
-                    selectedTab={activeTab}
-                    onTabSelected={setActiveTab}
-                />
+                <Tabs tabs={tabs} onNewTab={handleNewTab} />
             </div>
         </div>
     );
