@@ -63,7 +63,6 @@ const createWindow = async (file?: string | undefined) => {
         },
     });
     window = mainWindow;
-
     const template = [
         ...(isMac
             ? [

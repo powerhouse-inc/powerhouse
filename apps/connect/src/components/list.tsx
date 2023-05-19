@@ -1,3 +1,4 @@
+import type { TabListStateOptions } from '@react-stately/tabs';
 import { ReactElement, ReactNode, useRef } from 'react';
 import {
     DragPreview,
@@ -13,7 +14,7 @@ import {
     useTabList,
     useTabPanel,
 } from 'react-aria';
-import { Tabs } from 'react-aria-components';
+import { DraggableCollectionEndEvent, Tabs } from 'react-aria-components';
 import type {
     DraggableCollectionState,
     DroppableCollectionState,
@@ -27,24 +28,29 @@ import {
     useTabListState,
 } from 'react-stately';
 import { TabListDropTargetDelegate } from './TabListDropTargetDelegate';
+import { Tab } from './tabs';
 
 export function ReorderableTabList(
-    props: { children: ReactElement } & DroppableCollectionStateOptions &
-        Parameters<typeof useTabList>[0]
+    props: {
+        children: ReactElement | ((item: Tab) => Element);
+    } & TabListStateOptions<Tab> &
+        DroppableCollectionStateOptions & {
+            onDragOut?: (key: DraggableCollectionEndEvent) => void;
+        }
 ) {
     // Setup listbox as normal. See the useListBox docs for more details.
-    const state = useTabListState(props as any);
+    const state = useTabListState<Tab>(props);
     const preview = useRef(null);
     const ref = useRef(null);
     const { tabListProps } = useTabList(
         {
             ...props,
-            selectedKey: 2,
             orientation: 'horizontal',
         },
         state,
         ref
     );
+
     // Setup drag state for the collection.
     const dragState = useDraggableCollectionState({
         // Pass through events from props.
@@ -58,11 +64,23 @@ export function ReorderableTabList(
         getItems: keys => {
             return [...keys].map(key => {
                 const item = state.collection.getItem(key);
-                return {
-                    'text/plain': item?.textValue ?? '',
+                const test = {
+                    'text/plain': item?.value?.name ?? '',
                     key: key.toString(),
+                    id: item?.value?.name ?? '',
+                    name: item?.value?.name ?? '',
+                    type: item?.value?.type ?? '',
+                    args: item?.value?.serialize() ?? '[]',
                 };
+                return test;
             });
+        },
+        onDragEnd(e) {
+            if (e.isInternal) {
+                return true;
+            }
+
+            props.onDragOut?.(e);
         },
     });
 
@@ -133,13 +151,13 @@ function TabPanel({
     state,
     ...props
 }: Parameters<typeof useTabList>[0] & {
-    state: Parameters<typeof useTabList>[1];
+    state: TabListState<Tab>;
 }) {
     const ref = useRef(null);
     const { tabPanelProps } = useTabPanel(props, state, ref);
     return (
         <div {...tabPanelProps} ref={ref}>
-            {state.selectedItem?.props.children}
+            {state.selectedItem?.value?.content}
         </div>
     );
 }
@@ -166,18 +184,6 @@ function Option({
         },
         dragState
     );
-
-    // const isDropTarget =
-    //     dropState.isDropTarget({
-    //         key: item.key,
-    //         type: 'item',
-    //         dropPosition: 'before',
-    //     }) ||
-    //     dropState.isDropTarget({
-    //         key: item.key,
-    //         type: 'item',
-    //         dropPosition: 'after',
-    //     });
     const isDropTarget = false;
 
     const isSameTab = dragState.draggedKey === item.key;

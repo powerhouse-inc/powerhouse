@@ -1,95 +1,214 @@
 import {
+    BudgetStatementDocument,
+    utils,
+} from '@acaldas/document-model-libs/browser/budget-statement';
+import { Document } from 'document-model-editors';
+import {
+    DraggableCollectionEndEvent,
     DroppableCollectionReorderEvent,
-    Tab as TabComponent,
-    TabList,
-    TabPanel,
-    TabPanels,
-    Tabs,
+    DroppableCollectionRootDropEvent,
+    TextDropItem,
 } from 'react-aria-components';
 import { Item, useListData } from 'react-stately';
+import BudgetStatementEditor from '../budget-statement/editor';
 import { ReorderableTabList } from './list';
 
-export interface ITab {
-    name: string;
-    content: React.ReactElement;
+type TabType =
+    | ''
+    | 'new'
+    | 'powerhouse/document-model'
+    | 'powerhouse/budget-statement';
+
+export abstract class Tab {
+    public abstract type: TabType;
+    constructor(
+        public name: string,
+        public content: React.ReactElement,
+        public id: string = window.crypto.randomUUID()
+    ) {}
+
+    abstract serialize(): string;
+
+    saveFile(): unknown | null {
+        return null;
+    }
 }
 
-export class Tab implements ITab {
-    constructor(public name: string, public content: React.ReactElement) {}
+export class TabNew extends Tab {
+    public type: TabType = 'new';
+
+    constructor(
+        public handleNewDocumentModel: () => void,
+        public handleNewBudgetStatement: () => void,
+        id?: string
+    ) {
+        const content = (
+            <div>
+                <button
+                    className="underline underline-offset-4"
+                    onClick={handleNewDocumentModel}
+                >
+                    New Document Model
+                </button>
+                <button
+                    className="px-0 underline underline-offset-4"
+                    onClick={() => handleNewBudgetStatement()}
+                    style={{ marginLeft: 20 }}
+                >
+                    New Budget Statement
+                </button>
+            </div>
+        );
+
+        super('New tab', content, id);
+    }
+
+    serialize() {
+        return JSON.stringify([this.id]);
+    }
+}
+
+export class TabBudgetStatement extends Tab {
+    public type: TabType = 'powerhouse/budget-statement';
+    public budgetStatement: BudgetStatementDocument;
+
+    constructor(_budgetStatement?: BudgetStatementDocument, name?: string) {
+        const budgetStatement =
+            _budgetStatement ?? utils.createBudgetStatement();
+        const content = (
+            <BudgetStatementEditor
+                initialBudget={budgetStatement}
+                onChange={budget => {
+                    this.budgetStatement = budget;
+                }}
+            />
+        );
+
+        super(
+            name ||
+                budgetStatement.name ||
+                budgetStatement.data.month ||
+                'Budget',
+            content
+        );
+
+        this.budgetStatement = budgetStatement;
+    }
+
+    serialize(): string {
+        return JSON.stringify([this.budgetStatement, this.name]);
+    }
+
+    override saveFile(): BudgetStatementDocument {
+        return this.budgetStatement;
+    }
+}
+
+export class TabDocumentModel extends Tab {
+    public type: TabType = 'powerhouse/document-model';
+
+    constructor(name?: string) {
+        super(name || 'Document Model', <Document.Editor />);
+    }
+
+    serialize(): string {
+        return JSON.stringify([this.name]);
+    }
 }
 
 interface IProps {
-    tabs: ITab[];
-    onCreate: () => void;
-    selectedTab?: React.Key | null | undefined;
-    onTabSelected?: ((key: React.Key) => unknown) | undefined;
+    tabs: ReturnType<typeof useTabs>;
+    onNewTab: (tab?: Tab, args?: unknown[]) => void;
 }
 
-export default function ({
-    tabs,
-    onCreate,
-    selectedTab,
-    onTabSelected,
-}: IProps) {
-    const list = useListData({
-        initialItems: tabs.map((tab, i) => ({
-            id: window.crypto.randomUUID(),
-            ...tab,
-        })),
-    });
-
+export default function ({ tabs, onNewTab }: IProps) {
     const onReorder = (e: DroppableCollectionReorderEvent) => {
         if (e.target.dropPosition === 'before') {
-            list.moveBefore(e.target.key, e.keys);
+            tabs.moveBefore(e.target.key, e.keys);
         } else if (e.target.dropPosition === 'after') {
-            list.moveAfter(e.target.key, e.keys);
+            tabs.moveAfter(e.target.key, e.keys);
+        }
+    };
+
+    const handleTextdrop = async (item: TextDropItem) => {
+        const type = (await item.getText('type')) as TabType;
+        const args = await item.getText('args');
+        switch (type) {
+            case 'new':
+                onNewTab(undefined, JSON.parse(args));
+                break;
+            case 'powerhouse/budget-statement':
+                onNewTab(new TabBudgetStatement(...JSON.parse(args)));
+                break;
+            case 'powerhouse/document-model':
+                onNewTab(new TabDocumentModel(...JSON.parse(args)));
+                break;
+            default:
+                console.log(`Tab type ${type} wasn't handled`);
+        }
+    };
+
+    const onRootDrop = (e: DroppableCollectionRootDropEvent) => {
+        e.items.forEach(item => {
+            switch (item.kind) {
+                case 'text':
+                    handleTextdrop(item);
+                    break;
+                case 'directory':
+                    console.log('Directory dropped');
+                    break;
+                case 'file':
+                    console.log('File dropped');
+                    break;
+            }
+        });
+    };
+
+    const onSelectionChange = (key: string | number) => {
+        tabs.setSelectedTab(key.toString());
+    };
+
+    const onDragOut = (e: DraggableCollectionEndEvent) => {
+        // check window bounds
+        if (
+            e.x < 0 ||
+            e.x > window.innerWidth ||
+            e.y < 0 ||
+            e.y > window.innerHeight
+        ) {
+            tabs.remove(...e.keys);
         }
     };
 
     return (
         <ReorderableTabList
             aria-label="Favorite animals"
-            selectionMode="multiple"
-            selectionBehavior="replace"
-            items={list.items}
-            selectedKey={selectedTab}
-            onSelectionChange={onTabSelected}
+            items={tabs.items}
+            selectedKey={tabs.selectedTab}
+            onSelectionChange={onSelectionChange}
             onReorder={onReorder}
-            onRootDrop={console.log}
+            onRootDrop={onRootDrop}
+            onDragOut={onDragOut}
         >
-            {
-                // @ts-ignore
-                item => <Item>{item.name}</Item>
-            }
+            {/* @ts-ignore */}
+            {item => <Item>{item.name}</Item>}
         </ReorderableTabList>
     );
-    return (
-        <Tabs>
-            <div className="mb-4 flex">
-                <TabList
-                    className="flex"
-                    aria-label="Open documents"
-                    selectedKey={selectedTab}
-                    onSelectionChange={onTabSelected}
-                >
-                    {tabs.map((tab, i) => (
-                        <TabComponent
-                            id={tab.name + i}
-                            className="min-w-36 mr-4 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded-3xl bg-light px-6 py-4 aria-selected:font-bold"
-                            aria-label={tab.name}
-                        >
-                            {tab.name}
-                        </TabComponent>
-                    ))}
-                </TabList>
-                <button onClick={onCreate}>New tab</button>
-            </div>
-            <hr className="mb-6" />
-            <TabPanels>
-                {tabs.map(({ name, content }, i) => (
-                    <TabPanel id={name + i}>{content}</TabPanel>
-                ))}
-            </TabPanels>
-        </Tabs>
-    );
 }
+
+export const useTabs = (initialTabs: Tab[]) => {
+    const list = useListData<Tab>({
+        initialItems: initialTabs,
+        getKey: item => {
+            return item.id;
+        },
+    });
+    const { selectedKeys, setSelectedKeys, removeSelectedItems, ...result } =
+        list;
+    return {
+        ...result,
+        selectedTab: [...selectedKeys].pop(),
+        setSelectedTab: (key: string) => setSelectedKeys(new Set([key])),
+        removeSelectedTab: removeSelectedItems,
+    };
+};
