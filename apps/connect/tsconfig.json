@@ -17,7 +17,11 @@
         "skipLibCheck": true,
         "esModuleInterop": true,
         "declarationMap": true,
-        "baseUrl": "."
+        "baseUrl": ".",
+        "paths": {
+            "@/assets": ["assets"]
+        }
     },
-    "include": ["src"]
+    "include": ["src"],
+    "files": ["custom.d.ts"]
 }

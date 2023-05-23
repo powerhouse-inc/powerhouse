@@ -1,4 +1,6 @@
+import { ReactComponent as IconCross } from '@/assets/icons/cross.svg';
 import type { TabListStateOptions } from '@react-stately/tabs';
+import { useAtomValue } from 'jotai';
 import { ReactElement, ReactNode, useRef } from 'react';
 import {
     DragPreview,
@@ -27,6 +29,7 @@ import {
     useDroppableCollectionState,
     useTabListState,
 } from 'react-stately';
+import { themeAtom } from '../store';
 import { TabListDropTargetDelegate } from './TabListDropTargetDelegate';
 import { Tab } from './tabs';
 
@@ -36,6 +39,9 @@ export function ReorderableTabList(
     } & TabListStateOptions<Tab> &
         DroppableCollectionStateOptions & {
             onDragOut?: (key: DraggableCollectionEndEvent) => void;
+        } & {
+            onCloseTab: (tab: Tab) => void;
+            onNewTab: () => void;
         }
 ) {
     // Setup listbox as normal. See the useListBox docs for more details.
@@ -113,12 +119,14 @@ export function ReorderableTabList(
         ref
     );
 
+    const theme = useAtomValue(themeAtom);
+
     return (
-        <Tabs orientation="horizontal">
+        <Tabs orientation="horizontal" className="flex h-full flex-col">
             <ul
                 {...mergeProps(tabListProps, collectionProps)}
                 ref={ref}
-                className={`flex pb-4 ${
+                className={`flex items-center ${
                     isDropTarget && 'bg-light'
                 } rounded-3xl`}
             >
@@ -129,8 +137,17 @@ export function ReorderableTabList(
                         state={state}
                         dragState={dragState}
                         dropState={dropState}
+                        onCloseTab={props.onCloseTab}
                     />
                 ))}
+                <button
+                    className={`ml-3 flex h-6 w-6 items-center justify-center rounded-full hover:bg-accent-2
+                        ${theme === 'dark' && 'bg-neutral-6'}
+                    `}
+                    onClick={() => props.onNewTab()}
+                >
+                    <IconCross />
+                </button>
                 <DragPreview ref={preview}>
                     {items => (
                         <div className="min-w-36 mr-4 cursor-grabbing overflow-hidden text-ellipsis whitespace-nowrap rounded-3xl bg-light px-6 py-4">
@@ -141,7 +158,6 @@ export function ReorderableTabList(
                     )}
                 </DragPreview>
             </ul>
-            <hr className="mb-6" />
             <TabPanel key={state.selectedItem?.key} state={state} />
         </Tabs>
     );
@@ -156,7 +172,11 @@ function TabPanel({
     const ref = useRef(null);
     const { tabPanelProps } = useTabPanel(props, state, ref);
     return (
-        <div {...tabPanelProps} ref={ref}>
+        <div
+            className="min-h-full flex-1 bg-accent-2"
+            {...tabPanelProps}
+            ref={ref}
+        >
             {state.selectedItem?.value?.content}
         </div>
     );
@@ -167,11 +187,13 @@ function Option({
     state,
     dragState,
     dropState,
+    onCloseTab,
 }: {
-    item: Node<object>;
-    state: TabListState<object>;
+    item: Node<Tab>;
+    state: TabListState<Tab>;
     dragState: DraggableCollectionState;
     dropState: DroppableCollectionState;
+    onCloseTab: (tab: Tab) => void;
 }) {
     const ref = useRef(null);
     const { tabProps } = useTab({ key: item.key }, state, ref);
@@ -184,7 +206,6 @@ function Option({
         },
         dragState
     );
-    const isDropTarget = false;
 
     const isSameTab = dragState.draggedKey === item.key;
 
@@ -221,15 +242,21 @@ function Option({
                     focusProps
                 )}
                 ref={ref}
-                className={`${
-                    isSameTab && 'opacity-10'
-                } min-w-36 mx-2 cursor-pointer overflow-hidden
-                 text-ellipsis whitespace-nowrap rounded-3xl
-                 px-6 py-4 aria-selected:font-bold
-                 ${isDropTarget ? 'bg-gray-500' : 'bg-light'}`}
+                className={`
+                ${isSameTab && 'opacity-10'}
+                 min-w-36
+                 mr-1 flex cursor-pointer items-center justify-between
+                 overflow-hidden text-ellipsis whitespace-nowrap rounded-t-xl
+                 bg-accent-1 px-2 py-[6.5px] text-neutral-4/50 outline-none hover:bg-accent-2 aria-selected:bg-accent-2`}
                 role="option"
             >
-                {item.rendered}
+                <span>{item.rendered}</span>
+                <div
+                    className="onClick={() => item.value && onCloseTab(item.value)} ml-2 flex h-[21px] w-[21px] items-center justify-center rounded-full hover:bg-neutral-6"
+                    onClick={() => item.value && onCloseTab(item.value)}
+                >
+                    <IconCross className="bg-red" />
+                </div>
             </li>
             {!isSameTab && state.collection.getKeyAfter(item.key) == null && (
                 <DropIndicator
