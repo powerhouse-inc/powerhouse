@@ -119,9 +119,10 @@ export class TabDocumentModel extends Tab {
 interface IProps {
     tabs: ReturnType<typeof useTabs>;
     onNewTab: (tab?: Tab, args?: unknown[]) => void;
+    onCloseTab: (tab: Tab) => void;
 }
 
-export default function ({ tabs, onNewTab }: IProps) {
+export default function ({ tabs, onNewTab, onCloseTab }: IProps) {
     const onReorder = (e: DroppableCollectionReorderEvent) => {
         if (e.target.dropPosition === 'before') {
             tabs.moveBefore(e.target.key, e.keys);
@@ -189,6 +190,8 @@ export default function ({ tabs, onNewTab }: IProps) {
             onReorder={onReorder}
             onRootDrop={onRootDrop}
             onDragOut={onDragOut}
+            onCloseTab={onCloseTab}
+            onNewTab={() => onNewTab()}
         >
             {/* @ts-ignore */}
             {item => <Item>{item.name}</Item>}
