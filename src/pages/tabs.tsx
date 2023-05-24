@@ -7,13 +7,14 @@ export default () => {
 
     useEffect(() => {
         if (!tabs.items.length) {
-            tabs.handleNewTab();
+            tabs.addTab();
         }
     }, []);
+
     useEffect(() => {
         window.electronAPI?.handleFileOpened(file => {
             if (file) {
-                tabs.handleNewBudgetStatement(file);
+                tabs.addBudgetStatementTab(file);
             }
         });
     }, [window.electronAPI]);
@@ -34,12 +35,13 @@ export default () => {
             removeListener?.();
         };
     }, [tabs]);
+
     return (
         <div className="h-full pt-2">
             <Tabs
                 tabs={tabs}
-                onNewTab={tabs.handleNewTab}
-                onCloseTab={tabs.handleCloseTab}
+                onNewTab={tabs.addTab}
+                onCloseTab={tabs.closeTab}
             />
         </div>
     );

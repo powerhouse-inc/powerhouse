@@ -230,11 +230,11 @@ const createWindow = async (file?: string | undefined) => {
 };
 
 app.on('open-file', (_event, path) => {
-    // if (window) {
-    //     handleFile?.(path);
-    // } else {
-    createWindow(path);
-    // }
+    if (window) {
+        handleFile?.(path);
+    } else {
+        createWindow(path);
+    }
 });
 
 // This method will be called when Electron has finished
