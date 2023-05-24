@@ -8,6 +8,7 @@ module.exports = {
         extend: {
             colors: {
                 neutral: {
+                    1: 'rgba(var(--color-neutral-1))',
                     3: 'rgba(var(--color-neutral-3))',
                     4: 'rgba(var(--color-neutral-4))',
                     6: 'rgba(var(--color-neutral-6))',
@@ -17,6 +18,8 @@ module.exports = {
             backgroundImage: {
                 selected:
                     'linear-gradient(270deg, #323337 50%, rgba(80, 62, 110, 0.29) 100%)',
+                'selected-light':
+                    'linear-gradient(270deg, #fefefe 50%, rgba(255, 255, 255, 0.29) 100%)',
             },
         },
     },

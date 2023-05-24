@@ -1,24 +1,19 @@
-import { BudgetStatementDocument } from '@acaldas/document-model-libs/browser/budget-statement';
 import { useEffect } from 'react';
-import Tabs, {
-    Tab,
-    TabBudgetStatement,
-    TabDocumentModel,
-    TabNew,
-    useTabs,
-} from '../components/tabs';
+import Tabs from '../components/tabs';
+import { useTabs } from '../store/tabs';
 
 export default () => {
-    const tabs = useTabs([
-        new TabNew(handleNewDocumentModel, handleNewBudgetStatement),
-        new TabBudgetStatement(),
-        new TabDocumentModel(),
-    ]);
+    const tabs = useTabs();
 
+    useEffect(() => {
+        if (!tabs.items.length) {
+            tabs.handleNewTab();
+        }
+    }, []);
     useEffect(() => {
         window.electronAPI?.handleFileOpened(file => {
             if (file) {
-                handleNewBudgetStatement(file);
+                tabs.handleNewBudgetStatement(file);
             }
         });
     }, [window.electronAPI]);
@@ -39,38 +34,12 @@ export default () => {
             removeListener?.();
         };
     }, [tabs]);
-
-    function handleNewTab(tab?: Tab, args?: any[]) {
-        const newTab =
-            tab ??
-            new TabNew(
-                handleNewDocumentModel,
-                handleNewBudgetStatement,
-                ...(args ?? [])
-            );
-        tabs.append(newTab);
-        tabs.setSelectedTab(newTab.id);
-    }
-
-    function handleNewBudgetStatement(budget?: BudgetStatementDocument) {
-        const tab = new TabBudgetStatement(budget);
-        handleNewTab(tab);
-    }
-
-    function handleNewDocumentModel() {
-        const tab = new TabDocumentModel();
-        handleNewTab(tab);
-    }
-
-    function handleCloseTab(tab: Tab) {
-        tabs.remove(tab.id);
-    }
     return (
         <div className="h-full pt-2">
             <Tabs
                 tabs={tabs}
-                onNewTab={handleNewTab}
-                onCloseTab={handleCloseTab}
+                onNewTab={tabs.handleNewTab}
+                onCloseTab={tabs.handleCloseTab}
             />
         </div>
     );
