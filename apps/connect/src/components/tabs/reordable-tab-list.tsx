@@ -142,8 +142,8 @@ export function ReorderableTabList(
                 <DragPreview ref={preview}>
                     {items => (
                         <div
-                            className="min-w-36 flex cursor-grabbing items-center overflow-hidden
-                                text-ellipsis whitespace-nowrap rounded-t-xl bg-accent-2 px-2 py-[6.5px] text-neutral-4/50"
+                            className="min-w-36 flex cursor-grabbing items-center overflow-hidden text-ellipsis
+                                whitespace-nowrap rounded-t-xl bg-accent-2 px-2 py-[6.5px] text-neutral-4/50"
                         >
                             {items.length > 1
                                 ? `${items.length} items`

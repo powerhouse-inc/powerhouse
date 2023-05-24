@@ -33,21 +33,21 @@ export class TabNew extends Tab {
     public type: TabType = 'new';
 
     constructor(
-        public handleNewDocumentModel: () => void,
-        public handleNewBudgetStatement: () => void,
+        public addDocumentModelTab: () => void,
+        public addBudgetStatementTab: () => void,
         id?: string
     ) {
         const content = (
             <div>
                 <button
                     className="underline underline-offset-4"
-                    onClick={handleNewDocumentModel}
+                    onClick={addDocumentModelTab}
                 >
                     New Document Model
                 </button>
                 <button
                     className="px-0 underline underline-offset-4"
-                    onClick={() => handleNewBudgetStatement()}
+                    onClick={() => addBudgetStatementTab()}
                     style={{ marginLeft: 20 }}
                 >
                     New Budget Statement
@@ -168,10 +168,10 @@ export const useTabs = () => {
     > & {
         selectedTab: typeof selectedTab;
         setSelectedTab: typeof setSelectedTab;
-        handleNewTab: (tab?: Tab, args?: any[]) => void;
-        handleNewDocumentModel: () => void;
-        handleNewBudgetStatement: (budget?: BudgetStatementDocument) => void;
-        handleCloseTab: (tab: Tab) => void;
+        addTab: (tab?: Tab, args?: any[]) => void;
+        addDocumentModelTab: () => void;
+        addBudgetStatementTab: (budget?: BudgetStatementDocument) => void;
+        closeTab: (tab: Tab) => void;
     } = useMemo(
         () => ({
             items: _tabs,
@@ -214,26 +214,26 @@ export const useTabs = () => {
             },
             selectedTab,
             setSelectedTab,
-            handleNewTab(tab?: Tab, args?: any[]) {
+            addTab(tab?: Tab, args?: any[]) {
                 const newTab =
                     tab ??
                     new TabNew(
-                        tabs.handleNewDocumentModel,
-                        tabs.handleNewBudgetStatement,
+                        tabs.addDocumentModelTab,
+                        tabs.addBudgetStatementTab,
                         ...(args ?? [])
                     );
                 tabs.append(newTab);
                 tabs.setSelectedTab(newTab.id);
             },
-            handleNewBudgetStatement(budget?: BudgetStatementDocument) {
+            addBudgetStatementTab(budget?: BudgetStatementDocument) {
                 const tab = new TabBudgetStatement(budget);
-                tabs.handleNewTab(tab);
+                tabs.addTab(tab);
             },
-            handleNewDocumentModel() {
+            addDocumentModelTab() {
                 const tab = new TabDocumentModel();
-                tabs.handleNewTab(tab);
+                tabs.addTab(tab);
             },
-            handleCloseTab(tab: Tab) {
+            closeTab(tab: Tab) {
                 tabs.remove(tab.id);
             },
         }),

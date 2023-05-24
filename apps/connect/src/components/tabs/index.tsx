@@ -54,10 +54,10 @@ export default function ({ tabs, onNewTab, onCloseTab }: IProps) {
                     handleTextdrop(item);
                     break;
                 case 'directory':
-                    console.log('Directory dropped');
+                    console.log('Directory dropped'); // TODO
                     break;
                 case 'file':
-                    console.log('File dropped');
+                    console.log('File dropped'); // TODO
                     break;
             }
         });
@@ -81,7 +81,7 @@ export default function ({ tabs, onNewTab, onCloseTab }: IProps) {
 
     return (
         <ReorderableTabList
-            aria-label="Favorite animals"
+            aria-label="Tabs"
             items={tabs.items}
             selectedKey={tabs.selectedTab}
             onSelectionChange={onSelectionChange}

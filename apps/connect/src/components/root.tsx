@@ -3,14 +3,16 @@ import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { useDrop } from 'react-aria';
 import { FileDropItem } from 'react-aria-components';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { themeAtom } from '../store';
+import { useTabs } from '../store/tabs';
 import Sidebar from './sidebar';
 
 export default () => {
     const ref = React.useRef(null);
-
     const theme = useAtomValue(themeAtom);
+    const { addBudgetStatementTab } = useTabs();
+    const navigate = useNavigate();
 
     const { dropProps, isDropTarget } = useDrop({
         ref,
@@ -21,7 +23,8 @@ export default () => {
             files.forEach(async item => {
                 const file = await item.getFile();
                 const budget = await utils.loadBudgetStatementFromInput(file);
-                // handleNewBudgetStatement(budget); // TODO
+                addBudgetStatementTab(budget);
+                navigate('/');
             });
         },
     });
@@ -33,13 +36,19 @@ export default () => {
             {...dropProps}
             role="presentation"
             tabIndex={0}
-            ref={ref}
         >
             <Suspense>
                 <Sidebar />
-                <div className="mx-8 flex-1 overflow-auto">
+                <div className="relative mx-8 flex-1 overflow-auto">
                     <Outlet />
                 </div>
+                <div
+                    ref={ref}
+                    className={`pointer-events-none fixed inset-0 bg-current
+                        transition-opacity duration-150 ease-in-out
+                        ${isDropTarget ? 'opacity-10' : 'opacity-0'}
+                    `}
+                ></div>
             </Suspense>
         </div>
     );
