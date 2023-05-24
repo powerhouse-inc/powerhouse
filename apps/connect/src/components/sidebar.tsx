@@ -59,6 +59,8 @@ export function SidebarLink({
     Icon: React.FunctionComponent<React.SVGAttributes<SVGElement>>;
     title: string;
 }) {
+    const theme = useAtomValue(themeAtom);
+
     return (
         <NavLink
             className={({
@@ -67,7 +69,9 @@ export function SidebarLink({
         ${collapsed ? 'justify-center' : 'justify-start'}
         ${
             isActive
-                ? 'bg-selected text-current'
+                ? `text-current ${
+                      theme === 'dark' ? 'bg-selected' : 'bg-selected-light'
+                  }`
                 : 'text-neutral-4 hover:text-current'
         }`}
             to={to}
@@ -104,7 +108,7 @@ export default function () {
                 ${collapsed ? 'w-[92px]' : 'w-[320px]'}
             `}
         >
-            <div className={`flex-1 ${!collapsed && 'pl-4'}`}>
+            <div className={`flex-1 ${!collapsed && 'px-2'}`}>
                 <SidebarHeader
                     collapsed={collapsed}
                     toggleCollapse={toggleCollapse}
@@ -141,8 +145,10 @@ export default function () {
                     collapsed={collapsed}
                 />
             </div>
-            {collapsed && separator}
-            <ThemeSelector />
+            {collapsed ? separator : <div className="mb-4" />}
+            <div className={`${!collapsed && 'px-2'}`}>
+                <ThemeSelector />
+            </div>
         </div>
     );
 }

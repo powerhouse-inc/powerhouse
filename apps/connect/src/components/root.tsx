@@ -37,7 +37,7 @@ export default () => {
         >
             <Suspense>
                 <Sidebar />
-                <div className="ml-10 flex-1 overflow-auto">
+                <div className="mx-8 flex-1 overflow-auto">
                     <Outlet />
                 </div>
             </Suspense>
