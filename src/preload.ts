@@ -1,21 +1,50 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import { BudgetStatementDocument } from '@acaldas/document-model-libs/budget-statement';
-import { contextBridge, ipcRenderer } from 'electron';
+import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 
 const electronApi = {
+    ready: () => ipcRenderer.send('ready'),
     openFile: () => ipcRenderer.invoke('dialog:openFile'),
     saveFile: (file: unknown) => ipcRenderer.invoke('dialog:saveFile', file),
     handleFileOpened: (
         listener: (file: BudgetStatementDocument | undefined) => void
     ) => {
-        ipcRenderer.on('fileOpened', (event, file) => {
+        function callback(
+            event: IpcRendererEvent,
+            file: BudgetStatementDocument | undefined
+        ) {
             listener(file);
-        });
+        }
+        ipcRenderer.on('fileOpened', callback);
+        return () => {
+            ipcRenderer.off('fileOpened', callback);
+        };
     },
     handleFileSaved: (listener: () => void) => {
         ipcRenderer.on('fileSaved', listener);
-        return () => ipcRenderer.off('fileSaved', listener);
+        return () => {
+            ipcRenderer.off('fileSaved', listener);
+        };
+    },
+    showTabMenu: (tab: string) => {
+        ipcRenderer.invoke('showTabMenu', tab);
+    },
+    handleAddTab: (
+        listener: (event: IpcRendererEvent, tab: string) => void
+    ) => {
+        ipcRenderer.on('addTab', listener);
+        return () => {
+            ipcRenderer.off('addTab', listener);
+        };
+    },
+    handleRemoveTab: (
+        listener: (event: IpcRendererEvent, tab: string) => void
+    ) => {
+        ipcRenderer.on('removeTab', listener);
+        return () => {
+            ipcRenderer.off('removeTab', listener);
+        };
     },
 };
 

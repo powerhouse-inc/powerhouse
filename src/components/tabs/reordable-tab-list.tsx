@@ -64,10 +64,7 @@ export function ReorderableTabList(
                 const test = {
                     'text/plain': item?.value?.name ?? '',
                     key: key.toString(),
-                    id: item?.value?.name ?? '',
-                    name: item?.value?.name ?? '',
-                    type: item?.value?.type ?? '',
-                    args: item?.value?.serialize() ?? '[]',
+                    tab: item?.value?.serialize() ?? '',
                 };
                 return test;
             });
@@ -132,12 +129,18 @@ export function ReorderableTabList(
                     />
                 ))}
                 <button
-                    className={`ml-3 flex h-6 w-6 items-center justify-center rounded-full hover:bg-accent-2
-                        ${theme === 'dark' && 'bg-neutral-6'}
-                    `}
+                    className={`h-[37px] rounded-t-xl bg-accent-1 px-2 ${
+                        state.collection.size ? 'ml-1' : 'bg-accent-2'
+                    }`}
                     onClick={() => props.onNewTab()}
                 >
-                    <IconCross />
+                    <div
+                        className={`flex h-6 w-6 items-center justify-center rounded-full hover:bg-accent-2
+                        ${theme === 'dark' && 'bg-neutral-6'}
+                    `}
+                    >
+                        <IconCross />
+                    </div>
                 </button>
                 <DragPreview ref={preview}>
                     {items => (

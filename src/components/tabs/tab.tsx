@@ -29,7 +29,7 @@ export default function ({
     dropState: DroppableCollectionState;
     onCloseTab: (tab: Tab) => void;
 }) {
-    const ref = useRef(null);
+    const ref = useRef<HTMLLIElement>(null);
     const { tabProps } = useTab({ key: item.key }, state, ref);
     const { focusProps } = useFocusRing();
 
@@ -57,6 +57,10 @@ export default function ({
             </div>
         </div>
     ) : undefined;
+
+    ref.current?.addEventListener('contextmenu', () => {
+        window.electronAPI?.showTabMenu(item.value?.serialize() ?? '');
+    });
 
     return (
         <>

@@ -11,15 +11,26 @@ if (require('electron-squirrel-startup')) {
 }
 
 const isMac = process.platform === 'darwin';
-let handleFile: ((file: string) => Promise<void>) | undefined;
-let window: BrowserWindow | undefined;
+async function handleFile(file: string, window?: Electron.BrowserWindow) {
+    try {
+        const budget = await utils.loadBudgetStatementFromFile(file);
+        const _window = window ?? BrowserWindow.getFocusedWindow();
+        if (_window) {
+            _window.webContents.send('fileOpened', budget);
+        } else {
+            createWindow({
+                onReady(window) {
+                    window.webContents.send('fileOpened', budget);
+                },
+            });
+        }
+    } catch (error) {
+        console.log('handleFile', error);
+    }
+}
 
 async function handleFileOpen() {
-    const window = BrowserWindow.getFocusedWindow();
-    if (!window) {
-        return;
-    }
-    const files = await dialog.showOpenDialogSync(window, {
+    const files = await dialog.showOpenDialogSync({
         properties: ['openFile'],
     });
     if (files) {
@@ -29,10 +40,7 @@ async function handleFileOpen() {
 }
 
 async function handleFileSave(budgetStatement: BudgetStatementDocument) {
-    if (!window) {
-        return;
-    }
-    const filePath = await dialog.showSaveDialogSync(window, {
+    const filePath = await dialog.showSaveDialogSync({
         properties: ['showOverwriteConfirmation', 'createDirectory'],
         defaultPath: budgetStatement?.data.month ?? 'budget',
     });
@@ -51,9 +59,32 @@ async function handleFileSave(budgetStatement: BudgetStatementDocument) {
 }
 
 ipcMain.handle('dialog:openFile', handleFileOpen);
-ipcMain.handle('dialog:saveFile', (_, args) => handleFileSave(args));
+ipcMain.handle('dialog:saveFile', (e, args) => handleFileSave(args));
 
-const createWindow = async (file?: string | undefined) => {
+ipcMain.handle('showTabMenu', (event, tab) => {
+    const template = [
+        {
+            label: 'Move to new window',
+            click: async () => {
+                event.sender.send('removeTab', tab);
+
+                createWindow({
+                    onReady: window => {
+                        window.webContents.send('addTab', tab);
+                    },
+                });
+            },
+        },
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup({
+        window: BrowserWindow.fromWebContents(event.sender) ?? undefined,
+    });
+});
+
+const createWindow = async (options?: {
+    onReady?: (window: BrowserWindow) => void;
+}) => {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
         width: 1300,
@@ -62,7 +93,7 @@ const createWindow = async (file?: string | undefined) => {
             preload: path.join(__dirname, 'preload.js'),
         },
     });
-    window = mainWindow;
+
     const template = [
         ...(isMac
             ? [
@@ -86,6 +117,14 @@ const createWindow = async (file?: string | undefined) => {
             label: 'File',
             submenu: [
                 {
+                    label: 'New Window',
+                    accelerator: 'CommandOrControl+Shift+N',
+                    click: () => {
+                        createWindow();
+                    },
+                },
+                { type: 'separator' },
+                {
                     label: 'Open',
                     accelerator: 'CommandOrControl+O',
                     click: async () => {
@@ -97,11 +136,12 @@ const createWindow = async (file?: string | undefined) => {
                         );
                         if (files) {
                             files.map(file => app.addRecentDocument(file));
-                            if (window) {
-                                handleFile?.(files[0]);
-                            } else {
-                                createWindow(files[0]);
-                            }
+                            handleFile(
+                                files[0],
+                                mainWindow.isDestroyed()
+                                    ? undefined
+                                    : mainWindow
+                            );
                         }
                     },
                 },
@@ -191,6 +231,10 @@ const createWindow = async (file?: string | undefined) => {
         },
     ];
 
+    mainWindow.webContents.ipc.once('ready', () => {
+        options?.onReady?.(mainWindow);
+    });
+
     const menu = Menu.buildFromTemplate(template as any);
     Menu.setApplicationMenu(menu);
 
@@ -205,42 +249,38 @@ const createWindow = async (file?: string | undefined) => {
             )
         );
     }
-    handleFile = async (file: string) => {
-        if (file) {
-            try {
-                const budget = await utils.loadBudgetStatementFromFile(file);
-                mainWindow.webContents.send('fileOpened', budget);
-            } catch (error) {
-                console.log('handleFile', error);
-            }
-        }
-    };
-
-    file && handleFile(file);
 
     mainWindow.on('close', () => {
-        // ipcMain.removeHandler('dialog:openFile');
-        // ipcMain.removeHandler('dialog:saveFile');
-        window = undefined;
-        handleFile = undefined;
+        // TODO
     });
 
     // Open the DevTools.
-    // mainWindow.webContents.openDevTools({ mode: "bottom" });
+    mainWindow.webContents.openDevTools({ mode: 'bottom' });
+    return mainWindow;
 };
 
+let initFile: string;
+
 app.on('open-file', (_event, path) => {
-    if (window) {
-        handleFile?.(path);
+    if (app.isReady()) {
+        handleFile(path);
     } else {
-        createWindow(path);
+        initFile = path;
     }
 });
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', () => createWindow());
+app.on('ready', () =>
+    createWindow({
+        onReady() {
+            if (initFile) {
+                handleFile(initFile);
+            }
+        },
+    })
+);
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
