@@ -1,18 +1,22 @@
 import { utils } from '@acaldas/document-model-libs/browser/budget-statement';
 import { useAtomValue } from 'jotai';
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useDrop } from 'react-aria';
 import { FileDropItem } from 'react-aria-components';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { themeAtom } from '../store';
-import { useTabs } from '../store/tabs';
+import { TabBudgetStatement, useTabs } from '../store/tabs';
 import Sidebar from './sidebar';
 
 export default () => {
     const ref = React.useRef(null);
     const theme = useAtomValue(themeAtom);
-    const { addBudgetStatementTab } = useTabs();
+    const { addTab } = useTabs();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        window.electronAPI?.ready();
+    });
 
     const { dropProps, isDropTarget } = useDrop({
         ref,
@@ -23,11 +27,13 @@ export default () => {
             files.forEach(async item => {
                 const file = await item.getFile();
                 const budget = await utils.loadBudgetStatementFromInput(file);
-                addBudgetStatementTab(budget);
+                const tab = new TabBudgetStatement(budget);
+                addTab(tab);
                 navigate('/');
             });
         },
     });
+
     return (
         <div
             className={`theme-${theme} h-screen overflow-auto ${

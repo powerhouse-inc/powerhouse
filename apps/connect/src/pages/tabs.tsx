@@ -1,26 +1,22 @@
 import { useEffect } from 'react';
 import Tabs from '../components/tabs';
-import { useTabs } from '../store/tabs';
+import { TabBudgetStatement, useTabs } from '../store/tabs';
 
 export default () => {
     const tabs = useTabs();
 
     useEffect(() => {
-        if (!tabs.items.length) {
-            tabs.addTab();
-        }
-    }, []);
-
-    useEffect(() => {
-        window.electronAPI?.handleFileOpened(file => {
+        return window.electronAPI?.handleFileOpened(file => {
             if (file) {
-                tabs.addBudgetStatementTab(file);
+                // TODO deal with different files
+                const tab = new TabBudgetStatement(file);
+                tabs.addTab(tab);
             }
         });
-    }, [window.electronAPI]);
+    }, [tabs]);
 
     useEffect(() => {
-        const removeListener = window.electronAPI?.handleFileSaved(() => {
+        return window.electronAPI?.handleFileSaved(() => {
             const selectedTab = tabs.selectedTab;
             if (!selectedTab) {
                 return;
@@ -31,9 +27,6 @@ export default () => {
                 window.electronAPI?.saveFile(file);
             }
         });
-        return () => {
-            removeListener?.();
-        };
     }, [tabs]);
 
     return (

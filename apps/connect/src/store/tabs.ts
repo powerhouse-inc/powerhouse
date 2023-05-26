@@ -4,9 +4,10 @@ import {
 } from '@acaldas/document-model-libs/browser/budget-statement';
 import { Document } from 'document-model-editors';
 import { atom, useAtom } from 'jotai';
-import { useMemo } from 'react';
+import { ReactElement, useMemo } from 'react';
 import { ListData } from 'react-stately';
-import BudgetStatementEditor from '../budget-statement/editor';
+import { createBudgetStatementEditor } from '../budget-statement/editor';
+import tabNew from '../components/tabs/tab-new';
 
 export type TabType =
     | ''
@@ -18,7 +19,7 @@ export abstract class Tab {
     public abstract type: TabType;
     constructor(
         public name: string,
-        public content: React.ReactElement,
+        public content: () => ReactElement,
         public id: string = window.crypto.randomUUID()
     ) {}
 
@@ -27,39 +28,39 @@ export abstract class Tab {
     saveFile(): unknown | null {
         return null;
     }
+
+    static fromString(value: string): Tab {
+        const object = JSON.parse(value);
+        const type = object.type as TabType;
+        switch (object.type) {
+            case 'new':
+                return new TabNew(object.id);
+            case 'powerhouse/budget-statement':
+                return new TabBudgetStatement(
+                    object.budgetStatement,
+                    object.name,
+                    object.id
+                );
+            case 'powerhouse/document-model':
+                return new TabDocumentModel(object.name, object.id);
+            default:
+                throw new Error(`Tab type ${type} wasn't handled`);
+        }
+    }
 }
 
 export class TabNew extends Tab {
     public type: TabType = 'new';
 
-    constructor(
-        public addDocumentModelTab: () => void,
-        public addBudgetStatementTab: () => void,
-        id?: string
-    ) {
-        const content = (
-            <div>
-                <button
-                    className="underline underline-offset-4"
-                    onClick={addDocumentModelTab}
-                >
-                    New Document Model
-                </button>
-                <button
-                    className="px-0 underline underline-offset-4"
-                    onClick={() => addBudgetStatementTab()}
-                    style={{ marginLeft: 20 }}
-                >
-                    New Budget Statement
-                </button>
-            </div>
-        );
-
-        super('New tab', content, id);
+    constructor(id?: string) {
+        super('New tab', tabNew, id);
     }
 
     serialize() {
-        return JSON.stringify([this.id]);
+        return JSON.stringify({
+            type: this.type,
+            id: this.id,
+        });
     }
 }
 
@@ -67,31 +68,39 @@ export class TabBudgetStatement extends Tab {
     public type: TabType = 'powerhouse/budget-statement';
     public budgetStatement: BudgetStatementDocument;
 
-    constructor(_budgetStatement?: BudgetStatementDocument, name?: string) {
+    constructor(
+        _budgetStatement?: BudgetStatementDocument,
+        name?: string,
+        id?: string
+    ) {
         const budgetStatement =
             _budgetStatement ?? utils.createBudgetStatement();
-        const content = (
-            <BudgetStatementEditor
-                initialBudget={budgetStatement}
-                onChange={budget => {
-                    this.budgetStatement = budget;
-                }}
-            />
-        );
+        const content = createBudgetStatementEditor({
+            initialBudget: budgetStatement,
+            onChange: budget => {
+                this.budgetStatement = budget;
+            },
+        });
 
         super(
             name ||
                 budgetStatement.name ||
                 budgetStatement.data.month ||
                 'Budget',
-            content
+            content,
+            id
         );
 
         this.budgetStatement = budgetStatement;
     }
 
-    serialize(): string {
-        return JSON.stringify([this.budgetStatement, this.name]);
+    serialize() {
+        return JSON.stringify({
+            type: this.type,
+            id: this.id,
+            name: this.name,
+            budgetStatement: this.budgetStatement,
+        });
     }
 
     override saveFile(): BudgetStatementDocument {
@@ -102,12 +111,16 @@ export class TabBudgetStatement extends Tab {
 export class TabDocumentModel extends Tab {
     public type: TabType = 'powerhouse/document-model';
 
-    constructor(name?: string) {
-        super(name || 'Document Model', <Document.Editor />);
+    constructor(name?: string, id?: string) {
+        super(name || 'Document Model', Document.Editor, id);
     }
 
-    serialize(): string {
-        return JSON.stringify([this.name]);
+    serialize() {
+        return JSON.stringify({
+            type: this.type,
+            id: this.id,
+            name: this.name,
+        });
     }
 }
 
@@ -168,15 +181,17 @@ export const useTabs = () => {
     > & {
         selectedTab: typeof selectedTab;
         setSelectedTab: typeof setSelectedTab;
-        addTab: (tab?: Tab, args?: any[]) => void;
-        addDocumentModelTab: () => void;
-        addBudgetStatementTab: (budget?: BudgetStatementDocument) => void;
+        addTab: (tab?: Tab) => void;
         closeTab: (tab: Tab) => void;
     } = useMemo(
         () => ({
             items: _tabs,
             getItem(key) {
-                return _tabs.find(tab => tab.id === key)!;
+                const tab = _tabs.find(tab => tab.id === key);
+                if (!tab) {
+                    throw new Error(`Tab with id ${key} not found`);
+                }
+                return tab;
             },
             append(...values) {
                 setTabs(tabs => [...tabs, ...values]);
@@ -214,24 +229,10 @@ export const useTabs = () => {
             },
             selectedTab,
             setSelectedTab,
-            addTab(tab?: Tab, args?: any[]) {
-                const newTab =
-                    tab ??
-                    new TabNew(
-                        tabs.addDocumentModelTab,
-                        tabs.addBudgetStatementTab,
-                        ...(args ?? [])
-                    );
+            addTab(tab?: Tab) {
+                const newTab = tab ?? new TabNew();
                 tabs.append(newTab);
                 tabs.setSelectedTab(newTab.id);
-            },
-            addBudgetStatementTab(budget?: BudgetStatementDocument) {
-                const tab = new TabBudgetStatement(budget);
-                tabs.addTab(tab);
-            },
-            addDocumentModelTab() {
-                const tab = new TabDocumentModel();
-                tabs.addTab(tab);
             },
             closeTab(tab: Tab) {
                 tabs.remove(tab.id);

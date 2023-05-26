@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
     DraggableCollectionEndEvent,
     DroppableCollectionReorderEvent,
@@ -5,13 +6,7 @@ import {
     TextDropItem,
 } from 'react-aria-components';
 import { Item } from 'react-stately';
-import {
-    Tab,
-    TabBudgetStatement,
-    TabDocumentModel,
-    TabType,
-    useTabs,
-} from '../../store/tabs';
+import { Tab, useTabs } from '../../store/tabs';
 import { ReorderableTabList } from './reordable-tab-list';
 
 interface IProps {
@@ -30,20 +25,12 @@ export default function ({ tabs, onNewTab, onCloseTab }: IProps) {
     };
 
     const handleTextdrop = async (item: TextDropItem) => {
-        const type = (await item.getText('type')) as TabType;
-        const args = await item.getText('args');
-        switch (type) {
-            case 'new':
-                onNewTab(undefined, JSON.parse(args));
-                break;
-            case 'powerhouse/budget-statement':
-                onNewTab(new TabBudgetStatement(...JSON.parse(args)));
-                break;
-            case 'powerhouse/document-model':
-                onNewTab(new TabDocumentModel(...JSON.parse(args)));
-                break;
-            default:
-                console.log(`Tab type ${type} wasn't handled`);
+        try {
+            const tabStr = await item.getText('tab');
+            const tab = Tab.fromString(tabStr);
+            onNewTab(tab);
+        } catch (e) {
+            console.error(e);
         }
     };
 
@@ -78,6 +65,24 @@ export default function ({ tabs, onNewTab, onCloseTab }: IProps) {
             tabs.remove(...e.keys);
         }
     };
+
+    useEffect(() => {
+        const removeHandler1 = window.electronAPI?.handleAddTab((_, tabStr) => {
+            const tab = Tab.fromString(tabStr);
+            tabs.addTab(tab);
+        });
+
+        const removeHandler2 = window.electronAPI?.handleRemoveTab(
+            (_, tabStr) => {
+                const tab = Tab.fromString(tabStr);
+                tabs.remove(tab.id);
+            }
+        );
+        return () => {
+            removeHandler1?.();
+            removeHandler2?.();
+        };
+    }, [tabs]);
 
     return (
         <ReorderableTabList
