@@ -1,6 +1,11 @@
-import { reducer } from '../../src/budget-statement';
+import { AccountInput, reducer } from '../../src/budget-statement';
 import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
-import { init } from '../../src/budget-statement/gen';
+import {
+    addAccount,
+    setMonth,
+    setOwner,
+    setQuoteCurrency,
+} from '../../src/budget-statement/gen';
 import { setName } from '../../src/document/actions';
 
 describe('Budget Statement reducer', () => {
@@ -9,11 +14,6 @@ describe('Budget Statement reducer', () => {
         expect(state.revision).toBe(0);
         expect(state.documentType).toBe('powerhouse/budget-statement');
         expect(state.data).toBeDefined();
-    });
-
-    it('should start as Draft', async () => {
-        const state = createBudgetStatement();
-        expect(state.data.status).toBe('Draft');
     });
 
     it('should update name', async () => {
@@ -34,18 +34,39 @@ describe('Budget Statement reducer', () => {
     });
 
     it('should init budget statement with provided data', async () => {
+        const state = createBudgetStatement({
+            name: 'March',
+            data: {
+                owner: {
+                    ref: 'makerdao/core-unit',
+                    id: 'SES-001',
+                    title: 'Sustainable Ecosystem Scaling',
+                },
+            },
+        });
+        expect(state.data.owner).toStrictEqual({
+            ref: 'makerdao/core-unit',
+            id: 'SES-001',
+            title: 'Sustainable Ecosystem Scaling',
+        });
+        expect(state.name).toBe('March');
+    });
+
+    it('should throw error on invalid action', async () => {
+        const state = createBudgetStatement();
+        expect(() =>
+            reducer(state, addAccount([0] as unknown as AccountInput[]))
+        ).toThrow();
+    });
+
+    it('should set owner', async () => {
         const state = createBudgetStatement();
         const newState = reducer(
             state,
-            init({
-                name: 'March',
-                data: {
-                    owner: {
-                        ref: 'makerdao/core-unit',
-                        id: 'SES-001',
-                        title: 'Sustainable Ecosystem Scaling',
-                    },
-                },
+            setOwner({
+                ref: 'makerdao/core-unit',
+                id: 'SES-001',
+                title: 'Sustainable Ecosystem Scaling',
             })
         );
         expect(newState.data.owner).toStrictEqual({
@@ -54,11 +75,23 @@ describe('Budget Statement reducer', () => {
             title: 'Sustainable Ecosystem Scaling',
         });
         expect(state.data.owner).toStrictEqual({
-            id: null,
             ref: null,
+            id: null,
             title: null,
         });
-        expect(newState.name).toBe('March');
-        expect(state.name).toBe('');
+    });
+
+    it('should set month', async () => {
+        const state = createBudgetStatement();
+        const newState = reducer(state, setMonth('Feb'));
+        expect(newState.data.month).toBe('Feb');
+        expect(state.data.month).toBe(null);
+    });
+
+    it('should set quoteCurrency', async () => {
+        const state = createBudgetStatement();
+        const newState = reducer(state, setQuoteCurrency('DAI'));
+        expect(newState.data.quoteCurrency).toBe('DAI');
+        expect(state.data.quoteCurrency).toBe(null);
     });
 });

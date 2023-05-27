@@ -8,10 +8,9 @@ import {
 import { createBudgetStatement } from '../custom/utils';
 import AccountObject from './account/object';
 import AuditObject from './audit/object';
+import BaseObject from './base/object';
 import CommentObject from './comment/object';
-import InitObject from './init/object';
 import LineItemObject from './line-item/object';
-import StatusObject from './status/object';
 import VestingObject from './vesting/object';
 
 /**
@@ -22,9 +21,8 @@ interface BudgetStatement
     extends AccountObject,
         AuditObject,
         CommentObject,
-        InitObject,
+        BaseObject,
         LineItemObject,
-        StatusObject,
         VestingObject {}
 
 /**
@@ -52,30 +50,6 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
         >
     ) {
         super(reducer, createBudgetStatement(initialState));
-    }
-
-    /**
-     * Gets the month of the budget statement.
-     * @category Budget Statement
-     */
-    get month() {
-        return this.state.data.month;
-    }
-
-    /**
-     * Gets the owner of the budget statement.
-     * @category Budget Statement
-     */
-    get owner() {
-        return this.state.data.owner;
-    }
-
-    /**
-     * Gets the quote currency of the budget statement.
-     * @category Budget Statement
-     */
-    get quoteCurrency() {
-        return this.state.data.quoteCurrency;
     }
 
     /**
@@ -115,9 +89,8 @@ applyMixins(BudgetStatement, [
     AccountObject,
     AuditObject,
     CommentObject,
-    InitObject,
+    BaseObject,
     LineItemObject,
-    StatusObject,
     VestingObject,
 ]);
 

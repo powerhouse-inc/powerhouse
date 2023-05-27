@@ -1,3 +1,4 @@
+import { z } from '@acaldas/document-model-graphql/document';
 import { castDraft, produce } from 'immer';
 import {
     loadStateOperation,
@@ -117,6 +118,9 @@ function _baseReducer<T, A extends Action>(
     action: BaseAction,
     wrappedReducer: ImmutableReducer<T, A>
 ): Document<T, A> {
+    // throws if action is not valid base action
+    z.BaseActionSchema().parse(action);
+
     switch (action.type) {
         case SET_NAME:
             return setNameOperation(state, action.input);

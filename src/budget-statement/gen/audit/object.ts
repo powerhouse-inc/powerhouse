@@ -1,4 +1,5 @@
-import { BaseDocument, DocumentFile } from '../../../document';
+import { BaseDocument } from '../../../document';
+import { DocumentFile } from '../../../document/types';
 import {
     AuditReport,
     AuditReportStatus,

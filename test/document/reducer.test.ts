@@ -57,9 +57,23 @@ describe('Base reducer', () => {
         });
     });
 
+    it('should throw error creating invalid SET_NAME action', () => {
+        expect(() => setName(1 as unknown as string)).toThrow();
+    });
+
     it('should set document name', async () => {
         const state = createDocument();
         const newState = emptyReducer(state, setName('Document'));
         expect(newState.name).toBe('Document');
+    });
+
+    it('should throw error on invalid base action', async () => {
+        const state = createDocument();
+        expect(() =>
+            emptyReducer(state, {
+                type: 'SET_NAME',
+                input: 0 as unknown as string,
+            })
+        ).toThrow();
     });
 });

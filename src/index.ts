@@ -32,4 +32,9 @@ export { Document };
  */
 export { BudgetStatement };
 
+export const DocumentModels = {
+    'powerhouse/document': Document,
+    'powerhouse/budget-statement': BudgetStatement,
+};
+
 export default { BudgetStatement, Document };

@@ -10,8 +10,7 @@
         "eslint:recommended",
         "plugin:jest/recommended",
         "prettier",
-        "plugin:@typescript-eslint/recommended",
-        "eslint-plugin-tsdoc"
+        "plugin:@typescript-eslint/recommended"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
@@ -19,13 +18,17 @@
         "sourceType": "module",
         "project": ["./tsconfig.spec.json"]
     },
-    "plugins": ["@typescript-eslint", "jest"],
+    "plugins": [
+        "@typescript-eslint",
+        "jest"
+        // "eslint-plugin-tsdoc"
+    ],
     "rules": {
         "@typescript-eslint/no-unused-vars": [
             1,
             { "ignoreRestSiblings": true }
         ],
-        "@typescript-eslint/ban-ts-comment": "warn",
-        "tsdoc/syntax": "warn"
+        "@typescript-eslint/ban-ts-comment": "warn"
+        // "tsdoc/syntax": "warn"
     }
 }

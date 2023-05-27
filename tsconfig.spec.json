@@ -1,4 +1,13 @@
 {
     "extends": "./tsconfig.json",
-    "include": ["src/**/*", "test/**/*", "rollup.config.ts", "jest.config.js"]
+    "compilerOptions": {
+        "emitDeclarationOnly": false
+    },
+    "include": [
+        "src/**/*",
+        "test/**/*",
+        "rollup.config.ts",
+        "jest.config.js",
+        "node_modules/@types/wicg-file-system-access/index.d.ts"
+    ]
 }

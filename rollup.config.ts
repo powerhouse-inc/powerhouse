@@ -35,15 +35,23 @@ const input = {
     document: 'src/document/index.ts',
 };
 
+const bundledDependencies = [
+    'mime/lite',
+    'jszip',
+    '@acaldas/document-model-graphql',
+    '@acaldas/document-model-graphql/document',
+    '@acaldas/document-model-graphql/budget-statement',
+];
+
 const outputs: RollupOptions[] = [
     {
         input,
         plugins: [
-            // nodeResolve(),
             esbuild({
                 optimizeDeps: {
-                    include: ['mime/lite', 'jszip'],
+                    include: bundledDependencies,
                 },
+                treeShaking: true,
             }),
         ],
         output: {
@@ -56,11 +64,11 @@ const outputs: RollupOptions[] = [
     {
         input,
         plugins: [
-            // nodeResolve(),
             esbuild({
                 optimizeDeps: {
-                    include: ['mime/lite', 'jszip'],
+                    include: bundledDependencies,
                 },
+                treeShaking: true,
             }),
             emitModulePackageFile(),
         ],
@@ -73,7 +81,8 @@ const outputs: RollupOptions[] = [
     },
     {
         input,
-        plugins: [dts()],
+        external: ['@acaldas/document-model-graphql'],
+        plugins: [dts({ respectExternal: true })],
         output: {
             dir: 'dist/node/types/',
             entryFileNames: '[name].d.ts',
@@ -129,44 +138,22 @@ const outputs: RollupOptions[] = [
     },
     {
         input,
+        external: [
+            'immer',
+            'mime/lite',
+            '@acaldas/document-model-graphql',
+            '@acaldas/document-model-graphql/document',
+            '@acaldas/document-model-graphql/budget-statement',
+        ],
         plugins: [
             replaceBrowserModules(),
             nodePolyfills(),
             nodeResolve({ browser: true, preferBuiltins: false }),
-            esbuild({
-                optimizeDeps: {
-                    include: ['immer', 'mime/lite'],
-                    esbuildOptions: {
-                        treeShaking: true,
-                    },
-                },
-            }),
-            dts(),
+            dts({ respectExternal: true }),
         ],
         output: {
             dir: 'dist/browser/types/',
             entryFileNames: '[name].d.ts',
-            format: 'es',
-        },
-    },
-    {
-        input: 'src/index.ts',
-        plugins: [
-            replaceBrowserModules(),
-            nodePolyfills(),
-            nodeResolve({ browser: true, preferBuiltins: false }),
-            esbuild({
-                optimizeDeps: {
-                    include: ['immer', 'mime/lite'],
-                    esbuildOptions: {
-                        treeShaking: true,
-                    },
-                },
-            }),
-            dts(),
-        ],
-        output: {
-            dir: 'dist/browser',
             format: 'es',
         },
     },

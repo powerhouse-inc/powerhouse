@@ -1,6 +1,6 @@
 import { loadState, prune, redo, setName, undo } from './actions';
 import { BaseAction } from './actions/types';
-import { Action, Attachment, Document, Reducer } from './types';
+import type { Action, Attachment, Document, Reducer } from './types';
 import { createDocument, loadFromFile, saveToFile } from './utils';
 
 /**

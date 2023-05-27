@@ -97,8 +97,8 @@ export function redoOperation<T, A extends Action>(
 
 export function pruneOperation<T, A extends Action>(
     state: Document<T, A>,
-    start: number | undefined,
-    end: number | undefined,
+    start: number | null | undefined,
+    end: number | null | undefined,
     wrappedReducer: ImmutableReducer<T, A>
 ): Document<T, A> {
     start = start || 0;
@@ -131,12 +131,12 @@ export function pruneOperation<T, A extends Action>(
 
 export function loadStateOperation<T, A extends Action>(
     oldState: Document<T, A>,
-    newState: Pick<Document, 'data' | 'name'>
+    newState: { name: string; data?: Document['data'] }
 ): Document<T, A> {
     return {
         ...oldState,
         name: newState.name,
-        data: newState.data as T,
+        data: (newState.data ?? {}) as T,
     };
 }
 

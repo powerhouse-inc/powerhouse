@@ -1,15 +1,11 @@
-import { Document } from '..';
+import { z } from '@acaldas/document-model-graphql/document';
+import { Document } from '../types';
 import { createAction } from '../utils';
 import {
     LoadStateAction,
-    LOAD_STATE,
-    PRUNE,
     PruneAction,
-    REDO,
     RedoAction,
     SetNameAction,
-    SET_NAME,
-    UNDO,
     UndoAction,
 } from './types';
 
@@ -20,7 +16,7 @@ import {
  * @category Actions
  */
 export const setName = (name: string) =>
-    createAction<SetNameAction>(SET_NAME, name);
+    createAction<SetNameAction>('SET_NAME', name, z.SetNameActionSchema);
 
 /**
  * Cancels the last `count` operations.
@@ -28,7 +24,8 @@ export const setName = (name: string) =>
  * @param count - Number of operations to cancel
  * @category Actions
  */
-export const undo = (count = 1) => createAction<UndoAction>(UNDO, count);
+export const undo = (count = 1) =>
+    createAction<UndoAction>('UNDO', count, z.UndoActionSchema);
 
 /**
  * Cancels the last `count` {@link undo | UNDO} operations.
@@ -36,7 +33,8 @@ export const undo = (count = 1) => createAction<UndoAction>(UNDO, count);
  * @param count - Number of UNDO operations to cancel
  * @category Actions
  */
-export const redo = (count = 1) => createAction<RedoAction>(REDO, count);
+export const redo = (count = 1) =>
+    createAction<RedoAction>('REDO', count, z.RedoActionSchema);
 
 /**
  * Joins multiple operations into a single {@link loadState | LOAD_STATE} operation.
@@ -50,7 +48,7 @@ export const redo = (count = 1) => createAction<RedoAction>(REDO, count);
  * @category Actions
  */
 export const prune = (start?: number | undefined, end?: number | undefined) =>
-    createAction<PruneAction>(PRUNE, { start, end });
+    createAction<PruneAction>('PRUNE', { start, end }, z.PruneActionSchema);
 
 /**
  * Replaces the state of the document.
@@ -65,4 +63,9 @@ export const prune = (start?: number | undefined, end?: number | undefined) =>
 export const loadState = (
     state: Pick<Document, 'data' | 'name'>,
     operations: number
-) => createAction<LoadStateAction>(LOAD_STATE, { state, operations });
+) =>
+    createAction<LoadStateAction>(
+        'LOAD_STATE',
+        { state, operations },
+        z.LoadStateActionSchema
+    );

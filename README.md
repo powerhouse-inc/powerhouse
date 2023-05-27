@@ -142,7 +142,6 @@ A Budget statement follows the following data structure:
             title: "Sustainable Ecosystem Scaling"
         },
         month: "2023/01",
-        status: "Draft" | "Review" | "Final" | "Escalated",
         quoteCurrency: "DAI",
         auditReports: [
             {

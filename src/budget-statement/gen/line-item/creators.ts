@@ -1,5 +1,11 @@
+import {
+    LineItemDeleteInput,
+    LineItemsSortInput,
+    LineItemUpdateInput,
+    z,
+} from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
-import { Account, LineItem, LineItemInput } from '../../custom';
+import { Account, LineItem } from '../../custom';
 import { createLineItem } from '../../custom/utils';
 
 import {
@@ -7,6 +13,8 @@ import {
     ADD_LINE_ITEM,
     DeleteLineItemAction,
     DELETE_LINE_ITEM,
+    SortLineItemsAction,
+    SORT_LINE_ITEMS,
     UpdateLineItemAction,
     UPDATE_LINE_ITEM,
 } from './types';
@@ -22,10 +30,14 @@ export const addLineItem = (
     account: Account['address'],
     lineItems: (Partial<LineItem> & Pick<LineItem, 'category' | 'group'>)[]
 ) =>
-    createAction<AddLineItemAction>(ADD_LINE_ITEM, {
-        account,
-        lineItems: lineItems.map(createLineItem),
-    });
+    createAction<AddLineItemAction>(
+        ADD_LINE_ITEM,
+        {
+            account,
+            lineItems: lineItems.map(createLineItem),
+        },
+        z.AddLineItemActionSchema
+    );
 
 /**
  * Creates an action to update one or more line items in an account.
@@ -36,12 +48,16 @@ export const addLineItem = (
  */
 export const updateLineItem = (
     account: Account['address'],
-    lineItems: LineItemInput[]
+    lineItems: LineItemUpdateInput[]
 ) =>
-    createAction<UpdateLineItemAction>(UPDATE_LINE_ITEM, {
-        account,
-        lineItems,
-    });
+    createAction<UpdateLineItemAction>(
+        UPDATE_LINE_ITEM,
+        {
+            account,
+            lineItems,
+        },
+        z.UpdateLineItemActionSchema
+    );
 
 /**
  * Creates an action to delete one or more line items from an account.
@@ -52,9 +68,33 @@ export const updateLineItem = (
  */
 export const deleteLineItem = (
     account: Account['address'],
-    lineItems: { category: string; group: string }[]
+    lineItems: LineItemDeleteInput[]
 ) =>
-    createAction<DeleteLineItemAction>(DELETE_LINE_ITEM, {
-        account,
-        lineItems,
-    });
+    createAction<DeleteLineItemAction>(
+        DELETE_LINE_ITEM,
+        {
+            account,
+            lineItems,
+        },
+        z.DeleteLineItemActionSchema
+    );
+
+/**
+ * Creates an action to sort the line items of an account.
+ *
+ * @param account - The account containing the line items to sort.
+ * @param lineItems - An array of line items to sort.
+ * @group Line Item
+ */
+export const sortLineItems = (
+    account: Account['address'],
+    lineItems: LineItemsSortInput[]
+) =>
+    createAction<SortLineItemsAction>(
+        SORT_LINE_ITEMS,
+        {
+            account,
+            lineItems,
+        },
+        z.SortLineItemsActionSchema
+    );

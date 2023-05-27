@@ -1,28 +1,30 @@
+import { z } from '@acaldas/document-model-graphql/budget-statement';
+import { isBaseAction } from '../../document/actions/types';
 import { createReducer } from '../../document/utils';
 import {
     ADD_ACCOUNT,
     DELETE_ACCOUNT,
+    SORT_ACCOUNTS,
     UPDATE_ACCOUNT,
 } from '../gen/account/types';
 import { ADD_AUDIT_REPORT, DELETE_AUDIT_REPORT } from '../gen/audit/types';
+import {
+    SET_FTES,
+    SET_MONTH,
+    SET_OWNER,
+    SET_QUOTE_CURRENCY,
+} from '../gen/base/types';
 import {
     ADD_COMMENT,
     DELETE_COMMENT,
     UPDATE_COMMENT,
 } from '../gen/comment/types';
-import { INIT } from '../gen/init/types';
 import {
     ADD_LINE_ITEM,
     DELETE_LINE_ITEM,
+    SORT_LINE_ITEMS,
     UPDATE_LINE_ITEM,
 } from '../gen/line-item/types';
-import {
-    APPROVE,
-    ESCALATE,
-    REOPEN_TO_DRAFT,
-    REOPEN_TO_REVIEW,
-    SUBMIT_FOR_REVIEW,
-} from '../gen/status/types';
 import {
     ADD_VESTING,
     DELETE_VESTING,
@@ -32,15 +34,15 @@ import {
     addAccountOperation,
     addAuditReportOperation,
     addLineItemOperation,
-    approveOperation,
     deleteAccountOperation,
     deleteAuditReportOperation,
     deleteLineItemOperation,
-    escalateOperation,
-    initOperation,
-    reopenToDraftOperation,
-    reopenToReviewOperation,
-    submitForReviewOperation,
+    setFtesOperation,
+    setMonthOperation,
+    setOwnerOperation,
+    setQuoteCurrencyOperation,
+    sortAccountsOperation,
+    sortLineItemsOperation,
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
@@ -80,31 +82,37 @@ import { BudgetStatementAction, State } from './types';
  */
 export const reducer = createReducer<State, BudgetStatementAction>(
     (state, action) => {
+        if (isBaseAction(action)) {
+            return state;
+        }
+
+        z.BudgetStatementActionSchema().parse(action);
+
         switch (action.type) {
-            case INIT:
-                return initOperation(state, action);
+            case SET_OWNER:
+                return setOwnerOperation(state, action);
+            case SET_MONTH:
+                return setMonthOperation(state, action);
+            case SET_QUOTE_CURRENCY:
+                return setQuoteCurrencyOperation(state, action);
+            case SET_FTES:
+                return setFtesOperation(state, action);
             case ADD_ACCOUNT:
                 return addAccountOperation(state, action);
             case UPDATE_ACCOUNT:
                 return updateAccountOperation(state, action);
             case DELETE_ACCOUNT:
                 return deleteAccountOperation(state, action);
+            case SORT_ACCOUNTS:
+                return sortAccountsOperation(state, action);
             case ADD_LINE_ITEM:
                 return addLineItemOperation(state, action);
             case UPDATE_LINE_ITEM:
                 return updateLineItemOperation(state, action);
             case DELETE_LINE_ITEM:
                 return deleteLineItemOperation(state, action);
-            case SUBMIT_FOR_REVIEW:
-                return submitForReviewOperation(state);
-            case ESCALATE:
-                return escalateOperation(state);
-            case APPROVE:
-                return approveOperation(state);
-            case REOPEN_TO_DRAFT:
-                return reopenToDraftOperation(state);
-            case REOPEN_TO_REVIEW:
-                return reopenToReviewOperation(state);
+            case SORT_LINE_ITEMS:
+                return sortLineItemsOperation(state, action);
             case ADD_AUDIT_REPORT:
                 return addAuditReportOperation(state, action);
             case DELETE_AUDIT_REPORT:

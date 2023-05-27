@@ -1,4 +1,5 @@
-import { DocumentFile } from '../../../document';
+import { z } from '@acaldas/document-model-graphql/budget-statement';
+import { DocumentFile } from '../../../document/types';
 import { createAction } from '../../../document/utils';
 import { AuditReport, AuditReportStatus } from '../../custom';
 import {
@@ -31,9 +32,13 @@ export const addAuditReport = (
         timestamp: timestamp ?? newTimestamp.toISOString(),
         status,
     }));
-    return createAction<AddAuditReportAction>(ADD_AUDIT_REPORT, {
-        reports: newReports,
-    });
+    return createAction<AddAuditReportAction>(
+        ADD_AUDIT_REPORT,
+        {
+            reports: newReports,
+        },
+        z.AddAuditReportActionSchema
+    );
 };
 
 /**
@@ -44,4 +49,8 @@ export const addAuditReport = (
  * @group Audit
  */
 export const deleteAuditReport = (reports: AuditReport['report'][]) =>
-    createAction<DeleteAuditReportAction>(DELETE_AUDIT_REPORT, { reports });
+    createAction<DeleteAuditReportAction>(
+        DELETE_AUDIT_REPORT,
+        { reports },
+        z.DeleteAuditReportActionSchema
+    );

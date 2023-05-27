@@ -1,4 +1,4 @@
-import { Operation } from '../../../document';
+import { Operation } from '../../../document/types';
 import { hashAttachment } from '../../../document/utils';
 import {
     AddAuditReportAction,
@@ -6,6 +6,12 @@ import {
     isAuditReport,
 } from '../../gen/audit/types';
 import { BudgetStatementDocument } from '../types';
+
+function checkDuplicatedReport(state: BudgetStatementDocument, report: string) {
+    if (state.data.auditReports.find(audit => audit.report === report)) {
+        throw new Error(`Audit with report ${report} already exists`);
+    }
+}
 
 export const addAuditReportOperation = (
     state: BudgetStatementDocument,
@@ -17,13 +23,19 @@ export const addAuditReportOperation = (
 
     action.input.reports.forEach((audit, index) => {
         if (isAuditReport(audit)) {
+            // throws if report already exists
+            checkDuplicatedReport(state, audit.report);
             state.data.auditReports.push(audit);
         } else {
             const hash = hashAttachment(audit.report.data);
             const attachmentKey = `attachment://audits/${hash}` as const;
+
+            // throws if report already exists
+            checkDuplicatedReport(state, attachmentKey);
+
             state.fileRegistry[attachmentKey] = { ...audit.report };
             state.data.auditReports.push({
-                timestamp: audit.timestamp,
+                timestamp: audit.timestamp ?? new Date().toISOString(),
                 status: audit.status,
                 report: attachmentKey,
             });

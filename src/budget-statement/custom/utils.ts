@@ -1,8 +1,8 @@
+import { LineItemForecast } from '@acaldas/document-model-graphql/budget-statement';
 import JSZip from 'jszip';
 import {
     createDocument,
     createZip,
-    FileInput,
     loadFromFile,
     loadFromInput,
     saveToFile,
@@ -15,6 +15,7 @@ import {
     BudgetStatementAction,
     BudgetStatementDocument,
     LineItem,
+    LineItemInput,
     State,
 } from './types';
 
@@ -41,7 +42,6 @@ export const createBudgetStatement = (
                 title: null,
             },
             month: null,
-            status: 'Draft',
             quoteCurrency: null,
             vesting: [],
             ftes: null,
@@ -58,9 +58,9 @@ export const createBudgetStatement = (
  * @returns The new Account object.
  */
 export const createAccount = (input: AccountInput): Account => ({
-    name: '',
-    lineItems: [],
     ...input,
+    name: input.name ?? '',
+    lineItems: input.lineItems?.map(createLineItem) ?? new Array<LineItem>(),
 });
 
 /**
@@ -68,16 +68,18 @@ export const createAccount = (input: AccountInput): Account => ({
  * @param input - The input properties of the line item.
  * @returns The new LineItem object.
  */
-export const createLineItem = (
-    input: Partial<LineItem> & Pick<LineItem, 'category' | 'group'>
-): LineItem => ({
+export const createLineItem = (input: LineItemInput): LineItem => ({
     budgetCap: null,
     payment: null,
     actual: null,
-    forecast: [],
     comment: null,
-    headcountExpense: false,
     ...input,
+    forecast:
+        input.forecast?.sort((f1, f2) => f1.month.localeCompare(f2.month)) ??
+        new Array<LineItemForecast>(),
+    headcountExpense: input.headcountExpense ?? false,
+    group: input.group ?? null,
+    category: input.category ?? null,
 });
 
 /**
@@ -137,7 +139,7 @@ export const loadBudgetStatementFromFile = async (
 };
 
 export const loadBudgetStatementFromInput = async (
-    input: FileInput
+    input: Parameters<typeof loadFromInput>[0]
 ): Promise<BudgetStatementDocument> => {
     const state = await loadFromInput<State, BudgetStatementAction>(
         input,
