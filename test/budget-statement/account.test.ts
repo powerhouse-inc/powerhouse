@@ -1,8 +1,12 @@
 import { reducer } from '../../src/budget-statement';
-import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
+import {
+    createAccount,
+    createBudgetStatement,
+} from '../../src/budget-statement/custom/utils';
 import {
     addAccount,
     deleteAccount,
+    sortAccounts,
     updateAccount,
 } from '../../src/budget-statement/gen';
 
@@ -71,7 +75,7 @@ describe('Budget Statement account reducer', () => {
         expect(state.data.accounts.length).toBe(1);
     });
 
-    it('should throw exception if adding account with same address', async () => {
+    it('should throw exception if adding account with same address', () => {
         let state = createBudgetStatement();
         state = reducer(
             state,
@@ -94,5 +98,34 @@ describe('Budget Statement account reducer', () => {
                 ])
             )
         ).toThrow();
+    });
+
+    it('should sort accounts', () => {
+        const state = createBudgetStatement({
+            data: {
+                accounts: [
+                    createAccount({
+                        address: 'eth:0x00',
+                        name: '0',
+                    }),
+                    createAccount({
+                        address: 'eth:0x01',
+                        name: '1',
+                    }),
+                    createAccount({
+                        address: 'eth:0x02',
+                        name: '2',
+                    }),
+                ],
+            },
+        });
+
+        const newState = reducer(state, sortAccounts(['eth:0x02', 'eth:0x00']));
+
+        expect(newState.data.accounts.map(a => a.address)).toStrictEqual([
+            'eth:0x02',
+            'eth:0x00',
+            'eth:0x01',
+        ]);
     });
 });

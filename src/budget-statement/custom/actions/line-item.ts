@@ -1,6 +1,8 @@
 import {
     LineItemDeleteInput,
+    LineItemsSortInput,
     LineItemUpdateInput,
+    SortLineItemsAction,
 } from '@acaldas/document-model-graphql/budget-statement';
 import {
     AddLineItemAction,
@@ -11,7 +13,10 @@ import { BudgetStatementDocument, LineItem } from '../types';
 import { createLineItem } from '../utils';
 
 function isEqual(
-    lineItemInput: LineItemUpdateInput | LineItemDeleteInput,
+    lineItemInput:
+        | LineItemUpdateInput
+        | LineItemDeleteInput
+        | LineItemsSortInput,
     lineItem: LineItem
 ) {
     return (
@@ -100,4 +105,26 @@ export const deleteLineItemOperation = (
     account.lineItems = account.lineItems.filter(
         lineItem => !action.input.lineItems.find(l => isEqual(l, lineItem))
     );
+};
+
+export const sortLineItemsOperation = (
+    state: BudgetStatementDocument,
+    action: SortLineItemsAction
+) => {
+    const account = state.data.accounts.find(
+        a => a.address === action.input.account
+    );
+    if (!account) {
+        throw new Error(
+            `Account with address ${action.input.account} not found`
+        );
+    }
+    account.lineItems.sort((a, b) => {
+        const index1 = action.input.lineItems.findIndex(l => isEqual(l, a));
+        const index2 = action.input.lineItems.findIndex(l => isEqual(l, b));
+        return (
+            (index1 > -1 ? index1 : Infinity) -
+            (index2 > -1 ? index2 : Infinity)
+        );
+    });
 };

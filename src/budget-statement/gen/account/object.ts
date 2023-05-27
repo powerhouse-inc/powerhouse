@@ -6,7 +6,12 @@ import {
     BudgetStatementAction,
     State,
 } from '../../custom';
-import { addAccount, deleteAccount, updateAccount } from './creators';
+import {
+    addAccount,
+    deleteAccount,
+    sortAccounts,
+    updateAccount,
+} from './creators';
 
 /**
  * Account related methods and getters
@@ -38,12 +43,22 @@ export default class AccountObject extends BaseDocument<
 
     /**
      * Deletes one or more accounts from the budget statement.
-     * @param addresses An array of addresses of the accounts to delete.
+     * @param accounts An array of addresses of the accounts to delete.
      *
      * @group Account
      */
     public deleteAccount(accounts: Account['address'][]) {
         return this.dispatch(deleteAccount(accounts));
+    }
+
+    /**
+     * Sorts the accounts inthe budget statement.
+     * @param accounts An array of addresses of the accounts to sort.
+     *
+     * @group Account
+     */
+    public sortAccounts(accounts: Account['address'][]) {
+        return this.dispatch(sortAccounts(accounts));
     }
 
     /**

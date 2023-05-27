@@ -1,5 +1,6 @@
 import {
     AccountUpdateInput,
+    SortAccountsAction,
     z,
 } from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
@@ -11,6 +12,7 @@ import {
     ADD_ACCOUNT,
     DeleteAccountAction,
     DELETE_ACCOUNT,
+    SORT_ACCOUNTS,
     UpdateAccountAction,
     UPDATE_ACCOUNT,
 } from './types';
@@ -51,4 +53,16 @@ export const deleteAccount = (accounts: Account['address'][]) =>
         DELETE_ACCOUNT,
         { accounts },
         z.DeleteAccountActionSchema
+    );
+
+/**
+ * Action creator for sorting accounts in the budget statement.
+ * @param accounts Array of addresses of the accounts to sort.
+ * @group Account
+ */
+export const sortAccounts = (accounts: Account['address'][]) =>
+    createAction<SortAccountsAction>(
+        SORT_ACCOUNTS,
+        { accounts },
+        z.SortAccountsActionSchema
     );

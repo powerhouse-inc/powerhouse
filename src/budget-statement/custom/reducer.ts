@@ -4,6 +4,7 @@ import { createReducer } from '../../document/utils';
 import {
     ADD_ACCOUNT,
     DELETE_ACCOUNT,
+    SORT_ACCOUNTS,
     UPDATE_ACCOUNT,
 } from '../gen/account/types';
 import { ADD_AUDIT_REPORT, DELETE_AUDIT_REPORT } from '../gen/audit/types';
@@ -21,6 +22,7 @@ import {
 import {
     ADD_LINE_ITEM,
     DELETE_LINE_ITEM,
+    SORT_LINE_ITEMS,
     UPDATE_LINE_ITEM,
 } from '../gen/line-item/types';
 import {
@@ -39,6 +41,8 @@ import {
     setMonthOperation,
     setOwnerOperation,
     setQuoteCurrencyOperation,
+    sortAccountsOperation,
+    sortLineItemsOperation,
     updateAccountOperation,
     updateLineItemOperation,
 } from './actions';
@@ -99,12 +103,16 @@ export const reducer = createReducer<State, BudgetStatementAction>(
                 return updateAccountOperation(state, action);
             case DELETE_ACCOUNT:
                 return deleteAccountOperation(state, action);
+            case SORT_ACCOUNTS:
+                return sortAccountsOperation(state, action);
             case ADD_LINE_ITEM:
                 return addLineItemOperation(state, action);
             case UPDATE_LINE_ITEM:
                 return updateLineItemOperation(state, action);
             case DELETE_LINE_ITEM:
                 return deleteLineItemOperation(state, action);
+            case SORT_LINE_ITEMS:
+                return sortLineItemsOperation(state, action);
             case ADD_AUDIT_REPORT:
                 return addAuditReportOperation(state, action);
             case DELETE_AUDIT_REPORT:

@@ -1,10 +1,16 @@
 import {
     LineItemDeleteInput,
+    LineItemsSortInput,
     LineItemUpdateInput,
 } from '@acaldas/document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
 import { Account, BudgetStatementAction, LineItem, State } from '../../custom';
-import { addLineItem, deleteLineItem, updateLineItem } from './creators';
+import {
+    addLineItem,
+    deleteLineItem,
+    sortLineItems,
+    updateLineItem,
+} from './creators';
 
 export default class LineItemObject extends BaseDocument<
     State,
@@ -50,6 +56,20 @@ export default class LineItemObject extends BaseDocument<
         lineItems: LineItemDeleteInput[]
     ) {
         return this.dispatch(deleteLineItem(account, lineItems));
+    }
+
+    /**
+     * Sorts the line items of an account.
+     *
+     * @param account - The account containing the line items to sort.
+     * @param lineItems - An array of line items to sort.
+     * @group Line Item
+     */
+    public sortLineItems(
+        account: Account['address'],
+        lineItems: LineItemsSortInput[]
+    ) {
+        return this.dispatch(sortLineItems(account, lineItems));
     }
 
     /**

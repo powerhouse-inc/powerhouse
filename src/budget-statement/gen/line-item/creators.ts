@@ -1,5 +1,6 @@
 import {
     LineItemDeleteInput,
+    LineItemsSortInput,
     LineItemUpdateInput,
     z,
 } from '@acaldas/document-model-graphql/budget-statement';
@@ -12,6 +13,8 @@ import {
     ADD_LINE_ITEM,
     DeleteLineItemAction,
     DELETE_LINE_ITEM,
+    SortLineItemsAction,
+    SORT_LINE_ITEMS,
     UpdateLineItemAction,
     UPDATE_LINE_ITEM,
 } from './types';
@@ -74,4 +77,24 @@ export const deleteLineItem = (
             lineItems,
         },
         z.DeleteLineItemActionSchema
+    );
+
+/**
+ * Creates an action to sort the line items of an account.
+ *
+ * @param account - The account containing the line items to sort.
+ * @param lineItems - An array of line items to sort.
+ * @group Line Item
+ */
+export const sortLineItems = (
+    account: Account['address'],
+    lineItems: LineItemsSortInput[]
+) =>
+    createAction<SortLineItemsAction>(
+        SORT_LINE_ITEMS,
+        {
+            account,
+            lineItems,
+        },
+        z.SortLineItemsActionSchema
     );

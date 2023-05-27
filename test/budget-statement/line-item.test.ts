@@ -1,9 +1,14 @@
 import { reducer } from '../../src/budget-statement';
-import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
+import {
+    createAccount,
+    createBudgetStatement,
+    createLineItem,
+} from '../../src/budget-statement/custom/utils';
 import {
     addAccount,
     addLineItem,
     deleteLineItem,
+    sortLineItems,
     updateLineItem,
 } from '../../src/budget-statement/gen';
 
@@ -243,5 +248,76 @@ describe('Budget Statement line item reducer', () => {
                 ])
             )
         ).toThrow();
+    });
+
+    it('should sort line items', () => {
+        const state = createBudgetStatement({
+            data: {
+                accounts: [
+                    createAccount({
+                        address:
+                            'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+                        name: 'Grants Program',
+                        lineItems: [
+                            createLineItem({
+                                category: {
+                                    ref: '0',
+                                    id: '0',
+                                    title: '0',
+                                },
+                                group: {
+                                    ref: '0',
+                                    id: '0',
+                                    title: '0',
+                                },
+                            }),
+                            createLineItem({
+                                category: {
+                                    ref: '1',
+                                    id: '1',
+                                    title: '1',
+                                },
+                                group: {
+                                    ref: '1',
+                                    id: '1',
+                                    title: '1',
+                                },
+                            }),
+                            createLineItem({
+                                category: {
+                                    ref: '2',
+                                    id: '2',
+                                    title: '2',
+                                },
+                                group: {
+                                    ref: '2',
+                                    id: '2',
+                                    title: '2',
+                                },
+                            }),
+                        ],
+                    }),
+                ],
+            },
+        });
+
+        const newState = reducer(
+            state,
+            sortLineItems('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
+                { group: '2', category: '2' },
+                { group: '0', category: '0' },
+            ])
+        );
+
+        expect(
+            newState.data.accounts[0].lineItems.map(l => ({
+                group: l.group?.id,
+                category: l.category?.id,
+            }))
+        ).toStrictEqual([
+            { group: '2', category: '2' },
+            { group: '0', category: '0' },
+            { group: '1', category: '1' },
+        ]);
     });
 });
