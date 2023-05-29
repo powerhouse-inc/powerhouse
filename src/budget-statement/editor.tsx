@@ -5,7 +5,9 @@ import {
     utils,
 } from '@acaldas/document-model-libs/browser/budget-statement';
 import { BudgetStatement } from 'document-model-editors';
+import { useAtomValue } from 'jotai';
 import { useCallback, useEffect, useState } from 'react';
+import { themeAtom } from '../store';
 
 interface IProps {
     initialBudget?: BudgetStatementDocument;
@@ -13,6 +15,7 @@ interface IProps {
 }
 
 export default function Editor({ initialBudget, onChange }: IProps) {
+    const theme = useAtomValue(themeAtom);
     const [initialBudgetStatement, setInitialBudgetStatement] =
         useState<BudgetStatementDocument>(
             initialBudget ?? utils.createBudgetStatement()
@@ -62,6 +65,7 @@ export default function Editor({ initialBudget, onChange }: IProps) {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div style={{ width: '50%' }}>
                     <BudgetStatement.Editor
+                        editorContext={{ theme }}
                         budgetStatement={initialBudgetStatement}
                         onChange={handleChange}
                     />
