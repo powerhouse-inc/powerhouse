@@ -2,11 +2,19 @@
 # yarn lockfile v1
 
 
-"@acaldas/document-model-libs@^1.0.3":
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/@acaldas/document-model-libs/-/document-model-libs-1.0.3.tgz#d91b8c0f5e7d117263ff93a031b58766eb19923a"
-  integrity sha512-vtbnlxsKyRZMmSkdQL2JoNzcx9vJ7L1+8QgWo+40ZsYqVo3laIwT7Okw+vkPyz/ZXesPpXHFZ6vXIdt1ilzKng==
+"@acaldas/document-model-graphql@^1.0.10":
+  version "1.0.10"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.10.tgz#cd5e74b810819bf24b40dbd319c072bbe4758787"
+  integrity sha512-49EFYNdHLgEGnMIuzvZlRKiGql6QZmzxKo0QqsW3ihfCVQjzDJKs6vwJNcfcVf4ViQJLo2J06CBZB72jgAKThQ==
   dependencies:
+    zod "^3.21.4"
+
+"@acaldas/document-model-libs@^1.0.15":
+  version "1.0.15"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-libs/-/document-model-libs-1.0.15.tgz#7e462545fdaa3aa7bb84f6288c782f6c7bbcf567"
+  integrity sha512-asXSrfmDdwEJkdKpUQg8PmW5UQW7TrVwxOjZN9qNB1LycY88bFAaLFfjC26F5cC+8V05JDIUbnE/rR8oihvgSw==
+  dependencies:
+    "@acaldas/document-model-graphql" "^1.0.10"
     immer "^9.0.19"
     json-stringify-deterministic "^1.0.8"
     jszip "^3.10.1"
@@ -3824,16 +3832,18 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model-editors@../document-model-editors:
-  version "0.0.3"
+document-model-editors@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-0.0.4.tgz#43a4a1b7e51b917933b86c2c3be5bc2d2ea16e32"
+  integrity sha512-5cjJ4rbFiJqCNUsFMUnbB0oU5rWC4BW/xMs5HggqwHSE1Y1Y38B++eze5XPFbW6qGKdxmjk/gqul/grhR3kpyQ==
   dependencies:
-    "@acaldas/document-model-libs" "^1.0.3"
+    "@acaldas/document-model-libs" "^1.0.15"
     "@graphql-codegen/core" "^3.1.0"
     "@graphql-codegen/typescript" "^3.0.4"
     "@monaco-editor/react" "^4.5.0"
     "@theguild/editor" "^1.2.6"
     graphql "^16.6.0"
-    graphql-codegen-typescript-validation-schema "^0.8.0"
+    graphql-codegen-typescript-validation-schema "^0.9.0"
     monaco-editor "^0.38.0"
     monaco-graphql "^1.2.1"
     zod "^3.21.4"
@@ -4748,10 +4758,10 @@ grapheme-splitter@^1.0.4:
   resolved "https://registry.yarnpkg.com/grapheme-splitter/-/grapheme-splitter-1.0.4.tgz#9cf3a665c6247479896834af35cf1dbb4400767e"
   integrity sha512-bzh50DW9kTPM00T8y4o8vQg89Di9oLJVLW/KaOGIXJWP/iqCN6WKYkbNOF04vFLJhwcpYUh9ydh/+5vpOqV4YQ==
 
-graphql-codegen-typescript-validation-schema@^0.8.0:
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/graphql-codegen-typescript-validation-schema/-/graphql-codegen-typescript-validation-schema-0.8.0.tgz#ff64203d65a6a21c8fd28ab22804fd9a97b3414f"
-  integrity sha512-GmqRL00owVLihjt6EjNnKJZjG0UTBcNhvWmG/jCKi44bheIEQGdi+3vYiCwY7y6D+XuT3pgVzHc1Gpp3r/APMQ==
+graphql-codegen-typescript-validation-schema@^0.9.0:
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/graphql-codegen-typescript-validation-schema/-/graphql-codegen-typescript-validation-schema-0.9.0.tgz#bf196376ed3a0de06637e79920f829b74e57ffe5"
+  integrity sha512-HkhTQPYWlpe040mTLXBgflOzh1TxGBCcBxLJvwUvJABODMSWClD1lNCXZpj2HJLtMBb/DAqb4BnW9PLqzQcskQ==
   dependencies:
     "@graphql-codegen/plugin-helpers" "^4.2.0"
     "@graphql-codegen/schema-ast" "3.0.1"

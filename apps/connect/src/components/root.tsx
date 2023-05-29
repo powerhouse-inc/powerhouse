@@ -2,10 +2,9 @@ import { utils } from '@acaldas/document-model-libs/browser/budget-statement';
 import { useAtomValue } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { useDrop } from 'react-aria';
-import { FileDropItem } from 'react-aria-components';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { themeAtom } from '../store';
-import { TabBudgetStatement, useTabs } from '../store/tabs';
+import { Tab, TabBudgetStatement, useTabs } from '../store/tabs';
 import Sidebar from './sidebar';
 
 export default () => {
@@ -21,16 +20,29 @@ export default () => {
     const { dropProps, isDropTarget } = useDrop({
         ref,
         async onDrop(e) {
-            const files = e.items.filter(
-                item => item.kind === 'file'
-            ) as FileDropItem[];
-            files.forEach(async item => {
-                const file = await item.getFile();
-                const budget = await utils.loadBudgetStatementFromInput(file);
-                const tab = new TabBudgetStatement(budget);
-                addTab(tab);
-                navigate('/');
-            });
+            for (const item of e.items) {
+                if (item.kind === 'file') {
+                    const file = await item.getFile();
+                    const budget = await utils.loadBudgetStatementFromInput(
+                        file
+                    );
+                    const tab = new TabBudgetStatement(budget);
+                    addTab(tab);
+                    navigate('/');
+                } else if (item.kind === 'text') {
+                    try {
+                        const tabStr = await item.getText('tab');
+                        const tab = Tab.fromString(tabStr);
+                        addTab(tab);
+                        navigate('/');
+                    } catch (error) {
+                        console.log(
+                            `Dropped text not recognized as tab: ${error}`
+                        );
+                        console.log(item);
+                    }
+                }
+            }
         },
     });
 
