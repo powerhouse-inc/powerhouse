@@ -3832,10 +3832,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model-editors@^0.0.4:
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-0.0.4.tgz#43a4a1b7e51b917933b86c2c3be5bc2d2ea16e32"
-  integrity sha512-5cjJ4rbFiJqCNUsFMUnbB0oU5rWC4BW/xMs5HggqwHSE1Y1Y38B++eze5XPFbW6qGKdxmjk/gqul/grhR3kpyQ==
+document-model-editors@^0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-0.0.5.tgz#8428ebcaf98fa7376fe627fdd792cc39ee963b86"
+  integrity sha512-wkgrqTZvktGJqq9P8kc0VnS6KYUml7zfBUbT2/Ul8DfTSN3r64tRD1RJfuUG8gtYMmM5nhwfEHkyOHQhNleF4w==
   dependencies:
     "@acaldas/document-model-libs" "^1.0.15"
     "@graphql-codegen/core" "^3.1.0"

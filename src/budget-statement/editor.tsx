@@ -1,12 +1,11 @@
 import {
     BudgetStatementDocument,
     actions,
-    reducer,
     utils,
 } from '@acaldas/document-model-libs/browser/budget-statement';
 import { BudgetStatement } from 'document-model-editors';
 import { useAtomValue } from 'jotai';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { themeAtom } from '../store';
 
 interface IProps {
@@ -16,43 +15,30 @@ interface IProps {
 
 export default function Editor({ initialBudget, onChange }: IProps) {
     const theme = useAtomValue(themeAtom);
-    const [initialBudgetStatement, setInitialBudgetStatement] =
-        useState<BudgetStatementDocument>(
+
+    const [budgetStatement, dispatch, reset] =
+        BudgetStatement.useBudgetStatementReducer(
             initialBudget ?? utils.createBudgetStatement()
         );
-    const [budgetStatement, setBudgetStatement] =
-        useState<BudgetStatementDocument>();
 
     useEffect(() => {
-        setBudgetStatement(initialBudgetStatement);
-    }, [initialBudgetStatement]);
+        reset(initialBudget ?? utils.createBudgetStatement());
+    }, [initialBudget]);
 
-    const handleChange = useCallback(
-        (budgetStatement: BudgetStatementDocument) => {
-            setBudgetStatement({ ...budgetStatement });
-            onChange?.(budgetStatement);
-        },
-        []
-    );
+    useEffect(() => {
+        onChange?.(budgetStatement);
+    }, [budgetStatement]);
 
     const operations = budgetStatement
         ? [...budgetStatement.operations].reverse()
         : [];
 
     function undo() {
-        if (!budgetStatement) {
-            return;
-        }
-        const newBudget = reducer(budgetStatement, actions.undo());
-        setInitialBudgetStatement(newBudget);
+        dispatch(actions.undo());
     }
 
     function redo() {
-        if (!budgetStatement) {
-            return;
-        }
-        const newBudget = reducer(budgetStatement, actions.redo());
-        setInitialBudgetStatement(newBudget);
+        dispatch(actions.redo());
     }
 
     const canUndo = budgetStatement && budgetStatement.revision > 0;
@@ -66,8 +52,8 @@ export default function Editor({ initialBudget, onChange }: IProps) {
                 <div style={{ width: '50%' }}>
                     <BudgetStatement.Editor
                         editorContext={{ theme }}
-                        budgetStatement={initialBudgetStatement}
-                        onChange={handleChange}
+                        budgetStatement={budgetStatement}
+                        dispatch={dispatch}
                     />
                 </div>
                 <div style={{ width: '40%' }}>
