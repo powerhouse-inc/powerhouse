@@ -2,7 +2,14 @@ import {
     BudgetStatementDocument,
     utils,
 } from '@acaldas/document-model-libs/budget-statement';
-import { BrowserWindow, Menu, app, dialog, ipcMain } from 'electron';
+import {
+    BrowserWindow,
+    Menu,
+    app,
+    autoUpdater,
+    dialog,
+    ipcMain,
+} from 'electron';
 import path from 'path';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -272,15 +279,19 @@ app.on('open-file', (_event, path) => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', () =>
+app.on('ready', () => {
     createWindow({
         onReady() {
             if (initFile) {
                 handleFile(initFile);
             }
         },
-    })
-);
+    });
+
+    setInterval(() => {
+        autoUpdater.checkForUpdates();
+    }, 60000);
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
@@ -301,3 +312,27 @@ app.on('activate', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+const server = 'https://varies-me-summit-bald.trycloudflare.com';
+const url = `${server}/update/${process.platform}/${app.getVersion()}`;
+console.log(url);
+
+autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
+    const dialogOpts = {
+        type: 'info',
+        buttons: ['Restart', 'Later'],
+        title: 'Application Update',
+        message: process.platform === 'win32' ? releaseNotes : releaseName,
+        detail: 'A new version has been downloaded. Restart the application to apply the updates.',
+    };
+
+    dialog.showMessageBox(dialogOpts).then(returnValue => {
+        if (returnValue.response === 0) autoUpdater.quitAndInstall();
+    });
+});
+
+autoUpdater.on('error', message => {
+    console.error('There was a problem updating the application');
+    console.error(message);
+});
+
+autoUpdater.setFeedURL({ url });

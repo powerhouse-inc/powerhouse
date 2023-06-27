@@ -2,15 +2,16 @@ module.exports = {
     packagerConfig: {
         extendInfo: 'assets/Info.plist',
         ignore: [
-            "^/[.]vs$",
-            "^/public$",
-            "^/src$",
-            "^/[.]browserslistrc$",
-            "^/[.]editorconfig$",
-            "^/tsconfig[.]json$",
-            "[.](cmd|user|DotSettings|njsproj|sln)$",
+            '^/[.]vs$',
+            '^/public$',
+            '^/src$',
+            '^/[.]browserslistrc$',
+            '^/[.]editorconfig$',
+            '^/tsconfig[.]json$',
+            '[.](cmd|user|DotSettings|njsproj|sln)$',
         ],
         asar: true,
+        osxSign: {},
     },
     rebuildConfig: {},
     makers: [
@@ -54,6 +55,16 @@ module.exports = {
                         config: 'vite.renderer.config.mjs',
                     },
                 ],
+            },
+        },
+    ],
+    publishers: [
+        {
+            name: '@electron-forge/publisher-electron-release-server',
+            config: {
+                baseUrl: 'http://localhost:8080',
+                username: 'username',
+                password: 'password',
             },
         },
     ],
