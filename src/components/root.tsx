@@ -1,9 +1,9 @@
 import { utils } from '@acaldas/document-model-libs/browser/budget-statement';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { useDrop } from 'react-aria';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { themeAtom } from '../store';
+import { themeAtom, userAtom } from '../store';
 import { Tab, TabBudgetStatement, useTabs } from '../store/tabs';
 import Sidebar from './sidebar';
 
@@ -12,10 +12,19 @@ export default () => {
     const theme = useAtomValue(themeAtom);
     const { addTab } = useTabs();
     const navigate = useNavigate();
+    const setUser = useSetAtom(userAtom);
 
     useEffect(() => {
         window.electronAPI?.ready();
-    });
+
+        window.electronAPI?.user().then(user => {
+            setUser(user);
+        });
+
+        window.electronAPI?.handleLogin((_, user) => {
+            setUser(user);
+        });
+    }, []);
 
     const { dropProps, isDropTarget } = useDrop({
         ref,
