@@ -46,6 +46,18 @@ const electronApi = {
             ipcRenderer.off('removeTab', listener);
         };
     },
+    handleLogin: (
+        listener: (event: IpcRendererEvent, address: string) => void
+    ) => {
+        ipcRenderer.on('login', listener);
+        return () => {
+            ipcRenderer.off('login', listener);
+        };
+    },
+    user: async () => (await ipcRenderer.invoke('user')) as string | undefined,
+    openURL: (url: string) => {
+        ipcRenderer.invoke('openURL', url);
+    },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

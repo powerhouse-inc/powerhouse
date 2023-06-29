@@ -8,7 +8,7 @@ import { ReactComponent as IconSettings } from '@/assets/icons/settings.svg';
 import { ReactComponent as IconTemplate } from '@/assets/icons/template.svg';
 import { useAtom, useAtomValue } from 'jotai';
 import { NavLink, To, useNavigate } from 'react-router-dom';
-import { sidebarCollapsedAtom, themeAtom } from '../store';
+import { sidebarCollapsedAtom, themeAtom, userAtom } from '../store';
 import ThemeSelector from './theme-selector';
 
 interface IProps {
@@ -18,7 +18,6 @@ interface IProps {
 
 function SidebarHeader({ collapsed, toggleCollapse }: IProps) {
     const navigate = useNavigate();
-
     const theme = useAtomValue(themeAtom);
     return (
         <div
@@ -88,6 +87,7 @@ export default function () {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
 
     const theme = useAtomValue(themeAtom);
+    const user = useAtomValue(userAtom);
 
     function toggleCollapse() {
         setCollapsed(value => !value);
@@ -101,6 +101,10 @@ export default function () {
         />
     );
 
+    const login = () => {
+        window.electronAPI?.openURL('http://localhost:3000/');
+    };
+
     return (
         <div
             className={`flex h-full flex-shrink-0 flex-col
@@ -113,6 +117,13 @@ export default function () {
                     collapsed={collapsed}
                     toggleCollapse={toggleCollapse}
                 />
+                {user ? (
+                    <p className="w-full overflow-hidden text-ellipsis">
+                        {user}
+                    </p>
+                ) : (
+                    <button onClick={login}>Login</button>
+                )}
                 <SidebarLink
                     to="/new"
                     title="New Document"
