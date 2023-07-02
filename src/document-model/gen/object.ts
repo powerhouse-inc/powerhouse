@@ -7,6 +7,8 @@ import DocumentModelOperationExamples from './operation-examples/object';
 import DocumentModelOperations from './operations/object';
 import DocumentModelStateDocument from './state/object';
 import { DocumentModelAction } from './actions';
+import { reducer } from './reducer';
+import { Document } from '../../document/types';
 
 export * from './header/object';
 export * from './modules/object';
@@ -14,6 +16,8 @@ export * from './operation-errors/object';
 export * from './operation-examples/object';
 export * from './operations/object';
 export * from './state/object';
+
+type ExtendedDocumentModelState = Document<DocumentModelState, DocumentModelAction>;
 
 interface DocumentModel 
     extends DocumentModelHeader,
@@ -26,7 +30,9 @@ interface DocumentModel
 class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction> {
     static fileExtension = 'phdm';
 
-    // TODO: inject resolvers and finish convenience methods
+    constructor(initialExtendedState?: ExtendedDocumentModelState) {
+        super(reducer, initialExtendedState);
+    }
 
     public saveToFile(path: string, name?: string) {
         return super.saveToFile(path, DocumentModel.fileExtension, name);
@@ -37,9 +43,9 @@ class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction
     }
 
     static async fromFile(path: string) {
-        //const budgetStatement = new this();
-        //await budgetStatement.loadFromFile(path);
-        //return budgetStatement;
+        const document = new this();
+        await document.loadFromFile(path);
+        return document;
     }
 }
 
@@ -52,4 +58,4 @@ applyMixins(DocumentModel, [
     DocumentModelStateDocument,
 ]);
 
-export { DocumentModel };
+export { DocumentModel, ExtendedDocumentModelState };

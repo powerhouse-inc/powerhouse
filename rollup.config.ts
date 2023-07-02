@@ -30,9 +30,10 @@ function emitModulePackageFile(): Plugin {
 }
 
 const input = {
-    index: 'src/index.ts',
+    'index': 'src/index.ts',
+    'document-model': 'src/document-model/index.ts',
     'budget-statement': 'src/budget-statement/index.ts',
-    document: 'src/document/index.ts',
+    'document': 'src/document/index.ts',
 };
 
 const bundledDependencies = [
@@ -41,6 +42,7 @@ const bundledDependencies = [
     '@acaldas/document-model-graphql',
     '@acaldas/document-model-graphql/document',
     '@acaldas/document-model-graphql/budget-statement',
+    '@acaldas/document-model-graphql/document-model',
 ];
 
 const outputs: RollupOptions[] = [
