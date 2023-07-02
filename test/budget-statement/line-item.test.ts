@@ -37,6 +37,7 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
+                        color: 'teal'
                     },
                     headcountExpense: true,
                 },
@@ -53,6 +54,7 @@ describe('Budget Statement line item reducer', () => {
                     ref: 'makerdao/project',
                     id: 'core-unit/SES/2023/005',
                     title: 'Core Unit Operational Support',
+                    color: 'teal'
                 },
                 budgetCap: null,
                 payment: null,
@@ -89,6 +91,7 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
+                        color: 'teal'
                     },
                     headcountExpense: true,
                 },
@@ -123,6 +126,7 @@ describe('Budget Statement line item reducer', () => {
                 ref: 'makerdao/project',
                 id: 'core-unit/SES/2023/005',
                 title: 'Core Unit Operational Support',
+                color: 'teal'
             },
             headcountExpense: false,
             budgetCap: 1000,
@@ -147,6 +151,7 @@ describe('Budget Statement line item reducer', () => {
                 ref: 'makerdao/project',
                 id: 'core-unit/SES/2023/005',
                 title: 'Core Unit Operational Support',
+                color: 'teal'
             },
             headcountExpense: true,
             budgetCap: null,
@@ -181,6 +186,7 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
+                        color: 'teal'
                     },
                     headcountExpense: true,
                 },
@@ -223,6 +229,7 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
+                        color: 'teal'
                     },
                     headcountExpense: true,
                 },
@@ -242,6 +249,7 @@ describe('Budget Statement line item reducer', () => {
                             ref: 'makerdao/project',
                             id: 'core-unit/SES/2023/005',
                             title: 'Core Unit Operational Support',
+                            color: 'teal'
                         },
                         headcountExpense: true,
                     },
@@ -269,6 +277,7 @@ describe('Budget Statement line item reducer', () => {
                                     ref: '0',
                                     id: '0',
                                     title: '0',
+                                    color: 'teal'
                                 },
                             }),
                             createLineItem({
@@ -281,6 +290,7 @@ describe('Budget Statement line item reducer', () => {
                                     ref: '1',
                                     id: '1',
                                     title: '1',
+                                    color: 'teal'
                                 },
                             }),
                             createLineItem({
@@ -293,6 +303,7 @@ describe('Budget Statement line item reducer', () => {
                                     ref: '2',
                                     id: '2',
                                     title: '2',
+                                    color: 'teal'
                                 },
                             }),
                         ],
