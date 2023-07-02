@@ -40,6 +40,14 @@ export function createAction<A extends Action>(
 }
 
 /**
+ * Helper generic type to convert an Input type to Action type.
+ */
+export type ActionType<T extends string, I> = { 
+    type: T,
+    input: I
+};
+
+/**
  * Helper function to create a document model reducer.
  *
  * @remarks
