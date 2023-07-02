@@ -32,6 +32,9 @@
             ],
             "browser/budget-statement": [
                 "dist/browser/types/budget-statement"
+            ],
+            "browser/document-model": [
+                "dist/browser/types/document-model"
             ]
         }
     },
@@ -84,7 +87,7 @@
         "typescript": "^4.9.5"
     },
     "dependencies": {
-        "@acaldas/document-model-graphql": "^1.0.10",
+        "@acaldas/document-model-graphql": "file:../document-model-graphql",
         "immer": "^9.0.19",
         "json-stringify-deterministic": "^1.0.8",
         "jszip": "^3.10.1",
