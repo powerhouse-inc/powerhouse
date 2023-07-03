@@ -5,7 +5,7 @@ import {
     SetModuleNameInput,
     SetModuleDescriptionInput,
     DeleteModuleInput,
-    ReorderModulesInput
+    ReorderModulesInput,
 } from '@acaldas/document-model-graphql/document-model';
 
 export type AddModuleAction = ActionType<'ADD_MODULE', AddModuleInput>;
@@ -19,4 +19,5 @@ export type DocumentModelModuleAction =
     | SetModuleNameAction
     | SetModuleDescriptionAction
     | DeleteModuleAction
-    | ReorderModulesAction;
+    | ReorderModulesAction
+;

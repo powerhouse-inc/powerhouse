@@ -16,4 +16,5 @@ export type DocumentModelOperationExampleAction =
     | AddOperationExampleAction
     | UpdateOperationExampleAction
     | DeleteOperationExampleAction
-    | ReorderOperationExamplesAction;
+    | ReorderOperationExamplesAction
+;

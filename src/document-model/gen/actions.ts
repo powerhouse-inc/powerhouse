@@ -1,15 +1,15 @@
 import { DocumentModelHeaderAction } from './header/actions';
-import { DocumentModelModuleAction } from './modules/actions';
-import { DocumentModelOperationErrorAction } from './operation-errors/actions';
-import { DocumentModelOperationExampleAction } from './operation-examples/actions';
-import { DocumentModelOperationAction } from './operations/actions';
+import { DocumentModelModuleAction } from './module/actions';
+import { DocumentModelOperationErrorAction } from './operation-error/actions';
+import { DocumentModelOperationExampleAction } from './operation-example/actions';
+import { DocumentModelOperationAction } from './operation/actions';
 import { DocumentModelStateAction } from './state/actions';
 
 export * from './header/actions';
-export * from './modules/actions';
-export * from './operation-errors/actions';
-export * from './operation-examples/actions';
-export * from './operations/actions';
+export * from './module/actions';
+export * from './operation-error/actions';
+export * from './operation-example/actions';
+export * from './operation/actions';
 export * from './state/actions';
 
 export type DocumentModelAction =
@@ -18,4 +18,5 @@ export type DocumentModelAction =
     | DocumentModelOperationErrorAction
     | DocumentModelOperationExampleAction
     | DocumentModelOperationAction
-    | DocumentModelStateAction;
+    | DocumentModelStateAction
+;

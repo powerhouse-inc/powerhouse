@@ -22,4 +22,5 @@ export type DocumentModelHeaderAction =
     | SetModelExtensionAction
     | SetModelDescriptionAction
     | SetAuthorNameAction
-    | SetAuthorWebsiteAction;
+    | SetAuthorWebsiteAction
+;

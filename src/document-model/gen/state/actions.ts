@@ -5,7 +5,7 @@ import {
     AddStateExampleInput,
     UpdateStateExampleInput,
     DeleteStateExampleInput,
-    ReorderStateExamplesInput
+    ReorderStateExamplesInput,
 } from '@acaldas/document-model-graphql/document-model';
 
 export type SetStateSchemaAction = ActionType<'SET_STATE_SCHEMA', SetStateSchemaInput>;
@@ -19,4 +19,5 @@ export type DocumentModelStateAction =
     | AddStateExampleAction
     | UpdateStateExampleAction
     | DeleteStateExampleAction
-    | ReorderStateExamplesAction;
+    | ReorderStateExamplesAction
+;

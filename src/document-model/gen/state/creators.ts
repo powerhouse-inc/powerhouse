@@ -1,3 +1,13 @@
+import { createAction } from '../../../document/utils'; 
+
+import {
+    SetStateSchemaInput,
+    AddStateExampleInput,
+    UpdateStateExampleInput,
+    DeleteStateExampleInput,
+    ReorderStateExamplesInput,
+} from '@acaldas/document-model-graphql/document-model';
+
 import {
     SetStateSchemaAction,
     AddStateExampleAction,
@@ -6,34 +16,33 @@ import {
     ReorderStateExamplesAction,
 } from './actions';
 
-import { createAction } from '../../../document/utils'; 
-
-export const setStateSchema = (schema: string) => 
+export const setStateSchema = (input: SetStateSchemaInput) =>
     createAction<SetStateSchemaAction>(
         'SET_STATE_SCHEMA',
-        { schema }
+        {...input}
     );
 
-export const addStateExample = (example: string, insertBefore?: string) => 
+export const addStateExample = (input: AddStateExampleInput) =>
     createAction<AddStateExampleAction>(
         'ADD_STATE_EXAMPLE',
-        { example, insertBefore }
+        {...input}
     );
 
-export const updateStateExample = (id: string, newExample: string) => 
+export const updateStateExample = (input: UpdateStateExampleInput) =>
     createAction<UpdateStateExampleAction>(
         'UPDATE_STATE_EXAMPLE',
-        { id, newExample }
+        {...input}
     );
 
-export const deleteStateExample = (id: string) => 
+export const deleteStateExample = (input: DeleteStateExampleInput) =>
     createAction<DeleteStateExampleAction>(
         'DELETE_STATE_EXAMPLE',
-        { id }
+        {...input}
     );
 
-export const reorderStateExamples = (order: string[]) => 
+export const reorderStateExamples = (input: ReorderStateExamplesInput) =>
     createAction<ReorderStateExamplesAction>(
         'REORDER_STATE_EXAMPLES',
-        { order }
+        {...input}
     );
+

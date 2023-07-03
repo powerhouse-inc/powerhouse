@@ -1,37 +1,40 @@
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 import { BaseDocument, applyMixins } from '../../document/object';
-import DocumentModelHeader from './header/object';
-import DocumentModelModules from './modules/object';
-import DocumentModelOperationErrors from './operation-errors/object';
-import DocumentModelOperationExamples from './operation-examples/object';
-import DocumentModelOperations from './operations/object';
-import DocumentModelStateDocument from './state/object';
+import { Document } from '../../document/types';
+import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 import { DocumentModelAction } from './actions';
 import { reducer } from './reducer';
-import { Document } from '../../document/types';
 
-export * from './header/object';
-export * from './modules/object';
-export * from './operation-errors/object';
-export * from './operation-examples/object';
-export * from './operations/object';
-export * from './state/object';
+import DocumentModel_Header from './header/object'
+import DocumentModel_Module from './module/object'
+import DocumentModel_OperationError from './operation-error/object'
+import DocumentModel_OperationExample from './operation-example/object'
+import DocumentModel_Operation from './operation/object'
+import DocumentModel_State from './state/object'
+;
+
+export * from './header/object'
+export * from './module/object'
+export * from './operation-error/object'
+export * from './operation-example/object'
+export * from './operation/object'
+export * from './state/object'
+;
 
 type ExtendedDocumentModelState = Document<DocumentModelState, DocumentModelAction>;
 
-interface DocumentModel 
-    extends DocumentModelHeader,
-        DocumentModelModules,
-        DocumentModelOperationErrors,
-        DocumentModelOperationExamples,
-        DocumentModelOperations,
-        DocumentModelStateDocument {}
+interface DocumentModel extends 
+    DocumentModel_Header,
+    DocumentModel_Module,
+    DocumentModel_OperationError,
+    DocumentModel_OperationExample,
+    DocumentModel_Operation,
+    DocumentModel_State {}
 
 class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction> {
     static fileExtension = 'phdm';
 
-    constructor(initialExtendedState?: ExtendedDocumentModelState) {
-        super(reducer, initialExtendedState);
+    constructor(initialState?: ExtendedDocumentModelState) {
+        super(reducer, initialState);
     }
 
     public saveToFile(path: string, name?: string) {
@@ -50,12 +53,12 @@ class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction
 }
 
 applyMixins(DocumentModel, [
-    DocumentModelHeader,
-    DocumentModelModules,
-    DocumentModelOperationErrors,
-    DocumentModelOperationExamples,
-    DocumentModelOperations,
-    DocumentModelStateDocument,
+    DocumentModel_Header,
+    DocumentModel_Module,
+    DocumentModel_OperationError,
+    DocumentModel_OperationExample,
+    DocumentModel_Operation,
+    DocumentModel_State
 ]);
 
 export { DocumentModel, ExtendedDocumentModelState };

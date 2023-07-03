@@ -25,4 +25,5 @@ export type DocumentModelOperationErrorAction =
     | SetOperationErrorDescriptionAction
     | SetOperationErrorTemplateAction
     | DeleteOperationErrorAction
-    | ReorderOperationErrorsAction;
+    | ReorderOperationErrorsAction
+;

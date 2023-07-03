@@ -1,41 +1,51 @@
 import { BaseDocument } from '../../../document/object';
 
 import {
+    SetModelNameInput,
+    SetModelIdInput,
+    SetModelExtensionInput,
+    SetModelDescriptionInput,
+    SetAuthorNameInput,
+    SetAuthorWebsiteInput,
+} from '@acaldas/document-model-graphql/document-model';
+
+import {
     setModelName,
     setModelId,
     setModelExtension,
     setModelDescription,
     setAuthorName,
-    setAuthorWebsite
+    setAuthorWebsite,
 } from './creators';
 
 import { DocumentModelAction } from '../actions';
 import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
-export default class DocumentModelHeader extends BaseDocument<
+export default class DocumentModel_Header extends BaseDocument<
     DocumentModelState, DocumentModelAction
 > {
-    public setModelName(name: string) {
-        return this.dispatch(setModelName(name));
+    public setModelName(input: SetModelNameInput) {
+        return this.dispatch(setModelName(input));
     }
-
-    public setModelId(id: string) {
-        return this.dispatch(setModelId(id));
+    
+    public setModelId(input: SetModelIdInput) {
+        return this.dispatch(setModelId(input));
     }
-
-    public setModelExtension(extension: string) {
-        return this.dispatch(setModelExtension(extension));
+    
+    public setModelExtension(input: SetModelExtensionInput) {
+        return this.dispatch(setModelExtension(input));
     }
-
-    public setModelDescription(description: string) {
-        return this.dispatch(setModelDescription(description));
+    
+    public setModelDescription(input: SetModelDescriptionInput) {
+        return this.dispatch(setModelDescription(input));
     }
-
-    public setAuthorName(authorName: string) {
-        return this.dispatch(setAuthorName(authorName));
+    
+    public setAuthorName(input: SetAuthorNameInput) {
+        return this.dispatch(setAuthorName(input));
     }
-
-    public setAuthorWebsite(authorWebsite: string) {
-        return this.dispatch(setAuthorWebsite(authorWebsite));
+    
+    public setAuthorWebsite(input: SetAuthorWebsiteInput) {
+        return this.dispatch(setAuthorWebsite(input));
     }
+    
 }

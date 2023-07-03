@@ -1,6 +1,14 @@
 import { BaseDocument } from '../../../document/object';
 
 import {
+    SetStateSchemaInput,
+    AddStateExampleInput,
+    UpdateStateExampleInput,
+    DeleteStateExampleInput,
+    ReorderStateExamplesInput,
+} from '@acaldas/document-model-graphql/document-model';
+
+import {
     setStateSchema,
     addStateExample,
     updateStateExample,
@@ -11,26 +19,27 @@ import {
 import { DocumentModelAction } from '../actions';
 import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
-export default class DocumentModelStateDocument extends BaseDocument<
+export default class DocumentModel_State extends BaseDocument<
     DocumentModelState, DocumentModelAction
 > {
-    public setStateSchema(schema: string) {
-        return this.dispatch(setStateSchema(schema));
+    public setStateSchema(input: SetStateSchemaInput) {
+        return this.dispatch(setStateSchema(input));
     }
-
-    public addStateExample(example: string, insertBefore?: string) {
-        return this.dispatch(addStateExample(example, insertBefore));
+    
+    public addStateExample(input: AddStateExampleInput) {
+        return this.dispatch(addStateExample(input));
     }
-
-    public updateStateExample(id: string, newExample: string) {
-        return this.dispatch(updateStateExample(id, newExample));
+    
+    public updateStateExample(input: UpdateStateExampleInput) {
+        return this.dispatch(updateStateExample(input));
     }
-
-    public deleteStateExample(id: string) {
-        return this.dispatch(deleteStateExample(id));
+    
+    public deleteStateExample(input: DeleteStateExampleInput) {
+        return this.dispatch(deleteStateExample(input));
     }
-
-    public reorderStateExamples(order: string[]) {
-        return this.dispatch(reorderStateExamples(order));
+    
+    public reorderStateExamples(input: ReorderStateExamplesInput) {
+        return this.dispatch(reorderStateExamples(input));
     }
+    
 }

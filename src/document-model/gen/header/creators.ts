@@ -1,3 +1,14 @@
+import { createAction } from '../../../document/utils'; 
+
+import {
+    SetModelNameInput,
+    SetModelIdInput,
+    SetModelExtensionInput,
+    SetModelDescriptionInput,
+    SetAuthorNameInput,
+    SetAuthorWebsiteInput,
+} from '@acaldas/document-model-graphql/document-model';
+
 import {
     SetModelNameAction,
     SetModelIdAction,
@@ -7,40 +18,39 @@ import {
     SetAuthorWebsiteAction,
 } from './actions';
 
-import { createAction } from '../../../document/utils'; 
-
-export const setModelName = (name: string) => 
+export const setModelName = (input: SetModelNameInput) =>
     createAction<SetModelNameAction>(
         'SET_MODEL_NAME',
-        { name }
+        {...input}
     );
 
-export const setModelId = (id: string) => 
+export const setModelId = (input: SetModelIdInput) =>
     createAction<SetModelIdAction>(
         'SET_MODEL_ID',
-        { id }
+        {...input}
     );
 
-export const setModelExtension = (extension: string) => 
+export const setModelExtension = (input: SetModelExtensionInput) =>
     createAction<SetModelExtensionAction>(
         'SET_MODEL_EXTENSION',
-        { extension }
+        {...input}
     );
 
-export const setModelDescription = (description: string) => 
+export const setModelDescription = (input: SetModelDescriptionInput) =>
     createAction<SetModelDescriptionAction>(
         'SET_MODEL_DESCRIPTION',
-        { description }
+        {...input}
     );
 
-export const setAuthorName = (authorName: string) => 
+export const setAuthorName = (input: SetAuthorNameInput) =>
     createAction<SetAuthorNameAction>(
         'SET_AUTHOR_NAME',
-        { authorName }
+        {...input}
     );
 
-export const setAuthorWebsite = (authorWebsite: string) => 
+export const setAuthorWebsite = (input: SetAuthorWebsiteInput) =>
     createAction<SetAuthorWebsiteAction>(
         'SET_AUTHOR_WEBSITE',
-        { authorWebsite }
+        {...input}
     );
+

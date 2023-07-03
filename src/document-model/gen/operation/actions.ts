@@ -31,4 +31,5 @@ export type DocumentModelOperationAction =
     | SetOperationReducerAction
     | MoveOperationAction
     | DeleteOperationAction
-    | ReorderModuleOperationsAction;
+    | ReorderModuleOperationsAction
+;

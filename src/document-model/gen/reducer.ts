@@ -1,13 +1,14 @@
-import { DocumentModelState } from "@acaldas/document-model-graphql/document-model";
-import { DocumentModelAction } from "./actions";
 import { isBaseAction } from "../../document/actions/types";
 import { createReducer } from "../../document/utils";
 import { Document, ImmutableReducer } from "../../document/types";
 import { WritableDraft } from "immer/dist/internal";
 
+import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
+import { DocumentModelAction } from './actions';
+
 type ImmutableDocumentModelState = WritableDraft<Document<DocumentModelState, DocumentModelAction>>;
 
-const documentModelReducer: ImmutableReducer<DocumentModelState, DocumentModelAction>  = 
+const stateReducer: ImmutableReducer<DocumentModelState, DocumentModelAction> =
     (state: ImmutableDocumentModelState, action: DocumentModelAction) => {
         if (isBaseAction(action)) {
             return state;
@@ -50,9 +51,9 @@ const documentModelReducer: ImmutableReducer<DocumentModelState, DocumentModelAc
             case "UPDATE_STATE_EXAMPLE":
             case "DELETE_STATE_EXAMPLE":
             case "REORDER_STATE_EXAMPLES":
-            default: 
+            default:
                 return state;
         }
     }
 
-export const reducer = createReducer<DocumentModelState, DocumentModelAction>(documentModelReducer);
+export const reducer = createReducer<DocumentModelState, DocumentModelAction>(stateReducer);
