@@ -1,31 +1,94 @@
-/**
-* This is a scaffold file meant for customization: 
-* - modify it by implementing the reducer functions
-* - delete the file and run the code generator again to have it reset
-*/
-
+import { OperationError } from '@acaldas/document-model-graphql/document-model';
+import { hashKey } from '../../../document/utils';
 import { DocumentModelOperationErrorOperations } from '../../gen/operation-error/operations';
+
+const errorSorter = (order: string[]) => {
+    const mapping: {[key:string]: number} = {};
+    order.forEach((key, index) => mapping[key] = index);
+    return (a: OperationError, b: OperationError) => (mapping[a.id] || 999999) - (mapping[b.id] || 999999);
+}
 
 export const reducer: DocumentModelOperationErrorOperations = {
     addOperationErrorOperation(state, action) {
-        throw new Error('Reducer "addOperationErrorOperation" not yet implemented');
+        for(let i=0; i<state.data.modules.length; i++) {
+            for(let j=0; j<state.data.modules[i].operations.length; j++) {
+                if (state.data.modules[i].operations[j].id == action.input.operationId) {
+                    state.data.modules[i].operations[j].errors.push({
+                        id: hashKey(),
+                        name: action.input.errorName || "",
+                        code: action.input.errorCode || "",
+                        description: action.input.errorDescription || "",
+                        template: action.input.errorTemplate || ""
+                    })
+                }
+            }
+        }
     },
+
     setOperationErrorCodeOperation(state, action) {
-        throw new Error('Reducer "setOperationErrorCodeOperation" not yet implemented');
+        for(let i=0; i<state.data.modules.length; i++) {
+            for(let j=0; j<state.data.modules[i].operations.length; j++) {
+                for (let k=0; k<state.data.modules[i].operations[j].errors.length; k++) {
+                    if (state.data.modules[i].operations[j].errors[k].id == action.input.id) {
+                        state.data.modules[i].operations[j].errors[k].code = action.input.errorCode || "";
+                    }
+                }
+            }
+        }
     },
+
     setOperationErrorNameOperation(state, action) {
-        throw new Error('Reducer "setOperationErrorNameOperation" not yet implemented');
+        for(let i=0; i<state.data.modules.length; i++) {
+            for(let j=0; j<state.data.modules[i].operations.length; j++) {
+                for (let k=0; k<state.data.modules[i].operations[j].errors.length; k++) {
+                    if (state.data.modules[i].operations[j].errors[k].id == action.input.id) {
+                        state.data.modules[i].operations[j].errors[k].name = action.input.errorName || "";
+                    }
+                }
+            }
+        }
     },
+
     setOperationErrorDescriptionOperation(state, action) {
-        throw new Error('Reducer "setOperationErrorDescriptionOperation" not yet implemented');
+        for(let i=0; i<state.data.modules.length; i++) {
+            for(let j=0; j<state.data.modules[i].operations.length; j++) {
+                for (let k=0; k<state.data.modules[i].operations[j].errors.length; k++) {
+                    if (state.data.modules[i].operations[j].errors[k].id == action.input.id) {
+                        state.data.modules[i].operations[j].errors[k].description = action.input.errorDescription || "";
+                    }
+                }
+            }
+        }
     },
+
     setOperationErrorTemplateOperation(state, action) {
-        throw new Error('Reducer "setOperationErrorTemplateOperation" not yet implemented');
+        for(let i=0; i<state.data.modules.length; i++) {
+            for(let j=0; j<state.data.modules[i].operations.length; j++) {
+                for (let k=0; k<state.data.modules[i].operations[j].errors.length; k++) {
+                    if (state.data.modules[i].operations[j].errors[k].id == action.input.id) {
+                        state.data.modules[i].operations[j].errors[k].template = action.input.errorTemplate || "";
+                    }
+                }
+            }
+        }
     },
+
     deleteOperationErrorOperation(state, action) {
-        throw new Error('Reducer "deleteOperationErrorOperation" not yet implemented');
+        for(let i=0; i<state.data.modules.length; i++) {
+            for(let j=0; j<state.data.modules[i].operations.length; j++) {
+                state.data.modules[i].operations[j].errors = 
+                    state.data.modules[i].operations[j].errors.filter(e => e.id != action.input.id);
+            }
+        }
     },
+
     reorderOperationErrorsOperation(state, action) {
-        throw new Error('Reducer "reorderOperationErrorsOperation" not yet implemented');
+        for (let i=0; i<state.data.modules.length; i++) {
+            for (let j=0; j<state.data.modules[i].operations.length; j++) {
+                if (state.data.modules[i].operations[j].id == action.input.operationId) {
+                    state.data.modules[i].operations[j].errors.sort(errorSorter(action.input.order));
+                }
+            }
+        }
     },
 }

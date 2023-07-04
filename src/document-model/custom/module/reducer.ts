@@ -1,25 +1,44 @@
-/**
-* This is a scaffold file meant for customization: 
-* - modify it by implementing the reducer functions
-* - delete the file and run the code generator again to have it reset
-*/
-
 import { DocumentModelModuleOperations } from '../../gen/module/operations';
+import { hashKey } from '../../../document/utils';
+import { Module } from '@acaldas/document-model-graphql/document-model';
+
+const moduleSorter = (order: string[]) => {
+    const mapping: {[key:string]: number} = {};
+    order.forEach((key, index) => mapping[key] = index);
+    return (a: Module, b: Module) => (mapping[a.id] || 999999) - (mapping[b.id] || 999999);
+}
 
 export const reducer: DocumentModelModuleOperations = {
     addModuleOperation(state, action) {
-        throw new Error('Reducer "addModuleOperation" not yet implemented');
+        state.data.modules.push({
+            id: hashKey(),
+            name: action.input.name,
+            description: action.input.description || "",
+            operations: []
+        });
     },
+
     setModuleNameOperation(state, action) {
-        throw new Error('Reducer "setModuleNameOperation" not yet implemented');
+        for (let i=0; i<state.data.modules.length; i++) {
+            if (state.data.modules[i].id === action.input.id) {
+                state.data.modules[i].name = action.input.name || "";
+            }
+        }
     },
+
     setModuleDescriptionOperation(state, action) {
-        throw new Error('Reducer "setModuleDescriptionOperation" not yet implemented');
+        for (let i=0; i<state.data.modules.length; i++) {
+            if (state.data.modules[i].id === action.input.id) {
+                state.data.modules[i].description = action.input.description || "";
+            }
+        }
     },
+
     deleteModuleOperation(state, action) {
-        throw new Error('Reducer "deleteModuleOperation" not yet implemented');
+        state.data.modules = state.data.modules.filter(m => m.id != action.input.id);
     },
+
     reorderModulesOperation(state, action) {
-        throw new Error('Reducer "reorderModulesOperation" not yet implemented');
+        state.data.modules.sort(moduleSorter(action.input.order));
     },
 }
