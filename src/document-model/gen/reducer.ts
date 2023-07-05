@@ -6,12 +6,12 @@ import { WritableDraft } from "immer/dist/internal";
 import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 import { DocumentModelAction } from './actions';
 
-import { reducer as HeaderReducer } from '../custom/header/reducer';
-import { reducer as ModuleReducer } from '../custom/module/reducer';
-import { reducer as OperationErrorReducer } from '../custom/operation-error/reducer';
-import { reducer as OperationExampleReducer } from '../custom/operation-example/reducer';
-import { reducer as OperationReducer } from '../custom/operation/reducer';
-import { reducer as StateReducer } from '../custom/state/reducer';
+import { reducer as HeaderReducer } from '../custom/reducers/header';
+import { reducer as ModuleReducer } from '../custom/reducers/module';
+import { reducer as OperationErrorReducer } from '../custom/reducers/operation-error';
+import { reducer as OperationExampleReducer } from '../custom/reducers/operation-example';
+import { reducer as OperationReducer } from '../custom/reducers/operation';
+import { reducer as StateReducer } from '../custom/reducers/state';
 
 
 type ImmutableDocumentModelState = WritableDraft<Document<DocumentModelState, DocumentModelAction>>;

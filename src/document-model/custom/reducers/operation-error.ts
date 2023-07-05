@@ -5,7 +5,7 @@ import { DocumentModelOperationErrorOperations } from '../../gen/operation-error
 const errorSorter = (order: string[]) => {
     const mapping: {[key:string]: number} = {};
     order.forEach((key, index) => mapping[key] = index);
-    return (a: OperationError, b: OperationError) => (mapping[a.id] || 999999) - (mapping[b.id] || 999999);
+    return (a: OperationError, b: OperationError) => (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 }
 
 export const reducer: DocumentModelOperationErrorOperations = {

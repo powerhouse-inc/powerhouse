@@ -5,7 +5,7 @@ import { Module } from '@acaldas/document-model-graphql/document-model';
 const moduleSorter = (order: string[]) => {
     const mapping: {[key:string]: number} = {};
     order.forEach((key, index) => mapping[key] = index);
-    return (a: Module, b: Module) => (mapping[a.id] || 999999) - (mapping[b.id] || 999999);
+    return (a: Module, b: Module) => (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 }
 
 export const reducer: DocumentModelModuleOperations = {

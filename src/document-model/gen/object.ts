@@ -2,6 +2,7 @@ import { BaseDocument, applyMixins } from '../../document/object';
 import { Document } from '../../document/types';
 import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 import { DocumentModelAction } from './actions';
+import { createEmptyExtendedDocumentModelState } from '../custom/utils';
 import { reducer } from './reducer';
 
 import DocumentModel_Header from './header/object'
@@ -33,8 +34,10 @@ interface DocumentModel extends
 class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction> {
     static fileExtension = 'phdm';
 
+    public get state() { return this._state.data; }
+
     constructor(initialState?: ExtendedDocumentModelState) {
-        super(reducer, initialState);
+        super(reducer, initialState || createEmptyExtendedDocumentModelState());
     }
 
     public saveToFile(path: string, name?: string) {
