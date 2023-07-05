@@ -56,7 +56,7 @@ class BudgetStatementTest extends BudgetStatement {
     }
 
     get stateTest() {
-        return this.state;
+        return this._state;
     }
 }
 
