@@ -6,6 +6,7 @@ import { BaseDocument, applyMixins } from '../../document/object';
 import { Document } from '../../document/types';
 import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
+import { createEmptyExtendedDocumentModelState } from '../custom/utils';
 import { reducer } from './reducer';
 
 <% modules.forEach(module => { _%>
@@ -24,8 +25,10 @@ interface <%= h.changeCase.pascal(documentType) %> extends
 class <%= h.changeCase.pascal(documentType) %> extends BaseDocument<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> {
     static fileExtension = '<%= extension %>';
 
+    public get state() { return this._state.data; }
+
     constructor(initialState?: Extended<%= h.changeCase.pascal(documentType) %>State) {
-        super(reducer, initialState);
+        super(reducer, initialState || createEmptyExtendedDocumentModelState());
     }
 
     public saveToFile(path: string, name?: string) {

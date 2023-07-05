@@ -11,7 +11,7 @@ import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 
 <% modules.forEach(m => { _%>
-import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../custom/<%= h.changeCase.param(m.name) %>/reducer';
+import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../custom/reducers/<%= h.changeCase.param(m.name) %>';
 <%_ }); %>
 
 type Immutable<%= h.changeCase.pascal(documentType) %>State = WritableDraft<Document<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action>>;
