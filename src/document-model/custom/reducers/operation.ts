@@ -5,7 +5,7 @@ import { DocumentModelOperationOperations } from '../../gen/operation/operations
 const operationSorter = (order: string[]) => {
     const mapping: {[key:string]: number} = {};
     order.forEach((key, index) => mapping[key] = index);
-    return (a: Operation, b: Operation) => (mapping[a.id] || 999999) - (mapping[b.id] || 999999);
+    return (a: Operation, b: Operation) => (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 }
 
 export const reducer: DocumentModelOperationOperations = {
