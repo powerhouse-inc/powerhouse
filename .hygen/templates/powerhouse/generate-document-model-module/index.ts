@@ -1,5 +1,6 @@
-module.exports = {
+export default {
     params: ({ args }) => {
+        const documentModel = JSON.parse(args.documentModel);
         const filteredModules = documentModel.modules.filter(
             m => m.name === args.module
         );

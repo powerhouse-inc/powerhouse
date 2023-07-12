@@ -1,8 +1,8 @@
-module.exports = {
-    params: () => {
+export default {
+    params: ({ args }) => {
+        const documentModel = JSON.parse(args.documentModel);
         return {
             documentType: documentModel.name,
-            typeId: documentModel.id,
             extension: documentModel.extension,
             modules: documentModel.modules,
         };

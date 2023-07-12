@@ -10,7 +10,7 @@ import {
     ReorderModuleOperationsAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../object';
+import { ExtendedDocumentModelState } from '../types';
 
 export interface DocumentModelOperationOperations {
     addOperationOperation: (state: ExtendedDocumentModelState, action: AddOperationAction) => void,

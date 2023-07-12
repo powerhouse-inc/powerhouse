@@ -26,13 +26,20 @@ const run = async (args: string[]) => {
 
 const runAll = async () => {
     // Generate the singular files for the document model logic
-    await run(['powerhouse', 'generate-document-model']);
+    await run([
+        'powerhouse',
+        'generate-document-model',
+        '--document-model',
+        JSON.stringify(documentModel),
+    ]);
 
     // Generate the module-specific files for the document model logic
     for (let i = 0; i < modules.length; i++) {
         await run([
             'powerhouse',
             'generate-document-model-module',
+            '--document-model',
+            JSON.stringify(documentModel),
             '--module',
             modules[i],
         ]);

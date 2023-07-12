@@ -2,24 +2,22 @@ import { BaseDocument, applyMixins } from '../../document/object';
 import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 import { DocumentModelAction } from './actions';
 import { createEmptyExtendedDocumentModelState } from '../custom/utils';
-import type { ExtendedDocumentModelState } from "./types";
 import { reducer } from './reducer';
+import { ExtendedDocumentModelState } from './types';
 
-import DocumentModel_Header from './header/object'
-import DocumentModel_Module from './module/object'
-import DocumentModel_OperationError from './operation-error/object'
-import DocumentModel_OperationExample from './operation-example/object'
-import DocumentModel_Operation from './operation/object'
-import DocumentModel_State from './state/object'
-;
+import DocumentModel_Header from './header/object';
+import DocumentModel_Module from './module/object';
+import DocumentModel_OperationError from './operation-error/object';
+import DocumentModel_OperationExample from './operation-example/object';
+import DocumentModel_Operation from './operation/object';
+import DocumentModel_State from './state/object';
 
-export * from './header/object'
-export * from './module/object'
-export * from './operation-error/object'
-export * from './operation-example/object'
-export * from './operation/object'
-export * from './state/object'
-;
+export * from './header/object';
+export * from './module/object';
+export * from './operation-error/object';
+export * from './operation-example/object';
+export * from './operation/object';
+export * from './state/object';
 
 interface DocumentModel extends 
     DocumentModel_Header,
@@ -62,4 +60,4 @@ applyMixins(DocumentModel, [
     DocumentModel_State
 ]);
 
-export { DocumentModel, ExtendedDocumentModelState };
+export { DocumentModel };

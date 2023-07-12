@@ -8,7 +8,7 @@ import {
     ReorderOperationErrorsAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../object';
+import { ExtendedDocumentModelState } from '../types';
 
 export interface DocumentModelOperationErrorOperations {
     addOperationErrorOperation: (state: ExtendedDocumentModelState, action: AddOperationErrorAction) => void,

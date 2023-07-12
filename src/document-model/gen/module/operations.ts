@@ -6,7 +6,7 @@ import {
     ReorderModulesAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../object';
+import { ExtendedDocumentModelState } from '../types';
 
 export interface DocumentModelModuleOperations {
     addModuleOperation: (state: ExtendedDocumentModelState, action: AddModuleAction) => void,

@@ -6,7 +6,7 @@ import {
     ReorderStateExamplesAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../object';
+import { ExtendedDocumentModelState } from '../types';
 
 export interface DocumentModelStateOperations {
     setStateSchemaOperation: (state: ExtendedDocumentModelState, action: SetStateSchemaAction) => void,

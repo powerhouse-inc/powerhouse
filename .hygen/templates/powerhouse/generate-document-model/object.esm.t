@@ -6,16 +6,16 @@ import { BaseDocument, applyMixins } from '../../document/object';
 import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 import { createEmptyExtended<%= h.changeCase.pascal(documentType) %>State } from '../custom/utils';
-import type { Extended<%= h.changeCase.pascal(documentType) %>State } from "./types";
 import { reducer } from './reducer';
+import { ExtendedDocumentModelState } from './types';
 
 <% modules.forEach(module => { _%>
-import <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module.name) %> from './<%= module.name %>/object'
-<% }); _%>;
+import <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module.name) %> from './<%= module.name %>/object';
+<% }); _%>
 
 <% modules.forEach(module => { _%>
-export * from './<%= module.name %>/object'
-<% }); _%>;
+export * from './<%= module.name %>/object';
+<% }); _%>
 
 interface <%= h.changeCase.pascal(documentType) %> extends 
 <%= modules.map(m => '    ' + h.changeCase.pascal(documentType) + '_' + h.changeCase.pascal(m.name)).join(',\n') %> {}
@@ -48,4 +48,4 @@ applyMixins(<%= h.changeCase.pascal(documentType) %>, [
 <%= modules.map(m => '    ' + h.changeCase.pascal(documentType) + '_' + h.changeCase.pascal(m.name)).join(',\n') %>
 ]);
 
-export { <%= h.changeCase.pascal(documentType) %>, Extended<%= h.changeCase.pascal(documentType) %>State };
+export { <%= h.changeCase.pascal(documentType) %> };

@@ -8,7 +8,7 @@ import {
 <% }); _%>
 } from './actions';
 
-import { Extended<%= h.changeCase.pascal(documentType) %>State } from '../object';
+import { Extended<%= h.changeCase.pascal(documentType) %>State } from '../types';
 
 export interface <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations {
 <% actions.forEach(action => { _%>
