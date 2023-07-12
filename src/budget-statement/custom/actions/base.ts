@@ -10,7 +10,7 @@ export const setOwnerOperation = (
     state: BudgetStatementDocument,
     action: SetOwnerAction
 ) => {
-    state.data.owner = {
+    state.state.owner = {
         id: action.input.id ?? null,
         ref: action.input.ref ?? null,
         title: action.input.title ?? null,
@@ -21,22 +21,22 @@ export const setMonthOperation = (
     state: BudgetStatementDocument,
     action: SetMonthAction
 ) => {
-    state.data.month = action.input;
+    state.state.month = action.input;
 };
 
 export const setQuoteCurrencyOperation = (
     state: BudgetStatementDocument,
     action: SetQuoteCurrencyAction
 ) => {
-    state.data.quoteCurrency = action.input;
+    state.state.quoteCurrency = action.input;
 };
 
 export const setFtesOperation = (
     state: BudgetStatementDocument,
     action: SetFtesAction
 ) => {
-    state.data.ftes = action.input;
-    state.data.ftes?.forecast.sort((f1, f2) =>
+    state.state.ftes = action.input;
+    state.state.ftes?.forecast.sort((f1, f2) =>
         f1.month.localeCompare(f2.month)
     );
 };

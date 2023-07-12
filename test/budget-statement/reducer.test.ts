@@ -13,7 +13,7 @@ describe('Budget Statement reducer', () => {
         const state = createBudgetStatement();
         expect(state.revision).toBe(0);
         expect(state.documentType).toBe('powerhouse/budget-statement');
-        expect(state.data).toBeDefined();
+        expect(state.state).toBeDefined();
     });
 
     it('should update name', async () => {
@@ -36,7 +36,7 @@ describe('Budget Statement reducer', () => {
     it('should init budget statement with provided data', async () => {
         const state = createBudgetStatement({
             name: 'March',
-            data: {
+            state: {
                 owner: {
                     ref: 'makerdao/core-unit',
                     id: 'SES-001',
@@ -44,7 +44,7 @@ describe('Budget Statement reducer', () => {
                 },
             },
         });
-        expect(state.data.owner).toStrictEqual({
+        expect(state.state.owner).toStrictEqual({
             ref: 'makerdao/core-unit',
             id: 'SES-001',
             title: 'Sustainable Ecosystem Scaling',
@@ -69,12 +69,12 @@ describe('Budget Statement reducer', () => {
                 title: 'Sustainable Ecosystem Scaling',
             })
         );
-        expect(newState.data.owner).toStrictEqual({
+        expect(newState.state.owner).toStrictEqual({
             ref: 'makerdao/core-unit',
             id: 'SES-001',
             title: 'Sustainable Ecosystem Scaling',
         });
-        expect(state.data.owner).toStrictEqual({
+        expect(state.state.owner).toStrictEqual({
             ref: null,
             id: null,
             title: null,
@@ -84,14 +84,14 @@ describe('Budget Statement reducer', () => {
     it('should set month', async () => {
         const state = createBudgetStatement();
         const newState = reducer(state, setMonth('Feb'));
-        expect(newState.data.month).toBe('Feb');
-        expect(state.data.month).toBe(null);
+        expect(newState.state.month).toBe('Feb');
+        expect(state.state.month).toBe(null);
     });
 
     it('should set quoteCurrency', async () => {
         const state = createBudgetStatement();
         const newState = reducer(state, setQuoteCurrency('DAI'));
-        expect(newState.data.quoteCurrency).toBe('DAI');
-        expect(state.data.quoteCurrency).toBe(null);
+        expect(newState.state.quoteCurrency).toBe('DAI');
+        expect(state.state.quoteCurrency).toBe(null);
     });
 });

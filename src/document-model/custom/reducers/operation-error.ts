@@ -3,34 +3,46 @@ import { hashKey } from '../../../document/utils';
 import { DocumentModelOperationErrorOperations } from '../../gen/operation-error/operations';
 
 const errorSorter = (order: string[]) => {
-    const mapping: {[key:string]: number} = {};
-    order.forEach((key, index) => mapping[key] = index);
-    return (a: OperationError, b: OperationError) => (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
-}
+    const mapping: { [key: string]: number } = {};
+    order.forEach((key, index) => (mapping[key] = index));
+    return (a: OperationError, b: OperationError) =>
+        (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
+};
 
 export const reducer: DocumentModelOperationErrorOperations = {
     addOperationErrorOperation(state, action) {
-        for(let i=0; i<state.data.modules.length; i++) {
-            for(let j=0; j<state.data.modules[i].operations.length; j++) {
-                if (state.data.modules[i].operations[j].id == action.input.operationId) {
-                    state.data.modules[i].operations[j].errors.push({
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                if (
+                    state.state.modules[i].operations[j].id ==
+                    action.input.operationId
+                ) {
+                    state.state.modules[i].operations[j].errors.push({
                         id: hashKey(),
-                        name: action.input.errorName || "",
-                        code: action.input.errorCode || "",
-                        description: action.input.errorDescription || "",
-                        template: action.input.errorTemplate || ""
-                    })
+                        name: action.input.errorName || '',
+                        code: action.input.errorCode || '',
+                        description: action.input.errorDescription || '',
+                        template: action.input.errorTemplate || '',
+                    });
                 }
             }
         }
     },
 
     setOperationErrorCodeOperation(state, action) {
-        for(let i=0; i<state.data.modules.length; i++) {
-            for(let j=0; j<state.data.modules[i].operations.length; j++) {
-                for (let k=0; k<state.data.modules[i].operations[j].errors.length; k++) {
-                    if (state.data.modules[i].operations[j].errors[k].id == action.input.id) {
-                        state.data.modules[i].operations[j].errors[k].code = action.input.errorCode || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                for (
+                    let k = 0;
+                    k < state.state.modules[i].operations[j].errors.length;
+                    k++
+                ) {
+                    if (
+                        state.state.modules[i].operations[j].errors[k].id ==
+                        action.input.id
+                    ) {
+                        state.state.modules[i].operations[j].errors[k].code =
+                            action.input.errorCode || '';
                     }
                 }
             }
@@ -38,11 +50,19 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorNameOperation(state, action) {
-        for(let i=0; i<state.data.modules.length; i++) {
-            for(let j=0; j<state.data.modules[i].operations.length; j++) {
-                for (let k=0; k<state.data.modules[i].operations[j].errors.length; k++) {
-                    if (state.data.modules[i].operations[j].errors[k].id == action.input.id) {
-                        state.data.modules[i].operations[j].errors[k].name = action.input.errorName || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                for (
+                    let k = 0;
+                    k < state.state.modules[i].operations[j].errors.length;
+                    k++
+                ) {
+                    if (
+                        state.state.modules[i].operations[j].errors[k].id ==
+                        action.input.id
+                    ) {
+                        state.state.modules[i].operations[j].errors[k].name =
+                            action.input.errorName || '';
                     }
                 }
             }
@@ -50,11 +70,20 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorDescriptionOperation(state, action) {
-        for(let i=0; i<state.data.modules.length; i++) {
-            for(let j=0; j<state.data.modules[i].operations.length; j++) {
-                for (let k=0; k<state.data.modules[i].operations[j].errors.length; k++) {
-                    if (state.data.modules[i].operations[j].errors[k].id == action.input.id) {
-                        state.data.modules[i].operations[j].errors[k].description = action.input.errorDescription || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                for (
+                    let k = 0;
+                    k < state.state.modules[i].operations[j].errors.length;
+                    k++
+                ) {
+                    if (
+                        state.state.modules[i].operations[j].errors[k].id ==
+                        action.input.id
+                    ) {
+                        state.state.modules[i].operations[j].errors[
+                            k
+                        ].description = action.input.errorDescription || '';
                     }
                 }
             }
@@ -62,11 +91,20 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorTemplateOperation(state, action) {
-        for(let i=0; i<state.data.modules.length; i++) {
-            for(let j=0; j<state.data.modules[i].operations.length; j++) {
-                for (let k=0; k<state.data.modules[i].operations[j].errors.length; k++) {
-                    if (state.data.modules[i].operations[j].errors[k].id == action.input.id) {
-                        state.data.modules[i].operations[j].errors[k].template = action.input.errorTemplate || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                for (
+                    let k = 0;
+                    k < state.state.modules[i].operations[j].errors.length;
+                    k++
+                ) {
+                    if (
+                        state.state.modules[i].operations[j].errors[k].id ==
+                        action.input.id
+                    ) {
+                        state.state.modules[i].operations[j].errors[
+                            k
+                        ].template = action.input.errorTemplate || '';
                     }
                 }
             }
@@ -74,21 +112,28 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     deleteOperationErrorOperation(state, action) {
-        for(let i=0; i<state.data.modules.length; i++) {
-            for(let j=0; j<state.data.modules[i].operations.length; j++) {
-                state.data.modules[i].operations[j].errors = 
-                    state.data.modules[i].operations[j].errors.filter(e => e.id != action.input.id);
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                state.state.modules[i].operations[j].errors =
+                    state.state.modules[i].operations[j].errors.filter(
+                        e => e.id != action.input.id
+                    );
             }
         }
     },
 
     reorderOperationErrorsOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            for (let j=0; j<state.data.modules[i].operations.length; j++) {
-                if (state.data.modules[i].operations[j].id == action.input.operationId) {
-                    state.data.modules[i].operations[j].errors.sort(errorSorter(action.input.order));
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                if (
+                    state.state.modules[i].operations[j].id ==
+                    action.input.operationId
+                ) {
+                    state.state.modules[i].operations[j].errors.sort(
+                        errorSorter(action.input.order)
+                    );
                 }
             }
         }
     },
-}
+};

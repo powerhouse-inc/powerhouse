@@ -45,7 +45,7 @@ export const createEmptyExtendedScopeFrameworkState =
             revision: 0,
 
             // Component 2: (strict) state object
-            data: initialData,
+            state: initialData,
 
             // Component 3: file registry
             fileRegistry: {},
@@ -60,7 +60,7 @@ export const createEmptyExtendedScopeFrameworkState =
                 lastModified: dateTimeNow,
                 documentType: 'makerdao/scope-framework',
                 revision: 0,
-                data: initialData,
+                state: initialData,
                 fileRegistry: {},
                 operations: [],
             },

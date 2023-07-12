@@ -14,7 +14,7 @@ describe('Budget Statement Class', () => {
 
     it('should set initial state', async () => {
         const budgetStatement = new BudgetStatement({
-            data: { month: '03/2023' },
+            state: { month: '03/2023' },
         });
 
         expect(budgetStatement.month).toBe('03/2023');
@@ -145,7 +145,7 @@ describe('Budget Statement Class', () => {
     it('should save to file', async () => {
         const budgetStatement = new BudgetStatement({
             name: 'march',
-            data: { month: '03/2023' },
+            state: { month: '03/2023' },
         });
         budgetStatement.addAccount([
             {
@@ -183,6 +183,6 @@ describe('Budget Statement Class', () => {
             BudgetStatementAction
         >(file.buffer, reducer);
         expect(budgetStatement.name).toBe('march');
-        expect(budgetStatement.data.month).toBe('03/2023');
+        expect(budgetStatement.state.month).toBe('03/2023');
     });
 });

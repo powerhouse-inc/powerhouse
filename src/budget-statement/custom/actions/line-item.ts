@@ -29,7 +29,7 @@ export const addLineItemOperation = (
     state: BudgetStatementDocument,
     action: AddLineItemAction
 ) => {
-    const account = state.data.accounts.find(
+    const account = state.state.accounts.find(
         a => a.address === action.input.account
     );
     if (!account) {
@@ -61,7 +61,7 @@ export const updateLineItemOperation = (
     state: BudgetStatementDocument,
     action: UpdateLineItemAction
 ) => {
-    const account = state.data.accounts.find(
+    const account = state.state.accounts.find(
         a => a.address === action.input.account
     );
     if (!account) {
@@ -93,7 +93,7 @@ export const deleteLineItemOperation = (
     state: BudgetStatementDocument,
     action: DeleteLineItemAction
 ) => {
-    const account = state.data.accounts.find(
+    const account = state.state.accounts.find(
         a => a.address === action.input.account
     );
     if (!account) {
@@ -111,7 +111,7 @@ export const sortLineItemsOperation = (
     state: BudgetStatementDocument,
     action: SortLineItemsAction
 ) => {
-    const account = state.data.accounts.find(
+    const account = state.state.accounts.find(
         a => a.address === action.input.account
     );
     if (!account) {

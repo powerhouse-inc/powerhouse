@@ -111,15 +111,15 @@ export type FileRegistry = Record<Attachment, DocumentFile>;
  * @typeParam A - The type of the actions supported by the Document.
  */
 export type Document<
-    Data = unknown,
+    State = unknown,
     A extends Action = Action
 > = DocumentHeader & {
     /** The document model specific state. */
-    data: Data;
+    state: State;
     /** The operations history of the document. */
     operations: Operation<A | BaseAction>[];
     /** The initial state of the document, enabling replaying operations. */
-    initialState: Omit<Document<Data, A>, 'initialState'>;
+    initialState: Omit<Document<State, A>, 'initialState'>;
     /** The index of document attachments. */
     fileRegistry: FileRegistry;
 };

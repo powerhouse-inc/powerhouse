@@ -9,7 +9,7 @@ import {
 describe('Budget Statement Vesting reducer', () => {
     it('should start as empty array', async () => {
         const state = createBudgetStatement();
-        expect(state.data.vesting).toStrictEqual([]);
+        expect(state.state.vesting).toStrictEqual([]);
     });
 
     it('should add comment', async () => {
@@ -28,7 +28,7 @@ describe('Budget Statement Vesting reducer', () => {
                 },
             ])
         );
-        expect(newState.data.vesting).toStrictEqual([
+        expect(newState.state.vesting).toStrictEqual([
             {
                 amount: '100',
                 amountOld: '40',
@@ -39,7 +39,7 @@ describe('Budget Statement Vesting reducer', () => {
                 vested: false,
             },
         ]);
-        expect(state.data.vesting).toStrictEqual([]);
+        expect(state.state.vesting).toStrictEqual([]);
     });
 
     it('should update vesting', async () => {
@@ -59,7 +59,7 @@ describe('Budget Statement Vesting reducer', () => {
             ])
         );
         state = reducer(state, updateVesting([{ key: '123', amount: '300' }]));
-        expect(state.data.vesting[0]).toStrictEqual({
+        expect(state.state.vesting[0]).toStrictEqual({
             amount: '300',
             amountOld: '40',
             comment: 'New FTEs',
@@ -82,7 +82,7 @@ describe('Budget Statement Vesting reducer', () => {
         );
 
         state = reducer(state, deleteVesting(['123']));
-        expect(state.data.vesting.length).toBe(0);
+        expect(state.state.vesting.length).toBe(0);
     });
 
     it('should generate vesting key if undefined', async () => {
@@ -96,8 +96,8 @@ describe('Budget Statement Vesting reducer', () => {
                 },
             ])
         );
-        expect(newState.data.vesting[0].key.length).toBe(28);
-        expect(newState.data.vesting[0].amount).toBe('');
+        expect(newState.state.vesting[0].key.length).toBe(28);
+        expect(newState.state.vesting[0].amount).toBe('');
     });
 
     it('should sort vestings by date', async () => {
@@ -116,9 +116,9 @@ describe('Budget Statement Vesting reducer', () => {
                 },
             ])
         );
-        expect(newState.data.vesting[0].date).toBe('2023-03-11');
-        expect(newState.data.vesting[1].date).toBe('2023-03-13');
-        expect(newState.data.vesting[2].date).toBe('2023-03-15');
+        expect(newState.state.vesting[0].date).toBe('2023-03-11');
+        expect(newState.state.vesting[1].date).toBe('2023-03-13');
+        expect(newState.state.vesting[2].date).toBe('2023-03-15');
     });
 
     it('should throw if vesting key already exists', async () => {
@@ -166,7 +166,7 @@ describe('Budget Statement Vesting reducer', () => {
             ])
         );
 
-        expect(state.data.vesting).toStrictEqual([
+        expect(state.state.vesting).toStrictEqual([
             {
                 amount: '200',
                 amountOld: '100',

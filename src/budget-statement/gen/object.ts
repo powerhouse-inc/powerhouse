@@ -44,8 +44,8 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
      */
     constructor(
         initialState?: Partial<
-            Omit<BudgetStatementDocument, 'data'> & {
-                data: Partial<BudgetStatementDocument['data']>;
+            Omit<BudgetStatementDocument, 'state'> & {
+                state: Partial<BudgetStatementDocument['state']>;
             }
         >
     ) {

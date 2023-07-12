@@ -61,7 +61,7 @@ export const prune = (start?: number | undefined, end?: number | undefined) =>
  * @category Actions
  */
 export const loadState = (
-    state: Pick<Document, 'data' | 'name'>,
+    state: Pick<Document, 'state' | 'name'>,
     operations: number
 ) =>
     createAction<LoadStateAction>(

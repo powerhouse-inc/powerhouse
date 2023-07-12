@@ -16,12 +16,12 @@ export const addCommentOperation = (
     action.input.comments.forEach(input => {
         const key = input.key ?? hashKey();
 
-        const index = state.data.comments.findIndex(c => c.key === input.key);
+        const index = state.state.comments.findIndex(c => c.key === input.key);
         if (index > -1) {
             throw new Error(`Comment with key ${key} already exists`);
         }
 
-        state.data.comments.push({
+        state.state.comments.push({
             key,
             author: {
                 ref: null,
@@ -35,7 +35,7 @@ export const addCommentOperation = (
             status: input.status ?? 'Draft',
         });
     });
-    state.data.comments.sort(sortComment);
+    state.state.comments.sort(sortComment);
 };
 
 export const updateCommentOperation = (
@@ -43,12 +43,12 @@ export const updateCommentOperation = (
     action: UpdateCommentAction
 ) => {
     action.input.comments.forEach(input => {
-        const index = state.data.comments.findIndex(c => c.key === input.key);
+        const index = state.state.comments.findIndex(c => c.key === input.key);
         if (index === -1) {
             return;
         }
-        const comment = state.data.comments[index];
-        state.data.comments[index] = {
+        const comment = state.state.comments[index];
+        state.state.comments[index] = {
             ...comment,
             ...input,
             author: {
@@ -62,14 +62,14 @@ export const updateCommentOperation = (
             status: input.status ?? comment.status,
         };
     });
-    state.data.comments.sort(sortComment);
+    state.state.comments.sort(sortComment);
 };
 
 export const deleteCommentOperation = (
     state: BudgetStatementDocument,
     action: DeleteCommentAction
 ) => {
-    state.data.comments = state.data.comments.filter(
+    state.state.comments = state.state.comments.filter(
         comment => !action.input.comments.includes(comment.key)
     );
 };

@@ -24,10 +24,10 @@ export default class VestingObject extends BaseDocument<
     }
 
     get vesting() {
-        return this._state.data.vesting;
+        return this._state.state.vesting;
     }
 
     public getVesting(key: string) {
-        return this._state.data.vesting.find(v => v.key === key);
+        return this._state.state.vesting.find(v => v.key === key);
     }
 }

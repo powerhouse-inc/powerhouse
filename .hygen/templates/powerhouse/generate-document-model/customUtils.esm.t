@@ -18,7 +18,8 @@ const createEmpty<%= h.changeCase.pascal(documentType) %>State = (): <%= h.chang
 
 const dateTimeNow = (new Date()).toISOString();
 const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Extended<%= h.changeCase.pascal(documentType) %>State => ({
-    
+    const initialState = createEmpty<%= h.changeCase.pascal(documentType) %>State();
+
     // Component 1: document header
     name: "",
     created: dateTimeNow,
@@ -27,7 +28,7 @@ const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Ext
     revision: 0,
 
     // Component 2: (strict) state object
-    data: createEmpty<%= h.changeCase.pascal(documentType) %>State(),
+    state: initialState,
 
     // Component 3: file registry
     fileRegistry: {},
@@ -36,16 +37,7 @@ const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Ext
     operations: [],
 
     // TODO: remove initialState, lift to the document level (with type: ExtendedDocumentModelState)
-    initialState: {
-        name: "",
-        created: dateTimeNow,
-        lastModified: dateTimeNow,
-        documentType: "<%= documentType %>",
-        revision: 0,
-        data: createEmpty<%= h.changeCase.pascal(documentType) %>State(),
-        fileRegistry: {},
-        operations: []
-    }
+    initialState
 });
 
 export { 

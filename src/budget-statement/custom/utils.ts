@@ -28,15 +28,15 @@ import {
  */
 export const createBudgetStatement = (
     initialState?: Partial<
-        Omit<BudgetStatementDocument, 'data'> & {
-            data: Partial<BudgetStatementDocument['data']>;
+        Omit<BudgetStatementDocument, 'state'> & {
+            state: Partial<BudgetStatementDocument['state']>;
         }
     >
 ): BudgetStatementDocument =>
     createDocument<State, BudgetStatementAction>({
         documentType: 'powerhouse/budget-statement',
         ...initialState,
-        data: {
+        state: {
             owner: {
                 ref: null,
                 id: null,
@@ -49,7 +49,7 @@ export const createBudgetStatement = (
             accounts: [],
             auditReports: [],
             comments: [],
-            ...initialState?.data,
+            ...initialState?.state,
         },
     });
 
@@ -105,20 +105,20 @@ export const saveBudgetStatementToFile = (
 export const loadBudgetStatementFromFile = async (
     path: string
 ): Promise<BudgetStatementDocument> => {
-    const state = await loadFromFile<State, BudgetStatementAction>(
+    const document = await loadFromFile<State, BudgetStatementAction>(
         path,
         reducer
     );
 
-    const auditReports = state.data.auditReports;
+    const auditReports = document.state.auditReports;
     if (!auditReports.length) {
-        return state;
+        return document;
     }
 
     const file = readFile(path);
     const zip = new JSZip();
     await zip.loadAsync(file);
-    const fileRegistry = { ...state.fileRegistry };
+    const fileRegistry = { ...document.fileRegistry };
     await Promise.all(
         auditReports.map(async audit => {
             const path = audit.report.slice('attachment://'.length);
@@ -136,25 +136,25 @@ export const loadBudgetStatementFromFile = async (
             };
         })
     );
-    return { ...state, fileRegistry };
+    return { ...document, fileRegistry };
 };
 
 export const loadBudgetStatementFromInput = async (
     input: FileInput
 ): Promise<BudgetStatementDocument> => {
-    const state = await loadFromInput<State, BudgetStatementAction>(
+    const document = await loadFromInput<State, BudgetStatementAction>(
         input,
         reducer
     );
 
-    const auditReports = state.data.auditReports;
+    const auditReports = document.state.auditReports;
     if (!auditReports.length) {
-        return state;
+        return document;
     }
 
     const zip = new JSZip();
     await zip.loadAsync(input);
-    const fileRegistry = { ...state.fileRegistry };
+    const fileRegistry = { ...document.fileRegistry };
     await Promise.all(
         auditReports.map(async audit => {
             const path = audit.report.slice('attachment://'.length);
@@ -172,7 +172,7 @@ export const loadBudgetStatementFromInput = async (
             };
         })
     );
-    return { ...state, fileRegistry };
+    return { ...document, fileRegistry };
 };
 
 export const saveBudgetStatementToFileHandle = async (

@@ -23,7 +23,7 @@ interface <%= h.changeCase.pascal(documentType) %> extends
 class <%= h.changeCase.pascal(documentType) %> extends BaseDocument<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> {
     static fileExtension = '<%= extension %>';
 
-    public get state() { return this._state.data; }
+    public get state() { return this._state.state; }
 
     constructor(initialState?: Extended<%= h.changeCase.pascal(documentType) %>State) {
         super(reducer, initialState || createEmptyExtended<%= h.changeCase.pascal(documentType) %>State());

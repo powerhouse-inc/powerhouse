@@ -80,7 +80,7 @@ export default class LineItemObject extends BaseDocument<
      * @group Line Item
      */
     public getLineItems(account: Account['address']) {
-        return this._state.data.accounts.find(
+        return this._state.state.accounts.find(
             ({ address }) => address === account
         )?.lineItems;
     }

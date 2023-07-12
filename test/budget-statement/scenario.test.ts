@@ -24,13 +24,13 @@ const steps = files.map(file => {
 describe('Budget Statement scenario 1', () => {
     // creates budget statement using initial state
     const initialStep = steps[0].json;
-    let budgetStatement = createBudgetStatement({ data: initialStep.state });
+    let budgetStatement = createBudgetStatement({ state: initialStep.state });
     // tests each scenario step in sequence
     it.each(steps.slice(1))('should verify $file', ({ json }) => {
         expect.assertions(1);
         try {
             budgetStatement = reducer(budgetStatement, json.operation);
-            expect(budgetStatement.data).toStrictEqual(json.state);
+            expect(budgetStatement.state).toStrictEqual(json.state);
         } catch (error) {
             // eslint-disable-next-line jest/no-conditional-expect
             expect(json.error?.message).toBe((error as Error).message);
@@ -64,7 +64,7 @@ describe('Budget Statement scenario 1 with object methods', () => {
     // creates budget statement using initial state
     const initialStep = steps[0].json;
     const budgetStatement = new BudgetStatementTest({
-        data: initialStep.state,
+        state: initialStep.state,
     });
 
     // tests each scenario step in sequence
@@ -75,7 +75,7 @@ describe('Budget Statement scenario 1 with object methods', () => {
             budgetStatement.dispatchTest(
                 JSON.parse(JSON.stringify(json.operation))
             );
-            expect(budgetStatement.stateTest.data).toStrictEqual(json.state);
+            expect(budgetStatement.stateTest.state).toStrictEqual(json.state);
         } catch (error) {
             // eslint-disable-next-line jest/no-conditional-expect
             expect(json.error?.message).toBe((error as Error).message);

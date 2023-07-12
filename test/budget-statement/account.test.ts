@@ -22,14 +22,14 @@ describe('Budget Statement account reducer', () => {
                 },
             ])
         );
-        expect(newState.data.accounts).toStrictEqual([
+        expect(newState.state.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
                 lineItems: [],
             },
         ]);
-        expect(state.data.accounts).toStrictEqual([]);
+        expect(state.state.accounts).toStrictEqual([]);
     });
 
     it('should update account', async () => {
@@ -52,8 +52,8 @@ describe('Budget Statement account reducer', () => {
                 },
             ])
         );
-        expect(newState.data.accounts[0].name).toBe('Incubation');
-        expect(state.data.accounts[0].name).toBe('Grants Program');
+        expect(newState.state.accounts[0].name).toBe('Incubation');
+        expect(state.state.accounts[0].name).toBe('Grants Program');
     });
 
     it('should delete account', async () => {
@@ -71,8 +71,8 @@ describe('Budget Statement account reducer', () => {
             state,
             deleteAccount(['eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f'])
         );
-        expect(newState.data.accounts.length).toBe(0);
-        expect(state.data.accounts.length).toBe(1);
+        expect(newState.state.accounts.length).toBe(0);
+        expect(state.state.accounts.length).toBe(1);
     });
 
     it('should throw exception if adding account with same address', () => {
@@ -102,7 +102,7 @@ describe('Budget Statement account reducer', () => {
 
     it('should sort accounts', () => {
         const state = createBudgetStatement({
-            data: {
+            state: {
                 accounts: [
                     createAccount({
                         address: 'eth:0x00',
@@ -122,7 +122,7 @@ describe('Budget Statement account reducer', () => {
 
         const newState = reducer(state, sortAccounts(['eth:0x02', 'eth:0x00']));
 
-        expect(newState.data.accounts.map(a => a.address)).toStrictEqual([
+        expect(newState.state.accounts.map(a => a.address)).toStrictEqual([
             'eth:0x02',
             'eth:0x00',
             'eth:0x01',

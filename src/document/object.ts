@@ -20,7 +20,7 @@ export abstract class BaseDocument<T, A extends Action> {
      */
     constructor(
         reducer: Reducer<T, A | BaseAction>,
-        initialState?: Partial<Document<T, A>> & { data: T }
+        initialState?: Partial<Document<T, A>> & { state: T }
     ) {
         this._reducer = reducer;
         this._state = createDocument(initialState);
@@ -51,7 +51,10 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param path - The file path where the state is stored.
      */
     async loadFromFile(path: string) {
-        this._state = await loadFromFile<T, A | BaseAction>(path, this._reducer);
+        this._state = await loadFromFile<T, A | BaseAction>(
+            path,
+            this._reducer
+        );
     }
 
     /**
@@ -163,7 +166,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param operations - The operations to apply to the document.
      */
     public loadState(
-        state: Pick<Document<T, A>, 'data' | 'name'>,
+        state: Pick<Document<T, A>, 'state' | 'name'>,
         operations: number
     ) {
         this.dispatch(loadState(state, operations));

@@ -9,7 +9,7 @@ import {
 describe('Budget Statement Comment reducer', () => {
     it('should start as empty array', async () => {
         const state = createBudgetStatement();
-        expect(state.data.comments).toStrictEqual([]);
+        expect(state.state.comments).toStrictEqual([]);
     });
 
     it('should add comment', async () => {
@@ -31,7 +31,7 @@ describe('Budget Statement Comment reducer', () => {
                 },
             ])
         );
-        expect(newState.data.comments[0]).toStrictEqual({
+        expect(newState.state.comments[0]).toStrictEqual({
             key: '123',
             comment: 'Test',
             status: 'Escalated',
@@ -43,7 +43,7 @@ describe('Budget Statement Comment reducer', () => {
                 roleLabel: 'Auditor',
             },
         });
-        expect(state.data.comments).toStrictEqual([]);
+        expect(state.state.comments).toStrictEqual([]);
     });
 
     it('should update comment', async () => {
@@ -71,7 +71,7 @@ describe('Budget Statement Comment reducer', () => {
             state,
             updateComment([{ key: '123', comment: 'Test 2' }])
         );
-        expect(state.data.comments[0]).toStrictEqual({
+        expect(state.state.comments[0]).toStrictEqual({
             key: '123',
             comment: 'Test 2',
             status: 'Escalated',
@@ -106,7 +106,7 @@ describe('Budget Statement Comment reducer', () => {
         );
 
         state = reducer(state, deleteComment(['123']));
-        expect(state.data.comments.length).toBe(0);
+        expect(state.state.comments.length).toBe(0);
     });
 
     it('should generate comment key and timestamp if undefined', async () => {
@@ -127,8 +127,8 @@ describe('Budget Statement Comment reducer', () => {
                 },
             ])
         );
-        expect(newState.data.comments[0].key.length).toBe(28);
-        expect(newState.data.comments[0].timestamp).toBe(
+        expect(newState.state.comments[0].key.length).toBe(28);
+        expect(newState.state.comments[0].timestamp).toBe(
             '2023-03-16T00:00:00.000Z'
         );
     });
@@ -152,9 +152,9 @@ describe('Budget Statement Comment reducer', () => {
                 },
             ])
         );
-        expect(newState.data.comments[0].comment).toBe('03/11');
-        expect(newState.data.comments[1].comment).toBe('03/13');
-        expect(newState.data.comments[2].comment).toBe('03/15');
+        expect(newState.state.comments[0].comment).toBe('03/11');
+        expect(newState.state.comments[1].comment).toBe('03/13');
+        expect(newState.state.comments[2].comment).toBe('03/15');
     });
 
     it('should throw if comment key already exists', async () => {
@@ -211,7 +211,7 @@ describe('Budget Statement Comment reducer', () => {
             ])
         );
 
-        expect(state.data.comments).toStrictEqual([
+        expect(state.state.comments).toStrictEqual([
             {
                 key: '123',
                 comment: 'Test',

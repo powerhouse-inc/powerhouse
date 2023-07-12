@@ -79,11 +79,11 @@ describe('UNDO operation', () => {
     it('should keep document attributes', () => {
         let state = createDocument<CountState, CountAction>({
             documentType: 'powerhouse/counter',
-            data: { count: 0 },
+            state: { count: 0 },
         });
         state = countReducer(state, increment());
         state = countReducer(state, undo(1));
-        expect(state.data.count).toBe(0);
+        expect(state.state.count).toBe(0);
         expect(state.documentType).toBe('powerhouse/counter');
     });
 });

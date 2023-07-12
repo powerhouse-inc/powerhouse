@@ -3,74 +3,91 @@ import { hashKey } from '../../../document/utils';
 import { DocumentModelOperationOperations } from '../../gen/operation/operations';
 
 const operationSorter = (order: string[]) => {
-    const mapping: {[key:string]: number} = {};
-    order.forEach((key, index) => mapping[key] = index);
-    return (a: Operation, b: Operation) => (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
-}
+    const mapping: { [key: string]: number } = {};
+    order.forEach((key, index) => (mapping[key] = index));
+    return (a: Operation, b: Operation) =>
+        (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
+};
 
 export const reducer: DocumentModelOperationOperations = {
     addOperationOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            if (state.data.modules[i].id == action.input.moduleId) {
-                state.data.modules[i].operations.push({
+        for (let i = 0; i < state.state.modules.length; i++) {
+            if (state.state.modules[i].id == action.input.moduleId) {
+                state.state.modules[i].operations.push({
                     id: hashKey(),
                     name: action.input.name,
-                    description: action.input.description || "",
-                    schema: action.input.schema || "",
-                    template: action.input.template || action.input.description || "",
-                    reducer: action.input.reducer || "",
+                    description: action.input.description || '',
+                    schema: action.input.schema || '',
+                    template:
+                        action.input.template || action.input.description || '',
+                    reducer: action.input.reducer || '',
                     errors: [],
-                    examples: []
+                    examples: [],
                 });
             }
         }
     },
 
     setOperationNameOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            for (let j=0; j<state.data.modules[i].operations.length; j++) {
-                if (state.data.modules[i].operations[j].id == action.input.id) {
-                    state.data.modules[i].operations[j].name = action.input.name || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                if (
+                    state.state.modules[i].operations[j].id == action.input.id
+                ) {
+                    state.state.modules[i].operations[j].name =
+                        action.input.name || '';
                 }
             }
         }
     },
 
     setOperationSchemaOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            for (let j=0; j<state.data.modules[i].operations.length; j++) {
-                if (state.data.modules[i].operations[j].id == action.input.id) {
-                    state.data.modules[i].operations[j].schema = action.input.schema || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                if (
+                    state.state.modules[i].operations[j].id == action.input.id
+                ) {
+                    state.state.modules[i].operations[j].schema =
+                        action.input.schema || '';
                 }
             }
         }
     },
 
     setOperationDescriptionOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            for (let j=0; j<state.data.modules[i].operations.length; j++) {
-                if (state.data.modules[i].operations[j].id == action.input.id) {
-                    state.data.modules[i].operations[j].description = action.input.description || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                if (
+                    state.state.modules[i].operations[j].id == action.input.id
+                ) {
+                    state.state.modules[i].operations[j].description =
+                        action.input.description || '';
                 }
             }
         }
     },
 
     setOperationTemplateOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            for (let j=0; j<state.data.modules[i].operations.length; j++) {
-                if (state.data.modules[i].operations[j].id == action.input.id) {
-                    state.data.modules[i].operations[j].template = action.input.template || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                if (
+                    state.state.modules[i].operations[j].id == action.input.id
+                ) {
+                    state.state.modules[i].operations[j].template =
+                        action.input.template || '';
                 }
             }
         }
     },
 
     setOperationReducerOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            for (let j=0; j<state.data.modules[i].operations.length; j++) {
-                if (state.data.modules[i].operations[j].id == action.input.id) {
-                    state.data.modules[i].operations[j].reducer = action.input.reducer || "";
+        for (let i = 0; i < state.state.modules.length; i++) {
+            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
+                if (
+                    state.state.modules[i].operations[j].id == action.input.id
+                ) {
+                    state.state.modules[i].operations[j].reducer =
+                        action.input.reducer || '';
                 }
             }
         }
@@ -80,8 +97,10 @@ export const reducer: DocumentModelOperationOperations = {
         const moveOperations: Operation[] = [];
 
         // Filter and collect
-        for (let i=0; i<state.data.modules.length; i++) {
-            state.data.modules[i].operations = state.data.modules[i].operations.filter(operation => {
+        for (let i = 0; i < state.state.modules.length; i++) {
+            state.state.modules[i].operations = state.state.modules[
+                i
+            ].operations.filter(operation => {
                 if (operation.id == action.input.operationId) {
                     moveOperations.push(operation);
                     return false;
@@ -92,25 +111,28 @@ export const reducer: DocumentModelOperationOperations = {
         }
 
         // Inject in target modules
-        for (let i=0; i<state.data.modules.length; i++) {
-            if (state.data.modules[i].id == action.input.newModuleId) {
-                state.data.modules[i].operations.push(...moveOperations);
+        for (let i = 0; i < state.state.modules.length; i++) {
+            if (state.state.modules[i].id == action.input.newModuleId) {
+                state.state.modules[i].operations.push(...moveOperations);
             }
         }
     },
 
     deleteOperationOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            state.data.modules[i].operations = 
-                state.data.modules[i].operations.filter(operation => operation.id != action.input.id);
+        for (let i = 0; i < state.state.modules.length; i++) {
+            state.state.modules[i].operations = state.state.modules[
+                i
+            ].operations.filter(operation => operation.id != action.input.id);
         }
     },
 
     reorderModuleOperationsOperation(state, action) {
-        for (let i=0; i<state.data.modules.length; i++) {
-            if (state.data.modules[i].id == action.input.moduleId) {
-                state.data.modules[i].operations.sort(operationSorter(action.input.order));
+        for (let i = 0; i < state.state.modules.length; i++) {
+            if (state.state.modules[i].id == action.input.moduleId) {
+                state.state.modules[i].operations.sort(
+                    operationSorter(action.input.order)
+                );
             }
         }
     },
-}
+};

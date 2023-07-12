@@ -15,12 +15,12 @@ export const addVestingOperation = (
     action.input.vesting.forEach(input => {
         const key = input.key ?? hashKey();
 
-        const index = state.data.vesting.findIndex(v => v.key === input.key);
+        const index = state.state.vesting.findIndex(v => v.key === input.key);
         if (index > -1) {
             throw new Error(`Vesting with key ${key} already exists`);
         }
 
-        state.data.vesting.push({
+        state.state.vesting.push({
             ...input,
             key,
             date: input.date ?? '',
@@ -32,7 +32,7 @@ export const addVestingOperation = (
         });
     });
 
-    state.data.vesting.sort(sortVesting);
+    state.state.vesting.sort(sortVesting);
 };
 
 export const updateVestingOperation = (
@@ -40,12 +40,12 @@ export const updateVestingOperation = (
     action: UpdateVestingAction
 ) => {
     action.input.vesting.forEach(input => {
-        const index = state.data.vesting.findIndex(v => v.key === input.key);
+        const index = state.state.vesting.findIndex(v => v.key === input.key);
         if (index === -1) {
             return;
         }
-        const vesting = state.data.vesting[index];
-        state.data.vesting[index] = {
+        const vesting = state.state.vesting[index];
+        state.state.vesting[index] = {
             ...vesting,
             ...input,
             amount: input.amount ?? vesting.amount,
@@ -56,14 +56,14 @@ export const updateVestingOperation = (
             vested: input.vested ?? vesting.vested,
         };
     });
-    state.data.vesting.sort(sortVesting);
+    state.state.vesting.sort(sortVesting);
 };
 
 export const deleteVestingOperation = (
     state: BudgetStatementDocument,
     action: DeleteVestingAction
 ) => {
-    state.data.vesting = state.data.vesting.filter(
+    state.state.vesting = state.state.vesting.filter(
         vesting => !action.input.vesting.includes(vesting.key)
     );
 };

@@ -37,13 +37,13 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
-                        color: 'teal'
+                        color: 'teal',
                     },
                     headcountExpense: true,
                 },
             ])
         );
-        expect(newState.data.accounts[0].lineItems).toStrictEqual([
+        expect(newState.state.accounts[0].lineItems).toStrictEqual([
             {
                 category: {
                     ref: 'makerdao/budget-category',
@@ -54,7 +54,7 @@ describe('Budget Statement line item reducer', () => {
                     ref: 'makerdao/project',
                     id: 'core-unit/SES/2023/005',
                     title: 'Core Unit Operational Support',
-                    color: 'teal'
+                    color: 'teal',
                 },
                 budgetCap: null,
                 payment: null,
@@ -64,7 +64,7 @@ describe('Budget Statement line item reducer', () => {
                 forecast: [],
             },
         ]);
-        expect(state.data.accounts[0].lineItems).toStrictEqual([]);
+        expect(state.state.accounts[0].lineItems).toStrictEqual([]);
     });
 
     it('should update line item', async () => {
@@ -91,7 +91,7 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
-                        color: 'teal'
+                        color: 'teal',
                     },
                     headcountExpense: true,
                 },
@@ -116,7 +116,7 @@ describe('Budget Statement line item reducer', () => {
             ])
         );
 
-        expect(newState.data.accounts[0].lineItems[0]).toStrictEqual({
+        expect(newState.state.accounts[0].lineItems[0]).toStrictEqual({
             category: {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
@@ -126,7 +126,7 @@ describe('Budget Statement line item reducer', () => {
                 ref: 'makerdao/project',
                 id: 'core-unit/SES/2023/005',
                 title: 'Core Unit Operational Support',
-                color: 'teal'
+                color: 'teal',
             },
             headcountExpense: false,
             budgetCap: 1000,
@@ -141,7 +141,7 @@ describe('Budget Statement line item reducer', () => {
                 },
             ],
         });
-        expect(state.data.accounts[0].lineItems[0]).toStrictEqual({
+        expect(state.state.accounts[0].lineItems[0]).toStrictEqual({
             category: {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
@@ -151,7 +151,7 @@ describe('Budget Statement line item reducer', () => {
                 ref: 'makerdao/project',
                 id: 'core-unit/SES/2023/005',
                 title: 'Core Unit Operational Support',
-                color: 'teal'
+                color: 'teal',
             },
             headcountExpense: true,
             budgetCap: null,
@@ -186,7 +186,7 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
-                        color: 'teal'
+                        color: 'teal',
                     },
                     headcountExpense: true,
                 },
@@ -201,8 +201,8 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        expect(newState.data.accounts[0].lineItems.length).toBe(0);
-        expect(state.data.accounts[0].lineItems.length).toBe(1);
+        expect(newState.state.accounts[0].lineItems.length).toBe(0);
+        expect(state.state.accounts[0].lineItems.length).toBe(1);
     });
 
     it('should throw if adding duplicated line item', async () => {
@@ -229,7 +229,7 @@ describe('Budget Statement line item reducer', () => {
                         ref: 'makerdao/project',
                         id: 'core-unit/SES/2023/005',
                         title: 'Core Unit Operational Support',
-                        color: 'teal'
+                        color: 'teal',
                     },
                     headcountExpense: true,
                 },
@@ -249,7 +249,7 @@ describe('Budget Statement line item reducer', () => {
                             ref: 'makerdao/project',
                             id: 'core-unit/SES/2023/005',
                             title: 'Core Unit Operational Support',
-                            color: 'teal'
+                            color: 'teal',
                         },
                         headcountExpense: true,
                     },
@@ -260,7 +260,7 @@ describe('Budget Statement line item reducer', () => {
 
     it('should sort line items', () => {
         const state = createBudgetStatement({
-            data: {
+            state: {
                 accounts: [
                     createAccount({
                         address:
@@ -277,7 +277,7 @@ describe('Budget Statement line item reducer', () => {
                                     ref: '0',
                                     id: '0',
                                     title: '0',
-                                    color: 'teal'
+                                    color: 'teal',
                                 },
                             }),
                             createLineItem({
@@ -290,7 +290,7 @@ describe('Budget Statement line item reducer', () => {
                                     ref: '1',
                                     id: '1',
                                     title: '1',
-                                    color: 'teal'
+                                    color: 'teal',
                                 },
                             }),
                             createLineItem({
@@ -303,7 +303,7 @@ describe('Budget Statement line item reducer', () => {
                                     ref: '2',
                                     id: '2',
                                     title: '2',
-                                    color: 'teal'
+                                    color: 'teal',
                                 },
                             }),
                         ],
@@ -321,7 +321,7 @@ describe('Budget Statement line item reducer', () => {
         );
 
         expect(
-            newState.data.accounts[0].lineItems.map(l => ({
+            newState.state.accounts[0].lineItems.map(l => ({
                 group: l.group?.id,
                 category: l.category?.id,
             }))

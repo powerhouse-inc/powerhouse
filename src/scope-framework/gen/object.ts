@@ -15,7 +15,7 @@ interface ScopeFramework extends
 class ScopeFramework extends BaseDocument<ScopeFrameworkState, ScopeFrameworkAction> {
     static fileExtension = 'mdsf';
 
-    public get state() { return this._state.data; }
+    public get state() { return this._state.state; }
 
     constructor(initialState?: ExtendedScopeFrameworkState) {
         super(reducer, initialState || createEmptyExtendedScopeFrameworkState());

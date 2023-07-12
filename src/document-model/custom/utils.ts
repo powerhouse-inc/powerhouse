@@ -30,7 +30,7 @@ const createEmptyExtendedDocumentModelState = (): ExtendedDocumentModelState => 
 
     // Component 2: (strict) state object
     // TODO: rename data to state
-    data: createEmptyDocumentModelState(),
+    state: createEmptyDocumentModelState(),
 
     // Component 3: file registry
     fileRegistry: {},
@@ -45,7 +45,7 @@ const createEmptyExtendedDocumentModelState = (): ExtendedDocumentModelState => 
         lastModified: dateTimeNow,
         documentType: "powerhouse/document-model",
         revision: 0,
-        data: createEmptyDocumentModelState(),
+        state: createEmptyDocumentModelState(),
         fileRegistry: {},
         operations: []
     }

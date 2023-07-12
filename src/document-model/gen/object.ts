@@ -30,7 +30,7 @@ interface DocumentModel extends
 class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction> {
     static fileExtension = 'phdm';
 
-    public get state() { return this._state.data; }
+    public get state() { return this._state.state; }
 
     constructor(initialState?: ExtendedDocumentModelState) {
         super(reducer, initialState || createEmptyExtendedDocumentModelState());

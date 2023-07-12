@@ -8,7 +8,7 @@ import { BaseAction } from './types';
 // This produces and alternate version of the document
 // according to the provided actions.
 function replayOperations<T, A extends Action>(
-    initialState: Partial<Document<T, A>> & { data: T },
+    initialState: Partial<Document<T, A>> & { state: T },
     operations: Array<A | BaseAction>,
     reducer: ImmutableReducer<T, A>
 ): Document<T, A> {
@@ -109,34 +109,32 @@ export function pruneOperation<T, A extends Action>(
 
     // runs all operations from the initial state to
     // the end of prune to get name and data
-    const { name, data } = replayOperations(
+    const { name, state: newState } = replayOperations(
         state.initialState,
         actionsToKeepStart.concat(actionsToPrune),
         wrappedReducer
     );
 
     // replaces pruned operations with LOAD_STATE
-    const newState = replayOperations(
+    return replayOperations(
         state.initialState,
         [
             ...actionsToKeepStart,
-            loadState({ name, data }, actionsToPrune.length),
+            loadState({ name, state: newState }, actionsToPrune.length),
             ...actionsToKeepEnd,
         ],
         wrappedReducer
     );
-
-    return newState;
 }
 
 export function loadStateOperation<T, A extends Action>(
     oldState: Document<T, A>,
-    newState: { name: string; data?: Document['data'] }
+    newState: { name: string; state?: Document['state'] }
 ): Document<T, A> {
     return {
         ...oldState,
         name: newState.name,
-        data: (newState.data ?? {}) as T,
+        state: (newState.state ?? {}) as T,
     };
 }
 

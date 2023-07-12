@@ -8,7 +8,7 @@ import {
 import { BudgetStatementDocument } from '../types';
 
 function checkDuplicatedReport(state: BudgetStatementDocument, report: string) {
-    if (state.data.auditReports.find(audit => audit.report === report)) {
+    if (state.state.auditReports.find(audit => audit.report === report)) {
         throw new Error(`Audit with report ${report} already exists`);
     }
 }
@@ -25,7 +25,7 @@ export const addAuditReportOperation = (
         if (isAuditReport(audit)) {
             // throws if report already exists
             checkDuplicatedReport(state, audit.report);
-            state.data.auditReports.push(audit);
+            state.state.auditReports.push(audit);
         } else {
             const hash = hashAttachment(audit.report.data);
             const attachmentKey = `attachment://audits/${hash}` as const;
@@ -34,7 +34,7 @@ export const addAuditReportOperation = (
             checkDuplicatedReport(state, attachmentKey);
 
             state.fileRegistry[attachmentKey] = { ...audit.report };
-            state.data.auditReports.push({
+            state.state.auditReports.push({
                 timestamp: audit.timestamp ?? new Date().toISOString(),
                 status: audit.status,
                 report: attachmentKey,
@@ -50,11 +50,11 @@ export const deleteAuditReportOperation = (
     action: DeleteAuditReportAction
 ) => {
     action.input.reports.forEach(report => {
-        const index = state.data.auditReports.findIndex(
+        const index = state.state.auditReports.findIndex(
             audit => audit.report === report
         );
         if (index > -1) {
-            state.data.auditReports.splice(index, 1);
+            state.state.auditReports.splice(index, 1);
         }
     });
 };

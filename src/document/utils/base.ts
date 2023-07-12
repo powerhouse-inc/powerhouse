@@ -78,7 +78,7 @@ export function createReducer<T = unknown, A extends Action = Action>(
  * @returns The new document state.
  */
 export const createDocument = <T, A extends Action>(
-    initialState?: Partial<Document<T, A>> & { data: T }
+    initialState?: Partial<Document<T, A>> & { state: T }
 ): Document<T, A> => {
     const state = {
         name: '',
@@ -86,7 +86,7 @@ export const createDocument = <T, A extends Action>(
         revision: 0,
         created: new Date().toISOString(),
         lastModified: new Date().toISOString(),
-        data: {} as T,
+        state: {} as T,
         operations: [],
         fileRegistry: {},
         ...initialState,
@@ -100,8 +100,8 @@ export const createDocument = <T, A extends Action>(
     };
 };
 
-export const hashDocument = (state: Document) => {
-    return hash(JSONDeterministic(state.data));
+export const hashDocument = (document: Document) => {
+    return hash(JSONDeterministic(document.state));
 };
 
 export const hashKey = (date?: Date, randomLimit = 1000) => {

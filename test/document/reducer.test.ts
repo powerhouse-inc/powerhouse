@@ -10,7 +10,7 @@ describe('Base reducer', () => {
 
     it('should update revision', async () => {
         const state = createDocument();
-        const newState = emptyReducer(state, { type: 'TEST' });
+        const newState = emptyReducer(state, { type: 'TEST', input: {} });
         expect(newState.revision).toBe(1);
     });
 
@@ -21,7 +21,7 @@ describe('Base reducer', () => {
             setTimeout(r, 100);
             jest.runOnlyPendingTimers();
         });
-        const newState = emptyReducer(state, { type: 'TEST' });
+        const newState = emptyReducer(state, { type: 'TEST', input: {} });
         expect(newState.lastModified > state.lastModified).toBe(true);
         jest.useRealTimers();
     });
@@ -29,13 +29,14 @@ describe('Base reducer', () => {
     it('should update operations list', async () => {
         jest.useFakeTimers({ now: new Date('2023-01-01') });
         const state = createDocument();
-        const newState = emptyReducer(state, { type: 'TEST' });
+        const newState = emptyReducer(state, { type: 'TEST', input: {} });
 
         expect(newState.operations).toStrictEqual([
             {
                 type: 'TEST',
                 timestamp: new Date().toISOString(),
                 index: 0,
+                input: {},
                 hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
             },
         ]);
