@@ -25,24 +25,6 @@ function SidebarHeader({ collapsed, toggleCollapse }: IProps) {
             ${collapsed ? 'justify-center' : 'justify-between pr-[10px]'}
         `}
         >
-            <div className="flex items-center">
-                <IconLogo
-                    onClick={collapsed ? toggleCollapse : () => navigate('/')}
-                    className={'cursor-pointer'}
-                />
-                {collapsed || <IconConnect className="mx-2" />}
-            </div>
-            {collapsed || (
-                <button onClick={toggleCollapse}>
-                    <IconCollapse
-                        className={
-                            theme === 'dark'
-                                ? 'fill-neutral-4'
-                                : 'fill-neutral-3'
-                        }
-                    />
-                </button>
-            )}
         </div>
     );
 }
@@ -113,17 +95,7 @@ export default function () {
             `}
         >
             <div className={`flex-1 ${!collapsed && 'px-2'}`}>
-                <SidebarHeader
-                    collapsed={collapsed}
-                    toggleCollapse={toggleCollapse}
-                />
-                {user ? (
-                    <p className="w-full overflow-hidden text-ellipsis">
-                        {user}
-                    </p>
-                ) : (
-                    <button onClick={login}>Login</button>
-                )}
+                <div style={{height:'3em'}}></div>
                 <SidebarLink
                     to="/new"
                     title="New Document"

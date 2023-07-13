@@ -2,7 +2,7 @@
     "name": "document-model-electron",
     "productName": "document-model-electron",
     "version": "1.0.1",
-    "description": "Connect",
+    "description": "Powerhouse Connect",
     "main": ".vite/build/main.js",
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",

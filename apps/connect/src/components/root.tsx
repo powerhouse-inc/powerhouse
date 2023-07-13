@@ -6,6 +6,8 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { themeAtom, userAtom } from '../store';
 import { Tab, TabBudgetStatement, useTabs } from '../store/tabs';
 import Sidebar from './sidebar';
+import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
+import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 
 export default () => {
     const ref = React.useRef(null);
@@ -64,6 +66,10 @@ export default () => {
             role="presentation"
             tabIndex={0}
         >
+            <div className='titlebar'>
+                <IconLogo className='titlebar-logo'/>
+                <IconConnect className='titlebar-title' />
+            </div>
             <Suspense>
                 <Sidebar />
                 <div className="relative mx-8 flex-1 overflow-auto">
