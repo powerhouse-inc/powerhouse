@@ -33,6 +33,7 @@ module.exports = {
                     1: '#1F2022',
                     2: '#191A1D',
                 },
+                toolbar: 'rgb(10,10,10)',
             },
             light: {
                 text: '#141718',
@@ -42,6 +43,7 @@ module.exports = {
                     1: '#fefefe',
                     2: '#f3f5f7',
                 },
+                toolbar: 'rgb(241,241,241)',
             },
         }),
     ],

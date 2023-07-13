@@ -1,8 +1,5 @@
-import { ReactComponent as IconCollapse } from '@/assets/icons/collapse.svg';
-import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 import { ReactComponent as IconDraft } from '@/assets/icons/draft.svg';
 import { ReactComponent as IconFile } from '@/assets/icons/file.svg';
-import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
 import { ReactComponent as IconPlusCircle } from '@/assets/icons/plus-circle.svg';
 import { ReactComponent as IconSettings } from '@/assets/icons/settings.svg';
 import { ReactComponent as IconTemplate } from '@/assets/icons/template.svg';
@@ -24,8 +21,7 @@ function SidebarHeader({ collapsed, toggleCollapse }: IProps) {
             className={`flex items-center px-[10px] py-10
             ${collapsed ? 'justify-center' : 'justify-between pr-[10px]'}
         `}
-        >
-        </div>
+        ></div>
     );
 }
 
@@ -90,12 +86,11 @@ export default function () {
     return (
         <div
             className={`flex h-full flex-shrink-0 flex-col
-                rounded-tr-xl bg-light px-4 pb-4
+                bg-light px-4 pb-4
                 ${collapsed ? 'w-[92px]' : 'w-[320px]'}
             `}
         >
-            <div className={`flex-1 ${!collapsed && 'px-2'}`}>
-                <div style={{height:'3em'}}></div>
+            <div className={`flex-1 pt-10 ${!collapsed && 'px-2'}`}>
                 <SidebarLink
                     to="/new"
                     title="New Document"

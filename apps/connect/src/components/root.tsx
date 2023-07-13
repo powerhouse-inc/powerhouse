@@ -1,3 +1,5 @@
+import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
+import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
 import { utils } from '@acaldas/document-model-libs/browser/budget-statement';
 import { useAtomValue, useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
@@ -6,8 +8,6 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { themeAtom, userAtom } from '../store';
 import { Tab, TabBudgetStatement, useTabs } from '../store/tabs';
 import Sidebar from './sidebar';
-import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
-import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 
 export default () => {
     const ref = React.useRef(null);
@@ -56,33 +56,41 @@ export default () => {
             }
         },
     });
+    const isMac = window.navigator.appVersion.indexOf('Mac') != -1;
 
     return (
-        <div
-            className={`theme-${theme} h-screen overflow-auto ${
-                isDropTarget ? 'bg-light' : 'bg-bg'
-            } flex items-stretch text-text`}
-            {...dropProps}
-            role="presentation"
-            tabIndex={0}
-        >
-            <div className='titlebar'>
-                <IconLogo className='titlebar-logo'/>
-                <IconConnect className='titlebar-title' />
+        <div className={`theme-${theme} h-screen text-text`}>
+            <div
+                className={`h-[30px] w-full
+                ${isMac && 'justify-center'}
+                z-90 flex items-center bg-toolbar`}
+                style={{ '-webkit-app-region': 'drag' }}
+            >
+                <IconLogo className="ml-1 mr-[2px] p-[6px]" />
+                <IconConnect className="h-3 w-fit" />
             </div>
-            <Suspense>
-                <Sidebar />
-                <div className="relative mx-8 flex-1 overflow-auto">
-                    <Outlet />
-                </div>
-                <div
-                    ref={ref}
-                    className={`pointer-events-none fixed inset-0 bg-current
+            <div
+                className={`h-[calc(100vh-30px)] overflow-auto ${
+                    isDropTarget ? 'bg-light' : 'bg-bg'
+                } flex items-stretch`}
+                {...dropProps}
+                role="presentation"
+                tabIndex={0}
+            >
+                <Suspense>
+                    <Sidebar />
+                    <div className="relative flex-1 overflow-auto">
+                        <Outlet />
+                    </div>
+                    <div
+                        ref={ref}
+                        className={`pointer-events-none fixed inset-0 bg-current
                         transition-opacity duration-150 ease-in-out
                         ${isDropTarget ? 'opacity-10' : 'opacity-0'}
                     `}
-                ></div>
-            </Suspense>
+                    ></div>
+                </Suspense>
+            </div>
         </div>
     );
 };
