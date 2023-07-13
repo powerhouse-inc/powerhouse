@@ -2,7 +2,7 @@
 
 Demo Electron app to interact with Budget Statement documents.
 
-## Usage:
+## Usage
 
 Install dependencies:
 
@@ -40,4 +40,12 @@ Build for Windows: (only works on Windows)
 $ npm make:windows
 ```
 
-_For a complete list of *Electron Forge* options and requirements, visit the [official docs](https://github.com/electron-userland/electron-forge#usage)._
+## Troubleshooting
+
+- For a complete list of *Electron Forge* options and requirements, visit the [official docs](https://github.com/electron-userland/electron-forge#usage).
+
+ - If you're experiencing troubles with node-gyp on Windows 11, follow [this guide](https://devkimchi.com/2021/11/26/troubleshooting-node-gyp-package-on-windows11/).
+
+ - If you're experiencing troubles with node-gyp on older versions, check out [this guide](https://spin.atomicobject.com/2019/03/27/node-gyp-windows/).
+
+ - To use yarn via Windows PowerShell, check [this guide](https://bobbyhadz.com/blog/yarn-cannot-be-loaded-running-scripts-disabled)
