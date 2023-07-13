@@ -87,6 +87,12 @@ const createWindow = async (options?: {
 }) => {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
+        titleBarStyle: 'hidden',titleBarOverlay: {
+            color: 'rgba(16,16,16,0.75)',
+            symbolColor: '#666',
+            height: 30
+          },
+        
         width: 1300,
         height: 940,
         webPreferences: {
