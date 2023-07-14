@@ -30,7 +30,7 @@ export default () => {
     }, [tabs]);
 
     return (
-        <div className="h-full pt-2">
+        <div className="h-full">
             <Tabs
                 tabs={tabs}
                 onNewTab={tabs.addTab}

@@ -63,8 +63,8 @@ export default () => {
             <div
                 className={`h-[30px] w-full
                 ${isMac && 'justify-center'}
-                z-90 flex items-center bg-toolbar`}
-                style={{ '-webkit-app-region': 'drag' }}
+                z-90 flex items-center bg-toolbar
+                [-webkit-app-region:drag]`}
             >
                 <IconLogo className="ml-1 mr-[2px] p-[6px]" />
                 <IconConnect className="h-3 w-fit" />

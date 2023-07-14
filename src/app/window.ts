@@ -1,0 +1,3 @@
+class AppWindow {
+    // wrap window
+}
