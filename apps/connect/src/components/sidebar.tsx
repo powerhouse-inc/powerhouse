@@ -85,8 +85,8 @@ export default function () {
 
     return (
         <div
-            className={`flex h-full flex-shrink-0 flex-col
-                bg-light px-4 pb-4
+            className={`flex h-full flex-shrink-0
+                flex-col bg-light px-4 pb-4 [overflow:overlay]
                 ${collapsed ? 'w-[92px]' : 'w-[320px]'}
             `}
         >
@@ -123,8 +123,8 @@ export default function () {
                     collapsed={collapsed}
                 />
             </div>
-            {collapsed ? separator : <div className="mb-4" />}
-            <div className={`${!collapsed && 'px-2'}`}>
+            {collapsed ? separator : <div className="h-4" />}
+            <div className={`${!collapsed && 'px-2'} mt-4`}>
                 <ThemeSelector />
             </div>
         </div>

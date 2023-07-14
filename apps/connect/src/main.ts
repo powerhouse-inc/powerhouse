@@ -2,7 +2,15 @@ import {
     BudgetStatementDocument,
     utils,
 } from '@acaldas/document-model-libs/budget-statement';
-import { BrowserWindow, Menu, app, dialog, ipcMain, shell } from 'electron';
+import {
+    BrowserWindow,
+    Menu,
+    app,
+    dialog,
+    ipcMain,
+    nativeImage,
+    shell,
+} from 'electron';
 import isDev from 'electron-is-dev';
 import path from 'path';
 import { addDeeplink } from './app/deeplink';
@@ -87,14 +95,15 @@ const createWindow = async (options?: {
 }) => {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
-        titleBarStyle: 'hidden',titleBarOverlay: {
+        titleBarStyle: 'hidden',
+        titleBarOverlay: {
             color: 'rgba(16,16,16,0.75)',
             symbolColor: '#666',
-            height: 30
-          },
-        
+            height: 30,
+        },
         width: 1300,
         height: 940,
+        minHeight: 350,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
         },
@@ -279,6 +288,14 @@ app.on('open-file', (_event, path) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
+    const appIcon = nativeImage.createFromPath(
+        '/Users/acaldas/dev/makerdao/document-model-electron/assets/Vector.png'
+    );
+    console.log('APPICON', appIcon.isEmpty());
+    if (isMac) {
+        app.dock.setIcon(appIcon);
+    }
+
     createWindow({
         onReady() {
             if (initFile) {
