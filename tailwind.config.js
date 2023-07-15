@@ -40,11 +40,11 @@ module.exports = {
                     4: '#404446',
                     5: '#6F767E',
                 },
-                toolbar: 'rgb(10,10,10)',
+                titlebar: '#0A0A0A',
             },
             light: {
                 text: '#141718',
-                bg: 'rgba(255, 255, 255, 1)',
+                bg: '#FFFFFF',
                 light: '#F8FAFC',
                 accent: {
                     1: '#fefefe',
@@ -52,7 +52,7 @@ module.exports = {
                     3: '#F1F5F9',
                     5: '#94A3B8',
                 },
-                toolbar: 'rgb(241,241,241)',
+                titlebar: '#F1F1F1',
             },
         }),
     ],

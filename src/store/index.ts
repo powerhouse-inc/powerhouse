@@ -1,13 +1,11 @@
-import { atom, useAtomValue } from 'jotai';
+import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
-type Theme = 'light' | 'dark';
-
-export const themeAtom = atomWithStorage<Theme>('theme', 'dark');
+import { themeAtom } from './theme';
 
 export const sidebarCollapsedAtom = atomWithStorage('sidebar-collapsed', false);
 
 export const userAtom = atom<string | undefined>(undefined);
 
-export const useTheme = () => useAtomValue(themeAtom);
-
+export * from './tabs';
+export * from './theme';
 export default { themeAtom, sidebarCollapsedAtom, userAtom };

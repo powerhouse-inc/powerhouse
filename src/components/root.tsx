@@ -1,17 +1,17 @@
 import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
 import { utils } from '@acaldas/document-model-libs/browser/budget-statement';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { useDrop } from 'react-aria';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { themeAtom, userAtom } from '../store';
+import { useTheme, userAtom } from '../store';
 import { Tab, TabBudgetStatement, useTabs } from '../store/tabs';
 import Sidebar from './sidebar';
 
 export default () => {
     const ref = React.useRef(null);
-    const theme = useAtomValue(themeAtom);
+    const theme = useTheme();
     const { addTab } = useTabs();
     const navigate = useNavigate();
     const setUser = useSetAtom(userAtom);
@@ -63,7 +63,7 @@ export default () => {
             <div
                 className={`h-[30px] w-full
                 ${isMac && 'justify-center'}
-                z-90 flex items-center bg-toolbar
+                z-90 flex items-center bg-titlebar
                 [-webkit-app-region:drag]`}
             >
                 <IconLogo className="ml-1 mr-[2px] p-[6px]" />
