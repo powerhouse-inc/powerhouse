@@ -8,8 +8,6 @@ export function addDeeplink(
     protocol: string,
     handleOpenUrl: (event: Electron.Event, url: string) => void
 ) {
-    app.setName('Powerhouse Connect');
-
     app.on('ready', () => {
         new Deeplink({
             app,

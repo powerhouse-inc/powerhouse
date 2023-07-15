@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 body {
-    font-family: Inter, cursive;
+    font-family: Inter, -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI',
+        Roboto, 'Helvetica Neue', Arial, sans-serif;
     margin: auto;
     height: 100vh;
 }
@@ -32,6 +33,8 @@ select {
         --color-neutral-4: 108, 114, 117;
         --color-neutral-6: 35, 38, 39;
         --color-neutral-7: #141718;
+
+        --color-red: red;
     }
 
     ::-webkit-scrollbar {
@@ -46,7 +49,7 @@ select {
 
     /* Handle */
     ::-webkit-scrollbar-thumb {
-        background: hsl(var(--twc-toolbar));
+        background: hsl(var(--twc-titlebar));
     }
 
     /* Handle on hover */

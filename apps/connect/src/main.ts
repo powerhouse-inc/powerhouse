@@ -11,11 +11,13 @@ import {
     nativeImage,
     shell,
 } from 'electron';
-import isDev from 'electron-is-dev';
 import path from 'path';
-import { addDeeplink } from './app/deeplink';
+import store from './app/store';
+import { Theme } from './store';
 
 const isMac = process.platform === 'darwin';
+
+app.setName('Powerhouse Connect');
 
 async function handleFile(file: string, window?: Electron.BrowserWindow) {
     try {
@@ -90,17 +92,45 @@ ipcMain.handle('showTabMenu', (event, tab) => {
     });
 });
 
+function getThemeColors(theme: Theme) {
+    // TODO read from tailwind config
+    const color = theme === 'dark' ? '#fefefe' : '#141718';
+    const backgroundColor = theme === 'dark' ? '#141718' : '#FFFFFF';
+    const titlebarColor = theme === 'dark' ? '#0A0A0A' : '#F1F1F1';
+    return { color, backgroundColor, titlebarColor };
+}
+
+ipcMain.on('theme', (_, theme) => {
+    store.set('theme', theme);
+    const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
+
+    BrowserWindow.getAllWindows().forEach(window => {
+        window.setTitleBarOverlay({
+            color: titlebarColor,
+            symbolColor: color,
+            height: 30,
+        });
+        window.setBackgroundColor(backgroundColor);
+    });
+});
+
 const createWindow = async (options?: {
     onReady?: (window: BrowserWindow) => void;
 }) => {
+    const theme = store.get('theme', 'dark') as Theme;
+
+    const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
+
     // Create the browser window.
     const mainWindow = new BrowserWindow({
+        title: 'Connect',
         titleBarStyle: 'hidden',
         titleBarOverlay: {
-            color: 'rgba(16,16,16,0.75)',
-            symbolColor: '#666',
+            color: titlebarColor,
+            symbolColor: color,
             height: 30,
         },
+        backgroundColor: backgroundColor,
         width: 1300,
         height: 940,
         minHeight: 350,
@@ -270,7 +300,7 @@ const createWindow = async (options?: {
     });
 
     // Open the DevTools.
-    // mainWindow.webContents.openDevTools({ mode: 'bottom' });
+    mainWindow.webContents.openDevTools({ mode: 'bottom' });
     return mainWindow;
 };
 
@@ -288,10 +318,8 @@ app.on('open-file', (_event, path) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
-    const appIcon = nativeImage.createFromPath(
-        '/Users/acaldas/dev/makerdao/document-model-electron/assets/Vector.png'
-    );
-    console.log('APPICON', appIcon.isEmpty());
+    const appIcon = nativeImage.createFromPath('../assets/icon.png');
+
     if (isMac) {
         app.dock.setIcon(appIcon);
     }
@@ -326,18 +354,21 @@ app.on('activate', () => {
 let user: string;
 ipcMain.handle('user', () => user);
 
-const appProtocol = isDev ? 'connect-dev' : 'connect';
-addDeeplink(app, appProtocol, (event, url) => {
-    // gets user address from url
-    const address = url.slice(`${appProtocol}://`.length);
-    user = address;
+// deeplink login
 
-    // notifies all windows
-    BrowserWindow.getAllWindows().forEach((window, index) => {
-        window.webContents.send('login', address);
-        // shows first window if not in view
-        if (index === 0) {
-            window.show();
-        }
-    });
-});
+// const appProtocol = isDev ? 'connect-dev' : 'connect';
+
+// addDeeplink(app, appProtocol, (event, url) => {
+//     // gets user address from url
+//     const address = url.slice(`${appProtocol}://`.length);
+//     user = address;
+
+//     // notifies all windows
+//     BrowserWindow.getAllWindows().forEach((window, index) => {
+//         window.webContents.send('login', address);
+//         // shows first window if not in view
+//         if (index === 0) {
+//             window.show();
+//         }
+//     });
+// });
