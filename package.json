@@ -8,10 +8,12 @@
     "browser": "dist/browser/es/index.js",
     "exports": {
         ".": "./dist/node/es/index.js",
+        "./scope-framework": "./dist/node/es/scope-framework.js",
         "./document-model": "./dist/node/es/budget-statement.js",
         "./budget-statement": "./dist/node/es/budget-statement.js",
         "./document": "./dist/node/es/document.js",
         "./browser": "./dist/browser/es/index.js",
+        "./browser/scope-framework": "./dist/browser/es/scope-framework.js",
         "./browser/document-model": "./dist/browser/es/document-model.js",
         "./browser/budget-statement": "./dist/browser/es/budget-statement.js",
         "./browser/document": "./dist/browser/es/document.js"
@@ -20,6 +22,9 @@
         "*": {
             ".": [
                 "dist/node/types"
+            ],
+            "scope-framework": [
+                "dist/node/types/scope-framework"
             ],
             "budget-statement": [
                 "dist/node/types/budget-statement"
@@ -32,6 +37,9 @@
             ],
             "browser": [
                 "dist/browser/types"
+            ],
+            "browser/scope-framework": [
+                "dist/browser/types/scope-framework"
             ],
             "browser/budget-statement": [
                 "dist/browser/types/budget-statement"

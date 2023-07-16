@@ -32,6 +32,7 @@ function emitModulePackageFile(): Plugin {
 const input = {
     'index': 'src/index.ts',
     'document-model': 'src/document-model/index.ts',
+    'scope-framework': 'src/scope-framework/index.ts',
     'budget-statement': 'src/budget-statement/index.ts',
     'document': 'src/document/index.ts',
 };
@@ -41,6 +42,7 @@ const bundledDependencies = [
     'jszip',
     '@acaldas/document-model-graphql',
     '@acaldas/document-model-graphql/document',
+    '@acaldas/document-model-graphql/scope-framework',
     '@acaldas/document-model-graphql/budget-statement',
     '@acaldas/document-model-graphql/document-model',
 ];
@@ -146,6 +148,7 @@ const outputs: RollupOptions[] = [
             '@acaldas/document-model-graphql',
             '@acaldas/document-model-graphql/document',
             '@acaldas/document-model-graphql/budget-statement',
+            '@acaldas/document-model-graphql/scope-framework',
         ],
         plugins: [
             replaceBrowserModules(),
