@@ -1,5 +1,6 @@
 export * from './actions';
 export * from './object';
+export * from './types';
 
 export * from './header/creators';
 export * from './module/creators';

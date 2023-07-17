@@ -1,8 +1,8 @@
 import { BaseDocument, applyMixins } from '../../document/object';
-import { Document } from '../../document/types';
 import { ScopeFrameworkState } from '@acaldas/document-model-graphql/scope-framework';
 import { ScopeFrameworkAction } from './actions';
 import { createEmptyExtendedScopeFrameworkState } from '../custom/utils';
+import type { ExtendedScopeFrameworkState } from "./types";
 import { reducer } from './reducer';
 
 import ScopeFramework_Main from './main/object'
@@ -10,8 +10,6 @@ import ScopeFramework_Main from './main/object'
 
 export * from './main/object'
 ;
-
-type ExtendedScopeFrameworkState = Document<ScopeFrameworkState, ScopeFrameworkAction>;
 
 interface ScopeFramework extends 
     ScopeFramework_Main {}

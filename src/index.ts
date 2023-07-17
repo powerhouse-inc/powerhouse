@@ -1,5 +1,7 @@
 import * as BudgetStatement from './budget-statement';
 import * as Document from './document';
+import * as DocumentModel from './document-model';
+import * as ScopeFramework from './scope-framework';
 
 /**
  * This module exports all the public types, functions, and objects
@@ -35,6 +37,8 @@ export { BudgetStatement };
 export const DocumentModels = {
     'powerhouse/document': Document,
     'powerhouse/budget-statement': BudgetStatement,
+    'powerhouse/document-model': DocumentModel,
+    'powerhouse/scope-framework': ScopeFramework,
 };
 
-export default { BudgetStatement, Document };
+export default { BudgetStatement, Document, DocumentModel, ScopeFramework };

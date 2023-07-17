@@ -3,10 +3,10 @@ to: "./src/<%= h.changeCase.param(documentType) %>/gen/object.ts"
 force: true
 ---
 import { BaseDocument, applyMixins } from '../../document/object';
-import { Document } from '../../document/types';
 import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 import { createEmptyExtended<%= h.changeCase.pascal(documentType) %>State } from '../custom/utils';
+import type { Extended<%= h.changeCase.pascal(documentType) %>State } from "./types";
 import { reducer } from './reducer';
 
 <% modules.forEach(module => { _%>
@@ -16,8 +16,6 @@ import <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module.n
 <% modules.forEach(module => { _%>
 export * from './<%= module.name %>/object'
 <% }); _%>;
-
-type Extended<%= h.changeCase.pascal(documentType) %>State = Document<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action>;
 
 interface <%= h.changeCase.pascal(documentType) %> extends 
 <%= modules.map(m => '    ' + h.changeCase.pascal(documentType) + '_' + h.changeCase.pascal(m.name)).join(',\n') %> {}
