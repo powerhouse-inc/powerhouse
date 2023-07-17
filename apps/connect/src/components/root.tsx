@@ -1,19 +1,16 @@
 import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
-import { utils } from '@acaldas/document-model-libs/browser/budget-statement';
 import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
-import { useDrop } from 'react-aria';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
+import { useDropFile } from '../hooks';
 import { useTheme, userAtom } from '../store';
-import { Tab, TabBudgetStatement, useTabs } from '../store/tabs';
 import Sidebar from './sidebar';
 
 export default () => {
     const ref = React.useRef(null);
     const theme = useTheme();
-    const { addTab } = useTabs();
-    const navigate = useNavigate();
+
     const setUser = useSetAtom(userAtom);
 
     useEffect(() => {
@@ -23,39 +20,13 @@ export default () => {
             setUser(user);
         });
 
-        window.electronAPI?.handleLogin((_, user) => {
+        const unsubscribeLogin = window.electronAPI?.handleLogin((_, user) => {
             setUser(user);
         });
+        return unsubscribeLogin;
     }, []);
 
-    const { dropProps, isDropTarget } = useDrop({
-        ref,
-        async onDrop(e) {
-            for (const item of e.items) {
-                if (item.kind === 'file') {
-                    const file = await item.getFile();
-                    const budget = await utils.loadBudgetStatementFromInput(
-                        file
-                    );
-                    const tab = new TabBudgetStatement(budget);
-                    addTab(tab);
-                    navigate('/');
-                } else if (item.kind === 'text') {
-                    try {
-                        const tabStr = await item.getText('tab');
-                        const tab = Tab.fromString(tabStr);
-                        addTab(tab);
-                        navigate('/');
-                    } catch (error) {
-                        console.log(
-                            `Dropped text not recognized as tab: ${error}`
-                        );
-                        console.log(item);
-                    }
-                }
-            }
-        },
-    });
+    const { dropProps, isDropTarget } = useDropFile(ref);
     const isMac = window.navigator.appVersion.indexOf('Mac') != -1;
 
     return (

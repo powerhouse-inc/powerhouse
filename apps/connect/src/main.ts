@@ -2,6 +2,7 @@ import {
     BudgetStatementDocument,
     utils,
 } from '@acaldas/document-model-libs/budget-statement';
+import { Document } from '@acaldas/document-model-libs/document';
 import {
     BrowserWindow,
     Menu,
@@ -37,13 +38,18 @@ async function handleFile(file: string, window?: Electron.BrowserWindow) {
     }
 }
 
-async function handleFileOpen() {
-    const files = await dialog.showOpenDialogSync({
-        properties: ['openFile'],
-    });
-    if (files) {
-        files.map(file => app.addRecentDocument(file));
-        return utils.loadBudgetStatementFromFile(files[0]);
+async function handleFileOpen(): Promise<Document | undefined> {
+    try {
+        const files = await dialog.showOpenDialogSync({
+            properties: ['openFile'],
+        });
+        if (files) {
+            files.map(file => app.addRecentDocument(file));
+            return utils.loadBudgetStatementFromFile(files[0]);
+        }
+    } catch (error) {
+        console.log('OLLAAAAA');
+        dialog.showErrorBox('Error opening file', error as string);
     }
 }
 
@@ -105,11 +111,13 @@ ipcMain.on('theme', (_, theme) => {
     const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
 
     BrowserWindow.getAllWindows().forEach(window => {
-        window.setTitleBarOverlay({
-            color: titlebarColor,
-            symbolColor: color,
-            height: 30,
-        });
+        if (window.setTitleBarOverlay) {
+            window.setTitleBarOverlay({
+                color: titlebarColor,
+                symbolColor: color,
+                height: 30,
+            });
+        }
         window.setBackgroundColor(backgroundColor);
     });
 });
@@ -300,7 +308,7 @@ const createWindow = async (options?: {
     });
 
     // Open the DevTools.
-    mainWindow.webContents.openDevTools({ mode: 'bottom' });
+    // mainWindow.webContents.openDevTools({ mode: 'bottom' });
     return mainWindow;
 };
 

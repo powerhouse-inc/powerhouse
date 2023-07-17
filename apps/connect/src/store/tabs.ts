@@ -2,7 +2,8 @@ import {
     BudgetStatementDocument,
     utils,
 } from '@acaldas/document-model-libs/browser/budget-statement';
-import { Document } from 'document-model-editors';
+import { Document } from '@acaldas/document-model-libs/document';
+import { Document as DocumentEditors } from 'document-model-editors';
 import { atom, useAtom } from 'jotai';
 import { ReactElement, useMemo } from 'react';
 import { ListData } from 'react-stately';
@@ -44,7 +45,23 @@ export abstract class Tab {
             case 'powerhouse/document-model':
                 return new TabDocumentModel(object.name, object.id);
             default:
-                throw new Error(`Tab type ${type} wasn't handled`);
+                throw new Error(`Tab type ${type} was not handled`);
+        }
+    }
+
+    static fromDocument(document: Document) {
+        switch (document.documentType) {
+            case 'powerhouse/budget-statement':
+                return new TabBudgetStatement(
+                    document as BudgetStatementDocument,
+                    document.name
+                );
+            case 'powerhouse/document-model':
+                return new TabDocumentModel(document.name);
+            default:
+                throw new Error(
+                    `Document with type ${document.documentType} was not handled`
+                );
         }
     }
 }
@@ -112,7 +129,7 @@ export class TabDocumentModel extends Tab {
     public type: TabType = 'powerhouse/document-model';
 
     constructor(name?: string, id?: string) {
-        super(name || 'Document Model', Document.Editor, id);
+        super(name || 'Document Model', DocumentEditors.Editor, id);
     }
 
     serialize() {
