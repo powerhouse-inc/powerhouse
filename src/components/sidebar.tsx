@@ -92,7 +92,7 @@ export default function () {
         >
             <div className={`flex-1 pt-10 ${!collapsed && 'px-2'}`}>
                 <SidebarLink
-                    to="/new"
+                    to="/"
                     title="New Document"
                     Icon={IconPlusCircle}
                     collapsed={collapsed}

@@ -1,6 +1,6 @@
 {
     "name": "document-model-electron",
-    "productName": "document-model-electron",
+    "productName": "Powerhouse Connect",
     "version": "1.0.1",
     "description": "Powerhouse Connect",
     "main": ".vite/build/main.js",

@@ -13,7 +13,7 @@ export default function ({
     const ref = useRef(null);
     const { tabPanelProps } = useTabPanel(props, state, ref);
     return (
-        <div className="flex-1 bg-accent-2 p-4" {...tabPanelProps} ref={ref}>
+        <div className="flex-1 bg-bg p-6" {...tabPanelProps} ref={ref}>
             {state.selectedItem?.value?.content() ?? <TabNew />}
         </div>
     );
