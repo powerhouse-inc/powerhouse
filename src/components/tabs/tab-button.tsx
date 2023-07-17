@@ -43,7 +43,7 @@ export default forwardRef((props: IProps, ref) => {
         >
             <span>{typeof item === 'string' ? item : item.rendered}</span>
             <div
-                className="ml-2 mt-[1px] flex h-[21px] w-[21px] items-center justify-center rounded-full hover:bg-light hover:text-text"
+                className="ml-3 mt-[1px] flex h-[21px] w-[21px] items-center justify-center rounded-full hover:bg-light hover:text-text"
                 onClick={() =>
                     typeof item !== 'string' &&
                     item.value &&

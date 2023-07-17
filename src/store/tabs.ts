@@ -2,19 +2,25 @@ import {
     BudgetStatementDocument,
     utils,
 } from '@acaldas/document-model-libs/browser/budget-statement';
+import {
+    ExtendedScopeFrameworkState,
+    createEmptyExtendedScopeFrameworkState,
+} from '@acaldas/document-model-libs/browser/scope-framework';
 import { Document } from '@acaldas/document-model-libs/document';
 import { Document as DocumentEditors } from 'document-model-editors';
 import { atom, useAtom } from 'jotai';
 import { ReactElement, useMemo } from 'react';
 import { ListData } from 'react-stately';
-import { createBudgetStatementEditor } from '../budget-statement/editor';
+import { createBudgetStatementEditor } from '../components/editors/budget-statement';
+import { createScopeFrameworkEditor } from '../components/editors/scope-framework';
 import tabNew from '../components/tabs/tab-new';
 
 export type TabType =
     | ''
     | 'new'
     | 'powerhouse/document-model'
-    | 'powerhouse/budget-statement';
+    | 'powerhouse/budget-statement'
+    | 'powerhouse/scope-framework';
 
 export abstract class Tab {
     public abstract type: TabType;
@@ -141,6 +147,50 @@ export class TabDocumentModel extends Tab {
     }
 }
 
+export class TabScopeFramework extends Tab {
+    public type: TabType = 'powerhouse/scope-framework';
+    public scopeFramework: ExtendedScopeFrameworkState;
+
+    constructor(
+        _scopeFramework?: ExtendedScopeFrameworkState,
+        name?: string,
+        id?: string
+    ) {
+        const scopeFramework =
+            _scopeFramework ?? createEmptyExtendedScopeFrameworkState();
+        const content = createScopeFrameworkEditor({
+            initialScopeFramework: scopeFramework,
+            onChange: budget => {
+                this.scopeFramework = budget;
+            },
+        });
+
+        super(
+            name ||
+                scopeFramework.name ||
+                scopeFramework.data.rootPath ||
+                'Budget',
+            content,
+            id
+        );
+
+        this.scopeFramework = scopeFramework;
+    }
+
+    serialize() {
+        return JSON.stringify({
+            type: this.type,
+            id: this.id,
+            name: this.name,
+            scopeFramework: this.scopeFramework,
+        });
+    }
+
+    override saveFile(): ExtendedScopeFrameworkState {
+        return this.scopeFramework;
+    }
+}
+
 export const tabsAtom = atom<Tab[]>([]);
 export const selectedTabAtom = atom<Tab['id'] | undefined>(undefined);
 
@@ -199,6 +249,7 @@ export const useTabs = () => {
         selectedTab: typeof selectedTab;
         setSelectedTab: typeof setSelectedTab;
         addTab: (tab?: Tab) => void;
+        updateTab: (tab: Tab) => void;
         closeTab: (tab: Tab) => void;
     } = useMemo(
         () => ({
@@ -250,6 +301,19 @@ export const useTabs = () => {
                 const newTab = tab ?? new TabNew();
                 tabs.append(newTab);
                 tabs.setSelectedTab(newTab.id);
+            },
+            updateTab(tab: Tab) {
+                const index = _tabs.findIndex(_tab => _tab.id === tab.id);
+                setTabs(_tabs => {
+                    _tabs[index > -1 ? index : _tabs.length] = tab;
+                    return _tabs;
+                });
+
+                // refresh selected tab with timeout to trigger UI update
+                tabs.setSelectedTab(undefined);
+                setTimeout(() => {
+                    tabs.setSelectedTab(tab.id);
+                });
             },
             closeTab(tab: Tab) {
                 tabs.remove(tab.id);
