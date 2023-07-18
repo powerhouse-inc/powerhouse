@@ -7,6 +7,8 @@ import { useDropFile } from '../hooks';
 import { useTheme, userAtom } from '../store';
 import Sidebar from './sidebar';
 
+const ROOT_FILE_DROP = false;
+
 export default () => {
     const ref = React.useRef(null);
     const theme = useTheme();
@@ -26,7 +28,9 @@ export default () => {
         return unsubscribeLogin;
     }, []);
 
-    const { dropProps, isDropTarget } = useDropFile(ref);
+    const { dropProps, isDropTarget } = ROOT_FILE_DROP
+        ? useDropFile(ref)
+        : { dropProps: {}, isDropTarget: false };
     const isMac = window.navigator.appVersion.indexOf('Mac') != -1;
 
     return (
@@ -41,9 +45,9 @@ export default () => {
                 <IconConnect className="h-3 w-fit" />
             </div>
             <div
-                className={`h-[calc(100vh-30px)] overflow-auto ${
-                    isDropTarget ? 'bg-light' : 'bg-bg'
-                } flex items-stretch`}
+                className={`h-[calc(100vh-30px)] overflow-auto 
+                     ${isDropTarget ? 'bg-light' : 'bg-bg'}
+                 flex items-stretch`}
                 {...dropProps}
                 role="presentation"
                 tabIndex={0}

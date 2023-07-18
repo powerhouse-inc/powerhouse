@@ -1,7 +1,7 @@
-import { utils } from '@acaldas/document-model-libs/browser/budget-statement';
+import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browser/scope-framework';
 import { useDrop } from 'react-aria';
 import { useNavigate } from 'react-router-dom';
-import { Tab, TabBudgetStatement, useTabs } from '../store';
+import { Tab, TabScopeFramework, useTabs } from '../store';
 
 export function useDropFile(ref: React.RefObject<HTMLElement>) {
     const { addTab } = useTabs();
@@ -13,10 +13,8 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
             for (const item of e.items) {
                 if (item.kind === 'file') {
                     const file = await item.getFile();
-                    const budget = await utils.loadBudgetStatementFromInput(
-                        file
-                    );
-                    const tab = new TabBudgetStatement(budget);
+                    const document = await loadScopeFrameworkFromInput(file);
+                    const tab = new TabScopeFramework(document);
                     addTab(tab);
                     navigate('/');
                 } else if (item.kind === 'text') {
