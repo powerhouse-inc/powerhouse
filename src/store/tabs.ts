@@ -20,7 +20,7 @@ export type TabType =
     | 'new'
     | 'powerhouse/document-model'
     | 'powerhouse/budget-statement'
-    | 'powerhouse/scope-framework';
+    | 'makerdao/scope-framework';
 
 export abstract class Tab {
     public abstract type: TabType;
@@ -50,20 +50,33 @@ export abstract class Tab {
                 );
             case 'powerhouse/document-model':
                 return new TabDocumentModel(object.name, object.id);
+            case 'makerdao/scope-framework':
+                return new TabScopeFramework(
+                    object.scopeFramework as ExtendedScopeFrameworkState,
+                    object.name,
+                    object.id
+                );
             default:
                 throw new Error(`Tab type ${type} was not handled`);
         }
     }
 
-    static fromDocument(document: Document) {
+    static fromDocument(document: Document, id?: string) {
         switch (document.documentType) {
             case 'powerhouse/budget-statement':
                 return new TabBudgetStatement(
                     document as BudgetStatementDocument,
-                    document.name
+                    document.name,
+                    id
                 );
             case 'powerhouse/document-model':
-                return new TabDocumentModel(document.name);
+                return new TabDocumentModel(document.name, id);
+            case 'makerdao/scope-framework':
+                return new TabScopeFramework(
+                    document as ExtendedScopeFrameworkState,
+                    document.name,
+                    id
+                );
             default:
                 throw new Error(
                     `Document with type ${document.documentType} was not handled`
@@ -148,7 +161,7 @@ export class TabDocumentModel extends Tab {
 }
 
 export class TabScopeFramework extends Tab {
-    public type: TabType = 'powerhouse/scope-framework';
+    public type: TabType = 'makerdao/scope-framework';
     public scopeFramework: ExtendedScopeFrameworkState;
 
     constructor(

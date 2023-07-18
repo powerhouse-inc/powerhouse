@@ -2,10 +2,17 @@ import { ReactComponent as IconDraft } from '@/assets/icons/draft.svg';
 import { ReactComponent as IconFile } from '@/assets/icons/file.svg';
 import { ReactComponent as IconPlusCircle } from '@/assets/icons/plus-circle.svg';
 import { ReactComponent as IconSettings } from '@/assets/icons/settings.svg';
-import { ReactComponent as IconTemplate } from '@/assets/icons/template.svg';
+import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browser/scope-framework';
 import { useAtom, useAtomValue } from 'jotai';
 import { NavLink, To, useNavigate } from 'react-router-dom';
-import { sidebarCollapsedAtom, themeAtom, userAtom } from '../store';
+import {
+    Tab,
+    TabScopeFramework,
+    sidebarCollapsedAtom,
+    themeAtom,
+    useTabs,
+    userAtom,
+} from '../store';
 import ThemeSelector from './theme-selector';
 
 interface IProps {
@@ -61,11 +68,41 @@ export function SidebarLink({
     );
 }
 
+export function SidebarButton({
+    collapsed,
+    onClick,
+    Icon,
+    title,
+}: {
+    collapsed: boolean;
+    onClick: () => void;
+    Icon: React.FunctionComponent<React.SVGAttributes<SVGElement>>;
+    title: string;
+}) {
+    const theme = useAtomValue(themeAtom);
+
+    return (
+        <button
+            className={`
+            flex w-full items-center rounded-lg fill-current p-3 text-neutral-4 hover:text-current
+            ${collapsed ? 'justify-center' : 'justify-start'}
+        `}
+            onClick={onClick}
+        >
+            <div className="flex w-6 justify-center">
+                <Icon className="fill-inherit" />
+            </div>
+            {collapsed || <span className="ml-5">{title}</span>}
+        </button>
+    );
+}
+
 export default function () {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
 
     const theme = useAtomValue(themeAtom);
     const user = useAtomValue(userAtom);
+    const { addTab, selectedTab, getItem } = useTabs();
 
     function toggleCollapse() {
         setCollapsed(value => !value);
@@ -83,6 +120,31 @@ export default function () {
         window.electronAPI?.openURL('http://localhost:3000/');
     };
 
+    async function openFile() {
+        try {
+            const [fileHandle] = await window.showOpenFilePicker();
+            const file = await fileHandle.getFile();
+            const document = await loadScopeFrameworkFromInput(file);
+            if (document) {
+                addTab(Tab.fromDocument(document));
+            } else {
+                throw new Error('File was not recognized.');
+            }
+        } catch (error) {
+            console.error('Error opening file:', error); // TODO improve error handling
+        }
+    }
+
+    async function saveFile() {
+        if (!selectedTab) {
+            return;
+        }
+        const tab = getItem(selectedTab);
+        if (tab.type === 'makerdao/scope-framework') {
+            window.electronAPI?.saveFile((tab as TabScopeFramework).saveFile());
+        }
+    }
+
     return (
         <div
             className={`flex h-full flex-shrink-0
@@ -97,24 +159,26 @@ export default function () {
                     Icon={IconPlusCircle}
                     collapsed={collapsed}
                 />
-                <SidebarLink
-                    to="/recent"
-                    title="Recent Files"
+
+                <SidebarButton
+                    onClick={openFile}
+                    title="Open"
                     Icon={IconFile}
                     collapsed={collapsed}
                 />
-                <SidebarLink
-                    to="/drafts"
-                    title="Drafts"
+
+                <SidebarButton
+                    onClick={saveFile}
+                    title="Save"
                     Icon={IconDraft}
                     collapsed={collapsed}
                 />
-                <SidebarLink
+                {/* <SidebarLink
                     to="/templates"
                     title="Templates"
                     Icon={IconTemplate}
                     collapsed={collapsed}
-                />
+                /> */}
                 {separator}
                 <SidebarLink
                     to="/settings"
