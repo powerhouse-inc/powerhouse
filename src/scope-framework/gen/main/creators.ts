@@ -1,4 +1,4 @@
-import { createAction } from '../../../document/utils'; 
+import { createAction, hashKey } from '../../../document/utils'; 
 
 import {
     SetRootPathInput,
@@ -28,10 +28,10 @@ export const setRootPath = (input: SetRootPathInput) =>
         {...input}
     );
 
-export const addElement = (input: AddElementInput) =>
+export const addElement = (input: Omit<AddElementInput, "id">) =>
     createAction<AddElementAction>(
         'ADD_ELEMENT',
-        {...input}
+        {...input, id: hashKey()}
     );
 
 export const updateElementType = (input: UpdateElementTypeInput) =>

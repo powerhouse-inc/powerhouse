@@ -47,7 +47,7 @@ export const reducer: ScopeFrameworkMainOperations = {
     addElementOperation(state, action) {
         const result = [];
         const newElement = {
-            id: hashKey(),
+            id: action.input.id,
             version: 1,
             path: action.input.path,
             type: action.input.type,

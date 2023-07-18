@@ -32,7 +32,7 @@ export default class ScopeFramework_Main extends BaseDocument<
         return this.dispatch(setRootPath(input));
     }
     
-    public addElement(input: AddElementInput) {
+    public addElement(input: Omit<AddElementInput, "id">) {
         return this.dispatch(addElement(input));
     }
     

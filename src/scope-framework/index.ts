@@ -4,25 +4,16 @@
  */
 
 import { actions as BaseActions } from '../document';
-import {
-    createEmptyExtendedScopeFrameworkState,
-    createEmptyScopeFrameworkState,
-} from './custom/utils';
 import * as gen from './gen';
 import { reducer } from './gen/reducer';
 
+const { ScopeFramework, ...ScopeFrameworkActions } = gen;
+const actions = { ...BaseActions, ...ScopeFrameworkActions };
+
+export * from './custom/utils';
 export type {
     ExtendedScopeFrameworkState,
     ScopeFrameworkAction,
     types,
 } from './gen';
-export {
-    actions,
-    reducer,
-    ScopeFramework,
-    createEmptyScopeFrameworkState,
-    createEmptyExtendedScopeFrameworkState,
-};
-
-const { ScopeFramework, ...ScopeFrameworkActions } = gen;
-const actions = { ...BaseActions, ...ScopeFrameworkActions };
+export { actions, reducer, ScopeFramework };
