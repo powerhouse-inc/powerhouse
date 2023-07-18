@@ -1,3 +1,4 @@
+@import url('../node_modules/document-model-editors/dist/style.css');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

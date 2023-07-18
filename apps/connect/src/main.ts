@@ -1,8 +1,9 @@
-import {
-    BudgetStatementDocument,
-    utils,
-} from '@acaldas/document-model-libs/budget-statement';
 import { Document } from '@acaldas/document-model-libs/document';
+import {
+    ExtendedScopeFrameworkState,
+    loadScopeFrameworkFromInput,
+    saveScopeFrameworkToFile,
+} from '@acaldas/document-model-libs/scope-framework';
 import {
     BrowserWindow,
     Menu,
@@ -22,7 +23,7 @@ app.setName('Powerhouse Connect');
 
 async function handleFile(file: string, window?: Electron.BrowserWindow) {
     try {
-        const budget = await utils.loadBudgetStatementFromFile(file);
+        const budget = await loadScopeFrameworkFromInput(file);
         const _window = window ?? BrowserWindow.getFocusedWindow();
         if (_window) {
             _window.webContents.send('fileOpened', budget);
@@ -45,26 +46,25 @@ async function handleFileOpen(): Promise<Document | undefined> {
         });
         if (files) {
             files.map(file => app.addRecentDocument(file));
-            return utils.loadBudgetStatementFromFile(files[0]);
+            return loadScopeFrameworkFromInput(files[0]);
         }
     } catch (error) {
-        console.log('OLLAAAAA');
         dialog.showErrorBox('Error opening file', error as string);
     }
 }
 
-async function handleFileSave(budgetStatement: BudgetStatementDocument) {
+async function handleFileSave(document: ExtendedScopeFrameworkState) {
     const filePath = await dialog.showSaveDialogSync({
         properties: ['showOverwriteConfirmation', 'createDirectory'],
-        defaultPath: budgetStatement?.data.month ?? 'budget',
+        defaultPath: document.name ?? document.data.rootPath ?? 'scope',
     });
 
     if (filePath) {
         const index = filePath.lastIndexOf(path.sep);
         const dirPath = filePath.slice(0, index);
         const name = filePath.slice(index);
-        const savedPath = await utils.saveBudgetStatementToFile(
-            budgetStatement,
+        const savedPath = await saveScopeFrameworkToFile(
+            document,
             dirPath,
             name
         );
