@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Tab, TabScopeFramework, useTabs } from '../store';
 
 export function useDropFile(ref: React.RefObject<HTMLElement>) {
-    const { addTab } = useTabs();
+    const { addTab, selectedTab, getItem, updateTab } = useTabs();
     const navigate = useNavigate();
 
     return useDrop({
@@ -14,8 +14,21 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
                 if (item.kind === 'file') {
                     const file = await item.getFile();
                     const document = await loadScopeFrameworkFromInput(file);
-                    const tab = new TabScopeFramework(document);
-                    addTab(tab);
+                    if (document.documentType !== 'makerdao/scope-framework') {
+                        return;
+                    }
+
+                    const currentTab = selectedTab
+                        ? getItem(selectedTab)
+                        : undefined;
+                    const isNewTab = currentTab?.type === 'new';
+
+                    const tab = new TabScopeFramework(
+                        document,
+                        undefined,
+                        isNewTab ? selectedTab : undefined
+                    );
+                    updateTab(tab);
                     navigate('/');
                 } else if (item.kind === 'text') {
                     try {

@@ -1,3 +1,4 @@
+import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browser/scope-framework';
 import { useRef } from 'react';
 import { useDropFile } from '../../hooks';
 import { Tab, TabScopeFramework, useTabs, useTheme } from '../../store';
@@ -11,9 +12,11 @@ export default () => {
 
     async function openFile() {
         try {
-            const document = await window.electronAPI?.openFile();
+            const [fileHandle] = await window.showOpenFilePicker();
+            const file = await fileHandle.getFile();
+            const document = await loadScopeFrameworkFromInput(file);
             if (document) {
-                updateTab(Tab.fromDocument(document));
+                updateTab(Tab.fromDocument(document, selectedTab));
             } else {
                 throw new Error('File was not recognized.');
             }
