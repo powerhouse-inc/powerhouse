@@ -1,5 +1,4 @@
 import { ScopeFrameworkMainOperations } from '../../gen/main/operations';
-import { hashKey } from '../../../document/utils';
 
 const rootSegment = (path: string): string => {
     return path.split('.', 2)[0];
