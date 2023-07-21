@@ -7,7 +7,6 @@ import { useAtom, useAtomValue } from 'jotai';
 import { NavLink, To, useNavigate } from 'react-router-dom';
 import {
     Tab,
-    TabScopeFramework,
     sidebarCollapsedAtom,
     themeAtom,
     useTabs,
@@ -141,7 +140,7 @@ export default function () {
         }
         const tab = getItem(selectedTab);
         if (tab.type === 'makerdao/scope-framework') {
-            window.electronAPI?.saveFile((tab as TabScopeFramework).saveFile());
+            window.electronAPI?.saveFile(tab.document);
         }
     }
 

@@ -1,29 +1,18 @@
 import {
     ExtendedScopeFrameworkState,
     actions,
-    createEmptyExtendedScopeFrameworkState,
 } from '@acaldas/document-model-libs/browser/scope-framework';
 import { ScopeFramework } from 'document-model-editors';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
+import { EditorProps } from '.';
 import { themeAtom } from '../../store';
 
-interface IProps {
-    initialScopeFramework?: ExtendedScopeFrameworkState;
-    onChange?: (budget: ExtendedScopeFrameworkState) => void;
-}
-
-export default function Editor({ initialScopeFramework, onChange }: IProps) {
+export default function Editor({ document, onChange }: EditorProps) {
     const theme = useAtomValue(themeAtom);
-
-    const [scopeFramework, dispatch, reset] =
-        ScopeFramework.useScopeFrameworkReducer(initialScopeFramework);
-
-    useEffect(() => {
-        reset(
-            initialScopeFramework ?? createEmptyExtendedScopeFrameworkState()
-        );
-    }, [initialScopeFramework]);
+    const [scopeFramework, dispatch] = ScopeFramework.useScopeFrameworkReducer(
+        document as ExtendedScopeFrameworkState
+    );
 
     useEffect(() => {
         onChange?.(scopeFramework);
@@ -55,8 +44,4 @@ export default function Editor({ initialScopeFramework, onChange }: IProps) {
             />
         </div>
     );
-}
-
-export function createScopeFrameworkEditor(props: IProps) {
-    return () => <Editor {...props} />;
 }

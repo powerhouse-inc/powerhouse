@@ -2,7 +2,7 @@ import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browse
 import { useCallback } from 'react';
 import { useDrop } from 'react-aria';
 import { useNavigate } from 'react-router-dom';
-import { Tab, TabScopeFramework, useTabs } from '../store';
+import { Tab, createScopeFrameworkTab, useTabs } from '../store';
 
 export function useDropFile(ref: React.RefObject<HTMLElement>) {
     const { addTab, selectedTab, getItem, updateTab } = useTabs();
@@ -18,11 +18,7 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
                         return;
                     }
 
-                    const tab = new TabScopeFramework(
-                        document,
-                        undefined,
-                        undefined
-                    );
+                    const tab = createScopeFrameworkTab(document);
                     addTab(tab);
                     navigate('/');
                 } else if (item.kind === 'text') {
