@@ -2,19 +2,15 @@
 # yarn lockfile v1
 
 
-"@acaldas/document-model-graphql@^1.0.10":
-  version "1.0.10"
-  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.10.tgz#cd5e74b810819bf24b40dbd319c072bbe4758787"
-  integrity sha512-49EFYNdHLgEGnMIuzvZlRKiGql6QZmzxKo0QqsW3ihfCVQjzDJKs6vwJNcfcVf4ViQJLo2J06CBZB72jgAKThQ==
+"@acaldas/document-model-graphql@file:../document-model-graphql":
+  version "1.0.12"
   dependencies:
     zod "^3.21.4"
 
-"@acaldas/document-model-libs@^1.0.15":
-  version "1.0.15"
-  resolved "https://registry.yarnpkg.com/@acaldas/document-model-libs/-/document-model-libs-1.0.15.tgz#7e462545fdaa3aa7bb84f6288c782f6c7bbcf567"
-  integrity sha512-asXSrfmDdwEJkdKpUQg8PmW5UQW7TrVwxOjZN9qNB1LycY88bFAaLFfjC26F5cC+8V05JDIUbnE/rR8oihvgSw==
+"@acaldas/document-model-libs@../document-model-libs", "@acaldas/document-model-libs@file:../document-model-libs":
+  version "1.0.14"
   dependencies:
-    "@acaldas/document-model-graphql" "^1.0.10"
+    "@acaldas/document-model-graphql" "file:../../../Library/Caches/Yarn/v6/npm-@acaldas-document-model-libs-1.0.14-a000adab-38f6-427e-8616-a021bee6bb82-1689783265325/node_modules/@acaldas/document-model-graphql"
     immer "^9.0.19"
     json-stringify-deterministic "^1.0.8"
     jszip "^3.10.1"
@@ -3936,12 +3932,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model-editors@^0.0.5:
+document-model-editors@../document-model-editors:
   version "0.0.5"
-  resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-0.0.5.tgz#8428ebcaf98fa7376fe627fdd792cc39ee963b86"
-  integrity sha512-wkgrqTZvktGJqq9P8kc0VnS6KYUml7zfBUbT2/Ul8DfTSN3r64tRD1RJfuUG8gtYMmM5nhwfEHkyOHQhNleF4w==
   dependencies:
-    "@acaldas/document-model-libs" "^1.0.15"
+    "@acaldas/document-model-libs" "file:../../../Library/Caches/Yarn/v6/npm-document-model-editors-0.0.5-4763dd58-4edc-47b2-971a-a53b0f57ec5c-1689783265339/node_modules/document-model-libs"
     "@graphql-codegen/core" "^3.1.0"
     "@graphql-codegen/typescript" "^3.0.4"
     "@monaco-editor/react" "^4.5.0"
@@ -7449,6 +7443,11 @@ swap-case@^2.0.2:
   integrity sha512-kc6S2YS/2yXbtkSMunBtKdah4VFETZ8Oh6ONSmSd9bRxhqTrtARUCBUiWXH3xVPpvR7tz2CSnkuXVE42EcGnMw==
   dependencies:
     tslib "^2.0.3"
+
+tailwind-merge@^1.14.0:
+  version "1.14.0"
+  resolved "https://registry.yarnpkg.com/tailwind-merge/-/tailwind-merge-1.14.0.tgz#e677f55d864edc6794562c63f5001f45093cdb8b"
+  integrity sha512-3mFKyCo/MBcgyOTlrY8T7odzZFx+w+qKSMAmdFzRvqBfLlSigU6TZnlFHK0lkMwj9Bj8OYU+9yW9lmGuS0QEnQ==
 
 tailwindcss@^3.3.2:
   version "3.3.2"

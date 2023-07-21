@@ -1,7 +1,7 @@
 import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browser/scope-framework';
 import { useRef } from 'react';
 import { useDropFile } from '../../hooks';
-import { Tab, TabScopeFramework, useTabs, useTheme } from '../../store';
+import { Tab, createScopeFrameworkTab, useTabs, useTheme } from '../../store';
 import Button from '../button';
 
 export default () => {
@@ -32,11 +32,7 @@ export default () => {
                     className="bg-accent-1 text-text"
                     onClick={() =>
                         updateTab(
-                            new TabScopeFramework(
-                                undefined,
-                                undefined,
-                                selectedTab
-                            )
+                            createScopeFrameworkTab(undefined, selectedTab)
                         )
                     }
                 >

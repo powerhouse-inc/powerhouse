@@ -32,8 +32,9 @@ export function ReorderableTabList(
         > & {
             onDragOut?: (key: DraggableCollectionEndEvent) => void;
         } & {
-            onCloseTab: (tab: Tab) => void;
             onNewTab: () => void;
+            onCloseTab: (tab: Tab) => void;
+            onUpdateTab: (tab: Tab) => void;
         }
 ) {
     // Setup listbox as normal. See the useListBox docs for more details.
@@ -65,7 +66,7 @@ export function ReorderableTabList(
                 const test = {
                     'text/plain': item?.value?.name ?? '',
                     key: key.toString(),
-                    tab: item?.value?.serialize() ?? '',
+                    tab: item?.value ? Tab.serialize(item.value) : '',
                 };
                 return test;
             });
@@ -156,7 +157,11 @@ export function ReorderableTabList(
                     )}
                 </DragPreview>
             </ul>
-            <TabPanel key={state.selectedItem?.key} state={state} />
+            <TabPanel
+                key={state.selectedItem?.key}
+                state={state}
+                onUpdateTab={props.onUpdateTab}
+            />
         </Tabs>
     );
 }

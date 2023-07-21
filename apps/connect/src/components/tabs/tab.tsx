@@ -54,7 +54,9 @@ export default function ({
     ) : undefined;
 
     ref.current?.addEventListener('contextmenu', () => {
-        window.electronAPI?.showTabMenu(item.value?.serialize() ?? '');
+        window.electronAPI?.showTabMenu(
+            item?.value ? Tab.serialize(item.value) : ''
+        );
     });
 
     return (
