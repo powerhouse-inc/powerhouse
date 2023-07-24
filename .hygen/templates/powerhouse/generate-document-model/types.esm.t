@@ -10,4 +10,4 @@ import type * as types from '@acaldas/document-model-graphql/<%= h.changeCase.pa
 
 type Extended<%= h.changeCase.pascal(documentType) %>State = Document<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action>;
 
-export { types, Extended<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action };
+export { types, Extended<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action };

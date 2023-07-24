@@ -14,6 +14,7 @@ export * from './custom/utils';
 export type {
     ExtendedScopeFrameworkState,
     ScopeFrameworkAction,
+    ScopeFrameworkState,
     types,
 } from './gen';
 export { actions, reducer, ScopeFramework };

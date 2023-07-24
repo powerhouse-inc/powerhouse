@@ -10,6 +10,7 @@ const actions = { ...BaseActions, ...DocumentModelActions };
 
 export type {
     DocumentModelAction,
+    DocumentModelState,
     ExtendedDocumentModelState,
     types,
 } from './gen';

@@ -6,4 +6,4 @@ import type * as types from '@acaldas/document-model-graphql/scope-framework';
 
 type ExtendedScopeFrameworkState = Document<ScopeFrameworkState, ScopeFrameworkAction>;
 
-export { types, ExtendedScopeFrameworkState, ScopeFrameworkAction };
+export { types, ExtendedScopeFrameworkState, ScopeFrameworkState, ScopeFrameworkAction };

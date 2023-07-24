@@ -6,4 +6,4 @@ import type * as types from '@acaldas/document-model-graphql/document-model';
 
 type ExtendedDocumentModelState = Document<DocumentModelState, DocumentModelAction>;
 
-export { types, ExtendedDocumentModelState, DocumentModelAction };
+export { types, ExtendedDocumentModelState, DocumentModelState, DocumentModelAction };
