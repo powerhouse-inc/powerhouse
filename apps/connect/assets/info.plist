@@ -26,6 +26,28 @@
 				<string>application/zip</string>
 			</dict>
 		</dict>
+    <dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.electron.document-model-electron.maker-dao.scope-framework</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+			<string>public.data</string>
+			<string>public.archive</string>
+			<string>public.zip</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Scope Framework Document</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>mdsf</string>
+					<string>mdsf.zip</string>
+				</array>
+				<key>public.mimeType</key>
+				<string>application/zip</string>
+			</dict>
+		</dict>
 	</array>
 	<key>CFBundleDocumentTypes</key>
   <array>
@@ -48,6 +70,8 @@
       <array>
         <string>phbs</string>
         <string>phbs.zip</string>
+        <string>mdsf</string>
+        <string>mdsf.zip</string>
       </array>
       <key>CFBundleTypeIconFile</key>
       <string>electron.icns</string>

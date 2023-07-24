@@ -6,16 +6,17 @@ import {
     TextDropItem,
 } from 'react-aria-components';
 import { Item } from 'react-stately';
-import { Tab, useTabs } from '../../store/tabs';
+import { Tab, useTabs } from 'src/store/tabs';
 import { ReorderableTabList } from './reordable-tab-list';
 
 interface IProps {
     tabs: ReturnType<typeof useTabs>;
     onNewTab: (tab?: Tab, args?: unknown[]) => void;
     onCloseTab: (tab: Tab) => void;
+    onUpdateTab: (tab: Tab) => void;
 }
 
-export default function ({ tabs, onNewTab, onCloseTab }: IProps) {
+export default function ({ tabs, onNewTab, onCloseTab, onUpdateTab }: IProps) {
     const onReorder = (e: DroppableCollectionReorderEvent) => {
         if (e.target.dropPosition === 'before') {
             tabs.moveBefore(e.target.key, e.keys);
@@ -94,6 +95,7 @@ export default function ({ tabs, onNewTab, onCloseTab }: IProps) {
             onRootDrop={onRootDrop}
             onDragOut={onDragOut}
             onCloseTab={onCloseTab}
+            onUpdateTab={onUpdateTab}
             onNewTab={() => onNewTab()}
             children={item => <Item>{item.name}</Item>}
         />

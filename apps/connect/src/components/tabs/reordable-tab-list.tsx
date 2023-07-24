@@ -17,9 +17,10 @@ import {
     useDroppableCollectionState,
     useTabListState,
 } from 'react-stately';
-import { themeAtom } from '../../store';
-import { Tab } from '../../store/tabs';
+import { themeAtom } from 'src/store';
+import { Tab } from 'src/store/tabs';
 import TabComponent from './tab';
+import TabButton from './tab-button';
 import { TabListDropTargetDelegate } from './tab-list-drop-target-delegate';
 import TabPanel from './tab-panel';
 
@@ -31,8 +32,9 @@ export function ReorderableTabList(
         > & {
             onDragOut?: (key: DraggableCollectionEndEvent) => void;
         } & {
-            onCloseTab: (tab: Tab) => void;
             onNewTab: () => void;
+            onCloseTab: (tab: Tab) => void;
+            onUpdateTab: (tab: Tab) => void;
         }
 ) {
     // Setup listbox as normal. See the useListBox docs for more details.
@@ -64,7 +66,7 @@ export function ReorderableTabList(
                 const test = {
                     'text/plain': item?.value?.name ?? '',
                     key: key.toString(),
-                    tab: item?.value?.serialize() ?? '',
+                    tab: item?.value ? Tab.serialize(item.value) : '',
                 };
                 return test;
             });
@@ -110,13 +112,16 @@ export function ReorderableTabList(
     const theme = useAtomValue(themeAtom);
 
     return (
-        <Tabs orientation="horizontal" className="flex h-full flex-col">
+        <Tabs
+            orientation="horizontal"
+            className="flex h-full flex-col bg-light"
+        >
             <ul
                 {...mergeProps(tabListProps, collectionProps)}
                 ref={ref}
-                className={`flex items-center ${
-                    isDropTarget && 'bg-light'
-                } rounded-3xl`}
+                className={`flex flex-shrink-0 items-center
+                ${isDropTarget && 'bg-light'}
+                rounded-3xl px-2 pb-4 pt-3 [overflow:overlay]`}
             >
                 {[...state.collection].map(item => (
                     <TabComponent
@@ -129,36 +134,34 @@ export function ReorderableTabList(
                     />
                 ))}
                 <button
-                    className={`h-[37px] rounded-t-xl bg-accent-1 px-2 ${
-                        state.collection.size ? 'ml-1' : 'bg-accent-2'
-                    }`}
+                    className={`h-[38px] px-2`}
                     onClick={() => props.onNewTab()}
                 >
                     <div
-                        className={`flex h-6 w-6 items-center justify-center rounded-full hover:bg-accent-2
-                        ${theme === 'dark' && 'bg-neutral-6'}
-                    `}
+                        className={`flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent-3 hover:text-text
+                    ${theme === 'dark' ? 'text-accent-4' : 'text-neutral-2'}`}
                     >
                         <IconCross />
                     </div>
                 </button>
                 <DragPreview ref={preview}>
                     {items => (
-                        <div
-                            className="min-w-36 flex cursor-grabbing items-center overflow-hidden text-ellipsis
-                                whitespace-nowrap rounded-t-xl bg-accent-2 px-2 py-[6.5px] text-neutral-4/50"
-                        >
-                            {items.length > 1
-                                ? `${items.length} items`
-                                : items[0]['text/plain']}
-                            <div className="ml-2 flex h-[21px] w-[21px] items-center justify-center rounded-full hover:bg-neutral-6">
-                                <IconCross className="rotate-45" />
-                            </div>
-                        </div>
+                        <TabButton
+                            as="button"
+                            item={
+                                items.length > 1
+                                    ? `${items.length} items`
+                                    : items[0]['text/plain']
+                            }
+                        />
                     )}
                 </DragPreview>
             </ul>
-            <TabPanel key={state.selectedItem?.key} state={state} />
+            <TabPanel
+                key={state.selectedItem?.key}
+                state={state}
+                onUpdateTab={props.onUpdateTab}
+            />
         </Tabs>
     );
 }

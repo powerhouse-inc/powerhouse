@@ -12,6 +12,8 @@ module.exports = {
         ],
         asar: true,
         osxSign: {},
+        icon: 'assets/icon',
+        overwrite: true,
     },
     rebuildConfig: {},
     makers: [

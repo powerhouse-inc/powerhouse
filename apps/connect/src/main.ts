@@ -1,17 +1,28 @@
 import {
-    BudgetStatementDocument,
-    utils,
-} from '@acaldas/document-model-libs/budget-statement';
-import { BrowserWindow, Menu, app, dialog, ipcMain, shell } from 'electron';
-import isDev from 'electron-is-dev';
+    ExtendedScopeFrameworkState,
+    loadScopeFrameworkFromInput,
+    saveScopeFrameworkToFile,
+} from '@acaldas/document-model-libs/scope-framework';
+import {
+    BrowserWindow,
+    Menu,
+    app,
+    dialog,
+    ipcMain,
+    nativeImage,
+    shell,
+} from 'electron';
 import path from 'path';
-import { addDeeplink } from './app/deeplink';
+import store from './app/store';
+import { Theme } from './store';
 
 const isMac = process.platform === 'darwin';
 
+app.setName('Powerhouse Connect');
+
 async function handleFile(file: string, window?: Electron.BrowserWindow) {
     try {
-        const budget = await utils.loadBudgetStatementFromFile(file);
+        const budget = await loadScopeFrameworkFromInput(file);
         const _window = window ?? BrowserWindow.getFocusedWindow();
         if (_window) {
             _window.webContents.send('fileOpened', budget);
@@ -27,28 +38,18 @@ async function handleFile(file: string, window?: Electron.BrowserWindow) {
     }
 }
 
-async function handleFileOpen() {
-    const files = await dialog.showOpenDialogSync({
-        properties: ['openFile'],
-    });
-    if (files) {
-        files.map(file => app.addRecentDocument(file));
-        return utils.loadBudgetStatementFromFile(files[0]);
-    }
-}
-
-async function handleFileSave(budgetStatement: BudgetStatementDocument) {
+async function handleFileSave(document: ExtendedScopeFrameworkState) {
     const filePath = await dialog.showSaveDialogSync({
         properties: ['showOverwriteConfirmation', 'createDirectory'],
-        defaultPath: budgetStatement?.data.month ?? 'budget',
+        defaultPath: document.name ?? document.data.rootPath ?? 'scope',
     });
 
     if (filePath) {
         const index = filePath.lastIndexOf(path.sep);
         const dirPath = filePath.slice(0, index);
         const name = filePath.slice(index);
-        const savedPath = await utils.saveBudgetStatementToFile(
-            budgetStatement,
+        const savedPath = await saveScopeFrameworkToFile(
+            document,
             dirPath,
             name
         );
@@ -56,7 +57,6 @@ async function handleFileSave(budgetStatement: BudgetStatementDocument) {
     }
 }
 
-ipcMain.handle('dialog:openFile', handleFileOpen);
 ipcMain.handle('dialog:saveFile', (e, args) => handleFileSave(args));
 
 ipcMain.handle('openURL', (e, url) => shell.openExternal(url));
@@ -82,13 +82,50 @@ ipcMain.handle('showTabMenu', (event, tab) => {
     });
 });
 
+function getThemeColors(theme: Theme) {
+    // TODO read from tailwind config
+    const color = theme === 'dark' ? '#fefefe' : '#141718';
+    const backgroundColor = theme === 'dark' ? '#141718' : '#FFFFFF';
+    const titlebarColor = theme === 'dark' ? '#0A0A0A' : '#F1F1F1';
+    return { color, backgroundColor, titlebarColor };
+}
+
+ipcMain.on('theme', (_, theme) => {
+    store.set('theme', theme);
+    const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
+
+    BrowserWindow.getAllWindows().forEach(window => {
+        if (window.setTitleBarOverlay) {
+            window.setTitleBarOverlay({
+                color: titlebarColor,
+                symbolColor: color,
+                height: 30,
+            });
+        }
+        window.setBackgroundColor(backgroundColor);
+    });
+});
+
 const createWindow = async (options?: {
     onReady?: (window: BrowserWindow) => void;
 }) => {
+    const theme = store.get('theme', 'dark') as Theme;
+
+    const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
+
     // Create the browser window.
     const mainWindow = new BrowserWindow({
+        title: 'Connect',
+        titleBarStyle: 'hidden',
+        titleBarOverlay: {
+            color: titlebarColor,
+            symbolColor: color,
+            height: 30,
+        },
+        backgroundColor: backgroundColor,
         width: 1300,
         height: 940,
+        minHeight: 350,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
         },
@@ -273,6 +310,12 @@ app.on('open-file', (_event, path) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
+    const appIcon = nativeImage.createFromPath('src/assets/icon.png');
+
+    if (isMac) {
+        app.dock.setIcon(appIcon);
+    }
+
     createWindow({
         onReady() {
             if (initFile) {
@@ -303,18 +346,21 @@ app.on('activate', () => {
 let user: string;
 ipcMain.handle('user', () => user);
 
-const appProtocol = isDev ? 'connect-dev' : 'connect';
-addDeeplink(app, appProtocol, (event, url) => {
-    // gets user address from url
-    const address = url.slice(`${appProtocol}://`.length);
-    user = address;
+// deeplink login
 
-    // notifies all windows
-    BrowserWindow.getAllWindows().forEach((window, index) => {
-        window.webContents.send('login', address);
-        // shows first window if not in view
-        if (index === 0) {
-            window.show();
-        }
-    });
-});
+// const appProtocol = isDev ? 'connect-dev' : 'connect';
+
+// addDeeplink(app, appProtocol, (event, url) => {
+//     // gets user address from url
+//     const address = url.slice(`${appProtocol}://`.length);
+//     user = address;
+
+//     // notifies all windows
+//     BrowserWindow.getAllWindows().forEach((window, index) => {
+//         window.webContents.send('login', address);
+//         // shows first window if not in view
+//         if (index === 0) {
+//             window.show();
+//         }
+//     });
+// });

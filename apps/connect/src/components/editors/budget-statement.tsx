@@ -6,7 +6,7 @@ import {
 import { BudgetStatement } from 'document-model-editors';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
-import { themeAtom } from '../store';
+import { themeAtom } from 'src/store';
 
 interface IProps {
     initialBudget?: BudgetStatementDocument;
@@ -18,11 +18,11 @@ export default function Editor({ initialBudget, onChange }: IProps) {
 
     const [budgetStatement, dispatch, reset] =
         BudgetStatement.useBudgetStatementReducer(
-            initialBudget ?? utils.createBudgetStatement()
+            initialBudget ?? (utils.createBudgetStatement() as any) // TODO remove any
         );
 
     useEffect(() => {
-        reset(initialBudget ?? utils.createBudgetStatement());
+        reset(initialBudget ?? utils.createBudgetStatement()) as any; // TODO remove any;
     }, [initialBudget]);
 
     useEffect(() => {

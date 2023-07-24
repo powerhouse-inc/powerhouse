@@ -1,15 +1,14 @@
 import { useEffect } from 'react';
-import Tabs from '../components/tabs';
-import { TabBudgetStatement, useTabs } from '../store/tabs';
+import Tabs from 'src/components/tabs';
+import { createScopeFrameworkTab, useTabs } from 'src/store/tabs';
 
 export default () => {
     const tabs = useTabs();
-
     useEffect(() => {
         return window.electronAPI?.handleFileOpened(file => {
             if (file) {
                 // TODO deal with different files
-                const tab = new TabBudgetStatement(file);
+                const tab = createScopeFrameworkTab(file);
                 tabs.addTab(tab);
             }
         });
@@ -22,7 +21,7 @@ export default () => {
                 return;
             }
             const tab = tabs.getItem(selectedTab);
-            const file = tab.saveFile();
+            const file = tab.document;
             if (file) {
                 window.electronAPI?.saveFile(file);
             }
@@ -30,11 +29,12 @@ export default () => {
     }, [tabs]);
 
     return (
-        <div className="h-full pt-2">
+        <div className="h-full">
             <Tabs
                 tabs={tabs}
                 onNewTab={tabs.addTab}
                 onCloseTab={tabs.closeTab}
+                onUpdateTab={tabs.updateTab}
             />
         </div>
     );
