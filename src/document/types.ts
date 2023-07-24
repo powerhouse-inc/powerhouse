@@ -1,6 +1,6 @@
 import { WritableDraft } from 'immer/dist/internal';
 import { BaseAction } from './actions/types';
-
+export type { BaseAction };
 /**
  * Defines the basic structure of an action.
  *

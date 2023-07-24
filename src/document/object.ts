@@ -10,8 +10,8 @@ import { createDocument, loadFromFile, saveToFile } from './utils';
  * @typeparam A - The type of action the document can take.
  */
 export abstract class BaseDocument<T, A extends Action> {
-    protected state: Document<T, A>;
-    private reducer: Reducer<T, A | BaseAction>;
+    protected _state: Document<T, A>;
+    private _reducer: Reducer<T, A | BaseAction>;
 
     /**
      * Constructs a BaseDocument instance with an initial state.
@@ -22,8 +22,8 @@ export abstract class BaseDocument<T, A extends Action> {
         reducer: Reducer<T, A | BaseAction>,
         initialState?: Partial<Document<T, A>> & { data: T }
     ) {
-        this.reducer = reducer;
-        this.state = createDocument(initialState);
+        this._reducer = reducer;
+        this._state = createDocument(initialState);
     }
 
     /**
@@ -32,7 +32,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @returns The Document instance.
      */
     protected dispatch(action: A | BaseAction) {
-        this.state = this.reducer(this.state, action);
+        this._state = this._reducer(this._state, action);
         return this;
     }
 
@@ -43,7 +43,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @returns The file path where the state was saved.
      */
     protected saveToFile(path: string, extension: string, name?: string) {
-        return saveToFile(this.state, path, extension, name);
+        return saveToFile(this._state, path, extension, name);
     }
 
     /**
@@ -51,7 +51,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param path - The file path where the state is stored.
      */
     async loadFromFile(path: string) {
-        this.state = await loadFromFile<T, A | BaseAction>(path, this.reducer);
+        this._state = await loadFromFile<T, A | BaseAction>(path, this._reducer);
     }
 
     /**
@@ -72,49 +72,49 @@ export abstract class BaseDocument<T, A extends Action> {
      * Gets the name of the document.
      */
     get name() {
-        return this.state.name;
+        return this._state.name;
     }
 
     /**
      * Gets the type of document.
      */
     get documentType() {
-        return this.state.documentType;
+        return this._state.documentType;
     }
 
     /**
      * Gets the timestamp of the date the document was created.
      */
     get created() {
-        return this.state.created;
+        return this._state.created;
     }
 
     /**
      * Gets the timestamp of the date the document was last modified.
      */
     get lastModified() {
-        return this.state.lastModified;
+        return this._state.lastModified;
     }
 
     /**
      * Gets the revision number of the document.
      */
     get revision() {
-        return this.state.revision;
+        return this._state.revision;
     }
 
     /**
      * Gets the initial state of the document.
      */
     get initialState() {
-        return this.state.initialState;
+        return this._state.initialState;
     }
 
     /**
      *    Gets the list of operations performed on the document.
      */
     get operations() {
-        return this.state.operations;
+        return this._state.operations;
     }
 
     /**
@@ -122,7 +122,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param attachment - The key of the attachment to retrieve.
      */
     public getAttachment(attachment: Attachment) {
-        return this.state.fileRegistry[attachment];
+        return this._state.fileRegistry[attachment];
     }
 
     /**

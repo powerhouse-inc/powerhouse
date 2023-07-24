@@ -20,10 +20,10 @@ export default class CommentObject extends BaseDocument<
     }
 
     get comments() {
-        return this.state.data.comments;
+        return this._state.data.comments;
     }
 
     public getComment(key: string) {
-        return this.state.data.comments.find(v => v.key === key);
+        return this._state.data.comments.find(v => v.key === key);
     }
 }

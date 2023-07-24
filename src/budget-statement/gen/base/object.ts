@@ -16,7 +16,7 @@ export default class BaseObject extends BaseDocument<
      * @category Budget Statement
      */
     get month() {
-        return this.state.data.month;
+        return this._state.data.month;
     }
 
     /**
@@ -24,7 +24,7 @@ export default class BaseObject extends BaseDocument<
      * @category Budget Statement
      */
     get owner() {
-        return this.state.data.owner;
+        return this._state.data.owner;
     }
 
     /**
@@ -32,11 +32,11 @@ export default class BaseObject extends BaseDocument<
      * @category Budget Statement
      */
     get quoteCurrency() {
-        return this.state.data.quoteCurrency;
+        return this._state.data.quoteCurrency;
     }
 
     get ftes() {
-        return this.state.data.ftes;
+        return this._state.data.ftes;
     }
 
     public setOwner(owner: OwnerInput) {
