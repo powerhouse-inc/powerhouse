@@ -6,7 +6,7 @@ const FileSystemError = new Error('File system not available.');
 export function writeFile(
     path: string,
     name: string,
-    stream: Uint8Array
+    stream: NodeJS.ReadableStream
 ): Promise<string> {
     throw FileSystemError;
 }

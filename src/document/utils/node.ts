@@ -6,20 +6,21 @@ import { join } from 'path';
 export function writeFile(
     path: string,
     name: string,
-    data: Uint8Array
+    stream: NodeJS.ReadableStream
 ): Promise<string> {
     const filePath = join(path, name);
     fs.mkdirSync(path, { recursive: true });
 
     return new Promise((resolve, reject) => {
         try {
-            fs.writeFile(filePath, data, {}, err => {
-                if (err) {
-                    reject(err);
-                } else {
+            stream
+                .pipe(fs.createWriteStream(filePath))
+                .on('finish', () => {
                     resolve(filePath);
-                }
-            });
+                })
+                .on('error', error => {
+                    reject(error);
+                });
         } catch (error) {
             reject(error);
         }
