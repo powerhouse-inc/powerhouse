@@ -2,9 +2,9 @@ import { ReactComponent as IconDraft } from '@/assets/icons/draft.svg';
 import { ReactComponent as IconFile } from '@/assets/icons/file.svg';
 import { ReactComponent as IconPlusCircle } from '@/assets/icons/plus-circle.svg';
 import { ReactComponent as IconSettings } from '@/assets/icons/settings.svg';
-import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browser/scope-framework';
 import { useAtom, useAtomValue } from 'jotai';
 import { NavLink, To, useNavigate } from 'react-router-dom';
+import { useOpenFile } from '../hooks';
 import {
     Tab,
     sidebarCollapsedAtom,
@@ -119,20 +119,9 @@ export default function () {
         window.electronAPI?.openURL('http://localhost:3000/');
     };
 
-    async function openFile() {
-        try {
-            const [fileHandle] = await window.showOpenFilePicker();
-            const file = await fileHandle.getFile();
-            const document = await loadScopeFrameworkFromInput(file);
-            if (document) {
-                addTab(Tab.fromDocument(document));
-            } else {
-                throw new Error('File was not recognized.');
-            }
-        } catch (error) {
-            console.error('Error opening file:', error); // TODO improve error handling
-        }
-    }
+    const handleOpenFile = useOpenFile(document => {
+        addTab(Tab.fromDocument(document));
+    });
 
     async function saveFile() {
         if (!selectedTab) {
@@ -160,7 +149,7 @@ export default function () {
                 />
 
                 <SidebarButton
-                    onClick={openFile}
+                    onClick={handleOpenFile}
                     title="Open"
                     Icon={IconFile}
                     collapsed={collapsed}

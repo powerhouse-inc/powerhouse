@@ -1,4 +1,3 @@
-import { Document } from '@acaldas/document-model-libs/document';
 import {
     ExtendedScopeFrameworkState,
     loadScopeFrameworkFromInput,
@@ -39,20 +38,6 @@ async function handleFile(file: string, window?: Electron.BrowserWindow) {
     }
 }
 
-async function handleFileOpen(): Promise<Document | undefined> {
-    try {
-        const files = await dialog.showOpenDialogSync({
-            properties: ['openFile'],
-        });
-        if (files) {
-            files.map(file => app.addRecentDocument(file));
-            return loadScopeFrameworkFromInput(files[0]);
-        }
-    } catch (error) {
-        dialog.showErrorBox('Error opening file', error as string);
-    }
-}
-
 async function handleFileSave(document: ExtendedScopeFrameworkState) {
     const filePath = await dialog.showSaveDialogSync({
         properties: ['showOverwriteConfirmation', 'createDirectory'],
@@ -72,7 +57,6 @@ async function handleFileSave(document: ExtendedScopeFrameworkState) {
     }
 }
 
-ipcMain.handle('dialog:openFile', handleFileOpen);
 ipcMain.handle('dialog:saveFile', (e, args) => handleFileSave(args));
 
 ipcMain.handle('openURL', (e, url) => shell.openExternal(url));
