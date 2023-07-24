@@ -20,6 +20,8 @@ export default defineConfig({
         alias: {
             // eslint-disable-next-line no-undef
             '@/assets': path.resolve(__dirname, './assets'),
+            // eslint-disable-next-line no-undef
+            src: path.resolve(__dirname, './src'),
         },
     },
 });

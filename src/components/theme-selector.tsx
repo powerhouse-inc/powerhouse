@@ -2,7 +2,7 @@ import { ReactComponent as IconDark } from '@/assets/icons/dark.svg';
 import { ReactComponent as IconLight } from '@/assets/icons/light.svg';
 import { useAtom, useAtomValue } from 'jotai';
 import { Switch } from 'react-aria-components';
-import { sidebarCollapsedAtom, themeAtom } from '../store';
+import { sidebarCollapsedAtom, themeAtom } from 'src/store';
 
 function ThemeButton({
     Icon,

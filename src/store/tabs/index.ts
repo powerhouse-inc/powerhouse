@@ -1,131 +1,8 @@
-import {
-    BudgetStatementDocument,
-    utils,
-} from '@acaldas/document-model-libs/browser/budget-statement';
-import { Document } from 'document-model-editors';
 import { atom, useAtom } from 'jotai';
-import { ReactElement, useMemo } from 'react';
+import { useMemo } from 'react';
 import { ListData } from 'react-stately';
-import { createBudgetStatementEditor } from '../budget-statement/editor';
-import tabNew from '../components/tabs/tab-new';
-
-export type TabType =
-    | ''
-    | 'new'
-    | 'powerhouse/document-model'
-    | 'powerhouse/budget-statement';
-
-export abstract class Tab {
-    public abstract type: TabType;
-    constructor(
-        public name: string,
-        public content: () => ReactElement,
-        public id: string = window.crypto.randomUUID()
-    ) {}
-
-    abstract serialize(): string;
-
-    saveFile(): unknown | null {
-        return null;
-    }
-
-    static fromString(value: string): Tab {
-        const object = JSON.parse(value);
-        const type = object.type as TabType;
-        switch (object.type) {
-            case 'new':
-                return new TabNew(object.id);
-            case 'powerhouse/budget-statement':
-                return new TabBudgetStatement(
-                    object.budgetStatement,
-                    object.name,
-                    object.id
-                );
-            case 'powerhouse/document-model':
-                return new TabDocumentModel(object.name, object.id);
-            default:
-                throw new Error(`Tab type ${type} wasn't handled`);
-        }
-    }
-}
-
-export class TabNew extends Tab {
-    public type: TabType = 'new';
-
-    constructor(id?: string) {
-        super('New tab', tabNew, id);
-    }
-
-    serialize() {
-        return JSON.stringify({
-            type: this.type,
-            id: this.id,
-        });
-    }
-}
-
-export class TabBudgetStatement extends Tab {
-    public type: TabType = 'powerhouse/budget-statement';
-    public budgetStatement: BudgetStatementDocument;
-
-    constructor(
-        _budgetStatement?: BudgetStatementDocument,
-        name?: string,
-        id?: string
-    ) {
-        const budgetStatement =
-            _budgetStatement ?? utils.createBudgetStatement();
-        const content = createBudgetStatementEditor({
-            initialBudget: budgetStatement,
-            onChange: budget => {
-                this.budgetStatement = budget;
-            },
-        });
-
-        super(
-            name ||
-                budgetStatement.name ||
-                budgetStatement.data.month ||
-                'Budget',
-            content,
-            id
-        );
-
-        this.budgetStatement = budgetStatement;
-    }
-
-    serialize() {
-        return JSON.stringify({
-            type: this.type,
-            id: this.id,
-            name: this.name,
-            budgetStatement: this.budgetStatement,
-        });
-    }
-
-    override saveFile(): BudgetStatementDocument {
-        return this.budgetStatement;
-    }
-}
-
-export class TabDocumentModel extends Tab {
-    public type: TabType = 'powerhouse/document-model';
-
-    constructor(name?: string, id?: string) {
-        super(name || 'Document Model', Document.Editor, id);
-    }
-
-    serialize() {
-        return JSON.stringify({
-            type: this.type,
-            id: this.id,
-            name: this.name,
-        });
-    }
-}
-
-export const tabsAtom = atom<Tab[]>([]);
-export const selectedTabAtom = atom<Tab['id'] | undefined>(undefined);
+import { Tab, createTab } from './base';
+export * from './base';
 
 function moveTab(tabs: Tab[], indices: number[], toIndex: number): Tab[] {
     // Shift the target down by the number of items being moved from before the target
@@ -171,6 +48,9 @@ function moveTab(tabs: Tab[], indices: number[], toIndex: number): Tab[] {
     return copy;
 }
 
+export const tabsAtom = atom<Tab[]>([]);
+export const selectedTabAtom = atom<Tab['id'] | undefined>(undefined);
+
 export const useTabs = () => {
     const [_tabs, setTabs] = useAtom(tabsAtom);
     const [selectedTab, setSelectedTab] = useAtom(selectedTabAtom);
@@ -182,6 +62,7 @@ export const useTabs = () => {
         selectedTab: typeof selectedTab;
         setSelectedTab: typeof setSelectedTab;
         addTab: (tab?: Tab) => void;
+        updateTab: (tab: Tab) => void;
         closeTab: (tab: Tab) => void;
     } = useMemo(
         () => ({
@@ -194,7 +75,7 @@ export const useTabs = () => {
                 return tab;
             },
             append(...values) {
-                setTabs(tabs => [...tabs, ...values]);
+                setTabs(tabs => [...tabs.slice(), ...values]);
             },
             moveBefore(key, keys) {
                 setTabs(tabs => {
@@ -230,9 +111,17 @@ export const useTabs = () => {
             selectedTab,
             setSelectedTab,
             addTab(tab?: Tab) {
-                const newTab = tab ?? new TabNew();
+                const newTab = tab ?? createTab('new');
                 tabs.append(newTab);
                 tabs.setSelectedTab(newTab.id);
+            },
+            updateTab(tab: Tab) {
+                setTabs(_tabs => {
+                    const index = _tabs.findIndex(_tab => _tab.id === tab.id);
+                    const newTabs = _tabs.slice();
+                    newTabs[index > -1 ? index : newTabs.length] = tab;
+                    return newTabs;
+                });
             },
             closeTab(tab: Tab) {
                 tabs.remove(tab.id);
