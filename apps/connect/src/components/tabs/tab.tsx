@@ -13,7 +13,7 @@ import {
     DroppableCollectionState,
     TabListState,
 } from 'react-stately';
-import { Tab } from '../../store/tabs';
+import { Tab } from 'src/store/tabs';
 import TabButton from './tab-button';
 
 export default function ({

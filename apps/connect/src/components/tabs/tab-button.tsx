@@ -1,8 +1,8 @@
+import { ReactComponent as IconCross } from '@/assets/icons/cross.svg';
 import { Node } from '@react-types/shared';
 import { ButtonHTMLAttributes, DetailedHTMLProps, forwardRef } from 'react';
-import { ReactComponent as IconCross } from '../../../assets/icons/cross.svg';
-import { useTheme } from '../../store';
-import { Tab } from '../../store/tabs';
+import { useTheme } from 'src/store';
+import { Tab } from 'src/store/tabs';
 
 type IProps = DetailedHTMLProps<
     ButtonHTMLAttributes<HTMLButtonElement>,

@@ -17,8 +17,8 @@ import {
     useDroppableCollectionState,
     useTabListState,
 } from 'react-stately';
-import { themeAtom } from '../../store';
-import { Tab } from '../../store/tabs';
+import { themeAtom } from 'src/store';
+import { Tab } from 'src/store/tabs';
 import TabComponent from './tab';
 import TabButton from './tab-button';
 import { TabListDropTargetDelegate } from './tab-list-drop-target-delegate';

@@ -6,7 +6,7 @@ import {
     TextDropItem,
 } from 'react-aria-components';
 import { Item } from 'react-stately';
-import { Tab, useTabs } from '../../store/tabs';
+import { Tab, useTabs } from 'src/store/tabs';
 import { ReorderableTabList } from './reordable-tab-list';
 
 interface IProps {

@@ -2,7 +2,7 @@ import { Document } from '@acaldas/document-model-libs/document';
 import { useRef } from 'react';
 import { useTabList, useTabPanel } from 'react-aria';
 import { TabListState } from 'react-stately';
-import { Tab } from '../../store/tabs';
+import { Tab } from 'src/store/tabs';
 import TabNew from './tab-new';
 
 export default function ({

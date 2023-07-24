@@ -310,7 +310,7 @@ app.on('open-file', (_event, path) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
-    const appIcon = nativeImage.createFromPath('../assets/icon.png');
+    const appIcon = nativeImage.createFromPath('src/assets/icon.png');
 
     if (isMac) {
         app.dock.setIcon(appIcon);

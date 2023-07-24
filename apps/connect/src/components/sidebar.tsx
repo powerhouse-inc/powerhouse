@@ -4,14 +4,14 @@ import { ReactComponent as IconPlusCircle } from '@/assets/icons/plus-circle.svg
 import { ReactComponent as IconSettings } from '@/assets/icons/settings.svg';
 import { useAtom, useAtomValue } from 'jotai';
 import { NavLink, To, useNavigate } from 'react-router-dom';
-import { useOpenFile } from '../hooks';
+import { useOpenFile } from 'src/hooks';
 import {
     Tab,
     sidebarCollapsedAtom,
     themeAtom,
     useTabs,
     userAtom,
-} from '../store';
+} from 'src/store';
 import ThemeSelector from './theme-selector';
 
 interface IProps {

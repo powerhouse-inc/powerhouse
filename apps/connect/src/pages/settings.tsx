@@ -1,5 +1,5 @@
+import { ReactComponent as IconCross } from '@/assets/icons/cross.svg';
 import { NavLink } from 'react-router-dom';
-import { ReactComponent as IconCross } from '../../assets/icons/cross.svg';
 
 export default () => {
     return (
