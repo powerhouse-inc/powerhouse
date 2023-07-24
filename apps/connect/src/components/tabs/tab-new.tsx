@@ -1,6 +1,5 @@
-import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browser/scope-framework';
 import { useRef } from 'react';
-import { useDropFile } from '../../hooks';
+import { useDropFile, useOpenFile } from '../../hooks';
 import { Tab, createScopeFrameworkTab, useTabs, useTheme } from '../../store';
 import Button from '../button';
 
@@ -10,20 +9,9 @@ export default () => {
     const { selectedTab, updateTab } = useTabs();
     const { dropProps, isDropTarget } = useDropFile(ref);
 
-    async function openFile() {
-        try {
-            const [fileHandle] = await window.showOpenFilePicker();
-            const file = await fileHandle.getFile();
-            const document = await loadScopeFrameworkFromInput(file);
-            if (document) {
-                updateTab(Tab.fromDocument(document, selectedTab));
-            } else {
-                throw new Error('File was not recognized.');
-            }
-        } catch (error) {
-            console.error('Error opening file:', error); // TODO improve error handling
-        }
-    }
+    const handleOpenFile = useOpenFile(document => {
+        updateTab(Tab.fromDocument(document, selectedTab));
+    });
 
     return (
         <div>
@@ -55,7 +43,7 @@ export default () => {
             >
                 <div className="h-9 select-none opacity-0"></div>
                 <p className="text-accent-5">Drag file here</p>
-                <Button className="button" onClick={openFile}>
+                <Button className="button" onClick={handleOpenFile}>
                     Browse
                 </Button>
             </div>
