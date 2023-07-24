@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import Tabs from '../components/tabs';
-import { createScopeFrameworkTab, useTabs } from '../store/tabs';
+import Tabs from 'src/components/tabs';
+import { createScopeFrameworkTab, useTabs } from 'src/store/tabs';
 
 export default () => {
     const tabs = useTabs();

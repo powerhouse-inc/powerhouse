@@ -5,8 +5,8 @@ import {
 import { ScopeFramework } from 'document-model-editors';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
+import { themeAtom } from 'src/store';
 import { EditorProps } from '.';
-import { themeAtom } from '../../store';
 
 export default function Editor({ document, onChange }: EditorProps) {
     const theme = useAtomValue(themeAtom);

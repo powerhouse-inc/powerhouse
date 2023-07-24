@@ -2,7 +2,7 @@ import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browse
 import { useCallback } from 'react';
 import { useDrop } from 'react-aria';
 import { useNavigate } from 'react-router-dom';
-import { Tab, createScopeFrameworkTab, useTabs } from '../store';
+import { Tab, createScopeFrameworkTab, useTabs } from 'src/store';
 
 export function useDropFile(ref: React.RefObject<HTMLElement>) {
     const { addTab, selectedTab, getItem, updateTab } = useTabs();

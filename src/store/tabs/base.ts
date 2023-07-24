@@ -3,9 +3,9 @@ import {
     createEmptyExtendedScopeFrameworkState,
 } from '@acaldas/document-model-libs/browser/scope-framework';
 import { Document } from '@acaldas/document-model-libs/document';
-import { EditorComponent } from '../../components/editors';
-import ScopeFrameworkEditor from '../../components/editors/scope-framework';
-import tabNew from '../../components/tabs/tab-new';
+import { EditorComponent } from 'src/components/editors';
+import ScopeFrameworkEditor from 'src/components/editors/scope-framework';
+import tabNew from 'src/components/tabs/tab-new';
 
 export type TabType =
     | 'new'

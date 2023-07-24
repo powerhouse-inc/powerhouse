@@ -6,7 +6,7 @@ import {
 import { BudgetStatement } from 'document-model-editors';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
-import { themeAtom } from '../../store';
+import { themeAtom } from 'src/store';
 
 interface IProps {
     initialBudget?: BudgetStatementDocument;

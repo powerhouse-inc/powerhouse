@@ -3,8 +3,8 @@ import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
 import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import { useDropFile } from '../hooks';
-import { useTheme, userAtom } from '../store';
+import { useDropFile } from 'src/hooks';
+import { useTheme, userAtom } from 'src/store';
 import Sidebar from './sidebar';
 
 const ROOT_FILE_DROP = false;

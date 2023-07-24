@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { useDropFile, useOpenFile } from '../../hooks';
-import { Tab, createScopeFrameworkTab, useTabs, useTheme } from '../../store';
+import { useDropFile, useOpenFile } from 'src/hooks';
+import { Tab, createScopeFrameworkTab, useTabs, useTheme } from 'src/store';
 import Button from '../button';
 
 export default () => {
