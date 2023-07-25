@@ -1,5 +1,6 @@
 import { LineItemForecast } from '@acaldas/document-model-graphql/budget-statement';
 import JSZip from 'jszip';
+import type { FileInput } from '../../document/utils';
 import {
     createDocument,
     createZip,
@@ -139,7 +140,7 @@ export const loadBudgetStatementFromFile = async (
 };
 
 export const loadBudgetStatementFromInput = async (
-    input: Parameters<typeof loadFromInput>[0]
+    input: FileInput
 ): Promise<BudgetStatementDocument> => {
     const state = await loadFromInput<State, BudgetStatementAction>(
         input,

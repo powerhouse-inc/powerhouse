@@ -6,6 +6,7 @@
 
 import { ScopeFrameworkState } from '@acaldas/document-model-graphql/scope-framework';
 import { reducer } from '..';
+import type { FileInput } from '../../document/utils';
 import {
     createZip,
     hashKey,
@@ -34,37 +35,37 @@ export const createEmptyScopeFrameworkState = (): ScopeFrameworkState => ({
 const dateTimeNow = new Date().toISOString();
 export const createEmptyExtendedScopeFrameworkState =
     (): ExtendedScopeFrameworkState => {
-        const initialData = createEmptyScopeFrameworkState()
+        const initialData = createEmptyScopeFrameworkState();
         return {
-        // Component 1: document header
-        name: '',
-        created: dateTimeNow,
-        lastModified: dateTimeNow,
-        documentType: 'makerdao/scope-framework',
-        revision: 0,
-
-        // Component 2: (strict) state object
-        data: initialData,
-
-        // Component 3: file registry
-        fileRegistry: {},
-
-        // TODO: remove operations, lift to the document level structure: operations = { fileRegistry:File[], history:Operation[] }
-        operations: [],
-
-        // TODO: remove initialState, lift to the document level (with type: ExtendedDocumentModelState)
-        initialState: {
+            // Component 1: document header
             name: '',
             created: dateTimeNow,
             lastModified: dateTimeNow,
             documentType: 'makerdao/scope-framework',
             revision: 0,
+
+            // Component 2: (strict) state object
             data: initialData,
+
+            // Component 3: file registry
             fileRegistry: {},
+
+            // TODO: remove operations, lift to the document level structure: operations = { fileRegistry:File[], history:Operation[] }
             operations: [],
-        },
-    }
-};
+
+            // TODO: remove initialState, lift to the document level (with type: ExtendedDocumentModelState)
+            initialState: {
+                name: '',
+                created: dateTimeNow,
+                lastModified: dateTimeNow,
+                documentType: 'makerdao/scope-framework',
+                revision: 0,
+                data: initialData,
+                fileRegistry: {},
+                operations: [],
+            },
+        };
+    };
 
 export const loadScopeFrameworkFromFile = async (path: string) => {
     return loadFromFile<ScopeFrameworkState, ScopeFrameworkAction>(
@@ -74,7 +75,7 @@ export const loadScopeFrameworkFromFile = async (path: string) => {
 };
 
 export const loadScopeFrameworkFromInput = async (
-    input: Parameters<typeof loadFromInput>[0]
+    input: FileInput
 ): Promise<ExtendedScopeFrameworkState> => {
     return loadFromInput<ScopeFrameworkState, ScopeFrameworkAction>(
         input,
