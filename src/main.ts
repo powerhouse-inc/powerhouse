@@ -1,8 +1,4 @@
-import {
-    ExtendedScopeFrameworkState,
-    loadScopeFrameworkFromInput,
-    saveScopeFrameworkToFile,
-} from '@acaldas/document-model-libs/scope-framework';
+import { Document } from '@acaldas/document-model-libs/document';
 import {
     BrowserWindow,
     Menu,
@@ -15,6 +11,7 @@ import {
 import path from 'path';
 import store from './app/store';
 import { Theme } from './store';
+import { loadFile, saveFile } from './utils/file';
 
 const isMac = process.platform === 'darwin';
 
@@ -22,14 +19,14 @@ app.setName('Powerhouse Connect');
 
 async function handleFile(file: string, window?: Electron.BrowserWindow) {
     try {
-        const budget = await loadScopeFrameworkFromInput(file);
+        const document = await loadFile(file);
         const _window = window ?? BrowserWindow.getFocusedWindow();
         if (_window) {
-            _window.webContents.send('fileOpened', budget);
+            _window.webContents.send('fileOpened', document);
         } else {
             createWindow({
                 onReady(window) {
-                    window.webContents.send('fileOpened', budget);
+                    window.webContents.send('fileOpened', document);
                 },
             });
         }
@@ -38,21 +35,14 @@ async function handleFile(file: string, window?: Electron.BrowserWindow) {
     }
 }
 
-async function handleFileSave(document: ExtendedScopeFrameworkState) {
+async function handleFileSave(document: Document) {
     const filePath = await dialog.showSaveDialogSync({
         properties: ['showOverwriteConfirmation', 'createDirectory'],
-        defaultPath: document.name ?? document.data.rootPath ?? 'scope',
+        defaultPath: document.name,
     });
 
     if (filePath) {
-        const index = filePath.lastIndexOf(path.sep);
-        const dirPath = filePath.slice(0, index);
-        const name = filePath.slice(index);
-        const savedPath = await saveScopeFrameworkToFile(
-            document,
-            dirPath,
-            name
-        );
+        const savedPath = await saveFile(document, filePath);
         app.addRecentDocument(savedPath);
     }
 }

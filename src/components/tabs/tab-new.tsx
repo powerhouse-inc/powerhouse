@@ -1,6 +1,12 @@
 import { useRef } from 'react';
 import { useDropFile, useOpenFile } from 'src/hooks';
-import { Tab, createScopeFrameworkTab, useTabs, useTheme } from 'src/store';
+import {
+    Tab,
+    createBudgetStatementTab,
+    createScopeFrameworkTab,
+    useTabs,
+    useTheme,
+} from 'src/store';
 import Button from '../button';
 
 export default () => {
@@ -15,7 +21,7 @@ export default () => {
 
     return (
         <div>
-            <div className="mb-10">
+            <div className="mb-10 flex gap-4">
                 <Button
                     className="bg-accent-1 text-text"
                     onClick={() =>
@@ -25,6 +31,16 @@ export default () => {
                     }
                 >
                     New Scope Framework
+                </Button>
+                <Button
+                    className="bg-accent-1 text-text"
+                    onClick={() =>
+                        updateTab(
+                            createBudgetStatementTab(undefined, selectedTab)
+                        )
+                    }
+                >
+                    New Budget Statement
                 </Button>
             </div>
             <h2 className="h2">Open existing file</h2>

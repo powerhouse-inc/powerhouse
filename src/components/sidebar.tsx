@@ -128,7 +128,7 @@ export default function () {
             return;
         }
         const tab = getItem(selectedTab);
-        if (tab.type === 'makerdao/scope-framework') {
+        if (tab.document) {
             window.electronAPI?.saveFile(tab.document);
         }
     }
