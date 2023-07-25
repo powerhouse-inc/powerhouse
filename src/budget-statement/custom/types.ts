@@ -39,6 +39,11 @@ export type {
     OwnerInput,
     Ftes,
     FtesInput,
+};
+export {
+    types,
+    ExtendedBudgetStatementState,
+    BudgetStatementState,
     BudgetStatementAction,
 };
 
@@ -51,3 +56,11 @@ export type State = BudgetStatementData;
  * Represents a budget statement document, which extends the base Document type.
  */
 export type BudgetStatementDocument = Document<State, BudgetStatementAction>;
+
+import type * as types from '@acaldas/document-model-graphql/document-model';
+
+type BudgetStatementState = BudgetStatementData;
+type ExtendedBudgetStatementState = Document<
+    BudgetStatementState,
+    BudgetStatementAction
+>;

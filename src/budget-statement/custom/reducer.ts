@@ -56,7 +56,7 @@ import {
     deleteVestingOperation,
     updateVestingOperation,
 } from './actions/vesting';
-import { BudgetStatementAction, State } from './types';
+import type { BudgetStatementAction, BudgetStatementState } from './types';
 
 /**
  * Reducer for the BudgetStatement module, which handles operations related to budget statements.
@@ -80,57 +80,58 @@ import { BudgetStatementAction, State } from './types';
  * @param action - The action to be performed on the state.
  * @returns The new state after applying the action.
  */
-export const reducer = createReducer<State, BudgetStatementAction>(
-    (state, action) => {
-        if (isBaseAction(action)) {
-            return state;
-        }
-
-        z.BudgetStatementActionSchema().parse(action);
-
-        switch (action.type) {
-            case SET_OWNER:
-                return setOwnerOperation(state, action);
-            case SET_MONTH:
-                return setMonthOperation(state, action);
-            case SET_QUOTE_CURRENCY:
-                return setQuoteCurrencyOperation(state, action);
-            case SET_FTES:
-                return setFtesOperation(state, action);
-            case ADD_ACCOUNT:
-                return addAccountOperation(state, action);
-            case UPDATE_ACCOUNT:
-                return updateAccountOperation(state, action);
-            case DELETE_ACCOUNT:
-                return deleteAccountOperation(state, action);
-            case SORT_ACCOUNTS:
-                return sortAccountsOperation(state, action);
-            case ADD_LINE_ITEM:
-                return addLineItemOperation(state, action);
-            case UPDATE_LINE_ITEM:
-                return updateLineItemOperation(state, action);
-            case DELETE_LINE_ITEM:
-                return deleteLineItemOperation(state, action);
-            case SORT_LINE_ITEMS:
-                return sortLineItemsOperation(state, action);
-            case ADD_AUDIT_REPORT:
-                return addAuditReportOperation(state, action);
-            case DELETE_AUDIT_REPORT:
-                return deleteAuditReportOperation(state, action);
-            case ADD_VESTING:
-                return addVestingOperation(state, action);
-            case UPDATE_VESTING:
-                return updateVestingOperation(state, action);
-            case DELETE_VESTING:
-                return deleteVestingOperation(state, action);
-            case ADD_COMMENT:
-                return addCommentOperation(state, action);
-            case UPDATE_COMMENT:
-                return updateCommentOperation(state, action);
-            case DELETE_COMMENT:
-                return deleteCommentOperation(state, action);
-            default:
-                return state;
-        }
+export const reducer = createReducer<
+    BudgetStatementState,
+    BudgetStatementAction
+>((state, action) => {
+    if (isBaseAction(action)) {
+        return state;
     }
-);
+
+    z.BudgetStatementActionSchema().parse(action);
+
+    switch (action.type) {
+        case SET_OWNER:
+            return setOwnerOperation(state, action);
+        case SET_MONTH:
+            return setMonthOperation(state, action);
+        case SET_QUOTE_CURRENCY:
+            return setQuoteCurrencyOperation(state, action);
+        case SET_FTES:
+            return setFtesOperation(state, action);
+        case ADD_ACCOUNT:
+            return addAccountOperation(state, action);
+        case UPDATE_ACCOUNT:
+            return updateAccountOperation(state, action);
+        case DELETE_ACCOUNT:
+            return deleteAccountOperation(state, action);
+        case SORT_ACCOUNTS:
+            return sortAccountsOperation(state, action);
+        case ADD_LINE_ITEM:
+            return addLineItemOperation(state, action);
+        case UPDATE_LINE_ITEM:
+            return updateLineItemOperation(state, action);
+        case DELETE_LINE_ITEM:
+            return deleteLineItemOperation(state, action);
+        case SORT_LINE_ITEMS:
+            return sortLineItemsOperation(state, action);
+        case ADD_AUDIT_REPORT:
+            return addAuditReportOperation(state, action);
+        case DELETE_AUDIT_REPORT:
+            return deleteAuditReportOperation(state, action);
+        case ADD_VESTING:
+            return addVestingOperation(state, action);
+        case UPDATE_VESTING:
+            return updateVestingOperation(state, action);
+        case DELETE_VESTING:
+            return deleteVestingOperation(state, action);
+        case ADD_COMMENT:
+            return addCommentOperation(state, action);
+        case UPDATE_COMMENT:
+            return updateCommentOperation(state, action);
+        case DELETE_COMMENT:
+            return deleteCommentOperation(state, action);
+        default:
+            return state;
+    }
+});
