@@ -7,7 +7,7 @@ import {
     SetAuthorWebsiteAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../object';
+import { ExtendedDocumentModelState } from '../types';
 
 export interface DocumentModelHeaderOperations {
     setModelNameOperation: (state: ExtendedDocumentModelState, action: SetModelNameAction) => void,

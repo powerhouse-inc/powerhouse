@@ -6,11 +6,11 @@ export type { BaseAction };
  *
  * @typeParam T - The name of the action type. A `string` type by default.
  */
-export type Action<T = string> = {
+export type Action<T extends string = string, I = unknown> = {
     /** The name of the action. */
     type: T;
     /** The payload of the action. */
-    input?: unknown;
+    input: I;
 };
 
 /**

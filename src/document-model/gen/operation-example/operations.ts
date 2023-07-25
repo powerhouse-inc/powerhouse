@@ -5,7 +5,7 @@ import {
     ReorderOperationExamplesAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../object';
+import { ExtendedDocumentModelState } from '../types';
 
 export interface DocumentModelOperationExampleOperations {
     addOperationExampleOperation: (state: ExtendedDocumentModelState, action: AddOperationExampleAction) => void,

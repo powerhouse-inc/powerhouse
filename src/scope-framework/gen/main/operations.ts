@@ -9,7 +9,7 @@ import {
     MoveElementAction,
 } from './actions';
 
-import { ExtendedScopeFrameworkState } from '../object';
+import { ExtendedScopeFrameworkState } from '../types';
 
 export interface ScopeFrameworkMainOperations {
     setRootPathOperation: (state: ExtendedScopeFrameworkState, action: SetRootPathAction) => void,

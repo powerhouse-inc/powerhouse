@@ -12,7 +12,7 @@ import type {
 } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 
-type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
+export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
 export const createZip = async (document: Document) => {
     // create zip file
