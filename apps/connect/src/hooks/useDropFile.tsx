@@ -1,8 +1,8 @@
-import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browser/scope-framework';
 import { useCallback } from 'react';
 import { useDrop } from 'react-aria';
 import { useNavigate } from 'react-router-dom';
-import { Tab, createScopeFrameworkTab, useTabs } from 'src/store';
+import { Tab, useTabs } from 'src/store';
+import { loadFile } from 'src/utils/file';
 
 export function useDropFile(ref: React.RefObject<HTMLElement>) {
     const { addTab, selectedTab, getItem, updateTab } = useTabs();
@@ -13,12 +13,8 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
             for (const item of e.items) {
                 if (item.kind === 'file') {
                     const file = await item.getFile();
-                    const document = await loadScopeFrameworkFromInput(file);
-                    if (document.documentType !== 'makerdao/scope-framework') {
-                        return;
-                    }
-
-                    const tab = createScopeFrameworkTab(document);
+                    const document = await loadFile(file);
+                    const tab = Tab.fromDocument(document);
                     addTab(tab);
                     navigate('/');
                 } else if (item.kind === 'text') {

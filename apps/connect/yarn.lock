@@ -2,15 +2,19 @@
 # yarn lockfile v1
 
 
-"@acaldas/document-model-graphql@file:../document-model-graphql":
-  version "1.0.12"
+"@acaldas/document-model-graphql@^1.0.13":
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.13.tgz#0afddfa11f44fff3d2bf7ebf7996668b0381ac77"
+  integrity sha512-gNrffbZvS7oh5pg9eC7qQ8N5cKfsDSWG6gzVwmLPJxE0NXpcnJx03/gtKX23l1kGQizlTCySf1ShPrVH3qgGZg==
   dependencies:
     zod "^3.21.4"
 
-"@acaldas/document-model-libs@../document-model-libs", "@acaldas/document-model-libs@file:../document-model-libs":
-  version "1.0.14"
+"@acaldas/document-model-libs@^1.0.17":
+  version "1.0.17"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-libs/-/document-model-libs-1.0.17.tgz#649341a9537d9bb69e9791b4cff5db52b4a4b731"
+  integrity sha512-rCYnH4E7PgXfeyfRrfWMqkFPAgmYvfkQdsoNDgQ4zg0japsmjh2AZm15aezKhwxPVmPDzRUVlqe7QFTT4vneAA==
   dependencies:
-    "@acaldas/document-model-graphql" "file:../../../Library/Caches/Yarn/v6/npm-@acaldas-document-model-libs-1.0.14-a000adab-38f6-427e-8616-a021bee6bb82-1689783265325/node_modules/@acaldas/document-model-graphql"
+    "@acaldas/document-model-graphql" "^1.0.13"
     immer "^9.0.19"
     json-stringify-deterministic "^1.0.8"
     jszip "^3.10.1"
@@ -3932,10 +3936,12 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model-editors@../document-model-editors:
-  version "0.0.5"
+document-model-editors@^0.0.6:
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-0.0.6.tgz#09c1861ac60ca80fcec0adb1f08352d6f935ecb2"
+  integrity sha512-fN53fEdmgOwJl7XmTYdcAl6TeyFgiRB17Mxvb15S/r9Q5BW5hdENFZoOI0JUizk3iSOKnGlOKvgR57bYmAKqLA==
   dependencies:
-    "@acaldas/document-model-libs" "file:../../../Library/Caches/Yarn/v6/npm-document-model-editors-0.0.5-4763dd58-4edc-47b2-971a-a53b0f57ec5c-1689783265339/node_modules/document-model-libs"
+    "@acaldas/document-model-libs" "^1.0.17"
     "@graphql-codegen/core" "^3.1.0"
     "@graphql-codegen/typescript" "^3.0.4"
     "@monaco-editor/react" "^4.5.0"

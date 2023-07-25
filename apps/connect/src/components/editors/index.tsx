@@ -1,10 +1,14 @@
-import { Document } from '@acaldas/document-model-libs/document';
+import {
+    Action,
+    BaseAction,
+    Document,
+} from '@acaldas/document-model-libs/document';
 
-export interface EditorProps<T = unknown> {
-    document?: Document<T>;
-    onChange?: (scope: Document<T>) => void;
+export interface EditorProps<T = unknown, A extends Action = Action> {
+    document?: Document<T, A | BaseAction>;
+    onChange?: (scope: Document<T, A | BaseAction>) => void;
 }
 
-export type EditorComponent<T = unknown> = (
-    props: EditorProps<T>
+export type EditorComponent<T = unknown, A extends Action = Action> = (
+    props: EditorProps<T, A>
 ) => JSX.Element;

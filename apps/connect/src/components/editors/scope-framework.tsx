@@ -1,5 +1,7 @@
 import {
     ExtendedScopeFrameworkState,
+    ScopeFrameworkAction,
+    ScopeFrameworkState,
     actions,
 } from '@acaldas/document-model-libs/browser/scope-framework';
 import { ScopeFramework } from 'document-model-editors';
@@ -8,7 +10,10 @@ import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
 import { EditorProps } from '.';
 
-export default function Editor({ document, onChange }: EditorProps) {
+export default function Editor({
+    document,
+    onChange,
+}: EditorProps<ScopeFrameworkState, ScopeFrameworkAction>) {
     const theme = useAtomValue(themeAtom);
     const [scopeFramework, dispatch] = ScopeFramework.useScopeFrameworkReducer(
         document as ExtendedScopeFrameworkState
@@ -39,7 +44,7 @@ export default function Editor({ document, onChange }: EditorProps) {
         <div className="relative h-full">
             <ScopeFramework.Editor
                 editorContext={{ theme }}
-                scopeFramework={scopeFramework}
+                document={scopeFramework}
                 dispatch={dispatch}
             />
         </div>

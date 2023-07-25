@@ -23,7 +23,7 @@ export default function ({
         }
         onUpdateTab({
             ...state.selectedItem.value,
-            name: document.name,
+            name: document.name || state.selectedItem?.value?.name,
             document,
         });
     }

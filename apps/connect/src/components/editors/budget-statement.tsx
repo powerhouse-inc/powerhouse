@@ -1,29 +1,22 @@
 import {
-    BudgetStatementDocument,
+    BudgetStatementAction,
+    BudgetStatementState,
     actions,
-    utils,
 } from '@acaldas/document-model-libs/browser/budget-statement';
 import { BudgetStatement } from 'document-model-editors';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
+import { EditorProps } from '.';
 
-interface IProps {
-    initialBudget?: BudgetStatementDocument;
-    onChange?: (budget: BudgetStatementDocument) => void;
-}
-
-export default function Editor({ initialBudget, onChange }: IProps) {
+export default function Editor({
+    document,
+    onChange,
+}: EditorProps<BudgetStatementState, BudgetStatementAction>) {
     const theme = useAtomValue(themeAtom);
 
-    const [budgetStatement, dispatch, reset] =
-        BudgetStatement.useBudgetStatementReducer(
-            initialBudget ?? (utils.createBudgetStatement() as any) // TODO remove any
-        );
-
-    useEffect(() => {
-        reset(initialBudget ?? utils.createBudgetStatement()) as any; // TODO remove any;
-    }, [initialBudget]);
+    const [budgetStatement, dispatch] =
+        BudgetStatement.useBudgetStatementReducer(document);
 
     useEffect(() => {
         onChange?.(budgetStatement);
@@ -52,7 +45,7 @@ export default function Editor({ initialBudget, onChange }: IProps) {
                 <div style={{ width: '50%' }}>
                     <BudgetStatement.Editor
                         editorContext={{ theme }}
-                        budgetStatement={budgetStatement}
+                        document={budgetStatement}
                         dispatch={dispatch}
                     />
                 </div>
@@ -93,8 +86,4 @@ export default function Editor({ initialBudget, onChange }: IProps) {
             </div>
         </div>
     );
-}
-
-export function createBudgetStatementEditor(props: IProps) {
-    return () => <Editor {...props} />;
 }
