@@ -1,4 +1,4 @@
-import { ActionType } from '../../../document/utils';
+import { Action } from '../../../document';
 
 import {
     SetRootPathInput,
@@ -11,14 +11,14 @@ import {
     MoveElementInput,
 } from '@acaldas/document-model-graphql/scope-framework';
 
-export type SetRootPathAction = ActionType<'SET_ROOT_PATH', SetRootPathInput>;
-export type AddElementAction = ActionType<'ADD_ELEMENT', AddElementInput>;
-export type UpdateElementTypeAction = ActionType<'UPDATE_ELEMENT_TYPE', UpdateElementTypeInput>;
-export type UpdateElementNameAction = ActionType<'UPDATE_ELEMENT_NAME', UpdateElementNameInput>;
-export type UpdateElementComponentsAction = ActionType<'UPDATE_ELEMENT_COMPONENTS', UpdateElementComponentsInput>;
-export type RemoveElementAction = ActionType<'REMOVE_ELEMENT', RemoveElementInput>;
-export type ReorderElementsAction = ActionType<'REORDER_ELEMENTS', ReorderElementsInput>;
-export type MoveElementAction = ActionType<'MOVE_ELEMENT', MoveElementInput>;
+export type SetRootPathAction = Action<'SET_ROOT_PATH', SetRootPathInput>;
+export type AddElementAction = Action<'ADD_ELEMENT', AddElementInput>;
+export type UpdateElementTypeAction = Action<'UPDATE_ELEMENT_TYPE', UpdateElementTypeInput>;
+export type UpdateElementNameAction = Action<'UPDATE_ELEMENT_NAME', UpdateElementNameInput>;
+export type UpdateElementComponentsAction = Action<'UPDATE_ELEMENT_COMPONENTS', UpdateElementComponentsInput>;
+export type RemoveElementAction = Action<'REMOVE_ELEMENT', RemoveElementInput>;
+export type ReorderElementsAction = Action<'REORDER_ELEMENTS', ReorderElementsInput>;
+export type MoveElementAction = Action<'MOVE_ELEMENT', MoveElementInput>;
 
 export type ScopeFrameworkMainAction = 
     | SetRootPathAction

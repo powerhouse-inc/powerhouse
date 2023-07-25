@@ -7,7 +7,7 @@ import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 import { createEmptyExtended<%= h.changeCase.pascal(documentType) %>State } from '../custom/utils';
 import { reducer } from './reducer';
-import { ExtendedDocumentModelState } from './types';
+import { Extended<%= h.changeCase.pascal(documentType) %>State } from './types';
 
 <% modules.forEach(module => { _%>
 import <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module.name) %> from './<%= module.name %>/object';

@@ -23,7 +23,7 @@ const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Ext
     name: "",
     created: dateTimeNow,
     lastModified: dateTimeNow,
-    documentType: "<%= typeId %>",
+    documentType: "<%= documentType %>",
     revision: 0,
 
     // Component 2: (strict) state object
@@ -40,7 +40,7 @@ const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Ext
         name: "",
         created: dateTimeNow,
         lastModified: dateTimeNow,
-        documentType: "<%= typeId %>",
+        documentType: "<%= documentType %>",
         revision: 0,
         data: createEmpty<%= h.changeCase.pascal(documentType) %>State(),
         fileRegistry: {},
