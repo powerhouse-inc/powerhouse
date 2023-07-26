@@ -15,8 +15,8 @@ export default () => {
     const { selectedTab, updateTab } = useTabs();
     const { dropProps, isDropTarget } = useDropFile(ref);
 
-    const handleOpenFile = useOpenFile(document => {
-        updateTab(Tab.fromDocument(document, selectedTab));
+    const handleOpenFile = useOpenFile(async document => {
+        updateTab(await Tab.fromDocument(document, selectedTab));
     });
 
     return (
@@ -24,9 +24,12 @@ export default () => {
             <div className="mb-10 flex gap-4">
                 <Button
                     className="bg-accent-1 text-text"
-                    onClick={() =>
+                    onClick={async () =>
                         updateTab(
-                            createScopeFrameworkTab(undefined, selectedTab)
+                            await createScopeFrameworkTab(
+                                undefined,
+                                selectedTab
+                            )
                         )
                     }
                 >
@@ -34,9 +37,12 @@ export default () => {
                 </Button>
                 <Button
                     className="bg-accent-1 text-text"
-                    onClick={() =>
+                    onClick={async () =>
                         updateTab(
-                            createBudgetStatementTab(undefined, selectedTab)
+                            await createBudgetStatementTab(
+                                undefined,
+                                selectedTab
+                            )
                         )
                     }
                 >
