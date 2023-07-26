@@ -17,6 +17,8 @@ const isMac = process.platform === 'darwin';
 
 app.setName('Powerhouse Connect');
 
+app.commandLine.appendSwitch('enable-experimental-web-platform-features');
+
 async function handleFile(file: string, window?: Electron.BrowserWindow) {
     try {
         const document = await loadFile(file);
