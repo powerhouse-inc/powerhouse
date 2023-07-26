@@ -15,7 +15,7 @@ export default defineConfig({
         }),
         svgr(),
     ],
-    build: { minify: false },
+    build: { minify: false, sourcemap: true },
     resolve: {
         alias: {
             // eslint-disable-next-line no-undef

@@ -28,7 +28,7 @@ export default function ({ tabs, onNewTab, onCloseTab, onUpdateTab }: IProps) {
     const handleTextdrop = async (item: TextDropItem) => {
         try {
             const tabStr = await item.getText('tab');
-            const tab = Tab.fromString(tabStr);
+            const tab = await Tab.fromString(tabStr);
             onNewTab(tab);
         } catch (e) {
             console.error(e);
@@ -68,14 +68,16 @@ export default function ({ tabs, onNewTab, onCloseTab, onUpdateTab }: IProps) {
     };
 
     useEffect(() => {
-        const removeHandler1 = window.electronAPI?.handleAddTab((_, tabStr) => {
-            const tab = Tab.fromString(tabStr);
-            tabs.addTab(tab);
-        });
+        const removeHandler1 = window.electronAPI?.handleAddTab(
+            async (_, tabStr) => {
+                const tab = await Tab.fromString(tabStr);
+                tabs.addTab(tab);
+            }
+        );
 
         const removeHandler2 = window.electronAPI?.handleRemoveTab(
-            (_, tabStr) => {
-                const tab = Tab.fromString(tabStr);
+            async (_, tabStr) => {
+                const tab = await Tab.fromString(tabStr);
                 tabs.remove(tab.id);
             }
         );

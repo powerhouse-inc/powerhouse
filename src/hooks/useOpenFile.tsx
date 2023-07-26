@@ -1,5 +1,5 @@
-import { loadScopeFrameworkFromInput } from '@acaldas/document-model-libs/browser/scope-framework';
 import { Document } from '@acaldas/document-model-libs/document';
+import { loadFile } from 'src/utils/file';
 
 export function useOpenFile(
     onDocument: (document: Document) => void,
@@ -9,7 +9,7 @@ export function useOpenFile(
         try {
             const [fileHandle] = await window.showOpenFilePicker();
             const file = await fileHandle.getFile();
-            const document = await loadScopeFrameworkFromInput(file); // TODO handle all documents
+            const document = await loadFile(file); // TODO handle all documents
             if (document) {
                 onDocument(document);
             } else {

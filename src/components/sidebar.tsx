@@ -12,6 +12,7 @@ import {
     useTabs,
     userAtom,
 } from 'src/store';
+import { saveFile } from 'src/utils/file';
 import ThemeSelector from './theme-selector';
 
 interface IProps {
@@ -119,17 +120,20 @@ export default function () {
         window.electronAPI?.openURL('http://localhost:3000/');
     };
 
-    const handleOpenFile = useOpenFile(document => {
-        addTab(Tab.fromDocument(document));
+    const handleOpenFile = useOpenFile(async document => {
+        addTab(await Tab.fromDocument(document));
     });
 
-    async function saveFile() {
+    async function handleSaveFile() {
         if (!selectedTab) {
             return;
         }
         const tab = getItem(selectedTab);
         if (tab.document) {
-            window.electronAPI?.saveFile(tab.document);
+            const fileHandle = await window.showSaveFilePicker({
+                suggestedName: 'scope.zip',
+            });
+            saveFile(tab.document, fileHandle);
         }
     }
 
@@ -156,7 +160,7 @@ export default function () {
                 />
 
                 <SidebarButton
-                    onClick={saveFile}
+                    onClick={handleSaveFile}
                     title="Save"
                     Icon={IconDraft}
                     collapsed={collapsed}

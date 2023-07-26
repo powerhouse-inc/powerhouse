@@ -1,20 +1,15 @@
-import {
+import type {
     BudgetStatementDocument,
     ExtendedBudgetStatementState,
-    utils,
 } from '@acaldas/document-model-libs/browser/budget-statement';
-import {
-    ExtendedScopeFrameworkState,
-    createEmptyExtendedScopeFrameworkState,
-} from '@acaldas/document-model-libs/browser/scope-framework';
+import type { ExtendedScopeFrameworkState } from '@acaldas/document-model-libs/browser/scope-framework';
 import {
     Action,
     BaseAction,
     Document,
 } from '@acaldas/document-model-libs/document';
 import { EditorComponent } from 'src/components/editors';
-import BudgetStatementEditor from 'src/components/editors/budget-statement';
-import ScopeFrameworkEditor from 'src/components/editors/scope-framework';
+
 import tabNew from 'src/components/tabs/tab-new';
 
 export type TabType =
@@ -38,17 +33,16 @@ export const Tab = {
         const { type, id, name, document } = tab;
         return JSON.stringify({ type, id, name, document });
     },
-    fromString(value: string): ITab {
+    async fromString(value: string): Promise<ITab> {
         const object = JSON.parse(value);
         const type = object.type as TabType;
         switch (object.type) {
             case 'new':
                 return createTab(object.id);
             case 'powerhouse/budget-statement':
-                return createTab(
-                    object.id,
-                    object.name,
-                    object.budgetStatement
+                return createBudgetStatementTab(
+                    object.budgetStatement,
+                    object.id
                 );
             case 'makerdao/scope-framework':
                 return createScopeFrameworkTab(
@@ -61,7 +55,10 @@ export const Tab = {
                 throw new Error(`Tab type ${type} was not handled`);
         }
     },
-    fromDocument<T extends Document>(document: T, id?: string): ITab {
+    async fromDocument<T extends Document>(
+        document: T,
+        id?: string
+    ): Promise<ITab> {
         switch (document.documentType) {
             case 'powerhouse/budget-statement':
                 return createBudgetStatementTab(
@@ -118,18 +115,42 @@ export function createDocumentTab<T = unknown, A extends Action = Action>(
     );
 }
 
-export function createScopeFrameworkTab(
+export async function createScopeFrameworkTab(
     document?: ExtendedScopeFrameworkState,
     id?: string
 ) {
-    const scope = document ?? createEmptyExtendedScopeFrameworkState();
+    const ScopeFramework = await import(
+        '@acaldas/document-model-libs/browser/scope-framework'
+    );
+    const ScopeFrameworkEditor = (
+        await import('src/components/editors/scope-framework')
+    ).default;
+
+    const scope =
+        document ?? ScopeFramework.createEmptyExtendedScopeFrameworkState();
+    console.log(scope);
     return createDocumentTab(scope, ScopeFrameworkEditor, id, 'New scope');
 }
 
-export function createBudgetStatementTab(
+export async function createBudgetStatementTab(
     document?: ExtendedBudgetStatementState,
     id?: string
 ) {
-    const scope = document ?? utils.createBudgetStatement();
+    const BudgetStatement = await import(
+        '@acaldas/document-model-libs/browser/budget-statement'
+    );
+    const BudgetStatementEditor = (
+        await import('src/components/editors/budget-statement')
+    ).default;
+    const scope = document ?? BudgetStatement.utils.createBudgetStatement();
     return createDocumentTab(scope, BudgetStatementEditor, id, 'New budget');
+}
+
+export async function preloadTabs() {
+    await Promise.all([
+        import('@acaldas/document-model-libs/browser/scope-framework'),
+        import('src/components/editors/scope-framework'),
+        import('@acaldas/document-model-libs/browser/budget-statement'),
+        import('src/components/editors/budget-statement'),
+    ]);
 }
