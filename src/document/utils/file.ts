@@ -82,6 +82,17 @@ export const saveToFile = async (
     );
 };
 
+export const saveToFileHandle = async (
+    document: Document,
+    input: FileSystemFileHandle
+) => {
+    const zip = await createZip(document);
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const writable = await input.createWritable();
+    await writable.write(blob);
+    await writable.close();
+};
+
 /**
  * Loads a document from a ZIP file.
  *

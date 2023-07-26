@@ -8,11 +8,11 @@ import { ScopeFrameworkState } from '@acaldas/document-model-graphql/scope-frame
 import { reducer } from '..';
 import type { FileInput } from '../../document/utils';
 import {
-    createZip,
     hashKey,
     loadFromFile,
     loadFromInput,
     saveToFile,
+    saveToFileHandle,
 } from '../../document/utils';
 import { ExtendedScopeFrameworkState, ScopeFrameworkAction } from '../gen';
 
@@ -95,9 +95,5 @@ export const saveScopeFrameworkToFileHandle = async (
     document: ExtendedScopeFrameworkState,
     input: FileSystemFileHandle
 ) => {
-    const zip = await createZip(document);
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const writable = await input.createWritable();
-    await writable.write(blob);
-    await writable.close();
+    return saveToFileHandle(document, input);
 };

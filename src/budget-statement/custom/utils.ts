@@ -3,10 +3,10 @@ import JSZip from 'jszip';
 import type { FileInput } from '../../document/utils';
 import {
     createDocument,
-    createZip,
     loadFromFile,
     loadFromInput,
     saveToFile,
+    saveToFileHandle,
 } from '../../document/utils';
 import { readFile } from '../../document/utils/node';
 import { reducer } from './reducer';
@@ -179,9 +179,5 @@ export const saveBudgetStatementToFileHandle = async (
     document: BudgetStatementDocument,
     input: FileSystemFileHandle
 ) => {
-    const zip = await createZip(document);
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const writable = await input.createWritable();
-    await writable.write(blob);
-    await writable.close();
+    return saveToFileHandle(document, input);
 };
