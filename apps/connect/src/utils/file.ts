@@ -9,6 +9,11 @@ type SaveDocumentFn = (
     name?: string | undefined
 ) => Promise<string>;
 
+type SaveDocumentToFileHandleFn = (
+    document: Document,
+    handle: FileSystemFileHandle
+) => Promise<string>;
+
 async function saveDocumentToFileFn(
     document: Document
 ): Promise<SaveDocumentFn> {
@@ -31,7 +36,35 @@ async function saveDocumentToFileFn(
     }
 }
 
-export async function saveFile(document: Document, filePath: string) {
+async function saveDocumentToFileHandleFn(
+    document: Document
+): Promise<SaveDocumentToFileHandleFn> {
+    if (document.documentType === 'powerhouse/budget-statement') {
+        const BudgetStatement = await import(
+            isBrowser
+                ? '@acaldas/document-model-libs/browser/budget-statement'
+                : '@acaldas/document-model-libs/budget-statement'
+        );
+        return BudgetStatement.utils.saveBudgetStatementToFileHandle;
+    } else if (document.documentType === 'makerdao/scope-framework') {
+        const ScopeFramework = await import(
+            isBrowser
+                ? '@acaldas/document-model-libs/browser/scope-framework'
+                : '@acaldas/document-model-libs/scope-framework'
+        );
+        return ScopeFramework.saveScopeFrameworkToFileHandle;
+    } else {
+        throw new Error(`Document "${document.documentType}" is not supported`);
+    }
+}
+
+export async function saveFile(
+    document: Document,
+    filePath: string | FileSystemFileHandle
+) {
+    if (typeof filePath !== 'string') {
+        return saveFileHandle(document, filePath);
+    }
     const saveToFile = await saveDocumentToFileFn(document);
     const index = filePath.lastIndexOf(path.sep);
     const dirPath = filePath.slice(0, index);
@@ -39,7 +72,15 @@ export async function saveFile(document: Document, filePath: string) {
     return saveToFile(document, dirPath, name);
 }
 
-type LoadDocumentFn = (path: string) => Promise<Document>;
+async function saveFileHandle(
+    document: Document,
+    fileHandle: FileSystemFileHandle
+) {
+    const saveToFileHandle = await saveDocumentToFileHandleFn(document);
+    return saveToFileHandle(document, fileHandle);
+}
+
+type LoadDocumentFn = (path: string | File) => Promise<Document>;
 
 async function LoadDocumentFromInputFn(
     document: Document
@@ -63,7 +104,7 @@ async function LoadDocumentFromInputFn(
     }
 }
 
-export async function loadFile(path: string) {
+export async function loadFile(path: string | File) {
     const Document = await import(
         isBrowser
             ? '@acaldas/document-model-libs/browser/document'
