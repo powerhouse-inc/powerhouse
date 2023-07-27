@@ -4,13 +4,13 @@ import {
     SetOwnerAction,
     SetQuoteCurrencyAction,
 } from '../../gen/base/types';
-import { BudgetStatementDocument } from '../types';
+import { BudgetStatementState } from '../types';
 
 export const setOwnerOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: SetOwnerAction
 ) => {
-    state.state.owner = {
+    state.owner = {
         id: action.input.id ?? null,
         ref: action.input.ref ?? null,
         title: action.input.title ?? null,
@@ -18,25 +18,23 @@ export const setOwnerOperation = (
 };
 
 export const setMonthOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: SetMonthAction
 ) => {
-    state.state.month = action.input;
+    state.month = action.input;
 };
 
 export const setQuoteCurrencyOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: SetQuoteCurrencyAction
 ) => {
-    state.state.quoteCurrency = action.input;
+    state.quoteCurrency = action.input;
 };
 
 export const setFtesOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: SetFtesAction
 ) => {
-    state.state.ftes = action.input;
-    state.state.ftes?.forecast.sort((f1, f2) =>
-        f1.month.localeCompare(f2.month)
-    );
+    state.ftes = action.input;
+    state.ftes?.forecast.sort((f1, f2) => f1.month.localeCompare(f2.month));
 };

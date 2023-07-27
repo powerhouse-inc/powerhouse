@@ -4,23 +4,23 @@ import {
     DeleteVestingAction,
     UpdateVestingAction,
 } from '../../gen/vesting/types';
-import { BudgetStatementDocument, Vesting } from '../types';
+import { BudgetStatementState, Vesting } from '../types';
 
 const sortVesting = (a: Vesting, b: Vesting) => (a.date < b.date ? -1 : 1);
 
 export const addVestingOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: AddVestingAction
 ) => {
     action.input.vesting.forEach(input => {
         const key = input.key ?? hashKey();
 
-        const index = state.state.vesting.findIndex(v => v.key === input.key);
+        const index = state.vesting.findIndex(v => v.key === input.key);
         if (index > -1) {
             throw new Error(`Vesting with key ${key} already exists`);
         }
 
-        state.state.vesting.push({
+        state.vesting.push({
             ...input,
             key,
             date: input.date ?? '',
@@ -32,20 +32,20 @@ export const addVestingOperation = (
         });
     });
 
-    state.state.vesting.sort(sortVesting);
+    state.vesting.sort(sortVesting);
 };
 
 export const updateVestingOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: UpdateVestingAction
 ) => {
     action.input.vesting.forEach(input => {
-        const index = state.state.vesting.findIndex(v => v.key === input.key);
+        const index = state.vesting.findIndex(v => v.key === input.key);
         if (index === -1) {
             return;
         }
-        const vesting = state.state.vesting[index];
-        state.state.vesting[index] = {
+        const vesting = state.vesting[index];
+        state.vesting[index] = {
             ...vesting,
             ...input,
             amount: input.amount ?? vesting.amount,
@@ -56,14 +56,14 @@ export const updateVestingOperation = (
             vested: input.vested ?? vesting.vested,
         };
     });
-    state.state.vesting.sort(sortVesting);
+    state.vesting.sort(sortVesting);
 };
 
 export const deleteVestingOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: DeleteVestingAction
 ) => {
-    state.state.vesting = state.state.vesting.filter(
+    state.vesting = state.vesting.filter(
         vesting => !action.input.vesting.includes(vesting.key)
     );
 };

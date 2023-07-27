@@ -11,9 +11,9 @@ const operationSorter = (order: string[]) => {
 
 export const reducer: DocumentModelOperationOperations = {
     addOperationOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            if (state.state.modules[i].id == action.input.moduleId) {
-                state.state.modules[i].operations.push({
+        for (let i = 0; i < state.modules.length; i++) {
+            if (state.modules[i].id == action.input.moduleId) {
+                state.modules[i].operations.push({
                     id: hashKey(),
                     name: action.input.name,
                     description: action.input.description || '',
@@ -29,12 +29,10 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationNameOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
-                if (
-                    state.state.modules[i].operations[j].id == action.input.id
-                ) {
-                    state.state.modules[i].operations[j].name =
+        for (let i = 0; i < state.modules.length; i++) {
+            for (let j = 0; j < state.modules[i].operations.length; j++) {
+                if (state.modules[i].operations[j].id == action.input.id) {
+                    state.modules[i].operations[j].name =
                         action.input.name || '';
                 }
             }
@@ -42,12 +40,10 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationSchemaOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
-                if (
-                    state.state.modules[i].operations[j].id == action.input.id
-                ) {
-                    state.state.modules[i].operations[j].schema =
+        for (let i = 0; i < state.modules.length; i++) {
+            for (let j = 0; j < state.modules[i].operations.length; j++) {
+                if (state.modules[i].operations[j].id == action.input.id) {
+                    state.modules[i].operations[j].schema =
                         action.input.schema || '';
                 }
             }
@@ -55,12 +51,10 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationDescriptionOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
-                if (
-                    state.state.modules[i].operations[j].id == action.input.id
-                ) {
-                    state.state.modules[i].operations[j].description =
+        for (let i = 0; i < state.modules.length; i++) {
+            for (let j = 0; j < state.modules[i].operations.length; j++) {
+                if (state.modules[i].operations[j].id == action.input.id) {
+                    state.modules[i].operations[j].description =
                         action.input.description || '';
                 }
             }
@@ -68,12 +62,10 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationTemplateOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
-                if (
-                    state.state.modules[i].operations[j].id == action.input.id
-                ) {
-                    state.state.modules[i].operations[j].template =
+        for (let i = 0; i < state.modules.length; i++) {
+            for (let j = 0; j < state.modules[i].operations.length; j++) {
+                if (state.modules[i].operations[j].id == action.input.id) {
+                    state.modules[i].operations[j].template =
                         action.input.template || '';
                 }
             }
@@ -81,12 +73,10 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationReducerOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            for (let j = 0; j < state.state.modules[i].operations.length; j++) {
-                if (
-                    state.state.modules[i].operations[j].id == action.input.id
-                ) {
-                    state.state.modules[i].operations[j].reducer =
+        for (let i = 0; i < state.modules.length; i++) {
+            for (let j = 0; j < state.modules[i].operations.length; j++) {
+                if (state.modules[i].operations[j].id == action.input.id) {
+                    state.modules[i].operations[j].reducer =
                         action.input.reducer || '';
                 }
             }
@@ -97,39 +87,39 @@ export const reducer: DocumentModelOperationOperations = {
         const moveOperations: Operation[] = [];
 
         // Filter and collect
-        for (let i = 0; i < state.state.modules.length; i++) {
-            state.state.modules[i].operations = state.state.modules[
-                i
-            ].operations.filter(operation => {
-                if (operation.id == action.input.operationId) {
-                    moveOperations.push(operation);
-                    return false;
-                }
+        for (let i = 0; i < state.modules.length; i++) {
+            state.modules[i].operations = state.modules[i].operations.filter(
+                operation => {
+                    if (operation.id == action.input.operationId) {
+                        moveOperations.push(operation);
+                        return false;
+                    }
 
-                return true;
-            });
+                    return true;
+                }
+            );
         }
 
         // Inject in target modules
-        for (let i = 0; i < state.state.modules.length; i++) {
-            if (state.state.modules[i].id == action.input.newModuleId) {
-                state.state.modules[i].operations.push(...moveOperations);
+        for (let i = 0; i < state.modules.length; i++) {
+            if (state.modules[i].id == action.input.newModuleId) {
+                state.modules[i].operations.push(...moveOperations);
             }
         }
     },
 
     deleteOperationOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            state.state.modules[i].operations = state.state.modules[
-                i
-            ].operations.filter(operation => operation.id != action.input.id);
+        for (let i = 0; i < state.modules.length; i++) {
+            state.modules[i].operations = state.modules[i].operations.filter(
+                operation => operation.id != action.input.id
+            );
         }
     },
 
     reorderModuleOperationsOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            if (state.state.modules[i].id == action.input.moduleId) {
-                state.state.modules[i].operations.sort(
+        for (let i = 0; i < state.modules.length; i++) {
+            if (state.modules[i].id == action.input.moduleId) {
+                state.modules[i].operations.sort(
                     operationSorter(action.input.order)
                 );
             }

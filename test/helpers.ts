@@ -19,20 +19,14 @@ export const increment = () => createAction<IncrementAction>('INCREMENT');
 export const decrement = () => createAction<DecrementAction>('DECREMENT');
 
 export const countReducer = createReducer<CountState, CountAction>(
-    (document, action) => {
+    (state, action) => {
         switch (action.type) {
             case 'INCREMENT':
-                return {
-                    ...document,
-                    state: { count: document.state.count + 1 },
-                };
+                return { count: state.count + 1 };
             case 'DECREMENT':
-                return {
-                    ...document,
-                    state: { count: document.state.count - 1 },
-                };
+                return { count: state.count - 1 };
             default:
-                return document;
+                return state;
         }
     }
 );

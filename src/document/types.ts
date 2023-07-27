@@ -1,5 +1,5 @@
-import { WritableDraft } from 'immer/dist/internal';
-import { BaseAction } from './actions/types';
+import type { WritableDraft } from 'immer/dist/internal';
+import type { BaseAction } from './actions/types';
 export type { BaseAction };
 /**
  * Defines the basic structure of an action.
@@ -41,6 +41,11 @@ export type ImmutableReducer<State, A extends Action> = (
     state: WritableDraft<Document<State, A>>,
     action: A
 ) => Document<State, A> | void;
+
+export type ImmutableStateReducer<State, A extends Action> = (
+    state: WritableDraft<State>,
+    action: A
+) => State | void;
 
 /**
  * An operation that was applied to a {@link Document}.

@@ -14,9 +14,9 @@ import {
 
 describe('Budget Statement line item reducer', () => {
     it('should add line item', async () => {
-        let state = createBudgetStatement();
-        state = reducer(
-            state,
+        let document = createBudgetStatement();
+        document = reducer(
+            document,
             addAccount([
                 {
                     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
@@ -24,8 +24,8 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        const newState = reducer(
-            state,
+        const newDocument = reducer(
+            document,
             addLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 {
                     category: {
@@ -43,7 +43,7 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        expect(newState.state.accounts[0].lineItems).toStrictEqual([
+        expect(newDocument.state.accounts[0].lineItems).toStrictEqual([
             {
                 category: {
                     ref: 'makerdao/budget-category',
@@ -64,13 +64,13 @@ describe('Budget Statement line item reducer', () => {
                 forecast: [],
             },
         ]);
-        expect(state.state.accounts[0].lineItems).toStrictEqual([]);
+        expect(document.state.accounts[0].lineItems).toStrictEqual([]);
     });
 
     it('should update line item', async () => {
-        let state = createBudgetStatement();
-        state = reducer(
-            state,
+        let document = createBudgetStatement();
+        document = reducer(
+            document,
             addAccount([
                 {
                     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
@@ -78,8 +78,8 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        state = reducer(
-            state,
+        document = reducer(
+            document,
             addLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 {
                     category: {
@@ -97,8 +97,8 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        const newState = reducer(
-            state,
+        const newDocument = reducer(
+            document,
             updateLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 {
                     category: 'TravelAndEntertainment',
@@ -116,7 +116,7 @@ describe('Budget Statement line item reducer', () => {
             ])
         );
 
-        expect(newState.state.accounts[0].lineItems[0]).toStrictEqual({
+        expect(newDocument.state.accounts[0].lineItems[0]).toStrictEqual({
             category: {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
@@ -141,7 +141,7 @@ describe('Budget Statement line item reducer', () => {
                 },
             ],
         });
-        expect(state.state.accounts[0].lineItems[0]).toStrictEqual({
+        expect(document.state.accounts[0].lineItems[0]).toStrictEqual({
             category: {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
@@ -163,9 +163,9 @@ describe('Budget Statement line item reducer', () => {
     });
 
     it('should delete line item', async () => {
-        let state = createBudgetStatement();
-        state = reducer(
-            state,
+        let document = createBudgetStatement();
+        document = reducer(
+            document,
             addAccount([
                 {
                     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
@@ -173,8 +173,8 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        state = reducer(
-            state,
+        document = reducer(
+            document,
             addLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 {
                     category: {
@@ -192,8 +192,8 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        const newState = reducer(
-            state,
+        const newDocument = reducer(
+            document,
             deleteLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 {
                     category: 'TravelAndEntertainment',
@@ -201,14 +201,14 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        expect(newState.state.accounts[0].lineItems.length).toBe(0);
-        expect(state.state.accounts[0].lineItems.length).toBe(1);
+        expect(newDocument.state.accounts[0].lineItems.length).toBe(0);
+        expect(document.state.accounts[0].lineItems.length).toBe(1);
     });
 
     it('should throw if adding duplicated line item', async () => {
-        let state = createBudgetStatement({});
-        state = reducer(
-            state,
+        let document = createBudgetStatement({});
+        document = reducer(
+            document,
             addAccount([
                 {
                     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
@@ -216,8 +216,8 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        state = reducer(
-            state,
+        document = reducer(
+            document,
             addLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 {
                     category: {
@@ -237,7 +237,7 @@ describe('Budget Statement line item reducer', () => {
         );
         expect(() =>
             reducer(
-                state,
+                document,
                 addLineItem('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                     {
                         category: {
@@ -259,7 +259,7 @@ describe('Budget Statement line item reducer', () => {
     });
 
     it('should sort line items', () => {
-        const state = createBudgetStatement({
+        const document = createBudgetStatement({
             state: {
                 accounts: [
                     createAccount({
@@ -312,8 +312,8 @@ describe('Budget Statement line item reducer', () => {
             },
         });
 
-        const newState = reducer(
-            state,
+        const newDocument = reducer(
+            document,
             sortLineItems('eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f', [
                 { group: '2', category: '2' },
                 { group: '0', category: '0' },
@@ -321,7 +321,7 @@ describe('Budget Statement line item reducer', () => {
         );
 
         expect(
-            newState.state.accounts[0].lineItems.map(l => ({
+            newDocument.state.accounts[0].lineItems.map(l => ({
                 group: l.group?.id,
                 category: l.category?.id,
             }))

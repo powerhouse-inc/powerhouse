@@ -8,10 +8,10 @@ import {
 <% }); _%>
 } from './actions';
 
-import { Extended<%= h.changeCase.pascal(documentType) %>State } from '../types';
+import { <%= h.changeCase.pascal(documentType) %>State } from '../types';
 
 export interface <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations {
 <% actions.forEach(action => { _%>
-    <%= h.changeCase.camel(action) %>Operation: (state: Extended<%= h.changeCase.pascal(documentType) %>State, action: <%= action %>Action) => void,
+    <%= h.changeCase.camel(action) %>Operation: (state: <%= h.changeCase.pascal(documentType) %>State, action: <%= action %>Action) => void,
 <% }); _%>
 }

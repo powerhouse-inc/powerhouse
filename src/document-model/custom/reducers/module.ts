@@ -11,7 +11,7 @@ const moduleSorter = (order: string[]) => {
 
 export const reducer: DocumentModelModuleOperations = {
     addModuleOperation(state, action) {
-        state.state.modules.push({
+        state.modules.push({
             id: hashKey(),
             name: action.input.name,
             description: action.input.description || '',
@@ -20,29 +20,26 @@ export const reducer: DocumentModelModuleOperations = {
     },
 
     setModuleNameOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            if (state.state.modules[i].id === action.input.id) {
-                state.state.modules[i].name = action.input.name || '';
+        for (let i = 0; i < state.modules.length; i++) {
+            if (state.modules[i].id === action.input.id) {
+                state.modules[i].name = action.input.name || '';
             }
         }
     },
 
     setModuleDescriptionOperation(state, action) {
-        for (let i = 0; i < state.state.modules.length; i++) {
-            if (state.state.modules[i].id === action.input.id) {
-                state.state.modules[i].description =
-                    action.input.description || '';
+        for (let i = 0; i < state.modules.length; i++) {
+            if (state.modules[i].id === action.input.id) {
+                state.modules[i].description = action.input.description || '';
             }
         }
     },
 
     deleteModuleOperation(state, action) {
-        state.state.modules = state.state.modules.filter(
-            m => m.id != action.input.id
-        );
+        state.modules = state.modules.filter(m => m.id != action.input.id);
     },
 
     reorderModulesOperation(state, action) {
-        state.state.modules.sort(moduleSorter(action.input.order));
+        state.modules.sort(moduleSorter(action.input.order));
     },
 };

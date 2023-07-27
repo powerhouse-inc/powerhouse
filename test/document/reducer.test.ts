@@ -9,29 +9,29 @@ describe('Base reducer', () => {
     });
 
     it('should update revision', async () => {
-        const state = createDocument();
-        const newState = emptyReducer(state, { type: 'TEST', input: {} });
-        expect(newState.revision).toBe(1);
+        const document = createDocument();
+        const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
+        expect(newDocument.revision).toBe(1);
     });
 
     it('should update lastModified', async () => {
         jest.useFakeTimers();
-        const state = createDocument();
+        const document = createDocument();
         await new Promise(r => {
             setTimeout(r, 100);
             jest.runOnlyPendingTimers();
         });
-        const newState = emptyReducer(state, { type: 'TEST', input: {} });
-        expect(newState.lastModified > state.lastModified).toBe(true);
+        const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
+        expect(newDocument.lastModified > document.lastModified).toBe(true);
         jest.useRealTimers();
     });
 
     it('should update operations list', async () => {
         jest.useFakeTimers({ now: new Date('2023-01-01') });
-        const state = createDocument();
-        const newState = emptyReducer(state, { type: 'TEST', input: {} });
+        const document = createDocument();
+        const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
 
-        expect(newState.operations).toStrictEqual([
+        expect(newDocument.operations).toStrictEqual([
             {
                 type: 'TEST',
                 timestamp: new Date().toISOString(),
@@ -63,15 +63,15 @@ describe('Base reducer', () => {
     });
 
     it('should set document name', async () => {
-        const state = createDocument();
-        const newState = emptyReducer(state, setName('Document'));
-        expect(newState.name).toBe('Document');
+        const document = createDocument();
+        const newDocument = emptyReducer(document, setName('Document'));
+        expect(newDocument.name).toBe('Document');
     });
 
     it('should throw error on invalid base action', async () => {
-        const state = createDocument();
+        const document = createDocument();
         expect(() =>
-            emptyReducer(state, {
+            emptyReducer(document, {
                 type: 'SET_NAME',
                 input: 0 as unknown as string,
             })

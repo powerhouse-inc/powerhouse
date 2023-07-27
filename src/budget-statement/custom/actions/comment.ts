@@ -4,24 +4,24 @@ import {
     DeleteCommentAction,
     UpdateCommentAction,
 } from '../../gen/comment/types';
-import { BudgetStatementDocument, Comment } from '../types';
+import { BudgetStatementState, Comment } from '../types';
 
 const sortComment = (a: Comment, b: Comment) =>
     a.timestamp < b.timestamp ? -1 : 1;
 
 export const addCommentOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: AddCommentAction
 ) => {
     action.input.comments.forEach(input => {
         const key = input.key ?? hashKey();
 
-        const index = state.state.comments.findIndex(c => c.key === input.key);
+        const index = state.comments.findIndex(c => c.key === input.key);
         if (index > -1) {
             throw new Error(`Comment with key ${key} already exists`);
         }
 
-        state.state.comments.push({
+        state.comments.push({
             key,
             author: {
                 ref: null,
@@ -35,20 +35,20 @@ export const addCommentOperation = (
             status: input.status ?? 'Draft',
         });
     });
-    state.state.comments.sort(sortComment);
+    state.comments.sort(sortComment);
 };
 
 export const updateCommentOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: UpdateCommentAction
 ) => {
     action.input.comments.forEach(input => {
-        const index = state.state.comments.findIndex(c => c.key === input.key);
+        const index = state.comments.findIndex(c => c.key === input.key);
         if (index === -1) {
             return;
         }
-        const comment = state.state.comments[index];
-        state.state.comments[index] = {
+        const comment = state.comments[index];
+        state.comments[index] = {
             ...comment,
             ...input,
             author: {
@@ -62,14 +62,14 @@ export const updateCommentOperation = (
             status: input.status ?? comment.status,
         };
     });
-    state.state.comments.sort(sortComment);
+    state.comments.sort(sortComment);
 };
 
 export const deleteCommentOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: DeleteCommentAction
 ) => {
-    state.state.comments = state.state.comments.filter(
+    state.comments = state.comments.filter(
         comment => !action.input.comments.includes(comment.key)
     );
 };

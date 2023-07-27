@@ -8,14 +8,14 @@ import {
 
 describe('Budget Statement Comment reducer', () => {
     it('should start as empty array', async () => {
-        const state = createBudgetStatement();
-        expect(state.state.comments).toStrictEqual([]);
+        const document = createBudgetStatement();
+        expect(document.state.comments).toStrictEqual([]);
     });
 
     it('should add comment', async () => {
-        const state = createBudgetStatement();
-        const newState = reducer(
-            state,
+        const document = createBudgetStatement();
+        const newDocument = reducer(
+            document,
             addComment([
                 {
                     key: '123',
@@ -31,7 +31,7 @@ describe('Budget Statement Comment reducer', () => {
                 },
             ])
         );
-        expect(newState.state.comments[0]).toStrictEqual({
+        expect(newDocument.state.comments[0]).toStrictEqual({
             key: '123',
             comment: 'Test',
             status: 'Escalated',
@@ -43,13 +43,13 @@ describe('Budget Statement Comment reducer', () => {
                 roleLabel: 'Auditor',
             },
         });
-        expect(state.state.comments).toStrictEqual([]);
+        expect(document.state.comments).toStrictEqual([]);
     });
 
     it('should update comment', async () => {
-        let state = createBudgetStatement();
-        state = reducer(
-            state,
+        let document = createBudgetStatement();
+        document = reducer(
+            document,
             addComment([
                 {
                     key: '123',
@@ -67,11 +67,11 @@ describe('Budget Statement Comment reducer', () => {
         );
 
         jest.useFakeTimers({ now: new Date('2023-03-16') });
-        state = reducer(
-            state,
+        document = reducer(
+            document,
             updateComment([{ key: '123', comment: 'Test 2' }])
         );
-        expect(state.state.comments[0]).toStrictEqual({
+        expect(document.state.comments[0]).toStrictEqual({
             key: '123',
             comment: 'Test 2',
             status: 'Escalated',
@@ -86,9 +86,9 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should delete comment', async () => {
-        let state = createBudgetStatement();
-        state = reducer(
-            state,
+        let document = createBudgetStatement();
+        document = reducer(
+            document,
             addComment([
                 {
                     key: '123',
@@ -105,15 +105,15 @@ describe('Budget Statement Comment reducer', () => {
             ])
         );
 
-        state = reducer(state, deleteComment(['123']));
-        expect(state.state.comments.length).toBe(0);
+        document = reducer(document, deleteComment(['123']));
+        expect(document.state.comments.length).toBe(0);
     });
 
     it('should generate comment key and timestamp if undefined', async () => {
         jest.useFakeTimers({ now: new Date('2023-03-16') });
-        const state = createBudgetStatement();
-        const newState = reducer(
-            state,
+        const document = createBudgetStatement();
+        const newDocument = reducer(
+            document,
             addComment([
                 {
                     comment: 'Test',
@@ -127,16 +127,16 @@ describe('Budget Statement Comment reducer', () => {
                 },
             ])
         );
-        expect(newState.state.comments[0].key.length).toBe(28);
-        expect(newState.state.comments[0].timestamp).toBe(
+        expect(newDocument.state.comments[0].key.length).toBe(28);
+        expect(newDocument.state.comments[0].timestamp).toBe(
             '2023-03-16T00:00:00.000Z'
         );
     });
 
     it('should sort comments by timestamp', async () => {
-        const state = createBudgetStatement();
-        const newState = reducer(
-            state,
+        const document = createBudgetStatement();
+        const newDocument = reducer(
+            document,
             addComment([
                 {
                     comment: '03/11',
@@ -152,16 +152,16 @@ describe('Budget Statement Comment reducer', () => {
                 },
             ])
         );
-        expect(newState.state.comments[0].comment).toBe('03/11');
-        expect(newState.state.comments[1].comment).toBe('03/13');
-        expect(newState.state.comments[2].comment).toBe('03/15');
+        expect(newDocument.state.comments[0].comment).toBe('03/11');
+        expect(newDocument.state.comments[1].comment).toBe('03/13');
+        expect(newDocument.state.comments[2].comment).toBe('03/15');
     });
 
     it('should throw if comment key already exists', async () => {
-        const state = createBudgetStatement();
+        const document = createBudgetStatement();
         expect(() =>
             reducer(
-                state,
+                document,
                 addComment([
                     {
                         key: '123',
@@ -177,9 +177,9 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should ignore non existing keys on update', async () => {
-        let state = createBudgetStatement();
-        state = reducer(
-            state,
+        let document = createBudgetStatement();
+        document = reducer(
+            document,
             addComment([
                 {
                     key: '123',
@@ -196,8 +196,8 @@ describe('Budget Statement Comment reducer', () => {
             ])
         );
 
-        state = reducer(
-            state,
+        document = reducer(
+            document,
             updateComment([
                 {
                     key: '123',
@@ -211,7 +211,7 @@ describe('Budget Statement Comment reducer', () => {
             ])
         );
 
-        expect(state.state.comments).toStrictEqual([
+        expect(document.state.comments).toStrictEqual([
             {
                 key: '123',
                 comment: 'Test',

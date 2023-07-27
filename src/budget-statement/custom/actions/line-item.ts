@@ -9,7 +9,7 @@ import {
     DeleteLineItemAction,
     UpdateLineItemAction,
 } from '../../gen/line-item/types';
-import { BudgetStatementDocument, LineItem } from '../types';
+import { BudgetStatementState, LineItem } from '../types';
 import { createLineItem } from '../utils';
 
 function isEqual(
@@ -26,10 +26,10 @@ function isEqual(
 }
 
 export const addLineItemOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: AddLineItemAction
 ) => {
-    const account = state.state.accounts.find(
+    const account = state.accounts.find(
         a => a.address === action.input.account
     );
     if (!account) {
@@ -58,10 +58,10 @@ export const addLineItemOperation = (
 };
 
 export const updateLineItemOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: UpdateLineItemAction
 ) => {
-    const account = state.state.accounts.find(
+    const account = state.accounts.find(
         a => a.address === action.input.account
     );
     if (!account) {
@@ -90,10 +90,10 @@ export const updateLineItemOperation = (
 };
 
 export const deleteLineItemOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: DeleteLineItemAction
 ) => {
-    const account = state.state.accounts.find(
+    const account = state.accounts.find(
         a => a.address === action.input.account
     );
     if (!account) {
@@ -108,10 +108,10 @@ export const deleteLineItemOperation = (
 };
 
 export const sortLineItemsOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: SortLineItemsAction
 ) => {
-    const account = state.state.accounts.find(
+    const account = state.accounts.find(
         a => a.address === action.input.account
     );
     if (!account) {

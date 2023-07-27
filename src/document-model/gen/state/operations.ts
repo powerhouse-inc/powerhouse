@@ -6,12 +6,12 @@ import {
     ReorderStateExamplesAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../types';
+import { DocumentModelState } from '../types';
 
 export interface DocumentModelStateOperations {
-    setStateSchemaOperation: (state: ExtendedDocumentModelState, action: SetStateSchemaAction) => void,
-    addStateExampleOperation: (state: ExtendedDocumentModelState, action: AddStateExampleAction) => void,
-    updateStateExampleOperation: (state: ExtendedDocumentModelState, action: UpdateStateExampleAction) => void,
-    deleteStateExampleOperation: (state: ExtendedDocumentModelState, action: DeleteStateExampleAction) => void,
-    reorderStateExamplesOperation: (state: ExtendedDocumentModelState, action: ReorderStateExamplesAction) => void,
+    setStateSchemaOperation: (state: DocumentModelState, action: SetStateSchemaAction) => void,
+    addStateExampleOperation: (state: DocumentModelState, action: AddStateExampleAction) => void,
+    updateStateExampleOperation: (state: DocumentModelState, action: UpdateStateExampleAction) => void,
+    deleteStateExampleOperation: (state: DocumentModelState, action: DeleteStateExampleAction) => void,
+    reorderStateExamplesOperation: (state: DocumentModelState, action: ReorderStateExamplesAction) => void,
 }

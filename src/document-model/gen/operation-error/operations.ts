@@ -8,14 +8,14 @@ import {
     ReorderOperationErrorsAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../types';
+import { DocumentModelState } from '../types';
 
 export interface DocumentModelOperationErrorOperations {
-    addOperationErrorOperation: (state: ExtendedDocumentModelState, action: AddOperationErrorAction) => void,
-    setOperationErrorCodeOperation: (state: ExtendedDocumentModelState, action: SetOperationErrorCodeAction) => void,
-    setOperationErrorNameOperation: (state: ExtendedDocumentModelState, action: SetOperationErrorNameAction) => void,
-    setOperationErrorDescriptionOperation: (state: ExtendedDocumentModelState, action: SetOperationErrorDescriptionAction) => void,
-    setOperationErrorTemplateOperation: (state: ExtendedDocumentModelState, action: SetOperationErrorTemplateAction) => void,
-    deleteOperationErrorOperation: (state: ExtendedDocumentModelState, action: DeleteOperationErrorAction) => void,
-    reorderOperationErrorsOperation: (state: ExtendedDocumentModelState, action: ReorderOperationErrorsAction) => void,
+    addOperationErrorOperation: (state: DocumentModelState, action: AddOperationErrorAction) => void,
+    setOperationErrorCodeOperation: (state: DocumentModelState, action: SetOperationErrorCodeAction) => void,
+    setOperationErrorNameOperation: (state: DocumentModelState, action: SetOperationErrorNameAction) => void,
+    setOperationErrorDescriptionOperation: (state: DocumentModelState, action: SetOperationErrorDescriptionAction) => void,
+    setOperationErrorTemplateOperation: (state: DocumentModelState, action: SetOperationErrorTemplateAction) => void,
+    deleteOperationErrorOperation: (state: DocumentModelState, action: DeleteOperationErrorAction) => void,
+    reorderOperationErrorsOperation: (state: DocumentModelState, action: ReorderOperationErrorsAction) => void,
 }

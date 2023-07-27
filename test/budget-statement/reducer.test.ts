@@ -10,31 +10,31 @@ import { setName } from '../../src/document/actions';
 
 describe('Budget Statement reducer', () => {
     it('should create initial state', async () => {
-        const state = createBudgetStatement();
-        expect(state.revision).toBe(0);
-        expect(state.documentType).toBe('powerhouse/budget-statement');
-        expect(state.state).toBeDefined();
+        const document = createBudgetStatement();
+        expect(document.revision).toBe(0);
+        expect(document.documentType).toBe('powerhouse/budget-statement');
+        expect(document.state).toBeDefined();
     });
 
     it('should update name', async () => {
-        const state = createBudgetStatement();
-        const newState = reducer(state, setName('SES Jan 2023'));
-        expect(newState.name).toBe('SES Jan 2023');
+        const document = createBudgetStatement();
+        const newDocument = reducer(document, setName('SES Jan 2023'));
+        expect(newDocument.name).toBe('SES Jan 2023');
     });
 
     it('should update revision', async () => {
-        const state = createBudgetStatement();
-        const newState = reducer(state, setName('SES Jan 2023'));
-        expect(newState.revision).toBe(1);
+        const document = createBudgetStatement();
+        const newDocument = reducer(document, setName('SES Jan 2023'));
+        expect(newDocument.revision).toBe(1);
     });
 
     it('should init budget statement with correct type', async () => {
-        const state = createBudgetStatement();
-        expect(state.documentType).toBe('powerhouse/budget-statement');
+        const document = createBudgetStatement();
+        expect(document.documentType).toBe('powerhouse/budget-statement');
     });
 
     it('should init budget statement with provided data', async () => {
-        const state = createBudgetStatement({
+        const document = createBudgetStatement({
             name: 'March',
             state: {
                 owner: {
@@ -44,37 +44,37 @@ describe('Budget Statement reducer', () => {
                 },
             },
         });
-        expect(state.state.owner).toStrictEqual({
+        expect(document.state.owner).toStrictEqual({
             ref: 'makerdao/core-unit',
             id: 'SES-001',
             title: 'Sustainable Ecosystem Scaling',
         });
-        expect(state.name).toBe('March');
+        expect(document.name).toBe('March');
     });
 
     it('should throw error on invalid action', async () => {
-        const state = createBudgetStatement();
+        const document = createBudgetStatement();
         expect(() =>
-            reducer(state, addAccount([0] as unknown as AccountInput[]))
+            reducer(document, addAccount([0] as unknown as AccountInput[]))
         ).toThrow();
     });
 
     it('should set owner', async () => {
-        const state = createBudgetStatement();
-        const newState = reducer(
-            state,
+        const document = createBudgetStatement();
+        const newDocument = reducer(
+            document,
             setOwner({
                 ref: 'makerdao/core-unit',
                 id: 'SES-001',
                 title: 'Sustainable Ecosystem Scaling',
             })
         );
-        expect(newState.state.owner).toStrictEqual({
+        expect(newDocument.state.owner).toStrictEqual({
             ref: 'makerdao/core-unit',
             id: 'SES-001',
             title: 'Sustainable Ecosystem Scaling',
         });
-        expect(state.state.owner).toStrictEqual({
+        expect(document.state.owner).toStrictEqual({
             ref: null,
             id: null,
             title: null,
@@ -82,16 +82,16 @@ describe('Budget Statement reducer', () => {
     });
 
     it('should set month', async () => {
-        const state = createBudgetStatement();
-        const newState = reducer(state, setMonth('Feb'));
-        expect(newState.state.month).toBe('Feb');
-        expect(state.state.month).toBe(null);
+        const document = createBudgetStatement();
+        const newDocument = reducer(document, setMonth('Feb'));
+        expect(newDocument.state.month).toBe('Feb');
+        expect(document.state.month).toBe(null);
     });
 
     it('should set quoteCurrency', async () => {
-        const state = createBudgetStatement();
-        const newState = reducer(state, setQuoteCurrency('DAI'));
-        expect(newState.state.quoteCurrency).toBe('DAI');
-        expect(state.state.quoteCurrency).toBe(null);
+        const document = createBudgetStatement();
+        const newDocument = reducer(document, setQuoteCurrency('DAI'));
+        expect(newDocument.state.quoteCurrency).toBe('DAI');
+        expect(document.state.quoteCurrency).toBe(null);
     });
 });

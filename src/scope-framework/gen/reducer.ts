@@ -1,19 +1,14 @@
 import { isBaseAction } from "../../document/actions/types";
 import { createReducer } from "../../document/utils";
-import { ImmutableReducer } from "../../document/types";
-import { WritableDraft } from "immer/dist/internal";
-
+import { ImmutableStateReducer } from "../../document/types";
 import { ScopeFrameworkState, z } from '@acaldas/document-model-graphql/scope-framework';
 import { ScopeFrameworkAction } from './actions';
-import { ExtendedScopeFrameworkState } from './types';
 
 import { reducer as MainReducer } from '../custom/reducers/main';
 
 
-type ImmutableScopeFrameworkState = WritableDraft<ExtendedScopeFrameworkState>;
-
-const stateReducer: ImmutableReducer<ScopeFrameworkState, ScopeFrameworkAction> =
-    (state: ImmutableScopeFrameworkState, action: ScopeFrameworkAction) => {
+const stateReducer: ImmutableStateReducer<ScopeFrameworkState, ScopeFrameworkAction> =
+    (state, action) => {
         if (isBaseAction(action)) {
             return state;
         }

@@ -9,15 +9,15 @@ import {
     MoveElementAction,
 } from './actions';
 
-import { ExtendedScopeFrameworkState } from '../types';
+import { ScopeFrameworkState } from '../types';
 
 export interface ScopeFrameworkMainOperations {
-    setRootPathOperation: (state: ExtendedScopeFrameworkState, action: SetRootPathAction) => void,
-    addElementOperation: (state: ExtendedScopeFrameworkState, action: AddElementAction) => void,
-    updateElementTypeOperation: (state: ExtendedScopeFrameworkState, action: UpdateElementTypeAction) => void,
-    updateElementNameOperation: (state: ExtendedScopeFrameworkState, action: UpdateElementNameAction) => void,
-    updateElementComponentsOperation: (state: ExtendedScopeFrameworkState, action: UpdateElementComponentsAction) => void,
-    removeElementOperation: (state: ExtendedScopeFrameworkState, action: RemoveElementAction) => void,
-    reorderElementsOperation: (state: ExtendedScopeFrameworkState, action: ReorderElementsAction) => void,
-    moveElementOperation: (state: ExtendedScopeFrameworkState, action: MoveElementAction) => void,
+    setRootPathOperation: (state: ScopeFrameworkState, action: SetRootPathAction) => void,
+    addElementOperation: (state: ScopeFrameworkState, action: AddElementAction) => void,
+    updateElementTypeOperation: (state: ScopeFrameworkState, action: UpdateElementTypeAction) => void,
+    updateElementNameOperation: (state: ScopeFrameworkState, action: UpdateElementNameAction) => void,
+    updateElementComponentsOperation: (state: ScopeFrameworkState, action: UpdateElementComponentsAction) => void,
+    removeElementOperation: (state: ScopeFrameworkState, action: RemoveElementAction) => void,
+    reorderElementsOperation: (state: ScopeFrameworkState, action: ReorderElementsAction) => void,
+    moveElementOperation: (state: ScopeFrameworkState, action: MoveElementAction) => void,
 }

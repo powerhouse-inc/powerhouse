@@ -4,32 +4,28 @@ import {
     SortAccountsAction,
     UpdateAccountAction,
 } from '../../gen/account/types';
-import { BudgetStatementDocument } from '../types';
+import { BudgetStatementState } from '../types';
 import { createAccount } from '../utils';
 
 export const addAccountOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: AddAccountAction
 ) => {
     action.input.accounts.forEach(input => {
-        if (
-            state.state.accounts.find(
-                account => account.address === input.address
-            )
-        ) {
+        if (state.accounts.find(account => account.address === input.address)) {
             throw new Error(
                 `Account with address ${input.address} already exists!`
             );
         }
-        state.state.accounts.push(createAccount(input));
+        state.accounts.push(createAccount(input));
     });
 };
 
 export const updateAccountOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: UpdateAccountAction
 ) => {
-    state.state.accounts = state.state.accounts.map(account => {
+    state.accounts = state.accounts.map(account => {
         const accountUpdate = action.input.accounts.find(
             a => a.address === account.address
         );
@@ -42,20 +38,20 @@ export const updateAccountOperation = (
 };
 
 export const deleteAccountOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: DeleteAccountAction
 ) => {
-    state.state.accounts = state.state.accounts.filter(
+    state.accounts = state.accounts.filter(
         account =>
             !action.input.accounts.find(address => address === account.address)
     );
 };
 
 export const sortAccountsOperation = (
-    state: BudgetStatementDocument,
+    state: BudgetStatementState,
     action: SortAccountsAction
 ) => {
-    state.state.accounts.sort((a, b) => {
+    state.accounts.sort((a, b) => {
         const index1 = action.input.accounts.indexOf(a.address);
         const index2 = action.input.accounts.indexOf(b.address);
         return (

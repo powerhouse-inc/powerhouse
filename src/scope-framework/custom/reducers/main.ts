@@ -34,11 +34,11 @@ export const reducer: ScopeFrameworkMainOperations = {
             );
         }
 
-        const findString = state.state.rootPath + '.',
+        const findString = state.rootPath + '.',
             newString = action.input.newRootPath + '.';
 
-        state.state.rootPath = action.input.newRootPath;
-        state.state.elements = state.state.elements.map(e => ({
+        state.rootPath = action.input.newRootPath;
+        state.elements = state.elements.map(e => ({
             ...e,
             path: e.path.replace(findString, newString),
         }));
@@ -55,17 +55,17 @@ export const reducer: ScopeFrameworkMainOperations = {
             components: action.input.components,
         };
 
-        if (rootSegment(newElement.path) != state.state.rootPath) {
+        if (rootSegment(newElement.path) != state.rootPath) {
             throw new Error(
                 `Cannot add element with root segment ${rootSegment(
                     newElement.path
-                )} to document with root path ${state.state.rootPath}`
+                )} to document with root path ${state.rootPath}`
             );
         }
 
         let inserted = false,
             nextElement = null;
-        while ((nextElement = state.state.elements.shift())) {
+        while ((nextElement = state.elements.shift())) {
             if (!inserted && precedes(newElement.path, nextElement.path)) {
                 // TODO: add "sawParent" and "maySucceed(lastElement)" tests
                 result.push(newElement);
@@ -85,11 +85,11 @@ export const reducer: ScopeFrameworkMainOperations = {
             result.push(newElement);
         }
 
-        state.state.elements = result;
+        state.elements = result;
     },
 
     updateElementTypeOperation(state, action) {
-        state.state.elements
+        state.elements
             .filter(e => e.id == action.input.id)
             .forEach(e => {
                 e.type = action.input.type;
@@ -97,7 +97,7 @@ export const reducer: ScopeFrameworkMainOperations = {
     },
 
     updateElementNameOperation(state, action) {
-        state.state.elements
+        state.elements
             .filter(e => e.id == action.input.id)
             .forEach(e => {
                 e.name = action.input.name;
@@ -105,7 +105,7 @@ export const reducer: ScopeFrameworkMainOperations = {
     },
 
     updateElementComponentsOperation(state, action) {
-        state.state.elements
+        state.elements
             .filter(e => e.id == action.input.id)
             .forEach(e => {
                 e.components = action.input.components;
@@ -113,11 +113,9 @@ export const reducer: ScopeFrameworkMainOperations = {
     },
 
     removeElementOperation(state, action) {
-        const element = state.state.elements.filter(
-            e => e.id == action.input.id
-        )[0];
+        const element = state.elements.filter(e => e.id == action.input.id)[0];
         if (element) {
-            state.state.elements = state.state.elements.filter(
+            state.elements = state.elements.filter(
                 e => !e.path.startsWith(element.path)
             );
         }

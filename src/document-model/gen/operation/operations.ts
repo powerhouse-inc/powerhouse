@@ -10,16 +10,16 @@ import {
     ReorderModuleOperationsAction,
 } from './actions';
 
-import { ExtendedDocumentModelState } from '../types';
+import { DocumentModelState } from '../types';
 
 export interface DocumentModelOperationOperations {
-    addOperationOperation: (state: ExtendedDocumentModelState, action: AddOperationAction) => void,
-    setOperationNameOperation: (state: ExtendedDocumentModelState, action: SetOperationNameAction) => void,
-    setOperationSchemaOperation: (state: ExtendedDocumentModelState, action: SetOperationSchemaAction) => void,
-    setOperationDescriptionOperation: (state: ExtendedDocumentModelState, action: SetOperationDescriptionAction) => void,
-    setOperationTemplateOperation: (state: ExtendedDocumentModelState, action: SetOperationTemplateAction) => void,
-    setOperationReducerOperation: (state: ExtendedDocumentModelState, action: SetOperationReducerAction) => void,
-    moveOperationOperation: (state: ExtendedDocumentModelState, action: MoveOperationAction) => void,
-    deleteOperationOperation: (state: ExtendedDocumentModelState, action: DeleteOperationAction) => void,
-    reorderModuleOperationsOperation: (state: ExtendedDocumentModelState, action: ReorderModuleOperationsAction) => void,
+    addOperationOperation: (state: DocumentModelState, action: AddOperationAction) => void,
+    setOperationNameOperation: (state: DocumentModelState, action: SetOperationNameAction) => void,
+    setOperationSchemaOperation: (state: DocumentModelState, action: SetOperationSchemaAction) => void,
+    setOperationDescriptionOperation: (state: DocumentModelState, action: SetOperationDescriptionAction) => void,
+    setOperationTemplateOperation: (state: DocumentModelState, action: SetOperationTemplateAction) => void,
+    setOperationReducerOperation: (state: DocumentModelState, action: SetOperationReducerAction) => void,
+    moveOperationOperation: (state: DocumentModelState, action: MoveOperationAction) => void,
+    deleteOperationOperation: (state: DocumentModelState, action: DeleteOperationAction) => void,
+    reorderModuleOperationsOperation: (state: DocumentModelState, action: ReorderModuleOperationsAction) => void,
 }

@@ -1,7 +1,7 @@
 import JSONDeterministic from 'json-stringify-deterministic';
 import { BaseAction } from '../actions/types';
 import { baseReducer } from '../reducer';
-import { Action, Document, ImmutableReducer } from '../types';
+import { Action, Document, ImmutableStateReducer } from '../types';
 import { hash } from './node';
 
 /**
@@ -58,7 +58,7 @@ export function createAction<A extends Action>(
  * @returns The new reducer.
  */
 export function createReducer<T = unknown, A extends Action = Action>(
-    reducer: ImmutableReducer<T, A>,
+    reducer: ImmutableStateReducer<T, A>,
     documentReducer = baseReducer
 ) {
     return (state: Document<T, A | BaseAction>, action: A | BaseAction) => {

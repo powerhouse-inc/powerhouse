@@ -30,15 +30,15 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should start as empty array', async () => {
-        const state = createBudgetStatement();
-        expect(state.state.auditReports).toStrictEqual([]);
+        const document = createBudgetStatement();
+        expect(document.state.auditReports).toStrictEqual([]);
     });
 
     it('should add audit report', async () => {
-        const state = createBudgetStatement();
+        const document = createBudgetStatement();
         const file = await getLocalFile(tempFile);
-        const newState = reducer(
-            state,
+        const newDocument = reducer(
+            document,
             await addAuditReport([
                 {
                     report: file,
@@ -47,19 +47,19 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(newState.state.auditReports[0]).toStrictEqual({
+        expect(newDocument.state.auditReports[0]).toStrictEqual({
             report: 'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
-        expect(state.state.auditReports).toStrictEqual([]);
+        expect(document.state.auditReports).toStrictEqual([]);
     });
 
     it('should add attachment to file registry', async () => {
-        const state = createBudgetStatement();
+        const document = createBudgetStatement();
         const file = await getLocalFile(tempFile);
-        const newState = reducer(
-            state,
+        const newDocument = reducer(
+            document,
             await addAuditReport([
                 {
                     report: file,
@@ -70,7 +70,7 @@ describe('Budget Statement Audit Report reducer', () => {
         );
 
         expect(
-            newState.fileRegistry[
+            newDocument.fileRegistry[
                 'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8='
             ]
         ).toStrictEqual({
@@ -79,14 +79,14 @@ describe('Budget Statement Audit Report reducer', () => {
             extension: 'pdf',
             fileName: 'report.pdf',
         });
-        expect(state.fileRegistry).toStrictEqual({});
+        expect(document.fileRegistry).toStrictEqual({});
     });
 
     it('should delete audit report', async () => {
-        let state = createBudgetStatement();
+        let document = createBudgetStatement();
         const file = await getLocalFile(tempFile);
-        state = reducer(
-            state,
+        document = reducer(
+            document,
             await addAuditReport([
                 {
                     report: file,
@@ -95,21 +95,21 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        state = reducer(
-            state,
+        document = reducer(
+            document,
             deleteAuditReport([
                 'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             ])
         );
-        expect(state.state.auditReports).toStrictEqual([]);
+        expect(document.state.auditReports).toStrictEqual([]);
     });
 
     it('should set default timestamp on audit report', async () => {
-        const state = createBudgetStatement();
+        const document = createBudgetStatement();
         const date = new Date();
         const file = await getLocalFile(tempFile);
-        const newState = reducer(
-            state,
+        const newDocument = reducer(
+            document,
             await addAuditReport([
                 {
                     report: file,
@@ -118,13 +118,13 @@ describe('Budget Statement Audit Report reducer', () => {
             ])
         );
         expect(
-            newState.state.auditReports[0].timestamp >= date.toISOString()
+            newDocument.state.auditReports[0].timestamp >= date.toISOString()
         ).toBe(true);
     });
 
     it('should add approved audit report', async () => {
         const file = await getLocalFile(tempFile);
-        const state = reducer(
+        const document = reducer(
             createBudgetStatement(),
             await addAuditReport([
                 {
@@ -133,12 +133,12 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(state.state.auditReports[0].status).toBe('Approved');
+        expect(document.state.auditReports[0].status).toBe('Approved');
     });
 
     it('should add approved with comments audit report', async () => {
         const file = await getLocalFile(tempFile);
-        const state = reducer(
+        const document = reducer(
             createBudgetStatement(),
             await addAuditReport([
                 {
@@ -147,12 +147,14 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(state.state.auditReports[0].status).toBe('ApprovedWithComments');
+        expect(document.state.auditReports[0].status).toBe(
+            'ApprovedWithComments'
+        );
     });
 
     it('should add needs action audit report', async () => {
         const file = await getLocalFile(tempFile);
-        const state = reducer(
+        const document = reducer(
             createBudgetStatement(),
             await addAuditReport([
                 {
@@ -161,14 +163,14 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(state.state.auditReports[0].status).toBe('NeedsAction');
+        expect(document.state.auditReports[0].status).toBe('NeedsAction');
     });
 
     it('should throw if duplicated audit report', async () => {
-        let state = createBudgetStatement();
+        let document = createBudgetStatement();
         const file = await getLocalFile(tempFile);
-        state = reducer(
-            state,
+        document = reducer(
+            document,
             await addAuditReport([
                 {
                     report: file,
@@ -179,7 +181,7 @@ describe('Budget Statement Audit Report reducer', () => {
         );
         await expect(async () =>
             reducer(
-                state,
+                document,
                 await addAuditReport([
                     {
                         report: file,
@@ -195,9 +197,9 @@ describe('Budget Statement Audit Report reducer', () => {
         const file = await getRemoteFile(
             'https://makerdao.com/whitepaper/DaiDec17WP.pdf'
         );
-        const state = createBudgetStatement();
-        const newState = reducer(
-            state,
+        const document = createBudgetStatement();
+        const newDocument = reducer(
+            document,
             await addAuditReport([
                 {
                     report: file,
@@ -206,28 +208,28 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(newState.state.auditReports[0]).toStrictEqual({
+        expect(newDocument.state.auditReports[0]).toStrictEqual({
             report: 'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
         expect(
-            newState.fileRegistry[
+            newDocument.fileRegistry[
                 'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0='
             ].data.length
         ).toBeGreaterThan(0);
         expect(
-            newState.fileRegistry[
+            newDocument.fileRegistry[
                 'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0='
             ].mimeType
         ).toBe('application/pdf');
-        expect(state.state.auditReports).toStrictEqual([]);
-        expect(state.fileRegistry).toStrictEqual({});
+        expect(document.state.auditReports).toStrictEqual([]);
+        expect(document.fileRegistry).toStrictEqual({});
     });
 
     it('should save attachment to zip', async () => {
         const attachment = await getLocalFile(tempFile);
-        const state = reducer(
+        const document = reducer(
             createBudgetStatement({ name: 'march' }),
             await addAuditReport([
                 {
@@ -236,16 +238,16 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        const zipPath = await saveBudgetStatementToFile(state, tempDir);
+        const zipPath = await saveBudgetStatementToFile(document, tempDir);
         const file = readFile(zipPath);
         const zip = new JSZip();
         await zip.loadAsync(file);
 
-        const report = state.state.auditReports[0].report;
+        const report = document.state.auditReports[0].report;
         const path = report.slice('attachment://'.length);
         const attachmentZip = zip.file(path);
 
-        const { data, ...attributes } = state.fileRegistry[report];
+        const { data, ...attributes } = document.fileRegistry[report];
         expect(await attachmentZip?.async('string')).toBe('TEST');
         expect(JSON.parse(attachmentZip?.comment ?? '')).toStrictEqual(
             attributes
@@ -254,18 +256,18 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should load attachment from zip', async () => {
         const attachment = await getLocalFile(tempFile);
-        const state = await loadBudgetStatementFromFile(
+        const document = await loadBudgetStatementFromFile(
             `${tempDir}march.phbs.zip`
         );
-        expect(state.state.auditReports[0].status).toBe('NeedsAction');
+        expect(document.state.auditReports[0].status).toBe('NeedsAction');
         expect(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (state.operations[0] as any).input.reports[0].report.startsWith(
+            (document.operations[0] as any).input.reports[0].report.startsWith(
                 'attachment://'
             )
         ).toBe(true);
         expect(
-            state.fileRegistry[state.state.auditReports[0].report]
+            document.fileRegistry[document.state.auditReports[0].report]
         ).toStrictEqual(attachment);
     });
 });

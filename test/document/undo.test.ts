@@ -11,79 +11,79 @@ import {
 
 describe('UNDO operation', () => {
     it('should undo last operation', () => {
-        let state = createDocument();
-        state = emptyReducer(state, setName('TEST_1'));
-        expect(state.revision).toBe(1);
+        let document = createDocument();
+        document = emptyReducer(document, setName('TEST_1'));
+        expect(document.revision).toBe(1);
 
-        state = emptyReducer(state, undo(1));
+        document = emptyReducer(document, undo(1));
 
-        expect(mapOperations(state.operations)).toStrictEqual([
+        expect(mapOperations(document.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
         ]);
-        expect(state.name).toBe('');
-        expect(state.revision).toBe(0);
+        expect(document.name).toBe('');
+        expect(document.revision).toBe(0);
     });
 
     it('should undo multiple operations', () => {
-        let state = createDocument();
-        state = emptyReducer(state, setName('TEST_1'));
-        state = emptyReducer(state, setName('TEST_2'));
-        expect(state.revision).toBe(2);
+        let document = createDocument();
+        document = emptyReducer(document, setName('TEST_1'));
+        document = emptyReducer(document, setName('TEST_2'));
+        expect(document.revision).toBe(2);
 
-        state = emptyReducer(state, undo(2));
-        expect(mapOperations(state.operations)).toStrictEqual([
+        document = emptyReducer(document, undo(2));
+        expect(mapOperations(document.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
-        expect(state.revision).toBe(0);
+        expect(document.revision).toBe(0);
     });
 
     it('should undo only existing operations', () => {
-        let state = createDocument();
-        state = emptyReducer(state, setName('TEST_1'));
-        state = emptyReducer(state, setName('TEST_2'));
-        state = emptyReducer(state, undo(5));
-        expect(mapOperations(state.operations)).toStrictEqual([
+        let document = createDocument();
+        document = emptyReducer(document, setName('TEST_1'));
+        document = emptyReducer(document, setName('TEST_2'));
+        document = emptyReducer(document, undo(5));
+        expect(mapOperations(document.operations)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
-        expect(state.name).toBe('');
-        expect(state.revision).toBe(0);
+        expect(document.name).toBe('');
+        expect(document.revision).toBe(0);
     });
 
     it('should clear undone operations when there is a new operation', () => {
-        let state = createDocument();
-        state = emptyReducer(state, setName('TEST_1'));
-        state = emptyReducer(state, undo(1));
-        state = emptyReducer(state, setName('TEST_2'));
-        expect(mapOperations(state.operations)).toStrictEqual([
+        let document = createDocument();
+        document = emptyReducer(document, setName('TEST_1'));
+        document = emptyReducer(document, undo(1));
+        document = emptyReducer(document, setName('TEST_2'));
+        expect(mapOperations(document.operations)).toStrictEqual([
             { ...setName('TEST_2'), index: 0 },
         ]);
-        expect(state.name).toBe('TEST_2');
-        expect(state.revision).toBe(1);
+        expect(document.name).toBe('TEST_2');
+        expect(document.revision).toBe(1);
     });
 
     it('should undo the last UNDO operation', () => {
-        let state = createDocument();
-        state = emptyReducer(state, setName('TEST_1'));
-        state = emptyReducer(state, undo(1));
-        state = emptyReducer(state, setName('TEST_2'));
-        state = emptyReducer(state, undo(1));
-        expect(mapOperations(state.operations)).toStrictEqual([
+        let document = createDocument();
+        document = emptyReducer(document, setName('TEST_1'));
+        document = emptyReducer(document, undo(1));
+        document = emptyReducer(document, setName('TEST_2'));
+        document = emptyReducer(document, undo(1));
+        expect(mapOperations(document.operations)).toStrictEqual([
             { ...setName('TEST_2'), index: 0 },
         ]);
-        expect(state.name).toBe('');
-        expect(state.revision).toBe(0);
+        expect(document.name).toBe('');
+        expect(document.revision).toBe(0);
     });
 
     it('should keep document attributes', () => {
-        let state = createDocument<CountState, CountAction>({
+        let document = createDocument<CountState, CountAction>({
             documentType: 'powerhouse/counter',
             state: { count: 0 },
         });
-        state = countReducer(state, increment());
-        state = countReducer(state, undo(1));
-        expect(state.state.count).toBe(0);
-        expect(state.documentType).toBe('powerhouse/counter');
+        document = countReducer(document, increment());
+        document = countReducer(document, undo(1));
+        expect(document.state.count).toBe(0);
+        expect(document.documentType).toBe('powerhouse/counter');
     });
 });

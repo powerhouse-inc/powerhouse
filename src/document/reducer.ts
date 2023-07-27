@@ -1,5 +1,6 @@
 import { z } from '@acaldas/document-model-graphql/document';
 import { castDraft, produce } from 'immer';
+import { WritableDraft } from 'immer/dist/internal';
 import {
     loadStateOperation,
     pruneOperation,
@@ -16,7 +17,7 @@ import {
     SET_NAME,
     UNDO,
 } from './actions/types';
-import { Action, Document, ImmutableReducer } from './types';
+import { Action, Document, ImmutableStateReducer } from './types';
 import { hashDocument } from './utils';
 
 /**
@@ -116,7 +117,7 @@ function updateDocument<T, A extends Action>(
 function _baseReducer<T, A extends Action>(
     state: Document<T, A>,
     action: BaseAction,
-    wrappedReducer: ImmutableReducer<T, A>
+    wrappedReducer: ImmutableStateReducer<T, A>
 ): Document<T, A> {
     // throws if action is not valid base action
     z.BaseActionSchema().parse(action);
@@ -157,7 +158,7 @@ function _baseReducer<T, A extends Action>(
 export function baseReducer<T, A extends Action>(
     state: Document<T, A>,
     action: A | BaseAction,
-    customReducer: ImmutableReducer<T, A>
+    customReducer: ImmutableStateReducer<T, A>
 ) {
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first
@@ -176,13 +177,16 @@ export function baseReducer<T, A extends Action>(
     newState = produce(newState, draft => {
         // the reducer runs on a immutable version of
         // provided state
-        const returnedDraft = customReducer(draft, action as A);
+        const returnedDraft = customReducer(
+            draft.state as WritableDraft<T>,
+            action as A
+        );
 
         // if the reducer creates a new state object instead
         // of mutating the draft then returns the new state
         if (returnedDraft) {
             // casts new state as draft to comply with typescript
-            return castDraft(returnedDraft);
+            return castDraft({ ...newState, state: returnedDraft });
         }
     });
 

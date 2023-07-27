@@ -11,31 +11,31 @@ const exampleSorter = (order: string[]) => {
 
 export const reducer: DocumentModelStateOperations = {
     setStateSchemaOperation(state, action) {
-        state.state.state.schema = action.input.schema;
+        state.state.schema = action.input.schema;
     },
 
     addStateExampleOperation(state, action) {
-        state.state.state.examples.push({
+        state.state.examples.push({
             id: hashKey(),
             value: action.input.example,
         });
     },
 
     updateStateExampleOperation(state, action) {
-        for (let i = 0; i < state.state.state.examples.length; i++) {
-            if (state.state.state.examples[i].id == action.input.id) {
-                state.state.state.examples[i].value = action.input.newExample;
+        for (let i = 0; i < state.state.examples.length; i++) {
+            if (state.state.examples[i].id == action.input.id) {
+                state.state.examples[i].value = action.input.newExample;
             }
         }
     },
 
     deleteStateExampleOperation(state, action) {
-        state.state.state.examples = state.state.state.examples.filter(
+        state.state.examples = state.state.examples.filter(
             e => e.id != action.input.id
         );
     },
 
     reorderStateExamplesOperation(state, action) {
-        state.state.state.examples.sort(exampleSorter(action.input.order));
+        state.state.examples.sort(exampleSorter(action.input.order));
     },
 };
