@@ -1,5 +1,5 @@
 import { z } from '@acaldas/document-model-graphql/document';
-import { Document } from '../types';
+import { ExtendedState } from '../types';
 import { createAction } from '../utils';
 import {
     LoadStateAction,
@@ -61,7 +61,7 @@ export const prune = (start?: number | undefined, end?: number | undefined) =>
  * @category Actions
  */
 export const loadState = (
-    state: Pick<Document, 'state' | 'name'>,
+    state: Pick<ExtendedState, 'state' | 'name'>,
     operations: number
 ) =>
     createAction<LoadStateAction>(

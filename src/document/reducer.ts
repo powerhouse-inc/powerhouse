@@ -1,6 +1,5 @@
 import { z } from '@acaldas/document-model-graphql/document';
 import { castDraft, produce } from 'immer';
-import { WritableDraft } from 'immer/dist/internal';
 import {
     loadStateOperation,
     pruneOperation,
@@ -27,11 +26,11 @@ import { hashDocument } from './utils';
  * @param action The action being applied to the document.
  * @returns The next revision number.
  */
-function getNextRevision(state: Document, action: Action): number {
+function getNextRevision(document: Document, action: Action): number {
     // UNDO, REDO and PRUNE alter the revision themselves
     return [UNDO, REDO, PRUNE].includes(action.type)
-        ? state.revision
-        : state.revision + 1;
+        ? document.extendedState.revision
+        : document.extendedState.revision + 1;
 }
 
 /**
@@ -43,13 +42,16 @@ function getNextRevision(state: Document, action: Action): number {
  * @returns The updated document state.
  */
 function updateHeader<T, A extends Action>(
-    state: Document<T, A>,
-    action: A
+    document: Document<T, A>,
+    action: A | BaseAction
 ): Document<T, A> {
     return {
-        ...state,
-        revision: getNextRevision(state, action),
-        lastModified: new Date().toISOString(),
+        ...document,
+        extendedState: {
+            ...document.extendedState,
+            revision: getNextRevision(document, action),
+            lastModified: new Date().toISOString(),
+        },
     };
 }
 
@@ -61,23 +63,26 @@ function updateHeader<T, A extends Action>(
  * @returns The updated document state.
  */
 function updateOperations<T, A extends Action>(
-    state: Document<T, A>,
-    action: A
+    document: Document<T, A>,
+    action: A | BaseAction
 ): Document<T, A> {
     // UNDO, REDO and PRUNE are meta operations
     // that alter the operations history themselves
     if ([UNDO, REDO, PRUNE, PRUNE].includes(action.type)) {
-        return state;
+        return document;
     }
 
     // removes undone operations from history if there
     // is a new operation after an UNDO
-    const operations = state.operations.slice(0, state.revision);
+    const operations = document.operations.slice(
+        0,
+        document.extendedState.revision
+    );
 
     // adds the action to the operations history with
     // the latest index and current timestamp
     return {
-        ...state,
+        ...document,
         operations: [
             ...operations,
             {
@@ -98,12 +103,12 @@ function updateOperations<T, A extends Action>(
  * @returns The updated document state.
  */
 function updateDocument<T, A extends Action>(
-    state: Document<T, A>,
+    document: Document<T, A>,
     action: A | BaseAction
 ): Document<T, A> {
-    let newState = updateOperations(state, action);
-    newState = updateHeader(newState, action);
-    return newState;
+    let newDocument = updateOperations(document, action);
+    newDocument = updateHeader(newDocument, action);
+    return newDocument;
 }
 
 /**
@@ -115,7 +120,7 @@ function updateDocument<T, A extends Action>(
  * @returns The updated document state.
  */
 function _baseReducer<T, A extends Action>(
-    state: Document<T, A>,
+    document: Document<T, A>,
     action: BaseAction,
     wrappedReducer: ImmutableStateReducer<T, A>
 ): Document<T, A> {
@@ -124,22 +129,22 @@ function _baseReducer<T, A extends Action>(
 
     switch (action.type) {
         case SET_NAME:
-            return setNameOperation(state, action.input);
+            return setNameOperation(document, action.input);
         case UNDO:
-            return undoOperation(state, action.input, wrappedReducer);
+            return undoOperation(document, action.input, wrappedReducer);
         case REDO:
-            return redoOperation(state, action.input, wrappedReducer);
+            return redoOperation(document, action.input, wrappedReducer);
         case PRUNE:
             return pruneOperation(
-                state,
+                document,
                 action.input.start,
                 action.input.end,
                 wrappedReducer
             );
         case LOAD_STATE:
-            return loadStateOperation(state, action.input.state);
+            return loadStateOperation(document, action.input.state);
         default:
-            return state;
+            return document;
     }
 }
 
@@ -156,29 +161,29 @@ function _baseReducer<T, A extends Action>(
  * @returns The new state of the document.
  */
 export function baseReducer<T, A extends Action>(
-    state: Document<T, A>,
+    document: Document<T, A>,
     action: A | BaseAction,
     customReducer: ImmutableStateReducer<T, A>
 ) {
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first
-    let newState = state;
+    let newDocument = document;
     if (isBaseAction(action)) {
-        newState = _baseReducer(newState, action, customReducer);
+        newDocument = _baseReducer(newDocument, action, customReducer);
     }
 
     // updates the document revision number, last modified date
     // and operation history
-    newState = updateDocument(newState, action);
+    newDocument = updateDocument<T, A>(newDocument, action);
 
     // wraps the custom reducer with Immer to avoid
     // mutation bugs and allow writing reducers with
     // mutating code
-    newState = produce(newState, draft => {
+    newDocument = produce(newDocument, draft => {
         // the reducer runs on a immutable version of
         // provided state
         const returnedDraft = customReducer(
-            draft.state as WritableDraft<T>,
+            draft.extendedState.state,
             action as A
         );
 
@@ -186,12 +191,18 @@ export function baseReducer<T, A extends Action>(
         // of mutating the draft then returns the new state
         if (returnedDraft) {
             // casts new state as draft to comply with typescript
-            return castDraft({ ...newState, state: returnedDraft });
+            return castDraft<Document<T, A>>({
+                ...newDocument,
+                extendedState: {
+                    ...newDocument.extendedState,
+                    state: returnedDraft,
+                },
+            });
         }
     });
 
     // updates the last operation with the hash of the resulting state
-    return produce(newState, draft => {
+    return produce(newDocument, draft => {
         draft.operations[draft.operations.length - 1].hash =
             hashDocument(draft);
     });

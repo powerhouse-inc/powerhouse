@@ -1,4 +1,4 @@
-import type { WritableDraft } from 'immer/dist/internal';
+import type { Draft } from 'immer/dist/internal';
 import type { BaseAction } from './actions/types';
 export type { BaseAction };
 /**
@@ -11,6 +11,8 @@ export type Action<T extends string = string, I = unknown> = {
     type: T;
     /** The payload of the action. */
     input: I;
+    /** The attachments included in the action. */
+    attachments?: FileRegistry | undefined;
 };
 
 /**
@@ -22,7 +24,7 @@ export type Action<T extends string = string, I = unknown> = {
  */
 export type Reducer<State, A extends Action> = (
     state: Document<State, A>,
-    action: A
+    action: A | BaseAction
 ) => Document<State, A>;
 
 /**
@@ -38,12 +40,12 @@ export type Reducer<State, A extends Action> = (
  * @typeParam A - The type of the actions supported by the reducer.
  */
 export type ImmutableReducer<State, A extends Action> = (
-    state: WritableDraft<Document<State, A>>,
-    action: A
+    state: Draft<Document<State, A>>,
+    action: A | BaseAction
 ) => Document<State, A> | void;
 
 export type ImmutableStateReducer<State, A extends Action> = (
-    state: WritableDraft<State>,
+    state: Draft<State>,
     action: A
 ) => State | void;
 
@@ -106,6 +108,13 @@ export type DocumentFile = {
  */
 export type FileRegistry = Record<Attachment, DocumentFile>;
 
+export type ExtendedState<State = unknown> = DocumentHeader & {
+    /** The document model specific state. */
+    state: State;
+    /** The index of document attachments. */
+    attachments: FileRegistry;
+};
+
 /**
  * The base type of a document model.
  *
@@ -115,18 +124,13 @@ export type FileRegistry = Record<Attachment, DocumentFile>;
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type Document<
-    State = unknown,
-    A extends Action = Action
-> = DocumentHeader & {
+export type Document<S = unknown, A extends Action = Action> = {
     /** The document model specific state. */
-    state: State;
+    extendedState: ExtendedState<S>;
     /** The operations history of the document. */
     operations: Operation<A | BaseAction>[];
     /** The initial state of the document, enabling replaying operations. */
-    initialState: Omit<Document<State, A>, 'initialState'>;
-    /** The index of document attachments. */
-    fileRegistry: FileRegistry;
+    initialState: ExtendedState<S>;
 };
 
 /**

@@ -27,9 +27,9 @@ describe('PRUNE operation', () => {
         newDocument = countReducer(newDocument, increment());
         newDocument = countReducer(newDocument, prune(0, 4));
 
-        expect(newDocument.name).toBe('Document');
-        expect(newDocument.state.count).toBe(4);
-        expect(newDocument.revision).toBe(2);
+        expect(newDocument.extendedState.name).toBe('Document');
+        expect(newDocument.extendedState.state.count).toBe(4);
+        expect(newDocument.extendedState.revision).toBe(2);
         expect(mapOperations(newDocument.operations)).toStrictEqual([
             {
                 ...loadState(
@@ -43,9 +43,13 @@ describe('PRUNE operation', () => {
             },
             { ...increment(), index: 1 },
         ]);
-        expect(newDocument.documentType).toBe('powerhouse/counter');
+        expect(newDocument.extendedState.documentType).toBe(
+            'powerhouse/counter'
+        );
         expect(newDocument.initialState.state).toStrictEqual({ count: 0 });
-        expect(newDocument.initialState.state).toStrictEqual(document.state);
+        expect(newDocument.initialState.state).toStrictEqual(
+            document.extendedState.state
+        );
     });
 
     it('should prune last 3 operations', async () => {
@@ -60,9 +64,9 @@ describe('PRUNE operation', () => {
         newDocument = countReducer(newDocument, increment());
         newDocument = countReducer(newDocument, prune(2));
 
-        expect(newDocument.name).toBe('Document');
-        expect(newDocument.state.count).toBe(4);
-        expect(newDocument.revision).toBe(3);
+        expect(newDocument.extendedState.name).toBe('Document');
+        expect(newDocument.extendedState.state.count).toBe(4);
+        expect(newDocument.extendedState.revision).toBe(3);
         expect(mapOperations(newDocument.operations)).toStrictEqual([
             { ...increment(), index: 0 },
             { ...setName('Document'), index: 1 },
@@ -77,9 +81,13 @@ describe('PRUNE operation', () => {
                 index: 2,
             },
         ]);
-        expect(newDocument.documentType).toBe('powerhouse/counter');
+        expect(newDocument.extendedState.documentType).toBe(
+            'powerhouse/counter'
+        );
         expect(newDocument.initialState.state).toStrictEqual({ count: 0 });
-        expect(newDocument.initialState.state).toStrictEqual(document.state);
+        expect(newDocument.initialState.state).toStrictEqual(
+            document.extendedState.state
+        );
     });
 
     it('should prune 2 operations', async () => {
@@ -94,9 +102,9 @@ describe('PRUNE operation', () => {
         newDocument = countReducer(newDocument, increment());
         newDocument = countReducer(newDocument, prune(2, 4));
 
-        expect(newDocument.name).toBe('Document');
-        expect(newDocument.state.count).toBe(4);
-        expect(newDocument.revision).toBe(4);
+        expect(newDocument.extendedState.name).toBe('Document');
+        expect(newDocument.extendedState.state.count).toBe(4);
+        expect(newDocument.extendedState.revision).toBe(4);
         expect(mapOperations(newDocument.operations)).toStrictEqual([
             { ...increment(), index: 0 },
             { ...setName('Document'), index: 1 },
@@ -112,9 +120,13 @@ describe('PRUNE operation', () => {
             },
             { ...increment(), index: 3 },
         ]);
-        expect(newDocument.documentType).toBe('powerhouse/counter');
+        expect(newDocument.extendedState.documentType).toBe(
+            'powerhouse/counter'
+        );
         expect(newDocument.initialState.state).toStrictEqual({ count: 0 });
-        expect(newDocument.initialState.state).toStrictEqual(document.state);
+        expect(newDocument.initialState.state).toStrictEqual(
+            document.extendedState.state
+        );
     });
 
     it('should undo pruned state', async () => {
@@ -130,9 +142,9 @@ describe('PRUNE operation', () => {
         newDocument = countReducer(newDocument, prune(1, 5));
         newDocument = countReducer(newDocument, undo(1));
 
-        expect(newDocument.name).toBe('');
-        expect(newDocument.state.count).toBe(1);
-        expect(newDocument.revision).toBe(1);
+        expect(newDocument.extendedState.name).toBe('');
+        expect(newDocument.extendedState.state.count).toBe(1);
+        expect(newDocument.extendedState.revision).toBe(1);
         expect(mapOperations(newDocument.operations)).toStrictEqual([
             { ...increment(), index: 0 },
             {
@@ -146,9 +158,13 @@ describe('PRUNE operation', () => {
                 index: 1,
             },
         ]);
-        expect(newDocument.documentType).toBe('powerhouse/counter');
+        expect(newDocument.extendedState.documentType).toBe(
+            'powerhouse/counter'
+        );
         expect(newDocument.initialState.state).toStrictEqual({ count: 0 });
-        expect(newDocument.initialState.state).toStrictEqual(document.state);
+        expect(newDocument.initialState.state).toStrictEqual(
+            document.extendedState.state
+        );
     });
 
     it('should redo pruned state', async () => {
@@ -165,9 +181,9 @@ describe('PRUNE operation', () => {
         newDocument = countReducer(newDocument, undo(1));
         newDocument = countReducer(newDocument, redo(1));
 
-        expect(newDocument.name).toBe('Document');
-        expect(newDocument.state.count).toBe(4);
-        expect(newDocument.revision).toBe(2);
+        expect(newDocument.extendedState.name).toBe('Document');
+        expect(newDocument.extendedState.state.count).toBe(4);
+        expect(newDocument.extendedState.revision).toBe(2);
         expect(mapOperations(newDocument.operations)).toStrictEqual([
             { ...increment(), index: 0 },
             {
@@ -181,8 +197,12 @@ describe('PRUNE operation', () => {
                 index: 1,
             },
         ]);
-        expect(newDocument.documentType).toBe('powerhouse/counter');
+        expect(newDocument.extendedState.documentType).toBe(
+            'powerhouse/counter'
+        );
         expect(newDocument.initialState.state).toStrictEqual({ count: 0 });
-        expect(newDocument.initialState.state).toStrictEqual(document.state);
+        expect(newDocument.initialState.state).toStrictEqual(
+            document.extendedState.state
+        );
     });
 });

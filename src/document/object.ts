@@ -1,6 +1,12 @@
 import { loadState, prune, redo, setName, undo } from './actions';
 import { BaseAction } from './actions/types';
-import type { Action, Attachment, Document, Reducer } from './types';
+import type {
+    Action,
+    Attachment,
+    Document,
+    ExtendedState,
+    Reducer,
+} from './types';
 import { createDocument, loadFromFile, saveToFile } from './utils';
 
 /**
@@ -10,8 +16,8 @@ import { createDocument, loadFromFile, saveToFile } from './utils';
  * @typeparam A - The type of action the document can take.
  */
 export abstract class BaseDocument<T, A extends Action> {
-    protected _state: Document<T, A>;
-    private _reducer: Reducer<T, A | BaseAction>;
+    protected _document: Document<T, A>;
+    private _reducer: Reducer<T, A>;
 
     /**
      * Constructs a BaseDocument instance with an initial state.
@@ -19,11 +25,11 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param initialState - The initial state of the document.
      */
     constructor(
-        reducer: Reducer<T, A | BaseAction>,
-        initialState?: Partial<Document<T, A>> & { state: T }
+        reducer: Reducer<T, A>,
+        initialState?: Partial<ExtendedState<T>>
     ) {
         this._reducer = reducer;
-        this._state = createDocument(initialState);
+        this._document = createDocument(initialState);
     }
 
     /**
@@ -32,7 +38,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @returns The Document instance.
      */
     protected dispatch(action: A | BaseAction) {
-        this._state = this._reducer(this._state, action);
+        this._document = this._reducer(this._document, action);
         return this;
     }
 
@@ -43,7 +49,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @returns The file path where the state was saved.
      */
     protected saveToFile(path: string, extension: string, name?: string) {
-        return saveToFile(this._state, path, extension, name);
+        return saveToFile(this._document, path, extension, name);
     }
 
     /**
@@ -51,10 +57,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param path - The file path where the state is stored.
      */
     async loadFromFile(path: string) {
-        this._state = await loadFromFile<T, A | BaseAction>(
-            path,
-            this._reducer
-        );
+        this._document = await loadFromFile<T, A>(path, this._reducer);
     }
 
     /**
@@ -65,59 +68,70 @@ export abstract class BaseDocument<T, A extends Action> {
      */
     protected static async stateFromFile<T, A extends Action>(
         path: string,
-        reducer: Reducer<T, A | BaseAction>
+        reducer: Reducer<T, A>
     ) {
         const state = await loadFromFile<T, A>(path, reducer);
         return state;
     }
 
     /**
-     * Gets the name of the document.
+     *    Gets the current state of the document.
      */
-    get name() {
-        return this._state.name;
+    get state() {
+        return this._document.extendedState.state;
     }
 
-    /**
-     * Gets the type of document.
-     */
-    get documentType() {
-        return this._state.documentType;
-    }
-
-    /**
-     * Gets the timestamp of the date the document was created.
-     */
-    get created() {
-        return this._state.created;
-    }
-
-    /**
-     * Gets the timestamp of the date the document was last modified.
-     */
-    get lastModified() {
-        return this._state.lastModified;
-    }
-
-    /**
-     * Gets the revision number of the document.
-     */
-    get revision() {
-        return this._state.revision;
-    }
-
-    /**
-     * Gets the initial state of the document.
-     */
-    get initialState() {
-        return this._state.initialState;
+    get extendedState() {
+        return this._document.extendedState;
     }
 
     /**
      *    Gets the list of operations performed on the document.
      */
     get operations() {
-        return this._state.operations;
+        return this._document.operations;
+    }
+
+    /**
+     * Gets the name of the document.
+     */
+    get name() {
+        return this.extendedState.name;
+    }
+
+    /**
+     * Gets the type of document.
+     */
+    get documentType() {
+        return this.extendedState.documentType;
+    }
+
+    /**
+     * Gets the timestamp of the date the document was created.
+     */
+    get created() {
+        return this.extendedState.created;
+    }
+
+    /**
+     * Gets the timestamp of the date the document was last modified.
+     */
+    get lastModified() {
+        return this.extendedState.lastModified;
+    }
+
+    /**
+     * Gets the revision number of the document.
+     */
+    get revision() {
+        return this.extendedState.revision;
+    }
+
+    /**
+     * Gets the initial state of the document.
+     */
+    get initialState() {
+        return this._document.initialState;
     }
 
     /**
@@ -125,7 +139,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param attachment - The key of the attachment to retrieve.
      */
     public getAttachment(attachment: Attachment) {
-        return this._state.fileRegistry[attachment];
+        return this.extendedState.attachments[attachment];
     }
 
     /**
@@ -166,7 +180,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param operations - The operations to apply to the document.
      */
     public loadState(
-        state: Pick<Document<T, A>, 'state' | 'name'>,
+        state: Pick<ExtendedState<T>, 'state' | 'name'>,
         operations: number
     ) {
         this.dispatch(loadState(state, operations));

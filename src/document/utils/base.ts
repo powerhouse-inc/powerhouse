@@ -1,7 +1,12 @@
 import JSONDeterministic from 'json-stringify-deterministic';
-import { BaseAction } from '../actions/types';
 import { baseReducer } from '../reducer';
-import { Action, Document, ImmutableStateReducer } from '../types';
+import {
+    Action,
+    Document,
+    ExtendedState,
+    ImmutableStateReducer,
+    Reducer,
+} from '../types';
 import { hash } from './node';
 
 /**
@@ -60,9 +65,9 @@ export function createAction<A extends Action>(
 export function createReducer<T = unknown, A extends Action = Action>(
     reducer: ImmutableStateReducer<T, A>,
     documentReducer = baseReducer
-) {
-    return (state: Document<T, A | BaseAction>, action: A | BaseAction) => {
-        return documentReducer<T, A>(state, action, reducer);
+): Reducer<T, A> {
+    return (document, action) => {
+        return documentReducer(document, action, reducer);
     };
 }
 
@@ -78,30 +83,28 @@ export function createReducer<T = unknown, A extends Action = Action>(
  * @returns The new document state.
  */
 export const createDocument = <T, A extends Action>(
-    initialState?: Partial<Document<T, A>> & { state: T }
+    initialState?: Partial<ExtendedState<T>>
 ): Document<T, A> => {
-    const state = {
+    const state: ExtendedState<T> = {
         name: '',
         documentType: '',
         revision: 0,
         created: new Date().toISOString(),
         lastModified: new Date().toISOString(),
         state: {} as T,
-        operations: [],
-        fileRegistry: {},
+        attachments: {},
         ...initialState,
     };
 
-    // saves the initial state
-    const { initialState: _, ...newInitialState } = state;
     return {
-        ...state,
-        initialState: newInitialState,
+        extendedState: state,
+        initialState: state,
+        operations: [],
     };
 };
 
 export const hashDocument = (document: Document) => {
-    return hash(JSONDeterministic(document.state));
+    return hash(JSONDeterministic(document.extendedState.state));
 };
 
 export const hashKey = (date?: Date, randomLimit = 1000) => {

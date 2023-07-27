@@ -18,7 +18,8 @@ export const createZip = async (document: Document) => {
     // create zip file
     const zip = new JSZip();
 
-    const { name, revision, documentType, created, lastModified } = document;
+    const { name, revision, documentType, created, lastModified } =
+        document.extendedState;
     const header: DocumentHeader = {
         name,
         revision,
@@ -33,9 +34,11 @@ export const createZip = async (document: Document) => {
     );
     zip.file('operations.json', JSON.stringify(document.operations, null, 2));
 
-    const attachments = Object.keys(document.fileRegistry) as Attachment[];
+    const attachments = Object.keys(
+        document.extendedState.attachments
+    ) as Attachment[];
     attachments.forEach(key => {
-        const { data, ...attributes } = document.fileRegistry[key];
+        const { data, ...attributes } = document.extendedState.attachments[key];
         const path = key.slice('attachment://'.length);
         zip.file(path, data, {
             base64: true,
@@ -70,7 +73,7 @@ export const saveToFile = async (
         type: 'nodebuffer',
         streamFiles: true,
     });
-    const fileName = name ?? document.name;
+    const fileName = name ?? document.extendedState.name;
     const fileExtension = `.${extension}.zip`;
 
     return writeFile(
@@ -110,7 +113,7 @@ export const saveToFileHandle = async (
  */
 export const loadFromFile = async <S, A extends Action>(
     path: string,
-    reducer: Reducer<S, A | BaseAction>
+    reducer: Reducer<S, A>
 ) => {
     const file = readFile(path);
     return loadFromInput(file, reducer);
@@ -118,7 +121,7 @@ export const loadFromFile = async <S, A extends Action>(
 
 export const loadFromInput = async <S, A extends Action>(
     input: FileInput,
-    reducer: Reducer<S, A | BaseAction>
+    reducer: Reducer<S, A>
 ) => {
     const zip = new JSZip();
     await zip.loadAsync(input);
@@ -127,14 +130,14 @@ export const loadFromInput = async <S, A extends Action>(
 
 async function loadFromZip<S, A extends Action>(
     zip: JSZip,
-    reducer: Reducer<S, A | BaseAction>
+    reducer: Reducer<S, A>
 ) {
     const initialStateZip = zip.file('state.json');
     if (!initialStateZip) {
         throw new Error('Initial state not found');
     }
     const initialStateStr = await initialStateZip.async('string');
-    const state = JSON.parse(initialStateStr) as Document<S, A | BaseAction>;
+    const state = JSON.parse(initialStateStr) as Document<S, A>;
 
     // document is saved without initial state
     state.initialState = JSON.parse(initialStateStr);

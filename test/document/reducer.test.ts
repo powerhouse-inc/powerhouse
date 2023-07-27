@@ -11,7 +11,7 @@ describe('Base reducer', () => {
     it('should update revision', async () => {
         const document = createDocument();
         const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
-        expect(newDocument.revision).toBe(1);
+        expect(newDocument.extendedState.revision).toBe(1);
     });
 
     it('should update lastModified', async () => {
@@ -22,7 +22,10 @@ describe('Base reducer', () => {
             jest.runOnlyPendingTimers();
         });
         const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
-        expect(newDocument.lastModified > document.lastModified).toBe(true);
+        expect(
+            newDocument.extendedState.lastModified >
+                document.extendedState.lastModified
+        ).toBe(true);
         jest.useRealTimers();
     });
 
@@ -65,7 +68,7 @@ describe('Base reducer', () => {
     it('should set document name', async () => {
         const document = createDocument();
         const newDocument = emptyReducer(document, setName('Document'));
-        expect(newDocument.name).toBe('Document');
+        expect(newDocument.extendedState.name).toBe('Document');
     });
 
     it('should throw error on invalid base action', async () => {
