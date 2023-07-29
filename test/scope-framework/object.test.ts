@@ -1,6 +1,7 @@
 import { SectionComponent } from '@acaldas/document-model-graphql/scope-framework';
 import { ScopeFramework } from '../../src/scope-framework';
 import { ScopeFramework as ScopeFrameworkObject } from '../../src/scope-framework/gen';
+import { hashKey } from '../../src/document/utils';
 
 const buildExampleDocument = ():ScopeFrameworkObject => {
     const framework = new ScopeFramework();
@@ -15,7 +16,8 @@ const buildExampleDocument = ():ScopeFrameworkObject => {
         } 
     });
 
-    framework.addElement({ 
+    framework.addElement({
+        id: hashKey(),
         path: 'A.1.1',
         type: 'Article',
         name: 'Scope Improvement',
@@ -25,6 +27,7 @@ const buildExampleDocument = ():ScopeFrameworkObject => {
     });
 
     framework.addElement({ 
+        id: hashKey(),
         path: 'A.1.1.1',
         type: 'Section',
         name: 'Role of Scope Advisors',
@@ -34,6 +37,7 @@ const buildExampleDocument = ():ScopeFrameworkObject => {
     });
 
     framework.addElement({ 
+        id: hashKey(),
         path: 'A.1.1.2',
         type: 'Section',
         name: 'Role of Governance Nebulae',
@@ -43,6 +47,7 @@ const buildExampleDocument = ():ScopeFrameworkObject => {
     });
 
     framework.addElement({ 
+        id: hashKey(),
         path: 'A.1.2',
         type: 'Article',
         name: 'Spirit of the Atlas',
@@ -52,6 +57,7 @@ const buildExampleDocument = ():ScopeFrameworkObject => {
     });
 
     framework.addElement({ 
+        id: hashKey(),
         path: 'A.1.2.1',
         type: 'Section',
         name: 'Universal Alignment and the Spirit of the Atlas',
@@ -61,6 +67,7 @@ const buildExampleDocument = ():ScopeFrameworkObject => {
     });
 
     framework.addElement({ 
+        id: hashKey(),
         path: 'A.1.2.2',
         type: 'Section',
         name: 'Interpretation of the Spirit of the Atlas',
@@ -70,6 +77,7 @@ const buildExampleDocument = ():ScopeFrameworkObject => {
     });
 
     framework.addElement({ 
+        id: hashKey(),
         path: 'A.1.1.3',
         type: 'Section',
         name: 'Atlas Operational Platform',
@@ -112,6 +120,7 @@ describe('ScopeFramework Class', () => {
         });
 
         framework.addElement({
+            id: hashKey(),
             type: 'Article',
             path: 'B.1.3',
             name: null,

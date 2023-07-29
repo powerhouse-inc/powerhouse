@@ -1,4 +1,5 @@
 import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
+import { hashKey } from '../../src/document/utils';
 
 const state: DocumentModelState = {
     id: "makerdao/scope-framework", 
@@ -46,7 +47,29 @@ const state: DocumentModelState = {
                     id: "", description: ""
                 }
             ],
-            state: {schema:"", initialValue: "", examples:[]}
+            state: {
+                schema:"", 
+                initialValue: JSON.stringify(
+                    {
+                        rootPath: 'A',
+                        elements: [
+                            {
+                                id: hashKey(),
+                                name: 'Scope Name',
+                                version: 1,
+                                type: 'Scope',
+                                path: 'A.1',
+                                components: {
+                                    content: 'Scope description goes here.',
+                                },
+                            },
+                        ],
+                    },
+                    undefined,
+                    4
+                ), 
+                examples:[]
+            }
         }
     ]
 }
