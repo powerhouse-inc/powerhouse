@@ -156,7 +156,9 @@ describe('Budget Statement Class', () => {
         const path = await budgetStatement.saveToFile(
             './test/budget-statement/temp'
         );
-        expect(path).toBe('test/budget-statement/temp/march.phbs.zip');
+
+        // Support backslashes for Windows environments
+        expect(path.replace(/\\/g, '/')).toBe('test/budget-statement/temp/march.phbs.zip');
     });
 
     it('should load from file', async () => {
