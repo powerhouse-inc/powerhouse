@@ -9,12 +9,20 @@ unless_exists: true
 */
 
 import { <%= h.changeCase.pascal(documentType) %>State } from "@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>";
-import { Extended<%= h.changeCase.pascal(documentType) %>State } from "../gen";
+import { Extended<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action } from "../gen";
+import { reducer } from '..';
+import { 
+    FileInput,
+    loadFromFile,
+    loadFromInput,
+    saveToFile,
+    saveToFileHandle, 
+} from '../../document/utils';
 
-const createEmpty<%= h.changeCase.pascal(documentType) %>State = (): <%= h.changeCase.pascal(documentType) %>State => (<%- initialStateValue || '{}'%>);
+export const createEmpty<%= h.changeCase.pascal(documentType) %>State = (): <%= h.changeCase.pascal(documentType) %>State => (<%- initialStateValue || '{}'%>);
 
 const dateTimeNow = (new Date()).toISOString();
-const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Extended<%= h.changeCase.pascal(documentType) %>State => ({
+export const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Extended<%= h.changeCase.pascal(documentType) %>State => ({
     // Component 1: document header
     name: "",
     created: dateTimeNow,
@@ -44,7 +52,33 @@ const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Ext
     }
 });
 
-export { 
-    createEmpty<%= h.changeCase.pascal(documentType) %>State,
-    createEmptyExtended<%= h.changeCase.pascal(documentType) %>State
-}
+export const load<%= h.changeCase.pascal(documentType) %>FromFile = async (path: string) => {
+    return loadFromFile<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action>(
+        path,
+        reducer
+    );
+};
+
+export const load<%= h.changeCase.pascal(documentType) %>FromInput = async (
+    input: FileInput
+): Promise<Extended<%= h.changeCase.pascal(documentType) %>State> => {
+    return loadFromInput<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action>(
+        input,
+        reducer
+    );
+};
+
+export const save<%= h.changeCase.pascal(documentType) %>ToFile = (
+    document: Extended<%= h.changeCase.pascal(documentType) %>State,
+    path: string,
+    name?: string
+): Promise<string> => {
+    return saveToFile(document, path, '<%= extension %>', name);
+};
+
+export const save<%= h.changeCase.pascal(documentType) %>ToFileHandle = async (
+    document: Extended<%= h.changeCase.pascal(documentType) %>State,
+    input: FileSystemFileHandle
+) => {
+    return saveToFileHandle(document, input);
+};
