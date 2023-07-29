@@ -9,26 +9,21 @@ unless_exists: true
 */
 
 import { <%= h.changeCase.pascal(documentType) %>State } from "@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>";
-import { hashKey } from '../../document/utils';
 import { Extended<%= h.changeCase.pascal(documentType) %>State } from "../gen";
 
-const createEmpty<%= h.changeCase.pascal(documentType) %>State = (): <%= h.changeCase.pascal(documentType) %>State => ({
-    //TODO: add empty state
-});
+const createEmpty<%= h.changeCase.pascal(documentType) %>State = (): <%= h.changeCase.pascal(documentType) %>State => (<%- initialStateValue || '{}'%>);
 
 const dateTimeNow = (new Date()).toISOString();
 const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Extended<%= h.changeCase.pascal(documentType) %>State => ({
-    const initialState = createEmpty<%= h.changeCase.pascal(documentType) %>State();
-
     // Component 1: document header
     name: "",
     created: dateTimeNow,
     lastModified: dateTimeNow,
-    documentType: "<%= documentType %>",
+    documentType: "<%= documentTypeId %>",
     revision: 0,
 
     // Component 2: (strict) state object
-    state: initialState,
+    state: createEmpty<%= h.changeCase.pascal(documentType) %>State(),
 
     // Component 3: file registry
     fileRegistry: {},
@@ -37,7 +32,16 @@ const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Ext
     operations: [],
 
     // TODO: remove initialState, lift to the document level (with type: ExtendedDocumentModelState)
-    initialState
+    initialState: {
+        name: "",
+        created: dateTimeNow,
+        lastModified: dateTimeNow,
+        documentType: "<%= documentTypeId %>",
+        revision: 0,
+        state: createEmpty<%= h.changeCase.pascal(documentType) %>State(),
+        fileRegistry: {},
+        operations: []
+    }
 });
 
 export { 

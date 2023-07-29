@@ -1,33 +1,37 @@
+/**
+* This is a scaffold file meant for customization: 
+* - modify it by implementing the empty state object
+* - delete the file and run the code generator again to have it reset
+*/
+
 import { DocumentModelState } from "@acaldas/document-model-graphql/document-model";
-import { hashKey } from '../../document/utils';
 import { ExtendedDocumentModelState } from "../gen";
 
 const createEmptyDocumentModelState = (): DocumentModelState => ({
-    id: hashKey(),
-    name: "",
-    extension: "",
-    description: "",
-    author: {
-        name: "",
-        website: ""
+    "id": "",
+    "name": "",
+    "extension": "",
+    "description": "",
+    "author": {
+        "name": "",
+        "website": ""
     },
-    specifications: [
+    "specifications": [
         {
-            version: 1,
-            changeLog: [],
-            state: {
-                schema: "",
-                initialValue: "",
-                examples: []
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "schema": "",
+                "initialValue": "",
+                "examples": []
             },
-            modules: []
+            "modules": []
         }
     ]
 });
 
 const dateTimeNow = (new Date()).toISOString();
 const createEmptyExtendedDocumentModelState = (): ExtendedDocumentModelState => ({
-    
     // Component 1: document header
     name: "",
     created: dateTimeNow,
@@ -36,7 +40,6 @@ const createEmptyExtendedDocumentModelState = (): ExtendedDocumentModelState => 
     revision: 0,
 
     // Component 2: (strict) state object
-    // TODO: rename data to state
     state: createEmptyDocumentModelState(),
 
     // Component 3: file registry

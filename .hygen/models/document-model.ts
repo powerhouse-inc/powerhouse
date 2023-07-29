@@ -185,7 +185,36 @@ const state: DocumentModelState = {
                     id: "", description: ""
                 },
             ],
-            state: {schema:"", initialValue: "", examples:[]}
+            state: {
+                schema:"", 
+                initialValue: JSON.stringify(
+                    {
+                        id: "",
+                        name: "",
+                        extension: "",
+                        description: "",
+                        author: {
+                            name: "",
+                            website: ""
+                        },
+                        specifications: [
+                            {
+                                version: 1,
+                                changeLog: [],
+                                state: {
+                                    schema: "",
+                                    initialValue: "",
+                                    examples: []
+                                },
+                                modules: []
+                            }
+                        ]
+                    },
+                    undefined,
+                    4
+                ),
+                examples:[]
+            }
         }
     ]
 };
