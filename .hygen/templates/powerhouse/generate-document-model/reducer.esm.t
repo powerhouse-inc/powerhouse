@@ -22,7 +22,9 @@ const stateReducer: ImmutableStateReducer<<%= h.changeCase.pascal(documentType) 
 <%-
     modules.map(m => m.operations.map(o => 
         '            case "' + h.changeCase.constant(o.name) + '":\n' + 
-        '                ' + 'z.' + h.changeCase.pascalCase(o.name) + 'InputSchema().parse(action.input);\n' +
+        '                ' + (o.schema !== null ? 
+            'z.' + h.changeCase.pascalCase(o.name) + 'InputSchema().parse(action.input);\n' : 
+            'if (Object.keys(action.input).length > 0) throw new Error("Expected empty input for action ' + h.changeCase.constant(o.name) + '");\n') +
         '                ' + h.changeCase.pascal(m.name) + 'Reducer.' + h.changeCase.camel(o.name) + 'Operation(state, action);\n' +
         '                break;\n'        
     ).join('\n')).join('\n')

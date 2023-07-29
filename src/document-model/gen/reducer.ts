@@ -5,6 +5,7 @@ import { DocumentModelState, z } from '@acaldas/document-model-graphql/document-
 import { DocumentModelAction } from './actions';
 
 import { reducer as HeaderReducer } from '../custom/reducers/header';
+import { reducer as VersioningReducer } from '../custom/reducers/versioning';
 import { reducer as ModuleReducer } from '../custom/reducers/module';
 import { reducer as OperationErrorReducer } from '../custom/reducers/operation-error';
 import { reducer as OperationExampleReducer } from '../custom/reducers/operation-example';
@@ -47,6 +48,31 @@ const stateReducer: ImmutableStateReducer<DocumentModelState, DocumentModelActio
             case "SET_AUTHOR_WEBSITE":
                 z.SetAuthorWebsiteInputSchema().parse(action.input);
                 HeaderReducer.setAuthorWebsiteOperation(state, action);
+                break;
+
+            case "ADD_CHANGE_LOG_ITEM":
+                z.AddChangeLogItemInputSchema().parse(action.input);
+                VersioningReducer.addChangeLogItemOperation(state, action);
+                break;
+
+            case "UPDATE_CHANGE_LOG_ITEM":
+                z.UpdateChangeLogItemInputSchema().parse(action.input);
+                VersioningReducer.updateChangeLogItemOperation(state, action);
+                break;
+
+            case "DELETE_CHANGE_LOG_ITEM":
+                z.DeleteChangeLogItemInputSchema().parse(action.input);
+                VersioningReducer.deleteChangeLogItemOperation(state, action);
+                break;
+
+            case "REORDER_CHANGE_LOG_ITEMS":
+                z.ReorderChangeLogItemsInputSchema().parse(action.input);
+                VersioningReducer.reorderChangeLogItemsOperation(state, action);
+                break;
+
+            case "RELEASE_NEW_VERSION":
+                if (Object.keys(action.input).length > 0) throw new Error("Expected empty input for action RELEASE_NEW_VERSION");
+                VersioningReducer.releaseNewVersionOperation(state, action);
                 break;
 
             case "ADD_MODULE":
@@ -177,6 +203,11 @@ const stateReducer: ImmutableStateReducer<DocumentModelState, DocumentModelActio
             case "SET_STATE_SCHEMA":
                 z.SetStateSchemaInputSchema().parse(action.input);
                 StateReducer.setStateSchemaOperation(state, action);
+                break;
+
+            case "SET_INITIAL_STATE":
+                z.SetInitialStateInputSchema().parse(action.input);
+                StateReducer.setInitialStateOperation(state, action);
                 break;
 
             case "ADD_STATE_EXAMPLE":

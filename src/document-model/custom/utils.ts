@@ -11,11 +11,18 @@ const createEmptyDocumentModelState = (): DocumentModelState => ({
         name: "",
         website: ""
     },
-    state: {
-        schema: "",
-        examples: []
-    },
-    modules: []
+    specifications: [
+        {
+            version: 1,
+            changeLog: [],
+            state: {
+                schema: "",
+                initialValue: "",
+                examples: []
+            },
+            modules: []
+        }
+    ]
 });
 
 const dateTimeNow = (new Date()).toISOString();

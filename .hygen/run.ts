@@ -1,3 +1,4 @@
+import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 import { paramCase } from 'change-case';
 import { runner } from 'hygen';
 import Logger from 'hygen/dist/logger';
@@ -25,7 +26,7 @@ const run = async (args: string[]) => {
 const runAll = async () => {
     // loads document model
     const document = process.argv.at(2) || 'document-model';
-    let documentModel;
+    let documentModel: DocumentModelState;
     try {
         documentModel = (await import(`./models/${document}`)).default;
     } catch (error) {
@@ -43,7 +44,8 @@ const runAll = async () => {
     ]);
 
     // Generate the module-specific files for the document model logic
-    const modules = documentModel.modules.map(m => paramCase(m.name));
+    const latestSpec = documentModel.specifications[documentModel.specifications.length - 1];
+    const modules = latestSpec.modules.map(m => paramCase(m.name));
     for (let i = 0; i < modules.length; i++) {
         await run([
             'powerhouse',

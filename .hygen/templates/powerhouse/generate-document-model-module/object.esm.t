@@ -5,14 +5,14 @@ force: true
 import { BaseDocument } from '../../../document/object';
 
 import {
-<% actions.forEach(action => { _%>
-    <%= action %>Input,
+<% actions.filter(action => action.hasInput).forEach(action => { _%>
+    <%= action.name %>Input,
 <% }); _%>
 } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
 
 import {
 <% actions.forEach(action => { _%>
-    <%= h.changeCase.camel(action) %>,
+    <%= h.changeCase.camel(action.name) %>,
 <% }); _%>
 } from './creators';
 
@@ -22,9 +22,15 @@ import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document
 export default class <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module) %> extends BaseDocument<
     <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action
 > {
-<% actions.forEach(action => { _%>
-    public <%= h.changeCase.camel(action) %>(input: <%= action %>Input) {
-        return this.dispatch(<%= h.changeCase.camel(action) %>(input));
+<% actions.filter(action => action.hasInput).forEach(action => { _%>
+    public <%= h.changeCase.camel(action.name) %>(input: <%= action.name %>Input) {
+        return this.dispatch(<%= h.changeCase.camel(action.name) %>(input));
+    }
+    
+<% }); _%>
+<% actions.filter(action => !action.hasInput).forEach(action => { _%>
+    public <%= h.changeCase.camel(action.name) %>() {
+        return this.dispatch(<%= h.changeCase.camel(action.name) %>());
     }
     
 <% }); _%>

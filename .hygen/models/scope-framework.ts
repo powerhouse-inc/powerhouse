@@ -9,40 +9,46 @@ const state: DocumentModelState = {
         name: "MakerDAO",
         website: "https://www.makerdao.com/"
     },
-    modules: [
+    specifications: [
         {
-            name: "main",
-            operations: [
+            version: 1,
+            changeLog: [],
+            modules: [
                 {
-                    name: "SetRootPath",
-                    id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                }, {
-                    name: "AddElement",
-                    id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                }, {
-                    name: "UpdateElementType",
-                    id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                }, {
-                    name: "UpdateElementName",
-                    id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                }, {
-                    name: "UpdateElementComponents",
-                    id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                }, {
-                    name: "RemoveElement",
-                    id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                }, {
-                    name: "ReorderElements",
-                    id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                }, {
-                    name: "MoveElement",
-                    id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                    name: "main",
+                    operations: [
+                        {
+                            name: "SetRootPath",
+                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                        }, {
+                            name: "AddElement",
+                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                        }, {
+                            name: "UpdateElementType",
+                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                        }, {
+                            name: "UpdateElementName",
+                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                        }, {
+                            name: "UpdateElementComponents",
+                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                        }, {
+                            name: "RemoveElement",
+                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                        }, {
+                            name: "ReorderElements",
+                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                        }, {
+                            name: "MoveElement",
+                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
+                        }
+                    ],
+                    id: "", description: ""
                 }
             ],
-            id: "", description: ""
+            state: {schema:"", initialValue: "", examples:[]}
         }
-    ],
-    state: {schema:"", examples:[]}
+    ]
 }
 
 export default state;

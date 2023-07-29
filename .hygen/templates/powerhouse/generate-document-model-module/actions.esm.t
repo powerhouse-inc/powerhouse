@@ -5,16 +5,19 @@ force: true
 import { Action } from '../../../document';
 
 import {
-<% actions.forEach(action => { _%>
-    <%= action %>Input,
+<% actions.filter(a => a.hasInput).forEach(action => { _%>
+    <%= action.name %>Input,
 <% }); _%>
 } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
 
-<% actions.forEach(actionType => { _%>
-export type <%= actionType %>Action = Action<'<%= h.changeCase.constantCase(actionType) %>', <%= actionType %>Input>;
+<% actions.filter(a => a.hasInput).forEach(actionType => { _%>
+export type <%= actionType.name %>Action = Action<'<%= h.changeCase.constantCase(actionType.name) %>', <%= actionType.name %>Input>;
+<% }); _%>
+<% actions.filter(a => !a.hasInput).forEach(actionType => { _%>
+export type <%= actionType.name %>Action = Action<'<%= h.changeCase.constantCase(actionType.name) %>', {}>;
 <% }); _%>
 
 export type <%= documentType %><%= h.changeCase.pascal(module) %>Action = 
 <% actions.forEach(actionType => { _%>
-    | <%= actionType %>Action
+    | <%= actionType.name %>Action
 <% }); _%>;

@@ -6,6 +6,7 @@ import { reducer } from './reducer';
 import { ExtendedDocumentModelState } from './types';
 
 import DocumentModel_Header from './header/object';
+import DocumentModel_Versioning from './versioning/object';
 import DocumentModel_Module from './module/object';
 import DocumentModel_OperationError from './operation-error/object';
 import DocumentModel_OperationExample from './operation-example/object';
@@ -13,6 +14,7 @@ import DocumentModel_Operation from './operation/object';
 import DocumentModel_State from './state/object';
 
 export * from './header/object';
+export * from './versioning/object';
 export * from './module/object';
 export * from './operation-error/object';
 export * from './operation-example/object';
@@ -21,6 +23,7 @@ export * from './state/object';
 
 interface DocumentModel extends 
     DocumentModel_Header,
+    DocumentModel_Versioning,
     DocumentModel_Module,
     DocumentModel_OperationError,
     DocumentModel_OperationExample,
@@ -53,6 +56,7 @@ class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction
 
 applyMixins(DocumentModel, [
     DocumentModel_Header,
+    DocumentModel_Versioning,
     DocumentModel_Module,
     DocumentModel_OperationError,
     DocumentModel_OperationExample,

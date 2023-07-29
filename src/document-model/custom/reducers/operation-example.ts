@@ -11,13 +11,14 @@ const exampleSorter = (order: string[]) => {
 
 export const reducer: DocumentModelOperationExampleOperations = {
     addOperationExampleOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (
-                    state.modules[i].operations[j].id ==
+                    latestSpec.modules[i].operations[j].id ==
                     action.input.operationId
                 ) {
-                    state.modules[i].operations[j].examples.push({
+                    latestSpec.modules[i].operations[j].examples.push({
                         id: hashKey(),
                         value: action.input.example,
                     });
@@ -27,18 +28,19 @@ export const reducer: DocumentModelOperationExampleOperations = {
     },
 
     updateOperationExampleOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
                     let k = 0;
-                    k < state.modules[i].operations[j].examples.length;
+                    k < latestSpec.modules[i].operations[j].examples.length;
                     k++
                 ) {
                     if (
-                        state.modules[i].operations[j].examples[k].id ==
+                        latestSpec.modules[i].operations[j].examples[k].id ==
                         action.input.id
                     ) {
-                        state.modules[i].operations[j].examples[k].value =
+                        latestSpec.modules[i].operations[j].examples[k].value =
                             action.input.example;
                     }
                 }
@@ -47,9 +49,10 @@ export const reducer: DocumentModelOperationExampleOperations = {
     },
 
     deleteOperationExampleOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
-                state.modules[i].operations[j].examples = state.modules[
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+                latestSpec.modules[i].operations[j].examples = latestSpec.modules[
                     i
                 ].operations[j].examples.filter(e => e.id != action.input.id);
             }
@@ -57,13 +60,14 @@ export const reducer: DocumentModelOperationExampleOperations = {
     },
 
     reorderOperationExamplesOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (
-                    state.modules[i].operations[j].id ==
+                    latestSpec.modules[i].operations[j].id ==
                     action.input.operationId
                 ) {
-                    state.modules[i].operations[j].examples.sort(
+                    latestSpec.modules[i].operations[j].examples.sort(
                         exampleSorter(action.input.order)
                     );
                 }

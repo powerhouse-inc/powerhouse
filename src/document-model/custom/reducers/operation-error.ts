@@ -11,13 +11,14 @@ const errorSorter = (order: string[]) => {
 
 export const reducer: DocumentModelOperationErrorOperations = {
     addOperationErrorOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (
-                    state.modules[i].operations[j].id ==
+                    latestSpec.modules[i].operations[j].id ==
                     action.input.operationId
                 ) {
-                    state.modules[i].operations[j].errors.push({
+                    latestSpec.modules[i].operations[j].errors.push({
                         id: hashKey(),
                         name: action.input.errorName || '',
                         code: action.input.errorCode || '',
@@ -30,18 +31,19 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorCodeOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
                     let k = 0;
-                    k < state.modules[i].operations[j].errors.length;
+                    k < latestSpec.modules[i].operations[j].errors.length;
                     k++
                 ) {
                     if (
-                        state.modules[i].operations[j].errors[k].id ==
+                        latestSpec.modules[i].operations[j].errors[k].id ==
                         action.input.id
                     ) {
-                        state.modules[i].operations[j].errors[k].code =
+                        latestSpec.modules[i].operations[j].errors[k].code =
                             action.input.errorCode || '';
                     }
                 }
@@ -50,18 +52,19 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorNameOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
                     let k = 0;
-                    k < state.modules[i].operations[j].errors.length;
+                    k < latestSpec.modules[i].operations[j].errors.length;
                     k++
                 ) {
                     if (
-                        state.modules[i].operations[j].errors[k].id ==
+                        latestSpec.modules[i].operations[j].errors[k].id ==
                         action.input.id
                     ) {
-                        state.modules[i].operations[j].errors[k].name =
+                        latestSpec.modules[i].operations[j].errors[k].name =
                             action.input.errorName || '';
                     }
                 }
@@ -70,18 +73,19 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorDescriptionOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
                     let k = 0;
-                    k < state.modules[i].operations[j].errors.length;
+                    k < latestSpec.modules[i].operations[j].errors.length;
                     k++
                 ) {
                     if (
-                        state.modules[i].operations[j].errors[k].id ==
+                        latestSpec.modules[i].operations[j].errors[k].id ==
                         action.input.id
                     ) {
-                        state.modules[i].operations[j].errors[k].description =
+                        latestSpec.modules[i].operations[j].errors[k].description =
                             action.input.errorDescription || '';
                     }
                 }
@@ -90,18 +94,19 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorTemplateOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
                     let k = 0;
-                    k < state.modules[i].operations[j].errors.length;
+                    k < latestSpec.modules[i].operations[j].errors.length;
                     k++
                 ) {
                     if (
-                        state.modules[i].operations[j].errors[k].id ==
+                        latestSpec.modules[i].operations[j].errors[k].id ==
                         action.input.id
                     ) {
-                        state.modules[i].operations[j].errors[k].template =
+                        latestSpec.modules[i].operations[j].errors[k].template =
                             action.input.errorTemplate || '';
                     }
                 }
@@ -110,9 +115,10 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     deleteOperationErrorOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
-                state.modules[i].operations[j].errors = state.modules[
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+                latestSpec.modules[i].operations[j].errors = latestSpec.modules[
                     i
                 ].operations[j].errors.filter(e => e.id != action.input.id);
             }
@@ -120,13 +126,14 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     reorderOperationErrorsOperation(state, action) {
-        for (let i = 0; i < state.modules.length; i++) {
-            for (let j = 0; j < state.modules[i].operations.length; j++) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (
-                    state.modules[i].operations[j].id ==
+                    latestSpec.modules[i].operations[j].id ==
                     action.input.operationId
                 ) {
-                    state.modules[i].operations[j].errors.sort(
+                    latestSpec.modules[i].operations[j].errors.sort(
                         errorSorter(action.input.order)
                     );
                 }

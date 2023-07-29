@@ -2,6 +2,7 @@ import { createAction } from '../../../document/utils';
 
 import {
     SetStateSchemaInput,
+    SetInitialStateInput,
     AddStateExampleInput,
     UpdateStateExampleInput,
     DeleteStateExampleInput,
@@ -10,6 +11,7 @@ import {
 
 import {
     SetStateSchemaAction,
+    SetInitialStateAction,
     AddStateExampleAction,
     UpdateStateExampleAction,
     DeleteStateExampleAction,
@@ -19,6 +21,12 @@ import {
 export const setStateSchema = (input: SetStateSchemaInput) =>
     createAction<SetStateSchemaAction>(
         'SET_STATE_SCHEMA',
+        {...input}
+    );
+
+export const setInitialState = (input: SetInitialStateInput) =>
+    createAction<SetInitialStateAction>(
+        'SET_INITIAL_STATE',
         {...input}
     );
 
@@ -45,4 +53,5 @@ export const reorderStateExamples = (input: ReorderStateExamplesInput) =>
         'REORDER_STATE_EXAMPLES',
         {...input}
     );
+
 

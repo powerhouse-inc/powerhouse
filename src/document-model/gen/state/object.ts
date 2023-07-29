@@ -2,6 +2,7 @@ import { BaseDocument } from '../../../document/object';
 
 import {
     SetStateSchemaInput,
+    SetInitialStateInput,
     AddStateExampleInput,
     UpdateStateExampleInput,
     DeleteStateExampleInput,
@@ -10,6 +11,7 @@ import {
 
 import {
     setStateSchema,
+    setInitialState,
     addStateExample,
     updateStateExample,
     deleteStateExample,
@@ -24,6 +26,10 @@ export default class DocumentModel_State extends BaseDocument<
 > {
     public setStateSchema(input: SetStateSchemaInput) {
         return this.dispatch(setStateSchema(input));
+    }
+    
+    public setInitialState(input: SetInitialStateInput) {
+        return this.dispatch(setInitialState(input));
     }
     
     public addStateExample(input: AddStateExampleInput) {

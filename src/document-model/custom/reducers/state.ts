@@ -11,31 +11,41 @@ const exampleSorter = (order: string[]) => {
 
 export const reducer: DocumentModelStateOperations = {
     setStateSchemaOperation(state, action) {
-        state.state.schema = action.input.schema;
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        latestSpec.state.schema = action.input.schema;
+    },
+
+    setInitialStateOperation(state, action) {
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        latestSpec.state.initialValue = action.input.initialValue;
     },
 
     addStateExampleOperation(state, action) {
-        state.state.examples.push({
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        latestSpec.state.examples.push({
             id: hashKey(),
             value: action.input.example,
         });
     },
 
     updateStateExampleOperation(state, action) {
-        for (let i = 0; i < state.state.examples.length; i++) {
-            if (state.state.examples[i].id == action.input.id) {
-                state.state.examples[i].value = action.input.newExample;
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.state.examples.length; i++) {
+            if (latestSpec.state.examples[i].id == action.input.id) {
+                latestSpec.state.examples[i].value = action.input.newExample;
             }
         }
     },
 
     deleteStateExampleOperation(state, action) {
-        state.state.examples = state.state.examples.filter(
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        latestSpec.state.examples = latestSpec.state.examples.filter(
             e => e.id != action.input.id
         );
     },
 
     reorderStateExamplesOperation(state, action) {
-        state.state.examples.sort(exampleSorter(action.input.order));
+        const latestSpec = state.specifications[state.specifications.length - 1];
+        latestSpec.state.examples.sort(exampleSorter(action.input.order));
     },
 };
