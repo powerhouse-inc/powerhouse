@@ -30,7 +30,9 @@ describe('Budget Statement scenario 1', () => {
         expect.assertions(1);
         try {
             budgetStatement = reducer(budgetStatement, json.operation);
-            expect(budgetStatement.state).toStrictEqual(json.state);
+            expect(budgetStatement.extendedState.state).toStrictEqual(
+                json.state
+            );
         } catch (error) {
             // eslint-disable-next-line jest/no-conditional-expect
             expect(json.error?.message).toBe((error as Error).message);
@@ -54,10 +56,6 @@ class BudgetStatementTest extends BudgetStatement {
             : // @ts-ignore
               this[method](action.input);
     }
-
-    get stateTest() {
-        return this._state;
-    }
 }
 
 describe('Budget Statement scenario 1 with object methods', () => {
@@ -75,7 +73,7 @@ describe('Budget Statement scenario 1 with object methods', () => {
             budgetStatement.dispatchTest(
                 JSON.parse(JSON.stringify(json.operation))
             );
-            expect(budgetStatement.stateTest.state).toStrictEqual(json.state);
+            expect(budgetStatement.state).toStrictEqual(json.state);
         } catch (error) {
             // eslint-disable-next-line jest/no-conditional-expect
             expect(json.error?.message).toBe((error as Error).message);

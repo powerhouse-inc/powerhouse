@@ -67,7 +67,7 @@ export default class AccountObject extends BaseDocument<
      * @group Account
      */
     get accounts() {
-        return this._state.state.accounts;
+        return this.state.accounts;
     }
 
     /**

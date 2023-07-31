@@ -31,7 +31,7 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should start as empty array', async () => {
         const document = createBudgetStatement();
-        expect(document.state.auditReports).toStrictEqual([]);
+        expect(document.extendedState.state.auditReports).toStrictEqual([]);
     });
 
     it('should add audit report', async () => {
@@ -47,12 +47,12 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(newDocument.state.auditReports[0]).toStrictEqual({
+        expect(newDocument.extendedState.state.auditReports[0]).toStrictEqual({
             report: 'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
-        expect(document.state.auditReports).toStrictEqual([]);
+        expect(document.extendedState.state.auditReports).toStrictEqual([]);
     });
 
     it('should add attachment to file registry', async () => {
@@ -70,7 +70,7 @@ describe('Budget Statement Audit Report reducer', () => {
         );
 
         expect(
-            newDocument.fileRegistry[
+            newDocument.extendedState.attachments[
                 'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8='
             ]
         ).toStrictEqual({
@@ -79,7 +79,7 @@ describe('Budget Statement Audit Report reducer', () => {
             extension: 'pdf',
             fileName: 'report.pdf',
         });
-        expect(document.fileRegistry).toStrictEqual({});
+        expect(document.extendedState.attachments).toStrictEqual({});
     });
 
     it('should delete audit report', async () => {
@@ -101,7 +101,7 @@ describe('Budget Statement Audit Report reducer', () => {
                 'attachment://audits/Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             ])
         );
-        expect(document.state.auditReports).toStrictEqual([]);
+        expect(document.extendedState.state.auditReports).toStrictEqual([]);
     });
 
     it('should set default timestamp on audit report', async () => {
@@ -118,7 +118,8 @@ describe('Budget Statement Audit Report reducer', () => {
             ])
         );
         expect(
-            newDocument.state.auditReports[0].timestamp >= date.toISOString()
+            newDocument.extendedState.state.auditReports[0].timestamp >=
+                date.toISOString()
         ).toBe(true);
     });
 
@@ -133,7 +134,9 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(document.state.auditReports[0].status).toBe('Approved');
+        expect(document.extendedState.state.auditReports[0].status).toBe(
+            'Approved'
+        );
     });
 
     it('should add approved with comments audit report', async () => {
@@ -147,7 +150,7 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(document.state.auditReports[0].status).toBe(
+        expect(document.extendedState.state.auditReports[0].status).toBe(
             'ApprovedWithComments'
         );
     });
@@ -163,7 +166,9 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(document.state.auditReports[0].status).toBe('NeedsAction');
+        expect(document.extendedState.state.auditReports[0].status).toBe(
+            'NeedsAction'
+        );
     });
 
     it('should throw if duplicated audit report', async () => {
@@ -208,23 +213,23 @@ describe('Budget Statement Audit Report reducer', () => {
                 },
             ])
         );
-        expect(newDocument.state.auditReports[0]).toStrictEqual({
+        expect(newDocument.extendedState.state.auditReports[0]).toStrictEqual({
             report: 'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
         expect(
-            newDocument.fileRegistry[
+            newDocument.extendedState.attachments[
                 'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0='
             ].data.length
         ).toBeGreaterThan(0);
         expect(
-            newDocument.fileRegistry[
+            newDocument.extendedState.attachments[
                 'attachment://audits/Pv/RLgAirXe5QEWGG+W4PTlQCv0='
             ].mimeType
         ).toBe('application/pdf');
-        expect(document.state.auditReports).toStrictEqual([]);
-        expect(document.fileRegistry).toStrictEqual({});
+        expect(document.extendedState.state.auditReports).toStrictEqual([]);
+        expect(document.extendedState.attachments).toStrictEqual({});
     });
 
     it('should save attachment to zip', async () => {
@@ -243,11 +248,12 @@ describe('Budget Statement Audit Report reducer', () => {
         const zip = new JSZip();
         await zip.loadAsync(file);
 
-        const report = document.state.auditReports[0].report;
+        const report = document.extendedState.state.auditReports[0].report;
         const path = report.slice('attachment://'.length);
         const attachmentZip = zip.file(path);
 
-        const { data, ...attributes } = document.fileRegistry[report];
+        const { data, ...attributes } =
+            document.extendedState.attachments[report];
         expect(await attachmentZip?.async('string')).toBe('TEST');
         expect(JSON.parse(attachmentZip?.comment ?? '')).toStrictEqual(
             attributes
@@ -259,7 +265,9 @@ describe('Budget Statement Audit Report reducer', () => {
         const document = await loadBudgetStatementFromFile(
             `${tempDir}march.phbs.zip`
         );
-        expect(document.state.auditReports[0].status).toBe('NeedsAction');
+        expect(document.extendedState.state.auditReports[0].status).toBe(
+            'NeedsAction'
+        );
         expect(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (document.operations[0] as any).input.reports[0].report.startsWith(
@@ -267,7 +275,9 @@ describe('Budget Statement Audit Report reducer', () => {
             )
         ).toBe(true);
         expect(
-            document.fileRegistry[document.state.auditReports[0].report]
+            document.extendedState.attachments[
+                document.extendedState.state.auditReports[0].report
+            ]
         ).toStrictEqual(attachment);
     });
 });

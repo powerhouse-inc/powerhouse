@@ -43,7 +43,9 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        expect(newDocument.state.accounts[0].lineItems).toStrictEqual([
+        expect(
+            newDocument.extendedState.state.accounts[0].lineItems
+        ).toStrictEqual([
             {
                 category: {
                     ref: 'makerdao/budget-category',
@@ -64,7 +66,9 @@ describe('Budget Statement line item reducer', () => {
                 forecast: [],
             },
         ]);
-        expect(document.state.accounts[0].lineItems).toStrictEqual([]);
+        expect(
+            document.extendedState.state.accounts[0].lineItems
+        ).toStrictEqual([]);
     });
 
     it('should update line item', async () => {
@@ -116,7 +120,9 @@ describe('Budget Statement line item reducer', () => {
             ])
         );
 
-        expect(newDocument.state.accounts[0].lineItems[0]).toStrictEqual({
+        expect(
+            newDocument.extendedState.state.accounts[0].lineItems[0]
+        ).toStrictEqual({
             category: {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
@@ -141,7 +147,9 @@ describe('Budget Statement line item reducer', () => {
                 },
             ],
         });
-        expect(document.state.accounts[0].lineItems[0]).toStrictEqual({
+        expect(
+            document.extendedState.state.accounts[0].lineItems[0]
+        ).toStrictEqual({
             category: {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
@@ -201,8 +209,12 @@ describe('Budget Statement line item reducer', () => {
                 },
             ])
         );
-        expect(newDocument.state.accounts[0].lineItems.length).toBe(0);
-        expect(document.state.accounts[0].lineItems.length).toBe(1);
+        expect(
+            newDocument.extendedState.state.accounts[0].lineItems.length
+        ).toBe(0);
+        expect(document.extendedState.state.accounts[0].lineItems.length).toBe(
+            1
+        );
     });
 
     it('should throw if adding duplicated line item', async () => {
@@ -321,7 +333,7 @@ describe('Budget Statement line item reducer', () => {
         );
 
         expect(
-            newDocument.state.accounts[0].lineItems.map(l => ({
+            newDocument.extendedState.state.accounts[0].lineItems.map(l => ({
                 group: l.group?.id,
                 category: l.category?.id,
             }))

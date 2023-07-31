@@ -1,5 +1,5 @@
 import { LineItemForecast } from '@acaldas/document-model-graphql/budget-statement';
-import JSZip from 'jszip';
+import { ExtendedState } from '../../document';
 import type { FileInput } from '../../document/utils';
 import {
     createDocument,
@@ -8,13 +8,13 @@ import {
     saveToFile,
     saveToFileHandle,
 } from '../../document/utils';
-import { readFile } from '../../document/utils/node';
 import { reducer } from './reducer';
 import {
     Account,
     AccountInput,
     BudgetStatementAction,
     BudgetStatementDocument,
+    BudgetStatementState,
     LineItem,
     LineItemInput,
     State,
@@ -26,14 +26,11 @@ import {
  * @param initialState - The initial state of the document.
  * @returns The new BudgetStatement document.
  */
-export const createBudgetStatement = (
-    initialState?: Partial<
-        Omit<BudgetStatementDocument, 'state'> & {
-            state: Partial<BudgetStatementDocument['state']>;
-        }
-    >
-): BudgetStatementDocument =>
-    createDocument<State, BudgetStatementAction>({
+
+export function createBudgetStatement(
+    initialState?: Partial<ExtendedState<Partial<BudgetStatementState>>>
+): BudgetStatementDocument {
+    return createDocument<State, BudgetStatementAction>({
         documentType: 'powerhouse/budget-statement',
         ...initialState,
         state: {
@@ -52,6 +49,7 @@ export const createBudgetStatement = (
             ...initialState?.state,
         },
     });
+}
 
 /**
  * Creates a new Account with default properties and the given input properties.
@@ -110,33 +108,37 @@ export const loadBudgetStatementFromFile = async (
         reducer
     );
 
-    const auditReports = document.state.auditReports;
-    if (!auditReports.length) {
-        return document;
-    }
+    // TODO
+    // const auditReports = document.extendedState.state.auditReports;
+    // if (!auditReports.length) {
+    //     return document;
+    // }
 
-    const file = readFile(path);
-    const zip = new JSZip();
-    await zip.loadAsync(file);
-    const fileRegistry = { ...document.fileRegistry };
-    await Promise.all(
-        auditReports.map(async audit => {
-            const path = audit.report.slice('attachment://'.length);
-            const file = await zip.file(path);
-            if (!file) {
-                throw new Error(`Attachment ${audit.report} not found`);
-            }
-            const data = await file.async('base64');
-            const { mimeType, extension, fileName } = JSON.parse(file.comment);
-            fileRegistry[audit.report] = {
-                data,
-                mimeType,
-                extension,
-                fileName,
-            };
-        })
-    );
-    return { ...document, fileRegistry };
+    // const file = readFile(path);
+    // const zip = new JSZip();
+    // await zip.loadAsync(file);
+    // const attachments = { ...document.extendedState.attachments };
+    // await Promise.all(
+    //     auditReports.map(async audit => {
+    //         const path = audit.report.slice('attachment://'.length);
+    //         const file = await zip.file(path);
+    //         if (!file) {
+    //             throw new Error(`Attachment ${audit.report} not found`);
+    //         }
+    //         const data = await file.async('base64');
+    //         const { mimeType, extension, fileName } = JSON.parse(file.comment);
+    //         attachments[audit.report] = {
+    //             data,
+    //             mimeType,
+    //             extension,
+    //             fileName,
+    //         };
+    //     })
+    // );
+    return {
+        ...document,
+        // fileRegistry
+    };
 };
 
 export const loadBudgetStatementFromInput = async (
@@ -146,33 +148,36 @@ export const loadBudgetStatementFromInput = async (
         input,
         reducer
     );
+    // TODO
+    // const auditReports = document.state.auditReports;
+    // if (!auditReports.length) {
+    //     return document;
+    // }
 
-    const auditReports = document.state.auditReports;
-    if (!auditReports.length) {
-        return document;
-    }
-
-    const zip = new JSZip();
-    await zip.loadAsync(input);
-    const fileRegistry = { ...document.fileRegistry };
-    await Promise.all(
-        auditReports.map(async audit => {
-            const path = audit.report.slice('attachment://'.length);
-            const file = await zip.file(path);
-            if (!file) {
-                throw new Error(`Attachment ${audit.report} not found`);
-            }
-            const data = await file.async('base64');
-            const { mimeType, extension, fileName } = JSON.parse(file.comment);
-            fileRegistry[audit.report] = {
-                data,
-                mimeType,
-                extension,
-                fileName,
-            };
-        })
-    );
-    return { ...document, fileRegistry };
+    // const zip = new JSZip();
+    // await zip.loadAsync(input);
+    // const fileRegistry = { ...document.fileRegistry };
+    // await Promise.all(
+    //     auditReports.map(async audit => {
+    //         const path = audit.report.slice('attachment://'.length);
+    //         const file = await zip.file(path);
+    //         if (!file) {
+    //             throw new Error(`Attachment ${audit.report} not found`);
+    //         }
+    //         const data = await file.async('base64');
+    //         const { mimeType, extension, fileName } = JSON.parse(file.comment);
+    //         fileRegistry[audit.report] = {
+    //             data,
+    //             mimeType,
+    //             extension,
+    //             fileName,
+    //         };
+    //     })
+    // );
+    return {
+        ...document,
+        // fileRegistry
+    };
 };
 
 export const saveBudgetStatementToFileHandle = async (

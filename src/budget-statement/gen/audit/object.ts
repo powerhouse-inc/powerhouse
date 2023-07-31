@@ -45,7 +45,7 @@ export default class AuditObject extends BaseDocument<
      * @group Audit
      */
     public getAuditReports() {
-        return this._state.state.auditReports;
+        return this.state.auditReports;
     }
 
     /**

@@ -1,7 +1,7 @@
-import { applyMixins, BaseDocument } from '../../document';
+import { applyMixins, BaseDocument, ExtendedState } from '../../document';
 import {
     BudgetStatementAction,
-    BudgetStatementDocument,
+    BudgetStatementState,
     reducer,
     State,
 } from '../custom';
@@ -43,13 +43,10 @@ class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
      * @param initialState - An optional object representing the initial state of the BudgetStatement.
      */
     constructor(
-        initialState?: Partial<
-            Omit<BudgetStatementDocument, 'state'> & {
-                state: Partial<BudgetStatementDocument['state']>;
-            }
-        >
+        initialState?: Partial<ExtendedState<Partial<BudgetStatementState>>>
     ) {
-        super(reducer, createBudgetStatement(initialState));
+        const document = createBudgetStatement(initialState);
+        super(reducer, document.extendedState);
     }
 
     /**

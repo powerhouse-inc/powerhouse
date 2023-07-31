@@ -4,6 +4,7 @@ import * as gen from './gen';
 export * from './custom';
 export type {
     BudgetStatementAction,
+    BudgetStatementDocument,
     BudgetStatementState,
     ExtendedBudgetStatementState,
     types,

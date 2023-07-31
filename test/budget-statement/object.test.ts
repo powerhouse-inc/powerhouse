@@ -184,7 +184,7 @@ describe('Budget Statement Class', () => {
             State,
             BudgetStatementAction
         >(file.buffer, reducer);
-        expect(budgetStatement.name).toBe('march');
-        expect(budgetStatement.state.month).toBe('03/2023');
+        expect(budgetStatement.extendedState.name).toBe('march');
+        expect(budgetStatement.extendedState.state.month).toBe('03/2023');
     });
 });

@@ -19,7 +19,7 @@ import type {
     VestingInput,
     VestingUpdateInput,
 } from '@acaldas/document-model-graphql/budget-statement';
-import { Document } from '../../document/types';
+import { Document, ExtendedState } from '../../document/types';
 
 export type {
     Account,
@@ -60,7 +60,4 @@ export type BudgetStatementDocument = Document<State, BudgetStatementAction>;
 import type * as types from '@acaldas/document-model-graphql/document-model';
 
 type BudgetStatementState = BudgetStatementData;
-type ExtendedBudgetStatementState = Document<
-    BudgetStatementState,
-    BudgetStatementAction
->;
+type ExtendedBudgetStatementState = ExtendedState<BudgetStatementState>;
