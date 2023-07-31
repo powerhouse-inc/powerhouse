@@ -4,12 +4,12 @@ import {
     AuditReport,
     AuditReportStatus,
     BudgetStatementAction,
-    State,
+    BudgetStatementState,
 } from '../../custom';
 import { addAuditReport, deleteAuditReport } from './creators';
 
 export default class AuditObject extends BaseDocument<
-    State,
+    BudgetStatementState,
     BudgetStatementAction
 > {
     /**

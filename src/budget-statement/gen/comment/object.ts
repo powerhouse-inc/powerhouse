@@ -1,10 +1,14 @@
 import type { CommentUpdateInput } from '@acaldas/document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
-import { BudgetStatementAction, CommentInput, State } from '../../custom';
+import {
+    BudgetStatementAction,
+    BudgetStatementState,
+    CommentInput,
+} from '../../custom';
 import { addComment, deleteComment, updateComment } from './creators';
 
 export default class CommentObject extends BaseDocument<
-    State,
+    BudgetStatementState,
     BudgetStatementAction
 > {
     public addComment(comments: CommentInput[]) {

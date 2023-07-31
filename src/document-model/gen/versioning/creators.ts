@@ -41,4 +41,4 @@ export const reorderChangeLogItems = (input: ReorderChangeLogItemsInput) =>
 
 
 export const releaseNewVersion = () =>
-    createAction<ReleaseNewVersionAction>('RELEASE_NEW_VERSION', {});
+    createAction<ReleaseNewVersionAction>('RELEASE_NEW_VERSION');

@@ -2,8 +2,8 @@ import fs from 'fs';
 import {
     BudgetStatement,
     BudgetStatementAction,
+    BudgetStatementState,
     reducer,
-    State,
 } from '../../src/budget-statement';
 import { loadFromInput } from '../../src/document/utils/file';
 
@@ -158,7 +158,9 @@ describe('Budget Statement Class', () => {
         );
 
         // Support backslashes for Windows environments
-        expect(path.replace(/\\/g, '/')).toBe('test/budget-statement/temp/march.phbs.zip');
+        expect(path.replace(/\\/g, '/')).toBe(
+            'test/budget-statement/temp/march.phbs.zip'
+        );
     });
 
     it('should load from file', async () => {
@@ -181,7 +183,7 @@ describe('Budget Statement Class', () => {
             './test/budget-statement/temp/march.phbs.zip'
         );
         const budgetStatement = await loadFromInput<
-            State,
+            BudgetStatementState,
             BudgetStatementAction
         >(file.buffer, reducer);
         expect(budgetStatement.extendedState.name).toBe('march');

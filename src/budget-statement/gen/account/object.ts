@@ -4,7 +4,7 @@ import {
     Account,
     AccountInput,
     BudgetStatementAction,
-    State,
+    BudgetStatementState,
 } from '../../custom';
 import {
     addAccount,
@@ -17,7 +17,7 @@ import {
  * Account related methods and getters
  */
 export default class AccountObject extends BaseDocument<
-    State,
+    BudgetStatementState,
     BudgetStatementAction
 > {
     /**

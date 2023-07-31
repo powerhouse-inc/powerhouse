@@ -11,7 +11,7 @@ export type AddChangeLogItemAction = Action<'ADD_CHANGE_LOG_ITEM', AddChangeLogI
 export type UpdateChangeLogItemAction = Action<'UPDATE_CHANGE_LOG_ITEM', UpdateChangeLogItemInput>;
 export type DeleteChangeLogItemAction = Action<'DELETE_CHANGE_LOG_ITEM', DeleteChangeLogItemInput>;
 export type ReorderChangeLogItemsAction = Action<'REORDER_CHANGE_LOG_ITEMS', ReorderChangeLogItemsInput>;
-export type ReleaseNewVersionAction = Action<'RELEASE_NEW_VERSION', {}>;
+export type ReleaseNewVersionAction = Action<'RELEASE_NEW_VERSION', never>;
 
 export type DocumentModelVersioningAction = 
     | AddChangeLogItemAction

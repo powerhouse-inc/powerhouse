@@ -4,7 +4,12 @@ import {
     LineItemUpdateInput,
 } from '@acaldas/document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
-import { Account, BudgetStatementAction, LineItem, State } from '../../custom';
+import {
+    Account,
+    BudgetStatementAction,
+    BudgetStatementState,
+    LineItem,
+} from '../../custom';
 import {
     addLineItem,
     deleteLineItem,
@@ -13,7 +18,7 @@ import {
 } from './creators';
 
 export default class LineItemObject extends BaseDocument<
-    State,
+    BudgetStatementState,
     BudgetStatementAction
 > {
     /**

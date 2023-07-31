@@ -3,7 +3,6 @@ import {
     BudgetStatementAction,
     BudgetStatementState,
     reducer,
-    State,
 } from '../custom';
 import { createBudgetStatement } from '../custom/utils';
 import AccountObject from './account/object';
@@ -31,7 +30,10 @@ interface BudgetStatement
  * @extends BaseDocument<State, BudgetStatementAction>
  * @module
  */
-class BudgetStatement extends BaseDocument<State, BudgetStatementAction> {
+class BudgetStatement extends BaseDocument<
+    BudgetStatementState,
+    BudgetStatementAction
+> {
     /**
      * The file extension used to save budget statements.
      */

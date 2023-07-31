@@ -17,7 +17,6 @@ import {
     BudgetStatementState,
     LineItem,
     LineItemInput,
-    State,
 } from './types';
 
 /**
@@ -30,7 +29,7 @@ import {
 export function createBudgetStatement(
     initialState?: Partial<ExtendedState<Partial<BudgetStatementState>>>
 ): BudgetStatementDocument {
-    return createDocument<State, BudgetStatementAction>({
+    return createDocument<BudgetStatementState, BudgetStatementAction>({
         documentType: 'powerhouse/budget-statement',
         ...initialState,
         state: {
@@ -103,10 +102,10 @@ export const saveBudgetStatementToFile = (
 export const loadBudgetStatementFromFile = async (
     path: string
 ): Promise<BudgetStatementDocument> => {
-    const document = await loadFromFile<State, BudgetStatementAction>(
-        path,
-        reducer
-    );
+    const document = await loadFromFile<
+        BudgetStatementState,
+        BudgetStatementAction
+    >(path, reducer);
 
     // TODO
     // const auditReports = document.extendedState.state.auditReports;
@@ -144,10 +143,10 @@ export const loadBudgetStatementFromFile = async (
 export const loadBudgetStatementFromInput = async (
     input: FileInput
 ): Promise<BudgetStatementDocument> => {
-    const document = await loadFromInput<State, BudgetStatementAction>(
-        input,
-        reducer
-    );
+    const document = await loadFromInput<
+        BudgetStatementState,
+        BudgetStatementAction
+    >(input, reducer);
     // TODO
     // const auditReports = document.state.auditReports;
     // if (!auditReports.length) {

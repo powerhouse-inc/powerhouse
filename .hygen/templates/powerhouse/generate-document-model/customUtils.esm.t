@@ -9,7 +9,7 @@ unless_exists: true
 */
 
 import { <%= h.changeCase.pascal(documentType) %>State } from "@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>";
-import { Extended<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action } from "../gen";
+import { <%= h.changeCase.pascal(documentType) %>Document, Extended<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action } from "../gen";
 import { reducer } from '..';
 import { 
     FileInput,
@@ -23,33 +23,13 @@ export const createEmpty<%= h.changeCase.pascal(documentType) %>State = (): <%= 
 
 const dateTimeNow = (new Date()).toISOString();
 export const createEmptyExtended<%= h.changeCase.pascal(documentType) %>State = (): Extended<%= h.changeCase.pascal(documentType) %>State => ({
-    // Component 1: document header
     name: "",
     created: dateTimeNow,
     lastModified: dateTimeNow,
     documentType: "<%= documentTypeId %>",
     revision: 0,
-
-    // Component 2: (strict) state object
     state: createEmpty<%= h.changeCase.pascal(documentType) %>State(),
-
-    // Component 3: file registry
-    fileRegistry: {},
-
-    // TODO: remove operations, lift to the document level structure: operations = { fileRegistry:File[], history:Operation[] }
-    operations: [],
-
-    // TODO: remove initialState, lift to the document level (with type: ExtendedDocumentModelState)
-    initialState: {
-        name: "",
-        created: dateTimeNow,
-        lastModified: dateTimeNow,
-        documentType: "<%= documentTypeId %>",
-        revision: 0,
-        state: createEmpty<%= h.changeCase.pascal(documentType) %>State(),
-        fileRegistry: {},
-        operations: []
-    }
+    attachments: {},
 });
 
 export const load<%= h.changeCase.pascal(documentType) %>FromFile = async (path: string) => {
@@ -61,7 +41,7 @@ export const load<%= h.changeCase.pascal(documentType) %>FromFile = async (path:
 
 export const load<%= h.changeCase.pascal(documentType) %>FromInput = async (
     input: FileInput
-): Promise<Extended<%= h.changeCase.pascal(documentType) %>State> => {
+): Promise<<%= h.changeCase.pascal(documentType) %>Document> => {
     return loadFromInput<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action>(
         input,
         reducer
@@ -69,7 +49,7 @@ export const load<%= h.changeCase.pascal(documentType) %>FromInput = async (
 };
 
 export const save<%= h.changeCase.pascal(documentType) %>ToFile = (
-    document: Extended<%= h.changeCase.pascal(documentType) %>State,
+    document: <%= h.changeCase.pascal(documentType) %>Document,
     path: string,
     name?: string
 ): Promise<string> => {
@@ -77,7 +57,7 @@ export const save<%= h.changeCase.pascal(documentType) %>ToFile = (
 };
 
 export const save<%= h.changeCase.pascal(documentType) %>ToFileHandle = async (
-    document: Extended<%= h.changeCase.pascal(documentType) %>State,
+    document: <%= h.changeCase.pascal(documentType) %>Document,
     input: FileSystemFileHandle
 ) => {
     return saveToFileHandle(document, input);

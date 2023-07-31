@@ -21,6 +21,7 @@ export * from './operation-example/object';
 export * from './operation/object';
 export * from './state/object';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface DocumentModel extends 
     DocumentModel_Header,
     DocumentModel_Versioning,
@@ -32,8 +33,6 @@ interface DocumentModel extends
 
 class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction> {
     static fileExtension = 'phdm';
-
-    public get state() { return this._state.state; }
 
     constructor(initialState?: ExtendedDocumentModelState) {
         super(reducer, initialState || createEmptyExtendedDocumentModelState());

@@ -1,14 +1,14 @@
 import { BaseDocument } from '../../../document';
 import {
     BudgetStatementAction,
+    BudgetStatementState,
     FtesInput,
     OwnerInput,
-    State,
 } from '../../custom';
 import { setFtes, setMonth, setOwner, setQuoteCurrency } from './creators';
 
 export default class BaseObject extends BaseDocument<
-    State,
+    BudgetStatementState,
     BudgetStatementAction
 > {
     /**

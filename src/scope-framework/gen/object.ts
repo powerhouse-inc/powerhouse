@@ -9,13 +9,12 @@ import ScopeFramework_Main from './main/object';
 
 export * from './main/object';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface ScopeFramework extends 
     ScopeFramework_Main {}
 
 class ScopeFramework extends BaseDocument<ScopeFrameworkState, ScopeFrameworkAction> {
     static fileExtension = 'mdsf';
-
-    public get state() { return this._state.state; }
 
     constructor(initialState?: ExtendedScopeFrameworkState) {
         super(reducer, initialState || createEmptyExtendedScopeFrameworkState());

@@ -1,14 +1,14 @@
 import { BaseDocument } from '../../../document';
 import {
     BudgetStatementAction,
-    State,
+    BudgetStatementState,
     VestingInput,
     VestingUpdateInput,
 } from '../../custom';
 import { addVesting, deleteVesting, updateVesting } from './creators';
 
 export default class VestingObject extends BaseDocument<
-    State,
+    BudgetStatementState,
     BudgetStatementAction
 > {
     public addVesting(vesting: VestingInput[]) {

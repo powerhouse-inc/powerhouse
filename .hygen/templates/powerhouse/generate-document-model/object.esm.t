@@ -17,13 +17,12 @@ import <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module.n
 export * from './<%= module.name %>/object';
 <% }); _%>
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface <%= h.changeCase.pascal(documentType) %> extends 
 <%= modules.map(m => '    ' + h.changeCase.pascal(documentType) + '_' + h.changeCase.pascal(m.name)).join(',\n') %> {}
 
 class <%= h.changeCase.pascal(documentType) %> extends BaseDocument<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> {
     static fileExtension = '<%= extension %>';
-
-    public get state() { return this._state.state; }
 
     constructor(initialState?: Extended<%= h.changeCase.pascal(documentType) %>State) {
         super(reducer, initialState || createEmptyExtended<%= h.changeCase.pascal(documentType) %>State());

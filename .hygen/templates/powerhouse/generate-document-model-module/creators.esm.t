@@ -27,5 +27,5 @@ export const <%= h.changeCase.camel(action.name) %> = (input: <%= action.name %>
 
 <% actions.filter(a => !a.hasInput).forEach(action => { _%>
 export const <%= h.changeCase.camel(action.name) %> = () =>
-    createAction<<%= action.name %>Action>('<%= h.changeCase.constantCase(action.name) %>', {});
+    createAction<<%= action.name %>Action>('<%= h.changeCase.constantCase(action.name) %>');
 <% }); _%>

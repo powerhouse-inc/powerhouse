@@ -14,7 +14,7 @@ import {
 export type <%= actionType.name %>Action = Action<'<%= h.changeCase.constantCase(actionType.name) %>', <%= actionType.name %>Input>;
 <% }); _%>
 <% actions.filter(a => !a.hasInput).forEach(actionType => { _%>
-export type <%= actionType.name %>Action = Action<'<%= h.changeCase.constantCase(actionType.name) %>', {}>;
+export type <%= actionType.name %>Action = Action<'<%= h.changeCase.constantCase(actionType.name) %>', never>;
 <% }); _%>
 
 export type <%= documentType %><%= h.changeCase.pascal(module) %>Action = 
