@@ -7,6 +7,7 @@ import type {
     Document,
     DocumentFile,
     DocumentHeader,
+    ExtendedState,
     Operation,
     Reducer,
 } from '../types';
@@ -137,10 +138,7 @@ async function loadFromZip<S, A extends Action>(
         throw new Error('Initial state not found');
     }
     const initialStateStr = await initialStateZip.async('string');
-    const state = JSON.parse(initialStateStr) as Document<S, A>;
-
-    // document is saved without initial state
-    state.initialState = JSON.parse(initialStateStr);
+    const initialState = JSON.parse(initialStateStr) as ExtendedState<S>;
 
     const headerZip = zip.file('header.json');
     let header: DocumentHeader | null = null;
@@ -156,13 +154,26 @@ async function loadFromZip<S, A extends Action>(
         await operationsZip.async('string')
     ) as Operation<A | BaseAction>[];
 
+    const document: Document<S, A> = {
+        initialState,
+        extendedState: { ...initialState, ...header },
+        operations: [],
+    };
+
     let result = operations
         .slice(0, header?.revision)
-        .reduce((state, operation) => reducer(state, operation), state);
+        .reduce(
+            (document, operation) => reducer(document, operation),
+            document
+        );
 
     if (header) {
         result = {
             ...result,
+            extendedState: {
+                ...result.extendedState,
+                ...header,
+            },
             operations: [
                 ...result.operations,
                 ...operations.slice(header.revision),

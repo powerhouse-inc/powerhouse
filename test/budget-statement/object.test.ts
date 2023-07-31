@@ -10,6 +10,7 @@ import { loadFromInput } from '../../src/document/utils/file';
 describe('Budget Statement Class', () => {
     afterAll(() => {
         fs.rmSync('./test/budget-statement/temp/march.phbs.zip');
+        fs.rmSync('./test/budget-statement/temp/undo.phbs.zip');
     });
 
     it('should set initial state', async () => {
@@ -188,5 +189,59 @@ describe('Budget Statement Class', () => {
         >(file.buffer, reducer);
         expect(budgetStatement.extendedState.name).toBe('march');
         expect(budgetStatement.extendedState.state.month).toBe('03/2023');
+    });
+
+    it('should load from file and keep undo/redo state', async () => {
+        const budgetStatement = new BudgetStatement({
+            name: 'undo',
+            state: { month: '03/2023' },
+        });
+        budgetStatement.addAccount([
+            {
+                address: 'eth:000',
+                name: 'Grants Program',
+            },
+        ]);
+        budgetStatement.addAccount([
+            {
+                address: 'eth:111',
+                name: 'Incubation',
+            },
+        ]);
+        budgetStatement.undo(1);
+        expect(budgetStatement.accounts).toStrictEqual([
+            {
+                address: 'eth:000',
+                name: 'Grants Program',
+                lineItems: [],
+            },
+        ]);
+
+        const path = await budgetStatement.saveToFile(
+            './test/budget-statement/temp'
+        );
+        const loadedBudgetStatement = await BudgetStatement.fromFile(path);
+
+        expect(loadedBudgetStatement.accounts).toStrictEqual([
+            {
+                address: 'eth:000',
+                name: 'Grants Program',
+                lineItems: [],
+            },
+        ]);
+
+        loadedBudgetStatement.redo(1);
+        expect(loadedBudgetStatement.accounts).toStrictEqual([
+            {
+                address: 'eth:000',
+                name: 'Grants Program',
+                lineItems: [],
+            },
+            {
+                address: 'eth:111',
+                name: 'Incubation',
+                lineItems: [],
+            },
+        ]);
     });
 });
