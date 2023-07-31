@@ -28,6 +28,7 @@ export const addAccount = (accounts: AccountInput[]) =>
         {
             accounts: accounts.map(createAccount),
         },
+        undefined,
         z.AddAccountActionSchema
     );
 
@@ -40,6 +41,7 @@ export const updateAccount = (accounts: AccountUpdateInput[]) =>
     createAction<UpdateAccountAction>(
         UPDATE_ACCOUNT,
         { accounts },
+        undefined,
         z.UpdateAccountActionSchema
     );
 
@@ -52,6 +54,7 @@ export const deleteAccount = (accounts: Account['address'][]) =>
     createAction<DeleteAccountAction>(
         DELETE_ACCOUNT,
         { accounts },
+        undefined,
         z.DeleteAccountActionSchema
     );
 
@@ -64,5 +67,6 @@ export const sortAccounts = (accounts: Account['address'][]) =>
     createAction<SortAccountsAction>(
         SORT_ACCOUNTS,
         { accounts },
+        undefined,
         z.SortAccountsActionSchema
     );

@@ -36,6 +36,7 @@ export const addLineItem = (
             account,
             lineItems: lineItems.map(createLineItem),
         },
+        undefined,
         z.AddLineItemActionSchema
     );
 
@@ -56,6 +57,7 @@ export const updateLineItem = (
             account,
             lineItems,
         },
+        undefined,
         z.UpdateLineItemActionSchema
     );
 
@@ -76,6 +78,7 @@ export const deleteLineItem = (
             account,
             lineItems,
         },
+        undefined,
         z.DeleteLineItemActionSchema
     );
 
@@ -96,5 +99,6 @@ export const sortLineItems = (
             account,
             lineItems,
         },
+        undefined,
         z.SortLineItemsActionSchema
     );

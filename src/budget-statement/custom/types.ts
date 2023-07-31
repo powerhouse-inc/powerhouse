@@ -1,8 +1,8 @@
 import type {
     Account,
     AccountInput,
+    AddAuditReportInput,
     AuditReport,
-    AuditReportInput,
     AuditReportStatus,
     BudgetStatementAction,
     BudgetStatementData,
@@ -34,7 +34,7 @@ export type {
     Vesting,
     VestingInput,
     VestingUpdateInput,
-    AuditReportInput,
+    AddAuditReportInput,
     Owner,
     OwnerInput,
     Ftes,

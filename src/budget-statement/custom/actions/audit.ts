@@ -18,25 +18,25 @@ export const addAuditReportOperation = (
     // const operation = state.operations[
     //     state.operations.length - 1
     // ] as Operation<AddAuditReportAction>;
-    // action.input.reports.forEach((audit, index) => {
-    //     if (isAuditReport(audit)) {
-    //         // throws if report already exists
-    //         checkDuplicatedReport(state, audit.report);
-    //         state.auditReports.push(audit);
-    //     } else {
-    //         const hash = hashAttachment(audit.report.data);
-    //         const attachmentKey = `attachment://audits/${hash}` as const;
-    //         // throws if report already exists
-    //         checkDuplicatedReport(state, attachmentKey);
-    //         state.fileRegistry[attachmentKey] = { ...audit.report };
-    //         state.auditReports.push({
-    //             timestamp: audit.timestamp ?? new Date().toISOString(),
-    //             status: audit.status,
-    //             report: attachmentKey,
-    //         });
-    //         operation.input.reports[index].report = attachmentKey;
-    //     }
-    // });
+    action.input.reports.forEach(audit => {
+        // if (isAuditReport(audit)) {
+        //     // throws if report already exists
+        checkDuplicatedReport(state, audit.report);
+        state.auditReports.push(audit);
+        // } else {
+        //     const hash = hashAttachment(audit.report.data);
+        //     const attachmentKey = `attachment://audits/${hash}` as const;
+        //     // throws if report already exists
+        //     checkDuplicatedReport(state, attachmentKey);
+        //     state.fileRegistry[attachmentKey] = { ...audit.report };
+        //     state.auditReports.push({
+        //         timestamp: audit.timestamp ?? new Date().toISOString(),
+        //         status: audit.status,
+        //         report: attachmentKey,
+        //     });
+        //     operation.input.reports[index].report = attachmentKey;
+        // }
+    });
 };
 
 export const deleteAuditReportOperation = (

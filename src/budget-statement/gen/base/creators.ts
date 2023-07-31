@@ -13,17 +13,33 @@ import {
 } from './types';
 
 export const setOwner = (owner: OwnerInput) =>
-    createAction<SetOwnerAction>(SET_OWNER, owner, z.SetOwnerActionSchema);
+    createAction<SetOwnerAction>(
+        SET_OWNER,
+        owner,
+        undefined,
+        z.SetOwnerActionSchema
+    );
 
 export const setMonth = (month: string) =>
-    createAction<SetMonthAction>(SET_MONTH, month, z.SetMonthActionSchema);
+    createAction<SetMonthAction>(
+        SET_MONTH,
+        month,
+        undefined,
+        z.SetMonthActionSchema
+    );
 
 export const setQuoteCurrency = (currency: string) =>
     createAction<SetQuoteCurrencyAction>(
         SET_QUOTE_CURRENCY,
         currency,
+        undefined,
         z.SetQuoteCurrencyActionSchema
     );
 
 export const setFtes = (ftes: FtesInput) =>
-    createAction<SetFtesAction>(SET_FTES, ftes, z.SetFtesActionSchema);
+    createAction<SetFtesAction>(
+        SET_FTES,
+        ftes,
+        undefined,
+        z.SetFtesActionSchema
+    );

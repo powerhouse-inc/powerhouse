@@ -52,9 +52,9 @@ class BudgetStatementTest extends BudgetStatement {
 
         return typeof action.input === 'object'
             ? // @ts-ignore
-              this[method]?.(...Object.values(action.input))
+              this[method]?.(...Object.values(action.input), action.attachments)
             : // @ts-ignore
-              this[method](action.input);
+              this[method](action.input, action.attachments);
     }
 }
 

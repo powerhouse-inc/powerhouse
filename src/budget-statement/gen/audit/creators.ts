@@ -1,7 +1,10 @@
-import { z } from '@acaldas/document-model-graphql/budget-statement';
-import { DocumentFile } from '../../../document/types';
+import {
+    AddAuditReportInput,
+    z,
+} from '@acaldas/document-model-graphql/budget-statement';
+import { InputDocumentFile } from '../../../document/types';
 import { createAction } from '../../../document/utils';
-import { AuditReport, AuditReportStatus } from '../../custom';
+import { AuditReport } from '../../custom';
 import {
     AddAuditReportAction,
     ADD_AUDIT_REPORT,
@@ -20,23 +23,13 @@ import {
  * @group Audit
  */
 export const addAuditReport = (
-    reports: {
-        timestamp?: string;
-        status: AuditReportStatus;
-        report: DocumentFile;
-    }[]
+    reports: AddAuditReportInput['reports'],
+    attachments: InputDocumentFile[]
 ) => {
-    const newTimestamp = new Date();
-    const newReports = reports.map(({ timestamp, report, status }) => ({
-        report,
-        timestamp: timestamp ?? newTimestamp.toISOString(),
-        status,
-    }));
     return createAction<AddAuditReportAction>(
         ADD_AUDIT_REPORT,
-        {
-            reports: newReports,
-        },
+        { reports },
+        attachments,
         z.AddAuditReportActionSchema
     );
 };
@@ -52,5 +45,6 @@ export const deleteAuditReport = (reports: AuditReport['report'][]) =>
     createAction<DeleteAuditReportAction>(
         DELETE_AUDIT_REPORT,
         { reports },
+        undefined,
         z.DeleteAuditReportActionSchema
     );

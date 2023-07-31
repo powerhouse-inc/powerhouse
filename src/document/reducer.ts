@@ -201,9 +201,18 @@ export function baseReducer<T, A extends Action>(
         }
     });
 
-    // updates the last operation with the hash of the resulting state
     return produce(newDocument, draft => {
+        // updates the last operation with the hash of the resulting state
         draft.operations[draft.operations.length - 1].hash =
             hashDocument(draft);
+        // if the action has attachments then adds them to the document
+        if (!isBaseAction(action) && action.attachments) {
+            action.attachments.forEach(attachment => {
+                const { hash, ...file } = attachment;
+                draft.extendedState.attachments[hash] = {
+                    ...file,
+                };
+            });
+        }
     });
 }

@@ -12,7 +12,7 @@ export type Action<T extends string = string, I = unknown> = {
     /** The payload of the action. */
     input: I;
     /** The attachments included in the action. */
-    attachments?: FileRegistry | undefined;
+    attachments?: InputDocumentFile[] | undefined;
 };
 
 /**
@@ -98,6 +98,11 @@ export type DocumentFile = {
     fileName?: string | null;
 };
 
+export type InputDocumentFile =
+    | DocumentFile & {
+          hash: string;
+      };
+
 /**
  * Object that indexes attachments of a Document.
  *
@@ -132,6 +137,16 @@ export type Document<S = unknown, A extends Action = Action> = {
     /** The initial state of the document, enabling replaying operations. */
     initialState: ExtendedState<S>;
 };
+
+// export type Document<
+//     S = unknown,
+//     A extends Action = Action
+// > =
+//     ExtendedState<S> &
+//     {
+//         operations: Operation<A | BaseAction>[];
+//         initialState: ExtendedState<S>;
+//     };
 
 /**
  * String type representing an attachment in a Document.

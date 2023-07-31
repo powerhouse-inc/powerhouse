@@ -1,8 +1,8 @@
+import { AddAuditReportInput } from '@acaldas/document-model-graphql/budget-statement';
 import { BaseDocument } from '../../../document';
-import { DocumentFile } from '../../../document/types';
+import { InputDocumentFile } from '../../../document/types';
 import {
     AuditReport,
-    AuditReportStatus,
     BudgetStatementAction,
     BudgetStatementState,
 } from '../../custom';
@@ -19,13 +19,10 @@ export default class AuditObject extends BaseDocument<
      * @group Audit
      */
     public addAuditReport(
-        reports: {
-            timestamp?: string;
-            status: AuditReportStatus;
-            report: DocumentFile;
-        }[]
+        reports: AddAuditReportInput['reports'],
+        attachments: InputDocumentFile[]
     ) {
-        return this.dispatch(addAuditReport(reports));
+        return this.dispatch(addAuditReport(reports, attachments));
     }
 
     /**

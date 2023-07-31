@@ -28,6 +28,7 @@ import { hash } from './node';
 export function createAction<A extends Action>(
     type: A['type'],
     input?: A['input'],
+    attachments?: Action['attachments'],
     validator?: () => { parse(v: unknown): A }
 ): A {
     if (!type) {
@@ -38,7 +39,8 @@ export function createAction<A extends Action>(
         throw new Error(`Invalid action type: ${type}`);
     }
 
-    const action = { type, input };
+    const action = attachments ? { type, input, attachments } : { type, input };
+
     validator?.().parse(action);
 
     return action as unknown as A;

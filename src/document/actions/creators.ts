@@ -16,7 +16,12 @@ import {
  * @category Actions
  */
 export const setName = (name: string) =>
-    createAction<SetNameAction>('SET_NAME', name, z.SetNameActionSchema);
+    createAction<SetNameAction>(
+        'SET_NAME',
+        name,
+        undefined,
+        z.SetNameActionSchema
+    );
 
 /**
  * Cancels the last `count` operations.
@@ -25,7 +30,7 @@ export const setName = (name: string) =>
  * @category Actions
  */
 export const undo = (count = 1) =>
-    createAction<UndoAction>('UNDO', count, z.UndoActionSchema);
+    createAction<UndoAction>('UNDO', count, undefined, z.UndoActionSchema);
 
 /**
  * Cancels the last `count` {@link undo | UNDO} operations.
@@ -34,7 +39,7 @@ export const undo = (count = 1) =>
  * @category Actions
  */
 export const redo = (count = 1) =>
-    createAction<RedoAction>('REDO', count, z.RedoActionSchema);
+    createAction<RedoAction>('REDO', count, undefined, z.RedoActionSchema);
 
 /**
  * Joins multiple operations into a single {@link loadState | LOAD_STATE} operation.
@@ -48,7 +53,12 @@ export const redo = (count = 1) =>
  * @category Actions
  */
 export const prune = (start?: number | undefined, end?: number | undefined) =>
-    createAction<PruneAction>('PRUNE', { start, end }, z.PruneActionSchema);
+    createAction<PruneAction>(
+        'PRUNE',
+        { start, end },
+        undefined,
+        z.PruneActionSchema
+    );
 
 /**
  * Replaces the state of the document.
@@ -67,5 +77,6 @@ export const loadState = (
     createAction<LoadStateAction>(
         'LOAD_STATE',
         { state, operations },
+        undefined,
         z.LoadStateActionSchema
     );
