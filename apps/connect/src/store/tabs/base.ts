@@ -135,7 +135,6 @@ export async function createScopeFrameworkTab(
         utils.createDocument(
             ScopeFramework.createEmptyExtendedScopeFrameworkState()
         );
-    console.log(scope);
     return createDocumentTab(scope, ScopeFrameworkEditor, id, 'New scope');
 }
 
