@@ -9,7 +9,7 @@ import Sidebar from './sidebar';
 
 const ROOT_FILE_DROP = false;
 
-export default () => {
+const Root = () => {
     const ref = React.useRef(null);
     const theme = useTheme();
 
@@ -69,3 +69,6 @@ export default () => {
         </div>
     );
 };
+
+export const element = <Root />;
+export const errorElement = <Root />;
