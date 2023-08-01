@@ -1,9 +1,10 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDropFile, useOpenFile } from 'src/hooks';
 import {
     Tab,
     createBudgetStatementTab,
     createScopeFrameworkTab,
+    preloadTabs,
     useTabs,
     useTheme,
 } from 'src/store';
@@ -18,6 +19,11 @@ export default () => {
     const handleOpenFile = useOpenFile(async document => {
         updateTab(await Tab.fromDocument(document, selectedTab));
     });
+
+    // preload document editors
+    useEffect(() => {
+        preloadTabs();
+    }, []);
 
     return (
         <div>

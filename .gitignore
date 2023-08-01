@@ -91,3 +91,4 @@ dist/
 
 # Electron-Forge
 out/
+.vercel
