@@ -99,14 +99,14 @@ export const createDocument = <T, A extends Action>(
     };
 
     return {
-        extendedState: state,
+        ...state,
         initialState: state,
         operations: [],
     };
 };
 
 export const hashDocument = (document: Document) => {
-    return hash(JSONDeterministic(document.extendedState.state));
+    return hash(JSONDeterministic(document.state));
 };
 
 export const hashKey = (date?: Date, randomLimit = 1000) => {

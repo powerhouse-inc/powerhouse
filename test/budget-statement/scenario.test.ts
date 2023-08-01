@@ -30,9 +30,7 @@ describe('Budget Statement scenario 1', () => {
         expect.assertions(1);
         try {
             budgetStatement = reducer(budgetStatement, json.operation);
-            expect(budgetStatement.extendedState.state).toStrictEqual(
-                json.state
-            );
+            expect(budgetStatement.state).toStrictEqual(json.state);
         } catch (error) {
             // eslint-disable-next-line jest/no-conditional-expect
             expect(json.error?.message).toBe((error as Error).message);

@@ -48,7 +48,7 @@ class BudgetStatement extends BaseDocument<
         initialState?: Partial<ExtendedState<Partial<BudgetStatementState>>>
     ) {
         const document = createBudgetStatement(initialState);
-        super(reducer, document.extendedState);
+        super(reducer, document);
     }
 
     /**

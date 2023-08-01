@@ -187,8 +187,8 @@ describe('Budget Statement Class', () => {
             BudgetStatementState,
             BudgetStatementAction
         >(file.buffer, reducer);
-        expect(budgetStatement.extendedState.name).toBe('march');
-        expect(budgetStatement.extendedState.state.month).toBe('03/2023');
+        expect(budgetStatement.name).toBe('march');
+        expect(budgetStatement.state.month).toBe('03/2023');
     });
 
     it('should load from file and keep undo/redo state', async () => {

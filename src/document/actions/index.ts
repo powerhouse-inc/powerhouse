@@ -37,7 +37,7 @@ export function setNameOperation<T, A extends Action>(
     document: Document<T, A>,
     name: string
 ): Document<T, A> {
-    return { ...document, extendedState: { ...document.extendedState, name } };
+    return { ...document, name };
 }
 
 // undoes the last `count` operations
@@ -47,13 +47,13 @@ export function undoOperation<T, A extends Action>(
     wrappedReducer: ImmutableStateReducer<T, A>
 ): Document<T, A> {
     // undo can't be higher than the number of active operations
-    const undoCount = Math.min(count, document.extendedState.revision);
+    const undoCount = Math.min(count, document.revision);
 
     // builds the state from the initial data without the
     // undone operations
     const operations = document.operations.slice(
         0,
-        document.extendedState.revision - undoCount
+        document.revision - undoCount
     );
     const newDocument = replayOperations(
         document.initialState,
@@ -66,10 +66,7 @@ export function undoOperation<T, A extends Action>(
     return {
         ...newDocument,
         operations: document.operations,
-        extendedState: {
-            ...newDocument.extendedState,
-            revision: document.extendedState.revision - undoCount,
-        },
+        revision: document.revision - undoCount,
     };
 }
 
@@ -80,8 +77,7 @@ export function redoOperation<T, A extends Action>(
     wrappedReducer: ImmutableStateReducer<T, A>
 ): Document<T, A> {
     // the number of undone operations is retrieved from the revision number
-    const undoCount =
-        document.operations.length - document.extendedState.revision;
+    const undoCount = document.operations.length - document.revision;
     if (!undoCount) {
         throw new Error('There is no UNDO operation to REDO');
     }
@@ -93,7 +89,7 @@ export function redoOperation<T, A extends Action>(
     // into account the redone operations
     const operations = document.operations.slice(
         0,
-        document.extendedState.revision + redoCount
+        document.revision + redoCount
     );
     const newDocument = replayOperations(
         document.initialState,
@@ -106,10 +102,7 @@ export function redoOperation<T, A extends Action>(
     return {
         ...newDocument,
         operations: document.operations,
-        extendedState: {
-            ...newDocument.extendedState,
-            revision: document.extendedState.revision + redoCount,
-        },
+        revision: document.revision + redoCount,
     };
 }
 
@@ -127,13 +120,13 @@ export function pruneOperation<T, A extends Action>(
 
     // runs all operations from the initial state to
     // the end of prune to get name and data
-    const { extendedState } = replayOperations(
+    const newDocument = replayOperations(
         document.initialState,
         actionsToKeepStart.concat(actionsToPrune),
         wrappedReducer
     );
 
-    const { name, state: newState } = extendedState;
+    const { name, state: newState } = newDocument;
 
     // replaces pruned operations with LOAD_STATE
     return replayOperations(
@@ -153,11 +146,8 @@ export function loadStateOperation<T, A extends Action>(
 ): Document<T, A> {
     return {
         ...oldDocument,
-        extendedState: {
-            ...oldDocument.extendedState,
-            name: newDocument.name,
-            state: newDocument.state ?? ({} as T),
-        },
+        name: newDocument.name,
+        state: newDocument.state ?? ({} as T),
     };
 }
 

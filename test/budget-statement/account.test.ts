@@ -22,14 +22,14 @@ describe('Budget Statement account reducer', () => {
                 },
             ])
         );
-        expect(newDocument.extendedState.state.accounts).toStrictEqual([
+        expect(newDocument.state.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
                 lineItems: [],
             },
         ]);
-        expect(document.extendedState.state.accounts).toStrictEqual([]);
+        expect(document.state.accounts).toStrictEqual([]);
     });
 
     it('should update account', async () => {
@@ -52,12 +52,8 @@ describe('Budget Statement account reducer', () => {
                 },
             ])
         );
-        expect(newDocument.extendedState.state.accounts[0].name).toBe(
-            'Incubation'
-        );
-        expect(document.extendedState.state.accounts[0].name).toBe(
-            'Grants Program'
-        );
+        expect(newDocument.state.accounts[0].name).toBe('Incubation');
+        expect(document.state.accounts[0].name).toBe('Grants Program');
     });
 
     it('should delete account', async () => {
@@ -75,8 +71,8 @@ describe('Budget Statement account reducer', () => {
             document,
             deleteAccount(['eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f'])
         );
-        expect(newDocument.extendedState.state.accounts.length).toBe(0);
-        expect(document.extendedState.state.accounts.length).toBe(1);
+        expect(newDocument.state.accounts.length).toBe(0);
+        expect(document.state.accounts.length).toBe(1);
     });
 
     it('should throw exception if adding account with same address', () => {
@@ -129,8 +125,10 @@ describe('Budget Statement account reducer', () => {
             sortAccounts(['eth:0x02', 'eth:0x00'])
         );
 
-        expect(
-            newDocument.extendedState.state.accounts.map(a => a.address)
-        ).toStrictEqual(['eth:0x02', 'eth:0x00', 'eth:0x01']);
+        expect(newDocument.state.accounts.map(a => a.address)).toStrictEqual([
+            'eth:0x02',
+            'eth:0x00',
+            'eth:0x01',
+        ]);
     });
 });

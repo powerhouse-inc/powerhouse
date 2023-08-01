@@ -19,8 +19,7 @@ export const createZip = async (document: Document) => {
     // create zip file
     const zip = new JSZip();
 
-    const { name, revision, documentType, created, lastModified } =
-        document.extendedState;
+    const { name, revision, documentType, created, lastModified } = document;
     const header: DocumentHeader = {
         name,
         revision,
@@ -35,11 +34,9 @@ export const createZip = async (document: Document) => {
     );
     zip.file('operations.json', JSON.stringify(document.operations, null, 2));
 
-    const attachments = Object.keys(
-        document.extendedState.attachments
-    ) as Attachment[];
+    const attachments = Object.keys(document.attachments) as Attachment[];
     attachments.forEach(key => {
-        const { data, ...attributes } = document.extendedState.attachments[key];
+        const { data, ...attributes } = document.attachments[key];
         const path = key.slice('attachment://'.length);
         zip.file(path, data, {
             base64: true,
@@ -74,7 +71,7 @@ export const saveToFile = async (
         type: 'nodebuffer',
         streamFiles: true,
     });
-    const fileName = name ?? document.extendedState.name;
+    const fileName = name ?? document.name;
     const fileExtension = `.${extension}.zip`;
 
     return writeFile(
@@ -155,8 +152,9 @@ async function loadFromZip<S, A extends Action>(
     ) as Operation<A | BaseAction>[];
 
     const document: Document<S, A> = {
+        ...initialState,
+        ...header,
         initialState,
-        extendedState: { ...initialState, ...header },
         operations: [],
     };
 
@@ -170,10 +168,7 @@ async function loadFromZip<S, A extends Action>(
     if (header) {
         result = {
             ...result,
-            extendedState: {
-                ...result.extendedState,
-                ...header,
-            },
+            ...header,
             operations: [
                 ...result.operations,
                 ...operations.slice(header.revision),

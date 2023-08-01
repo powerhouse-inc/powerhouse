@@ -29,8 +29,8 @@ import { hashDocument } from './utils';
 function getNextRevision(document: Document, action: Action): number {
     // UNDO, REDO and PRUNE alter the revision themselves
     return [UNDO, REDO, PRUNE].includes(action.type)
-        ? document.extendedState.revision
-        : document.extendedState.revision + 1;
+        ? document.revision
+        : document.revision + 1;
 }
 
 /**
@@ -47,11 +47,8 @@ function updateHeader<T, A extends Action>(
 ): Document<T, A> {
     return {
         ...document,
-        extendedState: {
-            ...document.extendedState,
-            revision: getNextRevision(document, action),
-            lastModified: new Date().toISOString(),
-        },
+        revision: getNextRevision(document, action),
+        lastModified: new Date().toISOString(),
     };
 }
 
@@ -74,10 +71,7 @@ function updateOperations<T, A extends Action>(
 
     // removes undone operations from history if there
     // is a new operation after an UNDO
-    const operations = document.operations.slice(
-        0,
-        document.extendedState.revision
-    );
+    const operations = document.operations.slice(0, document.revision);
 
     // adds the action to the operations history with
     // the latest index and current timestamp
@@ -182,10 +176,7 @@ export function baseReducer<T, A extends Action>(
     newDocument = produce(newDocument, draft => {
         // the reducer runs on a immutable version of
         // provided state
-        const returnedDraft = customReducer(
-            draft.extendedState.state,
-            action as A
-        );
+        const returnedDraft = customReducer(draft.state, action as A);
 
         // if the reducer creates a new state object instead
         // of mutating the draft then returns the new state
@@ -193,10 +184,7 @@ export function baseReducer<T, A extends Action>(
             // casts new state as draft to comply with typescript
             return castDraft<Document<T, A>>({
                 ...newDocument,
-                extendedState: {
-                    ...newDocument.extendedState,
-                    state: returnedDraft,
-                },
+                state: returnedDraft,
             });
         }
     });
@@ -209,7 +197,7 @@ export function baseReducer<T, A extends Action>(
         if (!isBaseAction(action) && action.attachments) {
             action.attachments.forEach(attachment => {
                 const { hash, ...file } = attachment;
-                draft.extendedState.attachments[hash] = {
+                draft.attachments[hash] = {
                     ...file,
                 };
             });

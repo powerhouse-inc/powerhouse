@@ -78,11 +78,7 @@ export abstract class BaseDocument<T, A extends Action> {
      *    Gets the current state of the document.
      */
     get state() {
-        return this._document.extendedState.state;
-    }
-
-    get extendedState() {
-        return this._document.extendedState;
+        return this._document.state;
     }
 
     /**
@@ -96,35 +92,35 @@ export abstract class BaseDocument<T, A extends Action> {
      * Gets the name of the document.
      */
     get name() {
-        return this.extendedState.name;
+        return this._document.name;
     }
 
     /**
      * Gets the type of document.
      */
     get documentType() {
-        return this.extendedState.documentType;
+        return this._document.documentType;
     }
 
     /**
      * Gets the timestamp of the date the document was created.
      */
     get created() {
-        return this.extendedState.created;
+        return this._document.created;
     }
 
     /**
      * Gets the timestamp of the date the document was last modified.
      */
     get lastModified() {
-        return this.extendedState.lastModified;
+        return this._document.lastModified;
     }
 
     /**
      * Gets the revision number of the document.
      */
     get revision() {
-        return this.extendedState.revision;
+        return this._document.revision;
     }
 
     /**
@@ -139,7 +135,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param attachment - The key of the attachment to retrieve.
      */
     public getAttachment(attachment: Attachment) {
-        return this.extendedState.attachments[attachment];
+        return this._document.attachments[attachment];
     }
 
     /**

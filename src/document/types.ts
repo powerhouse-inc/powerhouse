@@ -129,14 +129,14 @@ export type ExtendedState<State = unknown> = DocumentHeader & {
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type Document<S = unknown, A extends Action = Action> = {
+export type Document<S = unknown, A extends Action = Action> =
     /** The document model specific state. */
-    extendedState: ExtendedState<S>;
-    /** The operations history of the document. */
-    operations: Operation<A | BaseAction>[];
-    /** The initial state of the document, enabling replaying operations. */
-    initialState: ExtendedState<S>;
-};
+    ExtendedState<S> & {
+        /** The operations history of the document. */
+        operations: Operation<A | BaseAction>[];
+        /** The initial state of the document, enabling replaying operations. */
+        initialState: ExtendedState<S>;
+    };
 
 // export type Document<
 //     S = unknown,

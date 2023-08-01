@@ -108,7 +108,7 @@ export const loadBudgetStatementFromFile = async (
     >(path, reducer);
 
     // TODO
-    // const auditReports = document.extendedState.state.auditReports;
+    // const auditReports = document.state.auditReports;
     // if (!auditReports.length) {
     //     return document;
     // }
@@ -116,7 +116,7 @@ export const loadBudgetStatementFromFile = async (
     // const file = readFile(path);
     // const zip = new JSZip();
     // await zip.loadAsync(file);
-    // const attachments = { ...document.extendedState.attachments };
+    // const attachments = { ...document.attachments };
     // await Promise.all(
     //     auditReports.map(async audit => {
     //         const path = audit.report.slice('attachment://'.length);
