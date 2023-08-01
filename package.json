@@ -1,7 +1,7 @@
 {
     "packageManager": "yarn@1.22.19",
     "name": "@acaldas/document-model-libs",
-    "version": "1.0.18",
+    "version": "1.0.19",
     "main": "dist/node/cjs/index.js",
     "module": "dist/node/es/index.js",
     "types": "dist/node/types/index.d.ts",
