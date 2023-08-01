@@ -1,12 +1,13 @@
+import type { BudgetStatementDocument } from '@acaldas/document-model-libs/browser/budget-statement';
 import type {
-    BudgetStatementDocument,
-    ExtendedBudgetStatementState,
-} from '@acaldas/document-model-libs/browser/budget-statement';
-import type { ExtendedScopeFrameworkState } from '@acaldas/document-model-libs/browser/scope-framework';
+    ScopeFrameworkAction,
+    ScopeFrameworkState,
+} from '@acaldas/document-model-libs/browser/scope-framework';
 import {
     Action,
     BaseAction,
     Document,
+    utils,
 } from '@acaldas/document-model-libs/document';
 import { EditorComponent } from 'src/components/editors';
 
@@ -67,7 +68,10 @@ export const Tab = {
                 );
             case 'makerdao/scope-framework':
                 return createScopeFrameworkTab(
-                    document as ExtendedScopeFrameworkState,
+                    document as Document<
+                        ScopeFrameworkState,
+                        ScopeFrameworkAction
+                    >,
                     id
                 );
             case 'powerhouse/document-model':
@@ -116,7 +120,7 @@ export function createDocumentTab<T = unknown, A extends Action = Action>(
 }
 
 export async function createScopeFrameworkTab(
-    document?: ExtendedScopeFrameworkState,
+    document?: Document<ScopeFrameworkState, ScopeFrameworkAction>,
     id?: string
 ) {
     const ScopeFramework = await import(
@@ -127,13 +131,16 @@ export async function createScopeFrameworkTab(
     ).default;
 
     const scope =
-        document ?? ScopeFramework.createEmptyExtendedScopeFrameworkState();
+        document ??
+        utils.createDocument(
+            ScopeFramework.createEmptyExtendedScopeFrameworkState()
+        );
     console.log(scope);
     return createDocumentTab(scope, ScopeFrameworkEditor, id, 'New scope');
 }
 
 export async function createBudgetStatementTab(
-    document?: ExtendedBudgetStatementState,
+    document?: BudgetStatementDocument,
     id?: string
 ) {
     const BudgetStatement = await import(

@@ -1,5 +1,4 @@
 import {
-    ExtendedScopeFrameworkState,
     ScopeFrameworkAction,
     ScopeFrameworkState,
     actions,
@@ -15,9 +14,8 @@ export default function Editor({
     onChange,
 }: EditorProps<ScopeFrameworkState, ScopeFrameworkAction>) {
     const theme = useAtomValue(themeAtom);
-    const [scopeFramework, dispatch] = ScopeFramework.useScopeFrameworkReducer(
-        document as ExtendedScopeFrameworkState
-    );
+    const [scopeFramework, dispatch] =
+        ScopeFramework.useScopeFrameworkReducer(document);
 
     useEffect(() => {
         onChange?.(scopeFramework);
