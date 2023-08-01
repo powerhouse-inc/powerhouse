@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import Tabs from 'src/components/tabs';
 import { createScopeFrameworkTab, useTabs } from 'src/store/tabs';
 
-export default () => {
+const TabsContainer = () => {
     const tabs = useTabs();
     useEffect(() => {
         return window.electronAPI?.handleFileOpened(file => {
@@ -39,3 +39,6 @@ export default () => {
         </div>
     );
 };
+
+export const element = <TabsContainer />;
+export default TabsContainer;

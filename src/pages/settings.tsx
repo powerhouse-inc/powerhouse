@@ -1,7 +1,7 @@
 import { ReactComponent as IconCross } from '@/assets/icons/cross.svg';
 import { NavLink } from 'react-router-dom';
 
-export default () => {
+const Settings = () => {
     return (
         <div className="px-8 py-4">
             <div className="mb-8 flex items-center justify-between">
@@ -37,3 +37,6 @@ export default () => {
         </div>
     );
 };
+
+export const element = <Settings />;
+export default Settings;

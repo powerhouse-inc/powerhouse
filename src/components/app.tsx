@@ -1,31 +1,27 @@
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
-import Settings from 'src/pages/settings';
-import Tabs from 'src/pages/tabs';
 import atoms from 'src/store';
-import Root from './root';
 
 export const App: React.FC = () => {
     const router = createHashRouter([
         {
             path: '/',
-            element: <Root />,
-            errorElement: <Root />,
+            lazy: () => import('./root'),
             loader: () => <></>, // TODO loading
             children: [
                 {
                     path: '',
-                    element: <Tabs />,
+                    lazy: () => import('src/pages/tabs'),
                 },
                 {
                     path: 'settings',
-                    element: <Settings />,
+                    lazy: () => import('src/pages/settings'),
                 },
             ],
         },
         {
-            element: <Root />,
+            lazy: () => import('./root'),
             loader: () => <></>, // TODO loading
         },
     ]);
