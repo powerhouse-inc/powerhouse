@@ -3,7 +3,7 @@ import {
     BudgetStatementState,
     actions,
 } from '@acaldas/document-model-libs/browser/budget-statement';
-import { BudgetStatement } from 'document-model-editors';
+import BudgetStatement from 'document-model-editors/budget-statement';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
