@@ -38,6 +38,9 @@
             "browser": [
                 "dist/browser/types"
             ],
+            "browser/document": [
+                "dist/browser/types/document"
+            ],
             "browser/scope-framework": [
                 "dist/browser/types/scope-framework"
             ],
