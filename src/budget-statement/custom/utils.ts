@@ -102,81 +102,13 @@ export const saveBudgetStatementToFile = (
 export const loadBudgetStatementFromFile = async (
     path: string
 ): Promise<BudgetStatementDocument> => {
-    const document = await loadFromFile<
-        BudgetStatementState,
-        BudgetStatementAction
-    >(path, reducer);
-
-    // TODO
-    // const auditReports = document.state.auditReports;
-    // if (!auditReports.length) {
-    //     return document;
-    // }
-
-    // const file = readFile(path);
-    // const zip = new JSZip();
-    // await zip.loadAsync(file);
-    // const attachments = { ...document.attachments };
-    // await Promise.all(
-    //     auditReports.map(async audit => {
-    //         const path = audit.report.slice('attachment://'.length);
-    //         const file = await zip.file(path);
-    //         if (!file) {
-    //             throw new Error(`Attachment ${audit.report} not found`);
-    //         }
-    //         const data = await file.async('base64');
-    //         const { mimeType, extension, fileName } = JSON.parse(file.comment);
-    //         attachments[audit.report] = {
-    //             data,
-    //             mimeType,
-    //             extension,
-    //             fileName,
-    //         };
-    //     })
-    // );
-    return {
-        ...document,
-        // fileRegistry
-    };
+    return loadFromFile(path, reducer);
 };
 
 export const loadBudgetStatementFromInput = async (
     input: FileInput
 ): Promise<BudgetStatementDocument> => {
-    const document = await loadFromInput<
-        BudgetStatementState,
-        BudgetStatementAction
-    >(input, reducer);
-    // TODO
-    // const auditReports = document.state.auditReports;
-    // if (!auditReports.length) {
-    //     return document;
-    // }
-
-    // const zip = new JSZip();
-    // await zip.loadAsync(input);
-    // const fileRegistry = { ...document.fileRegistry };
-    // await Promise.all(
-    //     auditReports.map(async audit => {
-    //         const path = audit.report.slice('attachment://'.length);
-    //         const file = await zip.file(path);
-    //         if (!file) {
-    //             throw new Error(`Attachment ${audit.report} not found`);
-    //         }
-    //         const data = await file.async('base64');
-    //         const { mimeType, extension, fileName } = JSON.parse(file.comment);
-    //         fileRegistry[audit.report] = {
-    //             data,
-    //             mimeType,
-    //             extension,
-    //             fileName,
-    //         };
-    //     })
-    // );
-    return {
-        ...document,
-        // fileRegistry
-    };
+    return loadFromInput(input, reducer);
 };
 
 export const saveBudgetStatementToFileHandle = async (

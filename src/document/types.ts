@@ -111,7 +111,7 @@ export type InputDocumentFile =
  * multiple instances of the binary data of the attachments.
  *
  */
-export type FileRegistry = Record<Attachment, DocumentFile>;
+export type FileRegistry = Record<AttachmentRef, DocumentFile>;
 
 export type ExtendedState<State = unknown> = DocumentHeader & {
     /** The document model specific state. */
@@ -138,20 +138,10 @@ export type Document<S = unknown, A extends Action = Action> =
         initialState: ExtendedState<S>;
     };
 
-// export type Document<
-//     S = unknown,
-//     A extends Action = Action
-// > =
-//     ExtendedState<S> &
-//     {
-//         operations: Operation<A | BaseAction>[];
-//         initialState: ExtendedState<S>;
-//     };
-
 /**
  * String type representing an attachment in a Document.
  *
  * @remarks
  * Attachment string is formatted as `attachment://<filename>`.
  */
-export type Attachment = string; // TODO `attachment://${string}`;
+export type AttachmentRef = string; // TODO `attachment://${string}`;

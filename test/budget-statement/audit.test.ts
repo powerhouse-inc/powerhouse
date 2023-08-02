@@ -10,11 +10,7 @@ import {
     addAuditReport,
     deleteAuditReport,
 } from '../../src/budget-statement/gen';
-import {
-    getLocalFile,
-    getRemoteFile,
-    hashAttachment,
-} from '../../src/document/utils';
+import { getLocalFile, getRemoteFile } from '../../src/document/utils';
 import { readFile } from '../../src/document/utils/node';
 
 describe('Budget Statement Audit Report reducer', () => {
@@ -41,22 +37,21 @@ describe('Budget Statement Audit Report reducer', () => {
     it('should add audit report', async () => {
         const document = createBudgetStatement();
         const file = await getLocalFile(tempFile);
-        const hash = `attachment://${hashAttachment(file.data)}`;
         const newDocument = reducer(
             document,
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: file.hash,
                         status: 'Approved',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...file, hash }]
+                [file]
             )
         );
         expect(newDocument.state.auditReports[0]).toStrictEqual({
-            report: 'attachment://Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
+            report: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
@@ -66,23 +61,22 @@ describe('Budget Statement Audit Report reducer', () => {
     it('should add attachment to file registry', async () => {
         const document = createBudgetStatement();
         const file = await getLocalFile(tempFile);
-        const hash = `attachment://${hashAttachment(file.data)}`;
         const newDocument = reducer(
             document,
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: file.hash,
                         status: 'Approved',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...file, hash }]
+                [file]
             )
         );
 
         expect(
-            newDocument.attachments['attachment://Q1pqSc2iiEdpNLjRefhjnQ3nNc8=']
+            newDocument.attachments['Q1pqSc2iiEdpNLjRefhjnQ3nNc8=']
         ).toStrictEqual({
             data: 'VEVTVA==',
             mimeType: 'application/pdf',
@@ -95,23 +89,22 @@ describe('Budget Statement Audit Report reducer', () => {
     it('should delete audit report', async () => {
         let document = createBudgetStatement();
         const file = await getLocalFile(tempFile);
-        const hash = `attachment://${hashAttachment(file.data)}`;
         document = reducer(
             document,
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: file.hash,
                         status: 'Escalated',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...file, hash }]
+                [file]
             )
         );
         document = reducer(
             document,
-            deleteAuditReport(['attachment://Q1pqSc2iiEdpNLjRefhjnQ3nNc8='])
+            deleteAuditReport(['Q1pqSc2iiEdpNLjRefhjnQ3nNc8='])
         );
         expect(document.state.auditReports).toStrictEqual([]);
     });
@@ -120,7 +113,7 @@ describe('Budget Statement Audit Report reducer', () => {
     //     const document = createBudgetStatement();
     //     const date = new Date();
     //     const file = await getLocalFile(tempFile);
-    //     const hash = `attachment://${hashAttachment(file.data)}`;
+    //
     //     const newDocument = reducer(
     //         document,
     //         addAuditReport(
@@ -143,18 +136,18 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should add approved audit report', async () => {
         const file = await getLocalFile(tempFile);
-        const hash = `attachment://${hashAttachment(file.data)}`;
+
         const document = reducer(
             createBudgetStatement(),
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: file.hash,
                         status: 'Approved',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...file, hash }]
+                [file]
             )
         );
         expect(document.state.auditReports[0].status).toBe('Approved');
@@ -162,18 +155,18 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should add approved with comments audit report', async () => {
         const file = await getLocalFile(tempFile);
-        const hash = `attachment://${hashAttachment(file.data)}`;
+
         const document = reducer(
             createBudgetStatement(),
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: file.hash,
                         status: 'ApprovedWithComments',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...file, hash }]
+                [file]
             )
         );
         expect(document.state.auditReports[0].status).toBe(
@@ -183,18 +176,18 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should add needs action audit report', async () => {
         const file = await getLocalFile(tempFile);
-        const hash = `attachment://${hashAttachment(file.data)}`;
+
         const document = reducer(
             createBudgetStatement(),
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: file.hash,
                         status: 'NeedsAction',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...file, hash }]
+                [file]
             )
         );
         expect(document.state.auditReports[0].status).toBe('NeedsAction');
@@ -202,18 +195,18 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should throw if duplicated audit report', async () => {
         const file = await getLocalFile(tempFile);
-        const hash = `attachment://${hashAttachment(file.data)}`;
+
         const document = reducer(
             createBudgetStatement(),
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: file.hash,
                         status: 'Approved',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...file, hash }]
+                [file]
             )
         );
 
@@ -223,12 +216,12 @@ describe('Budget Statement Audit Report reducer', () => {
                 addAuditReport(
                     [
                         {
-                            report: hash,
+                            report: file.hash,
                             status: 'Approved',
                             timestamp: '2023-03-15T17:46:22.754Z',
                         },
                     ],
-                    [{ ...file, hash }]
+                    [file]
                 )
             )
         ).rejects.toThrow();
@@ -238,33 +231,31 @@ describe('Budget Statement Audit Report reducer', () => {
         const file = await getRemoteFile(
             'https://makerdao.com/whitepaper/DaiDec17WP.pdf'
         );
-        const hash = `attachment://${hashAttachment(file.data)}`;
+
         const document = createBudgetStatement();
         const newDocument = reducer(
             document,
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: file.hash,
                         status: 'Approved',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...file, hash }]
+                [file]
             )
         );
         expect(newDocument.state.auditReports[0]).toStrictEqual({
-            report: 'attachment://Pv/RLgAirXe5QEWGG+W4PTlQCv0=',
+            report: 'Pv/RLgAirXe5QEWGG+W4PTlQCv0=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
         expect(
-            newDocument.attachments['attachment://Pv/RLgAirXe5QEWGG+W4PTlQCv0=']
-                .data.length
+            newDocument.attachments['Pv/RLgAirXe5QEWGG+W4PTlQCv0='].data.length
         ).toBeGreaterThan(0);
         expect(
-            newDocument.attachments['attachment://Pv/RLgAirXe5QEWGG+W4PTlQCv0=']
-                .mimeType
+            newDocument.attachments['Pv/RLgAirXe5QEWGG+W4PTlQCv0='].mimeType
         ).toBe('application/pdf');
         expect(document.state.auditReports).toStrictEqual([]);
         expect(document.attachments).toStrictEqual({});
@@ -272,18 +263,17 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should save attachment to zip', async () => {
         const attachment = await getLocalFile(tempFile);
-        const hash = `attachment://${hashAttachment(attachment.data)}`;
         const document = reducer(
             createBudgetStatement({ name: 'march' }),
             addAuditReport(
                 [
                     {
-                        report: hash,
+                        report: attachment.hash,
                         status: 'NeedsAction',
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
                 ],
-                [{ ...attachment, hash }]
+                [attachment]
             )
         );
         const zipPath = await saveBudgetStatementToFile(document, tempDir);
@@ -292,7 +282,7 @@ describe('Budget Statement Audit Report reducer', () => {
         await zip.loadAsync(file);
 
         const report = document.state.auditReports[0].report;
-        const path = report.slice('attachment://'.length);
+        const path = report.slice(''.length);
         const attachmentZip = zip.file(path);
 
         const { data, ...attributes } = document.attachments[report];
@@ -303,7 +293,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should load attachment from zip', async () => {
-        const attachment = await getLocalFile(tempFile);
+        const { hash, ...attachment } = await getLocalFile(tempFile);
         const document = await loadBudgetStatementFromFile(
             `${tempDir}march.phbs.zip`
         );
@@ -311,9 +301,10 @@ describe('Budget Statement Audit Report reducer', () => {
         expect(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (document.operations[0] as any).input.reports[0].report.startsWith(
-                'attachment://'
+                ''
             )
         ).toBe(true);
+
         expect(
             document.attachments[document.state.auditReports[0].report]
         ).toStrictEqual(attachment);

@@ -33,7 +33,7 @@ export function readFile(path: string) {
 
 export function fetchFile(
     url: string
-): Promise<{ data: Buffer; mimeType?: string }> {
+): Promise<{ buffer: Buffer; mimeType?: string }> {
     return new Promise((resolve, reject) => {
         https
             .get(url, resp => {
@@ -44,7 +44,7 @@ export function fetchFile(
                 });
 
                 resp.on('end', () => {
-                    resolve({ data: Buffer.concat(data), mimeType });
+                    resolve({ buffer: Buffer.concat(data), mimeType });
                 });
             })
             .on('error', err => {

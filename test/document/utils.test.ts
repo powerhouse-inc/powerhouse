@@ -23,6 +23,7 @@ describe('Base utils', () => {
         const file = await getLocalFile(tempFile);
         expect(file).toStrictEqual({
             data: 'VEVTVA==',
+            hash: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             mimeType: 'application/pdf',
             extension: 'pdf',
             fileName: 'report.pdf',

@@ -2,7 +2,7 @@ import { loadState, prune, redo, setName, undo } from './actions';
 import { BaseAction } from './actions/types';
 import type {
     Action,
-    Attachment,
+    AttachmentRef,
     Document,
     ExtendedState,
     Reducer,
@@ -134,7 +134,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * Gets the attachment associated with the given key.
      * @param attachment - The key of the attachment to retrieve.
      */
-    public getAttachment(attachment: Attachment) {
+    public getAttachment(attachment: AttachmentRef) {
         return this._document.attachments[attachment];
     }
 

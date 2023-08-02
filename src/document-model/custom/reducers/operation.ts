@@ -11,7 +11,8 @@ const operationSorter = (order: string[]) => {
 
 export const reducer: DocumentModelOperationOperations = {
     addOperationOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             if (latestSpec.modules[i].id == action.input.moduleId) {
                 latestSpec.modules[i].operations.push({
@@ -30,7 +31,8 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationNameOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (latestSpec.modules[i].operations[j].id == action.input.id) {
@@ -42,7 +44,8 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationSchemaOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (latestSpec.modules[i].operations[j].id == action.input.id) {
@@ -54,7 +57,8 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationDescriptionOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (latestSpec.modules[i].operations[j].id == action.input.id) {
@@ -66,7 +70,8 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationTemplateOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (latestSpec.modules[i].operations[j].id == action.input.id) {
@@ -78,7 +83,8 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     setOperationReducerOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (latestSpec.modules[i].operations[j].id == action.input.id) {
@@ -91,20 +97,21 @@ export const reducer: DocumentModelOperationOperations = {
 
     moveOperationOperation(state, action) {
         const moveOperations: Operation[] = [];
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
 
         // Filter and collect
         for (let i = 0; i < latestSpec.modules.length; i++) {
-            latestSpec.modules[i].operations = latestSpec.modules[i].operations.filter(
-                operation => {
-                    if (operation.id == action.input.operationId) {
-                        moveOperations.push(operation);
-                        return false;
-                    }
-
-                    return true;
+            latestSpec.modules[i].operations = latestSpec.modules[
+                i
+            ].operations.filter(operation => {
+                if (operation.id == action.input.operationId) {
+                    moveOperations.push(operation);
+                    return false;
                 }
-            );
+
+                return true;
+            });
         }
 
         // Inject in target modules
@@ -116,16 +123,18 @@ export const reducer: DocumentModelOperationOperations = {
     },
 
     deleteOperationOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
-            latestSpec.modules[i].operations = latestSpec.modules[i].operations.filter(
-                operation => operation.id != action.input.id
-            );
+            latestSpec.modules[i].operations = latestSpec.modules[
+                i
+            ].operations.filter(operation => operation.id != action.input.id);
         }
     },
 
     reorderModuleOperationsOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             if (latestSpec.modules[i].id == action.input.moduleId) {
                 latestSpec.modules[i].operations.sort(
