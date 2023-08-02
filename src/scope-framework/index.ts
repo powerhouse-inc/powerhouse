@@ -14,6 +14,7 @@ export * from './custom/utils';
 export type {
     ExtendedScopeFrameworkState,
     ScopeFrameworkAction,
+    ScopeFrameworkDocument,
     ScopeFrameworkState,
     types,
 } from './gen';
