@@ -1,5 +1,4 @@
 import { Module } from '@acaldas/document-model-graphql/document-model';
-import { hashKey } from '../../../document/utils';
 import { DocumentModelModuleOperations } from '../../gen/module/operations';
 
 const moduleSorter = (order: string[]) => {
@@ -11,9 +10,10 @@ const moduleSorter = (order: string[]) => {
 
 export const reducer: DocumentModelModuleOperations = {
     addModuleOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         latestSpec.modules.push({
-            id: hashKey(),
+            id: action.input.id,
             name: action.input.name,
             description: action.input.description || '',
             operations: [],
@@ -21,7 +21,8 @@ export const reducer: DocumentModelModuleOperations = {
     },
 
     setModuleNameOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             if (latestSpec.modules[i].id === action.input.id) {
                 latestSpec.modules[i].name = action.input.name || '';
@@ -30,21 +31,27 @@ export const reducer: DocumentModelModuleOperations = {
     },
 
     setModuleDescriptionOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             if (latestSpec.modules[i].id === action.input.id) {
-                latestSpec.modules[i].description = action.input.description || '';
+                latestSpec.modules[i].description =
+                    action.input.description || '';
             }
         }
     },
 
     deleteModuleOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
-        latestSpec.modules = latestSpec.modules.filter(m => m.id != action.input.id);
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
+        latestSpec.modules = latestSpec.modules.filter(
+            m => m.id != action.input.id
+        );
     },
 
     reorderModulesOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         latestSpec.modules.sort(moduleSorter(action.input.order));
     },
 };

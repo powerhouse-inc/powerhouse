@@ -1,5 +1,4 @@
 import { Operation } from '@acaldas/document-model-graphql/document-model';
-import { hashKey } from '../../../document/utils';
 import { DocumentModelOperationOperations } from '../../gen/operation/operations';
 
 const operationSorter = (order: string[]) => {
@@ -16,7 +15,7 @@ export const reducer: DocumentModelOperationOperations = {
         for (let i = 0; i < latestSpec.modules.length; i++) {
             if (latestSpec.modules[i].id == action.input.moduleId) {
                 latestSpec.modules[i].operations.push({
-                    id: hashKey(),
+                    id: action.input.id,
                     name: action.input.name,
                     description: action.input.description || '',
                     schema: action.input.schema || '',

@@ -1,5 +1,4 @@
 import { CodeExample } from '@acaldas/document-model-graphql/document-model';
-import { hashKey } from '../../../document/utils';
 import { DocumentModelOperationExampleOperations } from '../../gen/operation-example/operations';
 
 const exampleSorter = (order: string[]) => {
@@ -11,7 +10,8 @@ const exampleSorter = (order: string[]) => {
 
 export const reducer: DocumentModelOperationExampleOperations = {
     addOperationExampleOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (
@@ -19,7 +19,7 @@ export const reducer: DocumentModelOperationExampleOperations = {
                     action.input.operationId
                 ) {
                     latestSpec.modules[i].operations[j].examples.push({
-                        id: hashKey(),
+                        id: action.input.id,
                         value: action.input.example,
                     });
                 }
@@ -28,7 +28,8 @@ export const reducer: DocumentModelOperationExampleOperations = {
     },
 
     updateOperationExampleOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
@@ -49,18 +50,21 @@ export const reducer: DocumentModelOperationExampleOperations = {
     },
 
     deleteOperationExampleOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-                latestSpec.modules[i].operations[j].examples = latestSpec.modules[
-                    i
-                ].operations[j].examples.filter(e => e.id != action.input.id);
+                latestSpec.modules[i].operations[j].examples =
+                    latestSpec.modules[i].operations[j].examples.filter(
+                        e => e.id != action.input.id
+                    );
             }
         }
     },
 
     reorderOperationExamplesOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (

@@ -1,4 +1,5 @@
 import { DocumentModel } from '../../src/document-model';
+import { hashKey } from '../../src/document/utils';
 
 describe('DocumentModel Class', () => {
     it('should create an empty document', () => {
@@ -47,7 +48,9 @@ describe('DocumentModel Class', () => {
     it('should apply module operations to the latest specification', () => {
         const model = new DocumentModel();
 
-        model.addModule({ name: 'state' }).addModule({ name: 'header' });
+        model
+            .addModule({ id: hashKey(), name: 'state' })
+            .addModule({ id: hashKey(), name: 'header' });
 
         expect(
             model.state.specifications[0].modules.map(m => m.name)
@@ -96,12 +99,15 @@ describe('DocumentModel Class', () => {
     it('should apply operations operations to the latest spec', () => {
         const model = new DocumentModel();
 
-        model.addModule({ name: 'header' }).addModule({ name: 'state' });
+        model
+            .addModule({ id: hashKey(), name: 'header' })
+            .addModule({ id: hashKey(), name: 'state' });
 
         const headerModuleId = model.state.specifications[0].modules[0].id;
         const stateModuleId = model.state.specifications[0].modules[1].id;
 
         model.addOperation({
+            id: hashKey(),
             moduleId: headerModuleId,
             name: 'SetModuleExtension',
             schema: '<SetModuleExtension.schema>',
@@ -111,6 +117,7 @@ describe('DocumentModel Class', () => {
         });
 
         model.addOperation({
+            id: hashKey(),
             moduleId: stateModuleId,
             name: 'AddStateExample',
         });

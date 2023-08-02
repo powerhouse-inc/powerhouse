@@ -1,5 +1,4 @@
 import { OperationError } from '@acaldas/document-model-graphql/document-model';
-import { hashKey } from '../../../document/utils';
 import { DocumentModelOperationErrorOperations } from '../../gen/operation-error/operations';
 
 const errorSorter = (order: string[]) => {
@@ -11,7 +10,8 @@ const errorSorter = (order: string[]) => {
 
 export const reducer: DocumentModelOperationErrorOperations = {
     addOperationErrorOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (
@@ -19,7 +19,7 @@ export const reducer: DocumentModelOperationErrorOperations = {
                     action.input.operationId
                 ) {
                     latestSpec.modules[i].operations[j].errors.push({
-                        id: hashKey(),
+                        id: action.input.id,
                         name: action.input.errorName || '',
                         code: action.input.errorCode || '',
                         description: action.input.errorDescription || '',
@@ -31,7 +31,8 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorCodeOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
@@ -52,7 +53,8 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorNameOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
@@ -73,7 +75,8 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorDescriptionOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
@@ -85,8 +88,9 @@ export const reducer: DocumentModelOperationErrorOperations = {
                         latestSpec.modules[i].operations[j].errors[k].id ==
                         action.input.id
                     ) {
-                        latestSpec.modules[i].operations[j].errors[k].description =
-                            action.input.errorDescription || '';
+                        latestSpec.modules[i].operations[j].errors[
+                            k
+                        ].description = action.input.errorDescription || '';
                     }
                 }
             }
@@ -94,7 +98,8 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     setOperationErrorTemplateOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 for (
@@ -115,7 +120,8 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     deleteOperationErrorOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 latestSpec.modules[i].operations[j].errors = latestSpec.modules[
@@ -126,7 +132,8 @@ export const reducer: DocumentModelOperationErrorOperations = {
     },
 
     reorderOperationErrorsOperation(state, action) {
-        const latestSpec = state.specifications[state.specifications.length - 1];
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
         for (let i = 0; i < latestSpec.modules.length; i++) {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 if (

@@ -3,6 +3,7 @@ import { paramCase } from 'change-case';
 import { runner } from 'hygen';
 import Logger from 'hygen/dist/logger';
 import path from 'path';
+import { loadDocumentModelFromFile } from '../src/document-model';
 
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, 'templates');
@@ -28,7 +29,13 @@ const runAll = async () => {
     const document = process.argv.at(2) || 'document-model';
     let documentModel: DocumentModelState;
     try {
-        documentModel = (await import(`./models/${document}`)).default;
+        if (document.endsWith('.zip')) {
+            const file = await loadDocumentModelFromFile(document);
+            documentModel = file.state;
+            console.log(JSON.stringify(documentModel, null, 2));
+        } else {
+            documentModel = (await import(`./models/${document}`)).default;
+        }
     } catch (error) {
         throw error.code === 'MODULE_NOT_FOUND'
             ? new Error(`Document model "${document}" not found.`)
@@ -44,7 +51,8 @@ const runAll = async () => {
     ]);
 
     // Generate the module-specific files for the document model logic
-    const latestSpec = documentModel.specifications[documentModel.specifications.length - 1];
+    const latestSpec =
+        documentModel.specifications[documentModel.specifications.length - 1];
     const modules = latestSpec.modules.map(m => paramCase(m.name));
     for (let i = 0; i < modules.length; i++) {
         await run([
