@@ -1,15 +1,13 @@
 import type { BudgetStatementDocument } from '@acaldas/document-model-libs/browser/budget-statement';
-import type {
-    ScopeFrameworkAction,
-    ScopeFrameworkState,
-} from '@acaldas/document-model-libs/browser/scope-framework';
+import type { DocumentModelDocument } from '@acaldas/document-model-libs/browser/document-model';
+import type { ScopeFrameworkDocument } from '@acaldas/document-model-libs/browser/scope-framework';
 import {
     Action,
     BaseAction,
     Document,
     utils,
 } from '@acaldas/document-model-libs/document';
-import { EditorComponent } from 'src/components/editors';
+import type { EditorComponent } from 'src/components/editors';
 
 import tabNew from 'src/components/tabs/tab-new';
 
@@ -51,7 +49,7 @@ export const Tab = {
                     object.id
                 );
             case 'powerhouse/document-model':
-                return createTab(object.id, object.name);
+                return createDocumentModelTab(object.id, object.name);
             default:
                 throw new Error(`Tab type ${type} was not handled`);
         }
@@ -68,17 +66,13 @@ export const Tab = {
                 );
             case 'makerdao/scope-framework':
                 return createScopeFrameworkTab(
-                    document as Document<
-                        ScopeFrameworkState,
-                        ScopeFrameworkAction
-                    >,
+                    document as ScopeFrameworkDocument,
                     id
                 );
             case 'powerhouse/document-model':
-                return createTab(
-                    'powerhouse/document-model',
-                    id,
-                    document.name
+                return createDocumentModelTab(
+                    document as DocumentModelDocument,
+                    id
                 );
             default:
                 throw new Error(
@@ -120,7 +114,7 @@ export function createDocumentTab<T = unknown, A extends Action = Action>(
 }
 
 export async function createScopeFrameworkTab(
-    document?: Document<ScopeFrameworkState, ScopeFrameworkAction>,
+    document?: ScopeFrameworkDocument,
     id?: string
 ) {
     const ScopeFramework = await import(
@@ -150,6 +144,30 @@ export async function createBudgetStatementTab(
     ).default;
     const scope = document ?? BudgetStatement.utils.createBudgetStatement();
     return createDocumentTab(scope, BudgetStatementEditor, id, 'New budget');
+}
+
+export async function createDocumentModelTab(
+    document?: DocumentModelDocument,
+    id?: string
+) {
+    const DocumentModel = await import(
+        '@acaldas/document-model-libs/browser/document-model'
+    );
+    const DocumentModelEditor = (
+        await import('src/components/editors/document-model')
+    ).default;
+
+    const scope =
+        document ??
+        utils.createDocument(
+            DocumentModel.createEmptyExtendedDocumentModelState()
+        );
+    return createDocumentTab(
+        scope,
+        DocumentModelEditor,
+        id,
+        'New document model'
+    );
 }
 
 export async function preloadTabs() {

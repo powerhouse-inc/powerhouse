@@ -31,6 +31,13 @@ async function saveDocumentToFileFn(
                 : '@acaldas/document-model-libs/scope-framework'
         );
         return ScopeFramework.saveScopeFrameworkToFile;
+    } else if (document.documentType === 'powerhouse/document-model') {
+        const DocumentModel = await import(
+            isBrowser
+                ? '@acaldas/document-model-libs/browser/document-model'
+                : '@acaldas/document-model-libs/document-model'
+        );
+        return DocumentModel.saveDocumentModelToFile;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
     }
@@ -53,6 +60,13 @@ async function saveDocumentToFileHandleFn(
                 : '@acaldas/document-model-libs/scope-framework'
         );
         return ScopeFramework.saveScopeFrameworkToFileHandle;
+    } else if (document.documentType === 'powerhouse/document-model') {
+        const DocumentModel = await import(
+            isBrowser
+                ? '@acaldas/document-model-libs/browser/document-model'
+                : '@acaldas/document-model-libs/document-model'
+        );
+        return DocumentModel.saveDocumentModelToFileHandle;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
     }
