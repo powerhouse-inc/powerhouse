@@ -3,6 +3,7 @@ import { useDropFile, useOpenFile } from 'src/hooks';
 import {
     Tab,
     createBudgetStatementTab,
+    createDocumentModelTab,
     createScopeFrameworkTab,
     preloadTabs,
     useTabs,
@@ -53,6 +54,16 @@ export default () => {
                     }
                 >
                     New Budget Statement
+                </Button>
+                <Button
+                    className="bg-accent-1 text-text"
+                    onClick={async () =>
+                        updateTab(
+                            await createDocumentModelTab(undefined, selectedTab)
+                        )
+                    }
+                >
+                    New Document model
                 </Button>
             </div>
             <h2 className="h2">Open existing file</h2>
