@@ -1,4 +1,4 @@
-import { Document } from '@acaldas/document-model-libs/document';
+import { Document } from '@acaldas/document-model-libs/browser/document';
 import { loadFile } from 'src/utils/file';
 
 export function useOpenFile(
