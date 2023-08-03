@@ -16,17 +16,15 @@ describe('Budget Statement Vesting reducer', () => {
         const document = createBudgetStatement();
         const newDocument = reducer(
             document,
-            addVesting([
-                {
-                    amount: '100',
-                    amountOld: '40',
-                    comment: 'New FTEs',
-                    currency: 'MKR',
-                    date: '2023-03-15',
-                    key: '123',
-                    vested: false,
-                },
-            ])
+            addVesting({
+                amount: '100',
+                amountOld: '40',
+                comment: 'New FTEs',
+                currency: 'MKR',
+                date: '2023-03-15',
+                key: '123',
+                vested: false,
+            })
         );
         expect(newDocument.state.vesting).toStrictEqual([
             {
@@ -46,21 +44,19 @@ describe('Budget Statement Vesting reducer', () => {
         let document = createBudgetStatement();
         document = reducer(
             document,
-            addVesting([
-                {
-                    amount: '100',
-                    amountOld: '40',
-                    comment: 'New FTEs',
-                    currency: 'MKR',
-                    date: '2023-03-15',
-                    key: '123',
-                    vested: false,
-                },
-            ])
+            addVesting({
+                amount: '100',
+                amountOld: '40',
+                comment: 'New FTEs',
+                currency: 'MKR',
+                date: '2023-03-15',
+                key: '123',
+                vested: false,
+            })
         );
         document = reducer(
             document,
-            updateVesting([{ key: '123', amount: '300' }])
+            updateVesting({ key: '123', amount: '300' })
         );
         expect(document.state.vesting[0]).toStrictEqual({
             amount: '300',
@@ -77,14 +73,12 @@ describe('Budget Statement Vesting reducer', () => {
         let document = createBudgetStatement();
         document = reducer(
             document,
-            addVesting([
-                {
-                    key: '123',
-                },
-            ])
+            addVesting({
+                key: '123',
+            })
         );
 
-        document = reducer(document, deleteVesting(['123']));
+        document = reducer(document, deleteVesting({ vesting: '123' }));
         expect(document.state.vesting.length).toBe(0);
     });
 
@@ -93,11 +87,9 @@ describe('Budget Statement Vesting reducer', () => {
         const document = createBudgetStatement();
         const newDocument = reducer(
             document,
-            addVesting([
-                {
-                    date: '2023-03-16',
-                },
-            ])
+            addVesting({
+                date: '2023-03-16',
+            })
         );
         expect(newDocument.state.vesting[0].key.length).toBe(28);
         expect(newDocument.state.vesting[0].amount).toBe('');
@@ -105,40 +97,46 @@ describe('Budget Statement Vesting reducer', () => {
 
     it('should sort vestings by date', async () => {
         const document = createBudgetStatement();
-        const newDocument = reducer(
+        let newDocument = reducer(
             document,
-            addVesting([
-                {
-                    date: '2023-03-11',
-                },
-                {
-                    date: '2023-03-15',
-                },
-                {
-                    date: '2023-03-13',
-                },
-            ])
+            addVesting({
+                date: '2023-03-11',
+            })
         );
+        newDocument = reducer(
+            newDocument,
+            addVesting({
+                date: '2023-03-15',
+            })
+        );
+        newDocument = reducer(
+            newDocument,
+            addVesting({
+                date: '2023-03-13',
+            })
+        );
+
         expect(newDocument.state.vesting[0].date).toBe('2023-03-11');
         expect(newDocument.state.vesting[1].date).toBe('2023-03-13');
         expect(newDocument.state.vesting[2].date).toBe('2023-03-15');
     });
 
     it('should throw if vesting key already exists', async () => {
-        const document = createBudgetStatement();
+        let document = createBudgetStatement();
+        document = reducer(
+            document,
+            addVesting({
+                key: '123',
+                date: '2023-03-15',
+            })
+        );
         expect(() =>
             reducer(
                 document,
-                addVesting([
-                    {
-                        key: '123',
-                        date: '2023-03-15',
-                    },
-                    {
-                        key: '123',
-                        date: '2023-03-13',
-                    },
-                ])
+                addVesting({
+                    key: '123',
+                    date: '2023-03-13',
+                })
             )
         ).toThrow();
     });
@@ -147,26 +145,26 @@ describe('Budget Statement Vesting reducer', () => {
         let document = createBudgetStatement();
         document = reducer(
             document,
-            addVesting([
-                {
-                    key: '123',
-                    amount: '100',
-                },
-            ])
+            addVesting({
+                key: '123',
+                amount: '100',
+            })
         );
 
         document = reducer(
             document,
-            updateVesting([
-                {
-                    key: '123',
-                    amount: '200',
-                },
-                {
-                    key: '456',
-                    amount: '300',
-                },
-            ])
+            updateVesting({
+                key: '123',
+                amount: '200',
+            })
+        );
+
+        document = reducer(
+            document,
+            updateVesting({
+                key: '456',
+                amount: '300',
+            })
         );
 
         expect(document.state.vesting).toStrictEqual([

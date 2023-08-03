@@ -1,33 +1,34 @@
-import { BaseDocument } from '../../../document';
+import { BaseDocument } from '../../../document/object';
+
+
 import {
-    BudgetStatementAction,
-    BudgetStatementState,
-    VestingInput,
-    VestingUpdateInput,
-} from '../../custom';
-import { addVesting, deleteVesting, updateVesting } from './creators';
+    AddVestingInput,
+    UpdateVestingInput,
+    DeleteVestingInput,
+} from '@acaldas/document-model-graphql/budget-statement';
 
-export default class VestingObject extends BaseDocument<
-    BudgetStatementState,
-    BudgetStatementAction
+import {
+    addVesting,
+    updateVesting,
+    deleteVesting,
+} from './creators';
+
+import { BudgetStatementAction } from '../actions';
+import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+
+export default class BudgetStatement_Vesting extends BaseDocument<
+    BudgetStatementState, BudgetStatementAction
 > {
-    public addVesting(vesting: VestingInput[]) {
-        return this.dispatch(addVesting(vesting));
+    public addVesting(input: AddVestingInput) {
+        return this.dispatch(addVesting(input));
     }
-
-    public updateVesting(vesting: VestingUpdateInput[]) {
-        return this.dispatch(updateVesting(vesting));
+    
+    public updateVesting(input: UpdateVestingInput) {
+        return this.dispatch(updateVesting(input));
     }
-
-    public deleteVesting(vesting: string[]) {
-        return this.dispatch(deleteVesting(vesting));
+    
+    public deleteVesting(input: DeleteVestingInput) {
+        return this.dispatch(deleteVesting(input));
     }
-
-    get vesting() {
-        return this.state.vesting;
-    }
-
-    public getVesting(key: string) {
-        return this.state.vesting.find(v => v.key === key);
-    }
+    
 }

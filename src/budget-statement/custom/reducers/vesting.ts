@@ -1,18 +1,18 @@
+/**
+ * This is a scaffold file meant for customization:
+ * - modify it by implementing the reducer functions
+ * - delete the file and run the code generator again to have it reset
+ */
+
+import { Vesting } from '@acaldas/document-model-graphql/budget-statement';
 import { hashKey } from '../../../document/utils';
-import {
-    AddVestingAction,
-    DeleteVestingAction,
-    UpdateVestingAction,
-} from '../../gen/vesting/types';
-import { BudgetStatementState, Vesting } from '../types';
+import { BudgetStatementVestingOperations } from '../../gen/vesting/operations';
 
 const sortVesting = (a: Vesting, b: Vesting) => (a.date < b.date ? -1 : 1);
 
-export const addVestingOperation = (
-    state: BudgetStatementState,
-    action: AddVestingAction
-) => {
-    action.input.vesting.forEach(input => {
+export const reducer: BudgetStatementVestingOperations = {
+    addVestingOperation(state, action) {
+        const { input } = action;
         const key = input.key ?? hashKey();
 
         const index = state.vesting.findIndex(v => v.key === input.key);
@@ -30,16 +30,11 @@ export const addVestingOperation = (
             currency: input.currency ?? '',
             vested: input.vested ?? false,
         });
-    });
 
-    state.vesting.sort(sortVesting);
-};
-
-export const updateVestingOperation = (
-    state: BudgetStatementState,
-    action: UpdateVestingAction
-) => {
-    action.input.vesting.forEach(input => {
+        state.vesting.sort(sortVesting);
+    },
+    updateVestingOperation(state, action) {
+        const { input } = action;
         const index = state.vesting.findIndex(v => v.key === input.key);
         if (index === -1) {
             return;
@@ -55,15 +50,12 @@ export const updateVestingOperation = (
             date: input.date ?? vesting.date,
             vested: input.vested ?? vesting.vested,
         };
-    });
-    state.vesting.sort(sortVesting);
-};
 
-export const deleteVestingOperation = (
-    state: BudgetStatementState,
-    action: DeleteVestingAction
-) => {
-    state.vesting = state.vesting.filter(
-        vesting => !action.input.vesting.includes(vesting.key)
-    );
+        state.vesting.sort(sortVesting);
+    },
+    deleteVestingOperation(state, action) {
+        state.vesting = state.vesting.filter(
+            vesting => !action.input.vesting.includes(vesting.key)
+        );
+    },
 };

@@ -1,72 +1,42 @@
-import {
-    AccountUpdateInput,
-    SortAccountsAction,
-    z,
-} from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
-import { Account, AccountInput } from '../../custom';
-import { createAccount } from '../../custom/utils';
+
+
+import {
+    AddAccountInput,
+    UpdateAccountInput,
+    DeleteAccountInput,
+    SortAccountsInput,
+} from '@acaldas/document-model-graphql/budget-statement';
 
 import {
     AddAccountAction,
-    ADD_ACCOUNT,
-    DeleteAccountAction,
-    DELETE_ACCOUNT,
-    SORT_ACCOUNTS,
     UpdateAccountAction,
-    UPDATE_ACCOUNT,
-} from './types';
+    DeleteAccountAction,
+    SortAccountsAction,
+} from './actions';
 
-/**
- * Action creator for adding accounts to the budget statement.
- * @param accounts Array of account inputs to be added.
- * @group Account
- */
-export const addAccount = (accounts: AccountInput[]) =>
+export const addAccount = (input: AddAccountInput) =>
     createAction<AddAccountAction>(
-        ADD_ACCOUNT,
-        {
-            accounts: accounts.map(createAccount),
-        },
-        undefined,
-        z.AddAccountActionSchema
+        'ADD_ACCOUNT',
+        {...input}
     );
 
-/**
- * Action creator for updating accounts in the budget statement.
- * @param accounts Array of account inputs to be updated.
- * @group Account
- */
-export const updateAccount = (accounts: AccountUpdateInput[]) =>
+export const updateAccount = (input: UpdateAccountInput) =>
     createAction<UpdateAccountAction>(
-        UPDATE_ACCOUNT,
-        { accounts },
-        undefined,
-        z.UpdateAccountActionSchema
+        'UPDATE_ACCOUNT',
+        {...input}
     );
 
-/**
- * Action creator for deleting accounts from the budget statement.
- * @param accounts Array of addresses of the accounts to be deleted.
- * @group Account
- */
-export const deleteAccount = (accounts: Account['address'][]) =>
+export const deleteAccount = (input: DeleteAccountInput) =>
     createAction<DeleteAccountAction>(
-        DELETE_ACCOUNT,
-        { accounts },
-        undefined,
-        z.DeleteAccountActionSchema
+        'DELETE_ACCOUNT',
+        {...input}
     );
 
-/**
- * Action creator for sorting accounts in the budget statement.
- * @param accounts Array of addresses of the accounts to sort.
- * @group Account
- */
-export const sortAccounts = (accounts: Account['address'][]) =>
+export const sortAccounts = (input: SortAccountsInput) =>
     createAction<SortAccountsAction>(
-        SORT_ACCOUNTS,
-        { accounts },
-        undefined,
-        z.SortAccountsActionSchema
+        'SORT_ACCOUNTS',
+        {...input}
     );
+
+

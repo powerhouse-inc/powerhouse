@@ -144,6 +144,7 @@ export abstract class BaseDocument<T, A extends Action> {
      */
     public setName(name: string) {
         this.dispatch(setName(name));
+        return this;
     }
 
     /**
@@ -152,6 +153,7 @@ export abstract class BaseDocument<T, A extends Action> {
      */
     public undo(count: number) {
         this.dispatch(undo(count));
+        return this;
     }
 
     /**
@@ -160,6 +162,7 @@ export abstract class BaseDocument<T, A extends Action> {
      */
     public redo(count: number) {
         this.dispatch(redo(count));
+        return this;
     }
     /**
      * Removes a range of operations from the document.
@@ -168,6 +171,7 @@ export abstract class BaseDocument<T, A extends Action> {
      */
     public prune(start?: number | undefined, end?: number | undefined) {
         this.dispatch(prune(start, end));
+        return this;
     }
 
     /**
@@ -180,6 +184,7 @@ export abstract class BaseDocument<T, A extends Action> {
         operations: number
     ) {
         this.dispatch(loadState(state, operations));
+        return this;
     }
 }
 /**

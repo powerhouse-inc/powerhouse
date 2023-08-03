@@ -3,6 +3,7 @@ to: "./src/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/object.ts"
 force: true
 ---
 import { BaseDocument } from '../../../document/object';
+<% if (actions.find(a => a.hasAttachment)) {%>import { AttachmentInput } from '../../../document';<%}%>
 
 import {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
@@ -23,8 +24,8 @@ export default class <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.p
     <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action
 > {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
-    public <%= h.changeCase.camel(action.name) %>(input: <%= action.name %>Input) {
-        return this.dispatch(<%= h.changeCase.camel(action.name) %>(input));
+    public <%= h.changeCase.camel(action.name) %>(input: <%= action.name %>Input<%if(action.hasAttachment){ %>, attachments: AttachmentInput[] <% } %>) {
+        return this.dispatch(<%= h.changeCase.camel(action.name) %>(input<%if(action.hasAttachment){ %>, attachments<% } %>));
     }
     
 <% }); _%>

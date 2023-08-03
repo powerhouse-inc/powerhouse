@@ -1,33 +1,34 @@
-import type { CommentUpdateInput } from '@acaldas/document-model-graphql/budget-statement';
-import { BaseDocument } from '../../../document';
+import { BaseDocument } from '../../../document/object';
+
+
 import {
-    BudgetStatementAction,
-    BudgetStatementState,
-    CommentInput,
-} from '../../custom';
-import { addComment, deleteComment, updateComment } from './creators';
+    AddCommentInput,
+    UpdateCommentInput,
+    DeleteCommentInput,
+} from '@acaldas/document-model-graphql/budget-statement';
 
-export default class CommentObject extends BaseDocument<
-    BudgetStatementState,
-    BudgetStatementAction
+import {
+    addComment,
+    updateComment,
+    deleteComment,
+} from './creators';
+
+import { BudgetStatementAction } from '../actions';
+import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+
+export default class BudgetStatement_Comment extends BaseDocument<
+    BudgetStatementState, BudgetStatementAction
 > {
-    public addComment(comments: CommentInput[]) {
-        return this.dispatch(addComment(comments));
+    public addComment(input: AddCommentInput) {
+        return this.dispatch(addComment(input));
     }
-
-    public updateComment(comments: CommentUpdateInput[]) {
-        return this.dispatch(updateComment(comments));
+    
+    public updateComment(input: UpdateCommentInput) {
+        return this.dispatch(updateComment(input));
     }
-
-    public deleteComment(comments: string[]) {
-        return this.dispatch(deleteComment(comments));
+    
+    public deleteComment(input: DeleteCommentInput) {
+        return this.dispatch(deleteComment(input));
     }
-
-    get comments() {
-        return this.state.comments;
-    }
-
-    public getComment(key: string) {
-        return this.state.comments.find(v => v.key === key);
-    }
+    
 }

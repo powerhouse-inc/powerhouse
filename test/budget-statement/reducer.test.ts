@@ -1,4 +1,5 @@
-import { AccountInput, reducer } from '../../src/budget-statement';
+import { AddAccountInput } from '@acaldas/document-model-graphql/budget-statement';
+import { reducer } from '../../src/budget-statement';
 import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 import {
     addAccount,
@@ -55,7 +56,7 @@ describe('Budget Statement reducer', () => {
     it('should throw error on invalid action', async () => {
         const document = createBudgetStatement();
         expect(() =>
-            reducer(document, addAccount([0] as unknown as AccountInput[]))
+            reducer(document, addAccount({} as unknown as AddAccountInput))
         ).toThrow();
     });
 
@@ -83,14 +84,17 @@ describe('Budget Statement reducer', () => {
 
     it('should set month', async () => {
         const document = createBudgetStatement();
-        const newDocument = reducer(document, setMonth('Feb'));
+        const newDocument = reducer(document, setMonth({ month: 'Feb' }));
         expect(newDocument.state.month).toBe('Feb');
         expect(document.state.month).toBe(null);
     });
 
     it('should set quoteCurrency', async () => {
         const document = createBudgetStatement();
-        const newDocument = reducer(document, setQuoteCurrency('DAI'));
+        const newDocument = reducer(
+            document,
+            setQuoteCurrency({ quoteCurrency: 'DAI' })
+        );
         expect(newDocument.state.quoteCurrency).toBe('DAI');
         expect(document.state.quoteCurrency).toBe(null);
     });

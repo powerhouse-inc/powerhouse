@@ -8,8 +8,10 @@ import {
 } from '../../src/budget-statement/custom/utils';
 import {
     addAuditReport,
+    AddAuditReportAction,
     deleteAuditReport,
 } from '../../src/budget-statement/gen';
+import { Operation } from '../../src/document';
 import { getLocalFile, getRemoteFile } from '../../src/document/utils';
 import { readFile } from '../../src/document/utils/node';
 
@@ -40,13 +42,11 @@ describe('Budget Statement Audit Report reducer', () => {
         const newDocument = reducer(
             document,
             addAuditReport(
-                [
-                    {
-                        report: file.hash,
-                        status: 'Approved',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: file.hash,
+                    status: 'Approved',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
                 [file]
             )
         );
@@ -64,13 +64,11 @@ describe('Budget Statement Audit Report reducer', () => {
         const newDocument = reducer(
             document,
             addAuditReport(
-                [
-                    {
-                        report: file.hash,
-                        status: 'Approved',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: file.hash,
+                    status: 'Approved',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
                 [file]
             )
         );
@@ -92,47 +90,42 @@ describe('Budget Statement Audit Report reducer', () => {
         document = reducer(
             document,
             addAuditReport(
-                [
-                    {
-                        report: file.hash,
-                        status: 'Escalated',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: file.hash,
+                    status: 'Escalated',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+
                 [file]
             )
         );
         document = reducer(
             document,
-            deleteAuditReport(['Q1pqSc2iiEdpNLjRefhjnQ3nNc8='])
+            deleteAuditReport({ report: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=' })
         );
         expect(document.state.auditReports).toStrictEqual([]);
     });
 
-    // it('should set default timestamp on audit report', async () => {
-    //     const document = createBudgetStatement();
-    //     const date = new Date();
-    //     const file = await getLocalFile(tempFile);
-    //
-    //     const newDocument = reducer(
-    //         document,
-    //         addAuditReport(
-    //             {
-    //                 reports: [
-    //                     {
-    //                         report: hash,
-    //                         status: 'Approved',
-    //                     },
-    //                 ],
-    //             },
-    //             [{ ...file, hash }]
-    //         )
-    //     );
-    //     expect(
-    //         newDocument.state.auditReports[0].timestamp >=
-    //             date.toISOString()
-    //     ).toBe(true);
-    // });
+    it('should set default timestamp on audit report', async () => {
+        const document = createBudgetStatement();
+        const date = new Date();
+        const file = await getLocalFile(tempFile);
+
+        const newDocument = reducer(
+            document,
+            addAuditReport(
+                {
+                    report: file.hash,
+                    status: 'Approved',
+                },
+
+                [file]
+            )
+        );
+        expect(
+            newDocument.state.auditReports[0].timestamp >= date.toISOString()
+        ).toBe(true);
+    });
 
     it('should add approved audit report', async () => {
         const file = await getLocalFile(tempFile);
@@ -140,13 +133,12 @@ describe('Budget Statement Audit Report reducer', () => {
         const document = reducer(
             createBudgetStatement(),
             addAuditReport(
-                [
-                    {
-                        report: file.hash,
-                        status: 'Approved',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: file.hash,
+                    status: 'Approved',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+
                 [file]
             )
         );
@@ -159,13 +151,12 @@ describe('Budget Statement Audit Report reducer', () => {
         const document = reducer(
             createBudgetStatement(),
             addAuditReport(
-                [
-                    {
-                        report: file.hash,
-                        status: 'ApprovedWithComments',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: file.hash,
+                    status: 'ApprovedWithComments',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+
                 [file]
             )
         );
@@ -180,13 +171,12 @@ describe('Budget Statement Audit Report reducer', () => {
         const document = reducer(
             createBudgetStatement(),
             addAuditReport(
-                [
-                    {
-                        report: file.hash,
-                        status: 'NeedsAction',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: file.hash,
+                    status: 'NeedsAction',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+
                 [file]
             )
         );
@@ -199,13 +189,12 @@ describe('Budget Statement Audit Report reducer', () => {
         const document = reducer(
             createBudgetStatement(),
             addAuditReport(
-                [
-                    {
-                        report: file.hash,
-                        status: 'Approved',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: file.hash,
+                    status: 'Approved',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+
                 [file]
             )
         );
@@ -214,13 +203,12 @@ describe('Budget Statement Audit Report reducer', () => {
             reducer(
                 document,
                 addAuditReport(
-                    [
-                        {
-                            report: file.hash,
-                            status: 'Approved',
-                            timestamp: '2023-03-15T17:46:22.754Z',
-                        },
-                    ],
+                    {
+                        report: file.hash,
+                        status: 'Approved',
+                        timestamp: '2023-03-15T17:46:22.754Z',
+                    },
+
                     [file]
                 )
             )
@@ -236,13 +224,12 @@ describe('Budget Statement Audit Report reducer', () => {
         const newDocument = reducer(
             document,
             addAuditReport(
-                [
-                    {
-                        report: file.hash,
-                        status: 'Approved',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: file.hash,
+                    status: 'Approved',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+
                 [file]
             )
         );
@@ -266,13 +253,12 @@ describe('Budget Statement Audit Report reducer', () => {
         const document = reducer(
             createBudgetStatement({ name: 'march' }),
             addAuditReport(
-                [
-                    {
-                        report: attachment.hash,
-                        status: 'NeedsAction',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
-                ],
+                {
+                    report: attachment.hash,
+                    status: 'NeedsAction',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+
                 [attachment]
             )
         );
@@ -299,11 +285,9 @@ describe('Budget Statement Audit Report reducer', () => {
         );
         expect(document.state.auditReports[0].status).toBe('NeedsAction');
         expect(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (document.operations[0] as any).input.reports[0].report.startsWith(
-                ''
-            )
-        ).toBe(true);
+            (document.operations[0] as Operation<AddAuditReportAction>).input
+                .report
+        ).toBe(hash);
 
         expect(
             document.attachments[document.state.auditReports[0].report]

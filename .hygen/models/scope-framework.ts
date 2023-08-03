@@ -2,13 +2,14 @@ import { DocumentModelState } from '@acaldas/document-model-graphql/document-mod
 import { hashKey } from '../../src/document/utils';
 
 const state: DocumentModelState = {
-    id: "makerdao/scope-framework", 
-    name: "ScopeFramework",
-    extension: "mdsf",
-    description: "The MakerDAO Scope Framework document contains articles, sections and other elements that make up the governance rules for the MakerDAO scopes.",
-    author:{
-        name: "MakerDAO",
-        website: "https://www.makerdao.com/"
+    id: 'makerdao/scope-framework',
+    name: 'ScopeFramework',
+    extension: 'mdsf',
+    description:
+        'The MakerDAO Scope Framework document contains articles, sections and other elements that make up the governance rules for the MakerDAO scopes.',
+    author: {
+        name: 'MakerDAO',
+        website: 'https://www.makerdao.com/',
     },
     specifications: [
         {
@@ -16,39 +17,95 @@ const state: DocumentModelState = {
             changeLog: [],
             modules: [
                 {
-                    name: "main",
+                    name: 'main',
                     operations: [
                         {
-                            name: "SetRootPath",
-                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                        }, {
-                            name: "AddElement",
-                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                        }, {
-                            name: "UpdateElementType",
-                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                        }, {
-                            name: "UpdateElementName",
-                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                        }, {
-                            name: "UpdateElementComponents",
-                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                        }, {
-                            name: "RemoveElement",
-                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                        }, {
-                            name: "ReorderElements",
-                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                        }, {
-                            name: "MoveElement",
-                            id: "", description: "", schema: "", template: "", reducer: "", examples: [], errors: []
-                        }
+                            name: 'SetRootPath',
+                            id: '',
+                            description: '',
+                            schema: '',
+                            template: '',
+                            reducer: '',
+                            examples: [],
+                            errors: [],
+                        },
+                        {
+                            name: 'AddElement',
+                            id: '',
+                            description: '',
+                            schema: '',
+                            template: '',
+                            reducer: '',
+                            examples: [],
+                            errors: [],
+                        },
+                        {
+                            name: 'UpdateElementType',
+                            id: '',
+                            description: '',
+                            schema: '',
+                            template: '',
+                            reducer: '',
+                            examples: [],
+                            errors: [],
+                        },
+                        {
+                            name: 'UpdateElementName',
+                            id: '',
+                            description: '',
+                            schema: '',
+                            template: '',
+                            reducer: '',
+                            examples: [],
+                            errors: [],
+                        },
+                        {
+                            name: 'UpdateElementComponents',
+                            id: '',
+                            description: '',
+                            schema: '',
+                            template: '',
+                            reducer: '',
+                            examples: [],
+                            errors: [],
+                        },
+                        {
+                            name: 'RemoveElement',
+                            id: '',
+                            description: '',
+                            schema: '',
+                            template: '',
+                            reducer: '',
+                            examples: [],
+                            errors: [],
+                        },
+                        {
+                            name: 'ReorderElements',
+                            id: '',
+                            description: '',
+                            schema: '',
+                            template: '',
+                            reducer: '',
+                            examples: [],
+                            errors: [],
+                        },
+                        {
+                            name: 'MoveElement',
+                            id: '',
+                            description: '',
+                            schema: '',
+                            template: '',
+                            reducer: '',
+                            examples: [],
+                            errors: [],
+                        },
                     ],
-                    id: "", description: ""
-                }
+                    id: '',
+                    description: '',
+                },
             ],
             state: {
-                schema:"", 
+                schema: '',
                 initialValue: JSON.stringify(
                     {
                         rootPath: 'A',
@@ -67,11 +124,11 @@ const state: DocumentModelState = {
                     },
                     undefined,
                     4
-                ), 
-                examples:[]
-            }
-        }
-    ]
-}
+                ),
+                examples: [],
+            },
+        },
+    ],
+};
 
 export default state;

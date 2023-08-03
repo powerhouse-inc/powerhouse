@@ -1,35 +1,34 @@
-import { z } from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
-import { Vesting, VestingInput, VestingUpdateInput } from '../../custom';
+
+
+import {
+    AddVestingInput,
+    UpdateVestingInput,
+    DeleteVestingInput,
+} from '@acaldas/document-model-graphql/budget-statement';
+
 import {
     AddVestingAction,
-    ADD_VESTING,
-    DeleteVestingAction,
-    DELETE_VESTING,
     UpdateVestingAction,
-    UPDATE_VESTING,
-} from './types';
+    DeleteVestingAction,
+} from './actions';
 
-export const addVesting = (vesting: VestingInput[]) =>
+export const addVesting = (input: AddVestingInput) =>
     createAction<AddVestingAction>(
-        ADD_VESTING,
-        { vesting },
-        undefined,
-        z.AddVestingActionSchema
+        'ADD_VESTING',
+        {...input}
     );
 
-export const updateVesting = (vesting: VestingUpdateInput[]) =>
+export const updateVesting = (input: UpdateVestingInput) =>
     createAction<UpdateVestingAction>(
-        UPDATE_VESTING,
-        { vesting },
-        undefined,
-        z.UpdateVestingActionSchema
+        'UPDATE_VESTING',
+        {...input}
     );
 
-export const deleteVesting = (vesting: Vesting['key'][]) =>
+export const deleteVesting = (input: DeleteVestingInput) =>
     createAction<DeleteVestingAction>(
-        DELETE_VESTING,
-        { vesting },
-        undefined,
-        z.DeleteVestingActionSchema
+        'DELETE_VESTING',
+        {...input}
     );
+
+

@@ -1,38 +1,34 @@
-import {
-    CommentUpdateInput,
-    z,
-} from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
-import { Comment, CommentInput } from '../../custom';
+
+
+import {
+    AddCommentInput,
+    UpdateCommentInput,
+    DeleteCommentInput,
+} from '@acaldas/document-model-graphql/budget-statement';
+
 import {
     AddCommentAction,
-    ADD_COMMENT,
-    DeleteCommentAction,
-    DELETE_COMMENT,
     UpdateCommentAction,
-    UPDATE_COMMENT,
-} from './types';
+    DeleteCommentAction,
+} from './actions';
 
-export const addComment = (comments: CommentInput[]) =>
+export const addComment = (input: AddCommentInput) =>
     createAction<AddCommentAction>(
-        ADD_COMMENT,
-        { comments },
-        undefined,
-        z.AddCommentActionSchema
+        'ADD_COMMENT',
+        {...input}
     );
 
-export const updateComment = (comments: CommentUpdateInput[]) =>
+export const updateComment = (input: UpdateCommentInput) =>
     createAction<UpdateCommentAction>(
-        UPDATE_COMMENT,
-        { comments },
-        undefined,
-        z.UpdateCommentActionSchema
+        'UPDATE_COMMENT',
+        {...input}
     );
 
-export const deleteComment = (comments: Comment['key'][]) =>
+export const deleteComment = (input: DeleteCommentInput) =>
     createAction<DeleteCommentAction>(
-        DELETE_COMMENT,
-        { comments },
-        undefined,
-        z.DeleteCommentActionSchema
+        'DELETE_COMMENT',
+        {...input}
     );
+
+

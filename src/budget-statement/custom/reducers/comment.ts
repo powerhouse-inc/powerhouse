@@ -1,19 +1,19 @@
+/**
+ * This is a scaffold file meant for customization:
+ * - modify it by implementing the reducer functions
+ * - delete the file and run the code generator again to have it reset
+ */
+
+import { Comment } from '@acaldas/document-model-graphql/budget-statement';
 import { hashKey } from '../../../document/utils';
-import {
-    AddCommentAction,
-    DeleteCommentAction,
-    UpdateCommentAction,
-} from '../../gen/comment/types';
-import { BudgetStatementState, Comment } from '../types';
+import { BudgetStatementCommentOperations } from '../../gen/comment/operations';
 
 const sortComment = (a: Comment, b: Comment) =>
     a.timestamp < b.timestamp ? -1 : 1;
 
-export const addCommentOperation = (
-    state: BudgetStatementState,
-    action: AddCommentAction
-) => {
-    action.input.comments.forEach(input => {
+export const reducer: BudgetStatementCommentOperations = {
+    addCommentOperation(state, action) {
+        const { input } = action;
         const key = input.key ?? hashKey();
 
         const index = state.comments.findIndex(c => c.key === input.key);
@@ -34,15 +34,10 @@ export const addCommentOperation = (
             timestamp: input.timestamp || new Date().toISOString(),
             status: input.status ?? 'Draft',
         });
-    });
-    state.comments.sort(sortComment);
-};
-
-export const updateCommentOperation = (
-    state: BudgetStatementState,
-    action: UpdateCommentAction
-) => {
-    action.input.comments.forEach(input => {
+        state.comments.sort(sortComment);
+    },
+    updateCommentOperation(state, action) {
+        const { input } = action;
         const index = state.comments.findIndex(c => c.key === input.key);
         if (index === -1) {
             return;
@@ -61,15 +56,12 @@ export const updateCommentOperation = (
             timestamp: input.timestamp ?? new Date().toISOString(),
             status: input.status ?? comment.status,
         };
-    });
-    state.comments.sort(sortComment);
-};
-
-export const deleteCommentOperation = (
-    state: BudgetStatementState,
-    action: DeleteCommentAction
-) => {
-    state.comments = state.comments.filter(
-        comment => !action.input.comments.includes(comment.key)
-    );
+        state.comments.sort(sortComment);
+    },
+    deleteCommentOperation(state, action) {
+        const { input } = action;
+        state.comments = state.comments.filter(
+            comment => input.comment !== comment.key
+        );
+    },
 };

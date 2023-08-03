@@ -1,22 +1,23 @@
+/**
+* This is a scaffold file meant for customization.
+* Delete the file and run the code generator again to have it reset
+*/
+
 import { actions as BaseActions } from '../document';
-import { reducer, utils } from './custom';
+import { reducer } from './gen/reducer';
 import * as gen from './gen';
-export * from './custom';
-export type {
-    BudgetStatementAction,
-    BudgetStatementDocument,
-    BudgetStatementState,
-    ExtendedBudgetStatementState,
-    types,
-} from './custom';
-export { BudgetStatement };
-const { BudgetStatement, ...BudgetActions } = gen;
+import { 
+    createEmptyBudgetStatementState, 
+    createEmptyExtendedBudgetStatementState 
+} from './custom/utils';
 
-export const actions = { ...BaseActions, ...BudgetActions };
+const { BudgetStatement, ...BudgetStatementActions } = gen;
+const actions = { ...BaseActions, ...BudgetStatementActions };
 
-export default {
+export {
     actions,
-    reducer,
-    utils,
+    reducer, 
     BudgetStatement,
-};
+    createEmptyBudgetStatementState,
+    createEmptyExtendedBudgetStatementState
+}

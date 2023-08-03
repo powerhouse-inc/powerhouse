@@ -3,12 +3,12 @@ import mime from 'mime/lite';
 import { BaseAction } from '../actions/types';
 import type {
     Action,
+    Attachment,
+    AttachmentInput,
     AttachmentRef,
     Document,
-    DocumentFile,
     DocumentHeader,
     ExtendedState,
-    InputDocumentFile,
     Operation,
     Reducer,
 } from '../types';
@@ -181,7 +181,7 @@ async function loadFromZip<S, A extends Action>(
 
 function getFileAttributes(
     file: string
-): Omit<DocumentFile, 'data' | 'mimeType'> {
+): Omit<Attachment, 'data' | 'mimeType'> {
     const extension = file.replace(/^.*\./, '') || undefined;
     const fileName = file.replace(/^.*[/\\]/, '') || undefined;
     return { extension, fileName };
@@ -192,7 +192,7 @@ function getFileAttributes(
  * @param url - The URL of the attachment to fetch.
  * @returns A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
  */
-export async function getRemoteFile(url: string): Promise<InputDocumentFile> {
+export async function getRemoteFile(url: string): Promise<AttachmentInput> {
     const { buffer, mimeType = 'application/octet-stream' } = await fetchFile(
         url
     );
@@ -211,7 +211,7 @@ export async function getRemoteFile(url: string): Promise<InputDocumentFile> {
  * @param path - The path of the attachment file to read.
  * @returns A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
  */
-export async function getLocalFile(path: string): Promise<InputDocumentFile> {
+export async function getLocalFile(path: string): Promise<AttachmentInput> {
     const buffer = await getFile(path);
     const mimeType = mime.getType(path) || 'application/octet-stream';
     const attributes = getFileAttributes(path);

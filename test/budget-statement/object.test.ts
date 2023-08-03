@@ -1,10 +1,10 @@
 import fs from 'fs';
+import { BudgetStatement, reducer } from '../../src/budget-statement';
+import { createAccount } from '../../src/budget-statement/custom/utils';
 import {
-    BudgetStatement,
     BudgetStatementAction,
     BudgetStatementState,
-    reducer,
-} from '../../src/budget-statement';
+} from '../../src/budget-statement/gen';
 import { loadFromInput } from '../../src/document/utils/file';
 
 describe('Budget Statement Class', () => {
@@ -14,29 +14,27 @@ describe('Budget Statement Class', () => {
     });
 
     it('should set initial state', async () => {
-        const budgetStatement = new BudgetStatement({
-            state: { month: '03/2023' },
-        });
+        const budgetStatement = new BudgetStatement();
 
-        expect(budgetStatement.month).toBe('03/2023');
-        expect(budgetStatement.quoteCurrency).toBe(null);
-        expect(budgetStatement.owner).toStrictEqual({
+        expect(budgetStatement.state.month).toBe(null);
+        expect(budgetStatement.state.quoteCurrency).toBe(null);
+        expect(budgetStatement.state.owner).toStrictEqual({
             id: null,
             ref: null,
             title: null,
         });
-        expect(budgetStatement.ftes).toStrictEqual(null);
-        expect(budgetStatement.accounts).toStrictEqual([]);
-        expect(budgetStatement.comments).toStrictEqual([]);
-        expect(budgetStatement.vesting).toStrictEqual([]);
+        expect(budgetStatement.state.ftes).toStrictEqual(null);
+        expect(budgetStatement.state.accounts).toStrictEqual([]);
+        expect(budgetStatement.state.comments).toStrictEqual([]);
+        expect(budgetStatement.state.vesting).toStrictEqual([]);
     });
 
     it('should set base attributes', () => {
         const budgetStatement = new BudgetStatement();
 
         budgetStatement
-            .setMonth('03/2023')
-            .setQuoteCurrency('DAI')
+            .setMonth({ month: '03/2023' })
+            .setQuoteCurrency({ quoteCurrency: 'DAI' })
             .setOwner({ id: '001', ref: 'test', title: 'Test' })
             .setFtes({
                 value: 10.8,
@@ -60,14 +58,14 @@ describe('Budget Statement Class', () => {
                 ],
             });
 
-        expect(budgetStatement.month).toBe('03/2023');
-        expect(budgetStatement.quoteCurrency).toBe('DAI');
-        expect(budgetStatement.owner).toStrictEqual({
+        expect(budgetStatement.state.month).toBe('03/2023');
+        expect(budgetStatement.state.quoteCurrency).toBe('DAI');
+        expect(budgetStatement.state.owner).toStrictEqual({
             id: '001',
             ref: 'test',
             title: 'Test',
         });
-        expect(budgetStatement.ftes).toStrictEqual({
+        expect(budgetStatement.state.ftes).toStrictEqual({
             value: 10.8,
             forecast: [
                 {
@@ -92,19 +90,18 @@ describe('Budget Statement Class', () => {
 
     it('should add account', async () => {
         const budgetStatement = new BudgetStatement();
-        budgetStatement.addAccount([
-            {
+        budgetStatement.addAccount({
+            address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+            name: 'Grants Program',
+        });
+
+        expect(budgetStatement.state.accounts).toStrictEqual([
+            createAccount({
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-            },
+            }),
         ]);
-
-        expect(budgetStatement.accounts).toStrictEqual([
-            budgetStatement.getAccount(
-                'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f'
-            ),
-        ]);
-        expect(budgetStatement.accounts).toStrictEqual([
+        expect(budgetStatement.state.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
@@ -116,20 +113,16 @@ describe('Budget Statement Class', () => {
     it('should chain add account calls', async () => {
         const budgetStatement = new BudgetStatement();
         budgetStatement
-            .addAccount([
-                {
-                    address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
-                    name: 'Grants Program',
-                },
-            ])
-            .addAccount([
-                {
-                    address: 'eth:0x7c09ff9b59baaebfd721cbda3676826aa6d7bae8',
-                    name: 'Incubation Program',
-                },
-            ]);
+            .addAccount({
+                address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+                name: 'Grants Program',
+            })
+            .addAccount({
+                address: 'eth:0x7c09ff9b59baaebfd721cbda3676826aa6d7bae8',
+                name: 'Incubation Program',
+            });
 
-        expect(budgetStatement.accounts).toStrictEqual([
+        expect(budgetStatement.state.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
@@ -144,16 +137,13 @@ describe('Budget Statement Class', () => {
     });
 
     it('should save to file', async () => {
-        const budgetStatement = new BudgetStatement({
-            name: 'march',
-            state: { month: '03/2023' },
+        const budgetStatement = new BudgetStatement();
+        budgetStatement.setName('march');
+        budgetStatement.setMonth({ month: '03/2023' });
+        budgetStatement.addAccount({
+            address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+            name: 'Grants Program',
         });
-        budgetStatement.addAccount([
-            {
-                address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
-                name: 'Grants Program',
-            },
-        ]);
         const path = await budgetStatement.saveToFile(
             './test/budget-statement/temp'
         );
@@ -169,8 +159,8 @@ describe('Budget Statement Class', () => {
             './test/budget-statement/temp/march.phbs.zip'
         );
         expect(budgetStatement.name).toBe('march');
-        expect(budgetStatement.month).toBe('03/2023');
-        expect(budgetStatement.accounts).toStrictEqual([
+        expect(budgetStatement.state.month).toBe('03/2023');
+        expect(budgetStatement.state.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
@@ -192,24 +182,21 @@ describe('Budget Statement Class', () => {
     });
 
     it('should load from file and keep undo/redo state', async () => {
-        const budgetStatement = new BudgetStatement({
-            name: 'undo',
-            state: { month: '03/2023' },
-        });
-        budgetStatement.addAccount([
-            {
+        const budgetStatement = new BudgetStatement();
+        budgetStatement
+            .setName('undo')
+            .setMonth({ month: '03/2023' })
+            .addAccount({
                 address: 'eth:000',
                 name: 'Grants Program',
-            },
-        ]);
-        budgetStatement.addAccount([
-            {
+            })
+            .addAccount({
                 address: 'eth:111',
                 name: 'Incubation',
-            },
-        ]);
-        budgetStatement.undo(1);
-        expect(budgetStatement.accounts).toStrictEqual([
+            })
+            .undo(1);
+
+        expect(budgetStatement.state.accounts).toStrictEqual([
             {
                 address: 'eth:000',
                 name: 'Grants Program',
@@ -222,7 +209,7 @@ describe('Budget Statement Class', () => {
         );
         const loadedBudgetStatement = await BudgetStatement.fromFile(path);
 
-        expect(loadedBudgetStatement.accounts).toStrictEqual([
+        expect(loadedBudgetStatement.state.accounts).toStrictEqual([
             {
                 address: 'eth:000',
                 name: 'Grants Program',
@@ -231,7 +218,7 @@ describe('Budget Statement Class', () => {
         ]);
 
         loadedBudgetStatement.redo(1);
-        expect(loadedBudgetStatement.accounts).toStrictEqual([
+        expect(loadedBudgetStatement.state.accounts).toStrictEqual([
             {
                 address: 'eth:000',
                 name: 'Grants Program',

@@ -16,20 +16,18 @@ describe('Budget Statement Comment reducer', () => {
         const document = createBudgetStatement();
         const newDocument = reducer(
             document,
-            addComment([
-                {
-                    key: '123',
-                    comment: 'Test',
-                    status: 'Escalated',
-                    timestamp: '2023-03-15T17:46:22.754Z',
-                    author: {
-                        ref: 'makerdao/user',
-                        id: 'TEST-001',
-                        username: 'liberuum',
-                        roleLabel: 'Auditor',
-                    },
+            addComment({
+                key: '123',
+                comment: 'Test',
+                status: 'Escalated',
+                timestamp: '2023-03-15T17:46:22.754Z',
+                author: {
+                    ref: 'makerdao/user',
+                    id: 'TEST-001',
+                    username: 'liberuum',
+                    roleLabel: 'Auditor',
                 },
-            ])
+            })
         );
         expect(newDocument.state.comments[0]).toStrictEqual({
             key: '123',
@@ -50,26 +48,24 @@ describe('Budget Statement Comment reducer', () => {
         let document = createBudgetStatement();
         document = reducer(
             document,
-            addComment([
-                {
-                    key: '123',
-                    comment: 'Test',
-                    status: 'Escalated',
-                    timestamp: '2023-03-15T17:46:22.754Z',
-                    author: {
-                        ref: 'makerdao/user',
-                        id: 'TEST-001',
-                        username: 'liberuum',
-                        roleLabel: 'Auditor',
-                    },
+            addComment({
+                key: '123',
+                comment: 'Test',
+                status: 'Escalated',
+                timestamp: '2023-03-15T17:46:22.754Z',
+                author: {
+                    ref: 'makerdao/user',
+                    id: 'TEST-001',
+                    username: 'liberuum',
+                    roleLabel: 'Auditor',
                 },
-            ])
+            })
         );
 
         jest.useFakeTimers({ now: new Date('2023-03-16') });
         document = reducer(
             document,
-            updateComment([{ key: '123', comment: 'Test 2' }])
+            updateComment({ key: '123', comment: 'Test 2' })
         );
         expect(document.state.comments[0]).toStrictEqual({
             key: '123',
@@ -89,23 +85,21 @@ describe('Budget Statement Comment reducer', () => {
         let document = createBudgetStatement();
         document = reducer(
             document,
-            addComment([
-                {
-                    key: '123',
-                    comment: 'Test',
-                    status: 'Escalated',
-                    timestamp: '2023-03-15T17:46:22.754Z',
-                    author: {
-                        ref: 'makerdao/user',
-                        id: 'TEST-001',
-                        username: 'liberuum',
-                        roleLabel: 'Auditor',
-                    },
+            addComment({
+                key: '123',
+                comment: 'Test',
+                status: 'Escalated',
+                timestamp: '2023-03-15T17:46:22.754Z',
+                author: {
+                    ref: 'makerdao/user',
+                    id: 'TEST-001',
+                    username: 'liberuum',
+                    roleLabel: 'Auditor',
                 },
-            ])
+            })
         );
 
-        document = reducer(document, deleteComment(['123']));
+        document = reducer(document, deleteComment({ comment: '123' }));
         expect(document.state.comments.length).toBe(0);
     });
 
@@ -114,18 +108,16 @@ describe('Budget Statement Comment reducer', () => {
         const document = createBudgetStatement();
         const newDocument = reducer(
             document,
-            addComment([
-                {
-                    comment: 'Test',
-                    status: 'Escalated',
-                    author: {
-                        ref: 'makerdao/user',
-                        id: 'TEST-001',
-                        username: 'liberuum',
-                        roleLabel: 'Auditor',
-                    },
+            addComment({
+                comment: 'Test',
+                status: 'Escalated',
+                author: {
+                    ref: 'makerdao/user',
+                    id: 'TEST-001',
+                    username: 'liberuum',
+                    roleLabel: 'Auditor',
                 },
-            ])
+            })
         );
         expect(newDocument.state.comments[0].key.length).toBe(28);
         expect(newDocument.state.comments[0].timestamp).toBe(
@@ -135,43 +127,49 @@ describe('Budget Statement Comment reducer', () => {
 
     it('should sort comments by timestamp', async () => {
         const document = createBudgetStatement();
-        const newDocument = reducer(
+        let newDocument = reducer(
             document,
-            addComment([
-                {
-                    comment: '03/11',
-                    timestamp: '2023-03-11T17:46:22.754Z',
-                },
-                {
-                    comment: '03/15',
-                    timestamp: '2023-03-15T17:46:22.754Z',
-                },
-                {
-                    comment: '03/13',
-                    timestamp: '2023-03-13T17:46:22.754Z',
-                },
-            ])
+            addComment({
+                comment: '03/11',
+                timestamp: '2023-03-11T17:46:22.754Z',
+            })
         );
+        newDocument = reducer(
+            newDocument,
+            addComment({
+                comment: '03/15',
+                timestamp: '2023-03-15T17:46:22.754Z',
+            })
+        );
+        newDocument = reducer(
+            newDocument,
+            addComment({
+                comment: '03/13',
+                timestamp: '2023-03-13T17:46:22.754Z',
+            })
+        );
+
         expect(newDocument.state.comments[0].comment).toBe('03/11');
         expect(newDocument.state.comments[1].comment).toBe('03/13');
         expect(newDocument.state.comments[2].comment).toBe('03/15');
     });
 
     it('should throw if comment key already exists', async () => {
-        const document = createBudgetStatement();
+        let document = createBudgetStatement();
+        document = reducer(
+            document,
+            addComment({
+                key: '123',
+                comment: '03/15',
+            })
+        );
         expect(() =>
             reducer(
                 document,
-                addComment([
-                    {
-                        key: '123',
-                        comment: '03/15',
-                    },
-                    {
-                        key: '123',
-                        comment: '03/13',
-                    },
-                ])
+                addComment({
+                    key: '123',
+                    comment: '03/13',
+                })
             )
         ).toThrow();
     });
@@ -180,35 +178,34 @@ describe('Budget Statement Comment reducer', () => {
         let document = createBudgetStatement();
         document = reducer(
             document,
-            addComment([
-                {
-                    key: '123',
-                    comment: 'Test',
-                    status: 'Escalated',
-                    timestamp: '2023-03-15T17:46:22.754Z',
-                    author: {
-                        ref: 'makerdao/user',
-                        id: 'TEST-001',
-                        username: 'liberuum',
-                        roleLabel: 'Auditor',
-                    },
+            addComment({
+                key: '123',
+                comment: 'Test',
+                status: 'Escalated',
+                timestamp: '2023-03-15T17:46:22.754Z',
+                author: {
+                    ref: 'makerdao/user',
+                    id: 'TEST-001',
+                    username: 'liberuum',
+                    roleLabel: 'Auditor',
                 },
-            ])
+            })
         );
 
         document = reducer(
             document,
-            updateComment([
-                {
-                    key: '123',
-                    status: 'Final',
-                    timestamp: '2023-03-15T17:46:22.754Z',
-                },
-                {
-                    key: '456',
-                    comment: '03/15',
-                },
-            ])
+            updateComment({
+                key: '123',
+                status: 'Final',
+                timestamp: '2023-03-15T17:46:22.754Z',
+            })
+        );
+        document = reducer(
+            document,
+            updateComment({
+                key: '456',
+                comment: '03/15',
+            })
         );
 
         expect(document.state.comments).toStrictEqual([

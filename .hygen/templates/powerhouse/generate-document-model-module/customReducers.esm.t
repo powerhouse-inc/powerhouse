@@ -12,8 +12,8 @@ import { <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module)
 
 export const reducer: <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations = {
 <% actions.forEach(action => { _%>
-    <%= h.changeCase.camel(action) %>Operation(state, action) {
-        throw new Error('Reducer "<%= h.changeCase.camel(action) %>Operation" not yet implemented');
+    <%= h.changeCase.camel(action.name) %>Operation(state, action) {
+        throw new Error('Reducer "<%= h.changeCase.camel(action.name) %>Operation" not yet implemented');
     },
 <% }); _%>
 }

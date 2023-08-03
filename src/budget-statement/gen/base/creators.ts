@@ -1,45 +1,42 @@
-import { z } from '@acaldas/document-model-graphql/budget-statement';
 import { createAction } from '../../../document/utils';
-import { FtesInput, OwnerInput } from '../../custom';
+
+
 import {
-    SetFtesAction,
-    SetMonthAction,
+    SetOwnerInput,
+    SetMonthInput,
+    SetFtesInput,
+    SetQuoteCurrencyInput,
+} from '@acaldas/document-model-graphql/budget-statement';
+
+import {
     SetOwnerAction,
+    SetMonthAction,
+    SetFtesAction,
     SetQuoteCurrencyAction,
-    SET_FTES,
-    SET_MONTH,
-    SET_OWNER,
-    SET_QUOTE_CURRENCY,
-} from './types';
+} from './actions';
 
-export const setOwner = (owner: OwnerInput) =>
+export const setOwner = (input: SetOwnerInput) =>
     createAction<SetOwnerAction>(
-        SET_OWNER,
-        owner,
-        undefined,
-        z.SetOwnerActionSchema
+        'SET_OWNER',
+        {...input}
     );
 
-export const setMonth = (month: string) =>
+export const setMonth = (input: SetMonthInput) =>
     createAction<SetMonthAction>(
-        SET_MONTH,
-        month,
-        undefined,
-        z.SetMonthActionSchema
+        'SET_MONTH',
+        {...input}
     );
 
-export const setQuoteCurrency = (currency: string) =>
-    createAction<SetQuoteCurrencyAction>(
-        SET_QUOTE_CURRENCY,
-        currency,
-        undefined,
-        z.SetQuoteCurrencyActionSchema
-    );
-
-export const setFtes = (ftes: FtesInput) =>
+export const setFtes = (input: SetFtesInput) =>
     createAction<SetFtesAction>(
-        SET_FTES,
-        ftes,
-        undefined,
-        z.SetFtesActionSchema
+        'SET_FTES',
+        {...input}
     );
+
+export const setQuoteCurrency = (input: SetQuoteCurrencyInput) =>
+    createAction<SetQuoteCurrencyAction>(
+        'SET_QUOTE_CURRENCY',
+        {...input}
+    );
+
+

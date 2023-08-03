@@ -1,6 +1,7 @@
 import type { Draft } from 'immer/dist/internal';
 import type { BaseAction } from './actions/types';
 export type { BaseAction };
+
 /**
  * Defines the basic structure of an action.
  *
@@ -12,7 +13,14 @@ export type Action<T extends string = string, I = unknown> = {
     /** The payload of the action. */
     input: I;
     /** The attachments included in the action. */
-    attachments?: InputDocumentFile[] | undefined;
+    attachments?: AttachmentInput[] | undefined;
+};
+
+export type ActionWithAttachment<
+    T extends string = string,
+    I = unknown
+> = Action<T, I> & {
+    attachments: AttachmentInput[];
 };
 
 /**
@@ -87,7 +95,7 @@ export type DocumentHeader = {
 /**
  * The attributes stored for a file. Namely, attachments of a document.
  */
-export type DocumentFile = {
+export type Attachment = {
     /** The binary data of the attachment in Base64 */
     data: string;
     /** The MIME type of the attachment */
@@ -98,8 +106,8 @@ export type DocumentFile = {
     fileName?: string | null;
 };
 
-export type InputDocumentFile =
-    | DocumentFile & {
+export type AttachmentInput =
+    | Attachment & {
           hash: string;
       };
 
@@ -111,7 +119,7 @@ export type InputDocumentFile =
  * multiple instances of the binary data of the attachments.
  *
  */
-export type FileRegistry = Record<AttachmentRef, DocumentFile>;
+export type FileRegistry = Record<AttachmentRef, Attachment>;
 
 export type ExtendedState<State = unknown> = DocumentHeader & {
     /** The document model specific state. */

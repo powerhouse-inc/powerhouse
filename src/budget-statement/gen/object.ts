@@ -1,107 +1,62 @@
-import { applyMixins, BaseDocument, ExtendedState } from '../../document';
-import {
-    BudgetStatementAction,
-    BudgetStatementState,
-    reducer,
-} from '../custom';
-import { createBudgetStatement } from '../custom/utils';
-import AccountObject from './account/object';
-import AuditObject from './audit/object';
-import BaseObject from './base/object';
-import CommentObject from './comment/object';
-import LineItemObject from './line-item/object';
-import VestingObject from './vesting/object';
+import { BaseDocument, applyMixins } from '../../document/object';
+import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+import { BudgetStatementAction } from './actions';
+import { createEmptyExtendedBudgetStatementState } from '../custom/utils';
+import { reducer } from './reducer';
+import { ExtendedBudgetStatementState } from './types';
 
-/**
- * Represents a BudgetStatement object that extends the {@link BaseDocument} class to provide a convenient
- * interface for managing a budget statement.
- */
-interface BudgetStatement
-    extends AccountObject,
-        AuditObject,
-        CommentObject,
-        BaseObject,
-        LineItemObject,
-        VestingObject {}
+import BudgetStatement_Account from './account/object';
+import BudgetStatement_LineItem from './line-item/object';
+import BudgetStatement_Base from './base/object';
+import BudgetStatement_Audit from './audit/object';
+import BudgetStatement_Comment from './comment/object';
+import BudgetStatement_Vesting from './vesting/object';
 
-/**
- * Represents a budget statement document.
- *
- * @extends BaseDocument<State, BudgetStatementAction>
- * @module
- */
-class BudgetStatement extends BaseDocument<
-    BudgetStatementState,
-    BudgetStatementAction
-> {
-    /**
-     * The file extension used to save budget statements.
-     */
+export * from './account/object';
+export * from './line-item/object';
+export * from './base/object';
+export * from './audit/object';
+export * from './comment/object';
+export * from './vesting/object';
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface BudgetStatement extends 
+    BudgetStatement_Account,
+    BudgetStatement_LineItem,
+    BudgetStatement_Base,
+    BudgetStatement_Audit,
+    BudgetStatement_Comment,
+    BudgetStatement_Vesting {}
+
+class BudgetStatement extends BaseDocument<BudgetStatementState, BudgetStatementAction> {
     static fileExtension = 'phbs';
 
-    /**
-     *
-     * Creates a new BudgetStatement instance.
-     * @param initialState - An optional object representing the initial state of the BudgetStatement.
-     */
-    constructor(
-        initialState?: Partial<ExtendedState<Partial<BudgetStatementState>>>
-    ) {
-        const document = createBudgetStatement(initialState);
-        super(reducer, document);
+    constructor(initialState?: ExtendedBudgetStatementState) {
+        super(reducer, initialState || createEmptyExtendedBudgetStatementState());
     }
 
-    /**
-     * Saves the budget statement to a file.
-     *
-     * @param path The path to the file to save.
-     * @returns A promise that resolves when the save operation completes.
-     */
     public saveToFile(path: string, name?: string) {
         return super.saveToFile(path, BudgetStatement.fileExtension, name);
     }
 
-    /**
-     * Loads the budget statement from a file.
-     *
-     * @param path The path to the file to load.
-     * @returns A promise that resolves with the loaded `BudgetStatement` instance.
-     */
     public loadFromFile(path: string) {
         return super.loadFromFile(path);
     }
 
-    /**
-     * Creates a new `BudgetStatement` instance from a file.
-     *
-     * @param path The path to the file to load.
-     * @returns A promise that resolves with the loaded `BudgetStatement` instance.
-     */
     static async fromFile(path: string) {
-        const budgetStatement = new this();
-        await budgetStatement.loadFromFile(path);
-        return budgetStatement;
+        const document = new this();
+        await document.loadFromFile(path);
+        return document;
     }
 }
 
 applyMixins(BudgetStatement, [
-    AccountObject,
-    AuditObject,
-    CommentObject,
-    BaseObject,
-    LineItemObject,
-    VestingObject,
+    BudgetStatement_Account,
+    BudgetStatement_LineItem,
+    BudgetStatement_Base,
+    BudgetStatement_Audit,
+    BudgetStatement_Comment,
+    BudgetStatement_Vesting
 ]);
 
-/**
- * Represents a BudgetStatement object that extends the {@link BaseDocument} class to provide a convenient
- * interface for managing a budget statement.
- * @extends AccountObject
- * @extends AuditObject
- * @extends CommentObject
- * @extends InitObject
- * @extends LineItemObject
- * @extends StatusObject
- * @extends VestingObject
- */
 export { BudgetStatement };

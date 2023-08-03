@@ -1,57 +1,40 @@
-import { BaseDocument } from '../../../document';
+import { BaseDocument } from '../../../document/object';
+
+
 import {
-    BudgetStatementAction,
-    BudgetStatementState,
-    FtesInput,
-    OwnerInput,
-} from '../../custom';
-import { setFtes, setMonth, setOwner, setQuoteCurrency } from './creators';
+    SetOwnerInput,
+    SetMonthInput,
+    SetFtesInput,
+    SetQuoteCurrencyInput,
+} from '@acaldas/document-model-graphql/budget-statement';
 
-export default class BaseObject extends BaseDocument<
-    BudgetStatementState,
-    BudgetStatementAction
+import {
+    setOwner,
+    setMonth,
+    setFtes,
+    setQuoteCurrency,
+} from './creators';
+
+import { BudgetStatementAction } from '../actions';
+import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+
+export default class BudgetStatement_Base extends BaseDocument<
+    BudgetStatementState, BudgetStatementAction
 > {
-    /**
-     * Gets the month of the budget statement.
-     * @category Budget Statement
-     */
-    get month() {
-        return this.state.month;
+    public setOwner(input: SetOwnerInput) {
+        return this.dispatch(setOwner(input));
     }
-
-    /**
-     * Gets the owner of the budget statement.
-     * @category Budget Statement
-     */
-    get owner() {
-        return this.state.owner;
+    
+    public setMonth(input: SetMonthInput) {
+        return this.dispatch(setMonth(input));
     }
-
-    /**
-     * Gets the quote currency of the budget statement.
-     * @category Budget Statement
-     */
-    get quoteCurrency() {
-        return this.state.quoteCurrency;
+    
+    public setFtes(input: SetFtesInput) {
+        return this.dispatch(setFtes(input));
     }
-
-    get ftes() {
-        return this.state.ftes;
+    
+    public setQuoteCurrency(input: SetQuoteCurrencyInput) {
+        return this.dispatch(setQuoteCurrency(input));
     }
-
-    public setOwner(owner: OwnerInput) {
-        return this.dispatch(setOwner(owner));
-    }
-
-    public setMonth(month: string) {
-        return this.dispatch(setMonth(month));
-    }
-
-    public setQuoteCurrency(currency: string) {
-        return this.dispatch(setQuoteCurrency(currency));
-    }
-
-    public setFtes(ftes: FtesInput) {
-        return this.dispatch(setFtes(ftes));
-    }
+    
 }

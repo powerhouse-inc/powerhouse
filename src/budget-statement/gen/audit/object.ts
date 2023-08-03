@@ -1,58 +1,28 @@
-import { AddAuditReportInput } from '@acaldas/document-model-graphql/budget-statement';
-import { BaseDocument } from '../../../document';
-import { InputDocumentFile } from '../../../document/types';
+import { AttachmentInput } from '../../../document';
+import { BaseDocument } from '../../../document/object';
+
 import {
-    AuditReport,
-    BudgetStatementAction,
-    BudgetStatementState,
-} from '../../custom';
+    AddAuditReportInput,
+    DeleteAuditReportInput,
+} from '@acaldas/document-model-graphql/budget-statement';
+
 import { addAuditReport, deleteAuditReport } from './creators';
 
-export default class AuditObject extends BaseDocument<
+import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+import { BudgetStatementAction } from '../actions';
+
+export default class BudgetStatement_Audit extends BaseDocument<
     BudgetStatementState,
     BudgetStatementAction
 > {
-    /**
-     * Adds audit reports to the budget statement.
-     * @param reports - An array of audit report objects to add.
-     *
-     * @group Audit
-     */
     public addAuditReport(
-        reports: AddAuditReportInput['reports'],
-        attachments: InputDocumentFile[]
+        input: AddAuditReportInput,
+        attachments: AttachmentInput[]
     ) {
-        return this.dispatch(addAuditReport(reports, attachments));
+        return this.dispatch(addAuditReport(input, attachments));
     }
 
-    /**
-     * Deletes audit reports from the budget statement.
-     * @param reports - An array of objects that contain the report attachment name of the audits items to be deleted.
-     *
-     * @group Audit
-     */
-    public deleteAuditReport(reports: AuditReport['report'][]) {
-        return this.dispatch(deleteAuditReport(reports));
-    }
-
-    /**
-     * Retrieves all audit reports from the budget statement.
-     * @returns An array of audit report objects.
-     *
-     * @group Audit
-     */
-    public getAuditReports() {
-        return this.state.auditReports;
-    }
-
-    /**
-     * Retrieves a specific audit report from the budget statement.
-     * @param report - The name of the attachment of the report to be retrieved.
-     * @returns The audit report object if it exists, or undefined if not.
-     *
-     * @group Audit
-     */
-    public getAuditReport(report: AuditReport['report']) {
-        return this.getAuditReports().find(audit => audit.report === report);
+    public deleteAuditReport(input: DeleteAuditReportInput) {
+        return this.dispatch(deleteAuditReport(input));
     }
 }

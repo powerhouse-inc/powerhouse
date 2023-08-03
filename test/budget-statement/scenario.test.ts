@@ -1,12 +1,9 @@
 import fs from 'fs';
 import { parse } from 'jsonc-parser';
 import path from 'path';
-import {
-    BudgetStatement,
-    BudgetStatementAction,
-    reducer,
-} from '../../src/budget-statement';
+import { BudgetStatement, reducer } from '../../src/budget-statement';
 import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
+import { BudgetStatementAction } from '../../src/budget-statement/gen';
 
 // loads scenario from jsonc files
 const testFolder =
@@ -48,11 +45,8 @@ class BudgetStatementTest extends BudgetStatement {
             )
             .join('');
 
-        return typeof action.input === 'object'
-            ? // @ts-ignore
-              this[method]?.(...Object.values(action.input), action.attachments)
-            : // @ts-ignore
-              this[method](action.input, action.attachments);
+        // @ts-ignore
+        return this[method](action.input, action.attachments);
     }
 }
 
@@ -61,7 +55,7 @@ describe('Budget Statement scenario 1 with object methods', () => {
     const initialStep = steps[0].json;
     const budgetStatement = new BudgetStatementTest({
         state: initialStep.state,
-    });
+    } as any);
 
     // tests each scenario step in sequence
     it.each(steps.slice(1))('should verify $file', ({ json }) => {

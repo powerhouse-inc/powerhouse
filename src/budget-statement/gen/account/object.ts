@@ -1,82 +1,40 @@
-import { AccountUpdateInput } from '@acaldas/document-model-graphql/budget-statement';
-import { BaseDocument } from '../../../document';
+import { BaseDocument } from '../../../document/object';
+
+
 import {
-    Account,
-    AccountInput,
-    BudgetStatementAction,
-    BudgetStatementState,
-} from '../../custom';
+    AddAccountInput,
+    UpdateAccountInput,
+    DeleteAccountInput,
+    SortAccountsInput,
+} from '@acaldas/document-model-graphql/budget-statement';
+
 import {
     addAccount,
+    updateAccount,
     deleteAccount,
     sortAccounts,
-    updateAccount,
 } from './creators';
 
-/**
- * Account related methods and getters
- */
-export default class AccountObject extends BaseDocument<
-    BudgetStatementState,
-    BudgetStatementAction
+import { BudgetStatementAction } from '../actions';
+import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+
+export default class BudgetStatement_Account extends BaseDocument<
+    BudgetStatementState, BudgetStatementAction
 > {
-    /**
-     * Adds one or more accounts to the budget statement.
-     * @param accounts An array of AccountInput objects to add.
-     *
-     * @group Account
-     */
-    public addAccount(accounts: AccountInput[]) {
-        const action = addAccount(accounts);
-        return this.dispatch(action);
+    public addAccount(input: AddAccountInput) {
+        return this.dispatch(addAccount(input));
     }
-
-    /**
-     * Updates one or more existing accounts in the budget statement.
-     * @param accounts An array of AccountInput objects to update.
-     *
-     * @group Account
-     */
-    public updateAccount(accounts: AccountUpdateInput[]) {
-        return this.dispatch(updateAccount(accounts));
+    
+    public updateAccount(input: UpdateAccountInput) {
+        return this.dispatch(updateAccount(input));
     }
-
-    /**
-     * Deletes one or more accounts from the budget statement.
-     * @param accounts An array of addresses of the accounts to delete.
-     *
-     * @group Account
-     */
-    public deleteAccount(accounts: Account['address'][]) {
-        return this.dispatch(deleteAccount(accounts));
+    
+    public deleteAccount(input: DeleteAccountInput) {
+        return this.dispatch(deleteAccount(input));
     }
-
-    /**
-     * Sorts the accounts inthe budget statement.
-     * @param accounts An array of addresses of the accounts to sort.
-     *
-     * @group Account
-     */
-    public sortAccounts(accounts: Account['address'][]) {
-        return this.dispatch(sortAccounts(accounts));
+    
+    public sortAccounts(input: SortAccountsInput) {
+        return this.dispatch(sortAccounts(input));
     }
-
-    /**
-     * Returns an array of all accounts in the budget statement.
-     *
-     * @group Account
-     */
-    get accounts() {
-        return this.state.accounts;
-    }
-
-    /**
-     * Returns the Account object with the specified address.
-     * @param address The address of the Account to retrieve.
-     *
-     * @group Account
-     */
-    public getAccount(address: Account['address']) {
-        return this.accounts.find(account => account.address === address);
-    }
+    
 }
