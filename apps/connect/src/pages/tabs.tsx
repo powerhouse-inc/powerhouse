@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import Tabs from 'src/components/tabs';
 import { createScopeFrameworkTab, useTabs } from 'src/store/tabs';
+import { saveFile } from 'src/utils/file';
 
 const TabsContainer = () => {
     const tabs = useTabs();
@@ -14,18 +15,37 @@ const TabsContainer = () => {
         });
     }, [tabs]);
 
+    async function handleFileSaved() {
+        const selectedTab = tabs.selectedTab;
+        if (!selectedTab) {
+            return;
+        }
+        const tab = tabs.getItem(selectedTab);
+        if (tab.document) {
+            const fileHandle = await window.showSaveFilePicker({
+                suggestedName: `${tab.document.name || 'Untitled'}.zip`,
+            });
+            saveFile(tab.document, fileHandle);
+        }
+    }
+
     useEffect(() => {
-        return window.electronAPI?.handleFileSaved(() => {
-            const selectedTab = tabs.selectedTab;
-            if (!selectedTab) {
-                return;
+        const removeHandler =
+            window.electronAPI?.handleFileSaved(handleFileSaved);
+
+        function handleKeyboardSave(e: KeyboardEvent) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                handleFileSaved();
             }
-            const tab = tabs.getItem(selectedTab);
-            const file = tab.document;
-            if (file) {
-                window.electronAPI?.saveFile(file);
-            }
-        });
+        }
+
+        document.addEventListener('keydown', handleKeyboardSave);
+
+        return () => {
+            removeHandler?.();
+            document.removeEventListener('keydown', handleKeyboardSave);
+        };
     }, [tabs]);
 
     return (

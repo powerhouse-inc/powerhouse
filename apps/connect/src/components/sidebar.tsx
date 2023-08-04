@@ -131,7 +131,7 @@ export default function () {
         const tab = getItem(selectedTab);
         if (tab.document) {
             const fileHandle = await window.showSaveFilePicker({
-                suggestedName: 'scope.zip',
+                suggestedName: `${tab.document.name || 'Untitled'}.zip`,
             });
             saveFile(tab.document, fileHandle);
         }

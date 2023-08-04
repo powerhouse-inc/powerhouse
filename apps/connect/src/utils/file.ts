@@ -113,6 +113,13 @@ async function LoadDocumentFromInputFn(
                 : '@acaldas/document-model-libs/scope-framework'
         );
         return ScopeFramework.loadScopeFrameworkFromInput;
+    } else if (document.documentType === 'powerhouse/document-model') {
+        const DocumentModel = await import(
+            isBrowser
+                ? '@acaldas/document-model-libs/browser/document-model'
+                : '@acaldas/document-model-libs/document-model'
+        );
+        return DocumentModel.loadDocumentModelFromInput;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
     }
