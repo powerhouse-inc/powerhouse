@@ -3,7 +3,7 @@ import { paramCase } from 'change-case';
 import { runner } from 'hygen';
 import Logger from 'hygen/dist/logger';
 import path from 'path';
-import { loadDocumentModelFromFile } from '../src/document-model';
+import { utils } from '../src/document-model';
 
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, 'templates');
@@ -30,7 +30,7 @@ const runAll = async () => {
     let documentModel: DocumentModelState;
     try {
         if (document.endsWith('.zip')) {
-            const file = await loadDocumentModelFromFile(document);
+            const file = await utils.loadFromFile(document);
             documentModel = file.state;
             console.log(JSON.stringify(documentModel, null, 2));
         } else {

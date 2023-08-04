@@ -1,6 +1,6 @@
 import { z } from '@acaldas/document-model-graphql/document';
 import { ExtendedState } from '../types';
-import { createAction } from '../utils';
+import { createAction } from '../utils/base';
 import {
     LoadStateAction,
     PruneAction,

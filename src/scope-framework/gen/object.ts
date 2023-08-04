@@ -1,10 +1,9 @@
-import { BaseDocument, applyMixins } from '../../document/object';
 import { ScopeFrameworkState } from '@acaldas/document-model-graphql/scope-framework';
+import { ExtendedState } from '../../document';
+import { applyMixins, BaseDocument } from '../../document/object';
 import { ScopeFrameworkAction } from './actions';
-import { createEmptyExtendedScopeFrameworkState } from '../custom/utils';
 import { reducer } from './reducer';
-import { ExtendedScopeFrameworkState } from './types';
-
+import utils from './utils';
 import ScopeFramework_Main from './main/object';
 
 export * from './main/object';
@@ -16,8 +15,8 @@ interface ScopeFramework extends
 class ScopeFramework extends BaseDocument<ScopeFrameworkState, ScopeFrameworkAction> {
     static fileExtension = 'mdsf';
 
-    constructor(initialState?: ExtendedScopeFrameworkState) {
-        super(reducer, initialState || createEmptyExtendedScopeFrameworkState());
+    constructor(initialState?: Partial<ExtendedState<Partial<ScopeFrameworkState>>>) {
+        super(reducer, utils.createDocument(initialState));
     }
 
     public saveToFile(path: string, name?: string) {

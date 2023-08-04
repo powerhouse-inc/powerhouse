@@ -1,10 +1,9 @@
-import { BaseDocument, applyMixins } from '../../document/object';
 import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
+import { ExtendedState } from '../../document';
+import { applyMixins, BaseDocument } from '../../document/object';
 import { DocumentModelAction } from './actions';
-import { createEmptyExtendedDocumentModelState } from '../custom/utils';
 import { reducer } from './reducer';
-import { ExtendedDocumentModelState } from './types';
-
+import utils from './utils';
 import DocumentModel_Header from './header/object';
 import DocumentModel_Versioning from './versioning/object';
 import DocumentModel_Module from './module/object';
@@ -34,8 +33,8 @@ interface DocumentModel extends
 class DocumentModel extends BaseDocument<DocumentModelState, DocumentModelAction> {
     static fileExtension = 'phdm';
 
-    constructor(initialState?: ExtendedDocumentModelState) {
-        super(reducer, initialState || createEmptyExtendedDocumentModelState());
+    constructor(initialState?: Partial<ExtendedState<Partial<DocumentModelState>>>) {
+        super(reducer, utils.createDocument(initialState));
     }
 
     public saveToFile(path: string, name?: string) {

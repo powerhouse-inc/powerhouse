@@ -1,5 +1,8 @@
 import type { Draft } from 'immer/dist/internal';
+import type { DocumentModelState } from '../document-model';
 import type { BaseAction } from './actions/types';
+import { BaseDocument } from './object';
+import { FileInput } from './utils';
 export type { BaseAction };
 
 /**
@@ -153,3 +156,55 @@ export type Document<S = unknown, A extends Action = Action> =
  * Attachment string is formatted as `attachment://<filename>`.
  */
 export type AttachmentRef = string; // TODO `attachment://${string}`;
+
+export interface DocumentClass<
+    S,
+    A extends Action = Action,
+    C extends BaseDocument<S, A> = BaseDocument<S, A>
+> {
+    fileExtension: string;
+    fromFile: (path: string) => Promise<C>;
+    new (initialState?: ExtendedState<S>): C;
+}
+
+export type DocumentModelUtils<S = unknown, A extends Action = Action> = {
+    fileExtension: string;
+    createState: (state?: Partial<S>) => S;
+    createExtendedState: (
+        extendedState?: Partial<ExtendedState<Partial<S>>>,
+        createState?: (state?: Partial<S>) => S
+    ) => ExtendedState<S>;
+    createDocument: (
+        document?: Partial<ExtendedState<Partial<S>>>,
+        createState?: (state?: Partial<S>) => S
+    ) => Document<S, A>;
+    loadFromFile: (path: string) => Promise<Document<S, A>>;
+    loadFromInput: (input: FileInput) => Promise<Document<S, A>>;
+    saveToFile: (
+        document: Document<S, A>,
+        path: string,
+        name?: string
+    ) => Promise<string>;
+    saveToFileHandle: (
+        document: Document<S, A>,
+        input: FileSystemFileHandle
+    ) => Promise<void>;
+};
+
+type ActionCreator<A extends Action> = // TODO remove any
+
+        | ((input: any) => A)
+        | ((input: any, attachments: AttachmentInput[]) => A)
+        | ((...input: any) => BaseAction);
+
+export type DocumentModelModule<
+    S = unknown,
+    A extends Action = Action,
+    C extends BaseDocument<S, A> = BaseDocument<S, A>
+> = {
+    Document: DocumentClass<S, A, C>;
+    reducer: Reducer<S, A>;
+    actions: Record<string, ActionCreator<A>>;
+    utils: DocumentModelUtils<S, A>;
+    documentModel: DocumentModelState;
+};

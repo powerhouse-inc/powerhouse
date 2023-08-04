@@ -7,7 +7,7 @@ import type {
     ExtendedState,
     Reducer,
 } from './types';
-import { createDocument, loadFromFile, saveToFile } from './utils';
+import { loadFromFile, saveToFile } from './utils';
 
 /**
  * This is an abstract class representing a document and provides methods
@@ -22,14 +22,11 @@ export abstract class BaseDocument<T, A extends Action> {
     /**
      * Constructs a BaseDocument instance with an initial state.
      * @param reducer - The reducer function that updates the state.
-     * @param initialState - The initial state of the document.
+     * @param document - The initial state of the document.
      */
-    constructor(
-        reducer: Reducer<T, A>,
-        initialState?: Partial<ExtendedState<T>>
-    ) {
+    constructor(reducer: Reducer<T, A>, document: Document<T, A>) {
         this._reducer = reducer;
-        this._document = createDocument(initialState);
+        this._document = document;
     }
 
     /**

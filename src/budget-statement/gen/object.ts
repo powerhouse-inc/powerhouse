@@ -1,10 +1,9 @@
-import { BaseDocument, applyMixins } from '../../document/object';
 import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+import { ExtendedState } from '../../document';
+import { applyMixins, BaseDocument } from '../../document/object';
 import { BudgetStatementAction } from './actions';
-import { createEmptyExtendedBudgetStatementState } from '../custom/utils';
 import { reducer } from './reducer';
-import { ExtendedBudgetStatementState } from './types';
-
+import utils from './utils';
 import BudgetStatement_Account from './account/object';
 import BudgetStatement_LineItem from './line-item/object';
 import BudgetStatement_Base from './base/object';
@@ -31,8 +30,8 @@ interface BudgetStatement extends
 class BudgetStatement extends BaseDocument<BudgetStatementState, BudgetStatementAction> {
     static fileExtension = 'phbs';
 
-    constructor(initialState?: ExtendedBudgetStatementState) {
-        super(reducer, initialState || createEmptyExtendedBudgetStatementState());
+    constructor(initialState?: Partial<ExtendedState<Partial<BudgetStatementState>>>) {
+        super(reducer, utils.createDocument(initialState));
     }
 
     public saveToFile(path: string, name?: string) {

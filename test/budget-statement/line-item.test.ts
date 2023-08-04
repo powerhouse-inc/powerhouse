@@ -1,20 +1,17 @@
-import { reducer } from '../../src/budget-statement';
-import {
-    createAccount,
-    createBudgetStatement,
-    createLineItem,
-} from '../../src/budget-statement/custom/utils';
+import { reducer, utils } from '../../src/budget-statement';
 import {
     addAccount,
     addLineItem,
     deleteLineItem,
     sortLineItems,
     updateLineItem,
-} from '../../src/budget-statement/gen';
+} from '../../src/budget-statement/gen/creators';
+
+const { createAccount, createDocument, createLineItem } = utils;
 
 describe('Budget Statement line item reducer', () => {
     it('should add line item', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addAccount({
@@ -65,7 +62,7 @@ describe('Budget Statement line item reducer', () => {
     });
 
     it('should update line item', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addAccount({
@@ -156,7 +153,7 @@ describe('Budget Statement line item reducer', () => {
     });
 
     it('should delete line item', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addAccount({
@@ -195,7 +192,7 @@ describe('Budget Statement line item reducer', () => {
     });
 
     it('should throw if adding duplicated line item', async () => {
-        let document = createBudgetStatement({});
+        let document = createDocument({});
         document = reducer(
             document,
             addAccount({
@@ -244,7 +241,7 @@ describe('Budget Statement line item reducer', () => {
     });
 
     it('should sort line items', () => {
-        const document = createBudgetStatement({
+        const document = createDocument({
             state: {
                 accounts: [
                     createAccount({

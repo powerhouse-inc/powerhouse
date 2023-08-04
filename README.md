@@ -22,7 +22,7 @@ import {
     utils,
 } from '@acaldas/document-model-libs/budget-statement';
 
-let budgetStatement = utils.createBudgetStatement({
+let budgetStatement = utils.createDocument({
     name: 'March report',
     data: { month: '2023/01' },
 });

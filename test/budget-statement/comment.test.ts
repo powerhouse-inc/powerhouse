@@ -1,19 +1,21 @@
 import { reducer } from '../../src/budget-statement';
-import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 import {
     addComment,
     deleteComment,
     updateComment,
-} from '../../src/budget-statement/gen';
+} from '../../src/budget-statement/gen/creators';
+import utils from '../../src/budget-statement/gen/utils';
+
+const { createDocument } = utils;
 
 describe('Budget Statement Comment reducer', () => {
     it('should start as empty array', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         expect(document.state.comments).toStrictEqual([]);
     });
 
     it('should add comment', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(
             document,
             addComment({
@@ -45,7 +47,7 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should update comment', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addComment({
@@ -82,7 +84,7 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should delete comment', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addComment({
@@ -105,7 +107,7 @@ describe('Budget Statement Comment reducer', () => {
 
     it('should generate comment key and timestamp if undefined', async () => {
         jest.useFakeTimers({ now: new Date('2023-03-16') });
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(
             document,
             addComment({
@@ -126,7 +128,7 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should sort comments by timestamp', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         let newDocument = reducer(
             document,
             addComment({
@@ -155,7 +157,7 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should throw if comment key already exists', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addComment({
@@ -175,7 +177,7 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should ignore non existing keys on update', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addComment({

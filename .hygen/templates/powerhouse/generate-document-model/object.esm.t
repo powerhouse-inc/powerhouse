@@ -2,13 +2,12 @@
 to: "./src/<%= h.changeCase.param(documentType) %>/gen/object.ts"
 force: true
 ---
-import { BaseDocument, applyMixins } from '../../document/object';
 import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
+import { ExtendedState } from '../../document';
+import { applyMixins, BaseDocument } from '../../document/object';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
-import { createEmptyExtended<%= h.changeCase.pascal(documentType) %>State } from '../custom/utils';
 import { reducer } from './reducer';
-import { Extended<%= h.changeCase.pascal(documentType) %>State } from './types';
-
+import utils from './utils';
 <% modules.forEach(module => { _%>
 import <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module.name) %> from './<%= module.name %>/object';
 <% }); _%>
@@ -24,8 +23,8 @@ interface <%= h.changeCase.pascal(documentType) %> extends
 class <%= h.changeCase.pascal(documentType) %> extends BaseDocument<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> {
     static fileExtension = '<%= extension %>';
 
-    constructor(initialState?: Extended<%= h.changeCase.pascal(documentType) %>State) {
-        super(reducer, initialState || createEmptyExtended<%= h.changeCase.pascal(documentType) %>State());
+    constructor(initialState?: Partial<ExtendedState<Partial<<%= h.changeCase.pascal(documentType) %>State>>>) {
+        super(reducer, utils.createDocument(initialState));
     }
 
     public saveToFile(path: string, name?: string) {

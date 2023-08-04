@@ -2,8 +2,10 @@ import fs from 'fs';
 import { parse } from 'jsonc-parser';
 import path from 'path';
 import { BudgetStatement, reducer } from '../../src/budget-statement';
-import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 import { BudgetStatementAction } from '../../src/budget-statement/gen';
+import utils from '../../src/budget-statement/gen/utils';
+
+const { createDocument } = utils;
 
 // loads scenario from jsonc files
 const testFolder =
@@ -21,7 +23,7 @@ const steps = files.map(file => {
 describe('Budget Statement scenario 1', () => {
     // creates budget statement using initial state
     const initialStep = steps[0].json;
-    let budgetStatement = createBudgetStatement({ state: initialStep.state });
+    let budgetStatement = createDocument({ state: initialStep.state });
     // tests each scenario step in sequence
     it.each(steps.slice(1))('should verify $file', ({ json }) => {
         expect.assertions(1);
@@ -55,7 +57,7 @@ describe('Budget Statement scenario 1 with object methods', () => {
     const initialStep = steps[0].json;
     const budgetStatement = new BudgetStatementTest({
         state: initialStep.state,
-    } as any);
+    });
 
     // tests each scenario step in sequence
     it.each(steps.slice(1))('should verify $file', ({ json }) => {

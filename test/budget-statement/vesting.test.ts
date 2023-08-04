@@ -1,19 +1,21 @@
 import { reducer } from '../../src/budget-statement';
-import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 import {
     addVesting,
     deleteVesting,
     updateVesting,
-} from '../../src/budget-statement/gen';
+} from '../../src/budget-statement/gen/creators';
+import utils from '../../src/budget-statement/gen/utils';
+
+const { createDocument } = utils;
 
 describe('Budget Statement Vesting reducer', () => {
     it('should start as empty array', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         expect(document.state.vesting).toStrictEqual([]);
     });
 
     it('should add comment', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(
             document,
             addVesting({
@@ -41,7 +43,7 @@ describe('Budget Statement Vesting reducer', () => {
     });
 
     it('should update vesting', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addVesting({
@@ -70,7 +72,7 @@ describe('Budget Statement Vesting reducer', () => {
     });
 
     it('should delete vesting', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addVesting({
@@ -84,7 +86,7 @@ describe('Budget Statement Vesting reducer', () => {
 
     it('should generate vesting key if undefined', async () => {
         jest.useFakeTimers({ now: new Date('2023-03-16') });
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(
             document,
             addVesting({
@@ -96,7 +98,7 @@ describe('Budget Statement Vesting reducer', () => {
     });
 
     it('should sort vestings by date', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         let newDocument = reducer(
             document,
             addVesting({
@@ -122,7 +124,7 @@ describe('Budget Statement Vesting reducer', () => {
     });
 
     it('should throw if vesting key already exists', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addVesting({
@@ -142,7 +144,7 @@ describe('Budget Statement Vesting reducer', () => {
     });
 
     it('should ignore non existing keys on update', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         document = reducer(
             document,
             addVesting({

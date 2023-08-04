@@ -1,27 +1,44 @@
 ---
 to: "./src/<%= h.changeCase.param(documentType) %>/index.ts"
-unless_exists: true
+force: true
 ---
 /**
 * This is a scaffold file meant for customization.
 * Delete the file and run the code generator again to have it reset
 */
 
-import { actions as BaseActions } from '../document';
+import { actions as BaseActions, DocumentModelModule } from '../document';
+import { actions as <%= h.changeCase.pascal(documentType) %>Actions, <%= h.changeCase.pascal(documentType) %> } from './gen';
 import { reducer } from './gen/reducer';
-import * as gen from './gen';
-import { 
-    createEmpty<%= h.changeCase.pascal(documentType) %>State, 
-    createEmptyExtended<%= h.changeCase.pascal(documentType) %>State 
-} from './custom/utils';
+import { documentModel } from './gen/document-model';
+import genUtils from './gen/utils';
+import * as customUtils from './custom/utils';
+import { <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action } from './gen/types';
 
-const { <%= h.changeCase.pascal(documentType) %>, ...<%= h.changeCase.pascal(documentType) %>Actions } = gen;
+const Document = <%= h.changeCase.pascal(documentType) %>;
+const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...<%= h.changeCase.pascal(documentType) %>Actions };
 
-export {
+export const module: DocumentModelModule<
+    <%= h.changeCase.pascal(documentType) %>State,
+    <%= h.changeCase.pascal(documentType) %>Action,
+    <%= h.changeCase.pascal(documentType) %>
+> = {
+    Document,
+    reducer,
     actions,
-    reducer, 
+    utils,
+    documentModel
+};
+
+export {
     <%= h.changeCase.pascal(documentType) %>,
-    createEmpty<%= h.changeCase.pascal(documentType) %>State,
-    createEmptyExtended<%= h.changeCase.pascal(documentType) %>State
+    Document,
+    reducer,
+    actions,
+    utils,
+    documentModel
 }
+
+export * from './gen/types';
+export * from './custom/utils';

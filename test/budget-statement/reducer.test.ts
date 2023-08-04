@@ -1,41 +1,43 @@
 import { AddAccountInput } from '@acaldas/document-model-graphql/budget-statement';
 import { reducer } from '../../src/budget-statement';
-import { createBudgetStatement } from '../../src/budget-statement/custom/utils';
 import {
     addAccount,
     setMonth,
     setOwner,
     setQuoteCurrency,
-} from '../../src/budget-statement/gen';
+} from '../../src/budget-statement/gen/creators';
+import utils from '../../src/budget-statement/gen/utils';
 import { setName } from '../../src/document/actions';
+
+const { createDocument } = utils;
 
 describe('Budget Statement reducer', () => {
     it('should create initial state', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         expect(document.revision).toBe(0);
         expect(document.documentType).toBe('powerhouse/budget-statement');
         expect(document.state).toBeDefined();
     });
 
     it('should update name', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(document, setName('SES Jan 2023'));
         expect(newDocument.name).toBe('SES Jan 2023');
     });
 
     it('should update revision', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(document, setName('SES Jan 2023'));
         expect(newDocument.revision).toBe(1);
     });
 
     it('should init budget statement with correct type', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         expect(document.documentType).toBe('powerhouse/budget-statement');
     });
 
     it('should init budget statement with provided data', async () => {
-        const document = createBudgetStatement({
+        const document = createDocument({
             name: 'March',
             state: {
                 owner: {
@@ -54,14 +56,14 @@ describe('Budget Statement reducer', () => {
     });
 
     it('should throw error on invalid action', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         expect(() =>
             reducer(document, addAccount({} as unknown as AddAccountInput))
         ).toThrow();
     });
 
     it('should set owner', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(
             document,
             setOwner({
@@ -83,14 +85,14 @@ describe('Budget Statement reducer', () => {
     });
 
     it('should set month', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(document, setMonth({ month: 'Feb' }));
         expect(newDocument.state.month).toBe('Feb');
         expect(document.state.month).toBe(null);
     });
 
     it('should set quoteCurrency', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(
             document,
             setQuoteCurrency({ quoteCurrency: 'DAI' })

@@ -3,21 +3,38 @@
 * Delete the file and run the code generator again to have it reset
 */
 
-import { actions as BaseActions } from '../document';
+import { actions as BaseActions, DocumentModelModule } from '../document';
+import { actions as BudgetStatementActions, BudgetStatement } from './gen';
 import { reducer } from './gen/reducer';
-import * as gen from './gen';
-import { 
-    createEmptyBudgetStatementState, 
-    createEmptyExtendedBudgetStatementState 
-} from './custom/utils';
+import { documentModel } from './gen/document-model';
+import genUtils from './gen/utils';
+import * as customUtils from './custom/utils';
+import { BudgetStatementState, BudgetStatementAction } from './gen/types';
 
-const { BudgetStatement, ...BudgetStatementActions } = gen;
+const Document = BudgetStatement;
+const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...BudgetStatementActions };
 
-export {
+export const module: DocumentModelModule<
+    BudgetStatementState,
+    BudgetStatementAction,
+    BudgetStatement
+> = {
+    Document,
+    reducer,
     actions,
-    reducer, 
+    utils,
+    documentModel
+};
+
+export {
     BudgetStatement,
-    createEmptyBudgetStatementState,
-    createEmptyExtendedBudgetStatementState
+    Document,
+    reducer,
+    actions,
+    utils,
+    documentModel
 }
+
+export * from './gen/types';
+export * from './custom/utils';

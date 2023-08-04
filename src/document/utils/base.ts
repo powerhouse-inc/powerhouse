@@ -64,14 +64,32 @@ export function createAction<A extends Action>(
  *
  * @returns The new reducer.
  */
-export function createReducer<T = unknown, A extends Action = Action>(
-    reducer: ImmutableStateReducer<T, A>,
+export function createReducer<S = unknown, A extends Action = Action>(
+    reducer: ImmutableStateReducer<S, A>,
     documentReducer = baseReducer
-): Reducer<T, A> {
+): Reducer<S, A> {
     return (document, action) => {
         return documentReducer(document, action, reducer);
     };
 }
+
+export const createExtendedState = <S>(
+    initialState?: Partial<ExtendedState<Partial<S>>>,
+    createState?: (state?: Partial<S>) => S
+): ExtendedState<S> => {
+    return {
+        name: '',
+        documentType: '',
+        revision: 0,
+        created: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        attachments: {},
+        ...initialState,
+        state:
+            createState?.(initialState?.state) ??
+            ((initialState?.state ?? {}) as S),
+    };
+};
 
 /**
  * Builds the initial document state from the provided data.
@@ -84,20 +102,14 @@ export function createReducer<T = unknown, A extends Action = Action>(
  *
  * @returns The new document state.
  */
-export const createDocument = <T, A extends Action>(
-    initialState?: Partial<ExtendedState<T>>
-): Document<T, A> => {
-    const state: ExtendedState<T> = {
-        name: '',
-        documentType: '',
-        revision: 0,
-        created: new Date().toISOString(),
-        lastModified: new Date().toISOString(),
-        state: {} as T,
-        attachments: {},
-        ...initialState,
-    };
-
+export const createDocument = <S, A extends Action>(
+    initialState?: Partial<ExtendedState<Partial<S>>>,
+    createState?: (state?: Partial<S>) => S
+): Document<S, A> => {
+    const state: ExtendedState<S> = createExtendedState(
+        initialState,
+        createState
+    );
     return {
         ...state,
         initialState: state,

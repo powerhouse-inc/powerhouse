@@ -1,18 +1,16 @@
 import { reducer } from '../../src/budget-statement';
-import {
-    createAccount,
-    createBudgetStatement,
-} from '../../src/budget-statement/custom/utils';
+import { createAccount } from '../../src/budget-statement/custom/utils';
 import {
     addAccount,
     deleteAccount,
     sortAccounts,
     updateAccount,
-} from '../../src/budget-statement/gen';
+} from '../../src/budget-statement/gen/creators';
+import utils from '../../src/budget-statement/gen/utils';
 
 describe('Budget Statement account reducer', () => {
     it('should add account', async () => {
-        const document = createBudgetStatement();
+        const document = utils.createDocument();
         const newDocument = reducer(
             document,
             addAccount({
@@ -31,9 +29,8 @@ describe('Budget Statement account reducer', () => {
     });
 
     it('should update account', async () => {
-        let document = createBudgetStatement();
-        document = reducer(
-            createBudgetStatement(),
+        const document = reducer(
+            utils.createDocument(),
             addAccount({
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
@@ -51,7 +48,7 @@ describe('Budget Statement account reducer', () => {
     });
 
     it('should delete account', async () => {
-        let document = createBudgetStatement();
+        let document = utils.createDocument();
         document = reducer(
             document,
             addAccount({
@@ -70,7 +67,7 @@ describe('Budget Statement account reducer', () => {
     });
 
     it('should throw exception if adding account with same address', () => {
-        let document = createBudgetStatement();
+        let document = utils.createDocument();
         document = reducer(
             document,
             addAccount({
@@ -90,7 +87,7 @@ describe('Budget Statement account reducer', () => {
     });
 
     it('should sort accounts', () => {
-        const document = createBudgetStatement({
+        const document = utils.createDocument({
             state: {
                 accounts: [
                     createAccount({

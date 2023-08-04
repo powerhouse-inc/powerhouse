@@ -1,19 +1,17 @@
 import fs from 'fs';
 import JSZip from 'jszip';
 import { reducer } from '../../src/budget-statement';
-import {
-    createBudgetStatement,
-    loadBudgetStatementFromFile,
-    saveBudgetStatementToFile,
-} from '../../src/budget-statement/custom/utils';
+import { AddAuditReportAction } from '../../src/budget-statement/gen/actions';
 import {
     addAuditReport,
-    AddAuditReportAction,
     deleteAuditReport,
-} from '../../src/budget-statement/gen';
+} from '../../src/budget-statement/gen/creators';
+import utils from '../../src/budget-statement/gen/utils';
 import { Operation } from '../../src/document';
 import { getLocalFile, getRemoteFile } from '../../src/document/utils';
 import { readFile } from '../../src/document/utils/node';
+
+const { createDocument, loadFromFile, saveToFile } = utils;
 
 describe('Budget Statement Audit Report reducer', () => {
     const tempDir = './test/budget-statement/temp/audit/';
@@ -32,12 +30,12 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should start as empty array', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         expect(document.state.auditReports).toStrictEqual([]);
     });
 
     it('should add audit report', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const file = await getLocalFile(tempFile);
         const newDocument = reducer(
             document,
@@ -59,7 +57,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should add attachment to file registry', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const file = await getLocalFile(tempFile);
         const newDocument = reducer(
             document,
@@ -85,7 +83,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should delete audit report', async () => {
-        let document = createBudgetStatement();
+        let document = createDocument();
         const file = await getLocalFile(tempFile);
         document = reducer(
             document,
@@ -107,7 +105,7 @@ describe('Budget Statement Audit Report reducer', () => {
     });
 
     it('should set default timestamp on audit report', async () => {
-        const document = createBudgetStatement();
+        const document = createDocument();
         const date = new Date();
         const file = await getLocalFile(tempFile);
 
@@ -131,7 +129,7 @@ describe('Budget Statement Audit Report reducer', () => {
         const file = await getLocalFile(tempFile);
 
         const document = reducer(
-            createBudgetStatement(),
+            createDocument(),
             addAuditReport(
                 {
                     report: file.hash,
@@ -149,7 +147,7 @@ describe('Budget Statement Audit Report reducer', () => {
         const file = await getLocalFile(tempFile);
 
         const document = reducer(
-            createBudgetStatement(),
+            createDocument(),
             addAuditReport(
                 {
                     report: file.hash,
@@ -169,7 +167,7 @@ describe('Budget Statement Audit Report reducer', () => {
         const file = await getLocalFile(tempFile);
 
         const document = reducer(
-            createBudgetStatement(),
+            createDocument(),
             addAuditReport(
                 {
                     report: file.hash,
@@ -187,7 +185,7 @@ describe('Budget Statement Audit Report reducer', () => {
         const file = await getLocalFile(tempFile);
 
         const document = reducer(
-            createBudgetStatement(),
+            createDocument(),
             addAuditReport(
                 {
                     report: file.hash,
@@ -220,7 +218,7 @@ describe('Budget Statement Audit Report reducer', () => {
             'https://makerdao.com/whitepaper/DaiDec17WP.pdf'
         );
 
-        const document = createBudgetStatement();
+        const document = createDocument();
         const newDocument = reducer(
             document,
             addAuditReport(
@@ -251,7 +249,7 @@ describe('Budget Statement Audit Report reducer', () => {
     it('should save attachment to zip', async () => {
         const attachment = await getLocalFile(tempFile);
         const document = reducer(
-            createBudgetStatement({ name: 'march' }),
+            createDocument({ name: 'march' }),
             addAuditReport(
                 {
                     report: attachment.hash,
@@ -262,7 +260,7 @@ describe('Budget Statement Audit Report reducer', () => {
                 [attachment]
             )
         );
-        const zipPath = await saveBudgetStatementToFile(document, tempDir);
+        const zipPath = await saveToFile(document, tempDir);
         const file = readFile(zipPath);
         const zip = new JSZip();
         await zip.loadAsync(file);
@@ -280,9 +278,7 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should load attachment from zip', async () => {
         const { hash, ...attachment } = await getLocalFile(tempFile);
-        const document = await loadBudgetStatementFromFile(
-            `${tempDir}march.phbs.zip`
-        );
+        const document = await loadFromFile(`${tempDir}march.phbs.zip`);
         expect(document.state.auditReports[0].status).toBe('NeedsAction');
         expect(
             (document.operations[0] as Operation<AddAuditReportAction>).input
