@@ -1,12 +1,12 @@
 import type { BudgetStatementDocument } from '@acaldas/document-model-libs/browser/budget-statement';
+import type { DocumentModelDocument } from '@acaldas/document-model-libs/browser/document-model';
+import type { ScopeFrameworkDocument } from '@acaldas/document-model-libs/browser/scope-framework';
 import {
     Action,
     BaseAction,
     Document,
     utils,
-} from '@acaldas/document-model-libs/browser/document';
-import type { DocumentModelDocument } from '@acaldas/document-model-libs/browser/document-model';
-import type { ScopeFrameworkDocument } from '@acaldas/document-model-libs/browser/scope-framework';
+} from '@acaldas/document-model-libs/document';
 import type { EditorComponent } from 'src/components/editors';
 
 import tabNew from 'src/components/tabs/tab-new';

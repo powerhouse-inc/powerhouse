@@ -3,7 +3,7 @@ import {
     ScopeFrameworkState,
     actions,
 } from '@acaldas/document-model-libs/browser/scope-framework';
-import ScopeFramework from 'document-model-editors/scope-framework';
+import { ScopeFramework } from 'document-model-editors';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';

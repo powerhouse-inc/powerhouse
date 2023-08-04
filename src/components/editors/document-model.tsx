@@ -3,7 +3,7 @@ import {
     DocumentModelState,
     actions,
 } from '@acaldas/document-model-libs/browser/document-model';
-import DocumentModel from 'document-model-editors/document-model';
+import { DocumentModel } from 'document-model-editors';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';

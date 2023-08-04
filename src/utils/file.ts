@@ -1,4 +1,4 @@
-import type { Document } from '@acaldas/document-model-libs/browser/document';
+import type { Document } from '@acaldas/document-model-libs/document';
 import path from 'path';
 
 const isBrowser = typeof window !== undefined;
