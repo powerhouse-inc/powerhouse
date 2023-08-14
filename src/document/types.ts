@@ -191,7 +191,7 @@ export type DocumentModelUtils<S = unknown, A extends Action = Action> = {
     ) => Promise<void>;
 };
 
-type ActionCreator<A extends Action> = // TODO remove any
+export type ActionCreator<A extends Action> = // TODO remove any
 
         | ((input: any) => A)
         | ((input: any, attachments: AttachmentInput[]) => A)

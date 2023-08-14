@@ -7,10 +7,10 @@
   resolved "https://registry.yarnpkg.com/@aashutoshrathi/word-wrap/-/word-wrap-1.2.6.tgz#bd9154aec9983f77b3a034ecaa015c2e4201f6cf"
   integrity sha512-1Yjs2SvM8TflER/OD3cOjhWWOZb58A2t7wpE2S9XfBYTiIl+XFhQG2bjy4Pu1I+EAlCNUzRDYDdFwFYUKvXcIA==
 
-"@acaldas/document-model-graphql@^1.0.17":
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.17.tgz#47524d8ffb79ef363337c948167e7c636bf65db0"
-  integrity sha512-OklUGrj+ogjY4I3/aA14kQRPNL3v1LP7jFUxY+eOOqjSgzY45BOiuWvcjIcV1swYf1sxSQn3IYUBLOwnFpyfxg==
+"@acaldas/document-model-graphql@^1.0.18":
+  version "1.0.18"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.18.tgz#33e3105efdcf5a7ded32347ec7f7d1092782551a"
+  integrity sha512-G4n5veIZdhfYbamuWZ74ONJiOUucv57ZOSXt/5vCxAIT1yDBSxHMHWgw6UYZ+NIixMGLzhba/6ilH/zsduvjKg==
   dependencies:
     zod "^3.21.4"
 
