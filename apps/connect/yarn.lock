@@ -2,19 +2,19 @@
 # yarn lockfile v1
 
 
-"@acaldas/document-model-graphql@^1.0.16":
-  version "1.0.16"
-  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.16.tgz#e8a1e2009b16a6a99014e49f2e4a80665d6d3712"
-  integrity sha512-4S2yEav/UZHmbXg+U5fcoppvnIIZWi0SpgV+a0Q3YgM+wmqaoKBAvBxXiW4oPGIorYiEwuDTAPkSIbuVIpKnuA==
+"@acaldas/document-model-graphql@^1.0.18":
+  version "1.0.18"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-graphql/-/document-model-graphql-1.0.18.tgz#33e3105efdcf5a7ded32347ec7f7d1092782551a"
+  integrity sha512-G4n5veIZdhfYbamuWZ74ONJiOUucv57ZOSXt/5vCxAIT1yDBSxHMHWgw6UYZ+NIixMGLzhba/6ilH/zsduvjKg==
   dependencies:
     zod "^3.21.4"
 
-"@acaldas/document-model-libs@^1.0.20":
-  version "1.0.20"
-  resolved "https://registry.yarnpkg.com/@acaldas/document-model-libs/-/document-model-libs-1.0.20.tgz#a54b14d8915256af3afd5c8a6d3daabacd3f2b3f"
-  integrity sha512-z0McC72ncsIWza1gssGyaKQ1hxj2ZFsn6gLFNdQbg6T4Y8T59s0rPpHefDCdvYKPon+xj/PZh4mb/vUVF7E1jQ==
+"@acaldas/document-model-libs@^1.0.21":
+  version "1.0.21"
+  resolved "https://registry.yarnpkg.com/@acaldas/document-model-libs/-/document-model-libs-1.0.21.tgz#2e120ea55371d38819c4f0b71adc9d8e62ab9439"
+  integrity sha512-u1PSBKaMbbp2dxeE5CJr4p6S43HjNxvGqLo/iAwNunDcFUlm66i2vuN1at6Lipx54ATZT1oWx2yYOblzqbz9pA==
   dependencies:
-    "@acaldas/document-model-graphql" "^1.0.16"
+    "@acaldas/document-model-graphql" "^1.0.18"
     immer "^9.0.19"
     json-stringify-deterministic "^1.0.8"
     jszip "^3.10.1"
@@ -3130,12 +3130,12 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model-editors@^0.0.10:
-  version "0.0.10"
-  resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-0.0.10.tgz#063406d6e2c5005640746630f9c2fb6dfc39ac3c"
-  integrity sha512-nVPvE2CtgYFThTzaFKgKhkpA/kvpU8BiEm/fzNBwwijmivFbrhd/+VVJyyiqn6SCbYNmfnrxhNgvKKkQAEngGA==
+document-model-editors@^0.0.11:
+  version "0.0.11"
+  resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-0.0.11.tgz#ad7a6d3ea7fa197ed1d81d04cf4ebf14abe3a26d"
+  integrity sha512-+602qtaVuQ8GA/bHBEIcN651wjXyoA2YRrE43Pj7NLN9aaq+azYjt6l1fKmWkVGHbKh2ucFLavf0l8IcFAwS2w==
   dependencies:
-    "@acaldas/document-model-libs" "^1.0.20"
+    "@acaldas/document-model-libs" "^1.0.21"
     zod "^3.21.4"
 
 dot-prop@^6.0.1:
