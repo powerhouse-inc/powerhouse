@@ -3,7 +3,6 @@ import {
     Action,
     BaseAction,
     Document,
-    utils,
 } from '@acaldas/document-model-libs/browser/document';
 import type { DocumentModelDocument } from '@acaldas/document-model-libs/browser/document-model';
 import type { ScopeFrameworkDocument } from '@acaldas/document-model-libs/browser/scope-framework';
@@ -124,11 +123,8 @@ export async function createScopeFrameworkTab(
         await import('src/components/editors/scope-framework')
     ).default;
 
-    const scope =
-        document ??
-        utils.createDocument(
-            ScopeFramework.createEmptyExtendedScopeFrameworkState()
-        );
+    const scope = document ?? ScopeFramework.utils.createDocument();
+
     return createDocumentTab(scope, ScopeFrameworkEditor, id, 'New scope');
 }
 
@@ -142,7 +138,7 @@ export async function createBudgetStatementTab(
     const BudgetStatementEditor = (
         await import('src/components/editors/budget-statement')
     ).default;
-    const scope = document ?? BudgetStatement.utils.createBudgetStatement();
+    const scope = document ?? BudgetStatement.utils.createDocument();
     return createDocumentTab(scope, BudgetStatementEditor, id, 'New budget');
 }
 
@@ -157,11 +153,7 @@ export async function createDocumentModelTab(
         await import('src/components/editors/document-model')
     ).default;
 
-    const scope =
-        document ??
-        utils.createDocument(
-            DocumentModel.createEmptyExtendedDocumentModelState()
-        );
+    const scope = document ?? DocumentModel.utils.createDocument();
     return createDocumentTab(
         scope,
         DocumentModelEditor,
