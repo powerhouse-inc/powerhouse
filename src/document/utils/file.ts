@@ -67,8 +67,8 @@ export const saveToFile = async (
 ): Promise<string> => {
     // create zip file
     const zip = await createZip(document);
-    const stream = zip.generateNodeStream({
-        type: 'nodebuffer',
+    const file = await zip.generateAsync({
+        type: 'uint8array',
         streamFiles: true,
     });
     const fileName = name ?? document.name;
@@ -79,7 +79,7 @@ export const saveToFile = async (
         fileName.endsWith(fileExtension)
             ? fileName
             : `${fileName}${fileExtension}`,
-        stream
+        file
     );
 };
 
