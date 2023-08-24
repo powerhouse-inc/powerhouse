@@ -1,15 +1,15 @@
 /**
- * This is a scaffold file meant for customization.
- * Delete the file and run the code generator again to have it reset
- */
+* This is a scaffold file meant for customization.
+* Delete the file and run the code generator again to have it reset
+*/
 
 import { actions as BaseActions, DocumentModel } from '../document';
-import * as customUtils from './custom/utils';
 import { actions as BudgetStatementActions, BudgetStatement } from './gen';
-import { documentModel } from './gen/document-model';
 import { reducer } from './gen/reducer';
-import { BudgetStatementAction, BudgetStatementState } from './gen/types';
+import { documentModel } from './gen/document-model';
 import genUtils from './gen/utils';
+import * as customUtils from './custom/utils';
+import { BudgetStatementState, BudgetStatementAction } from './gen/types';
 
 const Document = BudgetStatement;
 const utils = { ...genUtils, ...customUtils };
@@ -24,9 +24,17 @@ export const module: DocumentModel<
     reducer,
     actions,
     utils,
-    documentModel,
+    documentModel
 };
 
-export * from './custom/utils';
+export {
+    BudgetStatement,
+    Document,
+    reducer,
+    actions,
+    utils,
+    documentModel
+}
+
 export * from './gen/types';
-export { BudgetStatement, Document, reducer, actions, utils, documentModel };
+export * from './custom/utils';

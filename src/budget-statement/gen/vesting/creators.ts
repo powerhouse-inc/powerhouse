@@ -1,12 +1,10 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddVestingInput,
     UpdateVestingInput,
     DeleteVestingInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+} from '../types';
 import {
     AddVestingAction,
     UpdateVestingAction,

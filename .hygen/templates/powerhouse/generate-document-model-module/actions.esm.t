@@ -3,12 +3,11 @@ to: "./src/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/actions.ts"
 force: true
 ---
 import { Action<% if (actions.find(a => a.hasAttachment)) {%>, ActionWithAttachment<%}%> } from '../../../document';
-
 import {
 <% actions.filter(a => a.hasInput).forEach(action => { _%>
     <%= action.name %>Input,
 <% }); _%>
-} from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
+} from '../types';
 
 <% actions.filter(a => a.hasInput).forEach(actionType => { _%>
 export type <%= actionType.name %>Action = Action<%if(actionType.hasAttachment){ %>WithAttachment<% } %><'<%= h.changeCase.constantCase(actionType.name) %>', <%= actionType.name %>Input>;

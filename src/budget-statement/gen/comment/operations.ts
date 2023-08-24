@@ -3,7 +3,6 @@ import {
     UpdateCommentAction,
     DeleteCommentAction,
 } from './actions';
-
 import { BudgetStatementState } from '../types';
 
 export interface BudgetStatementCommentOperations {

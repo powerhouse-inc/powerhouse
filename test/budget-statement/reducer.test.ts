@@ -1,5 +1,4 @@
-import { AddAccountInput } from '@acaldas/document-model-graphql/budget-statement';
-import { reducer } from '../../src/budget-statement';
+import { AddAccountInput, reducer } from '../../src/budget-statement';
 import {
     addAccount,
     setMonth,

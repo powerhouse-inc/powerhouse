@@ -3,7 +3,7 @@
  * Delete the file and run the code generator again to have it reset
  */
 
-import { actions as BaseActions } from '../document';
+import { actions as BaseActions, DocumentModel } from '../document';
 import * as customUtils from './custom/utils';
 import { actions as ScopeFrameworkActions, ScopeFramework } from './gen';
 import { documentModel } from './gen/document-model';

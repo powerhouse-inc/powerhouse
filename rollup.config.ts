@@ -30,11 +30,11 @@ function emitModulePackageFile(): Plugin {
 }
 
 const input = {
-    'index': 'src/index.ts',
+    index: 'src/index.ts',
     'document-model': 'src/document-model/index.ts',
     'scope-framework': 'src/scope-framework/index.ts',
     'budget-statement': 'src/budget-statement/index.ts',
-    'document': 'src/document/index.ts',
+    document: 'src/document/index.ts',
 };
 
 const bundledDependencies = [

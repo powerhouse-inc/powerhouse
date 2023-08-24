@@ -1,22 +1,19 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     AddLineItemInput,
     UpdateLineItemInput,
     DeleteLineItemInput,
     SortLineItemsInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+    BudgetStatementState
+} from '../types';
 import {
     addLineItem,
     updateLineItem,
     deleteLineItem,
     sortLineItems,
 } from './creators';
-
 import { BudgetStatementAction } from '../actions';
-import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
 
 export default class BudgetStatement_LineItem extends BaseDocument<
     BudgetStatementState, BudgetStatementAction

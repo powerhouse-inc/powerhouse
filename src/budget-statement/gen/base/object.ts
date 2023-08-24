@@ -1,22 +1,19 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     SetOwnerInput,
     SetMonthInput,
     SetFtesInput,
     SetQuoteCurrencyInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+    BudgetStatementState
+} from '../types';
 import {
     setOwner,
     setMonth,
     setFtes,
     setQuoteCurrency,
 } from './creators';
-
 import { BudgetStatementAction } from '../actions';
-import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
 
 export default class BudgetStatement_Base extends BaseDocument<
     BudgetStatementState, BudgetStatementAction

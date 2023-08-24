@@ -1,11 +1,9 @@
 import { createAction } from '../../../document/utils';
 import { AttachmentInput } from '../../../document';
-
 import {
     AddAuditReportInput,
     DeleteAuditReportInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+} from '../types';
 import {
     AddAuditReportAction,
     DeleteAuditReportAction,

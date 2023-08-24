@@ -4,9 +4,9 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { Comment } from '@acaldas/document-model-graphql/budget-statement';
 import { hashKey } from '../../../document/utils';
 import { BudgetStatementCommentOperations } from '../../gen/comment/operations';
+import { Comment } from '../../gen/schema';
 
 const sortComment = (a: Comment, b: Comment) =>
     a.timestamp < b.timestamp ? -1 : 1;

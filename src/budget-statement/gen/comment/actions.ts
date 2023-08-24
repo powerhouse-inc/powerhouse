@@ -1,10 +1,9 @@
 import { Action } from '../../../document';
-
 import {
     AddCommentInput,
     UpdateCommentInput,
     DeleteCommentInput,
-} from '@acaldas/document-model-graphql/budget-statement';
+} from '../types';
 
 export type AddCommentAction = Action<'ADD_COMMENT', AddCommentInput>;
 export type UpdateCommentAction = Action<'UPDATE_COMMENT', UpdateCommentInput>;

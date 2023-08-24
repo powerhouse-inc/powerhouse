@@ -1,11 +1,10 @@
 import { Action } from '../../../document';
-
 import {
     AddLineItemInput,
     UpdateLineItemInput,
     DeleteLineItemInput,
     SortLineItemsInput,
-} from '@acaldas/document-model-graphql/budget-statement';
+} from '../types';
 
 export type AddLineItemAction = Action<'ADD_LINE_ITEM', AddLineItemInput>;
 export type UpdateLineItemAction = Action<'UPDATE_LINE_ITEM', UpdateLineItemInput>;

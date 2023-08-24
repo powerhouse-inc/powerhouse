@@ -7,7 +7,6 @@ import {
     <%= action.name %>Action,
 <% }); _%>
 } from './actions';
-
 import { <%= h.changeCase.pascal(documentType) %>State } from '../types';
 
 export interface <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations {

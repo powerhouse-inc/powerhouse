@@ -9,7 +9,7 @@ import {
     LineItem,
     LineItemsSortInput,
     UpdateLineItemInput,
-} from '@acaldas/document-model-graphql/budget-statement';
+} from '../../gen';
 import { BudgetStatementLineItemOperations } from '../../gen/line-item/operations';
 import { createLineItem } from '../utils';
 

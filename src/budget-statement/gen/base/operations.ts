@@ -4,7 +4,6 @@ import {
     SetFtesAction,
     SetQuoteCurrencyAction,
 } from './actions';
-
 import { BudgetStatementState } from '../types';
 
 export interface BudgetStatementBaseOperations {

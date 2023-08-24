@@ -4,7 +4,6 @@ import {
     DeleteAccountAction,
     SortAccountsAction,
 } from './actions';
-
 import { BudgetStatementState } from '../types';
 
 export interface BudgetStatementAccountOperations {

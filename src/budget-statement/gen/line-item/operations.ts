@@ -4,7 +4,6 @@ import {
     DeleteLineItemAction,
     SortLineItemsAction,
 } from './actions';
-
 import { BudgetStatementState } from '../types';
 
 export interface BudgetStatementLineItemOperations {

@@ -1,13 +1,11 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     SetOwnerInput,
     SetMonthInput,
     SetFtesInput,
     SetQuoteCurrencyInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+} from '../types';
 import {
     SetOwnerAction,
     SetMonthAction,

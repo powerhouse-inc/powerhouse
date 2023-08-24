@@ -4,21 +4,18 @@ force: true
 ---
 import { BaseDocument } from '../../../document/object';
 <% if (actions.find(a => a.hasAttachment)) {%>import { AttachmentInput } from '../../../document';<%}%>
-
 import {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
     <%= action.name %>Input,
 <% }); _%>
-} from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
-
+    <%= h.changeCase.pascal(documentType) %>State
+} from '../types';
 import {
 <% actions.forEach(action => { _%>
     <%= h.changeCase.camel(action.name) %>,
 <% }); _%>
 } from './creators';
-
 import { <%= h.changeCase.pascal(documentType) %>Action } from '../actions';
-import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
 
 export default class <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module) %> extends BaseDocument<
     <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action

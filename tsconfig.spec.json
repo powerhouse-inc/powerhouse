@@ -5,6 +5,7 @@
     },
     "include": [
         "src/**/*",
+        "scripts/**/*",
         "test/**/*",
         "rollup.config.ts",
         "jest.config.js",

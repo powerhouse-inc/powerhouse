@@ -4,7 +4,7 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+import { BudgetStatementState } from '../../gen';
 import { BudgetStatementAuditOperations } from '../../gen/audit/operations';
 
 function checkDuplicatedReport(state: BudgetStatementState, report: string) {

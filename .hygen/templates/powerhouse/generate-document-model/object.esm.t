@@ -2,7 +2,7 @@
 to: "./src/<%= h.changeCase.param(documentType) %>/gen/object.ts"
 force: true
 ---
-import { <%= h.changeCase.pascal(documentType) %>State } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
+import { <%= h.changeCase.pascal(documentType) %>State } from './types';
 import { ExtendedState } from '../../document';
 import { applyMixins, BaseDocument } from '../../document/object';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';

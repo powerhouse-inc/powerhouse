@@ -3,7 +3,6 @@ import {
     UpdateVestingAction,
     DeleteVestingAction,
 } from './actions';
-
 import { BudgetStatementState } from '../types';
 
 export interface BudgetStatementVestingOperations {

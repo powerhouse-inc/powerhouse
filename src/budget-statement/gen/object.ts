@@ -1,4 +1,4 @@
-import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
+import { BudgetStatementState } from './types';
 import { ExtendedState } from '../../document';
 import { applyMixins, BaseDocument } from '../../document/object';
 import { BudgetStatementAction } from './actions';

@@ -4,13 +4,11 @@ force: true
 ---
 import { createAction } from '../../../document/utils';
 <% if (actions.find(a => a.hasAttachment)) {%>import { AttachmentInput } from '../../../document';<%}%>
-
 import {
 <% actions.filter(a => a.hasInput).forEach(action => { _%>
     <%= action.name %>Input,
 <% }); _%>
-} from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
-
+} from '../types';
 import {
 <% actions.forEach(action => { _%>
     <%= action.name %>Action,

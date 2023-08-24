@@ -1,12 +1,10 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddCommentInput,
     UpdateCommentInput,
     DeleteCommentInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+} from '../types';
 import {
     AddCommentAction,
     UpdateCommentAction,

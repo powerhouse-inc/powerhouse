@@ -1,11 +1,10 @@
 import { Action } from '../../../document';
-
 import {
     SetOwnerInput,
     SetMonthInput,
     SetFtesInput,
     SetQuoteCurrencyInput,
-} from '@acaldas/document-model-graphql/budget-statement';
+} from '../types';
 
 export type SetOwnerAction = Action<'SET_OWNER', SetOwnerInput>;
 export type SetMonthAction = Action<'SET_MONTH', SetMonthInput>;

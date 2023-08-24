@@ -1,20 +1,17 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     AddCommentInput,
     UpdateCommentInput,
     DeleteCommentInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+    BudgetStatementState
+} from '../types';
 import {
     addComment,
     updateComment,
     deleteComment,
 } from './creators';
-
 import { BudgetStatementAction } from '../actions';
-import { BudgetStatementState } from '@acaldas/document-model-graphql/budget-statement';
 
 export default class BudgetStatement_Comment extends BaseDocument<
     BudgetStatementState, BudgetStatementAction

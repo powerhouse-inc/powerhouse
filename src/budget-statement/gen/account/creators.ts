@@ -1,13 +1,11 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddAccountInput,
     UpdateAccountInput,
     DeleteAccountInput,
     SortAccountsInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+} from '../types';
 import {
     AddAccountAction,
     UpdateAccountAction,

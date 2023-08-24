@@ -1,11 +1,10 @@
 import { Action } from '../../../document';
-
 import {
     AddAccountInput,
     UpdateAccountInput,
     DeleteAccountInput,
     SortAccountsInput,
-} from '@acaldas/document-model-graphql/budget-statement';
+} from '../types';
 
 export type AddAccountAction = Action<'ADD_ACCOUNT', AddAccountInput>;
 export type UpdateAccountAction = Action<'UPDATE_ACCOUNT', UpdateAccountInput>;

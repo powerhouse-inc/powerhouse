@@ -4,8 +4,8 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { Vesting } from '@acaldas/document-model-graphql/budget-statement';
 import { hashKey } from '../../../document/utils';
+import { Vesting } from '../../gen/schema/types';
 import { BudgetStatementVestingOperations } from '../../gen/vesting/operations';
 
 const sortVesting = (a: Vesting, b: Vesting) => (a.date < b.date ? -1 : 1);

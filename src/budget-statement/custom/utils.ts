@@ -1,10 +1,10 @@
-import type {
+import {
     Account,
     AddAccountInput,
     LineItem,
     LineItemForecast,
     LineItemInput,
-} from '@acaldas/document-model-graphql/budget-statement';
+} from '../gen/schema/types';
 
 /**
  * Creates a new Account with default properties and the given input properties.

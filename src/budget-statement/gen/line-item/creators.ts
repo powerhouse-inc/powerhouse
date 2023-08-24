@@ -1,13 +1,11 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddLineItemInput,
     UpdateLineItemInput,
     DeleteLineItemInput,
     SortLineItemsInput,
-} from '@acaldas/document-model-graphql/budget-statement';
-
+} from '../types';
 import {
     AddLineItemAction,
     UpdateLineItemAction,

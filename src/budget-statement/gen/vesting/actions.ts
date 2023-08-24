@@ -1,10 +1,9 @@
 import { Action } from '../../../document';
-
 import {
     AddVestingInput,
     UpdateVestingInput,
     DeleteVestingInput,
-} from '@acaldas/document-model-graphql/budget-statement';
+} from '../types';
 
 export type AddVestingAction = Action<'ADD_VESTING', AddVestingInput>;
 export type UpdateVestingAction = Action<'UPDATE_VESTING', UpdateVestingInput>;

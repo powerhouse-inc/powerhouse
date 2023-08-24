@@ -5,7 +5,7 @@ force: true
 import { isBaseAction } from "../../document/actions/types";
 import { createReducer } from "../../document/utils";
 import { ImmutableStateReducer } from "../../document/types";
-import { <%= h.changeCase.pascal(documentType) %>State, z } from '@acaldas/document-model-graphql/<%= h.changeCase.param(documentType) %>';
+import { <%= h.changeCase.pascal(documentType) %>State, z } from './schema';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 
 <% modules.forEach(m => { _%>

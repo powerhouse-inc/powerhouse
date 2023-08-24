@@ -1,7 +1,7 @@
 import { isBaseAction } from "../../document/actions/types";
 import { createReducer } from "../../document/utils";
 import { ImmutableStateReducer } from "../../document/types";
-import { BudgetStatementState, z } from '@acaldas/document-model-graphql/budget-statement';
+import { BudgetStatementState, z } from './schema';
 import { BudgetStatementAction } from './actions';
 
 import { reducer as AccountReducer } from '../custom/reducers/account';
