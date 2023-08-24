@@ -2,11 +2,14 @@ import {
     ScopeFrameworkAction,
     ScopeFrameworkState,
     actions,
+    reducer,
+    utils,
 } from '@acaldas/document-model-libs/browser/scope-framework';
 import ScopeFramework from 'document-model-editors/scope-framework';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
+import { useDocumentReducer } from 'src/utils/document-model';
 import { EditorProps } from '.';
 
 export default function Editor({
@@ -14,8 +17,10 @@ export default function Editor({
     onChange,
 }: EditorProps<ScopeFrameworkState, ScopeFrameworkAction>) {
     const theme = useAtomValue(themeAtom);
-    const [scopeFramework, dispatch] =
-        ScopeFramework.useScopeFrameworkReducer(document);
+    const [scopeFramework, dispatch] = useDocumentReducer(
+        reducer,
+        utils.createDocument(document)
+    );
 
     useEffect(() => {
         onChange?.(scopeFramework);
@@ -40,7 +45,7 @@ export default function Editor({
 
     return (
         <div className="relative h-full">
-            <ScopeFramework.Editor
+            <ScopeFramework.Component
                 editorContext={{ theme }}
                 document={scopeFramework}
                 dispatch={dispatch}
