@@ -2,11 +2,14 @@ import {
     DocumentModelAction,
     DocumentModelState,
     actions,
+    reducer,
+    utils,
 } from '@acaldas/document-model-libs/browser/document-model';
 import DocumentModel from 'document-model-editors/document-model';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
+import { useDocumentReducer } from 'src/utils/document-model';
 import { EditorProps } from '.';
 
 export default function Editor({
@@ -14,8 +17,10 @@ export default function Editor({
     onChange,
 }: EditorProps<DocumentModelState, DocumentModelAction>) {
     const theme = useAtomValue(themeAtom);
-    const [scopeFramework, dispatch] =
-        DocumentModel.useDocumentModelReducer(document);
+    const [scopeFramework, dispatch] = useDocumentReducer(
+        reducer,
+        utils.createDocument(document)
+    );
 
     useEffect(() => {
         onChange?.(scopeFramework);
@@ -40,7 +45,7 @@ export default function Editor({
 
     return (
         <div className="relative h-full">
-            <DocumentModel.Editor
+            <DocumentModel.Component
                 editorContext={{ theme }}
                 document={scopeFramework}
                 dispatch={dispatch}

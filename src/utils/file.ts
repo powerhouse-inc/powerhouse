@@ -23,21 +23,21 @@ async function saveDocumentToFileFn(
                 ? '@acaldas/document-model-libs/browser/budget-statement'
                 : '@acaldas/document-model-libs/budget-statement'
         );
-        return BudgetStatement.utils.saveBudgetStatementToFile;
+        return BudgetStatement.utils.saveToFile;
     } else if (document.documentType === 'makerdao/scope-framework') {
         const ScopeFramework = await import(
             isBrowser
                 ? '@acaldas/document-model-libs/browser/scope-framework'
                 : '@acaldas/document-model-libs/scope-framework'
         );
-        return ScopeFramework.saveScopeFrameworkToFile;
+        return ScopeFramework.utils.saveToFile;
     } else if (document.documentType === 'powerhouse/document-model') {
         const DocumentModel = await import(
             isBrowser
                 ? '@acaldas/document-model-libs/browser/document-model'
                 : '@acaldas/document-model-libs/document-model'
         );
-        return DocumentModel.saveDocumentModelToFile;
+        return DocumentModel.utils.saveToFile;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
     }
@@ -52,21 +52,21 @@ async function saveDocumentToFileHandleFn(
                 ? '@acaldas/document-model-libs/browser/budget-statement'
                 : '@acaldas/document-model-libs/budget-statement'
         );
-        return BudgetStatement.utils.saveBudgetStatementToFileHandle;
+        return BudgetStatement.utils.saveToFileHandle;
     } else if (document.documentType === 'makerdao/scope-framework') {
         const ScopeFramework = await import(
             isBrowser
                 ? '@acaldas/document-model-libs/browser/scope-framework'
                 : '@acaldas/document-model-libs/scope-framework'
         );
-        return ScopeFramework.saveScopeFrameworkToFileHandle;
+        return ScopeFramework.utils.saveToFileHandle;
     } else if (document.documentType === 'powerhouse/document-model') {
         const DocumentModel = await import(
             isBrowser
                 ? '@acaldas/document-model-libs/browser/document-model'
                 : '@acaldas/document-model-libs/document-model'
         );
-        return DocumentModel.saveDocumentModelToFileHandle;
+        return DocumentModel.utils.saveToFileHandle;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
     }
@@ -105,21 +105,21 @@ async function LoadDocumentFromInputFn(
                 ? '@acaldas/document-model-libs/browser/budget-statement'
                 : '@acaldas/document-model-libs/budget-statement'
         );
-        return BudgetStatement.utils.loadBudgetStatementFromInput;
+        return BudgetStatement.utils.loadFromInput;
     } else if (document.documentType === 'makerdao/scope-framework') {
         const ScopeFramework = await import(
             isBrowser
                 ? '@acaldas/document-model-libs/browser/scope-framework'
                 : '@acaldas/document-model-libs/scope-framework'
         );
-        return ScopeFramework.loadScopeFrameworkFromInput;
+        return ScopeFramework.utils.loadFromInput;
     } else if (document.documentType === 'powerhouse/document-model') {
         const DocumentModel = await import(
             isBrowser
                 ? '@acaldas/document-model-libs/browser/document-model'
                 : '@acaldas/document-model-libs/document-model'
         );
-        return DocumentModel.loadDocumentModelFromInput;
+        return DocumentModel.utils.loadFromInput;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
     }

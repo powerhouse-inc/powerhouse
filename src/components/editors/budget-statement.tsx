@@ -2,11 +2,14 @@ import {
     BudgetStatementAction,
     BudgetStatementState,
     actions,
+    reducer,
+    utils,
 } from '@acaldas/document-model-libs/browser/budget-statement';
 import BudgetStatement from 'document-model-editors/budget-statement';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
+import { useDocumentReducer } from 'src/utils/document-model';
 import { EditorProps } from '.';
 
 export default function Editor({
@@ -15,8 +18,10 @@ export default function Editor({
 }: EditorProps<BudgetStatementState, BudgetStatementAction>) {
     const theme = useAtomValue(themeAtom);
 
-    const [budgetStatement, dispatch] =
-        BudgetStatement.useBudgetStatementReducer(document);
+    const [budgetStatement, dispatch] = useDocumentReducer(
+        reducer,
+        utils.createDocument(document)
+    );
 
     useEffect(() => {
         onChange?.(budgetStatement);
@@ -43,7 +48,7 @@ export default function Editor({
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div style={{ width: '50%' }}>
-                    <BudgetStatement.Editor
+                    <BudgetStatement.Component
                         editorContext={{ theme }}
                         document={budgetStatement}
                         dispatch={dispatch}
