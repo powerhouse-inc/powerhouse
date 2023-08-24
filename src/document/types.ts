@@ -197,7 +197,7 @@ export type ActionCreator<A extends Action> = // TODO remove any
         | ((input: any, attachments: AttachmentInput[]) => A)
         | ((...input: any) => BaseAction);
 
-export type DocumentModelModule<
+export type DocumentModel<
     S = unknown,
     A extends Action = Action,
     C extends BaseDocument<S, A> = BaseDocument<S, A>

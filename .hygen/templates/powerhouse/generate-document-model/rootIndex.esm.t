@@ -7,7 +7,7 @@ force: true
 * Delete the file and run the code generator again to have it reset
 */
 
-import { actions as BaseActions, DocumentModelModule } from '../document';
+import { actions as BaseActions, DocumentModel } from '../document';
 import { actions as <%= h.changeCase.pascal(documentType) %>Actions, <%= h.changeCase.pascal(documentType) %> } from './gen';
 import { reducer } from './gen/reducer';
 import { documentModel } from './gen/document-model';
@@ -19,7 +19,7 @@ const Document = <%= h.changeCase.pascal(documentType) %>;
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...<%= h.changeCase.pascal(documentType) %>Actions };
 
-export const module: DocumentModelModule<
+export const module: DocumentModel<
     <%= h.changeCase.pascal(documentType) %>State,
     <%= h.changeCase.pascal(documentType) %>Action,
     <%= h.changeCase.pascal(documentType) %>

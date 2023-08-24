@@ -1,21 +1,24 @@
 /**
-* This is a scaffold file meant for customization.
-* Delete the file and run the code generator again to have it reset
-*/
+ * This is a scaffold file meant for customization.
+ * Delete the file and run the code generator again to have it reset
+ */
 
-import { actions as BaseActions, DocumentModelModule } from '../document';
-import { actions as DocumentModelActions, DocumentModel } from './gen';
-import { reducer } from './gen/reducer';
-import { documentModel } from './gen/document-model';
-import genUtils from './gen/utils';
+import {
+    actions as BaseActions,
+    DocumentModel as _DocumentModel,
+} from '../document';
 import * as customUtils from './custom/utils';
-import { DocumentModelState, DocumentModelAction } from './gen/types';
+import { actions as DocumentModelActions, DocumentModel } from './gen';
+import { documentModel } from './gen/document-model';
+import { reducer } from './gen/reducer';
+import { DocumentModelAction, DocumentModelState } from './gen/types';
+import genUtils from './gen/utils';
 
 const Document = DocumentModel;
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...DocumentModelActions };
 
-export const module: DocumentModelModule<
+export const module: _DocumentModel<
     DocumentModelState,
     DocumentModelAction,
     DocumentModel
@@ -24,17 +27,9 @@ export const module: DocumentModelModule<
     reducer,
     actions,
     utils,
-    documentModel
+    documentModel,
 };
 
-export {
-    DocumentModel,
-    Document,
-    reducer,
-    actions,
-    utils,
-    documentModel
-}
-
-export * from './gen/types';
 export * from './custom/utils';
+export * from './gen/types';
+export { DocumentModel, Document, reducer, actions, utils, documentModel };
