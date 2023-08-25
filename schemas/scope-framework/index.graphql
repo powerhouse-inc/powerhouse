@@ -1,0 +1,129 @@
+#############################################################################
+# State Type Definitions 
+#
+type ScopeComponent {
+    content: String
+}
+
+type ArticleComponent {
+    content: String
+}
+
+type SectionComponent {
+    content: String
+}
+
+type CoreComponent {
+    content: String
+}
+
+enum TypeSpecificationComponentCategory {
+    Primary
+    Supporting
+    Immutable
+    Accessory
+}
+
+type TypeSpecificationComponent {
+    name: String
+    overview: String
+    category: TypeSpecificationComponentCategory
+    documentIdentifierRules: String
+    typeAuthority: String
+    additionalLogic: String
+}
+
+union ElementComponents = 
+        ScopeComponent
+    |   ArticleComponent
+    |   SectionComponent
+    |   CoreComponent
+    |   TypeSpecificationComponent
+
+enum ScopeFrameworkElementType {
+    Scope
+    Article
+    Section
+    Core
+    TypeSpecification
+}
+
+type ScopeFrameworkElement {
+    id: ID!
+    path: String!
+    version: Int!
+    name: String
+    type: ScopeFrameworkElementType
+    components: ElementComponents
+}
+
+type ScopeFrameworkState {
+    rootPath: String!
+    elements: [ScopeFrameworkElement!]!
+}
+
+#############################################################################
+# Operation Type Definitions 
+#
+
+type SetRootPathInput {
+    newRootPath: String!
+}
+
+type AddElementInput {
+    id: String!
+    path: String!
+    type: ScopeFrameworkElementType!
+    name: String
+    components: ElementComponents
+}
+
+type UpdateElementNameInput {
+    id: ID!
+    name: String
+}
+
+type UpdateElementTypeInput {
+    id: ID!
+    type: ScopeFrameworkElementType!
+}
+
+type UpdateElementComponentsInput {
+    id: ID!
+    components: ElementComponents
+}
+
+type RemoveElementInput {
+    id: ID!
+}
+
+type ReorderElementsInput {
+    parentElementId: ID!
+    order: [ID!]!
+}
+
+type MoveElementInput {
+    id: ID!
+    newParentId: ID!
+}
+
+type Mutation {
+    setRootPath(input: SetRootPathInput!): ScopeFrameworkState
+    addElement(input: AddElementInput!): ScopeFrameworkState
+    updateElementType(input: UpdateElementTypeInput!): ScopeFrameworkState
+    updateElementName(input: UpdateElementNameInput!): ScopeFrameworkState
+    updateElementComponents(input: UpdateElementComponentsInput!): ScopeFrameworkState
+    removeElement(input: RemoveElementInput!): ScopeFrameworkState
+    reorderElements(input: ReorderElementsInput!): ScopeFrameworkState
+    moveElement(input: MoveElementInput!): ScopeFrameworkState
+}
+
+union ScopeFrameworkInput = 
+        SetRootPathInput
+    |   AddElementInput
+    |   UpdateElementTypeInput
+    |   UpdateElementNameInput
+    |   UpdateElementComponentsInput
+    |   RemoveElementInput
+    |   ReorderElementsInput
+    |   MoveElementInput

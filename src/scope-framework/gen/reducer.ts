@@ -1,7 +1,7 @@
 import { isBaseAction } from "../../document/actions/types";
 import { createReducer } from "../../document/utils";
 import { ImmutableStateReducer } from "../../document/types";
-import { ScopeFrameworkState, z } from '@acaldas/document-model-graphql/scope-framework';
+import { ScopeFrameworkState, z } from './schema';
 import { ScopeFrameworkAction } from './actions';
 
 import { reducer as MainReducer } from '../custom/reducers/main';

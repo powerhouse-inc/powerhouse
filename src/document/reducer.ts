@@ -1,4 +1,3 @@
-import { z } from '@acaldas/document-model-graphql/document';
 import { castDraft, produce } from 'immer';
 import {
     loadStateOperation,
@@ -16,6 +15,7 @@ import {
     SET_NAME,
     UNDO,
 } from './actions/types';
+import { z } from './schema';
 import { Action, Document, ImmutableStateReducer } from './types';
 import { hashDocument } from './utils';
 

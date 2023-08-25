@@ -5,7 +5,6 @@ import {
     ReorderChangeLogItemsAction,
     ReleaseNewVersionAction,
 } from './actions';
-
 import { DocumentModelState } from '../types';
 
 export interface DocumentModelVersioningOperations {

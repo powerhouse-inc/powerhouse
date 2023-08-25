@@ -1,4 +1,12 @@
 import { type CodegenConfig } from '@graphql-codegen/cli';
+import { readdirSync } from 'fs';
+
+const getDirectories = source =>
+    readdirSync(source, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
+
+const SCHEMAS_DIR = './schemas';
 
 const tsConfig = {
     strict: true,
@@ -59,14 +67,15 @@ function schemaConfig(name: string): CodegenConfig['generates'] {
     };
 }
 
+const documentModels = getDirectories(SCHEMAS_DIR);
+const documentModelConfigs = documentModels.reduce(
+    (obj, model) => ({ ...obj, ...schemaConfig(model) }),
+    {}
+);
+
 const config: CodegenConfig = {
     overwrite: true,
-    generates: {
-        // ...schemaConfig('document'),
-        ...schemaConfig('budget-statement'),
-        // ...schemaConfig('document-model'),
-        // ...schemaConfig('scope-framework'),
-    },
+    generates: documentModelConfigs,
 };
 
 export default config;

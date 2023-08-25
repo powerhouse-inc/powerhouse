@@ -1,6 +1,5 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddOperationErrorInput,
     SetOperationErrorCodeInput,
@@ -9,8 +8,7 @@ import {
     SetOperationErrorTemplateInput,
     DeleteOperationErrorInput,
     ReorderOperationErrorsInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+} from '../types';
 import {
     AddOperationErrorAction,
     SetOperationErrorCodeAction,

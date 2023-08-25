@@ -1,5 +1,4 @@
 import { Action } from '../../../document';
-
 import {
     AddOperationInput,
     SetOperationNameInput,
@@ -10,7 +9,7 @@ import {
     MoveOperationInput,
     DeleteOperationInput,
     ReorderModuleOperationsInput,
-} from '@acaldas/document-model-graphql/document-model';
+} from '../types';
 
 export type AddOperationAction = Action<'ADD_OPERATION', AddOperationInput>;
 export type SetOperationNameAction = Action<'SET_OPERATION_NAME', SetOperationNameInput>;

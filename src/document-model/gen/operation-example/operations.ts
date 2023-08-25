@@ -4,7 +4,6 @@ import {
     DeleteOperationExampleAction,
     ReorderOperationExamplesAction,
 } from './actions';
-
 import { DocumentModelState } from '../types';
 
 export interface DocumentModelOperationExampleOperations {

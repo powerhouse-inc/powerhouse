@@ -1,9 +1,8 @@
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 import { paramCase } from 'change-case';
 import { runner } from 'hygen';
 import Logger from 'hygen/dist/logger';
 import path from 'path';
-import { utils } from '../src/document-model';
+import { DocumentModelState, utils } from '../src/document-model';
 
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, 'templates');

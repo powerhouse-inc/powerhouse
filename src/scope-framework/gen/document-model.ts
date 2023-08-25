@@ -104,7 +104,7 @@ export const documentModel: DocumentModelState = {
             ],
             "state": {
                 "schema": "",
-                "initialValue": "{\n    \"rootPath\": \"A\",\n    \"elements\": [\n        {\n            \"id\": \"o580YyvP92CGNrywTRZ6Ip9qRrI=\",\n            \"name\": \"Scope Name\",\n            \"version\": 1,\n            \"type\": \"Scope\",\n            \"path\": \"A.1\",\n            \"components\": {\n                \"content\": \"Scope description goes here.\"\n            }\n        }\n    ]\n}",
+                "initialValue": "{\n    \"rootPath\": \"A\",\n    \"elements\": [\n        {\n            \"id\": \"iwPYQckR3Ldv6sIK2wmyCq6JYBY=\",\n            \"name\": \"Scope Name\",\n            \"version\": 1,\n            \"type\": \"Scope\",\n            \"path\": \"A.1\",\n            \"components\": {\n                \"content\": \"Scope description goes here.\"\n            }\n        }\n    ]\n}",
                 "examples": []
             }
         }

@@ -95,10 +95,10 @@ export function BudgetStatementStateSchema(): z.ZodObject<Properties<BudgetState
     accounts: z.array(AccountSchema()),
     auditReports: z.array(AuditReportSchema()),
     comments: z.array(CommentSchema()),
-    ftes: FtesSchema().nullish(),
-    month: z.string().nullish(),
-    owner: OwnerSchema().nullish(),
-    quoteCurrency: z.string().nullish(),
+    ftes: FtesSchema().nullable(),
+    month: z.string().nullable(),
+    owner: OwnerSchema().nullable(),
+    quoteCurrency: z.string().nullable(),
     vesting: z.array(VestingSchema())
   })
 }
@@ -117,10 +117,10 @@ export function CommentSchema(): z.ZodObject<Properties<Comment>> {
 export function CommentAuthorSchema(): z.ZodObject<Properties<CommentAuthor>> {
   return z.object({
     __typename: z.literal('CommentAuthor').optional(),
-    id: z.string().nullish(),
-    ref: z.string().nullish(),
-    roleLabel: z.string().nullish(),
-    username: z.string().nullish()
+    id: z.string().nullable(),
+    ref: z.string().nullable(),
+    roleLabel: z.string().nullable(),
+    username: z.string().nullable()
   })
 }
 
@@ -191,14 +191,14 @@ export function FtesForecastInputSchema(): z.ZodObject<Properties<FtesForecastIn
 export function LineItemSchema(): z.ZodObject<Properties<LineItem>> {
   return z.object({
     __typename: z.literal('LineItem').optional(),
-    actual: z.number().nullish(),
-    budgetCap: z.number().nullish(),
-    category: LineItemCategorySchema().nullish(),
-    comment: z.string().nullish(),
+    actual: z.number().nullable(),
+    budgetCap: z.number().nullable(),
+    category: LineItemCategorySchema().nullable(),
+    comment: z.string().nullable(),
     forecast: z.array(LineItemForecastSchema()),
-    group: LineItemGroupSchema().nullish(),
+    group: LineItemGroupSchema().nullable(),
     headcountExpense: z.boolean(),
-    payment: z.number().nullish()
+    payment: z.number().nullable()
   })
 }
 
@@ -253,9 +253,9 @@ export function LineItemsSortInputSchema(): z.ZodObject<Properties<LineItemsSort
 export function OwnerSchema(): z.ZodObject<Properties<Owner>> {
   return z.object({
     __typename: z.literal('Owner').optional(),
-    id: z.string().nullish(),
-    ref: z.string().nullish(),
-    title: z.string().nullish()
+    id: z.string().nullable(),
+    ref: z.string().nullable(),
+    title: z.string().nullable()
   })
 }
 

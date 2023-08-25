@@ -1,4 +1,4 @@
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
+import { DocumentModelState } from '../../src/document-model';
 import { hashKey } from '../../src/document/utils';
 
 const state: DocumentModelState = {

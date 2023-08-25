@@ -3,7 +3,8 @@ import type { DocumentModelState } from '../document-model';
 import type { BaseAction } from './actions/types';
 import { BaseDocument } from './object';
 import { FileInput } from './utils';
-export type { BaseAction };
+export { z } from './schema';
+export type * from './schema/types';
 
 /**
  * Defines the basic structure of an action.

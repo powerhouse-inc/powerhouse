@@ -1,5 +1,4 @@
 import { Action } from '../../../document';
-
 import {
     SetModelNameInput,
     SetModelIdInput,
@@ -7,7 +6,7 @@ import {
     SetModelDescriptionInput,
     SetAuthorNameInput,
     SetAuthorWebsiteInput,
-} from '@acaldas/document-model-graphql/document-model';
+} from '../types';
 
 export type SetModelNameAction = Action<'SET_MODEL_NAME', SetModelNameInput>;
 export type SetModelIdAction = Action<'SET_MODEL_ID', SetModelIdInput>;

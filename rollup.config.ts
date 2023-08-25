@@ -37,15 +37,7 @@ const input = {
     document: 'src/document/index.ts',
 };
 
-const bundledDependencies = [
-    'mime/lite',
-    'jszip',
-    '@acaldas/document-model-graphql',
-    '@acaldas/document-model-graphql/document',
-    '@acaldas/document-model-graphql/scope-framework',
-    '@acaldas/document-model-graphql/budget-statement',
-    '@acaldas/document-model-graphql/document-model',
-];
+const bundledDependencies = ['mime/lite', 'jszip', 'zod'];
 
 const outputs: RollupOptions[] = [
     {
@@ -85,7 +77,7 @@ const outputs: RollupOptions[] = [
     },
     {
         input,
-        external: ['@acaldas/document-model-graphql'],
+        external: [],
         plugins: [dts({ respectExternal: true })],
         output: {
             dir: 'dist/node/types/',
@@ -142,14 +134,7 @@ const outputs: RollupOptions[] = [
     },
     {
         input,
-        external: [
-            'immer',
-            'mime/lite',
-            '@acaldas/document-model-graphql',
-            '@acaldas/document-model-graphql/document',
-            '@acaldas/document-model-graphql/budget-statement',
-            '@acaldas/document-model-graphql/scope-framework',
-        ],
+        external: ['immer', 'mime/lite'],
         plugins: [
             replaceBrowserModules(),
             nodePolyfills(),

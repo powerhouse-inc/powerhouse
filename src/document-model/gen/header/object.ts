@@ -1,6 +1,5 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     SetModelNameInput,
     SetModelIdInput,
@@ -8,8 +7,8 @@ import {
     SetModelDescriptionInput,
     SetAuthorNameInput,
     SetAuthorWebsiteInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+    DocumentModelState
+} from '../types';
 import {
     setModelName,
     setModelId,
@@ -18,9 +17,7 @@ import {
     setAuthorName,
     setAuthorWebsite,
 } from './creators';
-
 import { DocumentModelAction } from '../actions';
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
 export default class DocumentModel_Header extends BaseDocument<
     DocumentModelState, DocumentModelAction

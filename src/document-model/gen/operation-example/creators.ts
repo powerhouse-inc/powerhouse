@@ -1,13 +1,11 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddOperationExampleInput,
     UpdateOperationExampleInput,
     DeleteOperationExampleInput,
     ReorderOperationExamplesInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+} from '../types';
 import {
     AddOperationExampleAction,
     UpdateOperationExampleAction,

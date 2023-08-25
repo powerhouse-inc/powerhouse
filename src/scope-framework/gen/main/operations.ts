@@ -8,7 +8,6 @@ import {
     ReorderElementsAction,
     MoveElementAction,
 } from './actions';
-
 import { ScopeFrameworkState } from '../types';
 
 export interface ScopeFrameworkMainOperations {

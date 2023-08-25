@@ -7,7 +7,6 @@ import {
     DeleteOperationErrorAction,
     ReorderOperationErrorsAction,
 } from './actions';
-
 import { DocumentModelState } from '../types';
 
 export interface DocumentModelOperationErrorOperations {

@@ -1,7 +1,7 @@
 import { isBaseAction } from "../../document/actions/types";
 import { createReducer } from "../../document/utils";
 import { ImmutableStateReducer } from "../../document/types";
-import { DocumentModelState, z } from '@acaldas/document-model-graphql/document-model';
+import { DocumentModelState, z } from './schema';
 import { DocumentModelAction } from './actions';
 
 import { reducer as HeaderReducer } from '../custom/reducers/header';

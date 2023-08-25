@@ -1,5 +1,4 @@
 import { Action } from '../../../document';
-
 import {
     SetRootPathInput,
     AddElementInput,
@@ -9,7 +8,7 @@ import {
     RemoveElementInput,
     ReorderElementsInput,
     MoveElementInput,
-} from '@acaldas/document-model-graphql/scope-framework';
+} from '../types';
 
 export type SetRootPathAction = Action<'SET_ROOT_PATH', SetRootPathInput>;
 export type AddElementAction = Action<'ADD_ELEMENT', AddElementInput>;

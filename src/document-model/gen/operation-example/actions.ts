@@ -1,11 +1,10 @@
 import { Action } from '../../../document';
-
 import {
     AddOperationExampleInput,
     UpdateOperationExampleInput,
     DeleteOperationExampleInput,
     ReorderOperationExamplesInput,
-} from '@acaldas/document-model-graphql/document-model';
+} from '../types';
 
 export type AddOperationExampleAction = Action<'ADD_OPERATION_EXAMPLE', AddOperationExampleInput>;
 export type UpdateOperationExampleAction = Action<'UPDATE_OPERATION_EXAMPLE', UpdateOperationExampleInput>;

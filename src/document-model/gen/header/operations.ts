@@ -6,7 +6,6 @@ import {
     SetAuthorNameAction,
     SetAuthorWebsiteAction,
 } from './actions';
-
 import { DocumentModelState } from '../types';
 
 export interface DocumentModelHeaderOperations {

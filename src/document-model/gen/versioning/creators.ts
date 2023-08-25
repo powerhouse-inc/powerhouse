@@ -1,13 +1,11 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddChangeLogItemInput,
     UpdateChangeLogItemInput,
     DeleteChangeLogItemInput,
     ReorderChangeLogItemsInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+} from '../types';
 import {
     AddChangeLogItemAction,
     UpdateChangeLogItemAction,

@@ -1,7 +1,9 @@
-import { SectionComponent } from '@acaldas/document-model-graphql/scope-framework';
 import { hashKey } from '../../src/document/utils';
 import { ScopeFramework } from '../../src/scope-framework';
-import { ScopeFramework as ScopeFrameworkObject } from '../../src/scope-framework/gen';
+import {
+    ScopeFramework as ScopeFrameworkObject,
+    SectionComponent,
+} from '../../src/scope-framework/gen';
 
 const buildExampleDocument = (): ScopeFrameworkObject => {
     const framework = new ScopeFramework();

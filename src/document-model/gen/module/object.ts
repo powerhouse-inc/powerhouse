@@ -1,14 +1,13 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     AddModuleInput,
     SetModuleNameInput,
     SetModuleDescriptionInput,
     DeleteModuleInput,
     ReorderModulesInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+    DocumentModelState
+} from '../types';
 import {
     addModule,
     setModuleName,
@@ -16,9 +15,7 @@ import {
     deleteModule,
     reorderModules,
 } from './creators';
-
 import { DocumentModelAction } from '../actions';
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
 export default class DocumentModel_Module extends BaseDocument<
     DocumentModelState, DocumentModelAction

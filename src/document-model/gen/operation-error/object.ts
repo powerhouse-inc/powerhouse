@@ -1,6 +1,5 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     AddOperationErrorInput,
     SetOperationErrorCodeInput,
@@ -9,8 +8,8 @@ import {
     SetOperationErrorTemplateInput,
     DeleteOperationErrorInput,
     ReorderOperationErrorsInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+    DocumentModelState
+} from '../types';
 import {
     addOperationError,
     setOperationErrorCode,
@@ -20,9 +19,7 @@ import {
     deleteOperationError,
     reorderOperationErrors,
 } from './creators';
-
 import { DocumentModelAction } from '../actions';
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
 export default class DocumentModel_OperationError extends BaseDocument<
     DocumentModelState, DocumentModelAction

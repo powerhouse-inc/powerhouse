@@ -1,6 +1,5 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     SetRootPathInput,
     AddElementInput,
@@ -10,8 +9,8 @@ import {
     RemoveElementInput,
     ReorderElementsInput,
     MoveElementInput,
-} from '@acaldas/document-model-graphql/scope-framework';
-
+    ScopeFrameworkState
+} from '../types';
 import {
     setRootPath,
     addElement,
@@ -22,9 +21,7 @@ import {
     reorderElements,
     moveElement,
 } from './creators';
-
 import { ScopeFrameworkAction } from '../actions';
-import { ScopeFrameworkState } from '@acaldas/document-model-graphql/scope-framework';
 
 export default class ScopeFramework_Main extends BaseDocument<
     ScopeFrameworkState, ScopeFrameworkAction

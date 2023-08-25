@@ -1,22 +1,19 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     AddOperationExampleInput,
     UpdateOperationExampleInput,
     DeleteOperationExampleInput,
     ReorderOperationExamplesInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+    DocumentModelState
+} from '../types';
 import {
     addOperationExample,
     updateOperationExample,
     deleteOperationExample,
     reorderOperationExamples,
 } from './creators';
-
 import { DocumentModelAction } from '../actions';
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
 export default class DocumentModel_OperationExample extends BaseDocument<
     DocumentModelState, DocumentModelAction

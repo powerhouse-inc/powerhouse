@@ -5,7 +5,6 @@ import {
     DeleteModuleAction,
     ReorderModulesAction,
 } from './actions';
-
 import { DocumentModelState } from '../types';
 
 export interface DocumentModelModuleOperations {

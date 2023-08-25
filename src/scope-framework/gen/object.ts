@@ -1,4 +1,4 @@
-import { ScopeFrameworkState } from '@acaldas/document-model-graphql/scope-framework';
+import { ScopeFrameworkState } from './types';
 import { ExtendedState } from '../../document';
 import { applyMixins, BaseDocument } from '../../document/object';
 import { ScopeFrameworkAction } from './actions';

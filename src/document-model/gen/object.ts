@@ -1,4 +1,4 @@
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
+import { DocumentModelState } from './types';
 import { ExtendedState } from '../../document';
 import { applyMixins, BaseDocument } from '../../document/object';
 import { DocumentModelAction } from './actions';

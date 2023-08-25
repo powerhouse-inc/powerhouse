@@ -1,4 +1,4 @@
-import { Module } from '@acaldas/document-model-graphql/document-model';
+import { Module } from '../../gen';
 import { DocumentModelModuleOperations } from '../../gen/module/operations';
 
 const moduleSorter = (order: string[]) => {

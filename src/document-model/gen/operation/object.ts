@@ -1,6 +1,5 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     AddOperationInput,
     SetOperationNameInput,
@@ -11,8 +10,8 @@ import {
     MoveOperationInput,
     DeleteOperationInput,
     ReorderModuleOperationsInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+    DocumentModelState
+} from '../types';
 import {
     addOperation,
     setOperationName,
@@ -24,9 +23,7 @@ import {
     deleteOperation,
     reorderModuleOperations,
 } from './creators';
-
 import { DocumentModelAction } from '../actions';
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
 export default class DocumentModel_Operation extends BaseDocument<
     DocumentModelState, DocumentModelAction

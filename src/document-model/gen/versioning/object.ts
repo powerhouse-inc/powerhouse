@@ -1,13 +1,12 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     AddChangeLogItemInput,
     UpdateChangeLogItemInput,
     DeleteChangeLogItemInput,
     ReorderChangeLogItemsInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+    DocumentModelState
+} from '../types';
 import {
     addChangeLogItem,
     updateChangeLogItem,
@@ -15,9 +14,7 @@ import {
     reorderChangeLogItems,
     releaseNewVersion,
 } from './creators';
-
 import { DocumentModelAction } from '../actions';
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
 export default class DocumentModel_Versioning extends BaseDocument<
     DocumentModelState, DocumentModelAction

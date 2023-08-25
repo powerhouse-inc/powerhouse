@@ -1,6 +1,5 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     SetRootPathInput,
     AddElementInput,
@@ -10,8 +9,7 @@ import {
     RemoveElementInput,
     ReorderElementsInput,
     MoveElementInput,
-} from '@acaldas/document-model-graphql/scope-framework';
-
+} from '../types';
 import {
     SetRootPathAction,
     AddElementAction,

@@ -1,4 +1,4 @@
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
+import { DocumentModelState } from '../../src/document-model';
 
 const state: DocumentModelState = {
     id: 'powerhouse/document-model',

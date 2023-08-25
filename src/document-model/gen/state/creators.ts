@@ -1,6 +1,5 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     SetStateSchemaInput,
     SetInitialStateInput,
@@ -8,8 +7,7 @@ import {
     UpdateStateExampleInput,
     DeleteStateExampleInput,
     ReorderStateExamplesInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+} from '../types';
 import {
     SetStateSchemaAction,
     SetInitialStateAction,

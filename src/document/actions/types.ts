@@ -1,5 +1,4 @@
-import type { BaseAction } from '@acaldas/document-model-graphql/document';
-import { Action } from '../types';
+import { Action, BaseAction } from '../types';
 
 export const SET_NAME = 'SET_NAME';
 export const UNDO = 'UNDO';
@@ -13,8 +12,8 @@ export {
     RedoAction,
     SetNameAction,
     UndoAction,
-} from '@acaldas/document-model-graphql/document';
-export { BaseAction };
+} from '../types';
+export type { BaseAction };
 
 export function isBaseAction(action: Action): action is BaseAction {
     return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);

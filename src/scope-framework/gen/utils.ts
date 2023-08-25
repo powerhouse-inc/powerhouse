@@ -6,7 +6,7 @@ const initialState: ScopeFrameworkState = {
     "rootPath": "A",
     "elements": [
         {
-            "id": "o580YyvP92CGNrywTRZ6Ip9qRrI=",
+            "id": "iwPYQckR3Ldv6sIK2wmyCq6JYBY=",
             "name": "Scope Name",
             "version": 1,
             "type": "Scope",

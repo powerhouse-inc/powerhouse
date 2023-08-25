@@ -1,6 +1,5 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddOperationInput,
     SetOperationNameInput,
@@ -11,8 +10,7 @@ import {
     MoveOperationInput,
     DeleteOperationInput,
     ReorderModuleOperationsInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+} from '../types';
 import {
     AddOperationAction,
     SetOperationNameAction,

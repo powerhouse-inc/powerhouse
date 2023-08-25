@@ -1,14 +1,12 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     AddModuleInput,
     SetModuleNameInput,
     SetModuleDescriptionInput,
     DeleteModuleInput,
     ReorderModulesInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+} from '../types';
 import {
     AddModuleAction,
     SetModuleNameAction,

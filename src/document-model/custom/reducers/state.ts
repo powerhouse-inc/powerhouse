@@ -1,4 +1,4 @@
-import { CodeExample } from '@acaldas/document-model-graphql/document-model';
+import { CodeExample } from '../../gen';
 import { DocumentModelStateOperations } from '../../gen/state/operations';
 
 const exampleSorter = (order: string[]) => {

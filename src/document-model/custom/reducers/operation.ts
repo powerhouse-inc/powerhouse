@@ -1,4 +1,4 @@
-import { Operation } from '@acaldas/document-model-graphql/document-model';
+import { Operation } from '../../gen';
 import { DocumentModelOperationOperations } from '../../gen/operation/operations';
 
 const operationSorter = (order: string[]) => {

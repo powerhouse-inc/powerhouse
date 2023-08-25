@@ -1,6 +1,5 @@
 import { createAction } from '../../../document/utils';
 
-
 import {
     SetModelNameInput,
     SetModelIdInput,
@@ -8,8 +7,7 @@ import {
     SetModelDescriptionInput,
     SetAuthorNameInput,
     SetAuthorWebsiteInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+} from '../types';
 import {
     SetModelNameAction,
     SetModelIdAction,

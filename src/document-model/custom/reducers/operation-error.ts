@@ -1,4 +1,4 @@
-import { OperationError } from '@acaldas/document-model-graphql/document-model';
+import { OperationError } from '../../gen';
 import { DocumentModelOperationErrorOperations } from '../../gen/operation-error/operations';
 
 const errorSorter = (order: string[]) => {

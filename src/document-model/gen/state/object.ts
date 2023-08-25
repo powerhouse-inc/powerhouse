@@ -1,6 +1,5 @@
 import { BaseDocument } from '../../../document/object';
 
-
 import {
     SetStateSchemaInput,
     SetInitialStateInput,
@@ -8,8 +7,8 @@ import {
     UpdateStateExampleInput,
     DeleteStateExampleInput,
     ReorderStateExamplesInput,
-} from '@acaldas/document-model-graphql/document-model';
-
+    DocumentModelState
+} from '../types';
 import {
     setStateSchema,
     setInitialState,
@@ -18,9 +17,7 @@ import {
     deleteStateExample,
     reorderStateExamples,
 } from './creators';
-
 import { DocumentModelAction } from '../actions';
-import { DocumentModelState } from '@acaldas/document-model-graphql/document-model';
 
 export default class DocumentModel_State extends BaseDocument<
     DocumentModelState, DocumentModelAction

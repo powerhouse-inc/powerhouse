@@ -1,5 +1,4 @@
 import { Action } from '../../../document';
-
 import {
     AddOperationErrorInput,
     SetOperationErrorCodeInput,
@@ -8,7 +7,7 @@ import {
     SetOperationErrorTemplateInput,
     DeleteOperationErrorInput,
     ReorderOperationErrorsInput,
-} from '@acaldas/document-model-graphql/document-model';
+} from '../types';
 
 export type AddOperationErrorAction = Action<'ADD_OPERATION_ERROR', AddOperationErrorInput>;
 export type SetOperationErrorCodeAction = Action<'SET_OPERATION_ERROR_CODE', SetOperationErrorCodeInput>;
