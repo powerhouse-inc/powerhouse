@@ -42,14 +42,12 @@ export default defineConfig(({ mode = 'node' }) => {
             emptyOutDir: true,
             lib: {
                 entry,
-                formats: ['es'],
+                formats: ['es', 'cjs'],
+                fileName: (format, entryName) =>
+                    `${entryName}.${format === 'cjs' ? 'cjs' : 'js'}`,
             },
             rollupOptions: {
                 external,
-                output: {
-                    entryFileNames: '[name].js',
-                    format: 'es',
-                },
             },
         },
         plugins: [

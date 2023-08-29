@@ -6,8 +6,8 @@
     "files": [
         "dist"
     ],
-    "type": "module",
-    "main": "dist/node/index.js",
+    "types": "dist/node/index.d.ts",
+    "main": "dist/node/index.cjs",
     "module": "dist/node/index.js",
     "scripts": {
         "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
@@ -19,10 +19,44 @@
     },
     "exports": {
         ".": {
-            "import": "./dist/node/index.js"
+            "import": "./dist/node/index.js",
+            "require": "./dist/node/index.cjs"
         },
         "./browser": {
-            "import": "./dist/browser/index.js"
+            "import": "./dist/browser/index.js",
+            "require": "./dist/browser/index.cjs"
+        },
+        "./document": {
+            "import": "./dist/node/document.js",
+            "require": "./dist/node/document.cjs"
+        },
+        "./browser/document": {
+            "import": "./dist/browser/document.js",
+            "require": "./dist/browser/document.cjs"
+        },
+        "./document-model": {
+            "import": "./dist/node/document-model.js",
+            "require": "./dist/node/document-model.cjs"
+        },
+        "./browser/document-model": {
+            "import": "./dist/node/document-model.js",
+            "require": "./dist/node/document-model.cjs"
+        }
+    },
+    "typesVersions": {
+        "*": {
+            "document": [
+                "dist/node/document"
+            ],
+            "browser/document": [
+                "dist/browser/document"
+            ],
+            "document-model": [
+                "dist/node/document-model"
+            ],
+            "browser/document-model": [
+                "dist/browser/document-model"
+            ]
         }
     },
     "devDependencies": {
