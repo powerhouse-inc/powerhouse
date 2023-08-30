@@ -1,0 +1,12 @@
+{
+    "name": "document-model-boilerplate",
+    "version": "1.0.0",
+    "main": "index.js",
+    "license": "AGPL-3.0-only",
+    "scripts": {
+        "generate": "powerhouse generate"
+    },
+    "devDependencies": {
+        "@powerhouse/powerhouse": "../powerhouse"
+    }
+}
