@@ -2,11 +2,23 @@
 # yarn lockfile v1
 
 
-"@acaldas/powerhouse@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@acaldas/powerhouse/-/powerhouse-1.0.1.tgz#d08b4ff36926cf484c12c8e36823e051d8d2bdbd"
-  integrity sha512-7OSTk4LnLHMVYjtLTx+pdxf0Ic4bN0LA3Asyub8kDhRge2mP2lVDjR68RBL6sS3jm2EMJhDnZ/MzXdDkagZCpg==
+"@acaldas/graphql-codegen-typescript-validation-schema@^0.12.3":
+  version "0.12.3"
+  resolved "https://registry.yarnpkg.com/@acaldas/graphql-codegen-typescript-validation-schema/-/graphql-codegen-typescript-validation-schema-0.12.3.tgz#1d2b4705784982aafc80dc222e536b8cbe93daa4"
+  integrity sha512-NVH7QS/jCO2X3hSe5qeFgdPms6J9eUHt9ZHirt/KJ6liqo4jTdN0xJO0Dns0bdSBwqsuzNuRNrQmpYNpC3zlOQ==
   dependencies:
+    "@graphql-codegen/plugin-helpers" "^5.0.0"
+    "@graphql-codegen/schema-ast" "4.0.0"
+    "@graphql-codegen/visitor-plugin-common" "^4.0.0"
+    "@graphql-tools/utils" "^10.0.0"
+    graphlib "^2.1.8"
+
+"@acaldas/powerhouse@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@acaldas/powerhouse/-/powerhouse-1.0.3.tgz#82aa2b73a8cdf263f740958c1f8a8788bd820637"
+  integrity sha512-gcqZPezmU7Q6nRCTDz/Pr/3Ljlu4eg/R+4X1Lq+cnDtbW41ELq+/JE+4UkcPPayy4MEPHqxZNxL1eCJ50WWXLg==
+  dependencies:
+    "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
     "@graphql-codegen/cli" "^5.0.0"
     "@graphql-codegen/typescript" "^4.0.1"
     "@powerhouse/document-model" "../document-model"
@@ -580,7 +592,7 @@
     lodash "~4.17.0"
     tslib "~2.5.0"
 
-"@graphql-codegen/schema-ast@^4.0.0":
+"@graphql-codegen/schema-ast@4.0.0", "@graphql-codegen/schema-ast@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@graphql-codegen/schema-ast/-/schema-ast-4.0.0.tgz#5d60996c87b64f81847da8fcb2d8ef50ede89755"
   integrity sha512-WIzkJFa9Gz28FITAPILbt+7A8+yzOyd1NxgwFh7ie+EmO9a5zQK6UQ3U/BviirguXCYnn+AR4dXsoDrSrtRA1g==
@@ -600,7 +612,7 @@
     auto-bind "~4.0.0"
     tslib "~2.5.0"
 
-"@graphql-codegen/visitor-plugin-common@4.0.1":
+"@graphql-codegen/visitor-plugin-common@4.0.1", "@graphql-codegen/visitor-plugin-common@^4.0.0":
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/@graphql-codegen/visitor-plugin-common/-/visitor-plugin-common-4.0.1.tgz#64e293728b3c186f6767141e41fcdb310e50d367"
   integrity sha512-Bi/1z0nHg4QMsAqAJhds+ForyLtk7A3HQOlkrZNm3xEkY7lcBzPtiOTLBtvziwopBsXUxqeSwVjOOFPLS5Yw1Q==
@@ -1900,6 +1912,13 @@ graceful-fs@^4.1.6, graceful-fs@^4.2.0:
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
 
+graphlib@^2.1.8:
+  version "2.1.8"
+  resolved "https://registry.yarnpkg.com/graphlib/-/graphlib-2.1.8.tgz#5761d414737870084c92ec7b5dbcb0592c9d35da"
+  integrity sha512-jcLLfkpoVGmH7/InMC/1hIvOPSUh38oJtGhvrOFGzioE1DZ+0YW16RgmOJhHiuWTvGiJQ9Z1Ik43JvkRPRvE+A==
+  dependencies:
+    lodash "^4.17.15"
+
 graphql-config@^5.0.2:
   version "5.0.2"
   resolved "https://registry.yarnpkg.com/graphql-config/-/graphql-config-5.0.2.tgz#7e962f94ccddcc2ee0aa71d75cf4491ec5092bdb"
@@ -2240,9 +2259,9 @@ jiti@^1.17.1, jiti@^1.18.2:
   integrity sha512-5eEbBDQT/jF1xg6l36P+mWGGoH9Spuy0PCdSr2dtWRDGC6ph/w9ZCL4lmESW8f8F7MwT3XKescfP0wnZWAKL9w==
 
 jose@^4.11.4:
-  version "4.14.5"
-  resolved "https://registry.yarnpkg.com/jose/-/jose-4.14.5.tgz#2de2f061b824d075cd5f27df0828fbc17b93e4da"
-  integrity sha512-56ns1XlSI8d5V0t7hilPu8dMbE4YIwrTJU6e7bV1Abyu6oel4tSc4YmD742MoWV3U+vn7O0WlKpinzu2DP0HWw==
+  version "4.14.6"
+  resolved "https://registry.yarnpkg.com/jose/-/jose-4.14.6.tgz#94dca1d04a0ad8c6bff0998cdb51220d473cc3af"
+  integrity sha512-EqJPEUlZD0/CSUMubKtMaYUOtWe91tZXTWMJZoKSbLk+KtdhNdcvppH8lA9XwVu2V4Ailvsj0GBZJ2ZwDjfesQ==
 
 "js-tokens@^3.0.0 || ^4.0.0", js-tokens@^4.0.0:
   version "4.0.0"
@@ -2356,7 +2375,7 @@ locate-path@^5.0.0:
   dependencies:
     p-locate "^4.1.0"
 
-lodash@^4.17.20, lodash@^4.17.21, lodash@~4.17.0:
+lodash@^4.17.15, lodash@^4.17.20, lodash@^4.17.21, lodash@~4.17.0:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
