@@ -44,9 +44,9 @@ function schemaConfig(name: string): CodegenConfig['generates'] {
         },
         [`src/${name}/gen/schema/zod.ts`]: {
             schema: `schemas/${name}/index.graphql`,
-            plugins: ['typescript-validation-schema'],
+            plugins: ['@acaldas/graphql-codegen-typescript-validation-schema'],
             config: {
-                importFrom: `./`,
+                importFrom: `./types`,
                 schema: 'zod',
                 ...tsConfig,
                 scalarSchemas: {
