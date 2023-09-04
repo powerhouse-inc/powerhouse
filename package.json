@@ -7,6 +7,8 @@
         "generate": "powerhouse generate"
     },
     "devDependencies": {
-        "@powerhouse/powerhouse": "../powerhouse"
-    }
+        "@acaldas/powerhouse": "^1.0.1",
+        "graphql": "^16.8.0"
+    },
+    "dependencies": {}
 }
