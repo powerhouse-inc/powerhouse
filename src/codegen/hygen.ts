@@ -2,13 +2,11 @@ import 'ts-node/register/transpile-only';
 import { DocumentModel } from '@powerhouse/document-model';
 import { paramCase } from 'change-case';
 import { Logger, runner } from 'hygen';
-import { cwd } from 'process';
 import path from 'path';
 import fs from 'fs';
-import { documentModel } from '@powerhouse/document-model/document-model';
 
 const logger = new Logger(console.log.bind(console));
-const defaultTemplates = path.join(__dirname, '../', '.hygen', 'templates');
+const defaultTemplates = path.join(__dirname, '../../', '.hygen', 'templates');
 
 const MODELS_DIR = './document-models';
 

@@ -1,0 +1,46 @@
+Arguments: 
+  /Users/acaldas/.nvm/versions/node/v18.12.1/bin/node /Users/acaldas/dev/makerdao/.yarn/releases/yarn-1.22.19.cjs publish --cwd ./src/create-lib/
+
+PATH: 
+  /var/folders/ht/7q3t2pvj0p9163554zbbrgkc0000gn/T/yarn--1693912861539-0.201030768915073:/Users/acaldas/dev/makerdao/powerhouse/node_modules/.bin:/Users/acaldas/.config/yarn/link/node_modules/.bin:/Users/acaldas/.yarn/bin:/Users/acaldas/.nvm/versions/node/v18.12.1/libexec/lib/node_modules/npm/bin/node-gyp-bin:/Users/acaldas/.nvm/versions/node/v18.12.1/lib/node_modules/npm/bin/node-gyp-bin:/Users/acaldas/.nvm/versions/node/v18.12.1/bin/node_modules/npm/bin/node-gyp-bin:/Users/acaldas/.nvm/versions/node/v18.12.1/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/go/bin:/Library/Apple/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/Users/acaldas/.nvm/versions/node/v18.12.1/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/acaldas/.cargo/bin:/Users/acaldas/.foundry/bin:/Users/acaldas/.foundry/bin
+
+Yarn version: 
+  1.22.19
+
+Node version: 
+  18.12.1
+
+Platform: 
+  darwin arm64
+
+Trace: 
+  Error: canceled
+      at Interface.<anonymous> (/Users/acaldas/dev/makerdao/.yarn/releases/yarn-1.22.19.cjs:131557:13)
+      at Interface.emit (node:events:513:28)
+      at [_ttyWrite] [as _ttyWrite] (node:internal/readline/interface:1124:18)
+      at ReadStream.onkeypress (node:internal/readline/interface:273:20)
+      at ReadStream.emit (node:events:513:28)
+      at emitKeys (node:internal/readline/utils:357:14)
+      at emitKeys.next (<anonymous>)
+      at ReadStream.onData (node:internal/readline/emitKeypressEvents:64:36)
+      at ReadStream.emit (node:events:513:28)
+      at addChunk (node:internal/streams/readable:324:12)
+
+npm manifest: 
+  {
+      "name": "create-document-model-lib",
+      "version": "1.0.0",
+      "main": "dist/src.js",
+      "license": "AGPL-3.0-only",
+      "private": false,
+      "bin": "./dist/index.js",
+      "files": [
+          "./dist/"
+      ]
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

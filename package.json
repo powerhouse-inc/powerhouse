@@ -4,16 +4,19 @@
     "main": "index.js",
     "license": "AGPL-3.0-only",
     "private": false,
-    "bin": "./dist/scripts/cli.js",
+    "bin": {
+        "powerhouse": "./dist/src/cli.js",
+        "create-document-model-lib": "./dist/src/create-document-model-lib.js"
+    },
     "files": [
         "/dist"
     ],
     "scripts": {
-        "codegen": "npx ts-node --transpile-only .hygen/run.ts",
-        "graphql-codegen": "patch-package && graphql-codegen --config scripts/graphql-codegen.ts",
         "clean": "rimraf dist/",
         "copy-files": "copyfiles .hygen/templates/**/*.esm.t dist/",
-        "build": "yarn clean && tsc && yarn copy-files"
+        "build": "yarn clean && tsc && yarn copy-files",
+        "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
+        "publish:create-lib": "yarn publish --cwd ./src/create-lib/"
     },
     "dependencies": {
         "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
@@ -28,7 +31,6 @@
     },
     "devDependencies": {
         "copyfiles": "^2.4.1",
-        "graphql": "^16.8.0",
         "prettier": "^3.0.3",
         "prettier-plugin-organize-imports": "^3.2.3",
         "rimraf": "^5.0.1"

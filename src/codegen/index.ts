@@ -1,10 +1,8 @@
 #! /usr/bin/env node
 import { generateAll } from './hygen.js';
-import { executeAll } from './graphql-codegen.js';
+import { executeAll } from './graphql.js';
 
-async function main() {
+export async function generate() {
     await executeAll();
     await generateAll();
 }
-
-main();
