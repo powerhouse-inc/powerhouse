@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/reducer.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/reducer.ts"
 force: true
 ---
 import { ImmutableStateReducer, utils } from "document-model/document";
@@ -7,7 +7,7 @@ import { <%= h.changeCase.pascal(documentType) %>State, z } from './schema';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 
 <% modules.forEach(m => { _%>
-import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../custom/reducers/<%= h.changeCase.param(m.name) %>';
+import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../src/reducers/<%= h.changeCase.param(m.name) %>';
 <%_ }); %>
 
 const stateReducer: ImmutableStateReducer<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> =

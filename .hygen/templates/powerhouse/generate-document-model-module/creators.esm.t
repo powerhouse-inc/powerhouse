@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/creators.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/creators.ts"
 force: true
 ---
 import { utils<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model/document';

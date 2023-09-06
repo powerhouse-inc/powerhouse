@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/utils.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/utils.ts"
 force: true
 ---
 import { DocumentModelUtils, utils as base } from 'document-model/document';

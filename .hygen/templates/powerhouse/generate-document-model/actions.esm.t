@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/actions.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/actions.ts"
 force: true
 ---
 <% modules.forEach(module => { _%>

@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/object.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/object.ts"
 force: true
 ---
 import { BaseDocument<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model/document';

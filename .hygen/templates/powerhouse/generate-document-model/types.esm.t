@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/types.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/types.ts"
 force: true
 ---
 import type { Document, ExtendedState } from 'document-model/document';

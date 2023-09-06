@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/custom/utils.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/src/utils.ts"
 unless_exists: true
 ---
 export {};

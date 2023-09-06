@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/custom/reducers/<%= module %>.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/src/reducers/<%= module %>.ts"
 unless_exists: true
 ---
 /**

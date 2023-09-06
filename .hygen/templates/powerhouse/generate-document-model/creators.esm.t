@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/creators.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/creators.ts"
 force: true
 ---
 

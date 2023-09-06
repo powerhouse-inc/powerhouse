@@ -9,6 +9,7 @@ const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, '../../', '.hygen', 'templates');
 
 const MODELS_DIR = './document-models';
+const DEFAULT_ROOT_DIR = './document-models';
 
 async function run(args: string[]) {
     await runner(args, {
@@ -74,6 +75,8 @@ export async function generateDocumentModel(
         'generate-document-model',
         '--document-model',
         JSON.stringify(documentModel),
+        '--root-dir',
+        DEFAULT_ROOT_DIR,
     ]);
 
     // Generate the module-specific files for the document model logic
@@ -88,6 +91,8 @@ export async function generateDocumentModel(
             'generate-document-model-module',
             '--document-model',
             JSON.stringify(documentModel),
+            '--root-dir',
+            DEFAULT_ROOT_DIR,
             '--module',
             modules[i],
         ]);

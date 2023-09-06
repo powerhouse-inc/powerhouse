@@ -19,8 +19,13 @@ function documentModelToString(documentModel: DocumentModelState) {
     );
 }
 
+export type Args = {
+    documentModel: string;
+    rootDir: string;
+};
+
 export default {
-    params: ({ args }: { args: { documentModel: string } }) => {
+    params: ({ args }: { args: Args }) => {
         const documentModel = JSON.parse(
             args.documentModel,
         ) as DocumentModelState;
@@ -29,6 +34,7 @@ export default {
                 documentModel.specifications.length - 1
             ];
         return {
+            rootDir: args.rootDir,
             documentModel: documentModelToString(documentModel),
             documentTypeId: documentModel.id,
             documentType: documentModel.name,

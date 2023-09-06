@@ -1,7 +1,9 @@
 import { DocumentModelState } from 'document-model/document-model';
+import { Args } from '../generate-document-model';
 
+type ModuleArgs = Args & { module: string };
 export default {
-    params: ({ args }: { args: { documentModel: string; module: string } }) => {
+    params: ({ args }: { args: ModuleArgs }) => {
         const documentModel = JSON.parse(
             args.documentModel,
         ) as DocumentModelState;
@@ -13,6 +15,7 @@ export default {
             m => m.name === args.module,
         );
         return {
+            rootDir: args.rootDir,
             documentType: documentModel.name,
             module: args.module,
             actions:

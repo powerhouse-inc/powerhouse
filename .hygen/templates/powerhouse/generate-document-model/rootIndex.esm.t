@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/index.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/index.ts"
 force: true
 ---
 /**
@@ -12,7 +12,7 @@ import { actions as <%= h.changeCase.pascal(documentType) %>Actions, <%= h.chang
 import { reducer } from './gen/reducer';
 import { documentModel } from './gen/document-model';
 import genUtils from './gen/utils';
-import * as customUtils from './custom/utils';
+import * as customUtils from './src/utils';
 import { <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action } from './gen/types';
 
 const Document = <%= h.changeCase.pascal(documentType) %>;
@@ -41,4 +41,4 @@ export {
 }
 
 export * from './gen/types';
-export * from './custom/utils';
+export * from './src/utils';

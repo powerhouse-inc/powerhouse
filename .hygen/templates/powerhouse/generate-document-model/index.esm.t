@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/index.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/index.ts"
 force: true
 ---
 export * from './actions';

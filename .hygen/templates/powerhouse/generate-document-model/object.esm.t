@@ -1,5 +1,5 @@
 ---
-to: "./src/<%= h.changeCase.param(documentType) %>/gen/object.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/object.ts"
 force: true
 ---
 import { BaseDocument, ExtendedState, applyMixins } from 'document-model/document';
