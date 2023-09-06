@@ -2,12 +2,18 @@ import JSONDeterministic from 'json-stringify-deterministic';
 import { baseReducer } from '../reducer';
 import {
     Action,
+    BaseAction,
     Document,
     ExtendedState,
     ImmutableStateReducer,
     Reducer,
 } from '../types';
 import { hash } from './node';
+import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
+
+export function isBaseAction(action: Action): action is BaseAction {
+    return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
+}
 
 /**
  * Helper function to be used by action creators.
@@ -29,7 +35,7 @@ export function createAction<A extends Action>(
     type: A['type'],
     input?: A['input'],
     attachments?: Action['attachments'],
-    validator?: () => { parse(v: unknown): A }
+    validator?: () => { parse(v: unknown): A },
 ): A {
     if (!type) {
         throw new Error('Empty action type');
@@ -66,7 +72,7 @@ export function createAction<A extends Action>(
  */
 export function createReducer<S = unknown, A extends Action = Action>(
     reducer: ImmutableStateReducer<S, A>,
-    documentReducer = baseReducer
+    documentReducer = baseReducer,
 ): Reducer<S, A> {
     return (document, action) => {
         return documentReducer(document, action, reducer);
@@ -75,7 +81,7 @@ export function createReducer<S = unknown, A extends Action = Action>(
 
 export const createExtendedState = <S>(
     initialState?: Partial<ExtendedState<Partial<S>>>,
-    createState?: (state?: Partial<S>) => S
+    createState?: (state?: Partial<S>) => S,
 ): ExtendedState<S> => {
     return {
         name: '',
@@ -104,11 +110,11 @@ export const createExtendedState = <S>(
  */
 export const createDocument = <S, A extends Action>(
     initialState?: Partial<ExtendedState<Partial<S>>>,
-    createState?: (state?: Partial<S>) => S
+    createState?: (state?: Partial<S>) => S,
 ): Document<S, A> => {
     const state: ExtendedState<S> = createExtendedState(
         initialState,
-        createState
+        createState,
     );
     return {
         ...state,

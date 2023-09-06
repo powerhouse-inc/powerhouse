@@ -8,7 +8,6 @@ import {
 } from './actions';
 import {
     BaseAction,
-    isBaseAction,
     LOAD_STATE,
     PRUNE,
     REDO,
@@ -17,7 +16,7 @@ import {
 } from './actions/types';
 import { z } from './schema';
 import { Action, Document, ImmutableStateReducer } from './types';
-import { hashDocument } from './utils';
+import { isBaseAction, hashDocument } from './utils';
 
 /**
  * Gets the next revision number based on the provided action.
@@ -43,7 +42,7 @@ function getNextRevision(document: Document, action: Action): number {
  */
 function updateHeader<T, A extends Action>(
     document: Document<T, A>,
-    action: A | BaseAction
+    action: A | BaseAction,
 ): Document<T, A> {
     return {
         ...document,
@@ -61,7 +60,7 @@ function updateHeader<T, A extends Action>(
  */
 function updateOperations<T, A extends Action>(
     document: Document<T, A>,
-    action: A | BaseAction
+    action: A | BaseAction,
 ): Document<T, A> {
     // UNDO, REDO and PRUNE are meta operations
     // that alter the operations history themselves
@@ -98,7 +97,7 @@ function updateOperations<T, A extends Action>(
  */
 function updateDocument<T, A extends Action>(
     document: Document<T, A>,
-    action: A | BaseAction
+    action: A | BaseAction,
 ): Document<T, A> {
     let newDocument = updateOperations(document, action);
     newDocument = updateHeader(newDocument, action);
@@ -116,7 +115,7 @@ function updateDocument<T, A extends Action>(
 function _baseReducer<T, A extends Action>(
     document: Document<T, A>,
     action: BaseAction,
-    wrappedReducer: ImmutableStateReducer<T, A>
+    wrappedReducer: ImmutableStateReducer<T, A>,
 ): Document<T, A> {
     // throws if action is not valid base action
     z.BaseActionSchema().parse(action);
@@ -133,7 +132,7 @@ function _baseReducer<T, A extends Action>(
                 document,
                 action.input.start,
                 action.input.end,
-                wrappedReducer
+                wrappedReducer,
             );
         case LOAD_STATE:
             return loadStateOperation(document, action.input.state);
@@ -157,7 +156,7 @@ function _baseReducer<T, A extends Action>(
 export function baseReducer<T, A extends Action>(
     document: Document<T, A>,
     action: A | BaseAction,
-    customReducer: ImmutableStateReducer<T, A>
+    customReducer: ImmutableStateReducer<T, A>,
 ) {
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first

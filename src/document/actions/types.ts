@@ -1,4 +1,4 @@
-import { Action, BaseAction } from '../types';
+import { BaseAction } from '../types';
 
 export const SET_NAME = 'SET_NAME';
 export const UNDO = 'UNDO';
@@ -14,7 +14,3 @@ export {
     UndoAction,
 } from '../types';
 export type { BaseAction };
-
-export function isBaseAction(action: Action): action is BaseAction {
-    return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
-}
