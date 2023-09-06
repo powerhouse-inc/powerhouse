@@ -2,7 +2,7 @@
 to: "./src/<%= h.changeCase.param(documentType) %>/gen/types.ts"
 force: true
 ---
-import type { Document, ExtendedState } from '../../document/types';
+import type { Document, ExtendedState } from 'document-model/document';
 import type { <%= h.changeCase.pascal(documentType) %>State } from './schema/types';
 import type { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 

@@ -2,7 +2,7 @@
 to: "./src/<%= h.changeCase.param(documentType) %>/gen/utils.ts"
 force: true
 ---
-import { DocumentModelUtils, utils as base } from '../../document';
+import { DocumentModelUtils, utils as base } from 'document-model/document';
 import { <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>State } from './types';
 import { reducer } from './reducer';
 

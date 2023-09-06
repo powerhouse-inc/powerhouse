@@ -2,8 +2,7 @@
 to: "./src/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/creators.ts"
 force: true
 ---
-import { createAction } from '../../../document/utils';
-<% if (actions.find(a => a.hasAttachment)) {%>import { AttachmentInput } from '../../../document';<%}%>
+import { utils<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model/document';
 import {
 <% actions.filter(a => a.hasInput).forEach(action => { _%>
     <%= action.name %>Input,
@@ -14,6 +13,8 @@ import {
     <%= action.name %>Action,
 <% }); _%>
 } from './actions';
+
+const { createAction } = utils;
 
 <% actions.filter(a => a.hasInput).forEach(action => { _%>
 export const <%= h.changeCase.camel(action.name) %> = (input: <%= action.name %>Input<%if(action.hasAttachment){ %>, attachments: AttachmentInput[] <% } %>) =>

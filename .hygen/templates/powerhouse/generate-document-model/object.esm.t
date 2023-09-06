@@ -2,9 +2,8 @@
 to: "./src/<%= h.changeCase.param(documentType) %>/gen/object.ts"
 force: true
 ---
+import { BaseDocument, ExtendedState, applyMixins } from 'document-model/document';
 import { <%= h.changeCase.pascal(documentType) %>State } from './types';
-import { ExtendedState } from '../../document';
-import { applyMixins, BaseDocument } from '../../document/object';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 import { reducer } from './reducer';
 import utils from './utils';

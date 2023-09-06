@@ -6,7 +6,7 @@
     "private": false,
     "bin": {
         "powerhouse": "./dist/src/cli.js",
-        "create-document-model-lib": "./dist/src/create-document-model-lib.js"
+        "create-document-model-lib": "./dist/src/create-lib/index.js"
     },
     "files": [
         "/dist"
@@ -22,15 +22,16 @@
         "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
         "@graphql-codegen/cli": "^5.0.0",
         "@graphql-codegen/typescript": "^4.0.1",
-        "@powerhouse/document-model": "../document-model",
         "@types/node": "^20.5.9",
         "change-case": "^4.1.2",
+        "document-model": "^1.0.1",
         "hygen": "^6.2.11",
         "ts-node": "^10.9.1",
         "typescript": "^5.2.2"
     },
     "devDependencies": {
         "copyfiles": "^2.4.1",
+        "graphql": "^16.8.0",
         "prettier": "^3.0.3",
         "prettier-plugin-organize-imports": "^3.2.3",
         "rimraf": "^5.0.1"

@@ -2,9 +2,7 @@
 to: "./src/<%= h.changeCase.param(documentType) %>/gen/reducer.ts"
 force: true
 ---
-import { isBaseAction } from "../../document/actions/types";
-import { createReducer } from "../../document/utils";
-import { ImmutableStateReducer } from "../../document/types";
+import { ImmutableStateReducer, utils } from "document-model/document";
 import { <%= h.changeCase.pascal(documentType) %>State, z } from './schema';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 
@@ -14,7 +12,7 @@ import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../custom/
 
 const stateReducer: ImmutableStateReducer<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> =
     (state, action) => {
-        if (isBaseAction(action)) {
+        if (utils.isBaseAction(action)) {
             return state;
         }
 
@@ -34,4 +32,4 @@ const stateReducer: ImmutableStateReducer<<%= h.changeCase.pascal(documentType) 
         }
     }
 
-export const reducer = createReducer<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action>(stateReducer);
+export const reducer = utils.createReducer<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action>(stateReducer);

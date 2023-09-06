@@ -2,8 +2,7 @@
 to: "./src/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/object.ts"
 force: true
 ---
-import { BaseDocument } from '../../../document/object';
-<% if (actions.find(a => a.hasAttachment)) {%>import { AttachmentInput } from '../../../document';<%}%>
+import { BaseDocument<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model/document';
 import {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
     <%= action.name %>Input,

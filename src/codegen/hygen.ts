@@ -1,5 +1,5 @@
 import 'ts-node/register/transpile-only';
-import { DocumentModel } from '@powerhouse/document-model';
+import { DocumentModel } from 'document-model';
 import { paramCase } from 'change-case';
 import { Logger, runner } from 'hygen';
 import path from 'path';

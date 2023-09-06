@@ -1,4 +1,4 @@
-import { DocumentModelState } from '@powerhouse/document-model/document-model';
+import { DocumentModelState } from 'document-model/document-model';
 
 export default {
     params: ({ args }: { args: { documentModel: string; module: string } }) => {
