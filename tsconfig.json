@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "types": ["node"],
+        "moduleResolution": "node",
+        "declaration": true,
+        "outDir": "./dist",
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "skipLibCheck": true,
+        "emitDeclarationOnly": true
+    },
+    "include": ["document-models/**/*", "vite.config.ts"]
+}

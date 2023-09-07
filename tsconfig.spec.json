@@ -1,0 +1,13 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "types": ["node", "jest"],
+        "emitDeclarationOnly": false
+    },
+    "include": [
+        "document-models/**/*",
+        "**/*.test.ts",
+        "jest.config.ts",
+        "vite.config.ts"
+    ]
+}

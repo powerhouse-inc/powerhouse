@@ -4,11 +4,29 @@
     "main": "index.js",
     "license": "AGPL-3.0-only",
     "scripts": {
-        "generate": "powerhouse generate"
+        "generate": "powerhouse generate",
+        "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
+        "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
     },
     "devDependencies": {
-        "@acaldas/powerhouse": "^1.0.3",
-        "graphql": "^16.8.0"
+        "@acaldas/powerhouse": "file:.yalc/@acaldas/powerhouse",
+        "@types/jest": "^29.5.4",
+        "@types/react": "^18.2.21",
+        "@typescript-eslint/eslint-plugin": "^6.6.0",
+        "@typescript-eslint/parser": "^6.6.0",
+        "document-model": "file:.yalc/document-model",
+        "eslint": "^8.48.0",
+        "eslint-config-prettier": "^9.0.0",
+        "graphql": "^16.8.0",
+        "jest": "^29.6.4",
+        "prettier": "^3.0.3",
+        "prettier-plugin-organize-imports": "^3.2.3",
+        "react": "^18.2.0",
+        "ts-jest": "^29.1.1",
+        "vite": "^4.4.9"
+    },
+    "peerDependencies": {
+        "document-model": "^1.0.0"
     },
     "dependencies": {}
 }
