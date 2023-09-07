@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "target": "es6",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
         "strict": true,
         "outDir": "./dist",
         "composite": false,
@@ -9,12 +9,10 @@
         "forceConsistentCasingInFileNames": true,
         "inlineSources": false,
         "isolatedModules": true,
-        "moduleResolution": "node",
         "noUnusedLocals": false,
         "noUnusedParameters": false,
         "preserveWatchOutput": true,
         "skipLibCheck": true,
-        "emitDecoratorMetadata": true,
         "experimentalDecorators": true
     },
     "include": ["src/**/*.ts", ".hygen/**/*"]

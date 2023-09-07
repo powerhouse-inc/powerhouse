@@ -60,10 +60,7 @@ async function setup() {
 
         fs.rmSync(path.join(appPath, './.git'), { recursive: true });
 
-        fs.mkdirSync(path.join(appPath, 'schemas'));
         fs.mkdirSync(path.join(appPath, 'document-models'));
-
-        // fs.unlinkSync(path.join(appPath, 'LICENSE.MD'));
 
         const packageJson = JSON.parse(
             fs.readFileSync(path.join(appPath, 'package.json'), 'utf-8'),
@@ -91,7 +88,6 @@ function buildPackageJson(packageJson: any, folderName: string) {
         name: folderName,
         version: '1.0.0',
         description: '',
-        author: '',
     });
 
     fs.writeFileSync(
