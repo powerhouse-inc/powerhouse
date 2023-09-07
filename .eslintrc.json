@@ -15,5 +15,18 @@
         "sourceType": "module",
         "project": ["./tsconfig.spec.json"]
     },
-    "plugins": ["@typescript-eslint"]
+    "plugins": ["@typescript-eslint"],
+    "rules": {
+        "@typescript-eslint/no-unused-vars": [
+            1,
+            { "ignoreRestSiblings": true }
+        ],
+        "no-warning-comments": [
+            1,
+            {
+                "terms": ["TODO"],
+                "location": "start"
+            }
+        ]
+    }
 }

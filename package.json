@@ -9,12 +9,12 @@
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
     },
     "devDependencies": {
-        "@acaldas/powerhouse": "file:.yalc/@acaldas/powerhouse",
+        "@acaldas/powerhouse": "^1.0.4",
         "@types/jest": "^29.5.4",
         "@types/react": "^18.2.21",
         "@typescript-eslint/eslint-plugin": "^6.6.0",
         "@typescript-eslint/parser": "^6.6.0",
-        "document-model": "file:.yalc/document-model",
+        "document-model": "^1.0.2",
         "eslint": "^8.48.0",
         "eslint-config-prettier": "^9.0.0",
         "graphql": "^16.8.0",
@@ -23,10 +23,11 @@
         "prettier-plugin-organize-imports": "^3.2.3",
         "react": "^18.2.0",
         "ts-jest": "^29.1.1",
+        "typescript": "^5.2.2",
         "vite": "^4.4.9"
     },
     "peerDependencies": {
-        "document-model": "^1.0.0"
+        "document-model": "^1.0.2"
     },
     "dependencies": {}
 }
