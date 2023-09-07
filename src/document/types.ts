@@ -1,4 +1,5 @@
 import type { Draft } from 'immer';
+import type { FC } from 'react';
 import type { DocumentModelState } from '../document-model';
 import type { BaseAction } from './actions/types';
 import { BaseDocument } from './object';
@@ -192,10 +193,12 @@ export type DocumentModelUtils<S = unknown, A extends Action = Action> = {
 };
 
 export type ActionCreator<A extends Action> = // TODO remove any
-
-        | ((input: any) => A)
-        | ((input: any, attachments: AttachmentInput[]) => A)
-        | ((...input: any) => BaseAction);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | ((input: any) => A)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | ((input: any, attachments: AttachmentInput[]) => A)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | ((...input: any) => BaseAction);
 
 export type DocumentModel<
     S = unknown,
@@ -207,4 +210,25 @@ export type DocumentModel<
     actions: Record<string, ActionCreator<A>>;
     utils: DocumentModelUtils<S, A>;
     documentModel: DocumentModelState;
+};
+
+export type EditorContext = {
+    theme: 'light' | 'dark';
+    debug?: boolean;
+};
+
+export type EditorProps<S, A extends Action> = {
+    document: Document<S, A>;
+    dispatch: (action: A | BaseAction) => void;
+    editorContext: EditorContext;
+};
+
+export type Editor<S = unknown, A extends Action = Action> = {
+    Component: FC<EditorProps<S, A>>;
+    documentTypes: string[];
+};
+
+export type DocumentModelLib = {
+    documentModels: DocumentModel[];
+    editors: Editor[];
 };
