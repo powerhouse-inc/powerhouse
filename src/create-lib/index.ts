@@ -34,7 +34,7 @@ try {
     if ((err as { code: string }).code === 'EEXIST') {
         console.log(
             '\x1b[31m',
-            `The file ${folderName} already exist in the current directory, please give it another name.`,
+            `The folder ${folderName} already exists in the current directory, please give it another name.`,
             '\x1b[0m',
         );
     } else {
@@ -82,13 +82,12 @@ async function setup() {
 setup();
 
 function buildPackageJson(packageJson: any, folderName: string) {
-    const newPackage = { ...packageJson };
-
-    Object.assign(packageJson, {
+    const newPackage = {
+        ...packageJson,
         name: folderName,
         version: '1.0.0',
         description: '',
-    });
+    };
 
     fs.writeFileSync(
         path.join(appPath, 'package.json'),
