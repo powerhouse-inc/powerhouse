@@ -2,7 +2,7 @@
 import { generateAll } from './hygen.js';
 import { executeAll } from './graphql.js';
 
-export async function generate() {
-    await executeAll();
-    await generateAll();
+export async function generate(config: PowerhouseConfig) {
+    await executeAll(config.documentModelsDir);
+    await generateAll(config.documentModelsDir);
 }

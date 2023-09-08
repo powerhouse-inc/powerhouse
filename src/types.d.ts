@@ -1,0 +1,3 @@
+type PowerhouseConfig = {
+    documentModelsDir: string;
+};

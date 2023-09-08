@@ -6,9 +6,6 @@ const getDirectories = (source: string) =>
         .filter(dirent => dirent.isDirectory())
         .map(dirent => dirent.name);
 
-const SCHEMAS_DIR = './schemas';
-const TARGET_DIR = './document-models';
-
 const tsConfig = {
     strict: true,
     strictScalars: true,
@@ -30,16 +27,12 @@ const tsConfig = {
     inputMaybeValue: 'T | null | undefined',
 };
 
-function schemaConfig(
-    name: string,
-    schemasDir: string,
-    targetDir: string,
-): CodegenConfig['generates'] {
+function schemaConfig(name: string, dir: string): CodegenConfig['generates'] {
     return {
-        [`${targetDir}/${name}/gen/schema/types.ts`]: {
+        [`${dir}/${name}/gen/schema/types.ts`]: {
             schema: [
                 {
-                    [`${schemasDir}/${name}/index.graphql`]: {
+                    [`${dir}/${name}/schema.graphql`]: {
                         skipGraphQLImport: false,
                     },
                 },
@@ -47,8 +40,8 @@ function schemaConfig(
             plugins: ['typescript'],
             config: tsConfig,
         },
-        [`${targetDir}/${name}/gen/schema/zod.ts`]: {
-            schema: `${schemasDir}/${name}/index.graphql`,
+        [`${dir}/${name}/gen/schema/zod.ts`]: {
+            schema: `${dir}/${name}/schema.graphql`,
             plugins: ['@acaldas/graphql-codegen-typescript-validation-schema'],
             config: {
                 importFrom: `./types`,
@@ -72,15 +65,12 @@ function schemaConfig(
     };
 }
 
-export const executeAll = (
-    schemasDir = SCHEMAS_DIR,
-    targetDir = TARGET_DIR,
-) => {
-    const documentModels = getDirectories(schemasDir);
+export const executeAll = (dir: string) => {
+    const documentModels = getDirectories(dir);
     const documentModelConfigs = documentModels.reduce(
         (obj, model) => ({
             ...obj,
-            ...schemaConfig(model, schemasDir, targetDir),
+            ...schemaConfig(model, dir),
         }),
         {},
     );

@@ -54,14 +54,21 @@ async function loadDocumentModel(
 
 export async function generateAll(dir = MODELS_DIR) {
     const files = fs.readdirSync(dir, { withFileTypes: true });
-    for (const file of files.filter(f => f.isFile())) {
+    for (const directory of files.filter(f => f.isDirectory())) {
+        const documentModelPath = path.join(
+            dir,
+            directory.name,
+            `${directory.name}.json`,
+        );
+        if (!fs.existsSync(documentModelPath)) {
+            continue;
+        }
+
         try {
-            const documentModel = await loadDocumentModel(
-                path.join(dir, file.name),
-            );
+            const documentModel = await loadDocumentModel(documentModelPath);
             await generateDocumentModel(documentModel);
         } catch (error) {
-            console.error(file, error);
+            console.error(directory.name, error);
         }
     }
 }
