@@ -1,6 +1,6 @@
 {
     "name": "@acaldas/powerhouse",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "main": "index.js",
     "license": "AGPL-3.0-only",
     "private": false,
