@@ -20,43 +20,33 @@
     "exports": {
         ".": {
             "import": "./dist/node/index.js",
-            "require": "./dist/node/index.cjs"
+            "require": "./dist/node/index.cjs",
+            "types": "./dist/node/index.d.ts"
         },
         "./browser": {
             "import": "./dist/browser/index.js",
-            "require": "./dist/browser/index.cjs"
+            "require": "./dist/browser/index.cjs",
+            "types": "./dist/browser/index.d.ts"
         },
         "./document": {
             "import": "./dist/node/document.js",
-            "require": "./dist/node/document.cjs"
+            "require": "./dist/node/document.cjs",
+            "types": "./dist/node/document.d.ts"
         },
         "./browser/document": {
             "import": "./dist/browser/document.js",
-            "require": "./dist/browser/document.cjs"
+            "require": "./dist/browser/document.cjs",
+            "types": "./dist/browser/document.d.ts"
         },
         "./document-model": {
             "import": "./dist/node/document-model.js",
-            "require": "./dist/node/document-model.cjs"
+            "require": "./dist/node/document-model.cjs",
+            "types": "./dist/node/document-model.d.ts"
         },
         "./browser/document-model": {
             "import": "./dist/node/document-model.js",
-            "require": "./dist/node/document-model.cjs"
-        }
-    },
-    "typesVersions": {
-        "*": {
-            "document": [
-                "dist/node/document"
-            ],
-            "browser/document": [
-                "dist/browser/document"
-            ],
-            "document-model": [
-                "dist/node/document-model"
-            ],
-            "browser/document-model": [
-                "dist/browser/document-model"
-            ]
+            "require": "./dist/node/document-model.cjs",
+            "types": "./dist/node/document-model.d.ts"
         }
     },
     "devDependencies": {

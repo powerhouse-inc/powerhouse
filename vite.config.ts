@@ -48,6 +48,9 @@ export default defineConfig(({ mode = 'node' }) => {
             },
             rollupOptions: {
                 external,
+                output: {
+                    exports: 'named',
+                },
             },
         },
         plugins: [

@@ -1,8 +1,9 @@
 {
     "compilerOptions": {
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
         "target": "esnext",
         "types": ["node", "jest"],
-        "moduleResolution": "node",
         "declaration": true,
         "outDir": "./dist",
         "esModuleInterop": true,
@@ -14,7 +15,6 @@
     },
     "include": [
         "src/**/*",
-        "vite.config.ts",
         "node_modules/@types/wicg-file-system-access/index.d.ts"
     ],
     "exclude": ["src/document/utils/browser.ts"]
