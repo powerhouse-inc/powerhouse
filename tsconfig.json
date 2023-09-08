@@ -1,8 +1,8 @@
 {
     "compilerOptions": {
-        "target": "esnext",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
         "types": ["node"],
-        "moduleResolution": "node",
         "declaration": true,
         "outDir": "./dist",
         "esModuleInterop": true,
@@ -12,5 +12,5 @@
         "skipLibCheck": true,
         "emitDeclarationOnly": true
     },
-    "include": ["document-models/**/*", "vite.config.ts"]
+    "include": ["./index.ts", "document-models/**/*"]
 }

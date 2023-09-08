@@ -5,6 +5,7 @@
         "emitDeclarationOnly": false
     },
     "include": [
+        "./index.ts",
         "document-models/**/*",
         "**/*.test.ts",
         "jest.config.ts",
