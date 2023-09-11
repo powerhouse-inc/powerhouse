@@ -6,6 +6,10 @@ import fs from 'fs';
 import { exec as _exec } from 'child_process';
 const exec = util.promisify(_exec);
 
+function isUsingYarn() {
+    return (process.env.npm_config_user_agent || '').indexOf('yarn') === 0;
+}
+
 async function runCmd(command: string) {
     try {
         const { stdout, stderr } = await exec(command);
@@ -19,7 +23,12 @@ async function runCmd(command: string) {
 if (process.argv.length < 3) {
     console.log('\x1b[31m', 'You have to provide name to your app.');
     console.log('For example:');
-    console.log('    npx create-document-model-lib my-app', '\x1b[0m');
+    console.log(
+        isUsingYarn()
+            ? '    yarn create document-model-lib my-app'
+            : '    npx create-document-model-lib my-app',
+        '\x1b[0m',
+    );
     process.exit(1);
 }
 
@@ -45,6 +54,7 @@ try {
 
 async function setup() {
     try {
+        const useYarn = isUsingYarn();
         console.log(
             '\x1b[33m',
             'Downloading the project structure...',
@@ -55,10 +65,11 @@ async function setup() {
         process.chdir(appPath);
 
         console.log('\x1b[34m', 'Installing dependencies...', '\x1b[0m');
-        await runCmd('yarn install');
+        await runCmd(useYarn ? 'yarn install' : 'npm install');
         console.log();
 
         fs.rmSync(path.join(appPath, './.git'), { recursive: true });
+        await runCmd('git init');
 
         fs.mkdirSync(path.join(appPath, 'document-models'));
 
@@ -72,7 +83,10 @@ async function setup() {
 
         console.log('\x1b[34m', 'You can start by typing:');
         console.log(`    cd ${folderName}`);
-        console.log('    yarn generate', '\x1b[0m');
+        console.log(
+            useYarn ? '    yarn generate' : '    npm run generate',
+            '\x1b[0m',
+        );
         console.log();
     } catch (error) {
         console.log(error);
