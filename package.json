@@ -9,7 +9,7 @@
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
     },
     "devDependencies": {
-        "@acaldas/powerhouse": "^1.0.5",
+        "@acaldas/powerhouse": "file:.yalc/@acaldas/powerhouse",
         "@types/jest": "^29.5.4",
         "@types/react": "^18.2.21",
         "@typescript-eslint/eslint-plugin": "^6.6.0",
@@ -27,7 +27,7 @@
         "vite": "^4.4.9"
     },
     "peerDependencies": {
-        "document-model": "^1.0.2"
+        "document-model": "^1.0.3"
     },
     "dependencies": {}
 }

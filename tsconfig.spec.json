@@ -6,7 +6,7 @@
     },
     "include": [
         "./index.ts",
-        "document-models/**/*",
+        "**/*.ts",
         "**/*.test.ts",
         "jest.config.ts",
         "vite.config.ts"

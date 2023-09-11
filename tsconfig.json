@@ -12,5 +12,5 @@
         "skipLibCheck": true,
         "emitDeclarationOnly": true
     },
-    "include": ["./index.ts", "document-models/**/*"]
+    "include": ["./index.ts", "**/*.ts"]
 }
