@@ -1,4 +1,5 @@
 import { type CodegenConfig, generate } from '@graphql-codegen/cli';
+import { Types } from '@graphql-codegen/plugin-helpers';
 import { readdirSync } from 'fs';
 
 const getDirectories = (source: string) =>
@@ -65,7 +66,10 @@ function schemaConfig(name: string, dir: string): CodegenConfig['generates'] {
     };
 }
 
-export const executeAll = (dir: string) => {
+export const executeAll = (
+    dir: string,
+    { watch = false, format = false } = {},
+) => {
     const documentModels = getDirectories(dir);
     const documentModelConfigs = documentModels.reduce(
         (obj, model) => ({
@@ -78,6 +82,10 @@ export const executeAll = (dir: string) => {
     const config: CodegenConfig = {
         overwrite: true,
         generates: documentModelConfigs,
+        watch,
+        hooks: {
+            afterOneFileWrite: format ? ['prettier --write'] : [],
+        },
     };
     return generate(config, true);
 };

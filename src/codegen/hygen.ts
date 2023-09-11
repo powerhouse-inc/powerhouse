@@ -8,11 +8,8 @@ import fs from 'fs';
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, '../../', '.hygen', 'templates');
 
-const MODELS_DIR = './document-models';
-const DEFAULT_ROOT_DIR = './document-models';
-
-async function run(args: string[]) {
-    await runner(args, {
+async function run(args: string[], { watch = false, format = false } = {}) {
+    const result = await runner(args, {
         templates: defaultTemplates,
         cwd: process.cwd(),
         logger,
@@ -25,6 +22,19 @@ async function run(args: string[]) {
         },
         debug: !!process.env.DEBUG,
     });
+    if (format) {
+        const execa = await import('execa');
+        result.actions
+            .filter(action => ['added', 'inject'].includes(action.status))
+            .forEach(action => {
+                execa.$`prettier --ignore-path --write ${action.subject.replace(
+                    '.',
+                    process.cwd(),
+                )}`;
+            });
+    }
+
+    return result;
 }
 
 async function loadDocumentModel(
@@ -52,7 +62,10 @@ async function loadDocumentModel(
     }
 }
 
-export async function generateAll(dir = MODELS_DIR) {
+export async function generateAll(
+    dir: string,
+    { watch = false, format = false } = {},
+) {
     const files = fs.readdirSync(dir, { withFileTypes: true });
     for (const directory of files.filter(f => f.isDirectory())) {
         const documentModelPath = path.join(
@@ -66,7 +79,7 @@ export async function generateAll(dir = MODELS_DIR) {
 
         try {
             const documentModel = await loadDocumentModel(documentModelPath);
-            await generateDocumentModel(documentModel);
+            await generateDocumentModel(documentModel, dir, { watch, format });
         } catch (error) {
             console.error(directory.name, error);
         }
@@ -75,16 +88,21 @@ export async function generateAll(dir = MODELS_DIR) {
 
 export async function generateDocumentModel(
     documentModel: DocumentModel.DocumentModelState,
+    dir: string,
+    { watch = false, format = false } = {},
 ) {
     // Generate the singular files for the document model logic
-    await run([
-        'powerhouse',
-        'generate-document-model',
-        '--document-model',
-        JSON.stringify(documentModel),
-        '--root-dir',
-        DEFAULT_ROOT_DIR,
-    ]);
+    await run(
+        [
+            'powerhouse',
+            'generate-document-model',
+            '--document-model',
+            JSON.stringify(documentModel),
+            '--root-dir',
+            dir,
+        ],
+        { watch, format },
+    );
 
     // Generate the module-specific files for the document model logic
     const latestSpec =
@@ -93,15 +111,18 @@ export async function generateDocumentModel(
         paramCase(m.name),
     );
     for (let i = 0; i < modules.length; i++) {
-        await run([
-            'powerhouse',
-            'generate-document-model-module',
-            '--document-model',
-            JSON.stringify(documentModel),
-            '--root-dir',
-            DEFAULT_ROOT_DIR,
-            '--module',
-            modules[i],
-        ]);
+        await run(
+            [
+                'powerhouse',
+                'generate-document-model-module',
+                '--document-model',
+                JSON.stringify(documentModel),
+                '--root-dir',
+                dir,
+                '--module',
+                modules[i],
+            ],
+            { watch, format },
+        );
     }
 }
