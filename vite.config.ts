@@ -49,6 +49,7 @@ export default defineConfig(({ mode = 'node' }) => {
             rollupOptions: {
                 external,
                 output: {
+                    chunkFileNames: 'internal/[name]-[hash].js',
                     exports: 'named',
                 },
             },

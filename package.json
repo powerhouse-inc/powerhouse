@@ -9,6 +9,7 @@
     "types": "dist/node/index.d.ts",
     "main": "dist/node/index.cjs",
     "module": "dist/node/index.js",
+    "browser": "dist/browser/index.js",
     "scripts": {
         "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
@@ -19,34 +20,34 @@
     },
     "exports": {
         ".": {
-            "import": "./dist/node/index.js",
-            "require": "./dist/node/index.cjs",
-            "types": "./dist/node/index.d.ts"
-        },
-        "./browser": {
+            "node": {
+                "import": "./dist/node/index.js",
+                "require": "./dist/node/index.cjs",
+                "types": "./dist/node/index.d.ts"
+            },
             "import": "./dist/browser/index.js",
             "require": "./dist/browser/index.cjs",
             "types": "./dist/browser/index.d.ts"
         },
         "./document": {
-            "import": "./dist/node/document.js",
-            "require": "./dist/node/document.cjs",
-            "types": "./dist/node/document.d.ts"
-        },
-        "./browser/document": {
+            "node": {
+                "import": "./dist/node/document.js",
+                "require": "./dist/node/document.cjs",
+                "types": "./dist/node/document.d.ts"
+            },
             "import": "./dist/browser/document.js",
             "require": "./dist/browser/document.cjs",
             "types": "./dist/browser/document.d.ts"
         },
         "./document-model": {
-            "import": "./dist/node/document-model.js",
-            "require": "./dist/node/document-model.cjs",
-            "types": "./dist/node/document-model.d.ts"
-        },
-        "./browser/document-model": {
-            "import": "./dist/node/document-model.js",
-            "require": "./dist/node/document-model.cjs",
-            "types": "./dist/node/document-model.d.ts"
+            "node": {
+                "import": "./dist/node/document-model.js",
+                "require": "./dist/node/document-model.cjs",
+                "types": "./dist/node/document-model.d.ts"
+            },
+            "import": "./dist/browser/document-model.js",
+            "require": "./dist/browser/document-model.cjs",
+            "types": "./dist/browser/document-model.d.ts"
         }
     },
     "devDependencies": {
@@ -67,7 +68,7 @@
         "ts-node": "^10.9.1",
         "typescript": "^5.2.2",
         "vite": "^4.4.9",
-        "vite-plugin-dts": "^3.5.2",
+        "vite-plugin-dts": "^3.5.3",
         "vite-plugin-node-polyfills": "^0.11.3"
     },
     "dependencies": {
