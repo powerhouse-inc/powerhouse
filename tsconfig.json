@@ -3,6 +3,7 @@
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "strict": true,
+        "rootDir": "./src",
         "outDir": "./dist",
         "composite": false,
         "esModuleInterop": true,
@@ -14,7 +15,7 @@
         "preserveWatchOutput": true,
         "skipLibCheck": true,
         "experimentalDecorators": true,
-        "resolveJsonModule": true
+        "declaration": true
     },
-    "include": ["src/**/*.ts", ".hygen/**/*"]
+    "include": ["src/**/*.ts"]
 }

@@ -1,28 +1,9 @@
 #! /usr/bin/env node
-import { readFileSync } from 'fs';
 import { generate } from './codegen/index.js';
-
-function loadConfig() {
-    let config: PowerhouseConfig = {
-        documentModelsDir: './document-models',
-    };
-    try {
-        const configStr = readFileSync('./powerhouse.config.json', 'utf-8');
-        let userConfig: PowerhouseConfig = JSON.parse(configStr);
-        config = { ...config, ...userConfig };
-
-        if (process.argv.includes('--format')) {
-            config.format = true;
-        }
-        if (process.argv.includes('--watch')) {
-            config.watch = true;
-        }
-    } catch {}
-    return config;
-}
+import { getConfig } from './utils.js';
 
 async function main() {
-    const config = loadConfig();
+    const config = getConfig();
     await generate(config);
 }
 

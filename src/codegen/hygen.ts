@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 
 const logger = new Logger(console.log.bind(console));
-const defaultTemplates = path.join(__dirname, '../../', '.hygen', 'templates');
+const defaultTemplates = path.join(__dirname, '../', '.hygen', 'templates');
 
 async function run(args: string[], { watch = false, format = false } = {}) {
     const result = await runner(args, {

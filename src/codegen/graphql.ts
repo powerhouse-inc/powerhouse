@@ -1,5 +1,4 @@
 import { type CodegenConfig, generate } from '@graphql-codegen/cli';
-import { Types } from '@graphql-codegen/plugin-helpers';
 import { readdirSync } from 'fs';
 
 const getDirectories = (source: string) =>
@@ -84,7 +83,7 @@ export const executeAll = (
         generates: documentModelConfigs,
         watch,
         hooks: {
-            afterOneFileWrite: format ? ['prettier --write'] : [],
+            afterOneFileWrite: format ? ['prettier --ignore-path --write'] : [],
         },
     };
     return generate(config, true);

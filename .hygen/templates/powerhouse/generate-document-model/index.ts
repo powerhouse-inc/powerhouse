@@ -1,4 +1,4 @@
-import { DocumentModelState } from 'document-model/document-model';
+import { DocumentModelState } from 'document-model/dist/node/document-model';
 
 function documentModelToString(documentModel: DocumentModelState) {
     return JSON.stringify(
