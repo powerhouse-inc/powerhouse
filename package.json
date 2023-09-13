@@ -7,6 +7,7 @@
         "generate": "powerhouse generate",
         "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
+        "build": "vite build",
         "storybook": "storybook dev -p 6006",
         "build-storybook": "storybook build"
     },
@@ -23,7 +24,7 @@
         "@types/react": "^18.2.21",
         "@typescript-eslint/eslint-plugin": "^6.6.0",
         "@typescript-eslint/parser": "^6.6.0",
-        "document-model": "^1.0.3",
+        "document-model": "file:.yalc/document-model",
         "eslint": "^8.48.0",
         "eslint-config-prettier": "^9.0.0",
         "eslint-plugin-storybook": "^0.6.13",
@@ -36,7 +37,8 @@
         "storybook": "^7.4.1",
         "ts-jest": "^29.1.1",
         "typescript": "^5.2.2",
-        "vite": "^4.4.9"
+        "vite": "^4.4.9",
+        "vite-plugin-dts": "^3.5.3"
     },
     "peerDependencies": {
         "document-model": "^1.0.3",

@@ -4,7 +4,7 @@ import type {
     Document,
     ExtendedState,
     Reducer,
-} from 'document-model/browser/document';
+} from 'document-model/document';
 import { useReducer } from 'react';
 
 export function wrapReducer<State, A extends Action>(

@@ -6,7 +6,7 @@ import {
     utils,
     BaseAction,
     EditorContext,
-} from 'document-model/browser/document';
+} from 'document-model/document';
 import { useArgs, useChannel } from '@storybook/preview-api';
 import { Meta, ReactRenderer } from '@storybook/react';
 import { type StoryAnnotations } from '@storybook/types';
