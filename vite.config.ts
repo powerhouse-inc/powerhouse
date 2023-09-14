@@ -26,8 +26,6 @@ export default defineConfig(({ mode = 'node' }) => {
         'json-stringify-deterministic',
         'jszip',
         'mime',
-        'sha.js',
-        'sha.js/sha1',
         'zod',
     ];
 
@@ -53,6 +51,9 @@ export default defineConfig(({ mode = 'node' }) => {
                     exports: 'named',
                 },
             },
+        },
+        optimizeDeps: {
+            include: isBrowser ? ['sha.js/sha1'] : [],
         },
         plugins: [
             isBrowser ? replaceBrowserModules() : undefined,

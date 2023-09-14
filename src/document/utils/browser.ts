@@ -1,5 +1,5 @@
-import { Buffer } from 'buffer';
-// @ts-ignore
+import type { Buffer } from 'buffer';
+
 import Sha1 from 'sha.js/sha1';
 
 const FileSystemError = new Error('File system not available.');
@@ -40,5 +40,6 @@ export const hash = (data: string, algorithm = 'sha1') => {
     }
 
     const sha1 = new Sha1();
+    // @ts-ignore
     return hexToBase64(sha1.update(data).digest('hex'));
 };
