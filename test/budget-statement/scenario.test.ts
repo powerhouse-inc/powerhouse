@@ -1,9 +1,12 @@
 import fs from 'fs';
 import { parse } from 'jsonc-parser';
 import path from 'path';
-import { BudgetStatement, reducer } from '../../src/budget-statement';
-import { BudgetStatementAction } from '../../src/budget-statement/gen';
-import utils from '../../src/budget-statement/gen/utils';
+import {
+    BudgetStatement,
+    reducer,
+} from '../../document-models/budget-statement';
+import { BudgetStatementAction } from '../../document-models/budget-statement/gen';
+import utils from '../../document-models/budget-statement/gen/utils';
 
 const { createDocument } = utils;
 
@@ -43,7 +46,7 @@ class BudgetStatementTest extends BudgetStatement {
             .toLowerCase()
             .split('_')
             .map((word, i) =>
-                !i ? word : `${word[0].toUpperCase()}${word.slice(1)}`
+                !i ? word : `${word[0].toUpperCase()}${word.slice(1)}`,
             )
             .join('');
 
@@ -65,7 +68,7 @@ describe('Budget Statement scenario 1 with object methods', () => {
 
         try {
             budgetStatement.dispatchTest(
-                JSON.parse(JSON.stringify(json.operation))
+                JSON.parse(JSON.stringify(json.operation)),
             );
             expect(budgetStatement.state).toStrictEqual(json.state);
         } catch (error) {

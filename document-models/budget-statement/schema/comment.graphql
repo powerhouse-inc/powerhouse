@@ -1,0 +1,28 @@
+#import * from "../schema.graphql"
+
+input CommentAuthorInput {
+    ref: String
+    id: String
+    username: String
+    roleLabel: String
+}
+
+input AddCommentInput {
+    key: String
+    author: CommentAuthorInput
+    comment: String!
+    timestamp: DateTime
+    status: BudgetStatus
+}
+
+input UpdateCommentInput {
+    key: String!
+    author: CommentAuthorInput
+    comment: String
+    timestamp: DateTime
+    status: BudgetStatus
+}
+
+input DeleteCommentInput {
+    comment: String!
+}

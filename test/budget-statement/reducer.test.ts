@@ -1,11 +1,14 @@
-import { AddAccountInput, reducer } from '../../src/budget-statement';
+import {
+    AddAccountInput,
+    reducer,
+} from '../../document-models/budget-statement';
 import {
     addAccount,
     setMonth,
     setOwner,
     setQuoteCurrency,
-} from '../../src/budget-statement/gen/creators';
-import utils from '../../src/budget-statement/gen/utils';
+} from '../../document-models/budget-statement/gen/creators';
+import utils from '../../document-models/budget-statement/gen/utils';
 import { setName } from '../../src/document/actions';
 
 const { createDocument } = utils;
@@ -57,7 +60,7 @@ describe('Budget Statement reducer', () => {
     it('should throw error on invalid action', async () => {
         const document = createDocument();
         expect(() =>
-            reducer(document, addAccount({} as unknown as AddAccountInput))
+            reducer(document, addAccount({} as unknown as AddAccountInput)),
         ).toThrow();
     });
 
@@ -69,7 +72,7 @@ describe('Budget Statement reducer', () => {
                 ref: 'makerdao/core-unit',
                 id: 'SES-001',
                 title: 'Sustainable Ecosystem Scaling',
-            })
+            }),
         );
         expect(newDocument.state.owner).toStrictEqual({
             ref: 'makerdao/core-unit',
@@ -94,7 +97,7 @@ describe('Budget Statement reducer', () => {
         const document = createDocument();
         const newDocument = reducer(
             document,
-            setQuoteCurrency({ quoteCurrency: 'DAI' })
+            setQuoteCurrency({ quoteCurrency: 'DAI' }),
         );
         expect(newDocument.state.quoteCurrency).toBe('DAI');
         expect(document.state.quoteCurrency).toBe(null);

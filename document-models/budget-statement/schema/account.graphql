@@ -1,0 +1,22 @@
+#import * from "../schema.graphql"
+#import * from "./line-item.graphql"
+
+input AddAccountInput {
+    address: String!
+    name: String
+    lineItems: [LineItemInput!]
+}
+
+input UpdateAccountInput {
+    address: String!
+    name: String
+    lineItems: [LineItem!]
+}
+
+input DeleteAccountInput {
+    account: String!
+}
+
+input SortAccountsInput {
+    accounts: [String!]!
+}

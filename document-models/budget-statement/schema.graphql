@@ -1,0 +1,160 @@
+#import * from "./schema/account.graphql"
+#import * from "./schema/audit.graphql"
+#import * from "./schema/base.graphql"
+#import * from "./schema/comment.graphql"
+#import * from "./schema/line-item.graphql"
+#import * from "./schema/vesting.graphql"
+
+scalar DateTime
+scalar Attachment
+
+type LineItemGroup {
+    ref: String!
+    id: String!
+    title: String!
+    color: String!
+}
+
+type LineItemCategory {
+    ref: String!
+    id: String!
+    title: String!
+}
+
+type LineItemForecast {
+    month: String!
+    value: Float!
+    budgetCap: Float!
+}
+
+type LineItem {
+    group: LineItemGroup
+    headcountExpense: Boolean!
+    category: LineItemCategory
+    budgetCap: Float
+    actual: Float
+    payment: Float
+    forecast: [LineItemForecast!]!
+    comment: String
+}
+
+type Account {
+    address: String! # TODO Address
+    name: String!
+    lineItems: [LineItem!]!
+}
+
+type Owner {
+    ref: String
+    id: String
+    title: String
+}
+
+type Vesting {
+    key: String!
+    date: String!
+    amount: String!
+    amountOld: String!
+    comment: String!
+    currency: String!
+    vested: Boolean!
+}
+
+type FtesForecast {
+    month: String!
+    value: Float!
+}
+
+type Ftes {
+    value: Float!
+    forecast: [FtesForecast!]!
+}
+
+enum AuditReportStatus {
+    Approved
+    ApprovedWithComments
+    NeedsAction
+    Escalated
+}
+
+type AuditReport {
+    timestamp: DateTime!
+    report: Attachment! # TODO enforce attachment
+    status: AuditReportStatus!
+}
+
+type CommentAuthor {
+    ref: String
+    id: String
+    username: String
+    roleLabel: String
+}
+
+enum BudgetStatus {
+    Draft
+    Review
+    Final
+    Escalated
+}
+
+type Comment {
+    key: String!
+    author: CommentAuthor!
+    comment: String!
+    timestamp: DateTime!
+    status: BudgetStatus!
+}
+
+type BudgetStatementState {
+    owner: Owner
+    month: String
+    quoteCurrency: String
+    accounts: [Account!]!
+    vesting: [Vesting!]!
+    ftes: Ftes
+    auditReports: [AuditReport!]!
+    comments: [Comment!]!
+}
+
+type Mutation {
+    addAccount(input: AddAccountInput!): BudgetStatementState
+    updateAccount(input: UpdateAccountInput!): BudgetStatementState
+    deleteAccount(input: DeleteAccountInput!): BudgetStatementState
+    addLineItem(input: AddLineItemInput!): BudgetStatementState
+    updateLineItem(input: UpdateLineItemInput!): BudgetStatementState
+    deleteLineItem(input: DeleteLineItemInput!): BudgetStatementState
+    addComment(input: AddCommentInput!): BudgetStatementState
+    updateComment(input: UpdateCommentInput!): BudgetStatementState
+    deleteComment(input: DeleteCommentInput!): BudgetStatementState
+    addVesting(input: AddVestingInput!): BudgetStatementState
+    updateVesting(input: UpdateVestingInput!): BudgetStatementState
+    deleteVesting(input: DeleteVestingInput!): BudgetStatementState
+    addAuditReport(input: AddAuditReportInput!): BudgetStatementState
+    deleteAuditReport(input: DeleteAuditReportInput!): BudgetStatementState
+    setOwner(input: SetOwnerInput!): BudgetStatementState
+    setMonth(input: SetMonthInput!): BudgetStatementState
+    setQuoteCurrency(input: SetQuoteCurrencyInput!): BudgetStatementState
+    setFtes(input: SetFtesInput!): BudgetStatementState
+}
+
+union BudgetStatementInput =
+      AddAccountInput
+    | UpdateAccountInput
+    | DeleteAccountInput
+    | SortAccountsInput
+    | AddLineItemInput
+    | UpdateLineItemInput
+    | DeleteLineItemInput
+    | SortLineItemsInput
+    | AddCommentInput
+    | UpdateCommentInput
+    | DeleteCommentInput
+    | AddVestingInput
+    | UpdateVestingInput
+    | DeleteVestingInput
+    | AddAuditReportInput
+    | DeleteAuditReportInput
+    | SetOwnerInput
+    | SetMonthInput
+    | SetQuoteCurrencyInput
+    | SetFtesInput

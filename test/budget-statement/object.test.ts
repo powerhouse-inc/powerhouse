@@ -1,10 +1,13 @@
 import fs from 'fs';
-import { BudgetStatement, reducer } from '../../src/budget-statement';
-import { createAccount } from '../../src/budget-statement/custom/utils';
+import {
+    BudgetStatement,
+    reducer,
+} from '../../document-models/budget-statement';
+import { createAccount } from '../../document-models/budget-statement/custom/utils';
 import {
     BudgetStatementAction,
     BudgetStatementState,
-} from '../../src/budget-statement/gen';
+} from '../../document-models/budget-statement/gen';
 import { loadFromInput } from '../../src/document/utils/file';
 
 describe('Budget Statement Class', () => {
@@ -145,18 +148,18 @@ describe('Budget Statement Class', () => {
             name: 'Grants Program',
         });
         const path = await budgetStatement.saveToFile(
-            './test/budget-statement/temp'
+            './test/budget-statement/temp',
         );
 
         // Support backslashes for Windows environments
         expect(path.replace(/\\/g, '/')).toBe(
-            'test/budget-statement/temp/march.phbs.zip'
+            'test/budget-statement/temp/march.phbs.zip',
         );
     });
 
     it('should load from file', async () => {
         const budgetStatement = await BudgetStatement.fromFile(
-            './test/budget-statement/temp/march.phbs.zip'
+            './test/budget-statement/temp/march.phbs.zip',
         );
         expect(budgetStatement.name).toBe('march');
         expect(budgetStatement.state.month).toBe('03/2023');
@@ -171,7 +174,7 @@ describe('Budget Statement Class', () => {
 
     it('should load from stream', async () => {
         const file = fs.readFileSync(
-            './test/budget-statement/temp/march.phbs.zip'
+            './test/budget-statement/temp/march.phbs.zip',
         );
         const budgetStatement = await loadFromInput<
             BudgetStatementState,
@@ -205,7 +208,7 @@ describe('Budget Statement Class', () => {
         ]);
 
         const path = await budgetStatement.saveToFile(
-            './test/budget-statement/temp'
+            './test/budget-statement/temp',
         );
         const loadedBudgetStatement = await BudgetStatement.fromFile(path);
 

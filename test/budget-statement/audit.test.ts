@@ -1,12 +1,12 @@
 import fs from 'fs';
 import JSZip from 'jszip';
-import { reducer } from '../../src/budget-statement';
-import { AddAuditReportAction } from '../../src/budget-statement/gen/actions';
+import { reducer } from '../../document-models/budget-statement';
+import { AddAuditReportAction } from '../../document-models/budget-statement/gen/actions';
 import {
     addAuditReport,
     deleteAuditReport,
-} from '../../src/budget-statement/gen/creators';
-import utils from '../../src/budget-statement/gen/utils';
+} from '../../document-models/budget-statement/gen/creators';
+import utils from '../../document-models/budget-statement/gen/utils';
 import { Operation } from '../../src/document';
 import { getLocalFile, getRemoteFile } from '../../src/document/utils';
 import { readFile } from '../../src/document/utils/node';
@@ -45,8 +45,8 @@ describe('Budget Statement Audit Report reducer', () => {
                     status: 'Approved',
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
-                [file]
-            )
+                [file],
+            ),
         );
         expect(newDocument.state.auditReports[0]).toStrictEqual({
             report: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
@@ -67,12 +67,12 @@ describe('Budget Statement Audit Report reducer', () => {
                     status: 'Approved',
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
-                [file]
-            )
+                [file],
+            ),
         );
 
         expect(
-            newDocument.attachments['Q1pqSc2iiEdpNLjRefhjnQ3nNc8=']
+            newDocument.attachments['Q1pqSc2iiEdpNLjRefhjnQ3nNc8='],
         ).toStrictEqual({
             data: 'VEVTVA==',
             mimeType: 'application/pdf',
@@ -94,12 +94,12 @@ describe('Budget Statement Audit Report reducer', () => {
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
 
-                [file]
-            )
+                [file],
+            ),
         );
         document = reducer(
             document,
-            deleteAuditReport({ report: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=' })
+            deleteAuditReport({ report: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=' }),
         );
         expect(document.state.auditReports).toStrictEqual([]);
     });
@@ -117,11 +117,11 @@ describe('Budget Statement Audit Report reducer', () => {
                     status: 'Approved',
                 },
 
-                [file]
-            )
+                [file],
+            ),
         );
         expect(
-            newDocument.state.auditReports[0].timestamp >= date.toISOString()
+            newDocument.state.auditReports[0].timestamp >= date.toISOString(),
         ).toBe(true);
     });
 
@@ -137,8 +137,8 @@ describe('Budget Statement Audit Report reducer', () => {
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
 
-                [file]
-            )
+                [file],
+            ),
         );
         expect(document.state.auditReports[0].status).toBe('Approved');
     });
@@ -155,11 +155,11 @@ describe('Budget Statement Audit Report reducer', () => {
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
 
-                [file]
-            )
+                [file],
+            ),
         );
         expect(document.state.auditReports[0].status).toBe(
-            'ApprovedWithComments'
+            'ApprovedWithComments',
         );
     });
 
@@ -175,8 +175,8 @@ describe('Budget Statement Audit Report reducer', () => {
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
 
-                [file]
-            )
+                [file],
+            ),
         );
         expect(document.state.auditReports[0].status).toBe('NeedsAction');
     });
@@ -193,8 +193,8 @@ describe('Budget Statement Audit Report reducer', () => {
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
 
-                [file]
-            )
+                [file],
+            ),
         );
 
         await expect(async () =>
@@ -207,15 +207,15 @@ describe('Budget Statement Audit Report reducer', () => {
                         timestamp: '2023-03-15T17:46:22.754Z',
                     },
 
-                    [file]
-                )
-            )
+                    [file],
+                ),
+            ),
         ).rejects.toThrow();
     });
 
     it('should fetch attachment from URL', async () => {
         const file = await getRemoteFile(
-            'https://makerdao.com/whitepaper/DaiDec17WP.pdf'
+            'https://makerdao.com/whitepaper/DaiDec17WP.pdf',
         );
 
         const document = createDocument();
@@ -228,8 +228,8 @@ describe('Budget Statement Audit Report reducer', () => {
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
 
-                [file]
-            )
+                [file],
+            ),
         );
         expect(newDocument.state.auditReports[0]).toStrictEqual({
             report: 'Pv/RLgAirXe5QEWGG+W4PTlQCv0=',
@@ -237,10 +237,10 @@ describe('Budget Statement Audit Report reducer', () => {
             timestamp: '2023-03-15T17:46:22.754Z',
         });
         expect(
-            newDocument.attachments['Pv/RLgAirXe5QEWGG+W4PTlQCv0='].data.length
+            newDocument.attachments['Pv/RLgAirXe5QEWGG+W4PTlQCv0='].data.length,
         ).toBeGreaterThan(0);
         expect(
-            newDocument.attachments['Pv/RLgAirXe5QEWGG+W4PTlQCv0='].mimeType
+            newDocument.attachments['Pv/RLgAirXe5QEWGG+W4PTlQCv0='].mimeType,
         ).toBe('application/pdf');
         expect(document.state.auditReports).toStrictEqual([]);
         expect(document.attachments).toStrictEqual({});
@@ -257,8 +257,8 @@ describe('Budget Statement Audit Report reducer', () => {
                     timestamp: '2023-03-15T17:46:22.754Z',
                 },
 
-                [attachment]
-            )
+                [attachment],
+            ),
         );
         const zipPath = await saveToFile(document, tempDir);
         const file = readFile(zipPath);
@@ -272,7 +272,7 @@ describe('Budget Statement Audit Report reducer', () => {
         const { data, ...attributes } = document.attachments[report];
         expect(await attachmentZip?.async('string')).toBe('TEST');
         expect(JSON.parse(attachmentZip?.comment ?? '')).toStrictEqual(
-            attributes
+            attributes,
         );
     });
 
@@ -282,11 +282,11 @@ describe('Budget Statement Audit Report reducer', () => {
         expect(document.state.auditReports[0].status).toBe('NeedsAction');
         expect(
             (document.operations[0] as Operation<AddAuditReportAction>).input
-                .report
+                .report,
         ).toBe(hash);
 
         expect(
-            document.attachments[document.state.auditReports[0].report]
+            document.attachments[document.state.auditReports[0].report],
         ).toStrictEqual(attachment);
     });
 });

@@ -1,10 +1,10 @@
-import { reducer } from '../../src/budget-statement';
+import { reducer } from '../../document-models/budget-statement';
 import {
     addComment,
     deleteComment,
     updateComment,
-} from '../../src/budget-statement/gen/creators';
-import utils from '../../src/budget-statement/gen/utils';
+} from '../../document-models/budget-statement/gen/creators';
+import utils from '../../document-models/budget-statement/gen/utils';
 
 const { createDocument } = utils;
 
@@ -29,7 +29,7 @@ describe('Budget Statement Comment reducer', () => {
                     username: 'liberuum',
                     roleLabel: 'Auditor',
                 },
-            })
+            }),
         );
         expect(newDocument.state.comments[0]).toStrictEqual({
             key: '123',
@@ -61,13 +61,13 @@ describe('Budget Statement Comment reducer', () => {
                     username: 'liberuum',
                     roleLabel: 'Auditor',
                 },
-            })
+            }),
         );
 
         jest.useFakeTimers({ now: new Date('2023-03-16') });
         document = reducer(
             document,
-            updateComment({ key: '123', comment: 'Test 2' })
+            updateComment({ key: '123', comment: 'Test 2' }),
         );
         expect(document.state.comments[0]).toStrictEqual({
             key: '123',
@@ -98,7 +98,7 @@ describe('Budget Statement Comment reducer', () => {
                     username: 'liberuum',
                     roleLabel: 'Auditor',
                 },
-            })
+            }),
         );
 
         document = reducer(document, deleteComment({ comment: '123' }));
@@ -119,11 +119,11 @@ describe('Budget Statement Comment reducer', () => {
                     username: 'liberuum',
                     roleLabel: 'Auditor',
                 },
-            })
+            }),
         );
         expect(newDocument.state.comments[0].key.length).toBe(28);
         expect(newDocument.state.comments[0].timestamp).toBe(
-            '2023-03-16T00:00:00.000Z'
+            '2023-03-16T00:00:00.000Z',
         );
     });
 
@@ -134,21 +134,21 @@ describe('Budget Statement Comment reducer', () => {
             addComment({
                 comment: '03/11',
                 timestamp: '2023-03-11T17:46:22.754Z',
-            })
+            }),
         );
         newDocument = reducer(
             newDocument,
             addComment({
                 comment: '03/15',
                 timestamp: '2023-03-15T17:46:22.754Z',
-            })
+            }),
         );
         newDocument = reducer(
             newDocument,
             addComment({
                 comment: '03/13',
                 timestamp: '2023-03-13T17:46:22.754Z',
-            })
+            }),
         );
 
         expect(newDocument.state.comments[0].comment).toBe('03/11');
@@ -163,7 +163,7 @@ describe('Budget Statement Comment reducer', () => {
             addComment({
                 key: '123',
                 comment: '03/15',
-            })
+            }),
         );
         expect(() =>
             reducer(
@@ -171,8 +171,8 @@ describe('Budget Statement Comment reducer', () => {
                 addComment({
                     key: '123',
                     comment: '03/13',
-                })
-            )
+                }),
+            ),
         ).toThrow();
     });
 
@@ -191,7 +191,7 @@ describe('Budget Statement Comment reducer', () => {
                     username: 'liberuum',
                     roleLabel: 'Auditor',
                 },
-            })
+            }),
         );
 
         document = reducer(
@@ -200,14 +200,14 @@ describe('Budget Statement Comment reducer', () => {
                 key: '123',
                 status: 'Final',
                 timestamp: '2023-03-15T17:46:22.754Z',
-            })
+            }),
         );
         document = reducer(
             document,
             updateComment({
                 key: '456',
                 comment: '03/15',
-            })
+            }),
         );
 
         expect(document.state.comments).toStrictEqual([

@@ -1,10 +1,10 @@
-import { reducer } from '../../src/budget-statement';
+import { reducer } from '../../document-models/budget-statement';
 import {
     addVesting,
     deleteVesting,
     updateVesting,
-} from '../../src/budget-statement/gen/creators';
-import utils from '../../src/budget-statement/gen/utils';
+} from '../../document-models/budget-statement/gen/creators';
+import utils from '../../document-models/budget-statement/gen/utils';
 
 const { createDocument } = utils;
 
@@ -26,7 +26,7 @@ describe('Budget Statement Vesting reducer', () => {
                 date: '2023-03-15',
                 key: '123',
                 vested: false,
-            })
+            }),
         );
         expect(newDocument.state.vesting).toStrictEqual([
             {
@@ -54,11 +54,11 @@ describe('Budget Statement Vesting reducer', () => {
                 date: '2023-03-15',
                 key: '123',
                 vested: false,
-            })
+            }),
         );
         document = reducer(
             document,
-            updateVesting({ key: '123', amount: '300' })
+            updateVesting({ key: '123', amount: '300' }),
         );
         expect(document.state.vesting[0]).toStrictEqual({
             amount: '300',
@@ -77,7 +77,7 @@ describe('Budget Statement Vesting reducer', () => {
             document,
             addVesting({
                 key: '123',
-            })
+            }),
         );
 
         document = reducer(document, deleteVesting({ vesting: '123' }));
@@ -91,7 +91,7 @@ describe('Budget Statement Vesting reducer', () => {
             document,
             addVesting({
                 date: '2023-03-16',
-            })
+            }),
         );
         expect(newDocument.state.vesting[0].key.length).toBe(28);
         expect(newDocument.state.vesting[0].amount).toBe('');
@@ -103,19 +103,19 @@ describe('Budget Statement Vesting reducer', () => {
             document,
             addVesting({
                 date: '2023-03-11',
-            })
+            }),
         );
         newDocument = reducer(
             newDocument,
             addVesting({
                 date: '2023-03-15',
-            })
+            }),
         );
         newDocument = reducer(
             newDocument,
             addVesting({
                 date: '2023-03-13',
-            })
+            }),
         );
 
         expect(newDocument.state.vesting[0].date).toBe('2023-03-11');
@@ -130,7 +130,7 @@ describe('Budget Statement Vesting reducer', () => {
             addVesting({
                 key: '123',
                 date: '2023-03-15',
-            })
+            }),
         );
         expect(() =>
             reducer(
@@ -138,8 +138,8 @@ describe('Budget Statement Vesting reducer', () => {
                 addVesting({
                     key: '123',
                     date: '2023-03-13',
-                })
-            )
+                }),
+            ),
         ).toThrow();
     });
 
@@ -150,7 +150,7 @@ describe('Budget Statement Vesting reducer', () => {
             addVesting({
                 key: '123',
                 amount: '100',
-            })
+            }),
         );
 
         document = reducer(
@@ -158,7 +158,7 @@ describe('Budget Statement Vesting reducer', () => {
             updateVesting({
                 key: '123',
                 amount: '200',
-            })
+            }),
         );
 
         document = reducer(
@@ -166,7 +166,7 @@ describe('Budget Statement Vesting reducer', () => {
             updateVesting({
                 key: '456',
                 amount: '300',
-            })
+            }),
         );
 
         expect(document.state.vesting).toStrictEqual([

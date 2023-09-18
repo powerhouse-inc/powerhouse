@@ -1,11 +1,11 @@
-import { reducer, utils } from '../../src/budget-statement';
+import { reducer, utils } from '../../document-models/budget-statement';
 import {
     addAccount,
     addLineItem,
     deleteLineItem,
     sortLineItems,
     updateLineItem,
-} from '../../src/budget-statement/gen/creators';
+} from '../../document-models/budget-statement/gen/creators';
 
 const { createAccount, createDocument, createLineItem } = utils;
 
@@ -17,7 +17,7 @@ describe('Budget Statement line item reducer', () => {
             addAccount({
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-            })
+            }),
         );
         const newDocument = reducer(
             document,
@@ -35,7 +35,7 @@ describe('Budget Statement line item reducer', () => {
                     color: 'teal',
                 },
                 headcountExpense: true,
-            })
+            }),
         );
         expect(newDocument.state.accounts[0].lineItems).toStrictEqual([
             {
@@ -68,7 +68,7 @@ describe('Budget Statement line item reducer', () => {
             addAccount({
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-            })
+            }),
         );
         document = reducer(
             document,
@@ -86,7 +86,7 @@ describe('Budget Statement line item reducer', () => {
                     color: 'teal',
                 },
                 headcountExpense: true,
-            })
+            }),
         );
         const newDocument = reducer(
             document,
@@ -103,7 +103,7 @@ describe('Budget Statement line item reducer', () => {
                         budgetCap: 2000,
                     },
                 ],
-            })
+            }),
         );
 
         expect(newDocument.state.accounts[0].lineItems[0]).toStrictEqual({
@@ -159,7 +159,7 @@ describe('Budget Statement line item reducer', () => {
             addAccount({
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-            })
+            }),
         );
         document = reducer(
             document,
@@ -177,7 +177,7 @@ describe('Budget Statement line item reducer', () => {
                     color: 'teal',
                 },
                 headcountExpense: true,
-            })
+            }),
         );
         const newDocument = reducer(
             document,
@@ -185,7 +185,7 @@ describe('Budget Statement line item reducer', () => {
                 accountId: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 category: 'TravelAndEntertainment',
                 group: 'core-unit/SES/2023/005',
-            })
+            }),
         );
         expect(newDocument.state.accounts[0].lineItems.length).toBe(0);
         expect(document.state.accounts[0].lineItems.length).toBe(1);
@@ -198,7 +198,7 @@ describe('Budget Statement line item reducer', () => {
             addAccount({
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
-            })
+            }),
         );
         document = reducer(
             document,
@@ -216,7 +216,7 @@ describe('Budget Statement line item reducer', () => {
                     color: 'teal',
                 },
                 headcountExpense: true,
-            })
+            }),
         );
         expect(() =>
             reducer(
@@ -235,8 +235,8 @@ describe('Budget Statement line item reducer', () => {
                         color: 'teal',
                     },
                     headcountExpense: true,
-                })
-            )
+                }),
+            ),
         ).toThrow();
     });
 
@@ -302,14 +302,14 @@ describe('Budget Statement line item reducer', () => {
                     { group: '2', category: '2' },
                     { group: '0', category: '0' },
                 ],
-            })
+            }),
         );
 
         expect(
             newDocument.state.accounts[0].lineItems.map(l => ({
                 group: l.group?.id,
                 category: l.category?.id,
-            }))
+            })),
         ).toStrictEqual([
             { group: '2', category: '2' },
             { group: '0', category: '0' },
