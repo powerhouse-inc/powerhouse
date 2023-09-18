@@ -1,4 +1,9 @@
 /dist
+/coverage
 /node_modules
+/storybook-static
+
+**/gen
 
 .yalc/
+yalc.lock

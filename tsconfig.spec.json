@@ -13,5 +13,5 @@
         "jest.config.ts",
         "vite.config.ts"
     ],
-    "exclude": []
+    "exclude": ["dist/"]
 }

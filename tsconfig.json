@@ -15,6 +15,7 @@
     },
     "include": ["./index.ts", "**/*.ts", "**/*.tsx"],
     "exclude": [
+        "dist/",
         "**/*.test.ts",
         ".storybook/**/*.ts",
         "jest.config.ts",
