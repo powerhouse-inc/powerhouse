@@ -19,14 +19,15 @@
     graphlib "^2.1.8"
 
 "@acaldas/powerhouse@file:.yalc/@acaldas/powerhouse":
-  version "1.0.5"
+  version "1.0.7"
   dependencies:
     "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
     "@graphql-codegen/cli" "^5.0.0"
     "@graphql-codegen/typescript" "^4.0.1"
     "@types/node" "^20.5.9"
+    arg "^5.0.2"
     change-case "^4.1.2"
-    document-model "^1.0.3"
+    document-model "^1.0.5"
     enquirer "^2.4.1"
     execa "^8.0.1"
     hygen "^6.2.11"
@@ -4063,6 +4064,11 @@ arg@^4.1.0:
   resolved "https://registry.yarnpkg.com/arg/-/arg-4.1.3.tgz#269fc7ad5b8e42cb63c896d5666017261c144089"
   integrity sha512-58S9QDqG0Xx27YwPSt9fJxivjYl432YCwfDMfZ+71RAqUrZef7LrKQZ3LHLOwCS4FLNBplP533Zx895SeOCHvA==
 
+arg@^5.0.2:
+  version "5.0.2"
+  resolved "https://registry.yarnpkg.com/arg/-/arg-5.0.2.tgz#c81433cc427c92c4dcf4865142dbca6f15acd59c"
+  integrity sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==
+
 argparse@^1.0.7, argparse@~1.0.9:
   version "1.0.10"
   resolved "https://registry.npmjs.org/argparse/-/argparse-1.0.10.tgz"
@@ -5152,26 +5158,24 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model@^1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.3.tgz#f385acb39addb4a8cffbbd481e28776ddffd175d"
-  integrity sha512-DzBKx/GIux7O/bIhtMFtBN/+9yrol9IKvrEiNKA42Fqz4wdTS11PZbH1Knb1JtN0bNrenL4QKl9UZbtPql0D7g==
+document-model@^1.0.5:
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.5.tgz#4612774ed18a70a91d880852fcbdcb6166c1bd86"
+  integrity sha512-kcZ0Ra6k2xzL33VSwwdaQsnjYnPXR+OCOP8/UL/GipqJas5PpZTKC+GNzVm8RiYb12ZUYyJ6BMzyP2DWolS0+g==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
     jszip "^3.10.1"
     mime "^3.0.0"
-    sha.js "^2.4.11"
     zod "^3.22.2"
 
 "document-model@file:.yalc/document-model":
-  version "1.0.3"
+  version "1.0.4"
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
     jszip "^3.10.1"
     mime "^3.0.0"
-    sha.js "^2.4.11"
     zod "^3.22.2"
 
 dom-accessibility-api@^0.5.9:
@@ -8936,7 +8940,7 @@ safe-buffer@5.1.2, safe-buffer@~5.1.0, safe-buffer@~5.1.1:
   resolved "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.2.tgz"
   integrity sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g==
 
-safe-buffer@5.2.1, safe-buffer@^5.0.1, safe-buffer@~5.2.0:
+safe-buffer@5.2.1, safe-buffer@~5.2.0:
   version "5.2.1"
   resolved "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz"
   integrity sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==
@@ -9046,14 +9050,6 @@ setprototypeof@1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/setprototypeof/-/setprototypeof-1.2.0.tgz#66c9a24a73f9fc28cbe66b09fed3d33dcaf1b424"
   integrity sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==
-
-sha.js@^2.4.11:
-  version "2.4.11"
-  resolved "https://registry.npmjs.org/sha.js/-/sha.js-2.4.11.tgz"
-  integrity sha512-QMEp5B7cftE7APOjk5Y6xgrbWu+WkLVQwk8JNjZ8nKRciZaByEW6MubieAiToS7+dwvrjGhH8jRXz3MVd0AYqQ==
-  dependencies:
-    inherits "^2.0.1"
-    safe-buffer "^5.0.1"
 
 shallow-clone@^3.0.0:
   version "3.0.1"

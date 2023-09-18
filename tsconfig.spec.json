@@ -5,6 +5,9 @@
         "emitDeclarationOnly": false
     },
     "include": [
+        "./index.ts",
+        "**/*.ts",
+        "**/*.tsx",
         "**/*.test.ts",
         ".storybook/**/*.ts",
         "jest.config.ts",
