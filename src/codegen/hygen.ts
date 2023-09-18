@@ -1,12 +1,12 @@
 import 'ts-node/register/transpile-only';
-import { DocumentModel } from 'document-model';
+import { DocumentModelState, utils } from 'document-model/document-model';
 import { paramCase } from 'change-case';
 import { Logger, runner } from 'hygen';
 import path from 'path';
 import fs from 'fs';
 
 const logger = new Logger(console.log.bind(console));
-const defaultTemplates = path.join(__dirname, '../', '.hygen', 'templates');
+const defaultTemplates = path.join(__dirname, '.hygen', 'templates');
 
 async function run(args: string[], { watch = false, format = false } = {}) {
     const result = await runner(args, {
@@ -37,15 +37,13 @@ async function run(args: string[], { watch = false, format = false } = {}) {
     return result;
 }
 
-async function loadDocumentModel(
-    path: string,
-): Promise<DocumentModel.DocumentModelState> {
-    let documentModel: DocumentModel.DocumentModelState;
+async function loadDocumentModel(path: string): Promise<DocumentModelState> {
+    let documentModel: DocumentModelState;
     try {
         if (!path) {
             throw new Error('Document model file not specified');
         } else if (path.endsWith('.zip')) {
-            const file = await DocumentModel.utils.loadFromFile(path);
+            const file = await utils.loadFromFile(path);
             documentModel = file.state;
         } else if (path.endsWith('.json')) {
             const data = fs.readFileSync(path, 'utf-8');
@@ -87,7 +85,7 @@ export async function generateAll(
 }
 
 export async function generateDocumentModel(
-    documentModel: DocumentModel.DocumentModelState,
+    documentModel: DocumentModelState,
     dir: string,
     { watch = false, format = false } = {},
 ) {

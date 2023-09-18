@@ -1,5 +1,5 @@
-import { DocumentModelState } from 'document-model/dist/node/document-model';
-import { Args } from '../generate-document-model/index.js';
+import { DocumentModelState } from 'document-model/document-model';
+import { Args } from '../generate-document-model';
 
 type ModuleArgs = Args & { module: string };
 export default {
