@@ -6,8 +6,8 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "bin": {
-        "powerhouse": "./dist/src/cli.js",
-        "create-document-model-lib": "./dist/src/create-lib/index.js"
+        "powerhouse": "./dist/cli.js",
+        "create-document-model-lib": "./dist/create-lib/index.js"
     },
     "files": [
         "/dist"
