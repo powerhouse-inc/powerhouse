@@ -9,7 +9,8 @@
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
         "build": "vite build",
         "storybook": "storybook dev -p 6006",
-        "build-storybook": "storybook build"
+        "build-storybook": "storybook build",
+        "test": "jest"
     },
     "devDependencies": {
         "@acaldas/powerhouse": "file:.yalc/@acaldas/powerhouse",
