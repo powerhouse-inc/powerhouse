@@ -1,12 +1,11 @@
-import type { BudgetStatementDocument } from '@acaldas/document-model-libs/browser/budget-statement';
 import {
     Action,
     BaseAction,
     Document,
-} from '@acaldas/document-model-libs/browser/document';
-import type { DocumentModelDocument } from '@acaldas/document-model-libs/browser/document-model';
-import type { ScopeFrameworkDocument } from '@acaldas/document-model-libs/browser/scope-framework';
-import type { EditorComponent } from 'src/components/editors';
+    DocumentModel,
+    Editor,
+} from 'document-model/document';
+import { EditorComponent, wrapEditor } from 'src/components/editors';
 
 import tabNew from 'src/components/tabs/tab-new';
 
@@ -31,53 +30,44 @@ export const Tab = {
         const { type, id, name, document } = tab;
         return JSON.stringify({ type, id, name, document });
     },
-    async fromString(value: string): Promise<ITab> {
+    async fromString(
+        value: string,
+        getDocumentModel: (documentType: string) => DocumentModel | undefined,
+        getEditor: (documentType: string) => Editor | undefined
+    ): Promise<ITab> {
         const object = JSON.parse(value);
         const type = object.type as TabType;
-        switch (object.type) {
-            case 'new':
-                return createTab(object.id);
-            case 'powerhouse/budget-statement':
-                return createBudgetStatementTab(
-                    object.budgetStatement,
-                    object.id
-                );
-            case 'makerdao/scope-framework':
-                return createScopeFrameworkTab(
-                    object.scopeFramework,
-                    object.id
-                );
-            case 'powerhouse/document-model':
-                return createDocumentModelTab(object.id, object.name);
-            default:
-                throw new Error(`Tab type ${type} was not handled`);
+        if (type === 'new') {
+            return createTab(object.id);
         }
+
+        const documentModel = getDocumentModel(type);
+        const editor = getEditor(type);
+        if (!documentModel || !editor) {
+            throw new Error(`Document not supported: ${type}`);
+        }
+
+        return createDocumentTab(
+            documentModel,
+            editor,
+            object.document,
+            object.id,
+            object.name
+        );
     },
     async fromDocument<T extends Document>(
         document: T,
+        getDocumentModel: (documentType: string) => DocumentModel | undefined,
+        getEditor: (documentType: string) => Editor | undefined,
         id?: string
     ): Promise<ITab> {
-        switch (document.documentType) {
-            case 'powerhouse/budget-statement':
-                return createBudgetStatementTab(
-                    document as BudgetStatementDocument,
-                    id
-                );
-            case 'makerdao/scope-framework':
-                return createScopeFrameworkTab(
-                    document as ScopeFrameworkDocument,
-                    id
-                );
-            case 'powerhouse/document-model':
-                return createDocumentModelTab(
-                    document as DocumentModelDocument,
-                    id
-                );
-            default:
-                throw new Error(
-                    `Document with type ${document.documentType} was not handled`
-                );
+        const documentModel = getDocumentModel(document.documentType);
+        const editor = getEditor(document.documentType);
+        if (!documentModel || !editor) {
+            throw new Error(`Document not supported: ${document.documentType}`);
         }
+
+        return createDocumentTab(documentModel, editor, document, id);
     },
 };
 
@@ -98,75 +88,28 @@ export function createTab<T = unknown, A extends Action = Action>(
 }
 
 export function createDocumentTab<T = unknown, A extends Action = Action>(
-    document: Document<T, A | BaseAction>,
-    content?: EditorComponent<T, A>,
+    documentModel: DocumentModel<T, A>,
+    editor: Editor<T, A>,
+    document?: Document<T, A | BaseAction>,
     id?: string,
     name?: string
 ) {
+    document = document ?? documentModel.utils.createDocument();
     return createTab(
-        document.documentType as TabType,
+        documentModel.documentModel.id as TabType,
         id,
         name ?? document.name,
         document,
-        content
-    );
-}
-
-export async function createScopeFrameworkTab(
-    document?: ScopeFrameworkDocument,
-    id?: string
-) {
-    const ScopeFramework = await import(
-        '@acaldas/document-model-libs/browser/scope-framework'
-    );
-    const ScopeFrameworkEditor = (
-        await import('src/components/editors/scope-framework')
-    ).default;
-
-    const scope = document ?? ScopeFramework.utils.createDocument();
-
-    return createDocumentTab(scope, ScopeFrameworkEditor, id, 'New scope');
-}
-
-export async function createBudgetStatementTab(
-    document?: BudgetStatementDocument,
-    id?: string
-) {
-    const BudgetStatement = await import(
-        '@acaldas/document-model-libs/browser/budget-statement'
-    );
-    const BudgetStatementEditor = (
-        await import('src/components/editors/budget-statement')
-    ).default;
-    const scope = document ?? BudgetStatement.utils.createDocument();
-    return createDocumentTab(scope, BudgetStatementEditor, id, 'New budget');
-}
-
-export async function createDocumentModelTab(
-    document?: DocumentModelDocument,
-    id?: string
-) {
-    const DocumentModel = await import(
-        '@acaldas/document-model-libs/browser/document-model'
-    );
-    const DocumentModelEditor = (
-        await import('src/components/editors/document-model')
-    ).default;
-
-    const scope = document ?? DocumentModel.utils.createDocument();
-    return createDocumentTab(
-        scope,
-        DocumentModelEditor,
-        id,
-        'New document model'
+        wrapEditor(documentModel, editor)
     );
 }
 
 export async function preloadTabs() {
-    await Promise.all([
-        import('@acaldas/document-model-libs/browser/scope-framework'),
-        import('src/components/editors/scope-framework'),
-        import('@acaldas/document-model-libs/browser/budget-statement'),
-        import('src/components/editors/budget-statement'),
-    ]);
+    // TODO
+    // await Promise.all([
+    //     import('document-model-libs/scope-framework'),
+    //     import('src/components/editors/scope-framework'),
+    //     import('document-model-libs/budget-statement'),
+    //     import('src/components/editors/budget-statement'),
+    // ]);
 }

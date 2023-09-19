@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
-import { createHashRouter, RouterProvider } from 'react-router-dom';
+import { RouterProvider, createHashRouter } from 'react-router-dom';
 import atoms from 'src/store';
 
 export const App: React.FC = () => {

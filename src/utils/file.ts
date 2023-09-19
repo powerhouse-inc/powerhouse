@@ -1,42 +1,32 @@
-import type { Document } from '@acaldas/document-model-libs/browser/document';
+import type { Document } from 'document-model/document';
 import path from 'path';
 
-const isBrowser = typeof window !== undefined;
-
 type SaveDocumentFn = (
-    document: Document,
+    document: Document<any, any>,
     path: string,
     name?: string | undefined
 ) => Promise<string>;
 
 type SaveDocumentToFileHandleFn = (
-    document: Document,
+    document: Document<any, any>,
     handle: FileSystemFileHandle
-) => Promise<string>;
+) => Promise<void>;
 
 async function saveDocumentToFileFn(
     document: Document
 ): Promise<SaveDocumentFn> {
     if (document.documentType === 'powerhouse/budget-statement') {
         const BudgetStatement = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/budget-statement'
-                : '@acaldas/document-model-libs/budget-statement'
+            'document-model-libs/budget-statement'
         );
         return BudgetStatement.utils.saveToFile;
     } else if (document.documentType === 'makerdao/scope-framework') {
         const ScopeFramework = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/scope-framework'
-                : '@acaldas/document-model-libs/scope-framework'
+            'document-model-libs/scope-framework'
         );
         return ScopeFramework.utils.saveToFile;
     } else if (document.documentType === 'powerhouse/document-model') {
-        const DocumentModel = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/document-model'
-                : '@acaldas/document-model-libs/document-model'
-        );
+        const DocumentModel = await import('document-model/document-model');
         return DocumentModel.utils.saveToFile;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
@@ -48,24 +38,16 @@ async function saveDocumentToFileHandleFn(
 ): Promise<SaveDocumentToFileHandleFn> {
     if (document.documentType === 'powerhouse/budget-statement') {
         const BudgetStatement = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/budget-statement'
-                : '@acaldas/document-model-libs/budget-statement'
+            'document-model-libs/budget-statement'
         );
         return BudgetStatement.utils.saveToFileHandle;
     } else if (document.documentType === 'makerdao/scope-framework') {
         const ScopeFramework = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/scope-framework'
-                : '@acaldas/document-model-libs/scope-framework'
+            'document-model-libs/scope-framework'
         );
         return ScopeFramework.utils.saveToFileHandle;
     } else if (document.documentType === 'powerhouse/document-model') {
-        const DocumentModel = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/document-model'
-                : '@acaldas/document-model-libs/document-model'
-        );
+        const DocumentModel = await import('document-model/document-model');
         return DocumentModel.utils.saveToFileHandle;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
@@ -101,24 +83,16 @@ async function LoadDocumentFromInputFn(
 ): Promise<LoadDocumentFn> {
     if (document.documentType === 'powerhouse/budget-statement') {
         const BudgetStatement = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/budget-statement'
-                : '@acaldas/document-model-libs/budget-statement'
+            'document-model-libs/budget-statement'
         );
         return BudgetStatement.utils.loadFromInput;
     } else if (document.documentType === 'makerdao/scope-framework') {
         const ScopeFramework = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/scope-framework'
-                : '@acaldas/document-model-libs/scope-framework'
+            'document-model-libs/scope-framework'
         );
         return ScopeFramework.utils.loadFromInput;
     } else if (document.documentType === 'powerhouse/document-model') {
-        const DocumentModel = await import(
-            isBrowser
-                ? '@acaldas/document-model-libs/browser/document-model'
-                : '@acaldas/document-model-libs/document-model'
-        );
+        const DocumentModel = await import('document-model/document-model');
         return DocumentModel.utils.loadFromInput;
     } else {
         throw new Error(`Document "${document.documentType}" is not supported`);
@@ -126,11 +100,7 @@ async function LoadDocumentFromInputFn(
 }
 
 export async function loadFile(path: string | File) {
-    const Document = await import(
-        isBrowser
-            ? '@acaldas/document-model-libs/browser/document'
-            : '@acaldas/document-model-libs/document'
-    );
+    const Document = await import('document-model/document');
     const baseDocument = await Document.utils.loadFromInput(
         path,
         (state: Document) => state

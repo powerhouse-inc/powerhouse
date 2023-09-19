@@ -2,26 +2,34 @@ import type { DropEvent } from '@react-types/shared';
 import { useCallback } from 'react';
 import { useDrop } from 'react-aria';
 import { useNavigate } from 'react-router-dom';
-import { Tab, useTabs } from 'src/store';
+import { useTabs } from 'src/store';
 import { loadFile } from 'src/utils/file';
 
 export function useDropFile(ref: React.RefObject<HTMLElement>) {
-    const { addTab, selectedTab, getItem, updateTab } = useTabs();
+    const {
+        addTab,
+        selectedTab,
+        getItem,
+        updateTab,
+        fromDocument,
+        fromString,
+    } = useTabs();
     const navigate = useNavigate();
 
     const onDrop = useCallback(
         async (e: DropEvent) => {
             for (const item of e.items) {
+                console.log(item);
                 if (item.kind === 'file') {
                     const file = await item.getFile();
                     const document = await loadFile(file);
-                    const tab = await Tab.fromDocument(document);
+                    const tab = await fromDocument(document);
                     addTab(tab);
                     navigate('/');
                 } else if (item.kind === 'text') {
                     try {
                         const tabStr = await item.getText('tab');
-                        const tab = await Tab.fromString(tabStr);
+                        const tab = await fromString(tabStr);
                         addTab(tab);
                         navigate('/');
                     } catch (error) {

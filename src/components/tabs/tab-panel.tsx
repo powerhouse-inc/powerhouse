@@ -1,4 +1,4 @@
-import { Document } from '@acaldas/document-model-libs/document';
+import { Document } from 'document-model/document';
 import { useRef } from 'react';
 import { useTabList, useTabPanel } from 'react-aria';
 import { TabListState } from 'react-stately';

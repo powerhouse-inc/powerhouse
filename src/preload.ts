@@ -1,19 +1,14 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
-import { ExtendedScopeFrameworkState } from '@acaldas/document-model-libs/scope-framework';
+import { Document } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { Theme } from './store';
 
 const electronApi = {
     ready: () => ipcRenderer.send('ready'),
     saveFile: (file: unknown) => ipcRenderer.invoke('dialog:saveFile', file),
-    handleFileOpened: (
-        listener: (file: ExtendedScopeFrameworkState | undefined) => void
-    ) => {
-        function callback(
-            event: IpcRendererEvent,
-            file: ExtendedScopeFrameworkState | undefined
-        ) {
+    handleFileOpened: (listener: (file: Document | undefined) => void) => {
+        function callback(event: IpcRendererEvent, file: Document | undefined) {
             listener(file);
         }
         ipcRenderer.on('fileOpened', callback);
