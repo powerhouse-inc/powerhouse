@@ -1,15 +1,15 @@
 import { useEffect } from 'react';
 import Tabs from 'src/components/tabs';
-import { createScopeFrameworkTab, useTabs } from 'src/store/tabs';
+import { useTabs } from 'src/store/tabs';
 import { saveFile } from 'src/utils/file';
 
 const TabsContainer = () => {
     const tabs = useTabs();
+
     useEffect(() => {
-        return window.electronAPI?.handleFileOpened(file => {
+        return window.electronAPI?.handleFileOpened(async file => {
             if (file) {
-                // TODO deal with different files
-                const tab = createScopeFrameworkTab(file);
+                const tab = await tabs.fromDocument(file);
                 tabs.addTab(tab);
             }
         });

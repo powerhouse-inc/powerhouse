@@ -1,6 +1,12 @@
+import type { Document } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { useMemo } from 'react';
 import { ListData } from 'react-stately';
+import {
+    useDocumentModels,
+    useGetDocumentModel,
+    useGetEditor,
+} from '../document-model';
 import { Tab, createTab } from './base';
 export * from './base';
 
@@ -54,6 +60,10 @@ export const selectedTabAtom = atom<Tab['id'] | undefined>(undefined);
 export const useTabs = () => {
     const [_tabs, setTabs] = useAtom(tabsAtom);
     const [selectedTab, setSelectedTab] = useAtom(selectedTabAtom);
+    const getDocumentModel = useGetDocumentModel();
+    const getEditor = useGetEditor();
+    const documentModels = useDocumentModels();
+    const editors = useDocumentModels();
 
     const tabs: Pick<
         ListData<Tab>,
@@ -64,6 +74,8 @@ export const useTabs = () => {
         addTab: (tab?: Tab) => void;
         updateTab: (tab: Tab) => void;
         closeTab: (tab: Tab) => void;
+        fromDocument: (document: Document, id?: string) => Promise<Tab>;
+        fromString: (text: string) => Promise<Tab>;
     } = useMemo(
         () => ({
             items: _tabs,
@@ -126,8 +138,19 @@ export const useTabs = () => {
             closeTab(tab: Tab) {
                 tabs.remove(tab.id);
             },
+            fromDocument(document, id) {
+                return Tab.fromDocument(
+                    document,
+                    getDocumentModel,
+                    getEditor,
+                    id
+                );
+            },
+            fromString(text) {
+                return Tab.fromString(text, getDocumentModel, getEditor);
+            },
         }),
-        [_tabs, selectedTab]
+        [_tabs, selectedTab, documentModels, editors]
     );
 
     return tabs;

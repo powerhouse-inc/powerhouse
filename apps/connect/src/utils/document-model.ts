@@ -3,7 +3,7 @@ import type {
     BaseAction,
     Document,
     Reducer,
-} from '@acaldas/document-model-libs/browser/document';
+} from 'document-model/document';
 import { useReducer } from 'react';
 
 export function wrapReducer<State, A extends Action>(

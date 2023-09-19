@@ -1,4 +1,4 @@
-import { Document } from '@acaldas/document-model-libs/document';
+import { Document } from 'document-model/document';
 import {
     BrowserWindow,
     Menu,

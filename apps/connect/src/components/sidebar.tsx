@@ -5,13 +5,7 @@ import { ReactComponent as IconSettings } from '@/assets/icons/settings.svg';
 import { useAtom, useAtomValue } from 'jotai';
 import { NavLink, To, useNavigate } from 'react-router-dom';
 import { useOpenFile } from 'src/hooks';
-import {
-    Tab,
-    sidebarCollapsedAtom,
-    themeAtom,
-    useTabs,
-    userAtom,
-} from 'src/store';
+import { sidebarCollapsedAtom, themeAtom, useTabs, userAtom } from 'src/store';
 import { saveFile } from 'src/utils/file';
 import ThemeSelector from './theme-selector';
 
@@ -102,7 +96,7 @@ export default function () {
 
     const theme = useAtomValue(themeAtom);
     const user = useAtomValue(userAtom);
-    const { addTab, selectedTab, getItem } = useTabs();
+    const { addTab, selectedTab, getItem, fromDocument } = useTabs();
 
     function toggleCollapse() {
         setCollapsed(value => !value);
@@ -121,7 +115,7 @@ export default function () {
     };
 
     const handleOpenFile = useOpenFile(async document => {
-        addTab(await Tab.fromDocument(document));
+        addTab(await fromDocument(document));
     });
 
     async function handleSaveFile() {
