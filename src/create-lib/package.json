@@ -1,10 +1,10 @@
 {
     "name": "create-document-model-lib",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "main": "dist/src.js",
     "license": "AGPL-3.0-only",
     "private": false,
-    "bin": "./dist/index.js",
+    "bin": "./dist/create-lib/index.js",
     "files": [
         "./dist/"
     ]
