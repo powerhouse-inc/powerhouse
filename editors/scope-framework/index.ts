@@ -7,7 +7,7 @@ import Editor from './editor';
 
 const Module: EditorModule<ScopeFrameworkState, ScopeFrameworkAction> = {
     Component: Editor,
-    documentTypes: ['powerhouse/scope-framework'],
+    documentTypes: ['makerdao/scope-framework'],
 };
 
 export default Module;

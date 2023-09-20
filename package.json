@@ -1,8 +1,40 @@
 {
-    "name": "document-model-boilerplate",
-    "version": "1.0.0",
-    "main": "index.js",
+    "name": "document-model-libs",
+    "version": "1.1.0",
     "license": "AGPL-3.0-only",
+    "types": "dist/index.d.ts",
+    "main": "dist/index.cjs",
+    "module": "dist/index.js",
+    "files": [
+        "/dist"
+    ],
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "require": "./dist/index.cjs",
+            "types": "./dist/index.d.ts"
+        },
+        "./editors": {
+            "import": "./dist/editors.js",
+            "require": "./dist/editors.cjs",
+            "types": "./dist/editors.d.ts"
+        },
+        "./document-models": {
+            "import": "./dist/document-models.js",
+            "require": "./dist/document-models.cjs",
+            "types": "./dist/document-models.d.ts"
+        },
+        "./budget-statement": {
+            "import": "./dist/budget-statement.js",
+            "require": "./dist/budget-statement.cjs",
+            "types": "./dist/budget-statement.d.ts"
+        },
+        "./scope-framework": {
+            "import": "./dist/scope-framework.js",
+            "require": "./dist/scope-framework.cjs",
+            "types": "./dist/scope-framework.d.ts"
+        }
+    },
     "scripts": {
         "generate": "powerhouse generate",
         "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
