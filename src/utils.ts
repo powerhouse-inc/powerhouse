@@ -18,7 +18,7 @@ export const DEFAULT_CONFIG: PowerhouseConfig = {
     editorsDir: DEFAULT_EDITORS_DIR,
 };
 
-export const argsSpec = {
+export const configSpec = {
     '--document-models': String,
     '--editors': String,
     '--interactive': Boolean,
@@ -43,12 +43,18 @@ export function writeConfig(config: PowerhouseConfig) {
     writeFileSync('./powerhouse.config.json', JSON.stringify(config, null, 4));
 }
 
-export function parseArgs(): Partial<PowerhouseConfig> {
-    const config: Partial<PowerhouseConfig> = {};
-    const args = arg(argsSpec, {
+export function parseArgs<T extends arg.Spec>(argv: string[], spec: T) {
+    const args = arg(spec, {
         permissive: true,
-        argv: process.argv.slice(2),
+        argv,
     });
+
+    return args;
+}
+
+export function parseConfig(argv: string[]) {
+    const config: Partial<PowerhouseConfig> = {};
+    const args = parseArgs(argv, configSpec);
 
     if ('--document-models' in args) {
         config.documentModelsDir = args['--document-models'];

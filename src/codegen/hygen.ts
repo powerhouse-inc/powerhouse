@@ -124,3 +124,15 @@ export async function generateDocumentModel(
         );
     }
 }
+
+export async function generateEditor(
+    name: string,
+    dir: string,
+    { format = false } = {},
+) {
+    // Generate the singular files for the document model logic
+    await run(
+        ['powerhouse', 'generate-editor', '--name', name, '--root-dir', dir],
+        { format },
+    );
+}

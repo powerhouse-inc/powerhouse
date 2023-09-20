@@ -4,8 +4,12 @@ import path from 'path';
 import util from 'util';
 import fs from 'fs';
 import { exec as _exec } from 'child_process';
-import { promptDirectories, DEFAULT_CONFIG, argsSpec } from '../utils';
-import arg from 'arg';
+import {
+    promptDirectories,
+    DEFAULT_CONFIG,
+    configSpec,
+    parseArgs,
+} from '../utils';
 import { prompt } from 'enquirer';
 
 const exec = util.promisify(_exec);
@@ -40,18 +44,28 @@ function buildPowerhouseConfig(
     documentModelsDir: string,
     editorsDir: string,
 ) {
-    const packageJson = JSON.parse(
-        fs.readFileSync(path.join(appPath, 'powerhouse.config.json'), 'utf-8'),
-    );
+    const filePath = path.join(appPath, 'powerhouse.config.json');
+    const packageJson = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const newPackage = {
         ...packageJson,
         documentModelsDir,
         editorsDir,
     };
 
+    fs.writeFileSync(filePath, JSON.stringify(newPackage, null, 2), 'utf8');
+}
+
+function buildIndex(
+    appPath: string,
+    documentModelsDir: string,
+    editorsDir: string,
+) {
     fs.writeFileSync(
-        'powerhouse.config.json',
-        JSON.stringify(newPackage, null, 2),
+        path.join(appPath, 'index.ts'),
+        `import { documentModels } from '${documentModelsDir}';
+        import { editors } from '${editorsDir}';
+        
+        export { documentModels, editors };`,
         'utf8',
     );
 }
@@ -67,10 +81,7 @@ async function runCmd(command: string) {
 }
 
 async function init() {
-    const args = arg(argsSpec, {
-        permissive: true,
-        argv: process.argv.slice(2),
-    });
+    const args = parseArgs(process.argv.slice(2), configSpec);
 
     // checks if a project name was provided
     let projectName = args._.shift();
@@ -143,6 +154,7 @@ async function createProject(
 
         buildPackageJson(appPath, projectName);
         buildPowerhouseConfig(appPath, documentModelsDir, editorsDir);
+        buildIndex(appPath, documentModelsDir, editorsDir);
 
         console.log('\x1b[32m', 'The installation is done!', '\x1b[0m');
         console.log();
