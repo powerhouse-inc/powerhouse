@@ -1,11 +1,11 @@
 #! /usr/bin/env node
-import { generate, generateEditor } from './codegen/index';
+import { generate, generateEditor, generateFromFile } from './codegen/index';
 import { parseArgs, getConfig, promptDirectories, parseConfig } from './utils';
 
 async function parseCommand(argv: string[]) {
     const args = parseArgs(argv, { '--editor': String, '-e': '--editor' });
     const editorName = args['--editor'];
-    return { editor: !!editorName, editorName };
+    return { editor: !!editorName, editorName, arg: args._ };
 }
 
 async function main() {
@@ -18,9 +18,11 @@ async function main() {
         Object.assign(config, result);
     }
 
-    const command = await parseCommand(process.argv);
+    const command = await parseCommand(argv);
     if (command.editor) {
         await generateEditor(command.editorName!, config);
+    } else if (command.arg.length === 2) {
+        await generateFromFile(command.arg[1], config);
     } else {
         await generate(config);
     }

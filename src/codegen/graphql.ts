@@ -65,7 +65,24 @@ function schemaConfig(name: string, dir: string): CodegenConfig['generates'] {
     };
 }
 
-export const executeAll = (
+export const generateSchema = (
+    model: string,
+    dir: string,
+    { watch = false, format = false } = {},
+) => {
+    const documentModelConfig = schemaConfig(model, dir);
+    const config: CodegenConfig = {
+        overwrite: true,
+        generates: documentModelConfig,
+        watch,
+        hooks: {
+            afterOneFileWrite: format ? ['prettier --ignore-path --write'] : [],
+        },
+    };
+    return generate(config, true);
+};
+
+export const generateSchemas = (
     dir: string,
     { watch = false, format = false } = {},
 ) => {
