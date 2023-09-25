@@ -1,8 +1,12 @@
 import * as Lib from 'document-model-libs';
 import { DocumentModel, Editor } from 'document-model/document';
+import { module as DocumentModelLib } from 'document-model/document-model';
 import { atom, useAtomValue } from 'jotai';
 
-const documentModels = [...Lib.documentModels] as DocumentModel[];
+const documentModels = [
+    DocumentModelLib,
+    ...Lib.documentModels,
+] as DocumentModel[];
 const editors = [...Lib.editors] as Editor[];
 
 export const documentModelsAtom = atom(documentModels);

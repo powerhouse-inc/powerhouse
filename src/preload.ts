@@ -6,20 +6,21 @@ import { Theme } from './store';
 
 const electronApi = {
     ready: () => ipcRenderer.send('ready'),
-    saveFile: (file: unknown) => ipcRenderer.invoke('dialog:saveFile', file),
-    handleFileOpened: (listener: (file: Document | undefined) => void) => {
-        function callback(event: IpcRendererEvent, file: Document | undefined) {
+    fileSaved: (document: Document, path?: string) =>
+        ipcRenderer.invoke('fileSaved', document, path),
+    handleFileOpen: (listener: (file: string) => void) => {
+        function callback(event: IpcRendererEvent, file: string) {
             listener(file);
         }
-        ipcRenderer.on('fileOpened', callback);
+        ipcRenderer.on('openFile', callback);
         return () => {
-            ipcRenderer.off('fileOpened', callback);
+            ipcRenderer.off('openFile', callback);
         };
     },
-    handleFileSaved: (listener: () => void) => {
-        ipcRenderer.on('fileSaved', listener);
+    handleFileSave: (listener: () => void) => {
+        ipcRenderer.on('saveFile', listener);
         return () => {
-            ipcRenderer.off('fileSaved', listener);
+            ipcRenderer.off('saveFile', listener);
         };
     },
     showTabMenu: (tab: string) => {

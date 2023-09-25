@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { useDrop } from 'react-aria';
 import { useNavigate } from 'react-router-dom';
 import { useTabs } from 'src/store';
+import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
 
 export function useDropFile(ref: React.RefObject<HTMLElement>) {
@@ -15,14 +16,14 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
         fromString,
     } = useTabs();
     const navigate = useNavigate();
+    const getDocumentModel = useGetDocumentModel();
 
     const onDrop = useCallback(
         async (e: DropEvent) => {
             for (const item of e.items) {
-                console.log(item);
                 if (item.kind === 'file') {
                     const file = await item.getFile();
-                    const document = await loadFile(file);
+                    const document = await loadFile(file, getDocumentModel);
                     const tab = await fromDocument(document);
                     addTab(tab);
                     navigate('/');
