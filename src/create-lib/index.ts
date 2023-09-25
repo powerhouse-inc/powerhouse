@@ -149,9 +149,14 @@ async function createProject(
         fs.rmSync(path.join(appPath, './.git'), { recursive: true });
         await runCmd('git init');
 
-        fs.mkdirSync(path.join(appPath, documentModelsDir));
-        fs.mkdirSync(path.join(appPath, editorsDir));
-
+        try {
+            fs.mkdirSync(path.join(appPath, documentModelsDir));
+            fs.mkdirSync(path.join(appPath, editorsDir));
+        } catch (error) {
+            if (!(error as Error).message.includes('EEXIST')) {
+                throw error;
+            }
+        }
         buildPackageJson(appPath, projectName);
         buildPowerhouseConfig(appPath, documentModelsDir, editorsDir);
         buildIndex(appPath, documentModelsDir, editorsDir);

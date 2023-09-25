@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= name %>/editor.ts"
+to: "<%= rootDir %>/<%= name %>/editor.tsx"
 unless_exists: true
 ---
 import { Action } from 'document-model/document';
