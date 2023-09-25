@@ -1,42 +1,42 @@
 import { useEffect } from 'react';
 import Tabs from 'src/components/tabs';
+import { useGetDocumentModel } from 'src/store/document-model';
 import { useTabs } from 'src/store/tabs';
-import { saveFile } from 'src/utils/file';
+import { loadFile, saveFile } from 'src/utils/file';
 
 const TabsContainer = () => {
     const tabs = useTabs();
+    const getDocumentModel = useGetDocumentModel();
 
     useEffect(() => {
-        return window.electronAPI?.handleFileOpened(async file => {
-            if (file) {
-                const tab = await tabs.fromDocument(file);
-                tabs.addTab(tab);
-            }
+        return window.electronAPI?.handleFileOpen(async file => {
+            const document = await loadFile(file, getDocumentModel);
+            const tab = await tabs.fromDocument(document);
+            tabs.addTab(tab);
         });
     }, [tabs]);
 
-    async function handleFileSaved() {
+    async function handleFileSave() {
         const selectedTab = tabs.selectedTab;
         if (!selectedTab) {
             return;
         }
         const tab = tabs.getItem(selectedTab);
-        if (tab.document) {
-            const fileHandle = await window.showSaveFilePicker({
-                suggestedName: `${tab.document.name || 'Untitled'}.zip`,
-            });
-            saveFile(tab.document, fileHandle);
+        if (!tab.document) {
+            throw new Error('Current tab is not a document');
         }
+
+        saveFile(tab.document, getDocumentModel);
     }
 
     useEffect(() => {
         const removeHandler =
-            window.electronAPI?.handleFileSaved(handleFileSaved);
+            window.electronAPI?.handleFileSave(handleFileSave);
 
         function handleKeyboardSave(e: KeyboardEvent) {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
-                handleFileSaved();
+                handleFileSave();
             }
         }
 

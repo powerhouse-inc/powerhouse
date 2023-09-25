@@ -6,6 +6,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { NavLink, To, useNavigate } from 'react-router-dom';
 import { useOpenFile } from 'src/hooks';
 import { sidebarCollapsedAtom, themeAtom, useTabs, userAtom } from 'src/store';
+import { useGetDocumentModel } from 'src/store/document-model';
 import { saveFile } from 'src/utils/file';
 import ThemeSelector from './theme-selector';
 
@@ -97,7 +98,7 @@ export default function () {
     const theme = useAtomValue(themeAtom);
     const user = useAtomValue(userAtom);
     const { addTab, selectedTab, getItem, fromDocument } = useTabs();
-
+    const getDocumentModel = useGetDocumentModel();
     function toggleCollapse() {
         setCollapsed(value => !value);
     }
@@ -123,12 +124,11 @@ export default function () {
             return;
         }
         const tab = getItem(selectedTab);
-        if (tab.document) {
-            const fileHandle = await window.showSaveFilePicker({
-                suggestedName: `${tab.document.name || 'Untitled'}.zip`,
-            });
-            saveFile(tab.document, fileHandle);
+        if (!tab.document) {
+            throw new Error('Current tab is not a document');
         }
+
+        saveFile(tab.document, getDocumentModel);
     }
 
     return (

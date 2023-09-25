@@ -1,4 +1,3 @@
-import { Document } from 'document-model/document';
 import {
     BrowserWindow,
     Menu,
@@ -8,10 +7,10 @@ import {
     nativeImage,
     shell,
 } from 'electron';
+import fs from 'node:fs';
 import path from 'path';
 import store from './app/store';
 import { Theme } from './store';
-import { loadFile, saveFile } from './utils/file';
 
 const isMac = process.platform === 'darwin';
 
@@ -19,16 +18,17 @@ app.setName('Powerhouse Connect');
 
 app.commandLine.appendSwitch('enable-experimental-web-platform-features');
 
-async function handleFile(file: string, window?: Electron.BrowserWindow) {
+async function handleFile(path: string, window?: Electron.BrowserWindow) {
     try {
-        const document = await loadFile(file);
+        const file = fs.readFileSync(path, { encoding: 'binary' }).toString();
+
         const _window = window ?? BrowserWindow.getFocusedWindow();
         if (_window) {
-            _window.webContents.send('fileOpened', document);
+            _window.webContents.send('openFile', file);
         } else {
             createWindow({
                 onReady(window) {
-                    window.webContents.send('fileOpened', document);
+                    window.webContents.send('openFile', file);
                 },
             });
         }
@@ -37,19 +37,15 @@ async function handleFile(file: string, window?: Electron.BrowserWindow) {
     }
 }
 
-async function handleFileSave(document: Document) {
-    const filePath = await dialog.showSaveDialogSync({
-        properties: ['showOverwriteConfirmation', 'createDirectory'],
-        defaultPath: document.name,
-    });
-
-    if (filePath) {
-        const savedPath = await saveFile(document, filePath);
-        app.addRecentDocument(savedPath);
+async function handleFileSave(path?: string) {
+    if (path) {
+        app.addRecentDocument(path);
     }
 }
 
-ipcMain.handle('dialog:saveFile', (e, args) => handleFileSave(args));
+ipcMain.handle('fileSaved', (e, document: Document, path?: string) =>
+    handleFileSave(path)
+);
 
 ipcMain.handle('openURL', (e, url) => shell.openExternal(url));
 
@@ -181,7 +177,7 @@ const createWindow = async (options?: {
                         try {
                             const focusedWindow =
                                 BrowserWindow.getFocusedWindow();
-                            focusedWindow?.webContents.send('fileSaved');
+                            focusedWindow?.webContents.send('saveFile');
                         } catch (error) {
                             console.log('Error saving file', error);
                         }
