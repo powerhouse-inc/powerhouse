@@ -4,5 +4,6 @@
  */
 import BudgetStatement from './budget-statement';
 import ScopeFramework from './scope-framework';
+import DocumentModel from './document-model';
 
-export const editors = [ScopeFramework, BudgetStatement];
+export const editors = [ScopeFramework, BudgetStatement, DocumentModel];
