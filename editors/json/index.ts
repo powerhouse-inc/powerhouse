@@ -1,9 +1,9 @@
+import { Editor as EditorModule } from 'document-model/document';
 import Editor from './editor';
-import { EditorModule } from '../common';
 
-const Module: EditorModule = {
+export const module: EditorModule = {
     Component: Editor,
     documentTypes: ['*'],
 };
 
-export default Module;
+export default module;

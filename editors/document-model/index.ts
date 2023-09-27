@@ -1,13 +1,13 @@
-import {
-    DocumentModelState,
-    DocumentModelAction,
-} from 'document-model/document-model';
+import { Editor as EditorModule } from 'document-model/document';
 import Editor from './editor';
-import { EditorModule } from '../common';
+import {
+    DocumentModelAction,
+    DocumentModelState,
+} from 'document-model/document-model';
 
-const Module: EditorModule<DocumentModelState, DocumentModelAction> = {
+export const module: EditorModule<DocumentModelState, DocumentModelAction> = {
     Component: Editor,
     documentTypes: ['powerhouse/document-model'],
 };
 
-export default Module;
+export default module;

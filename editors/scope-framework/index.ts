@@ -1,13 +1,13 @@
+import { Editor as EditorModule } from 'document-model/document';
+import Editor from './editor';
 import {
     ScopeFrameworkAction,
     ScopeFrameworkState,
 } from '../../document-models/scope-framework';
-import { EditorModule } from '../common';
-import Editor from './editor';
 
-const Module: EditorModule<ScopeFrameworkState, ScopeFrameworkAction> = {
+export const module: EditorModule<ScopeFrameworkState, ScopeFrameworkAction> = {
     Component: Editor,
     documentTypes: ['makerdao/scope-framework'],
 };
 
-export default Module;
+export default module;
