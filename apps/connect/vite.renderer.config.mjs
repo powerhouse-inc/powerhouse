@@ -9,13 +9,13 @@ import svgr from 'vite-plugin-svgr';
 export default defineConfig({
     plugins: [
         react({
-            include: '**/*.tsx',
+            include: 'src/**/*.tsx',
             babel: { minified: false },
             plugins: [jotaiDebugLabel, jotaiReactRefresh],
         }),
         svgr(),
     ],
-    build: { minify: false, sourcemap: true },
+    build: { minify: false, sourcemap: false },
     resolve: {
         alias: {
             // eslint-disable-next-line no-undef
