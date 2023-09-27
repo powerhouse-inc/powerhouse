@@ -45,7 +45,7 @@
         "test": "jest"
     },
     "devDependencies": {
-        "@acaldas/powerhouse": "file:.yalc/@acaldas/powerhouse",
+        "@acaldas/powerhouse": "^1.0.9",
         "@monaco-editor/react": "^4.5.2",
         "@storybook/addon-essentials": "^7.4.1",
         "@storybook/addon-interactions": "^7.4.1",
@@ -60,7 +60,7 @@
         "@typescript-eslint/eslint-plugin": "^6.6.0",
         "@typescript-eslint/parser": "^6.6.0",
         "change-case": "^4.1.2",
-        "document-model": "file:.yalc/document-model",
+        "document-model": "^1.0.5",
         "eslint": "^8.48.0",
         "eslint-config-prettier": "^9.0.0",
         "eslint-plugin-storybook": "^0.6.13",
@@ -78,7 +78,7 @@
         "vite-plugin-dts": "^3.5.3"
     },
     "peerDependencies": {
-        "document-model": "^1.0.3",
+        "document-model": "^1.0.5",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"
     }

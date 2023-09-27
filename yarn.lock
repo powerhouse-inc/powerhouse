@@ -18,8 +18,10 @@
     "@graphql-tools/utils" "^10.0.0"
     graphlib "^2.1.8"
 
-"@acaldas/powerhouse@file:.yalc/@acaldas/powerhouse":
-  version "1.0.7"
+"@acaldas/powerhouse@^1.0.9":
+  version "1.0.9"
+  resolved "https://registry.yarnpkg.com/@acaldas/powerhouse/-/powerhouse-1.0.9.tgz#73bcbcc127b60968e901551002e9353f3b30836b"
+  integrity sha512-NB5xo1EKDhDQaxjOQ+XpZq0zoV4TYhFmx8R5uhbYNNJpsxzroAG1fJjSdznJBRK1k5kWJWj7s7mMiHPjMFtXfQ==
   dependencies:
     "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
     "@graphql-codegen/cli" "^5.0.0"
@@ -5366,15 +5368,6 @@ document-model@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.5.tgz#4612774ed18a70a91d880852fcbdcb6166c1bd86"
   integrity sha512-kcZ0Ra6k2xzL33VSwwdaQsnjYnPXR+OCOP8/UL/GipqJas5PpZTKC+GNzVm8RiYb12ZUYyJ6BMzyP2DWolS0+g==
-  dependencies:
-    immer "^10.0.2"
-    json-stringify-deterministic "^1.0.10"
-    jszip "^3.10.1"
-    mime "^3.0.0"
-    zod "^3.22.2"
-
-"document-model@file:.yalc/document-model":
-  version "1.0.4"
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
