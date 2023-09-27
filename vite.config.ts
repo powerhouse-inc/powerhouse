@@ -26,9 +26,6 @@ export default defineConfig(() => {
         'react',
         'react/jsx-runtime',
         'react-dom',
-        '@graphql-codegen/core',
-        '@graphql-codegen/typescript',
-        '@acaldas/graphql-codegen-typescript-validation-schema',
     ];
 
     return {
@@ -47,6 +44,12 @@ export default defineConfig(() => {
                     exports: 'named',
                 },
             },
+            commonjsOptions: {
+                include: [],
+            },
+        },
+        optimizeDeps: {
+            disabled: false,
         },
         plugins: [dts({ insertTypesEntry: true })],
     };
