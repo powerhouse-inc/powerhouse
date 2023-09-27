@@ -24,7 +24,11 @@ export default defineConfig(() => {
         'document-model',
         'document-model/document',
         'react',
+        'react/jsx-runtime',
         'react-dom',
+        '@graphql-codegen/core',
+        '@graphql-codegen/typescript',
+        '@acaldas/graphql-codegen-typescript-validation-schema',
     ];
 
     return {

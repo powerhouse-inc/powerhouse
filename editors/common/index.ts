@@ -1,6 +1,6 @@
 import type { Action, BaseAction, Document } from 'document-model/document';
 
-export type EditorModule<S, A extends Action> = {
+export type EditorModule<S = unknown, A extends Action = Action> = {
     Component: React.FC<EditorProps<S, A>>;
     documentTypes: string[];
 };

@@ -102,21 +102,7 @@
             ],
             "state": {
                 "schema": "",
-                "initialValue": {
-                    "rootPath": "A",
-                    "elements": [
-                        {
-                            "id": "hruFam5ot7s0Gb1n+aIBa+y+NJA=",
-                            "name": "Scope Name",
-                            "version": 1,
-                            "type": "Scope",
-                            "path": "A.1",
-                            "components": {
-                                "content": "Scope description goes here."
-                            }
-                        }
-                    ]
-                },
+                "initialValue": "{\n    \"rootPath\": \"A\",\n    \"elements\": [\n        {\n            \"id\": \"hruFam5ot7s0Gb1n+aIBa+y+NJA=\",\n            \"name\": \"Scope Name\",\n            \"version\": 1,\n            \"type\": \"Scope\",\n            \"path\": \"A.1\",\n            \"components\": {\n                \"content\": \"Scope description goes here.\"\n            }\n        }\n    ]\n}",
                 "examples": []
             }
         }

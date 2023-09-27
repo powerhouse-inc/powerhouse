@@ -5,7 +5,7 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    
+
     background-color: #aaa;
     margin: 0;
     padding: 0;
@@ -14,7 +14,7 @@
 }
 
 .dark-mode.document-editor {
-    background-color: #1A1D1F;
+    background-color: #1a1d1f;
 }
 
 .editor-toolbar {
@@ -28,11 +28,10 @@
     border-bottom: 1px solid #aaa;
 }
 
-
 .dark-mode .editor-toolbar {
     background-color: #141718;
-    border-bottom: 1px solid #0A0A0A;
-    color: #6C7275;
+    border-bottom: 1px solid #0a0a0a;
+    color: #6c7275;
 }
 
 .editor-toolbar--column {
@@ -76,7 +75,7 @@
 
 .dark-mode .toolbar-button:hover {
     background-color: #323337;
-    color: #D6D6D6;
+    color: #d6d6d6;
 }
 
 .editor-worksheet {
@@ -103,6 +102,7 @@
 .editor-worksheet--page {
     max-width: 60em;
     min-height: 27em;
+    height: 100%;
     box-sizing: content-box;
     border: 1px solid #eee;
     background-color: white;
@@ -125,7 +125,7 @@
 }
 
 .dark-mode .editor-worksheet--page {
-    background-color: #0A0A0A;
+    background-color: #0a0a0a;
     border: 1px solid #141718;
-    color: #D6D6D6;
+    color: #d6d6d6;
 }

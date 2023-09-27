@@ -4,13 +4,23 @@ import {
     DocumentModelAction,
     DocumentModelState,
 } from 'document-model/document-model';
-import { CSSProperties } from 'react';
+import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { pascalCase } from 'change-case';
 import { colorScheme, ColorTheme, typographySizes } from '../common/styles';
 import TextInput from '../common/textInput';
 import GraphQLEditor from './graphql-editor';
-
+import JSONEditor, { isJSONEqual } from '../common/json-editor';
+import { type OnMount } from '@monaco-editor/react';
+import z from 'zod';
+import EditorSchema from './editor-schema';
+import EditorInitialState from './editor-initital-state';
 export type IProps = EditorProps<DocumentModelState, DocumentModelAction>;
+
+type SchemaState = {
+    documentName: string;
+    schema: string;
+    validator: () => z.ZodObject<any>;
+};
 
 function Editor(props: IProps) {
     const theme: ColorTheme = props.editorContext.theme || 'light';
@@ -31,9 +41,11 @@ function Editor(props: IProps) {
 
     const { state } = document;
 
-    if (document.operations.length < 1) {
-        dispatch(actions.setModelId({ id: '' }));
-    }
+    useEffect(() => {
+        if (document.operations.length < 1) {
+            dispatch(actions.setModelId({ id: '' }));
+        }
+    }, [document.operations]);
 
     const setModelId = (id: string) => {
         dispatch(actions.setModelId({ id }));
@@ -61,6 +73,10 @@ function Editor(props: IProps) {
 
     const setStateSchema = (schema: string) => {
         dispatch(actions.setStateSchema({ schema }));
+    };
+
+    const setInitialState = (initialValue: string) => {
+        dispatch(actions.setInitialState({ initialValue }));
     };
 
     const addModule = (name: string) => {
@@ -94,6 +110,45 @@ function Editor(props: IProps) {
     const deleteOperation = (id: string) => {
         dispatch(actions.deleteOperation({ id }));
     };
+
+    const specification = state.specifications.length
+        ? state.specifications[state.specifications.length - 1]
+        : undefined;
+
+    const initialValueEditor = useRef<Parameters<OnMount>[0]>();
+    const [initialValue, setInitialValue] = useState<JSON>(
+        JSON.parse(specification?.state.initialValue || '{}'),
+    );
+
+    const handleInitialValueEditorMount: OnMount = editor => {
+        initialValueEditor.current = editor;
+    };
+
+    useEffect(() => {
+        if (!initialValueEditor.current) {
+            return;
+        }
+        initialValueEditor.current.onDidBlurEditorText(() => {
+            const currentValue = specification?.state.initialValue || '{}';
+
+            if (!isJSONEqual(initialValue, currentValue)) {
+                setInitialState(JSON.stringify(initialValue));
+            }
+        });
+    }, [
+        initialValueEditor.current,
+        initialValue,
+        specification?.state.initialValue,
+    ]);
+
+    useEffect(() => {
+        const specValue = specification?.state.initialValue || '{}';
+        if (!isJSONEqual(initialValue, specValue)) {
+            setInitialValue(JSON.parse(specValue));
+        }
+    }, [specification?.state.initialValue]);
+
+    const [schemaState, setSchemaState] = useState<SchemaState>();
 
     return (
         <>
@@ -168,88 +223,150 @@ function Editor(props: IProps) {
                         />
                     </div>
                 </div>
-                <div style={{ width: '50%', display: 'inline-block' }}>
-                    <h3 style={{ marginBottom: '16px' }}>State Schema</h3>
-                    <GraphQLEditor
-                        theme={theme}
-                        key="modelSchema"
-                        schema={
-                            state.specifications[0].state.schema ||
-                            `type State {
+                {!specification ? null : (
+                    <>
+                        <div style={{ width: '50%', display: 'inline-block' }}>
+                            <h4 style={{ marginBottom: '16px' }}>
+                                State Schema
+                            </h4>
+                            {/* <GraphQLEditor
+                                height={200}
+                                key={document.state.name}
+                                theme={theme}
+                                schema={
+                                    specification.state.schema ||
+                                    `type ${pascalCase(
+                                        document.state.name,
+                                    )}State {
     
 }`
-                        }
-                        onChange={schema => setStateSchema(schema)}
-                    />
-                </div>
-                {state.specifications[0].modules.map(m => (
-                    <div key={m.id}>
-                        <TextInput
-                            key={m.id + '#name'}
-                            theme={theme}
-                            placeholder="Module Name"
-                            autoFocus={false}
-                            onSubmit={name => updateModuleName(m.id, name)}
-                            onEmpty={() => deleteModule(m.id)}
-                            value={m.name}
-                            clearOnSubmit={false}
-                            size="large"
-                            horizontalLine={true}
-                        />
-                        <TextInput
-                            key={m.id + '#description'}
-                            theme={theme}
-                            placeholder={'Module ' + m.name + ' description'}
-                            autoFocus={false}
-                            onSubmit={description =>
-                                updateModuleDescription(m.id, description)
-                            }
-                            value={m.description || ''}
-                            clearOnSubmit={false}
-                            size="small"
-                        />
-                        {m.operations.map(op => (
-                            <div key={op.id}>
+                                }
+                                onChange={schema => setStateSchema(schema)}
+                            /> */}
+                            <EditorSchema
+                                name={document.state.name}
+                                onGenerate={schema => {
+                                    setSchemaState(state => ({
+                                        ...state,
+                                        ...schema,
+                                    }));
+                                    if (
+                                        schema.schema !==
+                                        specification.state.schema
+                                    ) {
+                                        setStateSchema(schema.schema);
+                                    }
+                                }}
+                                theme={theme}
+                                height={200}
+                            />
+                        </div>
+                        <div style={{ width: '50%', display: 'inline-block' }}>
+                            <h4 style={{ marginBottom: '16px' }}>
+                                Initial State
+                            </h4>
+                            <EditorInitialState
+                                height={200}
+                                validator={schemaState?.validator}
+                                onCreate={value =>
+                                    setInitialValue(JSON.parse(value))
+                                }
+                                theme={theme}
+                            />
+                            {/* <JSONEditor
+                                height={200}
+                                value={initialValue}
+                                theme={theme}
+                                onChange={setInitialValue}
+                                options={{
+                                    lineNumbers: 'off',
+                                    minimap: { enabled: false },
+                                }}
+                                onMount={handleInitialValueEditorMount}
+                            /> */}
+                        </div>
+                        {specification.modules.map(m => (
+                            <div key={m.id}>
                                 <TextInput
-                                    key={op.id + '#name'}
+                                    key={m.id + '#name'}
                                     theme={theme}
+                                    placeholder="Module Name"
                                     autoFocus={false}
                                     onSubmit={name =>
-                                        updateOperationName(op.id, name)
+                                        updateModuleName(m.id, name)
                                     }
-                                    onEmpty={() => deleteOperation(op.id)}
-                                    value={op.name || ''}
+                                    onEmpty={() => deleteModule(m.id)}
+                                    value={m.name}
                                     clearOnSubmit={false}
-                                    size="medium"
+                                    size="large"
+                                    horizontalLine={true}
                                 />
-                                <GraphQLEditor
+                                <TextInput
+                                    key={m.id + '#description'}
                                     theme={theme}
-                                    key={op.id + '#schema'}
-                                    schema={
-                                        op.schema ||
-                                        `input ${pascalCase(
-                                            op.name || '',
-                                        )}Input {
+                                    placeholder={
+                                        'Module ' + m.name + ' description'
+                                    }
+                                    autoFocus={false}
+                                    onSubmit={description =>
+                                        updateModuleDescription(
+                                            m.id,
+                                            description,
+                                        )
+                                    }
+                                    value={m.description || ''}
+                                    clearOnSubmit={false}
+                                    size="small"
+                                />
+                                {m.operations.map(op => (
+                                    <div key={op.id}>
+                                        <TextInput
+                                            key={op.id + '#name'}
+                                            theme={theme}
+                                            autoFocus={false}
+                                            onSubmit={name =>
+                                                updateOperationName(op.id, name)
+                                            }
+                                            onEmpty={() =>
+                                                deleteOperation(op.id)
+                                            }
+                                            value={op.name || ''}
+                                            clearOnSubmit={false}
+                                            size="medium"
+                                        />
+                                        <GraphQLEditor
+                                            theme={theme}
+                                            key={op.id + '#schema'}
+                                            schema={
+                                                op.schema ||
+                                                `input ${pascalCase(
+                                                    op.name || '',
+                                                )}Input {
     
 }`
-                                    }
-                                    onChange={schema =>
-                                        updateOperationSchema(op.id, schema)
-                                    }
+                                            }
+                                            onChange={schema =>
+                                                updateOperationSchema(
+                                                    op.id,
+                                                    schema,
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                ))}
+                                <TextInput
+                                    key={m.id + '#newOperation'}
+                                    theme={theme}
+                                    autoFocus={false}
+                                    placeholder="Add operation..."
+                                    onSubmit={name => addOperation(m.id, name)}
+                                    clearOnSubmit={true}
+                                    size="medium"
                                 />
                             </div>
                         ))}
-                        <TextInput
-                            key={m.id + '#newOperation'}
-                            theme={theme}
-                            autoFocus={false}
-                            placeholder="Add operation..."
-                            onSubmit={name => addOperation(m.id, name)}
-                            clearOnSubmit={true}
-                            size="medium"
-                        />
-                    </div>
-                ))}
+                    </>
+                )}
                 <TextInput
                     key="newModule"
                     theme={theme}

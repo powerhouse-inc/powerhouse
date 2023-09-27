@@ -257,16 +257,7 @@
             ],
             "state": {
                 "schema": "",
-                "initialValue": {
-                    "owner": { "ref": null, "id": null, "title": null },
-                    "month": null,
-                    "quoteCurrency": null,
-                    "vesting": [],
-                    "ftes": null,
-                    "accounts": [],
-                    "auditReports": [],
-                    "comments": []
-                },
+                "initialValue": "{\n    \"owner\": {\n        \"ref\": null,\n        \"id\": null,\n        \"title\": null\n    },\n    \"month\": null,\n    \"quoteCurrency\": null,\n    \"vesting\": [],\n    \"ftes\": null,\n    \"accounts\": [],\n    \"auditReports\": [],\n    \"comments\": []\n}",
                 "examples": []
             }
         }
