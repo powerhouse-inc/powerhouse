@@ -1,6 +1,6 @@
 {
     "name": "create-document-model-lib",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "main": "dist/src.js",
     "license": "AGPL-3.0-only",
     "private": false,
