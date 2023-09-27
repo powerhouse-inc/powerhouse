@@ -1,9 +1,0 @@
-{
-  "version": "v1",
-  "packages": {
-    "document-model-libs": {
-      "signature": "4d45901fc5b08e0bb4642080d610f8e3",
-      "file": true
-    }
-  }
-}

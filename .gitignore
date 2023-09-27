@@ -55,7 +55,7 @@ jspm_packages/
 dist/
 
 # yalc
-.yalc.lock
+yalc.lock
 .yalc/
 
 # Electron-Forge
