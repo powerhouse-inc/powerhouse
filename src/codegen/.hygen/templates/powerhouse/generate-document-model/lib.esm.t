@@ -7,6 +7,3 @@ unless_exists: true
 * Delete the file and run the code generator again to have it reset
 */
 
-export const documentModels = [
-
-];

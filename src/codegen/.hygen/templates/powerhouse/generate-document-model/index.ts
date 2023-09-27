@@ -33,6 +33,7 @@ export default {
             documentModel.specifications[
                 documentModel.specifications.length - 1
             ];
+
         return {
             rootDir: args.rootDir,
             documentModel: documentModelToString(documentModel),
@@ -40,11 +41,7 @@ export default {
             documentType: documentModel.name,
             extension: documentModel.extension,
             modules: latestSpec.modules,
-            initialStateValue: JSON.stringify(
-                latestSpec.state.initialValue,
-                null,
-                4,
-            ),
+            initialStateValue: latestSpec.state.initialValue,
             fileExtension: documentModel.extension,
         };
     },

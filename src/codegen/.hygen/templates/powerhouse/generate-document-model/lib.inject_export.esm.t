@@ -1,7 +1,7 @@
 ---
 inject: true
+append: true
 to: "<%= rootDir %>/index.ts"
-after: "export const documentModels = \\["
-skip_if: "<%= documentType %>"
+skip_if: "<%= h.changeCase.pascal(documentType) %>"
 ---
-    <%= documentType %>,
+export { module as <%= h.changeCase.pascal(documentType) %> } from './<%= h.changeCase.param(documentType)  %>';

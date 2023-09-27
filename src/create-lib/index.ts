@@ -62,10 +62,11 @@ function buildIndex(
 ) {
     fs.writeFileSync(
         path.join(appPath, 'index.ts'),
-        `import { documentModels } from '${documentModelsDir}';
-        import { editors } from '${editorsDir}';
-        
-        export { documentModels, editors };`,
+        `import * as documentModelsExports from '${documentModelsDir}';
+        import * as editorsExports from '${editorsDir}';
+
+        export const documentModels = Object.values(documentModelsExports);
+        export const editors = Object.values(editorsExports);`,
         'utf8',
     );
 }

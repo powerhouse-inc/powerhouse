@@ -1,7 +1,7 @@
 ---
 inject: true
+append: true
 to: "<%= rootDir %>/index.ts"
-after: "export const editors = \\["
 skip_if: "<%= h.changeCase.pascal(name) %>"
 ---
-    <%= h.changeCase.pascal(name) %>,
+export { module as <%= h.changeCase.pascal(name) %> } from './<%= h.changeCase.param(name) %>';
