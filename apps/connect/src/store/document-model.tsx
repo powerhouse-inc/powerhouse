@@ -21,7 +21,8 @@ const getDocumentModel = (
 ) => documentModels.find(d => d.documentModel.id === documentType);
 
 const getEditor = (documentType: string, editors: Editor[]) =>
-    editors.find(e => e.documentTypes.includes(documentType));
+    editors.find(e => e.documentTypes.includes(documentType)) ||
+    editors.find(e => e.documentTypes.includes('*'));
 
 export const useDocumentModel = (documentType: string) => {
     const documentModels = useDocumentModels();
