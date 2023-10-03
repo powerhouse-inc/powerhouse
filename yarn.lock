@@ -3111,10 +3111,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model-libs@^1.1.3:
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.3.tgz#00aea9391f689d161d75a962bc673252ce7e5538"
-  integrity sha512-11Re7Zl2zKwFpnzPlXSjQW5FHy1YinNwxc1p2pzdMx1Rd1+9157U1YOD6zAqqktk+VV74K/y7AHS3diIPpg9xQ==
+document-model-libs@^1.1.4:
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.4.tgz#84c7bd7ee3fec1ef0538ac2640aac4eb60776cbe"
+  integrity sha512-FaX81eCFV1UnoAhLSoIO5Zh2QpMTkL7Sddgo0ZWVMI0EP8Tu61oR4Gd4BmH0aqnFJAMKz0dHqdSHqrlfnC2/RQ==
 
 document-model@^1.0.5:
   version "1.0.5"
