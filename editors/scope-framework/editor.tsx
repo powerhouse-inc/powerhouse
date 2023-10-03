@@ -6,15 +6,16 @@ import {
     ScopeFrameworkElementType,
 } from '../../document-models/scope-framework';
 import { useEffect } from 'react';
-import { EditorProps } from '../common';
-import DocumentEditor from '../common/documentEditor';
-import EditorToolbar from '../common/editorToolbar';
-import EditorWorksheet from '../common/editorWorksheet';
-import '../common/styles.css';
-import TextInput from '../common/textInputVariant';
-import ToolbarButton from '../common/toolbarButton';
 import AtlasElement from './components/atlasElement';
 import './style.css';
+import { EditorProps } from 'document-model/document';
+import {
+    DocumentEditor,
+    EditorToolbar,
+    ToolbarButton,
+    EditorWorksheet,
+    TextInput,
+} from 'document-model-editors';
 
 export type IProps = EditorProps<ScopeFrameworkState, ScopeFrameworkAction>;
 
@@ -216,7 +217,7 @@ function ScopeFrameworkEditor(props: IProps) {
                     <TextInput
                         key="doc-title"
                         value={state.rootPath}
-                        size="chapter"
+                        size="medium"
                         theme={editorContext.theme}
                         onSubmit={handleSetRootPath}
                     />

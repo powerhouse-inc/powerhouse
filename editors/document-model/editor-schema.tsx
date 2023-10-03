@@ -5,7 +5,7 @@ import { z } from 'zod';
 import codegen from '../common/codegen';
 import { SchemaEditor as Editor, SchemaEditorProps } from '@theguild/editor';
 import { pascalCase } from 'change-case';
-import { ColorTheme } from '../common/styles';
+import { styles } from 'document-model-editors';
 
 interface IProps extends SchemaEditorProps {
     name: string;
@@ -14,7 +14,7 @@ interface IProps extends SchemaEditorProps {
         schema: string;
         validator: () => z.ZodObject<any>;
     }) => void;
-    theme: ColorTheme;
+    theme: styles.ColorTheme;
 }
 
 export default function EditorSchema({

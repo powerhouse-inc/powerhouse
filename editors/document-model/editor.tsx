@@ -6,8 +6,7 @@ import {
 } from 'document-model/document-model';
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { pascalCase } from 'change-case';
-import { colorScheme, ColorTheme, typographySizes } from '../common/styles';
-import TextInput from '../common/textInput';
+import { styles, TextInput } from 'document-model-editors';
 import GraphQLEditor from './graphql-editor';
 import JSONEditor, { isJSONEqual } from '../common/json-editor';
 import { type OnMount } from '@monaco-editor/react';
@@ -23,8 +22,8 @@ type SchemaState = {
 };
 
 function Editor(props: IProps) {
-    const theme: ColorTheme = props.editorContext.theme || 'light';
-    const scheme = colorScheme[theme];
+    const theme: styles.ColorTheme = props.editorContext.theme || 'light';
+    const scheme = styles.colorScheme[theme];
     const style: CSSProperties = {
         backgroundColor: scheme.bgColor,
         color: scheme.color,
@@ -197,7 +196,7 @@ function Editor(props: IProps) {
                     />
                 </div>
                 <div>
-                    <p style={{ ...typographySizes.tiny }}>Author</p>
+                    <p style={{ ...styles.typographySizes.tiny }}>Author</p>
                     <div style={{ width: '50%', display: 'inline-block' }}>
                         <TextInput
                             key="authorName"

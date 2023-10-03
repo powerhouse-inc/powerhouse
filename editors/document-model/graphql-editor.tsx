@@ -1,10 +1,10 @@
 import { SchemaEditor, SchemaEditorProps } from '@theguild/editor';
-import { ColorTheme } from '../common/styles';
+import { styles } from 'document-model-editors';
 
 export interface IProps extends Omit<SchemaEditorProps, 'onChange'> {
     schema: string;
     onChange: (schema: string) => void;
-    theme: ColorTheme;
+    theme: styles.ColorTheme;
 }
 
 const GraphQLEditor: React.FC<IProps> = ({

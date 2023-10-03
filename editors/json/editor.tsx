@@ -1,11 +1,12 @@
-import { Action, actions } from 'document-model/document';
-import { EditorProps } from '../common';
-import EditorWorksheet from '../common/editorWorksheet';
-import ToolbarButton from '../common/toolbarButton';
-import DocumentEditor from '../common/documentEditor';
-import EditorToolbar from '../common/editorToolbar';
+import { Action, EditorProps, actions } from 'document-model/document';
 import { useEffect, useState } from 'react';
-import TextInput from '../common/textInput';
+import {
+    DocumentEditor,
+    EditorToolbar,
+    ToolbarButton,
+    EditorWorksheet,
+    TextInput,
+} from 'document-model-editors';
 import JSONEditor from '../common/json-editor';
 
 export type IProps = EditorProps<unknown, Action>;

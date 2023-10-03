@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { TypographySize } from '../../common/stylesVariant';
-import TextInput from '../../common/textInputVariant';
+import { TextInputVariant, stylesVariant } from 'document-model-editors';
 import {
     ScopeFrameworkElement,
     ScopeFrameworkElementType,
@@ -72,7 +71,7 @@ function AtlasElement(props: AtlasElementProps) {
                     {props.element.path}
                 </div>
                 <div className="atlas-element--header-component atlas-element--type">
-                    <TextInput
+                    <TextInputVariant
                         value={props.element.type || ''}
                         onSubmit={handleTypeUpdate}
                         theme={props.mode}
@@ -81,14 +80,14 @@ function AtlasElement(props: AtlasElementProps) {
                     />
                 </div>
                 <div className="atlas-element--header-component atlas-element--name">
-                    <TextInput
+                    <TextInputVariant
                         value={props.element.name ?? ''}
                         onSubmit={handleNameUpdate}
                         onEmpty={handleDelete}
                         size={
                             sizeMap[
                                 props.element.type || 'Section'
-                            ] as TypographySize
+                            ] as stylesVariant.TypographySize
                         }
                         theme={props.mode}
                     />
@@ -100,7 +99,7 @@ function AtlasElement(props: AtlasElementProps) {
                 <div className="atlas-element--component">
                     <div className="atlas-element--componentLabel">Content</div>
                     <div className="atlas-element--componentInput">
-                        <TextInput
+                        <TextInputVariant
                             value={
                                 components && 'content' in components
                                     ? components.content || ''

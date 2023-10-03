@@ -1,6 +1,6 @@
-import { reducer, utils } from '../../document-models/budget-statement';
 import Editor from './editor';
-import { createDocumentStory } from '../common/utils';
+import { createDocumentStory } from 'document-model-editors';
+import { reducer, utils } from '../../document-models/budget-statement';
 
 const initialAccount = utils.createAccount({
     address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',

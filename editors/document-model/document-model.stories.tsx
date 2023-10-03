@@ -1,6 +1,6 @@
 import { reducer, utils } from 'document-model/document-model';
 import Editor from './editor';
-import { createDocumentStory } from '../common/utils';
+import { createDocumentStory } from 'document-model-editors';
 
 const { meta, CreateDocumentStory } = createDocumentStory(
     Editor,

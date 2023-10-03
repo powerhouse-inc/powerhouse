@@ -2,12 +2,12 @@ import { Editor as CodeEditor, EditorProps } from '@monaco-editor/react';
 import { editor } from 'monaco-editor';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
-import { ColorTheme } from '../common/styles';
+import { styles } from 'document-model-editors';
 
 interface IProps extends EditorProps {
     validator?: () => z.ZodObject<any>;
     onCreate: (create: string) => void;
-    theme: ColorTheme;
+    theme: styles.ColorTheme;
 }
 
 export default function EditorInitialState({

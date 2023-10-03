@@ -19,7 +19,7 @@ readdirSync(documentModelsDir, { withFileTypes: true })
         entry[name] = resolve(documentModelsDir, name, 'index.ts');
     });
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
     const external = [
         'document-model',
         'document-model/document',
@@ -52,5 +52,9 @@ export default defineConfig(() => {
             disabled: false,
         },
         plugins: [dts({ insertTypesEntry: true })],
+        define: {
+            'process.env.NODE_ENV': JSON.stringify(mode),
+            __vite_process_env_NODE_ENV: JSON.stringify(mode),
+        },
     };
 });
