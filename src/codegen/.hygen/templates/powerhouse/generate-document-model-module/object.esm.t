@@ -5,7 +5,7 @@ force: true
 import { BaseDocument<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model/document';
 import {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
-    <%= action.name %>Input,
+    <%= h.changeCase.pascal(action.name) %>Input,
 <% }); _%>
     <%= h.changeCase.pascal(documentType) %>State
 } from '../types';
@@ -20,7 +20,7 @@ export default class <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.p
     <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action
 > {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
-    public <%= h.changeCase.camel(action.name) %>(input: <%= action.name %>Input<%if(action.hasAttachment){ %>, attachments: AttachmentInput[] <% } %>) {
+    public <%= h.changeCase.camel(action.name) %>(input: <%= h.changeCase.pascal(action.name) %>Input<%if(action.hasAttachment){ %>, attachments: AttachmentInput[] <% } %>) {
         return this.dispatch(<%= h.changeCase.camel(action.name) %>(input<%if(action.hasAttachment){ %>, attachments<% } %>));
     }
     
