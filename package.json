@@ -45,7 +45,7 @@
         "test": "jest"
     },
     "devDependencies": {
-        "@acaldas/powerhouse": "^1.0.9",
+        "@acaldas/powerhouse": "^1.0.10",
         "@monaco-editor/react": "^4.5.2",
         "@storybook/addon-essentials": "^7.4.1",
         "@storybook/addon-interactions": "^7.4.1",

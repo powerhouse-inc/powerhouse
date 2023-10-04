@@ -129,9 +129,14 @@ export default function EditorSchema({
         }
 
         editorRef.current.onDidBlurEditorText(() => {
-            generateSchema(code);
+            const value = editorRef.current?.getValue();
+            if (value) {
+                generateSchema(value);
+            } else {
+                // TODO clear current schema?
+            }
         });
-    }, [editorRef.current, code]);
+    }, [editorRef.current]);
 
     return (
         <div>

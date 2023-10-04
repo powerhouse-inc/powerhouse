@@ -16,25 +16,18 @@ export default function EditorInitialState({
     theme,
     ...props
 }: IProps) {
-    const [code, setCode] = useState(`{}`);
+    const [code, setCode] = useState('{}');
 
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     useEffect(() => {
         if (!editorRef.current) {
             return;
         }
-
-        editorRef.current.onDidBlurEditorText(() => {
-            onCreate(code);
+        editorRef.current.onDidBlurEditorText(e => {
+            const value = editorRef.current?.getValue() ?? '{}';
+            onCreate(value);
         });
-    }, [editorRef.current, code]);
-
-    // useEffect(() => {
-    //     setTimeout(() => {
-    //         editorRef.current?.setPosition({ lineNumber: 11, column: 9 });
-    //         editorRef.current?.focus();
-    //     });
-    // }, []);
+    }, [editorRef.current]);
 
     let errorMessage = '';
     let valid = false;
