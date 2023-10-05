@@ -1,4 +1,5 @@
 import { DocumentModelState } from 'document-model/document-model';
+import { paramCase } from 'change-case';
 import { Args } from '../generate-document-model';
 
 type ModuleArgs = Args & { module: string };
@@ -14,10 +15,11 @@ export default {
         const filteredModules = latestSpec.modules.filter(
             m => m.name === args.module,
         );
+
         return {
             rootDir: args.rootDir,
             documentType: documentModel.name,
-            module: args.module,
+            module: paramCase(args.module),
             actions:
                 filteredModules.length > 0
                     ? filteredModules[0].operations.map(a => ({
