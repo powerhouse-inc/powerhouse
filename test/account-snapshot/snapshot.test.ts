@@ -23,7 +23,7 @@ describe('Account Snapshot Document Model', () => {
             const document = utils.createDocument();
             expect(document.state).toStrictEqual({
                 id: '',
-                ownerID: '',
+                ownerId: '',
                 ownerType: '',
                 period: '',
                 start: '',
@@ -53,10 +53,10 @@ describe('Account Snapshot Document Model', () => {
         });
 
         it('should set document owner id', () => {
-            const input = { ownerID: '123' };
+            const input = { ownerId: '123' };
             const updatedDocument = reducer(document, setOwnerId(input));
 
-            expect(updatedDocument.state.ownerID).toBe(input.ownerID);
+            expect(updatedDocument.state.ownerId).toBe(input.ownerId);
             expect(updatedDocument.operations).toHaveLength(1);
             expect(updatedDocument.operations[0].type).toBe('SET_OWNER_ID');
             expect(updatedDocument.operations[0].input).toStrictEqual(input);

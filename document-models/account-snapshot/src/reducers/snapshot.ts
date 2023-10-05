@@ -11,7 +11,7 @@ export const reducer: AccountSnapshotSnapshotOperations = {
         state.id = action.input.id;
     },
     setOwnerIdOperation(state, action) {
-        state.ownerID = action.input.ownerID;
+        state.ownerId = action.input.ownerId;
     },
     setOwnerTypeOperation(state, action) {
         state.ownerType = action.input.ownerType;

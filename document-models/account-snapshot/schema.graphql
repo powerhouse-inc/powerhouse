@@ -1,6 +1,6 @@
 type AccountSnapshotState {
-	id: ID!
-    ownerID: ID
+    id: ID!
+    ownerId: ID
     ownerType: String
     period: String
     start: String
@@ -67,7 +67,7 @@ input SetIdInput {
 }
 
 input SetOwnerIdInput {
-    ownerID: ID!
+    ownerId: ID!
 }
 
 input SetOwnerTypeInput {
