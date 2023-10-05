@@ -1,6 +1,5 @@
 import {
     Action,
-    BaseAction,
     Document,
     DocumentModel,
     Editor,
@@ -12,8 +11,8 @@ import { themeAtom } from 'src/store';
 import { useDocumentReducer } from 'src/utils/document-model';
 
 export interface EditorProps<T = unknown, A extends Action = Action> {
-    document?: Document<T, A | BaseAction>;
-    onChange?: (document: Document<T, A | BaseAction>) => void;
+    document: Document<T, A>;
+    onChange?: (document: Document<T, A>) => void;
 }
 
 export type EditorComponent<T = unknown, A extends Action = Action> = (
@@ -29,7 +28,7 @@ export function wrapEditor<T, A extends Action>(
         const theme = useAtomValue(themeAtom);
         const [document, dispatch] = useDocumentReducer(
             documentModel.reducer,
-            documentModel.utils.createDocument(initialDocument)
+            initialDocument
         );
 
         useEffect(() => {
