@@ -1,3 +1,4 @@
+import { paramCase } from 'change-case';
 import { DocumentModelState } from 'document-model/document-model';
 
 function documentModelToString(documentModel: DocumentModelState) {
@@ -40,7 +41,10 @@ export default {
             documentTypeId: documentModel.id,
             documentType: documentModel.name,
             extension: documentModel.extension,
-            modules: latestSpec.modules,
+            modules: latestSpec.modules.map(m => ({
+                ...m,
+                name: paramCase(m.name),
+            })),
             initialStateValue: latestSpec.state.initialValue,
             fileExtension: documentModel.extension,
         };

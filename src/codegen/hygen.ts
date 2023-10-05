@@ -1,6 +1,5 @@
 import 'ts-node/register/transpile-only';
 import { DocumentModelState, utils } from 'document-model/document-model';
-import { paramCase } from 'change-case';
 import { Logger, runner } from 'hygen';
 import path from 'path';
 import fs from 'fs';
@@ -105,9 +104,7 @@ export async function generateDocumentModel(
     // Generate the module-specific files for the document model logic
     const latestSpec =
         documentModel.specifications[documentModel.specifications.length - 1];
-    const modules = latestSpec.modules.map((m: { name: string }) =>
-        paramCase(m.name),
-    );
+    const modules = latestSpec.modules.map(m => m.name);
     for (let i = 0; i < modules.length; i++) {
         await run(
             [
