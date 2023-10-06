@@ -216,6 +216,7 @@ function Editor(props: IProps) {
                             </h4>
                             <EditorSchema
                                 name={document.state.name}
+                                value={specification.state.schema}
                                 onGenerate={schema => {
                                     setSchemaState(state => ({
                                         ...state,
@@ -238,6 +239,7 @@ function Editor(props: IProps) {
                             </h4>
                             <EditorInitialState
                                 height={200}
+                                value={specification.state.initialValue}
                                 validator={schemaState?.validator}
                                 onCreate={value => {
                                     setInitialValue(JSON.parse(value));

@@ -5,7 +5,7 @@ import {
     BudgetStatementAction,
     BudgetStatementState,
     DeleteLineItemInput,
-} from '../../document-models//budget-statement';
+} from '../../document-models/budget-statement';
 import type { EditorProps } from 'document-model-editors';
 import AccountForm from './components/account-form';
 import AccountsTable from './components/accounts-table';

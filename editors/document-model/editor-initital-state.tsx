@@ -16,7 +16,7 @@ export default function EditorInitialState({
     theme,
     ...props
 }: IProps) {
-    const [code, setCode] = useState('{}');
+    const [code, setCode] = useState(props.value || '{}');
 
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     useEffect(() => {
@@ -50,9 +50,9 @@ export default function EditorInitialState({
                 width="100%"
                 height="60vh"
                 language="json"
-                value={code}
                 onChange={value => setCode(value ?? '')}
                 {...props}
+                value={code}
                 onMount={(editor, monaco) => {
                     editorRef.current = editor;
                     props.onMount?.(editor, monaco);

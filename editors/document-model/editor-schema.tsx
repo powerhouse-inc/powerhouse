@@ -47,7 +47,7 @@ export default function EditorSchema({
     // };
     // }, [name]);
 
-    const [code, setCode] = useState('');
+    const [code, setCode] = useState(props.value || '');
 
     useEffect(() => {
         if (!code.includes(`type ${pascalCase(name)}State {`)) {
@@ -145,9 +145,9 @@ export default function EditorSchema({
                 onSchemaChange={schema => setSchema(schema)}
                 width="100%"
                 height="60vh"
+                {...props}
                 value={code}
                 onChange={value => setCode(value ?? '')}
-                {...props}
                 onMount={(editor, monaco) => {
                     editorRef.current = editor;
                     props.onMount?.(editor, monaco);
