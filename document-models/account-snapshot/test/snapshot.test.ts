@@ -5,10 +5,10 @@ import {
     setPeriod,
     setOwnerId,
     setOwnerType,
-} from '../../document-models/account-snapshot/gen/creators';
-import { reducer } from '../../document-models/account-snapshot';
-import utils from '../../document-models/account-snapshot/gen/utils';
-import { AccountSnapshotDocument } from '../../document-models/account-snapshot/gen/types';
+} from '../gen/creators';
+import utils from '../gen/utils';
+import { reducer } from '../gen/reducer';
+import { AccountSnapshotDocument } from '../gen/types';
 
 describe('Account Snapshot Document Model', () => {
     describe('Document Creation', () => {
