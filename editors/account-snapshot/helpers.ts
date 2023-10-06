@@ -26,17 +26,15 @@ const stateToActualsComparison = (
         },
     }));
 
-const stateToSnapshotAccount = (
-    state: SnapshotAccount[],
-): Snapshots['snapshotAccount'] =>
+const stateToSnapshotAccount = (state: SnapshotAccount[]) =>
     state.map(snapshot => ({
         id: snapshot.id,
         accountType: snapshot.accountType as AccountType,
         accountLabel: snapshot.accountLabel || '',
         offChain: !!snapshot.offChain,
-        accountAddress: snapshot.accountAddress || '',
-        groupAccountId: snapshot.groupAccountId || '',
-        upstreamAccountId: snapshot.upstreamAccountId || '',
+        accountAddress: snapshot.accountAddress || null,
+        groupAccountId: snapshot.groupAccountId || null,
+        upstreamAccountId: snapshot.upstreamAccountId || null,
         snapshotAccountTransaction: (
             snapshot.snapshotAccountTransaction || []
         ).map(tx => ({
@@ -77,6 +75,6 @@ export const accountSnapshotStateToSnapshot = (
         ),
         snapshotAccount: stateToSnapshotAccount(
             (state.snapshotAccount as SnapshotAccount[]) || [],
-        ),
+        ) as unknown as Snapshots['snapshotAccount'],
     };
 };
