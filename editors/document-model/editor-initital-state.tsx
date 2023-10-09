@@ -16,25 +16,18 @@ export default function EditorInitialState({
     theme,
     ...props
 }: IProps) {
-    const [code, setCode] = useState(`{}`);
+    const [code, setCode] = useState(props.value || '{}');
 
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     useEffect(() => {
         if (!editorRef.current) {
             return;
         }
-
-        editorRef.current.onDidBlurEditorText(() => {
-            onCreate(code);
+        editorRef.current.onDidBlurEditorText(e => {
+            const value = editorRef.current?.getValue() ?? '{}';
+            onCreate(value);
         });
-    }, [editorRef.current, code]);
-
-    // useEffect(() => {
-    //     setTimeout(() => {
-    //         editorRef.current?.setPosition({ lineNumber: 11, column: 9 });
-    //         editorRef.current?.focus();
-    //     });
-    // }, []);
+    }, [editorRef.current]);
 
     let errorMessage = '';
     let valid = false;
@@ -57,9 +50,9 @@ export default function EditorInitialState({
                 width="100%"
                 height="60vh"
                 language="json"
-                value={code}
                 onChange={value => setCode(value ?? '')}
                 {...props}
+                value={code}
                 onMount={(editor, monaco) => {
                     editorRef.current = editor;
                     props.onMount?.(editor, monaco);

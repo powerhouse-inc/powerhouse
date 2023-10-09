@@ -114,31 +114,17 @@ function Editor(props: IProps) {
         ? state.specifications[state.specifications.length - 1]
         : undefined;
 
-    const initialValueEditor = useRef<Parameters<OnMount>[0]>();
     const [initialValue, setInitialValue] = useState<JSON>(
         JSON.parse(specification?.state.initialValue || '{}'),
     );
 
-    const handleInitialValueEditorMount: OnMount = editor => {
-        initialValueEditor.current = editor;
-    };
-
     useEffect(() => {
-        if (!initialValueEditor.current) {
-            return;
-        }
-        initialValueEditor.current.onDidBlurEditorText(() => {
-            const currentValue = specification?.state.initialValue || '{}';
+        const currentValue = specification?.state.initialValue || '{}';
 
-            if (!isJSONEqual(initialValue, currentValue)) {
-                setInitialState(JSON.stringify(initialValue));
-            }
-        });
-    }, [
-        initialValueEditor.current,
-        initialValue,
-        specification?.state.initialValue,
-    ]);
+        if (!isJSONEqual(initialValue, currentValue)) {
+            setInitialState(JSON.stringify(initialValue));
+        }
+    }, [initialValue, specification?.state.initialValue]);
 
     useEffect(() => {
         const specValue = specification?.state.initialValue || '{}';
@@ -228,22 +214,9 @@ function Editor(props: IProps) {
                             <h4 style={{ marginBottom: '16px' }}>
                                 State Schema
                             </h4>
-                            {/* <GraphQLEditor
-                                height={200}
-                                key={document.state.name}
-                                theme={theme}
-                                schema={
-                                    specification.state.schema ||
-                                    `type ${pascalCase(
-                                        document.state.name,
-                                    )}State {
-    
-}`
-                                }
-                                onChange={schema => setStateSchema(schema)}
-                            /> */}
                             <EditorSchema
                                 name={document.state.name}
+                                value={specification.state.schema}
                                 onGenerate={schema => {
                                     setSchemaState(state => ({
                                         ...state,
@@ -266,23 +239,13 @@ function Editor(props: IProps) {
                             </h4>
                             <EditorInitialState
                                 height={200}
+                                value={specification.state.initialValue}
                                 validator={schemaState?.validator}
-                                onCreate={value =>
-                                    setInitialValue(JSON.parse(value))
-                                }
+                                onCreate={value => {
+                                    setInitialValue(JSON.parse(value));
+                                }}
                                 theme={theme}
                             />
-                            {/* <JSONEditor
-                                height={200}
-                                value={initialValue}
-                                theme={theme}
-                                onChange={setInitialValue}
-                                options={{
-                                    lineNumbers: 'off',
-                                    minimap: { enabled: false },
-                                }}
-                                onMount={handleInitialValueEditorMount}
-                            /> */}
                         </div>
                         {specification.modules.map(m => (
                             <div key={m.id}>
