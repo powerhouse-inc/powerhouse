@@ -5,3 +5,4 @@
 
 export { module as BudgetStatement } from './budget-statement';
 export { module as ScopeFramework } from './scope-framework';
+export { module as AccountSnapshot } from './account-snapshot';
