@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "declaration": true,
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "skipLibCheck": true,
+        "emitDeclarationOnly": true,
+        "jsx": "react-jsx"
+    },
+    "include": ["src/**/*.ts", "src/**/*.tsx"],
+    "exclude": [
+        "dist",
+        "node_modules",
+        "src/**/*.test.tsx",
+        "src/**/*.stories.tsx"
+    ]
+}
