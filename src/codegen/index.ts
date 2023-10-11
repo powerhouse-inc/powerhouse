@@ -8,8 +8,8 @@ import {
 import { generateSchemas, generateSchema } from './graphql';
 import type { PowerhouseConfig } from '../utils';
 import fs from 'fs';
-import { join } from 'path';
-import { paramCase } from 'change-case';
+import { join, resolve } from 'path';
+import { paramCase, pascalCase } from 'change-case';
 
 function generateGraphqlSchema(state: DocumentModelState) {
     const spec = state.specifications[state.specifications.length - 1];
@@ -26,6 +26,28 @@ function generateGraphqlSchema(state: DocumentModelState) {
         ];
         return schemas.join('\n\n');
     } else return null;
+}
+
+function getDocumentTypesMap(dir: string) {
+    const documentTypesMap: Record<string, string> = {};
+    fs.readdirSync(dir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name)
+        .forEach(name => {
+            const specPath = resolve(dir, name, `${name}.json`);
+            if (!fs.existsSync(specPath)) {
+                return;
+            }
+
+            const specRaw = fs.readFileSync(specPath, 'utf-8');
+            try {
+                const spec = JSON.parse(specRaw) as DocumentModelState;
+                if (spec.id) {
+                    documentTypesMap[spec.id] = pascalCase(name);
+                }
+            } catch {}
+        });
+    return documentTypesMap;
 }
 
 export async function generate(config: PowerhouseConfig) {
@@ -63,7 +85,26 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
     );
 }
 
-export async function generateEditor(name: string, config: PowerhouseConfig) {
-    const { format } = config;
-    return _generateEditor(name, config.editorsDir, { format });
+export async function generateEditor(
+    name: string,
+    documentTypes: string[],
+    config: PowerhouseConfig,
+) {
+    const { documentModelsDir, format } = config;
+    const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
+
+    let invalidType = documentTypes.find(
+        type => !Object.keys(docummentTypesMap).includes(type),
+    );
+    if (invalidType) {
+        throw new Error(`Document model for ${invalidType} not found`);
+    }
+    return _generateEditor(
+        name,
+        documentTypes,
+        docummentTypesMap,
+        config.editorsDir,
+        config.documentModelsDir,
+        { format },
+    );
 }

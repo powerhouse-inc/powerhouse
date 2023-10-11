@@ -124,12 +124,28 @@ export async function generateDocumentModel(
 
 export async function generateEditor(
     name: string,
+    documentTypes: string[],
+    documentTypesMap: Record<string, string>,
     dir: string,
+    documentModelsDir: string,
     { format = false } = {},
 ) {
     // Generate the singular files for the document model logic
     await run(
-        ['powerhouse', 'generate-editor', '--name', name, '--root-dir', dir],
+        [
+            'powerhouse',
+            'generate-editor',
+            '--name',
+            name,
+            '--root-dir',
+            dir,
+            '--document-types',
+            documentTypes.join(','),
+            '--document-types-map',
+            JSON.stringify(documentTypesMap),
+            '--document-models-dir',
+            documentModelsDir,
+        ],
         { format },
     );
 }
