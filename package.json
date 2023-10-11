@@ -17,7 +17,8 @@
         "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
         "build": "yarn clean && tsc && yarn copy-files",
         "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
-        "publish:create-lib": "yarn publish --cwd ./src/create-lib/"
+        "publish:create-lib": "yarn publish --cwd ./src/create-lib/",
+        "start": "ts-node src/cli.ts"
     },
     "dependencies": {
         "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
@@ -41,6 +42,8 @@
         "rimraf": "^5.0.1"
     },
     "peerDependencies": {
+        "@anatine/zod-mock": "^3.13.2",
+        "@faker-js/faker": "^8.1.0",
         "graphql": "^16.8.0"
     }
 }
