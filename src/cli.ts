@@ -3,9 +3,18 @@ import { generate, generateEditor, generateFromFile } from './codegen/index';
 import { parseArgs, getConfig, promptDirectories, parseConfig } from './utils';
 
 async function parseCommand(argv: string[]) {
-    const args = parseArgs(argv, { '--editor': String, '-e': '--editor' });
+    const args = parseArgs(argv, {
+        '--editor': String,
+        '-e': '--editor',
+        '--document-types': String,
+    });
     const editorName = args['--editor'];
-    return { editor: !!editorName, editorName, arg: args._ };
+    return {
+        editor: !!editorName,
+        editorName,
+        documentTypes: args['--document-types'],
+        arg: args._,
+    };
 }
 
 async function main() {
@@ -20,7 +29,11 @@ async function main() {
 
     const command = await parseCommand(argv);
     if (command.editor) {
-        await generateEditor(command.editorName!, config);
+        await generateEditor(
+            command.editorName!,
+            command.documentTypes?.split(/[|,;]/g) ?? [],
+            config,
+        );
     } else if (command.arg.length === 2) {
         await generateFromFile(command.arg[1], config);
     } else {
