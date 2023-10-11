@@ -2,7 +2,7 @@ import { reducer, utils } from 'document-model/document-model';
 import Editor from './editor';
 import { createDocumentStory } from 'document-model-editors';
 
-const { meta, CreateDocumentStory } = createDocumentStory(
+const { meta, CreateDocumentStory: DocumentModel } = createDocumentStory(
     Editor,
     reducer,
     utils.createExtendedState(),
@@ -10,4 +10,4 @@ const { meta, CreateDocumentStory } = createDocumentStory(
 
 export default { ...meta, title: 'Document Model' };
 
-export { CreateDocumentStory };
+export { DocumentModel };

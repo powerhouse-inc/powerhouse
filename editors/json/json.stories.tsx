@@ -2,7 +2,7 @@ import { baseReducer, utils } from 'document-model/document';
 import Editor from './editor';
 import { createDocumentStory } from 'document-model-editors';
 
-const { meta, CreateDocumentStory } = createDocumentStory(
+const { meta, CreateDocumentStory: JSONEditor } = createDocumentStory(
     Editor,
     (...args) => baseReducer(...args, document => document),
     utils.createExtendedState(),
@@ -10,4 +10,4 @@ const { meta, CreateDocumentStory } = createDocumentStory(
 
 export default { ...meta, title: 'JSON Editor' };
 
-export { CreateDocumentStory };
+export { JSONEditor };

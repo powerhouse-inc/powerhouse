@@ -44,16 +44,16 @@ const initialAccount = utils.createAccount({
     ],
 });
 
-const budgetStatement = utils.createExtendedState({
+const budgetStatementState = utils.createExtendedState({
     state: { accounts: [initialAccount] },
 });
 
-const { meta, CreateDocumentStory } = createDocumentStory(
+const { meta, CreateDocumentStory: BudgetStatement } = createDocumentStory(
     Editor,
     reducer,
-    budgetStatement,
+    budgetStatementState,
 );
 
 export default { ...meta, title: 'Budget Statement' };
 
-export { CreateDocumentStory };
+export { BudgetStatement };

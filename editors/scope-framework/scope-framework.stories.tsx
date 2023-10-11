@@ -2,7 +2,7 @@ import { reducer, utils } from '../../document-models/scope-framework';
 import Editor from './editor';
 import { createDocumentStory } from 'document-model-editors';
 
-const { meta, CreateDocumentStory } = createDocumentStory(
+const { meta, CreateDocumentStory: ScopeFramework } = createDocumentStory(
     Editor,
     reducer,
     utils.createExtendedState(),
@@ -10,4 +10,4 @@ const { meta, CreateDocumentStory } = createDocumentStory(
 
 export default { ...meta, title: 'Scope Framework' };
 
-export { CreateDocumentStory };
+export { ScopeFramework };
