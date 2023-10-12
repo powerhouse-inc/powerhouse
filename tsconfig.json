@@ -3,7 +3,6 @@
         "module": "ESNext",
         "moduleResolution": "Bundler",
         "declaration": true,
-        "rootDir": "./src",
         "outDir": "./dist",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
@@ -13,6 +12,11 @@
         "emitDeclarationOnly": true,
         "jsx": "react-jsx"
     },
-    "include": ["src/**/*.ts", "src/**/*.tsx"],
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        ".storybook/**/*.ts",
+        ".storybook/**/*.tsx"
+    ],
     "exclude": ["dist", "node_modules"]
 }
