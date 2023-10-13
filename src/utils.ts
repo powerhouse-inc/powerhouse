@@ -1,6 +1,7 @@
 import { prompt } from 'enquirer';
 import arg, { type Spec } from 'arg';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { generateMock as zodGenerateMock } from '@anatine/zod-mock';
 
 export type PowerhouseConfig = {
     documentModelsDir: string;
@@ -95,3 +96,9 @@ export async function promptDirectories(
         },
     ]);
 }
+
+export type generateMockTypeFn = typeof zodGenerateMock;
+
+export const generateMock: generateMockTypeFn = (zodRef, options) => {
+    return zodGenerateMock(zodRef, options);
+};
