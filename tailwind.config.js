@@ -14,7 +14,7 @@ module.exports = {
             themes: [
                 {
                     name: 'base',
-                    selectors: [':root'],
+                    selectors: ['[data-theme="ph-light"]'],
                     theme: {
                         colors: {
                             neutral: {
@@ -28,7 +28,7 @@ module.exports = {
                 },
                 {
                     name: 'dark',
-                    selectors: ['[data-theme="dark"]'],
+                    selectors: ['[data-theme="ph-dark"]'],
                     theme: {
                         colors: {
                             bg: '#141718',
