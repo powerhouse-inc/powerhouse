@@ -17,10 +17,13 @@
         "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
         "build": "yarn clean && tsc && yarn copy-files",
         "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
-        "publish:create-lib": "yarn publish --cwd ./src/create-lib/"
+        "publish:create-lib": "yarn publish --cwd ./src/create-lib/",
+        "start": "ts-node src/cli.ts"
     },
     "dependencies": {
         "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
+        "@anatine/zod-mock": "^3.13.2",
+        "@faker-js/faker": "^8.1.0",
         "@graphql-codegen/cli": "^5.0.0",
         "@graphql-codegen/typescript": "^4.0.1",
         "@types/node": "^20.5.9",
