@@ -1,2 +1,2 @@
-export * from './legacy';
 export * from './button';
+export * from './legacy';

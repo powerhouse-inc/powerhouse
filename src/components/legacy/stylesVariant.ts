@@ -40,14 +40,14 @@ const typographySizes: TypographyScheme = {
         margin: '0',
         lineHeight: 1,
         textAlign: 'right',
-        borderLeft: '4px solid'
+        borderLeft: '4px solid',
     },
     huge: {
         fontSize: '32pt',
         fontWeight: 'normal',
         padding: '6pt',
         margin: '0 0 0 -6pt',
-        lineHeight: 1
+        lineHeight: 1,
     },
     larger: {
         fontSize: '24pt',
@@ -89,7 +89,7 @@ const typographySizes: TypographyScheme = {
 
 const inputStyle = (
     mode: keyof typeof colorScheme = 'light',
-    focus = false
+    focus = false,
 ) => {
     const scheme = colorScheme[mode];
 
@@ -107,5 +107,5 @@ const inputStyle = (
     } satisfies CSSProperties;
 };
 
-export type { ColorTheme, TypographyScheme, TypographySize };
 export { colorScheme, inputStyle, typographySizes };
+export type { ColorTheme, TypographyScheme, TypographySize };

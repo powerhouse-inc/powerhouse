@@ -1,5 +1,5 @@
-import type { Preview } from '@storybook/react';
 import { withThemeByDataAttribute } from '@storybook/addon-themes';
+import type { Preview } from '@storybook/react';
 import '../src/tailwind.css';
 
 const preview: Preview = {

@@ -1,8 +1,8 @@
-import './button.css';
 import {
     Button as AriaButton,
     ButtonProps as AriaButtonProps,
 } from 'react-aria-components';
+import './button.css';
 
 export interface ButtonProps extends AriaButtonProps {
     /**

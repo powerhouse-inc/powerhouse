@@ -5,7 +5,7 @@ interface EditorWorksheetProps {
 }
 
 export function EditorWorksheet(
-    props: PropsWithChildren<EditorWorksheetProps>
+    props: PropsWithChildren<EditorWorksheetProps>,
 ) {
     return (
         <div className="editor-worksheet">

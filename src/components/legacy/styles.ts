@@ -78,7 +78,7 @@ const typographySizes: TypographyScheme = {
 
 const inputStyle = (
     mode: keyof typeof colorScheme = 'light',
-    focus = false
+    focus = false,
 ) => {
     const scheme = colorScheme[mode];
 
@@ -96,5 +96,5 @@ const inputStyle = (
     } satisfies CSSProperties;
 };
 
-export type { ColorTheme, TypographyScheme, TypographySize };
 export { colorScheme, inputStyle, typographySizes };
+export type { ColorTheme, TypographyScheme, TypographySize };
