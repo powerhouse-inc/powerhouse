@@ -1,6 +1,10 @@
 import './button.css';
+import {
+    Button as AriaButton,
+    ButtonProps as AriaButtonProps,
+} from 'react-aria-components';
 
-export interface ButtonProps {
+export interface ButtonProps extends AriaButtonProps {
     /**
      * Is this the principal call to action on the page?
      */
@@ -37,7 +41,7 @@ export const Button = ({
         ? 'storybook-button--primary'
         : 'storybook-button--secondary';
     return (
-        <button
+        <AriaButton
             type="button"
             className={[
                 'storybook-button',
@@ -48,6 +52,6 @@ export const Button = ({
             {...props}
         >
             {label}
-        </button>
+        </AriaButton>
     );
 };
