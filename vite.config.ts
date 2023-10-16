@@ -22,9 +22,6 @@ export default defineConfig({
                 ...Object.keys(pkg.peerDependencies),
                 'react/jsx-runtime',
             ],
-            output: {
-                // preserveModules: true,
-            },
         },
         lib: {
             entry: [resolve('src', 'index.ts')],
