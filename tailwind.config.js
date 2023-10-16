@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+const reactAriaComponents = require('tailwindcss-react-aria-components');
 const themeSwapper = require('tailwindcss-theme-swapper');
 
 module.exports = {
@@ -10,6 +11,7 @@ module.exports = {
         extend: {},
     },
     plugins: [
+        reactAriaComponents(),
         themeSwapper({
             themes: [
                 {

@@ -9834,6 +9834,11 @@ tailwind-merge@^1.14.0:
   resolved "https://registry.yarnpkg.com/tailwind-merge/-/tailwind-merge-1.14.0.tgz#e677f55d864edc6794562c63f5001f45093cdb8b"
   integrity sha512-3mFKyCo/MBcgyOTlrY8T7odzZFx+w+qKSMAmdFzRvqBfLlSigU6TZnlFHK0lkMwj9Bj8OYU+9yW9lmGuS0QEnQ==
 
+tailwindcss-react-aria-components@^1.0.0-beta.1:
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/tailwindcss-react-aria-components/-/tailwindcss-react-aria-components-1.0.0-beta.1.tgz#01930349563fc297fef6710ff251c2b1b5badf4a"
+  integrity sha512-TRh3beZJaVkWYewJWZ6JSoOdJy322gEEaOxNwh2obYkjzjj6XRfVkixZ0W8MaFSOUGcRRMjFEIQwLP2rypXueQ==
+
 tailwindcss-theme-swapper@^0.7.3:
   version "0.7.3"
   resolved "https://registry.yarnpkg.com/tailwindcss-theme-swapper/-/tailwindcss-theme-swapper-0.7.3.tgz#fcacf4bf41f7af08b84003afc25168cdf89bccbb"
