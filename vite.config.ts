@@ -3,10 +3,12 @@ import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import { libInjectCss } from 'vite-plugin-lib-inject-css';
+import svgr from 'vite-plugin-svgr';
 import pkg from './package.json';
 
 export default defineConfig({
     plugins: [
+        svgr(),
         react(),
         libInjectCss(),
         dts({
