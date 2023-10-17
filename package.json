@@ -33,6 +33,11 @@
             "import": "./dist/scope-framework.js",
             "require": "./dist/scope-framework.cjs",
             "types": "./dist/scope-framework.d.ts"
+        },
+        "./account-snapshot": {
+            "import": "./dist/account-snapshot.js",
+            "require": "./dist/account-snapshot.cjs",
+            "types": "./dist/account-snapshot.d.ts"
         }
     },
     "scripts": {
