@@ -1,6 +1,7 @@
+import { DriveView } from '@/powerhouse';
 import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
-import { ConnectSidebar } from '.';
+import { ConnectSidebar } from '..';
 
 const meta: Meta<typeof ConnectSidebar> = {
     title: 'Connect/Components',
@@ -14,13 +15,6 @@ const meta: Meta<typeof ConnectSidebar> = {
     ],
     parameters: {
         layout: 'fullscreen',
-    },
-    argTypes: {
-        children: {
-            control: {
-                disable: true,
-            },
-        },
     },
 };
 
@@ -45,13 +39,23 @@ export const Sidebar: Story = {
         username: 'Willow.eth',
         address: '0x8343...3u432u32',
         children: (
-            <ul className="p-4">
-                {Array(10)
+            <>
+                <DriveView
+                    type="public"
+                    name="Public Drives"
+                    className="mx-2"
+                />
+                <DriveView type="cloud" name="Secure Cloud Storage" />
+                {Array(8)
                     .fill('')
                     .map((_, i) => (
-                        <li key={i}>Item {i + 1}</li>
+                        <DriveView
+                            key={i}
+                            type="local"
+                            name={`My Drive ${i + 1}`}
+                        />
                     ))}
-            </ul>
+            </>
         ),
     },
 };
