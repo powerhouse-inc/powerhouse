@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 const reactAriaComponents = require('tailwindcss-react-aria-components');
 const themeSwapper = require('tailwindcss-theme-swapper');
+const plugin = require('tailwindcss/plugin');
 
 module.exports = {
     content: [
@@ -38,6 +39,9 @@ module.exports = {
                     },
                 },
             ],
+        }),
+        plugin(function ({ addVariant }) {
+            addVariant('collapsed', ':merge(.group).collapsed &');
         }),
     ],
 };
