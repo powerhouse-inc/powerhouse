@@ -9,11 +9,9 @@ import {
 import { twMerge } from 'tailwind-merge';
 
 export interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
-    header?: React.ReactNode;
-    footer?: React.ReactNode;
-    collapsed?: boolean;
-    maxWidth?: string;
-    minWidth?: string;
+    collapsed: boolean;
+    maxWidth: string;
+    minWidth: string;
 }
 
 export function SidebarHeader(props: React.HTMLAttributes<HTMLDivElement>) {
@@ -86,8 +84,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div
             {...props}
             className={twMerge(
-                'flex flex-col h-full bg-neutral-1 overflow-hidden',
+                'group group/sidebar flex flex-col h-full bg-neutral-1 overflow-hidden',
                 className,
+                collapsed && 'collapsed',
             )}
             style={{ width: collapsed ? minWidth : maxWidth }}
         >

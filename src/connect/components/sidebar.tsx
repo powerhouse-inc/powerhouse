@@ -13,10 +13,10 @@ const ConnectSidebarHeader: React.FC<SidebarHeaderProps> = ({ onToggle }) => {
         <>
             <input
                 placeholder="Create new document"
-                className="flex-1 border border-neutral-3 rounded-md py-3 px-5 leading-none placeholder-shown:bg-transparent"
+                className="flex-1 border border-neutral-3 rounded-md py-3 px-5 leading-none placeholder-shown:bg-transparent group-[.collapsed]:hidden"
             />
             <Button
-                className="border border-neutral-3 rounded-md p-[14px]"
+                className="border border-neutral-3 rounded-md p-3 group-[.collapsed]:rotate-180"
                 onPress={() => onToggle()}
             >
                 <IconArrowLeft />
@@ -31,7 +31,7 @@ interface SidebarUserProps {
 }
 
 const SidebarUser: React.FC<SidebarUserProps> = ({ username, address }) => (
-    <div className="flex gap-2 bg-white px-4 py-[10px]">
+    <div className="flex gap-2 bg-white py-[10px] px-3 group-[.collapsed]:px-1 group-[.collapsed]:justify-center">
         <img
             src={ImgPowerhouse}
             alt={username}
@@ -39,20 +39,22 @@ const SidebarUser: React.FC<SidebarUserProps> = ({ username, address }) => (
             height={40}
             className="object-contain"
         />
-        <div>
+        <div className="group-[.collapsed]:hidden">
             <p className="font-semibold text-sm text-[#404446]">{username}</p>
             <p className="font-semibold text-xs text-[#94A3B8]">{address}</p>
         </div>
     </div>
 );
 
-const ConnectSidebarFooter: React.FC<SidebarUserProps> = props => {
+interface SidebarFooterProps extends SidebarUserProps {}
+
+const ConnectSidebarFooter: React.FC<SidebarFooterProps> = ({ ...props }) => {
     return (
         <>
             <SidebarUser {...props} />
-            <Button className="flex gap-3 px-5 py-3 w-full">
+            <Button className="flex gap-3 py-3 w-full px-5 group-[.collapsed]:px-3">
                 <IconSettings />
-                <span className="font-semibold text-sm leading-6 text-[#404446]">
+                <span className="font-semibold text-sm leading-6 text-[#404446] group-[.collapsed]:hidden">
                     Settings
                 </span>
             </Button>
@@ -63,21 +65,29 @@ const ConnectSidebarFooter: React.FC<SidebarUserProps> = props => {
 interface ConnectSidebarProps
     extends SidebarProps,
         SidebarHeaderProps,
-        SidebarUserProps {}
+        SidebarFooterProps {}
 
 export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
     onToggle,
     username,
     address,
+    collapsed = false,
+    maxWidth = '304px',
+    minWidth = '58px',
     ...props
 }) => {
     return (
-        <Sidebar {...props}>
-            <SidebarHeader className="pt-11 px-2 flex gap-4">
+        <Sidebar
+            {...props}
+            collapsed={collapsed}
+            maxWidth={maxWidth}
+            minWidth={minWidth}
+        >
+            <SidebarHeader className="pt-11 px-2 flex gap-4 justify-center">
                 <ConnectSidebarHeader onToggle={onToggle} />
             </SidebarHeader>
-            {props.children}
-            <SidebarFooter className="p-4 border-t border-[#2326271A]">
+            {!collapsed ? props.children : null}
+            <SidebarFooter className="border-t border-[#2326271A] p-4 group-[.collapsed]:p-1">
                 <ConnectSidebarFooter username={username} address={address} />
             </SidebarFooter>
         </Sidebar>
