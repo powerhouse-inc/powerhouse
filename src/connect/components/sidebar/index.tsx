@@ -1,8 +1,13 @@
+import IconArrowLeft from 'assets/icons/arrow-left.svg?react';
+import ImgPowerhouse from 'assets/icons/powerhouse-rounded.png';
+import IconSettings from 'assets/icons/settings.svg?react';
+import {
+    Sidebar,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarProps,
+} from 'powerhouse';
 import { Button } from 'react-aria-components';
-import { Sidebar, SidebarFooter, SidebarHeader, SidebarProps } from '../..';
-import IconArrowLeft from '../../assets/icons/arrow-left.svg?react';
-import ImgPowerhouse from '../../assets/icons/powerhouse-rounded.png';
-import IconSettings from '../../assets/icons/settings.svg?react';
 
 interface SidebarHeaderProps {
     onToggle: () => void;

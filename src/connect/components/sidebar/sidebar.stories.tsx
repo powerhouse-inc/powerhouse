@@ -1,6 +1,6 @@
 import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
-import { ConnectSidebar } from '../connect/components/sidebar';
+import { ConnectSidebar } from '..';
 
 const meta = {
     title: 'Connect/Components',
@@ -16,16 +16,6 @@ const meta = {
         layout: 'fullscreen',
     },
     argTypes: {
-        header: {
-            control: {
-                disable: true,
-            },
-        },
-        footer: {
-            control: {
-                disable: true,
-            },
-        },
         children: {
             control: {
                 disable: true,

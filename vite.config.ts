@@ -13,7 +13,7 @@ export default defineConfig({
         libInjectCss(),
         dts({
             include: ['src'],
-            exclude: ['src/stories'],
+            exclude: ['src/**/*.stories.*'],
         }),
     ],
     build: {
