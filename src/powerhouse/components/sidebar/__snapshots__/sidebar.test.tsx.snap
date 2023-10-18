@@ -1,0 +1,22 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Sidebar Component should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="group group/sidebar flex flex-col h-full bg-neutral-1 overflow-hidden"
+    style="width: 300px;"
+  >
+    <div
+      class="flex-1 overflow-auto no-scrollbar transition-shadow"
+      style="box-shadow: none;"
+    >
+      <div
+        class="flex-shrink-0"
+      />
+    </div>
+    <div
+      class="flex-shrink-0"
+    />
+  </div>
+</DocumentFragment>
+`;

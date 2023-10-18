@@ -1,8 +1,8 @@
 import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
-import { ConnectSidebar } from '..';
+import { ConnectSidebar } from '.';
 
-const meta = {
+const meta: Meta<typeof ConnectSidebar> = {
     title: 'Connect/Components',
     component: ConnectSidebar,
     decorators: [
@@ -22,7 +22,7 @@ const meta = {
             },
         },
     },
-} satisfies Meta<typeof ConnectSidebar>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;

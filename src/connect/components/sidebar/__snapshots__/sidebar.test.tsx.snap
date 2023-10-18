@@ -1,0 +1,73 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Connect Sidebar Component should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="group group/sidebar flex flex-col h-full bg-neutral-1 overflow-hidden"
+    data-testid="sidebar"
+    style="width: 304px;"
+  >
+    <div
+      class="flex-1 overflow-auto no-scrollbar transition-shadow"
+      style="box-shadow: none;"
+    >
+      <div
+        class="flex-shrink-0 pt-11 px-2 flex gap-4 justify-center"
+      >
+        <input
+          class="flex-1 border border-neutral-3 rounded-md py-3 px-5 leading-none placeholder-shown:bg-transparent collapsed:hidden"
+          placeholder="Create new document"
+        />
+        <button
+          class="border border-neutral-3 rounded-md p-3 collapsed:rotate-180"
+          data-rac=""
+          type="button"
+        >
+          <div />
+        </button>
+      </div>
+    </div>
+    <div
+      class="flex-shrink-0 border-t border-[#2326271A] p-4 collapsed:p-1"
+    >
+      <div
+        class="flex gap-2 bg-white py-[10px] px-3 collapsed:px-1 collapsed:justify-center"
+      >
+        <img
+          alt="Willow"
+          class="object-contain"
+          height="40"
+          src="test-file-stub"
+          width="40"
+        />
+        <div
+          class="collapsed:hidden"
+        >
+          <p
+            class="font-semibold text-sm text-[#404446]"
+          >
+            Willow
+          </p>
+          <p
+            class="font-semibold text-xs text-[#94A3B8]"
+          >
+            0x123
+          </p>
+        </div>
+      </div>
+      <button
+        class="flex gap-3 py-3 w-full px-5 collapsed:px-3"
+        data-rac=""
+        type="button"
+      >
+        <div />
+        <span
+          class="font-semibold text-sm leading-6 text-[#404446] collapsed:hidden"
+        >
+          Settings
+        </span>
+      </button>
+    </div>
+  </div>
+</DocumentFragment>
+`;

@@ -11,8 +11,11 @@
         "skipLibCheck": true,
         "emitDeclarationOnly": true,
         "jsx": "react-jsx",
-        "baseUrl": "./src"
+        "paths": {
+            "@/*": ["./src/*"]
+        }
     },
+
     "types": ["jest", "@testing-library/jest-dom"],
     "include": [
         "src/**/*.ts",
