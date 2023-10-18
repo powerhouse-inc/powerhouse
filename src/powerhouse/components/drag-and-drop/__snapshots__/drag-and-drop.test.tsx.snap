@@ -1,0 +1,39 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DragAndDrop Components Draggable should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    aria-describedby="react-aria-description-0"
+    draggable="true"
+  >
+    <div
+      style="width: 100px; height: 100px;"
+    />
+  </div>
+</DocumentFragment>
+`;
+
+exports[`DragAndDrop Components DraggableTarget should match snapshot 1`] = `
+<DocumentFragment>
+  <div>
+    <div
+      aria-describedby="react-aria-description-3"
+      draggable="true"
+    >
+      <div
+        style="width: 100px; height: 100px;"
+      />
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`DragAndDrop Components DropTarget should match snapshot 1`] = `
+<DocumentFragment>
+  <div>
+    <div
+      style="width: 100px; height: 100px;"
+    />
+  </div>
+</DocumentFragment>
+`;
