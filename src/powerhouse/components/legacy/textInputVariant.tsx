@@ -75,7 +75,7 @@ export function TextInputVariant(props: TextInputProps) {
             const newValue = ref.current?.value || '';
             const origValue = props.value || '';
 
-            if (newValue != origValue && props.onSubmit) {
+            if (newValue !== origValue && props.onSubmit) {
                 props.onSubmit(newValue);
             }
         }

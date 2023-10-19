@@ -56,7 +56,7 @@ jobs:
               run: yarn test
 
     storybook:
-        name: Test
+        name: Storybook
         runs-on: ubuntu-latest
 
         steps:

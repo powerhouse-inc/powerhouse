@@ -1,17 +1,15 @@
 import { ReactElement } from 'react';
 
-interface EditorToolbarComponent {}
-
 interface EditorToolbarProps {
-    left?: ReactElement<EditorToolbarComponent>[];
-    center?: ReactElement<EditorToolbarComponent>[];
-    right?: ReactElement<EditorToolbarComponent>[];
+    left?: ReactElement<ReactElement>[];
+    center?: ReactElement<ReactElement>[];
+    right?: ReactElement<ReactElement>[];
 }
 
 export function EditorToolbar(props: EditorToolbarProps) {
-    const left = props.left || [],
-        center = props.center || [],
-        right = props.right || [];
+    const left = props.left || [];
+    const center = props.center || [];
+    const right = props.right || [];
 
     return (
         <div className="editor-toolbar">
