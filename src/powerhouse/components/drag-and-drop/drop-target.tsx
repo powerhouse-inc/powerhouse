@@ -13,12 +13,13 @@ export interface DropTargetProps<Target = unknown, Item = unknown>
     target: Target;
     children?: (props: DropTargetRenderProps) => React.ReactNode;
     onDropEvent: (item: Item, target: Target, event: DropEvent) => void;
+    dataType?: string;
 }
 
 export function DropTarget<Target = unknown, Item = unknown>(
     props: DropTargetProps<Target, Item>,
 ) {
-    const { children, target, onDropEvent, ...divProps } = props;
+    const { children, target, onDropEvent, dataType, ...divProps } = props;
 
     if (!children) return null;
 
@@ -29,11 +30,13 @@ export function DropTarget<Target = unknown, Item = unknown>(
             const item = e.items.find(
                 item =>
                     item.kind === 'text' &&
-                    item.types.has(CUSTOM_OBJECT_FORMAT),
+                    item.types.has(dataType || CUSTOM_OBJECT_FORMAT),
             ) as TextDropItem | undefined;
 
             if (item) {
-                const result = await item.getText(CUSTOM_OBJECT_FORMAT);
+                const result = await item.getText(
+                    dataType || CUSTOM_OBJECT_FORMAT,
+                );
                 onDropEvent(JSON.parse(result) as Item, target, e);
             }
         },

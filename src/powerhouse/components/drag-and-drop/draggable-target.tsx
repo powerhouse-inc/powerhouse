@@ -14,6 +14,7 @@ export interface DraggableTargetProps<Item = unknown> {
     children: (props: DraggableTargetRenderProps) => React.ReactNode;
     dragNodeProps?: Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>;
     targetNodeProps?: Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>;
+    dataType?: string;
 }
 
 export function DraggableTarget<Item = unknown>(
@@ -21,8 +22,9 @@ export function DraggableTarget<Item = unknown>(
 ) {
     const {
         item,
-        onDropEvent,
+        dataType,
         children,
+        onDropEvent,
         dragNodeProps = {},
         targetNodeProps = {},
     } = props;
@@ -31,10 +33,15 @@ export function DraggableTarget<Item = unknown>(
         <DropTarget<Item, Item>
             onDropEvent={onDropEvent}
             target={item}
+            dataType={dataType}
             {...targetNodeProps}
         >
             {({ isDropTarget }) => (
-                <Draggable<Item> item={item} {...dragNodeProps}>
+                <Draggable<Item>
+                    item={item}
+                    dataType={dataType}
+                    {...dragNodeProps}
+                >
                     {({ isDragging }) => children({ isDropTarget, isDragging })}
                 </Draggable>
             )}
