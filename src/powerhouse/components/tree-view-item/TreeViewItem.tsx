@@ -48,11 +48,13 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         label,
         onClick,
         children,
+        className,
         initialOpen,
         expandedIcon,
         secondaryIcon,
         onOptionsClick,
         level = 0,
+        style = {},
         ...divProps
     } = props;
 
@@ -80,8 +82,11 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         <div>
             <div
                 onClick={onClickItemHandler}
-                style={{ paddingLeft: `${level * 10}px` }}
-                className="flex flex-row cursor-pointer select-none rounded-lg py-3 group hover:bg-[#F1F5F9]"
+                style={{ paddingLeft: `${level * 10}px`, ...style }}
+                className={twMerge(
+                    'flex flex-row cursor-pointer select-none rounded-lg py-3 group hover:bg-[#F1F5F9]',
+                    className,
+                )}
                 {...divProps}
             >
                 <img
