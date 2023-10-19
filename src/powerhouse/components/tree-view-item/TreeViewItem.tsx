@@ -3,7 +3,8 @@ import { twMerge } from 'tailwind-merge';
 import CaretIcon from '../../../assets/icons/caret.svg';
 import VerticalDots from '../../../assets/icons/vertical-dots.svg';
 
-export interface TreeViewItemProps {
+export interface TreeViewItemProps
+    extends React.HTMLAttributes<HTMLDivElement> {
     label: string;
     children?: React.ReactNode;
     initialOpen?: boolean;
@@ -52,6 +53,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         secondaryIcon,
         onOptionsClick,
         level = 0,
+        ...divProps
     } = props;
 
     const [open, setOpen] = useState(initialOpen);
@@ -80,6 +82,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 onClick={onClickItemHandler}
                 style={{ paddingLeft: `${level * 10}px` }}
                 className="flex flex-row cursor-pointer select-none rounded-lg py-3 group hover:bg-[#F1F5F9]"
+                {...divProps}
             >
                 <img
                     src={CaretIcon}
