@@ -5,13 +5,13 @@ export interface DraggableRenderProps {
     isDragging: boolean;
 }
 
-export interface DraggableProps<Item = any>
+export interface DraggableProps<Item = unknown>
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
     children?: (props: DraggableRenderProps) => React.ReactNode;
     item: Item;
 }
 
-export function Draggable<Item = any>(props: DraggableProps<Item>) {
+export function Draggable<Item = unknown>(props: DraggableProps<Item>) {
     const { item, children, ...divProps } = props;
 
     if (!children) return null;
@@ -25,7 +25,7 @@ export function Draggable<Item = any>(props: DraggableProps<Item>) {
     });
 
     return (
-        <div {...dragProps} {...divProps}>
+        <div {...dragProps} role="button" tabIndex={0} {...divProps}>
             {children({ isDragging })}
         </div>
     );

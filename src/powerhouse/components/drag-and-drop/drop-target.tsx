@@ -8,14 +8,14 @@ export interface DropTargetRenderProps {
     isDropTarget: boolean;
 }
 
-export interface DropTargetProps<Target = any, Item = any>
+export interface DropTargetProps<Target = unknown, Item = unknown>
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
     target: Target;
     children?: (props: DropTargetRenderProps) => React.ReactNode;
     onDropEvent: (item: Item, target: Target, event: DropEvent) => void;
 }
 
-export function DropTarget<Target = any, Item = any>(
+export function DropTarget<Target = unknown, Item = unknown>(
     props: DropTargetProps<Target, Item>,
 ) {
     const { children, target, onDropEvent, ...divProps } = props;

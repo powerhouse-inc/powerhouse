@@ -8,7 +8,7 @@ import {
 export type DraggableTargetRenderProps = DraggableRenderProps &
     DropTargetRenderProps;
 
-export interface DraggableTargetProps<Item = any> {
+export interface DraggableTargetProps<Item = unknown> {
     item: Item;
     onDropEvent: DropTargetProps<Item, Item>['onDropEvent'];
     children: (props: DraggableTargetRenderProps) => React.ReactNode;
@@ -16,7 +16,9 @@ export interface DraggableTargetProps<Item = any> {
     targetNodeProps?: Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>;
 }
 
-export function DraggableTarget<Item = any>(props: DraggableTargetProps<Item>) {
+export function DraggableTarget<Item = unknown>(
+    props: DraggableTargetProps<Item>,
+) {
     const {
         item,
         onDropEvent,
