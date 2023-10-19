@@ -15,5 +15,16 @@ const config: StorybookConfig = {
     docs: {
         autodocs: 'tag',
     },
+    async viteFinal(config) {
+        return {
+            ...config,
+            plugins: config.plugins?.filter(
+                plugin =>
+                    !['vite:dts', 'vite:lib-inject-css'].includes(
+                        (plugin as any)?.name,
+                    ),
+            ),
+        };
+    },
 };
 export default config;
