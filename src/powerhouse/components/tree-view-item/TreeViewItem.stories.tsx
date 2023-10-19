@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { TreeViewItem } from './TreeViewItem';
+import { TreeViewItem, TreeViewItemProps } from './TreeViewItem';
 
 import CheckFilledIcon from '../../../assets/icons/check-filled.svg';
 import CheckIcon from '../../../assets/icons/check.svg';
@@ -80,6 +80,71 @@ export const Primary: Story = {
                         expandedIcon={FolderOpen}
                     ></TreeViewItem>
                 </TreeViewItem>
+            </>
+        ),
+    },
+};
+
+const itemClassName = 'rounded-lg py-3 hover:bg-[#F1F5F9]';
+
+const StyledTreeViewItem: React.FC<TreeViewItemProps> = props => {
+    return (
+        <TreeViewItem
+            {...props}
+            buttonProps={{
+                className: itemClassName,
+            }}
+        >
+            {props.children}
+        </TreeViewItem>
+    );
+};
+
+export const WithStyles: Story = {
+    args: {
+        label: 'Local Device',
+        initialOpen: true,
+        icon: FolderClose,
+        expandedIcon: FolderOpen,
+        secondaryIcon: SyncingIcon,
+        buttonProps: {
+            className: itemClassName,
+        },
+        children: (
+            <>
+                <StyledTreeViewItem
+                    label="Folder 1"
+                    icon={FolderClose}
+                    expandedIcon={FolderOpen}
+                >
+                    <StyledTreeViewItem
+                        label="Folder 1.1"
+                        icon={FolderClose}
+                        expandedIcon={FolderOpen}
+                    ></StyledTreeViewItem>
+                    <StyledTreeViewItem
+                        label="Folder 1.2"
+                        icon={FolderClose}
+                        expandedIcon={FolderOpen}
+                    >
+                        <StyledTreeViewItem
+                            label="Folder 1.2.1"
+                            icon={FolderClose}
+                            expandedIcon={FolderOpen}
+                        ></StyledTreeViewItem>
+                    </StyledTreeViewItem>
+                </StyledTreeViewItem>
+                <StyledTreeViewItem
+                    label="Folder 2"
+                    icon={FolderClose}
+                    expandedIcon={FolderOpen}
+                >
+                    <StyledTreeViewItem
+                        label="Folder 2.1"
+                        icon={FolderClose}
+                        expandedIcon={FolderOpen}
+                    ></StyledTreeViewItem>
+                </StyledTreeViewItem>
             </>
         ),
     },

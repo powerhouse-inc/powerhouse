@@ -29,11 +29,9 @@ const injectLevelProps = (
                 return injectLevelProps(child.props.children, level);
             }
 
-            const customProps: Partial<TreeViewItemProps> = {};
-
-            if (child.type === TreeViewItem) {
-                customProps.level = level + 1;
-            }
+            const customProps: Partial<TreeViewItemProps> = {
+                level: level + 1,
+            };
 
             return React.cloneElement(child, {
                 ...child.props,
@@ -96,7 +94,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                     ...containerButtonStyle,
                 }}
                 className={twMerge(
-                    'flex flex-row w-full cursor-pointer select-none rounded-lg py-3 group focus:outline-none hover:bg-[#F1F5F9]',
+                    'flex flex-row w-full cursor-pointer select-none group focus:outline-none',
                     typeof containerButtonClassName === 'string' &&
                         containerButtonClassName,
                 )}
