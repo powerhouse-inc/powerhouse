@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Button, ButtonProps, PressEvent } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 import CaretIcon from '../../../assets/icons/caret.svg';
 import VerticalDots from '../../../assets/icons/vertical-dots.svg';
@@ -12,11 +11,13 @@ export interface TreeViewItemProps
     expandedIcon?: string;
     icon?: string;
     level?: number;
-    onClick?: (event: PressEvent) => void;
-    onOptionsClick?: (event: PressEvent) => void;
+    onClick?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
+    onOptionsClick?: (
+        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    ) => void;
     secondaryIcon?: string;
-    buttonProps?: ButtonProps;
-    optionsButtonProps?: ButtonProps;
+    buttonProps?: React.HTMLAttributes<HTMLDivElement>;
+    optionsButtonProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 const injectLevelProps = (
@@ -69,9 +70,18 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         setOpen(initialOpen);
     }, [initialOpen]);
 
-    const onClickItemHandler = (e: PressEvent) => {
+    const onClickItemHandler = (
+        e: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    ) => {
         toggleOpen();
         onClick && onClick(e);
+    };
+
+    const onOptionsClickHandler = (
+        e: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    ) => {
+        e.stopPropagation();
+        onOptionsClick && onOptionsClick(e);
     };
 
     const {
@@ -87,16 +97,16 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
 
     return (
         <div {...divProps}>
-            <Button
-                onPress={onClickItemHandler}
+            <div
+                role="button"
+                onClick={onClickItemHandler}
                 style={{
                     paddingLeft: `${level * 10}px`,
                     ...containerButtonStyle,
                 }}
                 className={twMerge(
                     'flex flex-row w-full cursor-pointer select-none group focus:outline-none',
-                    typeof containerButtonClassName === 'string' &&
-                        containerButtonClassName,
+                    containerButtonClassName,
                 )}
                 {...containerButtonProps}
             >
@@ -110,17 +120,17 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 {icon && <img src={open ? expandedIcon || icon : icon} />}
                 {label && <div className="ml-1 flex flex-1">{label}</div>}
                 {onOptionsClick && (
-                    <Button
-                        onPress={onOptionsClick}
+                    <div
+                        role="button"
+                        onClick={onOptionsClickHandler}
                         className={twMerge(
                             'w-6 h-6 mx-3 hidden group-hover:inline-block focus:outline-none',
-                            typeof optionsButtonClassName === 'string' &&
-                                optionsButtonClassName,
+                            optionsButtonClassName,
                         )}
                         {...containerOptionsButtonProps}
                     >
                         <img src={VerticalDots} className="w-6 h-6" />
-                    </Button>
+                    </div>
                 )}
                 {secondaryIcon && (
                     <img
@@ -128,7 +138,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         className="flex self-end w-6 h-6 mx-3 group-hover:hidden"
                     />
                 )}
-            </Button>
+            </div>
             {children && (
                 <div className={twMerge(!open && 'hidden')}>
                     {injectLevelProps(children, level)}

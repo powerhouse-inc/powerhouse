@@ -1,5 +1,6 @@
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
+import { useDraggableTarget } from '../../hooks/useDraggableTarget';
 import { Draggable } from './draggable';
 import { DraggableTarget } from './draggable-target';
 import { DropTarget } from './drop-target';
@@ -189,4 +190,42 @@ const ListItems = () => {
 export const DraggableTargetComponent: Partial<Story> = {
     name: 'DraggableTarget',
     render: () => <ListItems />,
+};
+
+const DraggableElement: React.FC<ItemType> = props => {
+    const { dragProps, dropProps, isDropTarget } = useDraggableTarget<ItemType>(
+        {
+            data: {
+                id: props.id,
+                name: props.name,
+            },
+            onDropEvent: action('onDropEvent'),
+        },
+    );
+
+    return (
+        <div
+            {...dragProps}
+            {...dropProps}
+            onClick={action('onClick')}
+            style={{
+                backgroundColor: isDropTarget ? 'yellow' : 'lightblue',
+                width: '60px',
+                height: '30px',
+            }}
+        >
+            {props.name}
+        </div>
+    );
+};
+
+export const UseDraggableTargetHook: Partial<Story> = {
+    name: 'useDraggableTarget',
+    render: () => (
+        <div>
+            <DraggableElement id="item-1" name="Item 1" />
+            <DraggableElement id="item-2" name="Item 2" />
+            <DraggableElement id="item-3" name="Item 3" />
+        </div>
+    ),
 };

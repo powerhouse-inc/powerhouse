@@ -7,24 +7,10 @@ const meta = {
     argTypes: {
         onClick: { control: { type: 'action' } },
         onOptionsClick: { control: { type: 'action' } },
-        initialOpen: { control: { type: 'boolean' } },
         buttonProps: { control: { type: 'object' } },
         optionsButtonProps: { control: { type: 'object' } },
         level: { control: { type: 'number' } },
-        status: {
-            control: { type: 'select' },
-            options: ['available', 'available-offline', 'syncing', 'offline'],
-        },
-        type: {
-            control: { type: 'select' },
-            options: [
-                'folder',
-                'file',
-                'local-drive',
-                'network-drive',
-                'public-drive',
-            ],
-        },
+        item: { control: { type: 'object' } },
     },
 } satisfies Meta<typeof ConnectTreeViewItem>;
 
@@ -33,9 +19,13 @@ type Story = StoryObj<typeof meta>;
 
 export const TreeViewItem: Story = {
     args: {
-        label: 'Folder 1',
-        status: 'syncing' as ItemStatus,
-        type: 'folder' as ItemType,
         level: 0,
+        item: {
+            id: 'drive/folder1',
+            label: 'Folder 1',
+            type: ItemType.Folder,
+            status: ItemStatus.Syncing,
+            expanded: false,
+        },
     },
 };

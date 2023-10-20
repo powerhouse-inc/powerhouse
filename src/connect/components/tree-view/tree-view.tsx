@@ -1,35 +1,40 @@
 import React from 'react';
-import { PressEvent } from 'react-aria-components';
 
-import { ConnectTreeViewItem, ItemStatus, ItemType } from '../tree-view-item';
-
-export interface TreeItem {
-    id: string;
-    label: string;
-    type: ItemType;
-    status?: ItemStatus;
-    expanded?: boolean;
-    children?: TreeItem[];
-}
+import {
+    ConnectTreeViewItem,
+    ConnectTreeViewItemProps,
+    TreeItem,
+} from '../tree-view-item';
 
 export interface ConnectTreeViewProps
     extends Omit<React.HTMLAttributes<HTMLElement>, 'onClick'> {
     items: TreeItem;
-    onItemClick?: (event: PressEvent, item: TreeItem) => void;
-    onItemOptionsClick?: (event: PressEvent, item: TreeItem) => void;
+    onDropEvent?: ConnectTreeViewItemProps['onDropEvent'];
+    onItemClick?: (
+        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+        item: TreeItem,
+    ) => void;
+    onItemOptionsClick?: (
+        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+        item: TreeItem,
+    ) => void;
 }
 
 export const ConnectTreeView: React.FC<ConnectTreeViewProps> = props => {
-    const { items, onItemClick, onItemOptionsClick, ...elementProps } = props;
+    const {
+        items,
+        onItemClick,
+        onDropEvent,
+        onItemOptionsClick,
+        ...elementProps
+    } = props;
 
     const renderTreeItems = (item: TreeItem, level = 0) => {
         return (
             <ConnectTreeViewItem
+                item={item}
                 key={item.id}
-                type={item.type}
-                label={item.label}
-                status={item.status}
-                initialOpen={item.expanded}
+                onDropEvent={onDropEvent}
                 onClick={e => onItemClick?.(e, item)}
                 onOptionsClick={e => onItemOptionsClick?.(e, item)}
                 {...elementProps}

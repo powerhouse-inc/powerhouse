@@ -1,4 +1,9 @@
-import { TreeViewItem, TreeViewItemProps } from '@/powerhouse';
+import {
+    TreeViewItem,
+    TreeViewItemProps,
+    useDraggableTarget,
+    UseDraggableTargetProps,
+} from '@/powerhouse';
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
@@ -27,10 +32,27 @@ export enum ItemStatus {
     Offline = 'offline',
 }
 
-export interface ConnectTreeViewItemProps
-    extends Omit<TreeViewItemProps, 'icon' | 'expandedIcon' | 'secondaryIcon'> {
+export interface TreeItem {
+    id: string;
+    label: string;
     type: ItemType;
     status?: ItemStatus;
+    expanded?: boolean;
+    children?: TreeItem[];
+}
+
+export interface ConnectTreeViewItemProps
+    extends Pick<
+        TreeViewItemProps,
+        | 'children'
+        | 'onClick'
+        | 'onOptionsClick'
+        | 'buttonProps'
+        | 'optionsButtonProps'
+        | 'level'
+    > {
+    item: TreeItem;
+    onDropEvent?: UseDraggableTargetProps<TreeItem>['onDropEvent'];
 }
 
 const getStatusIcon = (status: ItemStatus) => {
@@ -68,12 +90,10 @@ export const ConnectTreeViewItem: React.FC<
     ConnectTreeViewItemProps
 > = props => {
     const {
-        type,
-        label,
-        status,
+        item,
         onClick,
         children,
-        initialOpen,
+        onDropEvent,
         onOptionsClick,
         optionsButtonProps,
         level = 0,
@@ -81,14 +101,23 @@ export const ConnectTreeViewItem: React.FC<
         ...divProps
     } = props;
 
+    const { dragProps, dropProps, isDropTarget } = useDraggableTarget<TreeItem>(
+        {
+            data: item,
+            onDropEvent,
+        },
+    );
+
     const { className: buttonClassName, ...restButtonProps } = buttonProps;
 
     return (
         <TreeViewItem
-            label={label}
+            {...(onDropEvent && { ...dragProps, ...dropProps })}
             level={level}
             onClick={onClick}
-            initialOpen={initialOpen}
+            label={item.label}
+            initialOpen={item.expanded}
+            className={twMerge(isDropTarget && 'rounded-lg bg-[#F4F4F4]')}
             buttonProps={{
                 className: twMerge(
                     'py-3 rounded-lg hover:bg-[#F1F5F9]',
@@ -98,8 +127,8 @@ export const ConnectTreeViewItem: React.FC<
             }}
             onOptionsClick={onOptionsClick}
             optionsButtonProps={optionsButtonProps}
-            {...(status && { secondaryIcon: getStatusIcon(status) })}
-            {...getItemIcon(type)}
+            {...(item.status && { secondaryIcon: getStatusIcon(item.status) })}
+            {...getItemIcon(item.type)}
             {...divProps}
         >
             {children}

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ItemStatus, ItemType } from '../tree-view-item';
-import { ConnectTreeView, TreeItem } from './tree-view';
+import { ItemStatus, ItemType, TreeItem } from '../tree-view-item';
+import { ConnectTreeView } from './tree-view';
 
 const meta = {
     title: 'Connect/Components',
@@ -8,6 +8,7 @@ const meta = {
     argTypes: {
         items: { control: { type: 'object' } },
         onItemClick: { control: { type: 'action' } },
+        onDropEvent: { control: { type: 'action' } },
         onItemOptionsClick: { control: { type: 'action' } },
     },
 } satisfies Meta<typeof ConnectTreeView>;
