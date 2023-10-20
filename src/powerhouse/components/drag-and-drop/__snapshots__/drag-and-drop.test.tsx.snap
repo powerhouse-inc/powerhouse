@@ -5,6 +5,8 @@ exports[`DragAndDrop Components Draggable should match snapshot 1`] = `
   <div
     aria-describedby="react-aria-description-0"
     draggable="true"
+    role="button"
+    tabindex="0"
   >
     <div
       style="width: 100px; height: 100px;"
@@ -19,6 +21,8 @@ exports[`DragAndDrop Components DraggableTarget should match snapshot 1`] = `
     <div
       aria-describedby="react-aria-description-3"
       draggable="true"
+      role="button"
+      tabindex="0"
     >
       <div
         style="width: 100px; height: 100px;"
