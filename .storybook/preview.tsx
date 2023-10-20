@@ -18,7 +18,7 @@ const preview: Preview = {
                 light: 'ph-light',
                 dark: 'ph-dark',
             },
-            defaultTheme: 'ph-light',
+            defaultTheme: 'light',
             attributeName: 'data-theme',
         }),
     ],
