@@ -30,7 +30,7 @@ export enum ItemStatus {
 export interface ConnectTreeViewItemProps
     extends Omit<TreeViewItemProps, 'icon' | 'expandedIcon' | 'secondaryIcon'> {
     type: ItemType;
-    status: ItemStatus;
+    status?: ItemStatus;
 }
 
 const getStatusIcon = (status: ItemStatus) => {
@@ -73,7 +73,6 @@ export const ConnectTreeViewItem: React.FC<
         status,
         onClick,
         children,
-        className,
         initialOpen,
         onOptionsClick,
         optionsButtonProps,
@@ -92,15 +91,14 @@ export const ConnectTreeViewItem: React.FC<
             initialOpen={initialOpen}
             buttonProps={{
                 className: twMerge(
-                    'py-3',
+                    'py-3 rounded-lg hover:bg-[#F1F5F9]',
                     typeof buttonClassName === 'string' && buttonClassName,
                 ),
                 ...restButtonProps,
             }}
             onOptionsClick={onOptionsClick}
-            secondaryIcon={getStatusIcon(status)}
             optionsButtonProps={optionsButtonProps}
-            className={twMerge('rounded-lg hover:bg-[#F1F5F9]', className)}
+            {...(status && { secondaryIcon: getStatusIcon(status) })}
             {...getItemIcon(type)}
             {...divProps}
         >
