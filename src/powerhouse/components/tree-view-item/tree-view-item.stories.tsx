@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { TreeViewItem, TreeViewItemProps } from './TreeViewItem';
+import { TreeViewItem, TreeViewItemProps } from './tree-view-item';
 
-import CheckFilledIcon from '../../../assets/icons/check-filled.svg';
-import CheckIcon from '../../../assets/icons/check.svg';
-import CloudSlashIcon from '../../../assets/icons/cloud-slash.svg';
-import FolderClose from '../../../assets/icons/folder-close-fill.svg';
-import FolderOpen from '../../../assets/icons/folder-open-fill.svg';
-import SyncingIcon from '../../../assets/icons/syncing.svg';
+import CheckFilledIcon from '@/assets/icons/check-filled.svg';
+import CheckIcon from '@/assets/icons/check.svg';
+import CloudSlashIcon from '@/assets/icons/cloud-slash.svg';
+import FolderClose from '@/assets/icons/folder-close-fill.svg';
+import FolderOpen from '@/assets/icons/folder-open-fill.svg';
+import SyncingIcon from '@/assets/icons/syncing.svg';
 
 const meta = {
-    title: 'Components/TreeView/TreeViewItem',
+    title: 'Powerhouse/Components/TreeView/TreeViewItem',
     component: TreeViewItem,
     argTypes: {
         children: { control: { type: 'text' } },

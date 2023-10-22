@@ -1,18 +1,29 @@
+import IconGear from '@/assets/icons/gear.svg?react';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
-import IconGear from '../assets/icons/gear.svg?react';
+import { ConnectTreeView, ConnectTreeViewProps, TreeItem } from '..';
 
 export type DriveType = 'public' | 'local' | 'cloud';
 
-export interface DriveViewProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface DriveViewProps
+    extends Pick<
+            ConnectTreeViewProps,
+            'onDropEvent' | 'onItemClick' | 'onItemOptionsClick'
+        >,
+        React.HTMLAttributes<HTMLDivElement> {
     type: DriveType;
     name: string;
+    items: TreeItem[];
 }
 
 export const DriveView: React.FC<DriveViewProps> = ({
     className,
     type,
     name,
+    items,
+    onDropEvent,
+    onItemClick,
+    onItemOptionsClick,
     ...props
 }) => {
     return (
@@ -31,6 +42,17 @@ export const DriveView: React.FC<DriveViewProps> = ({
                 <Button>
                     <IconGear />
                 </Button>
+            </div>
+            <div className="py-2">
+                {items.map(item => (
+                    <ConnectTreeView
+                        key={item.id}
+                        items={item}
+                        onDropEvent={onDropEvent}
+                        onItemClick={onItemClick}
+                        onItemOptionsClick={onItemOptionsClick}
+                    />
+                ))}
             </div>
         </div>
     );

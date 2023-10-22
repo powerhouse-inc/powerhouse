@@ -1,1 +1,1 @@
-export * from './TreeViewItem';
+export * from './tree-view-item';

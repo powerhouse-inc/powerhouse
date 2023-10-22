@@ -1,12 +1,12 @@
+import { useDraggableTarget } from '@/powerhouse/hooks/useDraggableTarget';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
-import { useDraggableTarget } from '../../hooks/useDraggableTarget';
 import { Draggable } from './draggable';
 import { DraggableTarget } from './draggable-target';
 import { DropTarget } from './drop-target';
 
 const meta = {
-    title: 'Components/DragAndDrop',
+    title: 'Powerhouse/Components/DragAndDrop',
     component: DropTarget,
     argTypes: {
         id: { control: { type: 'text' } },

@@ -7,15 +7,15 @@ import {
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
-import CheckFilledIcon from '../../../assets/icons/check-filled.svg';
-import CheckIcon from '../../../assets/icons/check.svg';
-import CloudSlashIcon from '../../../assets/icons/cloud-slash.svg';
-import FolderClose from '../../../assets/icons/folder-close-fill.svg';
-import FolderOpen from '../../../assets/icons/folder-open-fill.svg';
-import HDDIcon from '../../../assets/icons/hdd-fill.svg';
-import MIcon from '../../../assets/icons/m-fill.svg';
-import ServerIcon from '../../../assets/icons/server-fill.svg';
-import SyncingIcon from '../../../assets/icons/syncing.svg';
+import CheckFilledIcon from '@/assets/icons/check-filled.svg';
+import CheckIcon from '@/assets/icons/check.svg';
+import CloudSlashIcon from '@/assets/icons/cloud-slash.svg';
+import FolderClose from '@/assets/icons/folder-close-fill.svg';
+import FolderOpen from '@/assets/icons/folder-open-fill.svg';
+import HDDIcon from '@/assets/icons/hdd-fill.svg';
+import MIcon from '@/assets/icons/m-fill.svg';
+import ServerIcon from '@/assets/icons/server-fill.svg';
+import SyncingIcon from '@/assets/icons/syncing.svg';
 
 export enum ItemType {
     Folder = 'folder',

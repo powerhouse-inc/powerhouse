@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ConnectTreeViewItem, ItemStatus, ItemType } from './tree-view-item';
 
 const meta = {
-    title: 'Connect/Components',
+    title: 'Connect/Components/TreeView',
     component: ConnectTreeViewItem,
     argTypes: {
         onClick: { control: { type: 'action' } },

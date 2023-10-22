@@ -3,7 +3,7 @@ import { ItemStatus, ItemType, TreeItem } from '../tree-view-item';
 import { ConnectTreeView } from './tree-view';
 
 const meta = {
-    title: 'Connect/Components',
+    title: 'Connect/Components/TreeView',
     component: ConnectTreeView,
     argTypes: {
         items: { control: { type: 'object' } },

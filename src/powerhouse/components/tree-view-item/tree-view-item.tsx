@@ -1,7 +1,7 @@
+import CaretIcon from '@/assets/icons/caret.svg';
+import VerticalDots from '@/assets/icons/vertical-dots.svg';
 import React, { useEffect, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
-import CaretIcon from '../../../assets/icons/caret.svg';
-import VerticalDots from '../../../assets/icons/vertical-dots.svg';
 
 export interface TreeViewItemProps
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onClick'> {
@@ -102,6 +102,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 onClick={onClickItemHandler}
                 style={{
                     paddingLeft: `${level * 10}px`,
+
                     ...containerButtonStyle,
                 }}
                 className={twMerge(
@@ -114,11 +115,16 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                     src={CaretIcon}
                     className={twMerge(
                         open && 'rotate-90',
-                        'transition ease delay-50',
+                        'transition ease delay-50 pointer-events-none',
                     )}
                 />
-                {icon && <img src={open ? expandedIcon || icon : icon} />}
-                {label && <div className="ml-1 flex flex-1">{label}</div>}
+                {icon && (
+                    <img
+                        src={open ? expandedIcon || icon : icon}
+                        className="pointer-events-none"
+                    />
+                )}
+                {label && <div className="ml-2 flex flex-1">{label}</div>}
                 {onOptionsClick && (
                     <div
                         role="button"
@@ -129,13 +135,16 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         )}
                         {...containerOptionsButtonProps}
                     >
-                        <img src={VerticalDots} className="w-6 h-6" />
+                        <img
+                            src={VerticalDots}
+                            className="w-6 h-6 pointer-events-none"
+                        />
                     </div>
                 )}
                 {secondaryIcon && (
                     <img
                         src={secondaryIcon}
-                        className="flex self-end w-6 h-6 mx-3 group-hover:hidden"
+                        className="flex self-end w-6 h-6 mx-3 group-hover:hidden pointer-events-none"
                     />
                 )}
             </div>
