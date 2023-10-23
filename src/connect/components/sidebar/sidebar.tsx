@@ -33,17 +33,10 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
             minWidth={minWidth}
         >
             <SidebarPanel>
-                <ConnectSidebarHeader
-                    className="pt-11 px-2 flex gap-4 justify-center"
-                    onToggle={onToggle}
-                />
+                <ConnectSidebarHeader onToggle={onToggle} />
                 {!collapsed ? props.children : null}
             </SidebarPanel>
-            <ConnectSidebarFooter
-                username={username}
-                address={address}
-                className="border-t border-[#2326271A] p-4 collapsed:p-1"
-            />
+            <ConnectSidebarFooter username={username} address={address} />
         </Sidebar>
     );
 };

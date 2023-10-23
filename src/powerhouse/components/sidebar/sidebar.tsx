@@ -37,7 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={twMerge(
                 'group group/sidebar flex flex-col h-full bg-neutral-1 overflow-hidden shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]',
                 className,
-                collapsed && 'collapsed',
+                collapsed && 'collapsed shadow-none bg-transparent',
             )}
             style={{
                 width: collapsed ? minWidth : maxWidth,

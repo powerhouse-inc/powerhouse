@@ -100,7 +100,7 @@ export const Sidebar: Story = {
                 <DriveView
                     type="public"
                     name="Public Drives"
-                    className="mx-2"
+                    className="mx-2 mb-2"
                     items={[
                         {
                             id: 'drive',
@@ -114,6 +114,7 @@ export const Sidebar: Story = {
                 <DriveView
                     type="cloud"
                     name="Secure Cloud Storage"
+                    className="mb-2"
                     items={[
                         {
                             id: 'cloud 1',

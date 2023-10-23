@@ -9,17 +9,17 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
   >
     <div
       class="flex-1 overflow-auto no-scrollbar transition-shadow"
-      style="box-shadow: none;"
     >
       <div
-        class="flex-shrink-0 pt-11 px-2 flex gap-4 justify-center"
+        class="flex-shrink-0 pt-11 px-2 flex gap-4 justify-center mb-4"
       >
         <input
           class="flex-1 border border-neutral-3 rounded-md py-3 px-5 leading-none placeholder-shown:bg-transparent collapsed:hidden"
           placeholder="Create new document"
         />
         <button
-          class="border border-neutral-3 rounded-md p-3 collapsed:rotate-180"
+          class="border border-neutral-3 rounded-md p-3 collapsed:rotate-180 collapsed:border-[rgba(49,53,56,0.12)] collapsed:bg-neutral-3 hover:bg-[#F1F5F9]
+                collapsed:hover:bg-[#F1F5F9] collapsed:shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]"
           data-rac=""
           type="button"
         >
@@ -28,10 +28,10 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
       </div>
     </div>
     <div
-      class="flex-shrink-0 border-t border-[#2326271A] p-4 collapsed:p-1"
+      class="flex-shrink-0 border-t border-[#2326271A] p-4 collapsed:px-1"
     >
       <div
-        class="flex gap-2 bg-white py-[10px] px-3 collapsed:px-1 collapsed:justify-center"
+        class="flex gap-2 bg-white py-[10px] px-3 collapsed:px-1 collapsed:justify-center collapsed:bg-transparent"
       >
         <img
           alt="Willow"

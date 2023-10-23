@@ -8,7 +8,6 @@ exports[`Sidebar Component should match snapshot 1`] = `
   >
     <div
       class="flex-1 overflow-auto no-scrollbar transition-shadow"
-      style="box-shadow: none;"
     >
       <div
         class="flex-shrink-0"

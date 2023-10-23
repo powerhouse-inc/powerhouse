@@ -9,7 +9,7 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
     username,
     address,
 }) => (
-    <div className="flex gap-2 bg-white py-[10px] px-3 collapsed:px-1 collapsed:justify-center">
+    <div className="flex gap-2 bg-white py-[10px] px-3 collapsed:px-1 collapsed:justify-center collapsed:bg-transparent">
         <img
             src={ImgPowerhouse}
             alt={username}

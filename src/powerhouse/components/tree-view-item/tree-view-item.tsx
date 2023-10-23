@@ -106,7 +106,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                     ...containerButtonStyle,
                 }}
                 className={twMerge(
-                    'flex flex-row w-full cursor-pointer select-none group focus:outline-none',
+                    'flex flex-row w-full cursor-pointer select-none group/tree focus:outline-none',
                     containerButtonClassName,
                 )}
                 {...containerButtonProps}
@@ -130,7 +130,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         role="button"
                         onClick={onOptionsClickHandler}
                         className={twMerge(
-                            'w-6 h-6 mx-3 hidden group-hover:inline-block focus:outline-none',
+                            'w-6 h-6 mx-3 hidden group-hover/tree:inline-block focus:outline-none',
                             optionsButtonClassName,
                         )}
                         {...containerOptionsButtonProps}
@@ -144,7 +144,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 {secondaryIcon && (
                     <img
                         src={secondaryIcon}
-                        className="flex self-end w-6 h-6 mx-3 group-hover:hidden pointer-events-none"
+                        className="flex self-end w-6 h-6 mx-3 group-hover/tree:hidden pointer-events-none"
                     />
                 )}
             </div>
