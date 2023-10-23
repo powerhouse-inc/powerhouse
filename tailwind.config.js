@@ -12,7 +12,7 @@ module.exports = {
         extend: {},
     },
     plugins: [
-        reactAriaComponents(),
+        reactAriaComponents({ prefix: 'rac' }),
         themeSwapper({
             themes: [
                 {
