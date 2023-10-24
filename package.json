@@ -1,6 +1,6 @@
 {
     "name": "@powerhousedao/design-system",
-    "version": "1.0.0",
+    "version": "0.0.0-semantic-release",
     "description": "",
     "files": [
         "/dist"
@@ -8,6 +8,9 @@
     "type": "module",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "build": "vite build",
         "check-types": "tsc --noemit --emitDeclarationOnly false --project tsconfig.json",
@@ -16,7 +19,8 @@
         "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
         "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|tsx|json)\"",
-        "test": "jest"
+        "test": "jest",
+        "release": "semantic-release"
     },
     "repository": {
         "type": "git",
@@ -28,7 +32,12 @@
         "url": "https://github.com/powerhouse-inc/design-system/issues"
     },
     "homepage": "https://github.com/powerhouse-inc/design-system#readme",
+    "engines": {
+        "node": ">=18.17.0"
+    },
     "devDependencies": {
+        "@semantic-release/changelog": "^6.0.3",
+        "@semantic-release/git": "^10.0.1",
         "@storybook/addon-essentials": "^7.5.1",
         "@storybook/addon-interactions": "^7.5.1",
         "@storybook/addon-links": "^7.5.1",
@@ -65,6 +74,7 @@
         "react": "^18.2.0",
         "react-aria-components": "^1.0.0-beta.1",
         "react-dom": "^18.2.0",
+        "semantic-release": "^22.0.5",
         "storybook": "^7.5.1",
         "tailwind-merge": "^1.14.0",
         "tailwindcss": "^3.3.3",
