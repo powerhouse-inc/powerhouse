@@ -1,6 +1,6 @@
 {
     "name": "@powerhousedao/design-system",
-    "version": "0.0.0-semantic-release",
+    "version": "1.0.0-alpha.1",
     "description": "",
     "files": [
         "/dist"
