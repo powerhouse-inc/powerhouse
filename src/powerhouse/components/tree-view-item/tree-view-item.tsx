@@ -95,13 +95,16 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         ...containerOptionsButtonProps
     } = optionsButtonProps;
 
+    const levelPadding = level * 10;
+    const caretPadding = children ? 0 : 24;
+
     return (
         <div {...divProps}>
             <div
                 role="button"
                 onClick={onClickItemHandler}
                 style={{
-                    paddingLeft: `${level * 10}px`,
+                    paddingLeft: `${levelPadding + caretPadding}px`,
 
                     ...containerButtonStyle,
                 }}
@@ -111,13 +114,15 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 )}
                 {...containerButtonProps}
             >
-                <img
-                    src={CaretIcon}
-                    className={twMerge(
-                        open && 'rotate-90',
-                        'transition ease delay-50 pointer-events-none',
-                    )}
-                />
+                {children && (
+                    <img
+                        src={CaretIcon}
+                        className={twMerge(
+                            open && 'rotate-90',
+                            'transition ease delay-50 pointer-events-none',
+                        )}
+                    />
+                )}
                 {icon && (
                     <img
                         src={open ? expandedIcon || icon : icon}
