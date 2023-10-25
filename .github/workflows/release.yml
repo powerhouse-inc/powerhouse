@@ -4,6 +4,9 @@ on:
   push:
     branches: [production, main]
 
+env:
+  HUSKY: 0
+
 jobs:
   release:
     name: Release
