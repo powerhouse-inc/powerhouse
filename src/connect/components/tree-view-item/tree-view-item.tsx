@@ -120,7 +120,7 @@ export const ConnectTreeViewItem: React.FC<
             className={twMerge(isDropTarget && 'rounded-lg bg-[#F4F4F4]')}
             buttonProps={{
                 className: twMerge(
-                    'py-3 rounded-lg hover:bg-[#F1F5F9]',
+                    'py-3 rounded-lg hover:bg-[#F1F5F9] hover:to-[#F1F5F9]',
                     typeof buttonClassName === 'string' && buttonClassName,
                 ),
                 ...restButtonProps,

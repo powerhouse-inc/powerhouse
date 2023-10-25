@@ -8,9 +8,16 @@ import FolderClose from '@/assets/icons/folder-close-fill.svg';
 import FolderOpen from '@/assets/icons/folder-open-fill.svg';
 import SyncingIcon from '@/assets/icons/syncing.svg';
 
-const meta = {
+const meta: Meta<typeof TreeViewItem> = {
     title: 'Powerhouse/Components/TreeView/TreeViewItem',
     component: TreeViewItem,
+    decorators: [
+        Story => (
+            <div className="w-[312px] p-8 bg-white to-white">
+                <Story />
+            </div>
+        ),
+    ],
     argTypes: {
         children: { control: { type: 'text' } },
         label: { control: { type: 'text' } },
@@ -33,7 +40,7 @@ const meta = {
             ],
         },
     },
-} satisfies Meta<typeof TreeViewItem>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -85,7 +92,7 @@ export const Primary: Story = {
     },
 };
 
-const itemClassName = 'rounded-lg py-3 hover:bg-[#F1F5F9]';
+const itemClassName = 'rounded-lg py-3 hover:bg-[#F1F5F9] hover:to-[#F1F5F9]';
 
 const StyledTreeViewItem: React.FC<TreeViewItemProps> = props => {
     return (

@@ -129,7 +129,12 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         className="pointer-events-none"
                     />
                 )}
-                {label && <div className="ml-2 flex flex-1">{label}</div>}
+                {label && (
+                    <div className="ml-2 flex flex-1 overflow-hidden whitespace-nowrap relative">
+                        <span className="absolute right-0 w-12 h-full bg-gradient-to-r from-transparent to-inherit" />
+                        {label}
+                    </div>
+                )}
                 {onOptionsClick && (
                     <div
                         role="button"

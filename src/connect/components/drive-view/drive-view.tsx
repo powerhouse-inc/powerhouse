@@ -30,7 +30,7 @@ export const DriveView: React.FC<DriveViewProps> = ({
         <div
             className={twMerge(
                 'pb-2',
-                type === 'public' && 'bg-bg rounded-lg',
+                type === 'public' && 'bg-bg to-bg rounded-lg',
                 className,
             )}
             {...props}
