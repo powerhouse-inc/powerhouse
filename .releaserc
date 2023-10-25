@@ -1,6 +1,6 @@
 {
     "branches": [
-        "master",
+        "production",
         {
             "name": "main",
             "prerelease": "alpha"
