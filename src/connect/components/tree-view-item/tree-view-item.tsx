@@ -39,6 +39,7 @@ export interface TreeItem {
     status?: ItemStatus;
     expanded?: boolean;
     children?: TreeItem[];
+    isSelected?: boolean;
 }
 
 export interface ConnectTreeViewItemProps
@@ -121,13 +122,16 @@ export const ConnectTreeViewItem: React.FC<
             buttonProps={{
                 className: twMerge(
                     'py-3 rounded-lg hover:bg-[#F1F5F9] hover:to-[#F1F5F9]',
+                    item.isSelected && 'bg-[#F1F5F9] to-[#F1F5F9]',
                     typeof buttonClassName === 'string' && buttonClassName,
                 ),
                 ...restButtonProps,
             }}
             onOptionsClick={onOptionsClick}
             optionsButtonProps={optionsButtonProps}
-            {...(item.status && { secondaryIcon: getStatusIcon(item.status) })}
+            {...(item.status && {
+                secondaryIcon: getStatusIcon(item.status),
+            })}
             {...getItemIcon(item.type)}
             {...divProps}
         >
