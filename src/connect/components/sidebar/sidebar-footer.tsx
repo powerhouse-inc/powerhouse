@@ -18,14 +18,14 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         <SidebarFooter
             {...props}
             className={twMerge(
-                'border-t border-[#2326271A] p-4 collapsed:px-1',
+                'border-t border-[#2326271A] p-4 collapsed:px-1 expanding:px-1',
                 className,
             )}
         >
             <SidebarUser username={username} address={address} />
-            <Button className="flex gap-3 py-3 w-full px-5 collapsed:px-3">
+            <Button className="flex gap-3 py-3 w-full px-5 expanding:px-3 collapsed:px-3">
                 <IconSettings />
-                <span className="font-semibold text-sm leading-6 text-[#404446] collapsed:hidden">
+                <span className="font-semibold text-sm leading-6 text-[#404446] expanding:hidden collapsed:hidden">
                     Settings
                 </span>
             </Button>

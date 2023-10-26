@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 const reactAriaComponents = require('tailwindcss-react-aria-components');
 const themeSwapper = require('tailwindcss-theme-swapper');
+const animate = require('tailwindcss-animate');
 const plugin = require('tailwindcss/plugin');
 
 module.exports = {
@@ -12,6 +13,7 @@ module.exports = {
         extend: {},
     },
     plugins: [
+        animate,
         reactAriaComponents({ prefix: 'rac' }),
         themeSwapper({
             themes: [
@@ -42,6 +44,9 @@ module.exports = {
         }),
         plugin(function ({ addVariant }) {
             addVariant('collapsed', ':merge(.group).collapsed &');
+            addVariant('collapsing', ':merge(.group).collapsing &');
+            addVariant('expanded', ':merge(.group).expanded &');
+            addVariant('expanding', ':merge(.group).expanding &');
         }),
     ],
 };

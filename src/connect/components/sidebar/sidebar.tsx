@@ -34,7 +34,7 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
         >
             <SidebarPanel>
                 <ConnectSidebarHeader onToggle={onToggle} />
-                {!collapsed ? props.children : null}
+                <div className="expanded:block hidden">{props.children}</div>
             </SidebarPanel>
             <ConnectSidebarFooter username={username} address={address} />
         </Sidebar>
