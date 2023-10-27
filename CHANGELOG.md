@@ -1,3 +1,10 @@
+# [1.0.0-alpha.3](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2023-10-27)
+
+
+### Features
+
+* added sidebar collapse animation ([9706446](https://github.com/powerhouse-inc/design-system/commit/9706446a5d830a24daebe5f31a35a9ed2e6f77d6))
+
 # [1.0.0-alpha.2](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2023-10-26)
 
 
