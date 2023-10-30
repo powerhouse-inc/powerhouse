@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DropDownMenu Component should match snapshot 1`] = `
+<DocumentFragment>
+  <button
+    aria-expanded="false"
+    aria-haspopup="true"
+    aria-label="menu"
+    class="outline-none"
+    data-rac=""
+    id="react-aria-:r0:"
+    type="button"
+  >
+    <div>
+      ☰
+    </div>
+  </button>
+</DocumentFragment>
+`;
