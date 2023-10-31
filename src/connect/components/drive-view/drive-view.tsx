@@ -1,29 +1,44 @@
 import IconGear from '@/assets/icons/gear.svg?react';
+import type { DropEvent } from 'react-aria';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
-import { ConnectTreeView, ConnectTreeViewProps, TreeItem } from '..';
+import { ConnectTreeView, ConnectTreeViewProps, ItemType, TreeItem } from '..';
 
 export type DriveType = 'public' | 'local' | 'cloud';
 
+export interface DriveTreeItem extends TreeItem {
+    type: ItemType.LocalDrive | ItemType.NetworkDrive | ItemType.PublicDrive;
+}
+
 export interface DriveViewProps
-    extends Pick<
-            ConnectTreeViewProps,
-            | 'onDropEvent'
-            | 'onItemClick'
-            | 'onItemOptionsClick'
-            | 'defaultItemOptions'
-        >,
+    extends Pick<ConnectTreeViewProps, 'defaultItemOptions'>,
         React.HTMLAttributes<HTMLDivElement> {
     type: DriveType;
     name: string;
-    items: TreeItem[];
+    drives: DriveTreeItem[];
+    onDropEvent?: (
+        item: TreeItem,
+        target: TreeItem,
+        event: DropEvent,
+        drive: DriveTreeItem,
+    ) => void;
+    onItemClick?: (
+        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+        item: TreeItem,
+        drive: DriveTreeItem,
+    ) => void;
+    onItemOptionsClick?: (
+        item: TreeItem,
+        option: React.Key,
+        drive: DriveTreeItem,
+    ) => void;
 }
 
 export const DriveView: React.FC<DriveViewProps> = ({
     className,
     type,
     name,
-    items,
+    drives,
     onDropEvent,
     onItemClick,
     onItemOptionsClick,
@@ -48,13 +63,15 @@ export const DriveView: React.FC<DriveViewProps> = ({
                 </Button>
             </div>
             <div className="py-2">
-                {items.map(item => (
+                {drives.map(drive => (
                     <ConnectTreeView
-                        key={item.id}
-                        items={item}
-                        onDropEvent={onDropEvent}
-                        onItemClick={onItemClick}
-                        onItemOptionsClick={onItemOptionsClick}
+                        key={drive.id}
+                        items={drive}
+                        onDropEvent={(...args) => onDropEvent?.(...args, drive)}
+                        onItemClick={(...args) => onItemClick?.(...args, drive)}
+                        onItemOptionsClick={(...args) =>
+                            onItemOptionsClick?.(...args, drive)
+                        }
                         defaultItemOptions={defaultItemOptions}
                     />
                 ))}

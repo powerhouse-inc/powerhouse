@@ -134,7 +134,7 @@ export const Sidebar: Story = {
                     className="mx-2 mb-2"
                     defaultItemOptions={defaultOptions}
                     onItemOptionsClick={onItemOptionsClick}
-                    items={[
+                    drives={[
                         {
                             id: 'drive',
                             label: 'MakerDAO Atlas',
@@ -150,7 +150,7 @@ export const Sidebar: Story = {
                     className="mb-2"
                     defaultItemOptions={defaultOptions}
                     onItemOptionsClick={onItemOptionsClick}
-                    items={[
+                    drives={[
                         {
                             id: 'cloud 1',
                             label: 'Powerhouse Team Drive',
@@ -172,7 +172,7 @@ export const Sidebar: Story = {
                     name="My Local Drives"
                     defaultItemOptions={defaultOptions}
                     onItemOptionsClick={onItemOptionsClick}
-                    items={[
+                    drives={[
                         {
                             id: 'local',
                             label: 'Local Device',

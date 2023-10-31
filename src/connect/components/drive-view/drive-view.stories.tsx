@@ -27,7 +27,7 @@ const meta: Meta<typeof DriveView> = {
             options: ['public', 'local', 'cloud'],
         },
         name: { control: { type: 'string' } },
-        items: { control: { type: 'object' } },
+        drives: { control: { type: 'object' } },
         onItemClick: { control: { type: 'action' } },
         onDropEvent: { control: { type: 'action' } },
         onItemOptionsClick: { control: { type: 'action' } },
@@ -122,7 +122,7 @@ const items = [
 
 export const Public: Story = {
     args: {
-        items: [
+        drives: [
             {
                 id: 'drive',
                 label: 'MakerDAO Atlas',
@@ -139,7 +139,7 @@ export const Public: Story = {
 
 export const Cloud: Story = {
     args: {
-        items: [
+        drives: [
             {
                 id: 'cloud',
                 label: 'Powerhouse Team Drive',
@@ -163,7 +163,7 @@ export const Cloud: Story = {
 
 export const Local: Story = {
     args: {
-        items: [
+        drives: [
             {
                 id: 'local',
                 label: 'Local Device',

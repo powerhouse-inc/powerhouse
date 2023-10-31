@@ -10,7 +10,7 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
     address,
 }) => (
     <div
-        className={`flex gap-2 bg-white py-[10px] px-3 collapsing:bg-transparent
+        className={`flex gap-2 bg-white py-[10px] rounded-sm px-3 collapsing:bg-transparent
             collapsed:px-1 collapsed:justify-center collapsed:bg-transparent
             expanding:px-1 expanding:justify-center expanding:bg-transparent
         `}

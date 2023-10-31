@@ -36,7 +36,7 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
       class="flex-shrink-0 border-t border-[#2326271A] p-4 collapsed:px-1 expanding:px-1"
     >
       <div
-        class="flex gap-2 bg-white py-[10px] px-3 collapsing:bg-transparent
+        class="flex gap-2 bg-white py-[10px] rounded-sm px-3 collapsing:bg-transparent
             collapsed:px-1 collapsed:justify-center collapsed:bg-transparent
             expanding:px-1 expanding:justify-center expanding:bg-transparent
         "
