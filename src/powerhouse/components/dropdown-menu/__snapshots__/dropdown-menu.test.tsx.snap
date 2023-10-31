@@ -1,5 +1,27 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`DropDownMenu Component should match snapshot (open menu) 1`] = `
+<DocumentFragment>
+  <button
+    aria-controls="react-aria-:r3:"
+    aria-expanded="true"
+    aria-haspopup="true"
+    aria-label="menu"
+    class="outline-none"
+    data-focus-visible="true"
+    data-focused="true"
+    data-pressed="true"
+    data-rac=""
+    id="react-aria-:r2:"
+    type="button"
+  >
+    <div>
+      ☰
+    </div>
+  </button>
+</DocumentFragment>
+`;
+
 exports[`DropDownMenu Component should match snapshot 1`] = `
 <DocumentFragment>
   <button

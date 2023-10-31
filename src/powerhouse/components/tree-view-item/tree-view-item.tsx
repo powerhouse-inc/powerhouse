@@ -126,7 +126,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                     </div>
                 )}
                 {optionsContent && (
-                    <div className="w-6 h-6 mx-3 hidden group-hover/tree-item:inline-block">
+                    <div className="w-6 h-6 px-3 box-content hidden group-hover/tree-item:inline-block">
                         {optionsContent}
                     </div>
                 )}

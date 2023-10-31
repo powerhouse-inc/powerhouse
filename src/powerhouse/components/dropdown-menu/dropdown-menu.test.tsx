@@ -28,6 +28,24 @@ describe('DropDownMenu Component', () => {
         expect(asFragment()).toMatchSnapshot();
     });
 
+    it('should match snapshot (open menu)', () => {
+        const { asFragment } = render(
+            <DropdownMenu onItemClick={() => {}} items={items}>
+                <div>{children}</div>
+            </DropdownMenu>,
+        );
+
+        fireEvent(
+            screen.getByText(children),
+            new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
+
+        expect(asFragment()).toMatchSnapshot();
+    });
+
     it('should render correctly', () => {
         render(
             <DropdownMenu onItemClick={() => {}} items={items}>
