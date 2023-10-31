@@ -8,7 +8,10 @@ export type DriveType = 'public' | 'local' | 'cloud';
 export interface DriveViewProps
     extends Pick<
             ConnectTreeViewProps,
-            'onDropEvent' | 'onItemClick' | 'onItemOptionsClick'
+            | 'onDropEvent'
+            | 'onItemClick'
+            | 'onItemOptionsClick'
+            | 'defaultItemOptions'
         >,
         React.HTMLAttributes<HTMLDivElement> {
     type: DriveType;
@@ -24,6 +27,7 @@ export const DriveView: React.FC<DriveViewProps> = ({
     onDropEvent,
     onItemClick,
     onItemOptionsClick,
+    defaultItemOptions,
     ...props
 }) => {
     return (
@@ -51,6 +55,7 @@ export const DriveView: React.FC<DriveViewProps> = ({
                         onDropEvent={onDropEvent}
                         onItemClick={onItemClick}
                         onItemOptionsClick={onItemOptionsClick}
+                        defaultItemOptions={defaultItemOptions}
                     />
                 ))}
             </div>

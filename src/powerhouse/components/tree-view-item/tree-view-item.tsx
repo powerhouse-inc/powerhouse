@@ -1,5 +1,4 @@
 import CaretIcon from '@/assets/icons/caret.svg';
-import VerticalDots from '@/assets/icons/vertical-dots.svg';
 import React, { useEffect, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 
@@ -16,8 +15,11 @@ export interface TreeViewItemProps
         event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     ) => void;
     secondaryIcon?: string;
-    buttonProps?: React.HTMLAttributes<HTMLDivElement>;
-    optionsButtonProps?: React.HTMLAttributes<HTMLDivElement>;
+    buttonProps?: React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLDivElement>,
+        HTMLDivElement
+    >;
+    optionsContent?: React.ReactNode;
 }
 
 const injectLevelProps = (
@@ -54,9 +56,9 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         expandedIcon,
         secondaryIcon,
         onOptionsClick,
+        optionsContent,
         level = 0,
         buttonProps = {},
-        optionsButtonProps = {},
         ...divProps
     } = props;
 
@@ -77,23 +79,11 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         onClick && onClick(e);
     };
 
-    const onOptionsClickHandler = (
-        e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    ) => {
-        e.stopPropagation();
-        onOptionsClick && onOptionsClick(e);
-    };
-
     const {
         className: containerButtonClassName,
         style: containerButtonStyle,
         ...containerButtonProps
     } = buttonProps;
-
-    const {
-        className: optionsButtonClassName,
-        ...containerOptionsButtonProps
-    } = optionsButtonProps;
 
     const levelPadding = level * 10;
     const caretPadding = children ? 0 : 24;
@@ -135,20 +125,9 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         {label}
                     </div>
                 )}
-                {onOptionsClick && (
-                    <div
-                        role="button"
-                        onClick={onOptionsClickHandler}
-                        className={twMerge(
-                            'w-6 h-6 mx-3 hidden group-hover/tree-item:inline-block focus:outline-none',
-                            optionsButtonClassName,
-                        )}
-                        {...containerOptionsButtonProps}
-                    >
-                        <img
-                            src={VerticalDots}
-                            className="w-6 h-6 pointer-events-none"
-                        />
+                {optionsContent && (
+                    <div className="w-6 h-6 mx-3 hidden group-hover/tree-item:inline-block">
+                        {optionsContent}
                     </div>
                 )}
                 {secondaryIcon && (

@@ -5,6 +5,7 @@ import {
     Menu,
     MenuTrigger,
     Popover,
+    PopoverProps,
 } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
@@ -15,14 +16,16 @@ export interface DropdownMenuProps {
     className?: string;
     menuClassName?: string;
     menuItemClassName?: string;
+    popoverProps?: PopoverProps;
 }
 
 export const DropdownMenu = (props: DropdownMenuProps) => {
     const {
         items,
         children,
-        onItemClick,
         className,
+        onItemClick,
+        popoverProps,
         menuClassName,
         menuItemClassName,
     } = props;
@@ -35,7 +38,7 @@ export const DropdownMenu = (props: DropdownMenuProps) => {
             >
                 {children}
             </Button>
-            <Popover>
+            <Popover {...popoverProps}>
                 <Menu
                     onAction={onItemClick}
                     className={twMerge(

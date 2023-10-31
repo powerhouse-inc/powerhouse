@@ -1,3 +1,7 @@
+import FilesIcon from '@/assets/icons/files-earmark-fill.svg';
+import FolderIcon from '@/assets/icons/folder-plus-fill.svg';
+import PencilIcon from '@/assets/icons/pencil-fill.svg';
+import TrashIcon from '@/assets/icons/trash-fill.svg';
 import type { Meta, StoryObj } from '@storybook/react';
 import { ItemStatus, ItemType } from '../tree-view-item';
 import { DriveView } from './drive-view';
@@ -27,11 +31,36 @@ const meta: Meta<typeof DriveView> = {
         onItemClick: { control: { type: 'action' } },
         onDropEvent: { control: { type: 'action' } },
         onItemOptionsClick: { control: { type: 'action' } },
+        defaultItemOptions: { control: { type: 'object' } },
     },
 };
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+const defaultOptions = [
+    {
+        id: 'duplicate',
+        label: 'Duplicate',
+        icon: FilesIcon,
+    },
+    {
+        id: 'new-folder',
+        label: 'New Folder',
+        icon: FolderIcon,
+    },
+    {
+        id: 'rename',
+        label: 'Rename',
+        icon: PencilIcon,
+    },
+    {
+        id: 'delete',
+        label: 'Delete',
+        icon: TrashIcon,
+        className: 'text-[#EA4335]',
+    },
+];
 
 const items = [
     {
@@ -104,6 +133,7 @@ export const Public: Story = {
         ],
         name: 'Public drives',
         type: 'public',
+        defaultItemOptions: defaultOptions,
     },
 };
 
@@ -127,6 +157,7 @@ export const Cloud: Story = {
         ],
         name: 'Secure Cloud Storage',
         type: 'cloud',
+        defaultItemOptions: defaultOptions,
     },
 };
 
@@ -143,5 +174,6 @@ export const Local: Story = {
         ],
         name: 'My Local Drives',
         type: 'local',
+        defaultItemOptions: defaultOptions,
     },
 };

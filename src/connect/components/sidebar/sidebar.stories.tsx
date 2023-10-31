@@ -1,3 +1,8 @@
+import FilesIcon from '@/assets/icons/files-earmark-fill.svg';
+import FolderIcon from '@/assets/icons/folder-plus-fill.svg';
+import PencilIcon from '@/assets/icons/pencil-fill.svg';
+import TrashIcon from '@/assets/icons/trash-fill.svg';
+import { action } from '@storybook/addon-actions';
 import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
 import { ConnectSidebar, DriveView, ItemStatus, ItemType } from '..';
@@ -19,6 +24,32 @@ const meta: Meta<typeof ConnectSidebar> = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+const onItemOptionsClick = action('onItemOptionsClick');
+
+const defaultOptions = [
+    {
+        id: 'duplicate',
+        label: 'Duplicate',
+        icon: FilesIcon,
+    },
+    {
+        id: 'new-folder',
+        label: 'New Folder',
+        icon: FolderIcon,
+    },
+    {
+        id: 'rename',
+        label: 'Rename',
+        icon: PencilIcon,
+    },
+    {
+        id: 'delete',
+        label: 'Delete',
+        icon: TrashIcon,
+        className: 'text-[#EA4335]',
+    },
+];
 
 const items = [
     {
@@ -101,6 +132,8 @@ export const Sidebar: Story = {
                     type="public"
                     name="Public Drives"
                     className="mx-2 mb-2"
+                    defaultItemOptions={defaultOptions}
+                    onItemOptionsClick={onItemOptionsClick}
                     items={[
                         {
                             id: 'drive',
@@ -115,6 +148,8 @@ export const Sidebar: Story = {
                     type="cloud"
                     name="Secure Cloud Storage"
                     className="mb-2"
+                    defaultItemOptions={defaultOptions}
+                    onItemOptionsClick={onItemOptionsClick}
                     items={[
                         {
                             id: 'cloud 1',
@@ -135,6 +170,8 @@ export const Sidebar: Story = {
                 <DriveView
                     type="local"
                     name="My Local Drives"
+                    defaultItemOptions={defaultOptions}
+                    onItemOptionsClick={onItemOptionsClick}
                     items={[
                         {
                             id: 'local',

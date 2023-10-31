@@ -1,3 +1,4 @@
+import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
 import { TreeViewItem, TreeViewItemProps } from './tree-view-item';
 
@@ -7,6 +8,7 @@ import CloudSlashIcon from '@/assets/icons/cloud-slash.svg';
 import FolderClose from '@/assets/icons/folder-close-fill.svg';
 import FolderOpen from '@/assets/icons/folder-open-fill.svg';
 import SyncingIcon from '@/assets/icons/syncing.svg';
+import DotsIcon from '@/assets/icons/vertical-dots.svg';
 
 const meta: Meta<typeof TreeViewItem> = {
     title: 'Powerhouse/Components/TreeView/TreeViewItem',
@@ -45,6 +47,19 @@ const meta: Meta<typeof TreeViewItem> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const optionsContent = (
+    <div
+        role="button"
+        onClick={e => {
+            e.stopPropagation();
+            action('options-click')(e);
+        }}
+        className="w-6 h-6 focus:outline-none"
+    >
+        <img src={DotsIcon} className="w-6 h-6 pointer-events-none" />
+    </div>
+);
+
 export const Primary: Story = {
     args: {
         label: 'Local Device',
@@ -52,6 +67,7 @@ export const Primary: Story = {
         icon: FolderClose,
         expandedIcon: FolderOpen,
         secondaryIcon: SyncingIcon,
+        optionsContent,
         children: (
             <>
                 <TreeViewItem
@@ -114,6 +130,7 @@ export const WithStyles: Story = {
         icon: FolderClose,
         expandedIcon: FolderOpen,
         secondaryIcon: SyncingIcon,
+        optionsContent,
         buttonProps: {
             className: itemClassName,
         },
