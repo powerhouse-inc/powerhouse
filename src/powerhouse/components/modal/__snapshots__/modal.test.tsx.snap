@@ -1,0 +1,36 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Modal Component should match snapshot 1`] = `
+<div
+  class="bg-overlay fixed inset-0 flex justify-center items-start animate-in fade-in duration-300 ease-out"
+  data-entering="true"
+  data-rac=""
+  data-testid="modal"
+  style="--visual-viewport-height: 768px;"
+>
+  <div
+    class="flex justify-center relative animate-in zoom-in-95 ease-out duration-300"
+    data-entering="true"
+    data-rac=""
+  >
+    <div
+      style="border: 0px; clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; width: 1px; white-space: nowrap;"
+    >
+      <button
+        aria-label="Dismiss"
+        id="react-aria-:r0:"
+        tabindex="-1"
+      />
+    </div>
+    <section
+      class="bg-white outline-none"
+      role="dialog"
+      tabindex="-1"
+    >
+      <div>
+        Modal Content
+      </div>
+    </section>
+  </div>
+</div>
+`;

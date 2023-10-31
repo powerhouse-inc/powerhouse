@@ -21,4 +21,8 @@
             0px 44px 48px -12px rgba(0, 0, 0, 0.15),
             0px 2px 8px 0px rgba(0, 0, 0, 0.05);
     }
+
+    .bg-overlay {
+        background: rgba(20, 23, 24, 0.5);
+    }
 }
