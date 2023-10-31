@@ -1,13 +1,14 @@
 import * as Lib from 'document-model-libs';
-import { DocumentModel, Editor } from 'document-model/document';
+import { Action, DocumentModel, Editor } from 'document-model/document';
 import { module as DocumentModelLib } from 'document-model/document-model';
+import { editors as DspotEditors } from 'dspot-document-model-libs';
 import { atom, useAtomValue } from 'jotai';
 
 const documentModels = [
     DocumentModelLib,
     ...Lib.documentModels,
 ] as DocumentModel[];
-const editors = [...Lib.editors] as Editor[];
+const editors = [...Lib.editors, ...DspotEditors] as Editor[];
 
 export const documentModelsAtom = atom(documentModels);
 export const editorsAtom = atom(editors);

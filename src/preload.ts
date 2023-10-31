@@ -1,5 +1,9 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
+import {
+    DocumentDriveAction,
+    DocumentDriveState,
+} from 'document-model-libs/document-drive';
 import { Document } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { Theme } from './store';
@@ -55,6 +59,12 @@ const electronApi = {
         ipcRenderer.invoke('openURL', url);
     },
     setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
+    documentDrive: () =>
+        ipcRenderer.invoke('documentDrive') as Promise<
+            Document<DocumentDriveState, DocumentDriveAction>
+        >,
+    documentDriveOpen: (file: string, drive: string) =>
+        ipcRenderer.invoke('documentDrive:open', file, drive),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);
