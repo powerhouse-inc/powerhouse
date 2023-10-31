@@ -1,3 +1,14 @@
+# [1.0.0-alpha.4](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2023-10-31)
+
+
+### Features
+
+* **dropdown-menu:** 🎨 added offset to dropdown menu ([0e711fa](https://github.com/powerhouse-inc/design-system/commit/0e711fa02946db7548e0bb1e4e63e53cc8491113))
+* **dropdown-menu:** 🚀 Added ConnectDropdownMenu Component ([e2f7cb2](https://github.com/powerhouse-inc/design-system/commit/e2f7cb2d2b2741da00ec02d27772f74fde3d6590))
+* **dropdown-menu:** 🚀 added DropdownMenu component ([aad28ad](https://github.com/powerhouse-inc/design-system/commit/aad28ad1869358c4ebdc1e17590a4731ed21f332))
+* **dropdown-menu:** 🚀 ConnectDropdownMenu integration ([0533b13](https://github.com/powerhouse-inc/design-system/commit/0533b13c1a901975193d2c9277e08809d02c2a10))
+* **dropdown-menu:** 🚀 Fix TreeViewItem size for DropdownMenu node ([2f6a4ae](https://github.com/powerhouse-inc/design-system/commit/2f6a4aef4bed9d0e75ea6fa870d0517c4d4f8098))
+
 # [1.0.0-alpha.3](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2023-10-27)
 
 
