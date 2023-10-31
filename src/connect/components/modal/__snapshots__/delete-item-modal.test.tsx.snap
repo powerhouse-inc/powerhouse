@@ -1,0 +1,65 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Modal Component should match snapshot 1`] = `
+<div
+  class="bg-overlay fixed inset-0 flex justify-center items-start animate-in fade-in duration-300 ease-out"
+  data-entering="true"
+  data-rac=""
+  data-testid="delete-modal"
+  style="--visual-viewport-height: 768px;"
+>
+  <div
+    class="flex justify-center relative top-10 animate-in zoom-in-95 ease-out duration-300"
+    data-entering="true"
+    data-rac=""
+  >
+    <div
+      style="border: 0px; clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; width: 1px; white-space: nowrap;"
+    >
+      <button
+        aria-label="Dismiss"
+        id="react-aria-:r0:"
+        tabindex="-1"
+      />
+    </div>
+    <section
+      class="bg-white outline-none rounded-3xl"
+      role="dialog"
+      tabindex="-1"
+    >
+      <div
+        class="w-[465px] py-12 px-8 text-[#565868]"
+      >
+        <div
+          class="text-2xl font-semibold text-center"
+        >
+          Delete “Ecosystem Actors” folder?
+        </div>
+        <div
+          class="text-xl mt-8 text-center"
+        >
+          Are you sure you want to delete this folder? All files and subfolders within it will be removed.
+        </div>
+        <div
+          class="mt-8 flex justify-center gap-3"
+        >
+          <button
+            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#E8ECEFBF] text-[#141718]"
+            data-rac=""
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#EA4335] text-[#FEFEFE]"
+            data-rac=""
+            type="button"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+`;
