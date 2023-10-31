@@ -129,6 +129,7 @@ export const ConnectTreeViewItem: React.FC<
                 popoverProps={{
                     triggerRef: containerRef,
                     placement: 'bottom end',
+                    offset: -10,
                 }}
             >
                 <img src={DotsIcon} className="w-6 h-6 pointer-events-none" />
