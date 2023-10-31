@@ -1,0 +1,91 @@
+type FolderNode {
+    path: String!
+    name: String!
+    hash: String!
+    kind: String!
+}
+
+type FileNode {
+    path: String!
+    name: String!
+    hash: String!
+    kind: String!
+    documentType: String!
+}
+
+union Node = FolderNode | FileNode
+
+type Drive {
+    id: ID!
+    name: String!
+    hash: String!
+    nodes: [Node!]!
+}
+
+type DocumentDriveState {
+    drives: [Drive!]!
+}
+
+# Node
+
+input AddFileInput {
+    drive: ID!
+    path: String!
+    name: String!
+    hash: String!
+    documentType: String!
+}
+
+input AddFolderInput {
+    drive: ID!
+    path: String!
+    name: String!
+    hash: String!
+}
+
+input DeleteNodeInput {
+    drive: ID!
+    path: String!
+}
+
+input UpdateFileInput {
+    drive: ID!
+    path: String!
+    name: String
+    hash: String
+    documentType: String
+    document: String
+}
+
+input UpdateNodeInput {
+    drive: ID!
+    path: String!
+    name: String
+    hash: String
+}
+
+input CopyNodeInput {
+    drive: ID!
+    srcPath: String!
+    distPath: String!
+}
+
+# Drive
+
+input AddDriveInput {
+    id: ID!
+    name: String!
+    hash: String!
+    nodes: [Node!]!
+}
+
+input UpdateDriveInput {
+    id: ID!
+    name: String
+    hash: String
+    nodes: [Node!]
+}
+
+input DeleteDriveInput {
+    id: ID!
+}

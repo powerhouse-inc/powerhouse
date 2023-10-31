@@ -1,0 +1,127 @@
+{
+    "id": "powerhouse/document-drive",
+    "name": "DocumentDrive",
+    "extension": "phdd",
+    "description": "",
+    "author": {
+        "name": "Powerhouse Inc",
+        "website": "https://www.powerhouse.inc/"
+    },
+    "specifications": [
+        {
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "schema": "interface Node {\n    id: ID!\n    path: String!\n    name: String!\n    hash: String!\n}\n\ntype FolderNode implements Node {\n    kind: String!\n}\n\ntype FileNode implements Node {\n    kind: String!\n    documentType: String!\n    document: String!\n}\n\ntype Drive {\n    id: ID!\n    name: String!\n    hash: String!\n    nodes: [Node!]!\n}\n\ntype DocumentDriveState {\n\tdrives: [Drive!]!\n}",
+                "initialValue": "{\"drives\":[]}",
+                "examples": []
+            },
+            "modules": [
+                {
+                    "id": "GRzuvv78tBvmB6ciitokLfonNHA=",
+                    "name": "Node",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "7xiTdxonc9yEASR8sfV/KnbSV10=",
+                            "name": "ADD_FILE",
+                            "description": "",
+                            "schema": "input AddFileInput {\n    drive: ID!\n    id: ID!\n    path: String!\n    name: String!\n    hash: String!\n    documentType: String!\n    document: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        },
+                        {
+                            "id": "4lzNMMKKdIAtEU6i12xLgi9hp+U=",
+                            "name": "ADD_FOLDER",
+                            "description": "",
+                            "schema": "input AddFolderInput {\n    drive: ID!\n    id: ID!\n    path: String!\n    name: String!\n    hash: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        },
+                        {
+                            "id": "53jH2/3TWTTcgCJiv2C+BmuC6i0=",
+                            "name": "DELETE_NODE",
+                            "description": "",
+                            "schema": "input DeleteNodeInput {\n    drive: ID!\n    path: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        },
+                        {
+                            "id": "pNn+Y1/HVq/GNMk7t0u3g3gtMLE=",
+                            "name": "UPDATE_FILE",
+                            "description": "",
+                            "schema": "input UpdateFileInput {\n    drive: ID!\n    id: ID!\n    path: String\n    name: String\n    hash: String\n    documentType: String\n    document: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        },
+                        {
+                            "id": "P0x1M8Mnt+Q/+9nggkwgVbfybsc=",
+                            "name": "UPDATE_NODE",
+                            "description": "",
+                            "schema": "input UpdateNodeInput {\n    drive: ID!\n    id: ID!\n    path: String\n    name: String\n    hash: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        },
+                        {
+                            "id": "vnQ7OB5b3wGLgjhbgJqAIpA+JLE=",
+                            "name": "COPY_NODE",
+                            "description": "",
+                            "schema": "input CopyNodeInput {\n    drive: ID!\n    srcPath: String!\n\tdistPath: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        }
+                    ]
+                },
+                {
+                    "id": "0DpPd+j7aFZfP+exb+bK29vMfxI=",
+                    "name": "Drive",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "giiVXy0ChoED+JaAngU2+JFcsRA=",
+                            "name": "ADD_DRIVE",
+                            "description": "",
+                            "schema": "input AddDriveInput {\n    id: ID!\n    name: String!\n    hash: String!\n    nodes: [Node!]!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        },
+                        {
+                            "id": "KxJDdNtLSjCfHl9mh/cnPCdPbIQ=",
+                            "name": "UPDATE_DRIVE",
+                            "description": "",
+                            "schema": "input UpdateDriveInput {\n    id: ID!\n    name: String\n    hash: String\n    nodes: [Node!]\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        },
+                        {
+                            "id": "SPyR3AdggaUQU+j2ccOeAt9AnMA=",
+                            "name": "DELETE_DRIVE",
+                            "description": "",
+                            "schema": "input DeleteDriveInput {\n    id: ID!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": []
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
