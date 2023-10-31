@@ -9,6 +9,7 @@ import {
 } from 'electron';
 import fs from 'node:fs';
 import path from 'path';
+import { initDocumentDrive } from './app/document-drive';
 import store from './app/store';
 import { Theme } from './store';
 
@@ -97,7 +98,7 @@ ipcMain.on('theme', (_, theme) => {
 const createWindow = async (options?: {
     onReady?: (window: BrowserWindow) => void;
 }) => {
-    const theme = store.get('theme', 'dark') as Theme;
+    const theme = store.get('theme', 'light') as Theme;
 
     const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
 
@@ -329,6 +330,12 @@ app.on('activate', () => {
         createWindow();
     }
 });
+
+const documentDrive = initDocumentDrive(store);
+ipcMain.handle('documentDrive', () => documentDrive.document.toDocument());
+ipcMain.handle('documentDrive:open', async (e, file, drive) =>
+    documentDrive.openFile(file, drive)
+);
 
 // keeps track of the logged in user
 let user: string;

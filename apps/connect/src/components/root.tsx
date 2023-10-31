@@ -4,6 +4,7 @@ import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useDropFile } from 'src/hooks';
+import { isElectron, isMac } from 'src/hooks/utils';
 import { useTheme, userAtom } from 'src/store';
 import Sidebar from './sidebar';
 
@@ -31,23 +32,28 @@ const Root = () => {
     const { dropProps, isDropTarget } = ROOT_FILE_DROP
         ? useDropFile(ref)
         : { dropProps: {}, isDropTarget: false };
-    const isMac = window.navigator.appVersion.indexOf('Mac') != -1;
 
     return (
-        <div className={`theme-${theme} h-screen text-text`}>
-            <div
-                className={`h-[30px] w-full
+        <div
+            className={`theme-${theme} h-screen text-text`}
+            data-theme={'ph-' + theme}
+        >
+            {isElectron && (
+                <div
+                    className={`h-[30px] w-full
                 ${isMac && 'justify-center'}
                 z-90 flex items-center bg-titlebar
                 [-webkit-app-region:drag]`}
-            >
-                <IconLogo className="ml-1 mr-[2px] p-[6px]" />
-                <IconConnect className="h-3 w-fit" />
-            </div>
+                >
+                    <IconLogo className="ml-1 mr-[2px] p-[6px]" />
+                    <IconConnect className="h-3 w-fit" />
+                </div>
+            )}
             <div
-                className={`h-[calc(100vh-30px)] overflow-auto 
-                     ${isDropTarget ? 'bg-light' : 'bg-bg'}
-                 flex items-stretch`}
+                className={`flex items-stretch overflow-auto
+                    ${isElectron ? 'h-[calc(100vh-30px)]' : 'h-screen'}
+                    ${isDropTarget ? 'bg-light' : 'bg-bg'}
+                `}
                 {...dropProps}
                 role="presentation"
                 tabIndex={0}

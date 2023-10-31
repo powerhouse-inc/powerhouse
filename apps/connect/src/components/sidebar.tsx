@@ -1,182 +1,105 @@
-import { ReactComponent as IconDraft } from '@/assets/icons/draft.svg';
-import { ReactComponent as IconFile } from '@/assets/icons/file.svg';
-import { ReactComponent as IconPlusCircle } from '@/assets/icons/plus-circle.svg';
-import { ReactComponent as IconSettings } from '@/assets/icons/settings.svg';
-import { useAtom, useAtomValue } from 'jotai';
-import { NavLink, To, useNavigate } from 'react-router-dom';
-import { useOpenFile } from 'src/hooks';
-import { sidebarCollapsedAtom, themeAtom, useTabs, userAtom } from 'src/store';
+import {
+    ConnectSidebar,
+    DriveTreeItem,
+    DriveView,
+    ItemType,
+    TreeItem,
+} from '@powerhousedao/design-system';
+import {
+    DocumentDriveAction,
+    DocumentDriveState,
+    Drive,
+    Node,
+} from 'document-model-libs/document-drive';
+import { Document } from 'document-model/document';
+import { useAtom } from 'jotai';
+import { useEffect, useState } from 'react';
+import { sidebarCollapsedAtom, useTabs } from 'src/store';
 import { useGetDocumentModel } from 'src/store/document-model';
-import { saveFile } from 'src/utils/file';
-import ThemeSelector from './theme-selector';
+import { loadFile } from 'src/utils/file';
 
-interface IProps {
-    collapsed: boolean;
-    toggleCollapse: () => void;
+function mapDocumentDriveNodeToTreeItem(
+    node: Node,
+    allNodes: Node[]
+): TreeItem {
+    const isFolder = node.kind === 'folder';
+    const pathRegex = new RegExp(`^${node.path}/[^/]+`);
+
+    return {
+        id: node.path,
+        label: node.name,
+        type: isFolder ? ItemType.Folder : ItemType.File,
+        children: isFolder
+            ? allNodes
+                  .filter(childrenNode => pathRegex.test(childrenNode.path))
+                  .map(childrenNode =>
+                      mapDocumentDriveNodeToTreeItem(childrenNode, allNodes)
+                  )
+            : undefined,
+    };
 }
 
-function SidebarHeader({ collapsed, toggleCollapse }: IProps) {
-    const navigate = useNavigate();
-    const theme = useAtomValue(themeAtom);
-    return (
-        <div
-            className={`flex items-center px-[10px] py-10
-            ${collapsed ? 'justify-center' : 'justify-between pr-[10px]'}
-        `}
-        ></div>
-    );
-}
-
-export function SidebarLink({
-    collapsed,
-    to,
-    Icon,
-    title,
-}: {
-    collapsed: boolean;
-    to: To;
-    Icon: React.FunctionComponent<React.SVGAttributes<SVGElement>>;
-    title: string;
-}) {
-    const theme = useAtomValue(themeAtom);
-
-    return (
-        <NavLink
-            className={({
-                isActive,
-            }) => `flex w-full items-center rounded-lg fill-current p-3
-        ${collapsed ? 'justify-center' : 'justify-start'}
-        ${
-            isActive
-                ? `text-current ${
-                      theme === 'dark' ? 'bg-selected' : 'bg-selected-light'
-                  }`
-                : 'text-neutral-4 hover:text-current'
-        }`}
-            to={to}
-        >
-            <div className="flex w-6 justify-center">
-                <Icon className="fill-inherit" />
-            </div>
-            {collapsed || <span className="ml-5">{title}</span>}
-        </NavLink>
-    );
-}
-
-export function SidebarButton({
-    collapsed,
-    onClick,
-    Icon,
-    title,
-}: {
-    collapsed: boolean;
-    onClick: () => void;
-    Icon: React.FunctionComponent<React.SVGAttributes<SVGElement>>;
-    title: string;
-}) {
-    const theme = useAtomValue(themeAtom);
-
-    return (
-        <button
-            className={`
-            flex w-full items-center rounded-lg fill-current p-3 text-neutral-4 hover:text-current
-            ${collapsed ? 'justify-center' : 'justify-start'}
-        `}
-            onClick={onClick}
-        >
-            <div className="flex w-6 justify-center">
-                <Icon className="fill-inherit" />
-            </div>
-            {collapsed || <span className="ml-5">{title}</span>}
-        </button>
-    );
+function mapDocumentDriveToTreeItem(drive: Drive): DriveTreeItem {
+    return {
+        id: drive.id,
+        label: drive.name,
+        type: ItemType.LocalDrive,
+        expanded: true,
+        children: drive.nodes
+            .filter(node => !node.path.includes('/'))
+            .map(node => mapDocumentDriveNodeToTreeItem(node, drive.nodes)),
+    };
 }
 
 export default function () {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
-
-    const theme = useAtomValue(themeAtom);
-    const user = useAtomValue(userAtom);
-    const { addTab, selectedTab, getItem, fromDocument } = useTabs();
-    const getDocumentModel = useGetDocumentModel();
     function toggleCollapse() {
         setCollapsed(value => !value);
     }
+    const getDocumentModel = useGetDocumentModel();
+    const { addTab, fromDocument } = useTabs();
 
-    const separator = (
-        <hr
-            className={`my-4 ${
-                theme === 'dark' ? 'border-neutral-6' : 'border-neutral-3'
-            }`}
-        />
-    );
+    const [documentDrive, setDocumentDrive] = useState<Document<
+        DocumentDriveState,
+        DocumentDriveAction
+    > | null>(null);
 
-    const login = () => {
-        window.electronAPI?.openURL('http://localhost:3000/');
-    };
+    useEffect(() => {
+        window.electronAPI?.documentDrive().then(setDocumentDrive);
+    }, []);
 
-    const handleOpenFile = useOpenFile(async document => {
-        addTab(await fromDocument(document));
-    });
+    async function openFile(path: string, drive: string) {
+        const file = await window.electronAPI?.documentDriveOpen(path, drive);
+        const document = await loadFile(await file, getDocumentModel);
+        const tab = await fromDocument(document);
+        addTab(tab);
+    }
 
-    async function handleSaveFile() {
-        if (!selectedTab) {
-            return;
+    function handleNodeClick(item: TreeItem, drive: DriveTreeItem) {
+        if (item.type === ItemType.File) {
+            openFile(item.id, drive.id);
         }
-        const tab = getItem(selectedTab);
-        if (!tab.document) {
-            throw new Error('Current tab is not a document');
-        }
-
-        saveFile(tab.document, getDocumentModel);
     }
 
     return (
-        <div
-            className={`flex h-full flex-shrink-0
-                flex-col bg-light px-4 pb-4 [overflow:overlay]
-                ${collapsed ? 'w-[92px]' : 'w-[320px]'}
-            `}
+        <ConnectSidebar
+            collapsed={collapsed}
+            onToggle={toggleCollapse}
+            username="Willow.eth"
+            address="0x8343...3u432u32"
         >
-            <div className={`flex-1 pt-10 ${!collapsed && 'px-2'}`}>
-                <SidebarLink
-                    to="/"
-                    title="New Document"
-                    Icon={IconPlusCircle}
-                    collapsed={collapsed}
+            {documentDrive && (
+                <DriveView
+                    type="local"
+                    name={documentDrive.name}
+                    drives={documentDrive.state.drives.map(
+                        mapDocumentDriveToTreeItem
+                    )}
+                    onItemClick={(_, item, drive) => {
+                        handleNodeClick(item, drive);
+                    }}
                 />
-
-                <SidebarButton
-                    onClick={handleOpenFile}
-                    title="Open"
-                    Icon={IconFile}
-                    collapsed={collapsed}
-                />
-
-                <SidebarButton
-                    onClick={handleSaveFile}
-                    title="Save"
-                    Icon={IconDraft}
-                    collapsed={collapsed}
-                />
-                {/* <SidebarLink
-                    to="/templates"
-                    title="Templates"
-                    Icon={IconTemplate}
-                    collapsed={collapsed}
-                /> */}
-                {separator}
-                <SidebarLink
-                    to="/settings"
-                    title="Settings"
-                    Icon={IconSettings}
-                    collapsed={collapsed}
-                />
-            </div>
-            {collapsed ? separator : <div className="h-4" />}
-            <div className={`${!collapsed && 'px-2'} mt-4`}>
-                <ThemeSelector />
-            </div>
-        </div>
+            )}
+        </ConnectSidebar>
     );
 }

@@ -7,7 +7,7 @@ export async function saveFile(
     const documentModel = getDocumentModel(document.documentType);
     if (!documentModel) {
         throw new Error(
-            `Document model not supported: $document.documentType}`
+            `Document model not supported: ${document.documentType}`
         );
     }
 

@@ -968,6 +968,9 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
+"@powerhousedao/design-system@file:.yalc/@powerhousedao/design-system":
+  version "1.0.0-alpha.3"
+
 "@react-aria/breadcrumbs@^3.5.1":
   version "3.5.1"
   resolved "https://registry.yarnpkg.com/@react-aria/breadcrumbs/-/breadcrumbs-3.5.1.tgz#e4bddbaebc7fe0fed34c904a03929618affc5730"
@@ -2679,15 +2682,10 @@ camelcase@^6.2.0:
   resolved "https://registry.yarnpkg.com/camelcase/-/camelcase-6.3.0.tgz#5685b95eb209ac9c0c177467778c9c84df58ba9a"
   integrity sha512-Gmy6FhYlCY7uOElZUSbxo2UCDH8owEk996gkbrpsgGtrJLM3J7jGxl9Ic7Qwwj4ivOE5AWZWRMecDdF7hqGjFA==
 
-caniuse-lite@^1.0.30001449:
-  version "1.0.30001478"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001478.tgz#0ef8a1cf8b16be47a0f9fc4ecfc952232724b32a"
-  integrity sha512-gMhDyXGItTHipJj2ApIvR+iVB5hd0KP3svMWWXDvZOmjzJJassGLMfxRkQCSYgGd2gtdL/ReeiyvMSFD1Ss6Mw==
-
-caniuse-lite@^1.0.30001464:
-  version "1.0.30001486"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001486.tgz#56a08885228edf62cbe1ac8980f2b5dae159997e"
-  integrity sha512-uv7/gXuHi10Whlj0pp5q/tsK/32J2QSqVRKQhs2j8VsDCjgyruAh/eEXHF822VqO9yT6iZKw3nRwZRSPBE9OQg==
+caniuse-lite@^1.0.30001449, caniuse-lite@^1.0.30001464:
+  version "1.0.30001554"
+  resolved "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001554.tgz"
+  integrity sha512-A2E3U//MBwbJVzebddm1YfNp7Nud5Ip+IPn4BozBmn4KqVX7AvluoIDFWjsv5OkGnKUXQVmMSoMKLa3ScCblcQ==
 
 chalk@^2.0.0:
   version "2.4.2"
@@ -3111,15 +3109,11 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model-libs@^1.1.5:
-  version "1.1.5"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.5.tgz#d3ced7c3d20432f1142c28515ca31517a29b673d"
-  integrity sha512-ozuxPhKkGjA8Za8yD8SHacwE7xqMHuWATe7Grcis+njkXHfv8IHZ0kWeXLaS0z5JP/Vq2XUldhQvQ//5QWl2wg==
+"document-model-libs@file:.yalc/document-model-libs":
+  version "1.1.7"
 
-document-model@^1.0.5:
+"document-model@file:.yalc/document-model":
   version "1.0.5"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.5.tgz#4612774ed18a70a91d880852fcbdcb6166c1bd86"
-  integrity sha512-kcZ0Ra6k2xzL33VSwwdaQsnjYnPXR+OCOP8/UL/GipqJas5PpZTKC+GNzVm8RiYb12ZUYyJ6BMzyP2DWolS0+g==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
@@ -3133,6 +3127,9 @@ dot-prop@^6.0.1:
   integrity sha512-tE7ztYzXHIeyvc7N+hR3oi7FIbf/NIjVP9hmAt3yMXzrQ072/fpjGLx2GxNxGxUl5V73MEqYzioOMoVhGMJ5cA==
   dependencies:
     is-obj "^2.0.0"
+
+"dspot-document-model-libs@file:.yalc/dspot-document-model-libs":
+  version "1.0.0"
 
 ee-first@1.1.1:
   version "1.1.1"
