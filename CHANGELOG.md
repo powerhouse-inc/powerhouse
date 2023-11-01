@@ -1,3 +1,11 @@
+# [1.0.0-alpha.5](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2023-11-01)
+
+
+### Features
+
+* **modal:** 🚀 added base Modal component ([b660842](https://github.com/powerhouse-inc/design-system/commit/b660842f103aeb1cd9da2f4c95d7e205df601add))
+* **modal:** 🚀 added ConnectDeleteItemModal component ([7a82024](https://github.com/powerhouse-inc/design-system/commit/7a820248c5efc4106c2c076587615431462e6b38))
+
 # [1.0.0-alpha.4](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2023-10-31)
 
 
