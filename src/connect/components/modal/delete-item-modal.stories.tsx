@@ -10,7 +10,6 @@ const meta: Meta<typeof ConnectDeleteItemModal> = {
         onClose: { control: { type: 'action' } },
         dialogProps: { control: { type: 'object' } },
         modalProps: { control: { type: 'object' } },
-        overlayProps: { control: { type: 'object' } },
         body: { control: { type: 'text' } },
         header: { control: { type: 'text' } },
         onDelete: { control: { type: 'action' } },

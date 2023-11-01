@@ -11,7 +11,6 @@ const meta: Meta<typeof Modal> = {
         onClose: { control: { type: 'action' } },
         dialogProps: { control: { type: 'object' } },
         modalProps: { control: { type: 'object' } },
-        overlayProps: { control: { type: 'object' } },
     },
 };
 

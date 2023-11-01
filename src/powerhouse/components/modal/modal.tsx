@@ -7,14 +7,14 @@ import {
 } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
-export interface ModalProps {
+export interface ModalProps
+    extends ModalOverlayProps,
+        React.RefAttributes<HTMLDivElement> {
     open?: boolean;
     onClose?: () => void;
     children?: React.ReactNode;
-    overlayProps?: ModalOverlayProps & React.RefAttributes<HTMLDivElement>;
     modalProps?: ModalOverlayProps & React.RefAttributes<HTMLDivElement>;
     dialogProps?: DialogProps & React.RefAttributes<HTMLElement>;
-    'data-testid'?: string;
 }
 
 export const Modal: React.FC<ModalProps> = props => {
@@ -24,11 +24,9 @@ export const Modal: React.FC<ModalProps> = props => {
         open = false,
         modalProps = {},
         dialogProps = {},
-        overlayProps = {},
+        className: modalOverlayClassName,
+        ...modalOverlayProps
     } = props;
-
-    const { className: modalOverlayClassName, ...modalOverlayProps } =
-        overlayProps;
 
     const { className: ariaModalClassName, ...ariaModalProps } = modalProps;
     const { className: ariaDialogClassName, ...ariaDialogProps } = dialogProps;
@@ -47,7 +45,6 @@ export const Modal: React.FC<ModalProps> = props => {
             isDismissable
             isOpen={open}
             onOpenChange={onClose}
-            data-testid={props['data-testid']}
             {...modalOverlayProps}
         >
             <AriaModal
