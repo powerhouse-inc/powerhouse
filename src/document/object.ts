@@ -65,7 +65,7 @@ export abstract class BaseDocument<T, A extends Action> {
      */
     protected static async stateFromFile<T, A extends Action>(
         path: string,
-        reducer: Reducer<T, A>
+        reducer: Reducer<T, A>,
     ) {
         const state = await loadFromFile<T, A>(path, reducer);
         return state;
@@ -128,6 +128,13 @@ export abstract class BaseDocument<T, A extends Action> {
     }
 
     /**
+     * Returns the current document as an object
+     */
+    public toDocument() {
+        return this._document;
+    }
+
+    /**
      * Gets the attachment associated with the given key.
      * @param attachment - The key of the attachment to retrieve.
      */
@@ -178,7 +185,7 @@ export abstract class BaseDocument<T, A extends Action> {
      */
     public loadState(
         state: Pick<ExtendedState<T>, 'state' | 'name'>,
-        operations: number
+        operations: number,
     ) {
         this.dispatch(loadState(state, operations));
         return this;
@@ -202,7 +209,7 @@ export function applyMixins(derivedCtor: any, constructors: any[]) {
                 derivedCtor.prototype,
                 name,
                 Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
-                    Object.create(null)
+                    Object.create(null),
             );
         });
     });
