@@ -1,6 +1,6 @@
 import {
     ConnectDropdownMenu,
-    ConnectDropdownMenuProps,
+    ConnectDropdownMenuItem,
 } from '@/connect/components/dropdown-menu';
 import {
     TreeViewItem,
@@ -8,18 +8,22 @@ import {
     UseDraggableTargetProps,
     useDraggableTarget,
 } from '@/powerhouse';
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 import CheckFilledIcon from '@/assets/icons/check-filled.svg';
 import CheckIcon from '@/assets/icons/check.svg';
 import CloudSlashIcon from '@/assets/icons/cloud-slash.svg';
+import FilesIcon from '@/assets/icons/files-earmark-fill.svg';
 import FolderClose from '@/assets/icons/folder-close-fill.svg';
 import FolderOpen from '@/assets/icons/folder-open-fill.svg';
+import FolderIcon from '@/assets/icons/folder-plus-fill.svg';
 import HDDIcon from '@/assets/icons/hdd-fill.svg';
 import MIcon from '@/assets/icons/m-fill.svg';
+import PencilIcon from '@/assets/icons/pencil-fill.svg';
 import ServerIcon from '@/assets/icons/server-fill.svg';
 import SyncingIcon from '@/assets/icons/syncing.svg';
+import TrashIcon from '@/assets/icons/trash-fill.svg';
 import DotsIcon from '@/assets/icons/vertical-dots.svg';
 
 export enum ItemType {
@@ -37,26 +41,52 @@ export enum ItemStatus {
     Offline = 'offline',
 }
 
-export interface TreeItem {
+export interface TreeItem<T extends string = string> {
     id: string;
     label: string;
     type: ItemType;
     status?: ItemStatus;
     expanded?: boolean;
-    children?: TreeItem[];
+    children?: TreeItem<T>[];
     isSelected?: boolean;
-    options?: ConnectDropdownMenuProps['items'];
+    options?: ConnectDropdownMenuItem<T>[];
 }
 
-export interface ConnectTreeViewItemProps
+export const DefaultOptions = [
+    {
+        id: 'duplicate',
+        label: 'Duplicate',
+        icon: FilesIcon,
+    },
+    {
+        id: 'new-folder',
+        label: 'New Folder',
+        icon: FolderIcon,
+    },
+    {
+        id: 'rename',
+        label: 'Rename',
+        icon: PencilIcon,
+    },
+    {
+        id: 'delete',
+        label: 'Delete',
+        icon: TrashIcon,
+        className: 'text-[#EA4335]',
+    },
+] as const;
+
+export type DefaultOptionId = (typeof DefaultOptions)[number]['id'];
+
+export interface ConnectTreeViewItemProps<T extends string = DefaultOptionId>
     extends Pick<
         TreeViewItemProps,
         'children' | 'onClick' | 'buttonProps' | 'level'
     > {
-    item: TreeItem;
-    onDropEvent?: UseDraggableTargetProps<TreeItem>['onDropEvent'];
-    defaultOptions?: ConnectDropdownMenuProps['items'];
-    onOptionsClick?: (item: TreeItem, option: React.Key) => void;
+    item: TreeItem<T>;
+    onDropEvent?: UseDraggableTargetProps<TreeItem<T>>['onDropEvent'];
+    defaultOptions?: ConnectDropdownMenuItem<T>[];
+    onOptionsClick?: (item: TreeItem<T>, option: T) => void;
 }
 
 const getStatusIcon = (status: ItemStatus) => {
@@ -90,9 +120,9 @@ const getItemIcon = (type: ItemType) => {
     }
 };
 
-export const ConnectTreeViewItem: React.FC<
-    ConnectTreeViewItemProps
-> = props => {
+export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
+    props: ConnectTreeViewItemProps<T>,
+) {
     const {
         item,
         onClick,
@@ -101,27 +131,27 @@ export const ConnectTreeViewItem: React.FC<
         onOptionsClick,
         level = 0,
         buttonProps = {},
-        defaultOptions,
+        defaultOptions = DefaultOptions,
         ...divProps
     } = props;
 
     const containerRef = useRef(null);
 
-    const { dragProps, dropProps, isDropTarget } = useDraggableTarget<TreeItem>(
-        {
-            data: item,
-            onDropEvent,
-        },
-    );
+    const { dragProps, dropProps, isDropTarget } = useDraggableTarget<
+        TreeItem<T>
+    >({
+        data: item,
+        onDropEvent,
+    });
 
     const { className: buttonClassName, ...restButtonProps } = buttonProps;
 
     const optionsContent = (defaultOptions || item.options) &&
         onOptionsClick && (
-            <ConnectDropdownMenu
+            <ConnectDropdownMenu<T>
                 items={
-                    (item.options ||
-                        defaultOptions) as ConnectDropdownMenuProps['items']
+                    item.options ||
+                    (defaultOptions as ConnectDropdownMenuItem<T>[])
                 }
                 menuClassName="bg-white cursor-pointer"
                 menuItemClassName="hover:bg-[#F1F5F9] px-2"
@@ -163,4 +193,4 @@ export const ConnectTreeViewItem: React.FC<
             {children}
         </TreeViewItem>
     );
-};
+}

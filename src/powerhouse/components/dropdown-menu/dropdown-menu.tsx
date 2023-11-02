@@ -9,9 +9,9 @@ import {
 } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
-export interface DropdownMenuProps {
-    onItemClick: (itemID: React.Key) => void;
-    items: Array<{ id: string; content: React.ReactNode }>;
+export interface DropdownMenuProps<T = string> {
+    onItemClick: (itemID: T) => void;
+    items: Array<{ id: T; content: React.ReactNode }>;
     children: React.ReactNode;
     className?: string;
     menuClassName?: string;
@@ -19,7 +19,7 @@ export interface DropdownMenuProps {
     popoverProps?: PopoverProps;
 }
 
-export const DropdownMenu = (props: DropdownMenuProps) => {
+export function DropdownMenu<T extends string>(props: DropdownMenuProps<T>) {
     const {
         items,
         children,
@@ -40,7 +40,7 @@ export const DropdownMenu = (props: DropdownMenuProps) => {
             </Button>
             <Popover {...popoverProps}>
                 <Menu
-                    onAction={onItemClick}
+                    onAction={key => onItemClick(key as T)}
                     className={twMerge(
                         'outline-none overflow-hidden',
                         menuClassName,
@@ -62,4 +62,4 @@ export const DropdownMenu = (props: DropdownMenuProps) => {
             </Popover>
         </MenuTrigger>
     );
-};
+}

@@ -6,19 +6,21 @@ import {
     TreeItem,
 } from '../tree-view-item';
 
-export interface ConnectTreeViewProps
+export interface ConnectTreeViewProps<T extends string = string>
     extends Omit<React.HTMLAttributes<HTMLElement>, 'onClick'> {
-    items: TreeItem;
-    onDropEvent?: ConnectTreeViewItemProps['onDropEvent'];
+    items: TreeItem<T>;
+    onDropEvent?: ConnectTreeViewItemProps<T>['onDropEvent'];
     onItemClick?: (
         event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-        item: TreeItem,
+        item: TreeItem<T>,
     ) => void;
-    onItemOptionsClick?: ConnectTreeViewItemProps['onOptionsClick'];
-    defaultItemOptions?: ConnectTreeViewItemProps['defaultOptions'];
+    onItemOptionsClick?: ConnectTreeViewItemProps<T>['onOptionsClick'];
+    defaultItemOptions?: ConnectTreeViewItemProps<T>['defaultOptions'];
 }
 
-export const ConnectTreeView: React.FC<ConnectTreeViewProps> = props => {
+export function ConnectTreeView<T extends string = string>(
+    props: ConnectTreeViewProps<T>,
+) {
     const {
         items,
         onItemClick,
@@ -28,9 +30,9 @@ export const ConnectTreeView: React.FC<ConnectTreeViewProps> = props => {
         ...elementProps
     } = props;
 
-    const renderTreeItems = (item: TreeItem, level = 0) => {
+    function renderTreeItems(item: TreeItem<T>, level = 0) {
         return (
-            <ConnectTreeViewItem
+            <ConnectTreeViewItem<T>
                 item={item}
                 key={item.id}
                 onDropEvent={onDropEvent}
@@ -42,7 +44,7 @@ export const ConnectTreeView: React.FC<ConnectTreeViewProps> = props => {
                 {item.children?.map(item => renderTreeItems(item, level + 1))}
             </ConnectTreeViewItem>
         );
-    };
+    }
 
     return renderTreeItems(items);
-};
+}

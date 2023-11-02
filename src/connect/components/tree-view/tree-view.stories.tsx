@@ -1,7 +1,3 @@
-import FilesIcon from '@/assets/icons/files-earmark-fill.svg';
-import FolderIcon from '@/assets/icons/folder-plus-fill.svg';
-import PencilIcon from '@/assets/icons/pencil-fill.svg';
-import TrashIcon from '@/assets/icons/trash-fill.svg';
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { ItemStatus, ItemType, TreeItem } from '../tree-view-item';
@@ -21,30 +17,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-const defaultOptions = [
-    {
-        id: 'duplicate',
-        label: 'Duplicate',
-        icon: FilesIcon,
-    },
-    {
-        id: 'new-folder',
-        label: 'New Folder',
-        icon: FolderIcon,
-    },
-    {
-        id: 'rename',
-        label: 'Rename',
-        icon: PencilIcon,
-    },
-    {
-        id: 'delete',
-        label: 'Delete',
-        icon: TrashIcon,
-        className: 'text-[#EA4335]',
-    },
-];
 
 const treeItem: TreeItem = {
     id: 'drive',
@@ -171,7 +143,6 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
 export const TreeView: Story = {
     args: {
         items: treeItem,
-        defaultItemOptions: defaultOptions,
     },
     render: args => <TreeViewImpl {...args} />,
 };
