@@ -1,0 +1,51 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`TreeViewInput Component should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="flex flex-row items-center pr-5"
+    style="padding-left: 24px;"
+  >
+    <div>
+      Icon
+    </div>
+    <div
+      class="flex flex-1 ml-1 min-w-0"
+      data-rac=""
+    >
+      <input
+        aria-label="input-label"
+        class="flex flex-1 outline-none bg-inherit min-w-0"
+        data-focus-visible="true"
+        data-focused="true"
+        data-rac=""
+        id="react-aria-:r5:"
+        type="text"
+        value="My Documents"
+      />
+    </div>
+    <div
+      class="flex flex-row items-center"
+    >
+      <button
+        class="outline-none"
+        data-rac=""
+        type="button"
+      >
+        <div>
+          Submit Icon
+        </div>
+      </button>
+      <button
+        class="outline-none ml-1"
+        data-rac=""
+        type="button"
+      >
+        <div>
+          Cancel Icon
+        </div>
+      </button>
+    </div>
+  </div>
+</DocumentFragment>
+`;
