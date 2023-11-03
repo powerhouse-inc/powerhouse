@@ -16,19 +16,25 @@ export const editorsAtom = atom(editors);
 export const useDocumentModels = () => useAtomValue(documentModelsAtom);
 export const useEditors = () => useAtomValue(editorsAtom);
 
-const getDocumentModel = (
+function getDocumentModel<S = unknown, A extends Action = Action>(
     documentType: string,
     documentModels: DocumentModel[]
-) => documentModels.find(d => d.documentModel.id === documentType);
+) {
+    return documentModels.find(d => d.documentModel.id === documentType) as
+        | DocumentModel<S, A>
+        | undefined;
+}
 
 const getEditor = (documentType: string, editors: Editor[]) =>
     editors.find(e => e.documentTypes.includes(documentType)) ||
     editors.find(e => e.documentTypes.includes('*'));
 
-export const useDocumentModel = (documentType: string) => {
+export function useDocumentModel<S = unknown, A extends Action = Action>(
+    documentType: string
+) {
     const documentModels = useDocumentModels();
-    return getDocumentModel(documentType, documentModels);
-};
+    return getDocumentModel<S, A>(documentType, documentModels);
+}
 
 export const useEditor = (documentType: string) => {
     const editors = useEditors();

@@ -5,7 +5,6 @@ import {
     DocumentDriveAction,
     DocumentDriveState,
     utils as DriveUtils,
-    FileNode,
     UpdateFileInput,
 } from 'document-model-libs/document-drive';
 import {
@@ -119,7 +118,12 @@ class ElectronDocumentDrive implements IDocumentDrive {
     }
 
     async openFile(path: string, driveId: string) {
-        const file = this.getNode(driveId, path) as FileNode;
+        const file = this.getNode(driveId, path);
+        if (!file) {
+            throw new Error(
+                `Node with path ${path} not found on drive ${driveId}`
+            );
+        }
         if (!DriveUtils.isFileNode(file)) {
             throw new Error(
                 `Node with path ${path} on drive ${driveId} is not a file`
