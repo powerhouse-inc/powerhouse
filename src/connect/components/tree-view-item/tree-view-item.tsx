@@ -34,6 +34,11 @@ export enum ItemType {
     PublicDrive = 'public-drive',
 }
 
+export enum ActionType {
+    Update = 'update',
+    New = 'new',
+}
+
 export enum ItemStatus {
     Available = 'available',
     AvailableOffline = 'available-offline',
@@ -45,6 +50,7 @@ export interface TreeItem<T extends string = string> {
     id: string;
     label: string;
     type: ItemType;
+    action?: ActionType;
     status?: ItemStatus;
     expanded?: boolean;
     children?: TreeItem<T>[];

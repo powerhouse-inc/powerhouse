@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useKeyboard } from 'react-aria';
 import { Button, Input, PressEvent, TextField } from 'react-aria-components';
 import ClickAwayListener from 'react-click-away-listener';
@@ -34,6 +34,13 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
     } = props;
 
     const [text, setText] = useState(initialValue);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useLayoutEffect(() => {
+        setTimeout(() => {
+            inputRef.current?.focus();
+        }, 500);
+    }, []);
 
     const { keyboardProps } = useKeyboard({
         onKeyUp(e) {
@@ -64,7 +71,7 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
             >
                 {icon}
                 <TextField
-                    className="flex flex-1 ml-1 min-w-0"
+                    className="flex flex-1 ml-2 min-w-0"
                     value={text}
                     onChange={setText}
                     aria-label={ariaLabel}
@@ -73,6 +80,7 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
                     <Input
                         className="flex flex-1 outline-none bg-inherit min-w-0"
                         placeholder={placeholder}
+                        ref={inputRef}
                     />
                 </TextField>
                 <div className="flex flex-row items-center">

@@ -10,7 +10,7 @@ exports[`TreeViewInput Component should match snapshot 1`] = `
       Icon
     </div>
     <div
-      class="flex flex-1 ml-1 min-w-0"
+      class="flex flex-1 ml-2 min-w-0"
       data-rac=""
     >
       <input
