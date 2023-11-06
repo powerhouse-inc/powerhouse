@@ -7,7 +7,7 @@ import type {
     ExtendedState,
     Reducer,
 } from './types';
-import { loadFromFile, saveToFile } from './utils';
+import { loadFromFile, saveToFile, readOnly } from './utils';
 
 /**
  * This is an abstract class representing a document and provides methods
@@ -75,14 +75,14 @@ export abstract class BaseDocument<T, A extends Action> {
      *    Gets the current state of the document.
      */
     get state() {
-        return this._document.state;
+        return readOnly(this._document.state);
     }
 
     /**
      *    Gets the list of operations performed on the document.
      */
     get operations() {
-        return this._document.operations;
+        return readOnly(this._document.operations);
     }
 
     /**
@@ -124,14 +124,14 @@ export abstract class BaseDocument<T, A extends Action> {
      * Gets the initial state of the document.
      */
     get initialState() {
-        return this._document.initialState;
+        return readOnly(this._document.initialState);
     }
 
     /**
      * Returns the current document as an object
      */
     public toDocument() {
-        return this._document;
+        return readOnly(this._document);
     }
 
     /**

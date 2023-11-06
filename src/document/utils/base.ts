@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { hash } from './node';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
+import { castImmutable, freeze } from 'immer';
 
 export function isBaseAction(action: Action): action is BaseAction {
     return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
@@ -131,3 +132,7 @@ export const hashKey = (date?: Date, randomLimit = 1000) => {
     const random = Math.random() * randomLimit;
     return hash(`${(date ?? new Date()).toISOString()}${random}`);
 };
+
+export function readOnly<T>(value: T) {
+    return castImmutable(freeze(value, true));
+}
