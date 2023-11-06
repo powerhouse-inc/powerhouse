@@ -7,6 +7,7 @@ import { FileInput } from './utils';
 export { z } from './schema';
 export type * from './schema/types';
 export type { FileInput } from './utils';
+export type { Immutable } from 'immer';
 
 /**
  * Defines the basic structure of an action.

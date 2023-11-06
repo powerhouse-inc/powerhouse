@@ -7,6 +7,7 @@ import {
     ExtendedState,
     ImmutableStateReducer,
     Reducer,
+    Immutable,
 } from '../types';
 import { hash } from './node';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
@@ -133,6 +134,6 @@ export const hashKey = (date?: Date, randomLimit = 1000) => {
     return hash(`${(date ?? new Date()).toISOString()}${random}`);
 };
 
-export function readOnly<T>(value: T) {
+export function readOnly<T>(value: T): Immutable<T> {
     return castImmutable(freeze(value, true));
 }
