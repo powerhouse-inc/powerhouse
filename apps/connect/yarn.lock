@@ -968,8 +968,10 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
-"@powerhousedao/design-system@file:.yalc/@powerhousedao/design-system":
-  version "1.0.0-alpha.3"
+"@powerhousedao/design-system@^1.0.0-alpha.6":
+  version "1.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.6.tgz#02d4f14ba090b210938e0513aca2a8281e6039a5"
+  integrity sha512-NV96y2lxIuZY6K/JIPSO+lKFbiSEinNtShdLqFkonPgX2oWO/3p3PrTR3+Gp1BYKrMBHYCVStOpuGU6mQsBeeA==
 
 "@react-aria/breadcrumbs@^3.5.1":
   version "3.5.1"
@@ -3109,11 +3111,15 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-"document-model-libs@file:.yalc/document-model-libs":
-  version "1.1.7"
+document-model-libs@^1.1.9:
+  version "1.1.9"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.9.tgz#494d53c2547c977f85ce26651624aff426d0203d"
+  integrity sha512-yMKDhxKlbsI8wkekOekcL87QATnRH+j9ET/X4n1bVBDqctP5ssjtyfw3oL1+weXWRywktEWop05HGhC79xyj4A==
 
-"document-model@file:.yalc/document-model":
-  version "1.0.5"
+document-model@^1.0.7:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.7.tgz#88e2fa70ad6c5f4152e595198fec44abb8093806"
+  integrity sha512-I9f8vYerxzJFWPETBZr/6hb/nfNhgcLhajuqBS4lIvf/fcFfQwuc1b4txav8+6LF1+xzHVabRegrejffUBK2Dg==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
@@ -3127,9 +3133,6 @@ dot-prop@^6.0.1:
   integrity sha512-tE7ztYzXHIeyvc7N+hR3oi7FIbf/NIjVP9hmAt3yMXzrQ072/fpjGLx2GxNxGxUl5V73MEqYzioOMoVhGMJ5cA==
   dependencies:
     is-obj "^2.0.0"
-
-"dspot-document-model-libs@file:.yalc/dspot-document-model-libs":
-  version "1.0.0"
 
 ee-first@1.1.1:
   version "1.1.1"

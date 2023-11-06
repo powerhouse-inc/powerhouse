@@ -1,10 +1,12 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import {
+    AddFileInput,
     DocumentDriveAction,
     DocumentDriveState,
+    FileNode,
 } from 'document-model-libs/document-drive';
-import { Document } from 'document-model/document';
+import { Action, Document } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { Theme } from './store';
 
@@ -64,8 +66,23 @@ const electronApi = {
             ipcRenderer.invoke('documentDrive') as Promise<
                 Document<DocumentDriveState, DocumentDriveAction>
             >,
-        openfile: (file: string, drive: string) =>
-            ipcRenderer.invoke('documentDrive:open', file, drive),
+        openFile: <S = unknown, A extends Action = Action>(
+            drive: string,
+            file: string
+        ) =>
+            ipcRenderer.invoke(
+                'documentDrive:openFile',
+                drive,
+                file
+            ) as Promise<Document<S, A>>,
+        addFile: (input: AddFileInput, document: Document) =>
+            ipcRenderer.invoke(
+                'documentDrive:addFile',
+                input,
+                document
+            ) as Promise<FileNode>,
+        deleteNode: (drive: string, path: string) =>
+            ipcRenderer.invoke('documentDrive:deleteNode', drive, path),
     },
 };
 

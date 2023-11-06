@@ -6,8 +6,10 @@ import {
     DocumentDriveState,
     utils as DriveUtils,
     UpdateFileInput,
+    isFileNode,
 } from 'document-model-libs/document-drive';
 import {
+    Action,
     Document,
     ExtendedState,
     utils as baseUtils,
@@ -16,13 +18,14 @@ import ElectronStore from 'electron-store';
 import fs from 'fs/promises';
 import path from 'path';
 
-const BASE_PATH = '/Users/acaldas/dev/makerdao/document-model-libs/';
-
 interface IDocumentDrive {
     store: ElectronStore;
     basePath: string;
     document: DocumentDrive;
-    openFile: (path: string, driveId: string) => Promise<string>;
+    openFile: <S = unknown, A extends Action = Action>(
+        path: string,
+        driveId: string
+    ) => Promise<Document<S, A>>;
 }
 
 interface IElectronDocumentDriveSerialized {
@@ -49,8 +52,8 @@ class ElectronDocumentDrive implements IDocumentDrive {
         this.basePath = basePath;
     }
 
-    private getPath(...paths: string[]) {
-        return path.join(this.basePath, ...paths);
+    private getPath(driveId: string, ...paths: string[]) {
+        return path.join(this.basePath, driveId, ...paths);
     }
 
     getDrive(id: string) {
@@ -72,7 +75,10 @@ class ElectronDocumentDrive implements IDocumentDrive {
     serialize() {
         return JSON.stringify({
             basePath: this.basePath,
-            document: this.document.toDocument(),
+            document: this.document.toDocument() as Document<
+                DocumentDriveState,
+                DocumentDriveAction
+            >,
         } satisfies IElectronDocumentDriveSerialized);
     }
 
@@ -101,94 +107,90 @@ class ElectronDocumentDrive implements IDocumentDrive {
         return this.deserialize(result, store);
     }
 
-    private async saveFile(path: string, document: Document) {
-        return fs.writeFile(this.getPath(path), JSON.stringify(document), {
-            encoding: 'binary',
-        });
+    private async saveFile(driveId: string, path: string, document: Document) {
+        return fs.writeFile(
+            this.getPath(driveId, path),
+            JSON.stringify(document),
+            {
+                encoding: 'binary',
+            }
+        );
+    }
+
+    private async deleteFile(driveId: string, path: string) {
+        return fs.rm(this.getPath(driveId, path));
     }
 
     async addFile(input: AddFileInput, document: Document) {
-        await this.saveFile(input.path, document);
+        await this.saveFile(input.drive, input.path, document);
         this.document.addFile(input);
+
+        const node = this.getNode(input.drive, input.path);
+        if (!node || !isFileNode(node)) {
+            throw new Error('Error adding file');
+        }
+
+        this.save();
+        return node;
     }
 
     async updateFile(input: UpdateFileInput, document: Document) {
-        await this.saveFile(input.path, document);
+        await this.saveFile(input.drive, input.path, document);
         this.document.updateFile(input);
     }
 
-    async openFile(path: string, driveId: string) {
-        const file = this.getNode(driveId, path);
+    async deleteNode(drive: string, path: string) {
+        await this.deleteFile(drive, path);
+        this.document.deleteNode({ drive, path });
+        this.save();
+    }
+
+    async openFile<S = unknown, A extends Action = Action>(
+        drive: string,
+        path: string
+    ) {
+        const file = this.getNode(drive, path);
         if (!file) {
             throw new Error(
-                `Node with path ${path} not found on drive ${driveId}`
+                `Node with path ${path} not found on drive ${drive}`
             );
         }
         if (!DriveUtils.isFileNode(file)) {
             throw new Error(
-                `Node with path ${path} on drive ${driveId} is not a file`
+                `Node with path ${path} on drive ${drive} is not a file`
             );
         }
-        return (
-            await fs.readFile(this.getPath(file.path), {
-                encoding: 'binary',
-            })
-        ).toString();
+        const content = await fs.readFile(this.getPath(drive, file.path), {
+            encoding: 'binary',
+        });
+        return JSON.parse(content.toString()) as Document<S, A>;
     }
 
     async addDrive(input: AddDriveInput) {
         await fs.mkdir(this.getPath(input.id));
         this.document.addDrive(input);
+        this.save();
     }
 }
 
-export const initDocumentDrive = (store: ElectronStore) => {
+export const initDocumentDrive = (store: ElectronStore, path: string) => {
     let documentDrive = ElectronDocumentDrive.load(store);
 
     if (!documentDrive) {
-        documentDrive = new ElectronDocumentDrive(store, BASE_PATH, {
+        console.log('Creating document drive at ', path);
+        documentDrive = new ElectronDocumentDrive(store, path, {
             name: 'My Local Drives',
-            state: {
-                drives: [
-                    {
-                        id: baseUtils.hashKey(),
-                        name: 'Local Device',
-                        hash: 'test',
-                        nodes: [
-                            {
-                                name: 'Document Models',
-                                path: 'Document Models',
-                                hash: 'folder',
-                                kind: 'folder',
-                            },
-                            {
-                                name: 'Address Book',
-                                path: 'Document Models/addressBook.phdm.zip',
-                                hash: 'Address Book',
-                                kind: 'file',
-                                documentType: 'powerhouse/document-model',
-                            },
-                            {
-                                name: 'Document Drive',
-                                path: 'Document Models/documentDrive.phdm.zip',
-                                hash: 'Document Drive',
-                                kind: 'file',
-                                documentType: 'powerhouse/document-model',
-                            },
-                            {
-                                name: 'Document Editor',
-                                path: 'Document Models/documentEditor.phdm.zip',
-                                hash: 'Document Editor',
-                                kind: 'file',
-                                documentType: 'powerhouse/document-model',
-                            },
-                        ],
-                    },
-                ],
-            },
         });
-
         documentDrive.save();
+    }
+
+    if (!documentDrive.document.state.drives.length) {
+        documentDrive.addDrive({
+            id: baseUtils.hashKey(),
+            name: 'Local Device',
+            hash: '',
+            nodes: [],
+        });
     }
     return documentDrive;
 };

@@ -331,10 +331,16 @@ app.on('activate', () => {
     }
 });
 
-const documentDrive = initDocumentDrive(store);
+const documentDrive = initDocumentDrive(store, app.getPath('userData'));
 ipcMain.handle('documentDrive', () => documentDrive.document.toDocument());
-ipcMain.handle('documentDrive:open', async (e, file, drive) =>
-    documentDrive.openFile(file, drive)
+ipcMain.handle('documentDrive:openFile', async (_e, drive, path) =>
+    documentDrive.openFile(drive, path)
+);
+ipcMain.handle('documentDrive:addFile', (_e, input, document) =>
+    documentDrive.addFile(input, document)
+);
+ipcMain.handle('documentDrive:deleteNode', async (_e, drive, path) =>
+    documentDrive.deleteNode(drive, path)
 );
 
 // keeps track of the logged in user
