@@ -8,9 +8,6 @@ import {
 } from '@powerhousedao/design-system';
 import { Drive, Node } from 'document-model-libs/document-drive';
 import { useAtom } from 'jotai';
-import { useRef } from 'react';
-import { useDrop } from 'react-aria';
-import { FileDropItem } from 'react-aria-components';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
 import { sidebarCollapsedAtom } from 'src/store';
 
@@ -47,45 +44,17 @@ function mapDocumentDriveToTreeItem(drive: Drive): DriveTreeItem {
     };
 }
 
-function DropTarget(onFileDropped: (file: File) => void) {
-    const ref = useRef(null);
-    const { dropProps, isDropTarget } = useDrop({
-        ref,
-        async onDrop(e) {
-            const items = await Promise.all(
-                (
-                    e.items.filter(
-                        item => item.kind === 'file'
-                    ) as FileDropItem[]
-                ).map((item: FileDropItem) => {
-                    const file = item.getFile();
-                })
-            );
-        },
-    });
-
-    return (
-        <div
-            {...dropProps}
-            role="button"
-            tabIndex={0}
-            ref={ref}
-            className={`droppable ${isDropTarget ? 'target' : ''}`}
-        ></div>
-    );
-}
-
 export default function () {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
     function toggleCollapse() {
         setCollapsed(value => !value);
     }
 
-    const { documentDrive, openFile, duplicateFile } = useDocumentDrive();
+    const { documentDrive, openFile, deleteNode } = useDocumentDrive();
 
     function handleNodeClick(item: TreeItem, drive: DriveTreeItem) {
         if (item.type === ItemType.File) {
-            openFile(item.id, drive.id);
+            openFile(drive.id, item.id);
         }
     }
 
@@ -95,10 +64,9 @@ export default function () {
         drive
     ) => {
         switch (option) {
-            case 'duplicate':
-                if (item.type === ItemType.File) {
-                    duplicateFile(item.id, drive.id);
-                }
+            case 'delete':
+                deleteNode(drive.id, item.id);
+                break;
         }
     };
 

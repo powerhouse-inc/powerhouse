@@ -3,7 +3,7 @@ import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
 
 export function useOpenFile(
-    onDocument: (document: Document) => void,
+    onDocument: (document: Document, file: File) => void,
     onError?: (error: Error) => void
 ) {
     const getDocumentModel = useGetDocumentModel();
@@ -13,7 +13,7 @@ export function useOpenFile(
             const file = await fileHandle.getFile();
             const document = await loadFile(file, getDocumentModel);
             if (document) {
-                onDocument(document);
+                onDocument(document, file);
             } else {
                 throw new Error('File was not recognized.');
             }
