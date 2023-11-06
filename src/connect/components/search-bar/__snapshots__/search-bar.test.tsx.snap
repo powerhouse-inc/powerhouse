@@ -1,0 +1,49 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ConnectSearchBar Component should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="flex flex-row bg-[#FCFCFC] px-4 h-[52px] items-center rounded-xl border border-[#EFEFEF]"
+  >
+    <div
+      class="mr-3"
+    >
+      <img
+        src="test-file-stub"
+      />
+    </div>
+    <div
+      class="flex flex-1 min-w-0"
+      data-rac=""
+    >
+      <input
+        aria-label="search input"
+        class="flex flex-1 outline-none bg-inherit min-w-0 text-sm"
+        data-rac=""
+        id="react-aria-:r0:"
+        placeholder="Search Files"
+        type="text"
+        value=""
+      />
+    </div>
+    <button
+      aria-expanded="false"
+      aria-haspopup="true"
+      aria-label="menu"
+      class="ml-3 flex flex-row outline-none h-full items-center"
+      data-rac=""
+      id="react-aria-:r5:"
+      type="button"
+    >
+      <div
+        class="mr-2 text-sm text-[#6F767E] font-semibold"
+      >
+        File type
+      </div>
+      <img
+        src="test-file-stub"
+      />
+    </button>
+  </div>
+</DocumentFragment>
+`;

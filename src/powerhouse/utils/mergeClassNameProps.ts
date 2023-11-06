@@ -9,7 +9,7 @@ interface ClassNameProps {
 export function mergeClassNameProps<T extends ClassNameProps>(
     props: T,
     className: string,
-): ClassNameProps & Omit<T, 'className'> {
+): { className?: string } & Omit<T, 'className'> {
     const { className: componentClassName, ...restProps } = props;
 
     return {
