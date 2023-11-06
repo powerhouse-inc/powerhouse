@@ -1,0 +1,29 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Modal Component should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="flex flex-row bg-white rounded-2xl p-2"
+  >
+    <div>
+      Start
+    </div>
+    <div
+      class="flex flex-1 min-w-0"
+      data-rac=""
+    >
+      <input
+        aria-label="test"
+        class="flex flex-1 outline-none bg-inherit min-w-0"
+        data-rac=""
+        id="react-aria-:r0:"
+        type="text"
+        value=""
+      />
+    </div>
+    <div>
+      End
+    </div>
+  </div>
+</DocumentFragment>
+`;
