@@ -1,3 +1,10 @@
+# [1.0.0-alpha.6](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2023-11-06)
+
+
+### Features
+
+* trigger release ([5683e8b](https://github.com/powerhouse-inc/design-system/commit/5683e8b0c44c4da038632ed3620653da771c4d7f))
+
 # [1.0.0-alpha.5](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2023-11-01)
 
 
