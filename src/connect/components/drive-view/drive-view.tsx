@@ -1,4 +1,5 @@
 import IconGear from '@/assets/icons/gear.svg?react';
+import { DropItem } from '@/powerhouse/hooks';
 import type { DropEvent } from 'react-aria';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
@@ -30,7 +31,7 @@ export interface DriveViewProps<T extends string = DefaultOptionId>
     drives: DriveTreeItem<T>[];
     defaultItemOptions?: ConnectTreeViewItemProps<T>['defaultOptions'];
     onDropEvent?: (
-        item: TreeItem<T>,
+        item: DropItem<TreeItem<T>>,
         target: TreeItem<T>,
         event: DropEvent,
         drive: DriveTreeItem<T>,
