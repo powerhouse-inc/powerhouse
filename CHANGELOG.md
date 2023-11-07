@@ -1,3 +1,12 @@
+# [1.0.0-alpha.7](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.6...v1.0.0-alpha.7) (2023-11-07)
+
+
+### Features
+
+* 🚀 Added mergeClassNameProps util ([9b4bcd2](https://github.com/powerhouse-inc/design-system/commit/9b4bcd2cbd36d8c86364cf02a76433da1848b9a7))
+* **search-bar:** 🚀 Added ConnectSearchBar component ([b74507e](https://github.com/powerhouse-inc/design-system/commit/b74507eb8fefb7fe2eb3e12a6361d6faceda55a5))
+* **search-bar:** 🚀 Added TextInput component ([e85f554](https://github.com/powerhouse-inc/design-system/commit/e85f5540585e8d18d3d10a23d96f42acd1abe08b))
+
 # [1.0.0-alpha.6](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2023-11-06)
 
 
