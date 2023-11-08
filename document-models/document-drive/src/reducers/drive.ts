@@ -8,6 +8,9 @@ import { DocumentDriveDriveOperations } from '../../gen/drive/operations';
 
 export const reducer: DocumentDriveDriveOperations = {
     addDriveOperation(state, action) {
+        if (state.drives.find(drive => drive.id === action.input.id)) {
+            throw new Error(`Drive with id ${action.input.id} already exists!`);
+        }
         state.drives.push(action.input);
     },
     updateDriveOperation(state, action) {

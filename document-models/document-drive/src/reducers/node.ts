@@ -12,6 +12,13 @@ export const reducer: DocumentDriveNodeOperations = {
         const drive = state.drives.find(
             drive => drive.id === action.input.drive,
         );
+
+        if (drive?.nodes.find(node => node.path === action.input.path)) {
+            throw new Error(
+                `Node with path ${action.input.path} already exists!`,
+            );
+        }
+
         drive?.nodes.push({ ...action.input, kind: 'file' });
     },
     addFolderOperation(state, action) {
