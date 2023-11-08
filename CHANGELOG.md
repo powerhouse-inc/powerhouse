@@ -1,3 +1,10 @@
+# [1.0.0-alpha.8](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.7...v1.0.0-alpha.8) (2023-11-08)
+
+
+### Features
+
+* **drag-and-drop:** 🚀 Added support for file drop events ([0d9a05f](https://github.com/powerhouse-inc/design-system/commit/0d9a05fdd12e8c919eb7c1233d67d929a51140fc))
+
 # [1.0.0-alpha.7](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.6...v1.0.0-alpha.7) (2023-11-07)
 
 
