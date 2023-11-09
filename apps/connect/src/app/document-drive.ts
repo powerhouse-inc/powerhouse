@@ -5,6 +5,7 @@ import {
     DocumentDriveAction,
     DocumentDriveState,
     utils as DriveUtils,
+    FileNode,
     UpdateFileInput,
     isFileNode,
 } from 'document-model-libs/document-drive';
@@ -12,6 +13,7 @@ import {
     Action,
     Document,
     ExtendedState,
+    Immutable,
     utils as baseUtils,
 } from 'document-model/document';
 import ElectronStore from 'electron-store';
@@ -19,13 +21,14 @@ import fs from 'fs/promises';
 import path from 'path';
 
 interface IDocumentDrive {
-    store: ElectronStore;
-    basePath: string;
-    document: DocumentDrive;
+    getDocument(): Promise<
+        Immutable<Document<DocumentDriveState, DocumentDriveAction>>
+    >;
     openFile: <S = unknown, A extends Action = Action>(
         path: string,
         driveId: string
     ) => Promise<Document<S, A>>;
+    addFile(file: AddFileInput, document: Document): Promise<FileNode>;
 }
 
 interface IElectronDocumentDriveSerialized {
@@ -34,9 +37,9 @@ interface IElectronDocumentDriveSerialized {
 }
 
 class ElectronDocumentDrive implements IDocumentDrive {
-    store: ElectronStore;
-    basePath: string;
-    document: DocumentDrive;
+    private store: ElectronStore;
+    private basePath: string;
+    private document: DocumentDrive;
 
     static DOCUMENT_DRIVE_KEY = 'DOCUMENT_DRIVE';
 
@@ -50,6 +53,10 @@ class ElectronDocumentDrive implements IDocumentDrive {
         this.store = store;
         this.document = new DocumentDrive(initialState);
         this.basePath = basePath;
+    }
+
+    async getDocument() {
+        return this.document.toDocument();
     }
 
     private getPath(driveId: string, ...paths: string[]) {
@@ -173,7 +180,7 @@ class ElectronDocumentDrive implements IDocumentDrive {
     }
 }
 
-export const initDocumentDrive = (store: ElectronStore, path: string) => {
+export const initDocumentDrive = async (store: ElectronStore, path: string) => {
     let documentDrive = ElectronDocumentDrive.load(store);
 
     if (!documentDrive) {
@@ -184,7 +191,9 @@ export const initDocumentDrive = (store: ElectronStore, path: string) => {
         documentDrive.save();
     }
 
-    if (!documentDrive.document.state.drives.length) {
+    const document = await documentDrive.getDocument();
+
+    if (!document.state.drives.length) {
         documentDrive.addDrive({
             id: baseUtils.hashKey(),
             name: 'Local Device',
