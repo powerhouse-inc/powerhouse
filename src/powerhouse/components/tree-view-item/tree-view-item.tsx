@@ -1,12 +1,12 @@
 import CaretIcon from '@/assets/icons/caret.svg';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export interface TreeViewItemProps
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onClick'> {
     label: string;
     children?: React.ReactNode;
-    initialOpen?: boolean;
+    open?: boolean;
     expandedIcon?: string;
     icon?: string;
     level?: number;
@@ -20,6 +20,8 @@ export interface TreeViewItemProps
         HTMLDivElement
     >;
     optionsContent?: React.ReactNode;
+    topIndicator?: React.ReactNode;
+    bottomIndicator?: React.ReactNode;
 }
 
 const injectLevelProps = (
@@ -49,35 +51,20 @@ const injectLevelProps = (
 export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
     const {
         icon,
+        open,
         label,
         onClick,
         children,
-        initialOpen,
+        topIndicator,
         expandedIcon,
         secondaryIcon,
         onOptionsClick,
         optionsContent,
+        bottomIndicator,
         level = 0,
         buttonProps = {},
         ...divProps
     } = props;
-
-    const [open, setOpen] = useState(initialOpen);
-
-    const toggleOpen = () => {
-        setOpen(!open);
-    };
-
-    useEffect(() => {
-        setOpen(initialOpen);
-    }, [initialOpen]);
-
-    const onClickItemHandler = (
-        e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    ) => {
-        toggleOpen();
-        onClick && onClick(e);
-    };
 
     const {
         className: containerButtonClassName,
@@ -92,50 +79,55 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         <div {...divProps}>
             <div
                 role="button"
-                onClick={onClickItemHandler}
-                style={{
-                    paddingLeft: `${levelPadding + caretPadding}px`,
-
-                    ...containerButtonStyle,
-                }}
+                onClick={onClick}
+                style={containerButtonStyle}
                 className={twMerge(
-                    'flex flex-row w-full cursor-pointer select-none group/tree-item focus:outline-none',
+                    'flex flex-col w-full cursor-pointer select-none group/tree-item focus:outline-none relative max-h-[49px]',
                     containerButtonClassName,
                 )}
                 {...containerButtonProps}
             >
-                {children && (
-                    <img
-                        src={CaretIcon}
-                        className={twMerge(
-                            open && 'rotate-90',
-                            'transition ease delay-50 pointer-events-none',
-                        )}
-                    />
-                )}
-                {icon && (
-                    <img
-                        src={open ? expandedIcon || icon : icon}
-                        className="pointer-events-none"
-                    />
-                )}
-                {label && (
-                    <div className="ml-2 flex flex-1 overflow-hidden whitespace-nowrap relative">
-                        <span className="absolute right-0 w-12 h-full bg-gradient-to-r from-transparent to-inherit" />
-                        {label}
-                    </div>
-                )}
-                {optionsContent && (
-                    <div className="w-6 h-6 px-3 box-content hidden group-hover/tree-item:inline-block">
-                        {optionsContent}
-                    </div>
-                )}
-                {secondaryIcon && (
-                    <img
-                        src={secondaryIcon}
-                        className="flex self-end w-6 h-6 mx-3 group-hover/tree-item:hidden pointer-events-none"
-                    />
-                )}
+                <div className="absolute top-0 w-full">{topIndicator}</div>
+                <div
+                    className="flex flex-row w-full cursor-pointer"
+                    style={{ paddingLeft: `${levelPadding + caretPadding}px` }}
+                >
+                    {children && (
+                        <img
+                            src={CaretIcon}
+                            className={twMerge(
+                                open && 'rotate-90',
+                                'transition ease delay-50 pointer-events-none',
+                            )}
+                        />
+                    )}
+                    {icon && (
+                        <img
+                            src={open ? expandedIcon || icon : icon}
+                            className="pointer-events-none"
+                        />
+                    )}
+                    {label && (
+                        <div className="ml-2 flex flex-1 overflow-hidden whitespace-nowrap relative">
+                            <span className="absolute right-0 w-12 h-full bg-gradient-to-r from-transparent to-inherit" />
+                            {label}
+                        </div>
+                    )}
+                    {optionsContent && (
+                        <div className="w-6 h-6 px-3 box-content hidden group-hover/tree-item:inline-block">
+                            {optionsContent}
+                        </div>
+                    )}
+                    {secondaryIcon && (
+                        <img
+                            src={secondaryIcon}
+                            className="flex self-end w-6 h-6 mx-3 group-hover/tree-item:hidden pointer-events-none"
+                        />
+                    )}
+                </div>
+                <div className="absolute bottom-0 w-full">
+                    {bottomIndicator}
+                </div>
             </div>
             {children && (
                 <div className={twMerge(!open && 'hidden')}>

@@ -13,6 +13,8 @@ export interface CustomObjectDropItem<T = unknown> {
     kind: 'object';
     type: string;
     data: T;
+    dropAfterItem?: boolean;
+    dropBeforeItem?: boolean;
 }
 
 export type DropItem<T> = CustomObjectDropItem<T> | FileDropItem;
@@ -21,12 +23,15 @@ export interface UseDraggableTargetProps<T = unknown> {
     data: T;
     onDropEvent?: (item: DropItem<T>, target: T, event: DropEvent) => void;
     dataType?: string;
+    dropAfterItem?: boolean;
+    dropBeforeItem?: boolean;
 }
 
 export function useDraggableTarget<T = unknown>(
     props: UseDraggableTargetProps<T>,
 ) {
-    const { data, onDropEvent, dataType } = props;
+    const { data, onDropEvent, dataType, dropAfterItem, dropBeforeItem } =
+        props;
 
     const ref = useRef(null);
 
@@ -64,6 +69,8 @@ export function useDraggableTarget<T = unknown>(
                     type: dataType || CUSTOM_OBJECT_FORMAT,
                     kind: 'object',
                     data: dropData,
+                    dropAfterItem,
+                    dropBeforeItem,
                 };
                 onDropEvent?.(dropEvent, data, e);
             }

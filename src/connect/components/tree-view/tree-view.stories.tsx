@@ -1,3 +1,4 @@
+import { traverseTree } from '@/connect/utils';
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { ItemStatus, ItemType, TreeItem } from '../tree-view-item';
@@ -94,21 +95,6 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
     const { onItemClick, items: argItems, ...treeViewProps } = args;
     const [items, setItems] = useState(argItems);
 
-    const traverseTree = (
-        item: TreeItem,
-        callback: (item: TreeItem) => TreeItem,
-    ): TreeItem => {
-        const treeItem = callback(item);
-
-        if (treeItem.children) {
-            treeItem.children = treeItem.children.map(child =>
-                traverseTree(child, callback),
-            );
-        }
-
-        return { ...treeItem };
-    };
-
     const onItemClickHandler: ConnectTreeViewProps['onItemClick'] = (
         e,
         item,
@@ -118,6 +104,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
             const newTree = traverseTree(prevState, treeItem => {
                 if (treeItem.id === item.id) {
                     treeItem.isSelected = !treeItem.isSelected;
+                    treeItem.expanded = !treeItem.expanded;
                 } else {
                     treeItem.isSelected = false;
                 }

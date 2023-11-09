@@ -1,7 +1,15 @@
+import { traverseDriveById } from '@/connect/utils';
 import { action } from '@storybook/addon-actions';
 import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
-import { ConnectSidebar, DriveView, ItemStatus, ItemType } from '..';
+import { useState } from 'react';
+import {
+    ConnectSidebar,
+    DriveView,
+    DriveViewProps,
+    ItemStatus,
+    ItemType,
+} from '..';
 
 const meta: Meta<typeof ConnectSidebar> = {
     title: 'Connect/Components',
@@ -22,6 +30,39 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const onItemOptionsClick = action('onItemOptionsClick');
+
+const DriveViewImpl = (args: DriveViewProps) => {
+    const { drives: initialDrives, onItemClick, ...restArgs } = args;
+    const [drives, setDrives] = useState(initialDrives);
+
+    const onItemClickHandler: DriveViewProps['onItemClick'] = (
+        e,
+        item,
+        drive,
+    ) => {
+        const newDrives = traverseDriveById(drives, drive.id, treeItem => {
+            if (treeItem.id === item.id) {
+                return {
+                    ...treeItem,
+                    expanded: !treeItem.expanded,
+                };
+            }
+
+            return treeItem;
+        });
+
+        setDrives(newDrives);
+        onItemClick?.(e, item, drive);
+    };
+
+    return (
+        <DriveView
+            {...restArgs}
+            drives={drives}
+            onItemClick={onItemClickHandler}
+        />
+    );
+};
 
 const items = [
     {
@@ -100,7 +141,7 @@ export const Sidebar: Story = {
         address: '0x8343...3u432u32',
         children: (
             <>
-                <DriveView
+                <DriveViewImpl
                     type="public"
                     name="Public Drives"
                     className="mx-2 mb-2"
@@ -115,7 +156,7 @@ export const Sidebar: Story = {
                         },
                     ]}
                 />
-                <DriveView
+                <DriveViewImpl
                     type="cloud"
                     name="Secure Cloud Storage"
                     className="mb-2"
@@ -137,7 +178,7 @@ export const Sidebar: Story = {
                         },
                     ]}
                 />
-                <DriveView
+                <DriveViewImpl
                     type="local"
                     name="My Local Drives"
                     onItemOptionsClick={onItemOptionsClick}

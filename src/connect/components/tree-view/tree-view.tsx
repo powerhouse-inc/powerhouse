@@ -36,9 +36,10 @@ export function ConnectTreeView<T extends string = string>(
                 item={item}
                 key={item.id}
                 onDropEvent={onDropEvent}
-                onClick={e => onItemClick?.(e, item)}
                 onOptionsClick={onItemOptionsClick}
                 defaultOptions={defaultItemOptions}
+                onClick={e => onItemClick?.(e, item)}
+                disableDropBetween={level === 0 && !item.expanded}
                 {...elementProps}
             >
                 {item.children?.map(item => renderTreeItems(item, level + 1))}

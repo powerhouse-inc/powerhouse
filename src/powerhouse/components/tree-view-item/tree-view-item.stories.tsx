@@ -23,7 +23,6 @@ const meta: Meta<typeof TreeViewItem> = {
     argTypes: {
         children: { control: { type: 'text' } },
         label: { control: { type: 'text' } },
-        initialOpen: { control: { type: 'boolean' } },
         expandedIcon: { control: { type: 'text' } },
         icon: { control: { type: 'text' } },
         onClick: { control: { type: 'action' } },
@@ -63,7 +62,6 @@ const optionsContent = (
 export const Primary: Story = {
     args: {
         label: 'Local Device',
-        initialOpen: true,
         icon: FolderClose,
         expandedIcon: FolderOpen,
         secondaryIcon: SyncingIcon,
@@ -126,7 +124,6 @@ const StyledTreeViewItem: React.FC<TreeViewItemProps> = props => {
 export const WithStyles: Story = {
     args: {
         label: 'Local Device',
-        initialOpen: true,
         icon: FolderClose,
         expandedIcon: FolderOpen,
         secondaryIcon: SyncingIcon,
