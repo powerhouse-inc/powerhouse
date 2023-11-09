@@ -8,7 +8,7 @@ const { documentModelsDir, editorsDir } = getConfig();
 
 const entry = {
     index: 'index.ts',
-    documentModels: resolve(documentModelsDir, 'index.ts'),
+    'document-models': resolve(documentModelsDir, 'index.ts'),
     editors: resolve(editorsDir, 'index.ts'),
 };
 
