@@ -1,3 +1,11 @@
+# [1.0.0-alpha.9](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.8...v1.0.0-alpha.9) (2023-11-09)
+
+
+### Features
+
+* **drag-and-drop:** 🚀 Added drop between items support ([efb5ea9](https://github.com/powerhouse-inc/design-system/commit/efb5ea960c7023e84bbcd137029e70f44923ff83))
+* **drag-and-drop:** avoid render top and bottom when isn't needed ([50151d1](https://github.com/powerhouse-inc/design-system/commit/50151d1397b5516192692b7e54ec7043b684dac5))
+
 # [1.0.0-alpha.8](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.7...v1.0.0-alpha.8) (2023-11-08)
 
 
