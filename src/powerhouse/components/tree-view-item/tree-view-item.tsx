@@ -87,7 +87,9 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 )}
                 {...containerButtonProps}
             >
-                <div className="absolute top-0 w-full">{topIndicator}</div>
+                {topIndicator && (
+                    <div className="absolute top-0 w-full">{topIndicator}</div>
+                )}
                 <div
                     className="flex flex-row w-full cursor-pointer"
                     style={{ paddingLeft: `${levelPadding + caretPadding}px` }}
@@ -125,9 +127,11 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         />
                     )}
                 </div>
-                <div className="absolute bottom-0 w-full">
-                    {bottomIndicator}
-                </div>
+                {bottomIndicator && (
+                    <div className="absolute bottom-0 w-full">
+                        {bottomIndicator}
+                    </div>
+                )}
             </div>
             {children && (
                 <div className={twMerge(!open && 'hidden')}>
