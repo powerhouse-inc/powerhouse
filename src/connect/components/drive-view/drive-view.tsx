@@ -1,6 +1,6 @@
 import IconGear from '@/assets/icons/gear.svg?react';
 import { DropItem } from '@/powerhouse/hooks';
-import type { DropEvent } from 'react-aria';
+import type { DragEndEvent, DragStartEvent, DropEvent } from 'react-aria';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -25,7 +25,10 @@ export type OnItemOptionsClickHandler<T extends string = DefaultOptionId> = (
 ) => void;
 
 export interface DriveViewProps<T extends string = DefaultOptionId>
-    extends React.HTMLAttributes<HTMLDivElement> {
+    extends Omit<
+        React.HTMLAttributes<HTMLDivElement>,
+        'onDragEnd' | 'onDragStart'
+    > {
     type: DriveType;
     name: string;
     drives: DriveTreeItem<T>[];
@@ -42,7 +45,24 @@ export interface DriveViewProps<T extends string = DefaultOptionId>
         drive: DriveTreeItem<T>,
     ) => void;
     onSubmitInput?: (item: TreeItem, drive: DriveTreeItem<T>) => void;
+    onCancelInput?: (item: TreeItem, drive: DriveTreeItem<T>) => void;
     onItemOptionsClick?: OnItemOptionsClickHandler<T>;
+    disableHighlightStyles?: boolean;
+
+    onDropActivate?: (
+        drive: DriveTreeItem<T>,
+        dropTargetItem: TreeItem,
+    ) => void;
+    onDragStart?: (
+        drive: DriveTreeItem<T>,
+        dragItem: TreeItem,
+        event: DragStartEvent,
+    ) => void;
+    onDragEnd?: (
+        drive: DriveTreeItem<T>,
+        dragItem: TreeItem,
+        event: DragEndEvent,
+    ) => void;
 }
 
 export function DriveView<T extends string = DefaultOptionId>(
@@ -58,6 +78,11 @@ export function DriveView<T extends string = DefaultOptionId>(
         onSubmitInput,
         onItemOptionsClick,
         defaultItemOptions,
+        onDropActivate,
+        onDragStart,
+        onDragEnd,
+        onCancelInput,
+        disableHighlightStyles,
         ...restProps
     } = props;
     return (
@@ -82,8 +107,17 @@ export function DriveView<T extends string = DefaultOptionId>(
                     <ConnectTreeView<T>
                         key={drive.id}
                         items={drive}
+                        disableHighlightStyles={disableHighlightStyles}
+                        onDragEnd={(...args) => onDragEnd?.(drive, ...args)}
+                        onDragStart={(...args) => onDragStart?.(drive, ...args)}
                         onDropEvent={(...args) => onDropEvent?.(...args, drive)}
                         onItemClick={(...args) => onItemClick?.(...args, drive)}
+                        onDropActivate={(...args) =>
+                            onDropActivate?.(drive, ...args)
+                        }
+                        onCancelInput={(...args) =>
+                            onCancelInput?.(...args, drive)
+                        }
                         onSubmitInput={(...args) =>
                             onSubmitInput?.(...args, drive)
                         }

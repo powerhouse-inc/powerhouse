@@ -30,6 +30,10 @@ const meta: Meta<typeof DriveView> = {
         onDropEvent: { control: { type: 'action' } },
         onItemOptionsClick: { control: { type: 'action' } },
         defaultItemOptions: { control: { type: 'object' } },
+        onDragStart: { control: { type: 'action' } },
+        onDragEnd: { control: { type: 'action' } },
+        onDropActivate: { control: { type: 'action' } },
+        disableHighlightStyles: { control: { type: 'boolean' } },
     },
 };
 

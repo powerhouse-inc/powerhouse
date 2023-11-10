@@ -13,7 +13,10 @@ import {
 } from '../tree-view-input';
 
 export interface ConnectTreeViewProps<T extends string = string>
-    extends Omit<React.HTMLAttributes<HTMLElement>, 'onClick'> {
+    extends Omit<
+        React.HTMLAttributes<HTMLElement>,
+        'onClick' | 'onDragStart' | 'onDragEnd'
+    > {
     items: TreeItem<T>;
     onDropEvent?: ConnectTreeViewItemProps<T>['onDropEvent'];
     onItemClick?: (
