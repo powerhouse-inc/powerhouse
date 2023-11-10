@@ -1,3 +1,10 @@
+# [1.0.0-alpha.11](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.10...v1.0.0-alpha.11) (2023-11-10)
+
+
+### Features
+
+* removed react-click-away-listener as peer dependency ([8ed9266](https://github.com/powerhouse-inc/design-system/commit/8ed92661e8aad1c21c6760101686f8c7ce330e8b))
+
 # [1.0.0-alpha.10](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.9...v1.0.0-alpha.10) (2023-11-10)
 
 
