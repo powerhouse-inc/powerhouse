@@ -2,6 +2,7 @@
 import { useRef } from 'react';
 import {
     DropEvent,
+    DropOptions,
     FileDropItem,
     TextDropItem,
     useDrag,
@@ -25,13 +26,20 @@ export interface UseDraggableTargetProps<T = unknown> {
     dataType?: string;
     dropAfterItem?: boolean;
     dropBeforeItem?: boolean;
+    onDropActivate?: DropOptions['onDropActivate'];
 }
 
 export function useDraggableTarget<T = unknown>(
     props: UseDraggableTargetProps<T>,
 ) {
-    const { data, onDropEvent, dataType, dropAfterItem, dropBeforeItem } =
-        props;
+    const {
+        data,
+        onDropEvent,
+        dataType,
+        dropAfterItem,
+        dropBeforeItem,
+        onDropActivate,
+    } = props;
 
     const ref = useRef(null);
 
@@ -45,6 +53,7 @@ export function useDraggableTarget<T = unknown>(
 
     const { dropProps, isDropTarget } = useDrop({
         ref,
+        onDropActivate,
         async onDrop(e) {
             const item = e.items.find(
                 item =>

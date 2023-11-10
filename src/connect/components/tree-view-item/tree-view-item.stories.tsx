@@ -18,6 +18,8 @@ const meta: Meta<typeof ConnectTreeViewItem> = {
         level: { control: { type: 'number' } },
         item: { control: { type: 'object' } },
         defaultOptions: { control: { type: 'object' } },
+        onDropEvent: { control: { type: 'action' } },
+        onDropActivate: { control: { type: 'action' } },
     },
 };
 

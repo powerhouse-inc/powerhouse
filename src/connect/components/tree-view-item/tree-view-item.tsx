@@ -91,6 +91,7 @@ export interface ConnectTreeViewItemProps<T extends string = DefaultOptionId>
     > {
     item: TreeItem<T>;
     onDropEvent?: UseDraggableTargetProps<TreeItem<T>>['onDropEvent'];
+    onDropActivate?: (dropTargetItem: TreeItem<T>) => void;
     defaultOptions?: ConnectDropdownMenuItem<T>[];
     onOptionsClick?: (item: TreeItem<T>, option: T) => void;
     disableDropBetween?: boolean;
@@ -136,6 +137,7 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
         children,
         onDropEvent,
         onOptionsClick,
+        onDropActivate,
         level = 0,
         buttonProps = {},
         disableDropBetween = false,
@@ -150,6 +152,7 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
     >({
         data: item,
         onDropEvent,
+        onDropActivate: () => onDropActivate?.(item),
     });
 
     const { dropProps: dropDividerProps, isDropTarget: isDropDividerTarget } =
