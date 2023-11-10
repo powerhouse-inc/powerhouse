@@ -41,6 +41,7 @@ export interface DriveViewProps<T extends string = DefaultOptionId>
         item: TreeItem<T>,
         drive: DriveTreeItem<T>,
     ) => void;
+    onSubmitInput?: (item: TreeItem, drive: DriveTreeItem<T>) => void;
     onItemOptionsClick?: OnItemOptionsClickHandler<T>;
 }
 
@@ -54,6 +55,7 @@ export function DriveView<T extends string = DefaultOptionId>(
         drives,
         onDropEvent,
         onItemClick,
+        onSubmitInput,
         onItemOptionsClick,
         defaultItemOptions,
         ...restProps
@@ -82,6 +84,9 @@ export function DriveView<T extends string = DefaultOptionId>(
                         items={drive}
                         onDropEvent={(...args) => onDropEvent?.(...args, drive)}
                         onItemClick={(...args) => onItemClick?.(...args, drive)}
+                        onSubmitInput={(...args) =>
+                            onSubmitInput?.(...args, drive)
+                        }
                         onItemOptionsClick={(...args) =>
                             onItemOptionsClick?.(...args, drive)
                         }
