@@ -1,3 +1,11 @@
+# [1.0.0-alpha.10](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.9...v1.0.0-alpha.10) (2023-11-10)
+
+
+### Features
+
+* **tree-view-input:** 🚀 Added ConnectTreeViewInput component ([97a82bb](https://github.com/powerhouse-inc/design-system/commit/97a82bb8a8d52144a533fe18147d8a1b979ca3a3))
+* **tree-view-input:** 🚀 Added TreeViewInput Component ([bba0d1e](https://github.com/powerhouse-inc/design-system/commit/bba0d1e1b2946474098c86ef56145e012455d43d))
+
 # [1.0.0-alpha.9](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.8...v1.0.0-alpha.9) (2023-11-09)
 
 
