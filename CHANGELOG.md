@@ -1,3 +1,10 @@
+# [1.0.0-alpha.12](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.11...v1.0.0-alpha.12) (2023-11-10)
+
+
+### Features
+
+* added onSubmitInput handlers on drive-view ([9da2705](https://github.com/powerhouse-inc/design-system/commit/9da2705ca98402b9f0ac3c718ffb28313f52cee4))
+
 # [1.0.0-alpha.11](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.10...v1.0.0-alpha.11) (2023-11-10)
 
 
