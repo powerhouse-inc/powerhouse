@@ -30,7 +30,7 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
 
                     const drive = documentDrive?.state.drives[0]; // TODO improve default drive selection
                     if (drive) {
-                        const node = await addFile(file, file.name, drive.id);
+                        const node = await addFile(file, drive.id, file.name);
                         if (node) {
                             openFile(drive.id, node.path);
                         }
