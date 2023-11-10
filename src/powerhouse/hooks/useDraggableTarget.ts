@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { useRef } from 'react';
 import {
+    DragEndEvent,
+    DragStartEvent,
     DropEvent,
     DropOptions,
     FileDropItem,
@@ -27,6 +29,8 @@ export interface UseDraggableTargetProps<T = unknown> {
     dropAfterItem?: boolean;
     dropBeforeItem?: boolean;
     onDropActivate?: DropOptions['onDropActivate'];
+    onDragStart?: (dragItem: T, event: DragStartEvent) => void;
+    onDragEnd?: (dragItem: T, event: DragEndEvent) => void;
 }
 
 export function useDraggableTarget<T = unknown>(
@@ -39,11 +43,15 @@ export function useDraggableTarget<T = unknown>(
         dropAfterItem,
         dropBeforeItem,
         onDropActivate,
+        onDragStart,
+        onDragEnd,
     } = props;
 
     const ref = useRef(null);
 
     const { dragProps, isDragging } = useDrag({
+        onDragEnd: e => onDragEnd?.(data, e),
+        onDragStart: e => onDragStart?.(data, e),
         getItems: () => [
             {
                 [dataType || CUSTOM_OBJECT_FORMAT]: JSON.stringify(data),

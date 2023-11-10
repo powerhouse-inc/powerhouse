@@ -25,6 +25,9 @@ export interface ConnectTreeViewProps<T extends string = string>
     onSubmitInput?: ConnectTreeViewInputProps['onSubmit'];
     onCancelInput?: ConnectTreeViewInputProps['onCancel'];
     onDropActivate?: ConnectTreeViewItemProps<T>['onDropActivate'];
+    onDragStart?: ConnectTreeViewItemProps<T>['onDragStart'];
+    onDragEnd?: ConnectTreeViewItemProps<T>['onDragEnd'];
+    disableHighlightStyles?: boolean;
 }
 
 export function ConnectTreeView<T extends string = string>(

@@ -95,6 +95,9 @@ export interface ConnectTreeViewItemProps<T extends string = DefaultOptionId>
     defaultOptions?: ConnectDropdownMenuItem<T>[];
     onOptionsClick?: (item: TreeItem<T>, option: T) => void;
     disableDropBetween?: boolean;
+    onDragStart?: UseDraggableTargetProps<TreeItem<T>>['onDragStart'];
+    onDragEnd?: UseDraggableTargetProps<TreeItem<T>>['onDragEnd'];
+    disableHighlightStyles?: boolean;
 }
 
 const getStatusIcon = (status: ItemStatus) => {
@@ -135,25 +138,29 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
         item,
         onClick,
         children,
+        onDragEnd,
+        onDragStart,
         onDropEvent,
         onOptionsClick,
         onDropActivate,
         level = 0,
         buttonProps = {},
         disableDropBetween = false,
+        disableHighlightStyles = false,
         defaultOptions = DefaultOptions,
         ...divProps
     } = props;
 
     const containerRef = useRef(null);
 
-    const { dragProps, dropProps, isDropTarget } = useDraggableTarget<
-        TreeItem<T>
-    >({
-        data: item,
-        onDropEvent,
-        onDropActivate: () => onDropActivate?.(item),
-    });
+    const { dragProps, dropProps, isDropTarget, isDragging } =
+        useDraggableTarget<TreeItem<T>>({
+            onDragEnd,
+            onDragStart,
+            data: item,
+            onDropEvent,
+            onDropActivate: () => onDropActivate?.(item),
+        });
 
     const { dropProps: dropDividerProps, isDropTarget: isDropDividerTarget } =
         useDraggableTarget({
@@ -206,12 +213,16 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
             onClick={onClick}
             label={item.label}
             open={item.expanded}
-            className={twMerge(isDropTarget && 'rounded-lg bg-[#F4F4F4]')}
             buttonProps={{
                 className: twMerge(
-                    'py-3 rounded-lg hover:bg-[#F1F5F9] hover:to-[#F1F5F9]',
-                    item.isSelected && 'bg-[#F1F5F9] to-[#F1F5F9]',
+                    'py-3 rounded-lg',
+                    !disableHighlightStyles &&
+                        'hover:bg-[#F1F5F9] hover:to-[#F1F5F9]',
+                    item.isSelected &&
+                        !disableHighlightStyles &&
+                        'bg-[#F1F5F9] to-[#F1F5F9]',
                     typeof buttonClassName === 'string' && buttonClassName,
+                    isDropTarget && !isDragging && 'rounded-lg bg-[#F1F5F9]',
                 ),
                 ref: containerRef,
                 ...restButtonProps,
