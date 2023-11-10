@@ -2,12 +2,15 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import {
     AddFileInput,
+    AddFolderInput,
     DocumentDriveAction,
     DocumentDriveState,
     FileNode,
+    FolderNode,
 } from 'document-model-libs/document-drive';
 import { Action, Document } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
+import { IDocumentDrive } from './services/document-drive';
 import { Theme } from './store';
 
 const electronApi = {
@@ -62,7 +65,7 @@ const electronApi = {
     },
     setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
     documentDrive: {
-        request: () =>
+        getDocument: () =>
             ipcRenderer.invoke('documentDrive') as Promise<
                 Document<DocumentDriveState, DocumentDriveAction>
             >,
@@ -81,9 +84,16 @@ const electronApi = {
                 input,
                 document
             ) as Promise<FileNode>,
+        addFolder: (input: AddFolderInput) =>
+            ipcRenderer.invoke(
+                'documentDrive:addFolder',
+                input
+            ) as Promise<FolderNode>,
         deleteNode: (drive: string, path: string) =>
             ipcRenderer.invoke('documentDrive:deleteNode', drive, path),
-    },
+        renameNode: (drive: string, path: string, name: string) =>
+            ipcRenderer.invoke('documentDrive:renameNode', drive, path, name),
+    } satisfies IDocumentDrive,
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

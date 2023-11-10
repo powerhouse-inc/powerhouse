@@ -2,32 +2,34 @@ import {
     DocumentDriveAction,
     DocumentDriveState,
 } from 'document-model-libs/document-drive';
-import { Document, utils } from 'document-model/document';
+import { Document, Immutable, utils } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useMemo } from 'react';
+import { IDocumentDrive } from 'src/services/document-drive';
 import { useTabs } from 'src/store';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
 
-export const documentDriveAtom = atom<Document<
-    DocumentDriveState,
-    DocumentDriveAction
+export const documentDriveAtom = atom<Immutable<
+    Document<DocumentDriveState, DocumentDriveAction>
 > | null>(null);
 
-export function useDocumentDrive() {
+export function useDocumentDrive(
+    documentDrive: IDocumentDrive | undefined = window.electronAPI
+        ?.documentDrive
+) {
     const getDocumentModel = useGetDocumentModel();
     const { addTab, fromDocument, updateTab } = useTabs();
 
-    const [documentDrive, setDocumentDrive] = useAtom(documentDriveAtom);
+    const [document, setDocument] = useAtom(documentDriveAtom);
 
     async function fetchDocumentDrive() {
         try {
-            const drive = await window.electronAPI?.documentDrive.request();
-
-            setDocumentDrive(() => drive ?? null);
+            const drive = await documentDrive?.getDocument();
+            setDocument(drive ?? null);
         } catch (error) {
             console.error(error);
-            setDocumentDrive(null);
+            setDocument(null);
         }
     }
 
@@ -36,10 +38,7 @@ export function useDocumentDrive() {
     }, []);
 
     async function openFile(drive: string, path: string, tab?: string) {
-        const document = await window.electronAPI?.documentDrive.openFile(
-            drive,
-            path
-        );
+        const document = await documentDrive?.openFile(drive, path);
         if (!document) {
             throw new Error(
                 `There was an error opening file with ${path} on drive ${drive}`
@@ -49,9 +48,9 @@ export function useDocumentDrive() {
         return tab ? updateTab(documentTab) : addTab(documentTab);
     }
 
-    async function addFile(file: File, path: string, drive: string) {
+    async function addFile(file: File, drive: string, path: string) {
         const document = await loadFile(file, getDocumentModel);
-        const node = await window.electronAPI?.documentDrive.addFile(
+        const node = await documentDrive?.addFile(
             {
                 drive,
                 path,
@@ -65,13 +64,36 @@ export function useDocumentDrive() {
         return node;
     }
 
+    async function addFolder(drive: string, path: string, name = '') {
+        const node = await documentDrive?.addFolder({
+            drive,
+            path,
+            hash: '',
+            name,
+        });
+        await fetchDocumentDrive();
+        return node;
+    }
+
     async function deleteNode(drive: string, path: string) {
-        await window.electronAPI?.documentDrive.deleteNode(drive, path);
+        await documentDrive?.deleteNode(drive, path);
+        return fetchDocumentDrive();
+    }
+
+    async function renameNode(drive: string, path: string, name: string) {
+        await documentDrive?.renameNode(drive, path, name);
         return fetchDocumentDrive();
     }
 
     return useMemo(
-        () => ({ documentDrive, openFile, addFile, deleteNode }),
-        [documentDrive]
+        () => ({
+            documentDrive: document,
+            openFile,
+            addFile,
+            addFolder,
+            deleteNode,
+            renameNode,
+        }),
+        [document]
     );
 }

@@ -9,7 +9,7 @@ import {
 } from 'electron';
 import fs from 'node:fs';
 import path from 'path';
-import { initDocumentDrive } from './app/document-drive';
+import initDocumentDrive from './app/document-drive';
 import store from './app/store';
 import { Theme } from './store';
 
@@ -331,18 +331,7 @@ app.on('activate', () => {
     }
 });
 
-initDocumentDrive(store, app.getPath('userData')).then(documentDrive => {
-    ipcMain.handle('documentDrive', () => documentDrive.getDocument());
-    ipcMain.handle('documentDrive:openFile', async (_e, drive, path) =>
-        documentDrive.openFile(drive, path)
-    );
-    ipcMain.handle('documentDrive:addFile', (_e, input, document) =>
-        documentDrive.addFile(input, document)
-    );
-    ipcMain.handle('documentDrive:deleteNode', async (_e, drive, path) =>
-        documentDrive.deleteNode(drive, path)
-    );
-});
+initDocumentDrive(store, app.getPath('userData'), ipcMain);
 
 // keeps track of the logged in user
 let user: string;
