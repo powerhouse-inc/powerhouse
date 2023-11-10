@@ -31,7 +31,7 @@ export const ConnectTreeViewInput: React.FC<
 
     return (
         <TreeViewInput
-            icon={<img src={FolderIcon} />}
+            icon={<img src={FolderIcon} className="h-6 w-6" />}
             submitIcon={<img src={CheckIcon} className="w-6 h-6" />}
             cancelIcon={
                 <div className="w-6 h-6 flex items-center justify-center">

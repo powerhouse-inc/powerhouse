@@ -98,6 +98,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         <img
                             src={CaretIcon}
                             className={twMerge(
+                                'h-6 w-6',
                                 open && 'rotate-90',
                                 'transition ease delay-50 pointer-events-none',
                             )}
@@ -106,7 +107,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                     {icon && (
                         <img
                             src={open ? expandedIcon || icon : icon}
-                            className="pointer-events-none"
+                            className="pointer-events-none h-6 w-6"
                         />
                     )}
                     {label && (
