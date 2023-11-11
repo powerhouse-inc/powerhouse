@@ -151,7 +151,18 @@ export default function () {
         drive,
         droptarget
     ) => {
-        console.log('onDropActivate', drive, droptarget);
+        setDrives(drives =>
+            traverseDriveById(drives, drive.id, treeItem => {
+                if (treeItem.id === droptarget.id) {
+                    return {
+                        ...treeItem,
+                        expanded: true,
+                    };
+                }
+
+                return treeItem;
+            })
+        );
     };
 
     if (!documentDrive) {
