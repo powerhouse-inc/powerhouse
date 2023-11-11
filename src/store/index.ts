@@ -3,6 +3,7 @@ import { atomWithStorage } from 'jotai/utils';
 import { themeAtom } from './theme';
 
 export const sidebarCollapsedAtom = atomWithStorage('sidebar-collapsed', false);
+export const sidebarDisableHoverStyles = atom(false);
 
 export const userAtom = atom<string | undefined>(undefined);
 

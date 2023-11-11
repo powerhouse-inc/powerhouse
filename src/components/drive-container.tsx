@@ -11,8 +11,10 @@ import {
 } from '@powerhousedao/design-system';
 import { Drive, Node } from 'document-model-libs/document-drive';
 import { Immutable } from 'document-model/document';
+import { useAtom } from 'jotai';
 import { useEffect, useState } from 'react';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import { sidebarDisableHoverStyles } from 'src/store';
 
 function mapDocumentDriveNodeToTreeItem(
     node: Immutable<Node>,
@@ -50,6 +52,9 @@ function mapDocumentDriveToTreeItem(drive: Immutable<Drive>): DriveTreeItem {
 
 export default function () {
     const [drives, setDrives] = useState<DriveTreeItem[]>([]);
+    const [disableHoverStyles, setDisableHoverStyles] = useAtom(
+        sidebarDisableHoverStyles
+    );
     const { documentDrive, openFile, addFolder, deleteNode, renameNode } =
         useDocumentDrive();
 
@@ -136,16 +141,11 @@ export default function () {
         }
     };
 
-    const onDragStartHandler: DriveViewProps['onDragStart'] = (
-        drive,
-        dragItem
-    ) => {
-        console.log('onDragStart', drive, dragItem);
-    };
+    const onDragStartHandler: DriveViewProps['onDragStart'] = () =>
+        setDisableHoverStyles(true);
 
-    const onDragEndHandler: DriveViewProps['onDragEnd'] = (drive, dragItem) => {
-        console.log('onDragEnd', drive, dragItem);
-    };
+    const onDragEndHandler: DriveViewProps['onDragEnd'] = () =>
+        setDisableHoverStyles(false);
 
     const onDropActivateHandler: DriveViewProps['onDropActivate'] = (
         drive,
@@ -184,6 +184,7 @@ export default function () {
             onDragEnd={onDragEndHandler}
             onDropEvent={(...args) => console.log('onDropEvent', args)}
             onDropActivate={onDropActivateHandler}
+            disableHighlightStyles={disableHoverStyles}
         />
     );
 }
