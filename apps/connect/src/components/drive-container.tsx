@@ -2,9 +2,11 @@ import {
     ActionType,
     DriveTreeItem,
     DriveView,
+    DriveViewProps,
     ItemType,
     OnItemOptionsClickHandler,
     TreeItem,
+    traverseDriveById,
     traverseTree,
 } from '@powerhousedao/design-system';
 import { Drive, Node } from 'document-model-libs/document-drive';
@@ -23,6 +25,7 @@ function mapDocumentDriveNodeToTreeItem(
         id: node.path,
         label: node.name,
         type: isFolder ? ItemType.Folder : ItemType.File,
+        expanded: false,
         children: isFolder
             ? allNodes
                   .filter(childrenNode => pathRegex.test(childrenNode.path))
@@ -60,15 +63,31 @@ export default function () {
     function handleNodeClick(item: TreeItem, drive: DriveTreeItem) {
         if (item.type === ItemType.File) {
             openFile(drive.id, item.id);
+        } else {
+            setDrives(drives =>
+                traverseDriveById(drives, drive.id, treeItem => {
+                    if (treeItem.id === item.id) {
+                        return {
+                            ...treeItem,
+                            expanded: !treeItem.expanded,
+                        };
+                    }
+
+                    return treeItem;
+                })
+            );
         }
     }
 
     function addNewFolder(item: TreeItem, drive: DriveTreeItem) {
         const basePath = item.id.replace(drive.id, '');
+        // generate random number between 1 and 9999
+        const num = Math.floor(Math.random() * 9999) + 1;
+
         addFolder(
             drive.id,
-            `${basePath ? `${basePath}/` : ''}new-folder`, // TODO check if there is a new folder already
-            'New Folder'
+            `${basePath ? `${basePath}/` : ''}new-folder-${num}`, // TODO check if there is a new folder already
+            'New Folder ' + num
         );
     }
 
@@ -117,6 +136,24 @@ export default function () {
         }
     };
 
+    const onDragStartHandler: DriveViewProps['onDragStart'] = (
+        drive,
+        dragItem
+    ) => {
+        console.log('onDragStart', drive, dragItem);
+    };
+
+    const onDragEndHandler: DriveViewProps['onDragEnd'] = (drive, dragItem) => {
+        console.log('onDragEnd', drive, dragItem);
+    };
+
+    const onDropActivateHandler: DriveViewProps['onDropActivate'] = (
+        drive,
+        droptarget
+    ) => {
+        console.log('onDropActivate', drive, droptarget);
+    };
+
     if (!documentDrive) {
         return null;
     }
@@ -127,10 +164,15 @@ export default function () {
             name={documentDrive.name}
             drives={drives}
             onItemClick={(_, item, drive) => {
+                console.log('here');
                 handleNodeClick(item, drive);
             }}
             onItemOptionsClick={handleItemOptionsClick}
             onSubmitInput={updateNodeName}
+            onDragStart={onDragStartHandler}
+            onDragEnd={onDragEndHandler}
+            onDropEvent={(...args) => console.log('onDropEvent', args)}
+            onDropActivate={onDropActivateHandler}
         />
     );
 }
