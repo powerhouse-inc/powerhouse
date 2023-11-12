@@ -21,6 +21,12 @@ export interface IDocumentDrive {
     addFolder(folder: AddFolderInput): Promise<FolderNode>;
     deleteNode(drive: string, path: string): Promise<void>;
     renameNode(drive: string, path: string, name: string): Promise<Node>;
+    copyOrMoveNode(
+        drive: string,
+        srcPath: string,
+        destPath: string,
+        operation: string
+    ): Promise<void>;
 }
 
 export { initElectronDocumentDrive } from './electron-document-drive';

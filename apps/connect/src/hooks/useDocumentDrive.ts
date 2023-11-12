@@ -85,6 +85,21 @@ export function useDocumentDrive(
         return fetchDocumentDrive();
     }
 
+    async function copyOrMoveNode(
+        drive: string,
+        srcPath: string,
+        destPath: string,
+        operation: string
+    ) {
+        await documentDrive?.copyOrMoveNode(
+            drive,
+            srcPath,
+            destPath,
+            operation
+        );
+        return fetchDocumentDrive();
+    }
+
     return useMemo(
         () => ({
             documentDrive: document,
@@ -93,6 +108,7 @@ export function useDocumentDrive(
             addFolder,
             deleteNode,
             renameNode,
+            copyOrMoveNode,
         }),
         [document]
     );

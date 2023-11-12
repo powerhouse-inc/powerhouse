@@ -60,6 +60,7 @@
         "electron-is-dev": "^2.0.0",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
+        "fs-extra": "^11.1.1",
         "graphql": "^16.8.1",
         "jotai": "^2.1.0",
         "react-router-dom": "^6.11.2",
