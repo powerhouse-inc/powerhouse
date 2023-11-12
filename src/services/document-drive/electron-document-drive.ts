@@ -6,6 +6,7 @@ import {
     DocumentDriveAction,
     DocumentDriveState,
     utils as DriveUtils,
+    Node,
     UpdateFileInput,
     isFileNode,
     isFolderNode,
@@ -17,6 +18,7 @@ import {
     utils as baseUtils,
 } from 'document-model/document';
 import ElectronStore from 'electron-store';
+import fsExtra from 'fs-extra';
 import fs from 'fs/promises';
 import path from 'path';
 import { IDocumentDrive } from '.';
@@ -118,6 +120,39 @@ class ElectronDocumentDrive implements IDocumentDrive {
         return fs.rm(this.getPath(driveId, path), { recursive: true });
     }
 
+    private async copyOrMoveNodeFs(
+        driveId: string,
+        srcPath: string,
+        destPath: string,
+        operation: string
+    ) {
+        console.log('here');
+        const srcNode = this.getNode(driveId, srcPath);
+        if (!srcNode) {
+            throw new Error(
+                `Node with path ${srcPath} not found on drive ${driveId}`
+            );
+        }
+
+        const destNode = this.getNode(driveId, destPath);
+        if (!destNode) {
+            throw new Error(
+                `Node with path ${destPath} not found on drive ${driveId}`
+            );
+        }
+
+        const srcFullPath = this.getPath(driveId, srcPath);
+        const destFullPath = this.getPath(driveId, destPath);
+        const newPath = path.join(destFullPath, path.basename(srcFullPath));
+
+        if (operation === 'copy') {
+            await fsExtra.emptyDir(newPath);
+            return await fsExtra.copy(srcFullPath, newPath);
+        }
+
+        return await fsExtra.move(srcFullPath, newPath);
+    }
+
     async addFolder(input: AddFolderInput) {
         await fs.mkdir(this.getPath(input.drive, input.path, ''));
         this.document.addFolder(input);
@@ -173,6 +208,71 @@ class ElectronDocumentDrive implements IDocumentDrive {
             );
         }
         return updatedNode;
+    }
+
+    async copyOrMoveNode(
+        drive: string,
+        srcPath: string,
+        destPath: string,
+        operation: string
+    ): Promise<void> {
+        const driveDocument = this.document.state.drives.find(
+            d => d.id === drive
+        );
+
+        if (!driveDocument) {
+            console.error('Drive not found');
+            return;
+        }
+
+        if (operation === 'move' && destPath.startsWith(srcPath)) {
+            console.error('Cannot move a node to a child node');
+            return;
+        }
+
+        await this.copyOrMoveNodeFs(drive, srcPath, destPath, operation);
+
+        let mutatedNodes: Array<Node> = [];
+        const newBasePath = path.join(destPath, path.basename(srcPath));
+
+        if (operation === 'move') {
+            mutatedNodes = driveDocument.nodes.map<Node>(node => {
+                if (node.path.startsWith(srcPath)) {
+                    return {
+                        ...node,
+                        path: path.normalize(
+                            node.path.replace(srcPath, newBasePath)
+                        ),
+                    };
+                }
+                return node;
+            });
+        } else {
+            // Copied nodes
+            mutatedNodes = driveDocument.nodes.reduce((acc, node) => {
+                if (node.path.startsWith(srcPath)) {
+                    const copiedNode = {
+                        ...node,
+                        path: path.normalize(
+                            node.path.replace(srcPath, newBasePath)
+                        ),
+                    };
+                    return [...acc, { ...node }, copiedNode];
+                }
+                return [...acc, { ...node }];
+            }, [] as Array<Node>);
+        }
+
+        // Update drive document
+        this.document.updateDrive({
+            id: driveDocument.id,
+            hash: driveDocument.hash,
+            name: driveDocument.name,
+            nodes: mutatedNodes,
+        });
+
+        this.save();
+        return;
     }
 
     async openFile<S = unknown, A extends Action = Action>(

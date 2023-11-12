@@ -93,6 +93,19 @@ const electronApi = {
             ipcRenderer.invoke('documentDrive:deleteNode', drive, path),
         renameNode: (drive: string, path: string, name: string) =>
             ipcRenderer.invoke('documentDrive:renameNode', drive, path, name),
+        copyOrMoveNode: (
+            drive: string,
+            srcPath: string,
+            destPath: string,
+            operation: string
+        ) =>
+            ipcRenderer.invoke(
+                'documentDrive:copyOrMoveNode',
+                drive,
+                srcPath,
+                destPath,
+                operation
+            ),
     } satisfies IDocumentDrive,
 };
 

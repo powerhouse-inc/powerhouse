@@ -21,7 +21,16 @@ function mapDocumentDriveNodeToTreeItem(
     allNodes: Immutable<Array<Node>>
 ): TreeItem {
     const isFolder = node.kind === 'folder';
-    const pathRegex = new RegExp(`^${node.path}/[^/]+`);
+    const isChildrenRootNode = (childrenPath: string) => {
+        const isChildrenNode = childrenPath.startsWith(node.path);
+        if (!isChildrenNode) return false;
+
+        const parentSegments = node.path.split('/').length;
+        const childrenSegments = childrenPath.split('/').length;
+
+        const isChildrenRoot = parentSegments + 1 === childrenSegments;
+        return isChildrenRoot;
+    };
 
     return {
         id: node.path,
@@ -30,7 +39,7 @@ function mapDocumentDriveNodeToTreeItem(
         expanded: false,
         children: isFolder
             ? allNodes
-                  .filter(childrenNode => pathRegex.test(childrenNode.path))
+                  .filter(childrenNode => isChildrenRootNode(childrenNode.path))
                   .map(childrenNode =>
                       mapDocumentDriveNodeToTreeItem(childrenNode, allNodes)
                   )
@@ -55,10 +64,17 @@ export default function () {
     const [disableHoverStyles, setDisableHoverStyles] = useAtom(
         sidebarDisableHoverStyles
     );
-    const { documentDrive, openFile, addFolder, deleteNode, renameNode } =
-        useDocumentDrive();
+    const {
+        documentDrive,
+        openFile,
+        addFolder,
+        deleteNode,
+        renameNode,
+        copyOrMoveNode,
+    } = useDocumentDrive();
 
     useEffect(() => {
+        console.log('documentDrive:drives', documentDrive?.state.drives);
         const newItems = documentDrive?.state.drives.map(
             mapDocumentDriveToTreeItem
         );
@@ -165,6 +181,15 @@ export default function () {
         );
     };
 
+    const onDropEventHandler: DriveViewProps['onDropEvent'] = (
+        item,
+        target,
+        event,
+        drive
+    ) => {
+        copyOrMoveNode(drive.id, item.data.id, target.id, event.dropOperation);
+    };
+
     if (!documentDrive) {
         return null;
     }
@@ -175,14 +200,13 @@ export default function () {
             name={documentDrive.name}
             drives={drives}
             onItemClick={(_, item, drive) => {
-                console.log('here');
                 handleNodeClick(item, drive);
             }}
             onItemOptionsClick={handleItemOptionsClick}
             onSubmitInput={updateNodeName}
             onDragStart={onDragStartHandler}
             onDragEnd={onDragEndHandler}
-            onDropEvent={(...args) => console.log('onDropEvent', args)}
+            onDropEvent={onDropEventHandler}
             onDropActivate={onDropActivateHandler}
             disableHighlightStyles={disableHoverStyles}
         />

@@ -20,4 +20,9 @@ export default async (store: ElectronStore, path: string, ipcMain: IpcMain) => {
     ipcMain.handle('documentDrive:renameNode', async (_e, drive, path, name) =>
         documentDrive.renameNode(drive, path, name)
     );
+    ipcMain.handle(
+        'documentDrive:copyOrMoveNode',
+        async (_e, drive, srcPath, destPath, operation) =>
+            documentDrive.copyOrMoveNode(drive, srcPath, destPath, operation)
+    );
 };

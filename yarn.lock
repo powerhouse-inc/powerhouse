@@ -974,10 +974,8 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
-"@powerhousedao/design-system@^1.0.0-alpha.12":
+"@powerhousedao/design-system@file:.yalc/@powerhousedao/design-system":
   version "1.0.0-alpha.12"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.12.tgz#2b0442f4fde95947359e04306a868873dc046e9f"
-  integrity sha512-mQvkCZJZ3QhudbI33qgUG0zGJC85NzEnJoc7FCk7ZO4sBlrz4GPgK8+mBtchf4XK+kVyD4RDU0g0cN2vknlgbQ==
 
 "@react-aria/breadcrumbs@^3.5.1":
   version "3.5.1"
@@ -3768,7 +3766,7 @@ fs-extra@^10.0.0, fs-extra@^10.1.0:
     jsonfile "^6.0.1"
     universalify "^2.0.0"
 
-fs-extra@^11.1.0:
+fs-extra@^11.1.0, fs-extra@^11.1.1:
   version "11.1.1"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-11.1.1.tgz#da69f7c39f3b002378b0954bb6ae7efdc0876e2d"
   integrity sha512-MGIE4HOvQCeUCzmlHs0vXpih4ysz4wg9qiSAu6cd42lVwPbTM1TjV7RusoyQqMmk/95gdQZX72u+YW+c3eEpFQ==
