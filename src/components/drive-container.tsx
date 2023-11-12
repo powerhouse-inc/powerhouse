@@ -75,7 +75,6 @@ export default function () {
     } = useDocumentDrive();
 
     useEffect(() => {
-        console.log('documentDrive:drives', documentDrive?.state.drives);
         const newItems = documentDrive?.state.drives.map(
             mapDocumentDriveToTreeItem
         );
@@ -102,15 +101,47 @@ export default function () {
     }
 
     function addNewFolder(item: TreeItem, drive: DriveTreeItem) {
-        const basePath = item.id.replace(drive.id, '');
-        // generate random number between 1 and 9999
+        const normalizedPath = item.id.replace(drive.id, '');
+        const basePath = normalizedPath.split('/').slice(0, -1).join('/');
+
+        const newPath = path.join(
+            basePath,
+            item.label.replace(/\s/g, '-').toLowerCase()
+        );
+
+        console.log(newPath);
+
+        addFolder(drive.id, newPath, item.label);
+    }
+
+    function addVirtualNewFolder(item: TreeItem, drive: DriveTreeItem) {
         const num = Math.floor(Math.random() * 9999) + 1;
 
-        addFolder(
-            drive.id,
-            `${basePath ? `${basePath}/` : ''}new-folder-${num}`, // TODO check if there is a new folder already
-            'New Folder ' + num
-        );
+        setDrives(drives => {
+            const newDrives = drives.map(driveItem => {
+                if (driveItem.id === drive.id) {
+                    return traverseTree(driveItem, treeItem => {
+                        if (treeItem.id === item.id) {
+                            treeItem.expanded = true;
+                            treeItem.isSelected = false;
+                            treeItem.children = treeItem.children || [];
+                            treeItem.children.push({
+                                id: `${treeItem.id}/new-folder-${num}`,
+                                label: 'New Folder',
+                                type: ItemType.Folder,
+                                action: ActionType.New,
+                            });
+                        }
+
+                        return { ...treeItem };
+                    });
+                }
+
+                return { ...driveItem };
+            });
+
+            return newDrives;
+        });
     }
 
     function updateItem(item: TreeItem, drive: DriveTreeItem) {
@@ -140,6 +171,22 @@ export default function () {
         renameNode(drive.id, item.id, item.label);
     }
 
+    function submitInputHandler(item: TreeItem, drive: DriveTreeItem) {
+        if (item.action === ActionType.New) {
+            addNewFolder(item, drive);
+            return;
+        }
+
+        updateNodeName(item, drive);
+    }
+
+    function cancelInputHandler() {
+        const newItems = documentDrive?.state.drives.map(
+            mapDocumentDriveToTreeItem
+        );
+        setDrives(newItems ?? []);
+    }
+
     const handleItemOptionsClick: OnItemOptionsClickHandler = (
         item,
         option,
@@ -147,7 +194,7 @@ export default function () {
     ) => {
         switch (option) {
             case 'new-folder':
-                addNewFolder(item, drive);
+                addVirtualNewFolder(item, drive);
                 break;
             case 'rename':
                 setItemUpdate(item, drive);
@@ -214,7 +261,8 @@ export default function () {
                 handleNodeClick(item, drive);
             }}
             onItemOptionsClick={handleItemOptionsClick}
-            onSubmitInput={updateNodeName}
+            onSubmitInput={submitInputHandler}
+            onCancelInput={cancelInputHandler}
             onDragStart={onDragStartHandler}
             onDragEnd={onDragEndHandler}
             onDropEvent={onDropEventHandler}
