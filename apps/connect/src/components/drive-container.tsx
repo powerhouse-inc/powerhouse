@@ -12,6 +12,7 @@ import {
 import { Drive, Node } from 'document-model-libs/document-drive';
 import { Immutable } from 'document-model/document';
 import { useAtom } from 'jotai';
+import path from 'path';
 import { useEffect, useState } from 'react';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
 import { sidebarDisableHoverStyles } from 'src/store';
@@ -187,7 +188,17 @@ export default function () {
         event,
         drive
     ) => {
-        copyOrMoveNode(drive.id, item.data.id, target.id, event.dropOperation);
+        const isDropAfter = item.dropAfterItem as boolean;
+
+        let targetId =
+            isDropAfter && !target.expanded
+                ? path.dirname(target.id)
+                : target.id;
+        if (targetId === drive.id || targetId == '.') {
+            targetId = '';
+        }
+
+        copyOrMoveNode(drive.id, item.data.id, targetId, event.dropOperation);
     };
 
     if (!documentDrive) {

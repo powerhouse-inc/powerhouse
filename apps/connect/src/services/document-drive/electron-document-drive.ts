@@ -216,6 +216,13 @@ class ElectronDocumentDrive implements IDocumentDrive {
         destPath: string,
         operation: string
     ): Promise<void> {
+        const newBasePath = path.join(destPath, path.basename(srcPath));
+
+        if (srcPath === newBasePath) {
+            console.error('Cannot copy or move a node to itself');
+            return;
+        }
+
         const driveDocument = this.document.state.drives.find(
             d => d.id === drive
         );
@@ -233,7 +240,6 @@ class ElectronDocumentDrive implements IDocumentDrive {
         await this.copyOrMoveNodeFs(drive, srcPath, destPath, operation);
 
         let mutatedNodes: Array<Node> = [];
-        const newBasePath = path.join(destPath, path.basename(srcPath));
 
         if (operation === 'move') {
             mutatedNodes = driveDocument.nodes.map<Node>(node => {
