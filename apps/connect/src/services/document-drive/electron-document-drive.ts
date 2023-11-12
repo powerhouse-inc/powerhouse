@@ -126,7 +126,6 @@ class ElectronDocumentDrive implements IDocumentDrive {
         destPath: string,
         operation: string
     ) {
-        console.log('here');
         const srcNode = this.getNode(driveId, srcPath);
         if (!srcNode) {
             throw new Error(
