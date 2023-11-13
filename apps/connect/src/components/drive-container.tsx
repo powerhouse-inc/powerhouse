@@ -17,10 +17,19 @@ import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
 import { SortOptions } from 'src/services/document-drive';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils/path';
 
-function mapDocumentDriveNodeToTreeItem(
+function findNodeById(id: string, treeItem: TreeItem): TreeItem | undefined {
+    if (treeItem.id === id) {
+        return treeItem;
+    }
+
+    return treeItem.children?.find(item => findNodeById(id, item));
+}
+
+function mapDocumentDriveNodeToTreeItem<T extends string>(
     node: Immutable<Node>,
-    allNodes: Immutable<Array<Node>>
-): TreeItem {
+    allNodes: Immutable<Array<Node>>,
+    treeItem?: TreeItem
+): TreeItem<T> {
     const isFolder = node.kind === 'folder';
     const isChildrenRootNode = (childrenPath: string) => {
         const isChildrenNode = childrenPath.startsWith(node.path);
@@ -37,26 +46,43 @@ function mapDocumentDriveNodeToTreeItem(
         id: node.path,
         label: node.name,
         type: isFolder ? ItemType.Folder : ItemType.File,
-        expanded: false,
+        expanded: treeItem?.expanded,
+        isSelected: treeItem?.isSelected,
         children: isFolder
             ? allNodes
                   .filter(childrenNode => isChildrenRootNode(childrenNode.path))
                   .map(childrenNode =>
-                      mapDocumentDriveNodeToTreeItem(childrenNode, allNodes)
+                      mapDocumentDriveNodeToTreeItem(
+                          childrenNode,
+                          allNodes,
+                          treeItem
+                              ? findNodeById(node.path, treeItem)
+                              : undefined
+                      )
                   )
             : undefined,
     };
 }
 
-function mapDocumentDriveToTreeItem(drive: Immutable<Drive>): DriveTreeItem {
+function mapDocumentDriveToTreeItem(
+    drive: Immutable<Drive>,
+    treeItem?: DriveTreeItem
+): DriveTreeItem {
     return {
         id: drive.id,
         label: drive.name,
         type: ItemType.LocalDrive,
-        expanded: true,
+        expanded: treeItem?.expanded ?? true,
+        isSelected: treeItem?.isSelected,
         children: drive.nodes
             .filter(node => !node.path.includes('/'))
-            .map(node => mapDocumentDriveNodeToTreeItem(node, drive.nodes)),
+            .map(node =>
+                mapDocumentDriveNodeToTreeItem(
+                    node,
+                    drive.nodes,
+                    treeItem ? findNodeById(node.path, treeItem) : undefined
+                )
+            ),
     };
 }
 
@@ -79,11 +105,20 @@ export default function DriveContainer(props: DriveContainerProps) {
         copyOrMoveNode,
     } = useDocumentDrive();
 
+    function updateDrives() {
+        setDrives(oldItems => {
+            const newItems = documentDrive?.state.drives.map(drive =>
+                mapDocumentDriveToTreeItem(
+                    drive,
+                    oldItems.find(item => item.id === drive.id)
+                )
+            );
+            return newItems ?? [];
+        });
+    }
+
     useEffect(() => {
-        const newItems = documentDrive?.state.drives.map(
-            mapDocumentDriveToTreeItem
-        );
-        setDrives(newItems ?? []);
+        updateDrives();
     }, [documentDrive]);
 
     function handleNodeClick(item: TreeItem, drive: DriveTreeItem) {
@@ -148,7 +183,9 @@ export default function DriveContainer(props: DriveContainerProps) {
                         }
 
                         return { ...treeItem };
-                    });
+                    }) as DriveTreeItem<
+                        'duplicate' | 'new-folder' | 'rename' | 'delete'
+                    >;
                 }
 
                 return { ...driveItem };
@@ -166,7 +203,9 @@ export default function DriveContainer(props: DriveContainerProps) {
                 }
                 return traverseTree(drive, _item =>
                     _item.id !== item.id ? _item : item
-                );
+                ) as DriveTreeItem<
+                    'duplicate' | 'new-folder' | 'rename' | 'delete'
+                >;
             })
         );
     }
@@ -195,10 +234,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     }
 
     function cancelInputHandler() {
-        const newItems = documentDrive?.state.drives.map(
-            mapDocumentDriveToTreeItem
-        );
-        setDrives(newItems ?? []);
+        updateDrives();
     }
 
     const handleItemOptionsClick: OnItemOptionsClickHandler = (
