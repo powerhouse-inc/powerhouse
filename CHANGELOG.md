@@ -1,3 +1,24 @@
+# [1.0.0-alpha.14](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.13...v1.0.0-alpha.14) (2023-11-13)
+
+
+### Bug Fixes
+
+* remove stray console log ([a7c1f28](https://github.com/powerhouse-inc/design-system/commit/a7c1f281770482ec90332407829ed44e369c79a4))
+* update prop name ([2994dd8](https://github.com/powerhouse-inc/design-system/commit/2994dd8a746f3c2c6ac22ea5cac996a77a06e520))
+
+
+### Features
+
+* add breadcrumb styles ([93b796b](https://github.com/powerhouse-inc/design-system/commit/93b796b1897e43e4001853ce1c2518d7ebb01033))
+* add breadcrumbs component ([a5b1ddd](https://github.com/powerhouse-inc/design-system/commit/a5b1ddd96fd0131f752403aebf4652846b2536da))
+* add breadcrumbs component ([b1c1d0b](https://github.com/powerhouse-inc/design-system/commit/b1c1d0bc685e7a6dbccd2bf962b8e4344a54574f))
+* add breadcrumbs story ([8a7e593](https://github.com/powerhouse-inc/design-system/commit/8a7e593d49cde456eb5e9e6a6606c998b5e9d187))
+* add comments ([a59237e](https://github.com/powerhouse-inc/design-system/commit/a59237e8ec4c04a3cd229d33effb23785791f7b1))
+* add height to breadcrumbs ([416fc02](https://github.com/powerhouse-inc/design-system/commit/416fc027d1bafc61136573f1eb776d31c4147ffb))
+* add icon component ([e74d306](https://github.com/powerhouse-inc/design-system/commit/e74d30612956705d138a1b6b7eb50e8f7a52d4b0))
+* add new item input logic ([eb7eae7](https://github.com/powerhouse-inc/design-system/commit/eb7eae73ff5e4e5424cee782cad5bebe37ab6ed9))
+* remove redundant props ([d5d181c](https://github.com/powerhouse-inc/design-system/commit/d5d181cad5046f5cef85bb8b6e7c4f093905361a))
+
 # [1.0.0-alpha.13](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.12...v1.0.0-alpha.13) (2023-11-13)
 
 
