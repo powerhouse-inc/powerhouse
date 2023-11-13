@@ -10,7 +10,7 @@ import {
 } from 'document-model-libs/document-drive';
 import { Action, Document } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
-import { IDocumentDrive } from './services/document-drive';
+import { IDocumentDrive, SortOptions } from './services/document-drive';
 import { Theme } from './store';
 
 const electronApi = {
@@ -97,14 +97,16 @@ const electronApi = {
             drive: string,
             srcPath: string,
             destPath: string,
-            operation: string
+            operation: string,
+            sortOptions?: SortOptions
         ) =>
             ipcRenderer.invoke(
                 'documentDrive:copyOrMoveNode',
                 drive,
                 srcPath,
                 destPath,
-                operation
+                operation,
+                sortOptions
             ),
     } satisfies IDocumentDrive,
 };

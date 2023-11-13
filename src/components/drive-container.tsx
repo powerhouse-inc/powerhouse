@@ -14,6 +14,7 @@ import { Immutable } from 'document-model/document';
 import path from 'path';
 import { useEffect, useState } from 'react';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import { SortOptions } from 'src/services/document-drive';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils/path';
 
 function mapDocumentDriveNodeToTreeItem(
@@ -110,6 +111,7 @@ export default function DriveContainer(props: DriveContainerProps) {
 
         const newPath = path.join(basePath, sanitizePath(item.label));
 
+        if (newPath === '.') return cancelInputHandler();
         addFolder(drive.id, newPath, item.label);
     }
 
@@ -248,6 +250,9 @@ export default function DriveContainer(props: DriveContainerProps) {
         drive
     ) => {
         const isDropAfter = !!item.dropAfterItem;
+        const sortOptions: SortOptions | undefined = isDropAfter
+            ? { afterNodePath: target.id }
+            : undefined;
 
         let targetId =
             isDropAfter && !target.expanded
@@ -262,7 +267,8 @@ export default function DriveContainer(props: DriveContainerProps) {
                 drive.id,
                 item.data.id,
                 targetId,
-                event.dropOperation
+                event.dropOperation,
+                sortOptions
             );
         } else if (item.kind === 'file') {
             const file = await item.getFile();
