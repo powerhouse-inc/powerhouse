@@ -22,7 +22,13 @@ export default async (store: ElectronStore, path: string, ipcMain: IpcMain) => {
     );
     ipcMain.handle(
         'documentDrive:copyOrMoveNode',
-        async (_e, drive, srcPath, destPath, operation) =>
-            documentDrive.copyOrMoveNode(drive, srcPath, destPath, operation)
+        async (_e, drive, srcPath, destPath, operation, sortOptions) =>
+            documentDrive.copyOrMoveNode(
+                drive,
+                srcPath,
+                destPath,
+                operation,
+                sortOptions
+            )
     );
 };

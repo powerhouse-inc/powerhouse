@@ -5,7 +5,7 @@ import {
 import { Document, Immutable, utils } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useMemo } from 'react';
-import { IDocumentDrive } from 'src/services/document-drive';
+import { IDocumentDrive, SortOptions } from 'src/services/document-drive';
 import { useTabs } from 'src/store';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
@@ -89,13 +89,15 @@ export function useDocumentDrive(
         drive: string,
         srcPath: string,
         destPath: string,
-        operation: string
+        operation: string,
+        sortOptions?: SortOptions
     ) {
         await documentDrive?.copyOrMoveNode(
             drive,
             srcPath,
             destPath,
-            operation
+            operation,
+            sortOptions
         );
         return fetchDocumentDrive();
     }

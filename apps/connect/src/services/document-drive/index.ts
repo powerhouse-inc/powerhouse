@@ -9,6 +9,10 @@ import {
 } from 'document-model-libs/document-drive';
 import { Action, Document, Immutable } from 'document-model/document';
 
+export interface SortOptions {
+    afterNodePath?: string;
+}
+
 export interface IDocumentDrive {
     getDocument(): Promise<
         Immutable<Document<DocumentDriveState, DocumentDriveAction>>
@@ -25,7 +29,8 @@ export interface IDocumentDrive {
         drive: string,
         srcPath: string,
         destPath: string,
-        operation: string
+        operation: string,
+        sort?: SortOptions
     ): Promise<void>;
 }
 

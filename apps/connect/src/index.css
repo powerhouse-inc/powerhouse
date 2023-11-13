@@ -13,7 +13,6 @@ body {
 input,
 select {
     background-color: transparent;
-    border-bottom: 1px solid currentcolor;
     margin: 0 4px;
 }
 

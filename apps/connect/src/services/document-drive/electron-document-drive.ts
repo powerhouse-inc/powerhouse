@@ -21,7 +21,7 @@ import ElectronStore from 'electron-store';
 import fsExtra from 'fs-extra';
 import fs from 'fs/promises';
 import path from 'path';
-import { IDocumentDrive } from '.';
+import { IDocumentDrive, SortOptions } from '.';
 
 interface IElectronDocumentDriveSerialized {
     basePath: string;
@@ -134,7 +134,7 @@ class ElectronDocumentDrive implements IDocumentDrive {
         }
 
         const destNode = this.getNode(driveId, destPath);
-        if (!destNode) {
+        if (!destNode && destPath !== '') {
             throw new Error(
                 `Node with path ${destPath} not found on drive ${driveId}`
             );
@@ -209,18 +209,36 @@ class ElectronDocumentDrive implements IDocumentDrive {
         return updatedNode;
     }
 
+    sortNodes(nodes: Array<Node>, srcPath: string, sortOptions?: SortOptions) {
+        if (sortOptions?.afterNodePath) {
+            const sortedNodes = [...nodes];
+            const srcIndex = sortedNodes.findIndex(
+                node => node.path === srcPath
+            );
+            const targetPath = sortedNodes.findIndex(
+                node => node.path === sortOptions.afterNodePath
+            );
+
+            if (srcIndex !== -1 && targetPath !== -1) {
+                const srcNode = sortedNodes[srcIndex];
+                sortedNodes.splice(srcIndex, 1);
+                sortedNodes.splice(targetPath + 1, 0, srcNode);
+            }
+
+            return sortedNodes;
+        }
+
+        return nodes;
+    }
+
     async copyOrMoveNode(
         drive: string,
         srcPath: string,
         destPath: string,
-        operation: string
+        operation: string,
+        sortOptions?: SortOptions
     ): Promise<void> {
         const newBasePath = path.join(destPath, path.basename(srcPath));
-
-        if (srcPath === newBasePath) {
-            console.error('Cannot copy or move a node to itself');
-            return;
-        }
 
         const driveDocument = this.document.state.drives.find(
             d => d.id === drive
@@ -228,6 +246,31 @@ class ElectronDocumentDrive implements IDocumentDrive {
 
         if (!driveDocument) {
             console.error('Drive not found');
+            return;
+        }
+
+        if (srcPath === newBasePath) {
+            // Only sort nodes, not action required in the file system
+            if (sortOptions) {
+                console.log('here');
+                const sortedNodes = this.sortNodes(
+                    [...driveDocument.nodes],
+                    srcPath,
+                    sortOptions
+                );
+
+                this.document.updateDrive({
+                    id: driveDocument.id,
+                    hash: driveDocument.hash,
+                    name: driveDocument.name,
+                    nodes: sortedNodes,
+                });
+
+                this.save();
+                return;
+            }
+
+            console.error('Cannot copy or move a node to itself');
             return;
         }
 
@@ -266,6 +309,15 @@ class ElectronDocumentDrive implements IDocumentDrive {
                 }
                 return [...acc, { ...node }];
             }, [] as Array<Node>);
+        }
+
+        // Sort nodes if required
+        if (sortOptions) {
+            mutatedNodes = this.sortNodes(
+                mutatedNodes,
+                newBasePath,
+                sortOptions
+            );
         }
 
         // Update drive document
