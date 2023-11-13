@@ -3,6 +3,10 @@ import { useState } from 'react';
 import { TreeItem } from '..';
 import { AddNewItemInput } from './add-new-item-input';
 
+/**
+ * Finds the deepest selected item's path in the TreeView state.
+ * We want a linear representation of the path since we only show the path to the deepest selected item and ignore the other children.
+ */
 function findDeepestSelectedPath<T extends string = string>(root: TreeItem<T>) {
     let deepestPath: TreeItem<T>[] = [];
     const currentDepth = 0;
@@ -42,6 +46,12 @@ export type BreadcrumbsProps<T extends string> =
         onCancelInput: (item: TreeItem) => void;
     };
 
+/**
+ * The `Breadcrumbs` component displays the current path of the selected item.
+ * It also allows the user to add a new folder to the current path.
+ * The component mirrors the state and setters of the TreeView, and should be used together with it.
+ * The `TreeItem` type is the source of truth.
+ */
 export function Breadcrumbs<T extends string = string>(
     props: BreadcrumbsProps<T>,
 ) {
@@ -49,10 +59,14 @@ export function Breadcrumbs<T extends string = string>(
     const breadcrumbItems = findDeepestSelectedPath(props.rootItem);
     const deepestSelectedItem = breadcrumbItems[breadcrumbItems.length - 1];
 
+    // in the case where we are adding a new item, we don't want to show the last item in the breadcrumbs.
+    // the new item being added is actually the new deepest selected item, so it would be shown twice otherwise.
     if (isAddingNewItem) {
         breadcrumbItems.pop();
     }
 
+    // adding a new item from the breadcrumbs is a special case of the general add new item functionality found in the TreeView.
+    // in this case, we always call the onAddNewItem handler with the deepest selected item and the 'new-folder' option.
     function onAddNew() {
         setIsAddingNewItem(true);
         props.onAddNewItem(deepestSelectedItem, 'new-folder');
