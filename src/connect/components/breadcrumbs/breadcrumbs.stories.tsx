@@ -94,8 +94,6 @@ export const Default: Story = {
     render: function Wrapper(args) {
         const [items, setItems] = useState(args.rootItem);
 
-        console.log({ items });
-
         const traverseTree = (
             item: TreeItem,
             callback: (item: TreeItem) => TreeItem,
