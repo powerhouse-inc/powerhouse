@@ -33,7 +33,7 @@ export const reducer: DocumentDriveNodeOperations = {
         );
         if (drive) {
             drive.nodes = drive.nodes.filter(
-                node => node.path !== action.input.path,
+                node => !node.path.startsWith(action.input.path),
             );
         }
     },
