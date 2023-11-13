@@ -1,3 +1,10 @@
+# [1.0.0-alpha.16](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.15...v1.0.0-alpha.16) (2023-11-13)
+
+
+### Features
+
+* export breadcrumbs component ([a9c549b](https://github.com/powerhouse-inc/design-system/commit/a9c549b57c55c02a2e8084eb63078ae1b03b7fdd))
+
 # [1.0.0-alpha.15](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.14...v1.0.0-alpha.15) (2023-11-13)
 
 
