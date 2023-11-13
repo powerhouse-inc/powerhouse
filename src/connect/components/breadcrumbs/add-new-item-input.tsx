@@ -7,8 +7,6 @@ import { twMerge } from 'tailwind-merge';
 
 export interface AddNewItemInputProps
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSubmit'> {
-    initialValue: string;
-    placeholder: string;
     onCancel: () => void;
     onSubmit: (value: string, event?: PressEvent) => void;
     'aria-label'?: string;
@@ -22,11 +20,11 @@ export const AddNewItemInput: React.FC<AddNewItemInputProps> = props => {
         style,
         placeholder,
         'aria-label': ariaLabel,
-        initialValue = '',
+        defaultValue = '',
         ...containerProps
     } = props;
 
-    const [text, setText] = useState(initialValue);
+    const [text, setText] = useState(defaultValue.toString());
     const inputRef = useRef<HTMLInputElement>(null);
 
     useLayoutEffect(() => {
