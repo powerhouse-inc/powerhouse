@@ -1,3 +1,4 @@
+export * from './breadcrumbs';
 export * from './drive-view';
 export * from './dropdown-menu';
 export * from './modal';
