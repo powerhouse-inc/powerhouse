@@ -11,11 +11,10 @@ import {
 } from '@powerhousedao/design-system';
 import { Drive, Node } from 'document-model-libs/document-drive';
 import { Immutable } from 'document-model/document';
-import { useAtom } from 'jotai';
 import path from 'path';
 import { useEffect, useState } from 'react';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
-import { sidebarDisableHoverStyles } from 'src/store';
+import { sanitizePath } from 'src/utils/path';
 
 function mapDocumentDriveNodeToTreeItem(
     node: Immutable<Node>,
@@ -60,11 +59,15 @@ function mapDocumentDriveToTreeItem(drive: Immutable<Drive>): DriveTreeItem {
     };
 }
 
-export default function () {
+interface DriveContainerProps {
+    disableHoverStyles?: boolean;
+    setDisableHoverStyles?: (value: boolean) => void;
+}
+
+export default function DriveContainer(props: DriveContainerProps) {
+    const { disableHoverStyles = false, setDisableHoverStyles } = props;
+
     const [drives, setDrives] = useState<DriveTreeItem[]>([]);
-    const [disableHoverStyles, setDisableHoverStyles] = useAtom(
-        sidebarDisableHoverStyles
-    );
     const {
         documentDrive,
         openFile,
@@ -104,19 +107,12 @@ export default function () {
         const normalizedPath = item.id.replace(drive.id, '');
         const basePath = normalizedPath.split('/').slice(0, -1).join('/');
 
-        const newPath = path.join(
-            basePath,
-            item.label.replace(/\s/g, '-').toLowerCase()
-        );
-
-        console.log(newPath);
+        const newPath = path.join(basePath, sanitizePath(item.label));
 
         addFolder(drive.id, newPath, item.label);
     }
 
     function addVirtualNewFolder(item: TreeItem, drive: DriveTreeItem) {
-        const num = Math.floor(Math.random() * 9999) + 1;
-
         setDrives(drives => {
             const newDrives = drives.map(driveItem => {
                 if (driveItem.id === drive.id) {
@@ -126,7 +122,7 @@ export default function () {
                             treeItem.isSelected = false;
                             treeItem.children = treeItem.children || [];
                             treeItem.children.push({
-                                id: `${treeItem.id}/new-folder-${num}`,
+                                id: `${treeItem.id}/virtual-new-folder`,
                                 label: 'New Folder',
                                 type: ItemType.Folder,
                                 action: ActionType.New,
@@ -206,10 +202,10 @@ export default function () {
     };
 
     const onDragStartHandler: DriveViewProps['onDragStart'] = () =>
-        setDisableHoverStyles(true);
+        setDisableHoverStyles?.(true);
 
     const onDragEndHandler: DriveViewProps['onDragEnd'] = () =>
-        setDisableHoverStyles(false);
+        setDisableHoverStyles?.(false);
 
     const onDropActivateHandler: DriveViewProps['onDropActivate'] = (
         drive,
