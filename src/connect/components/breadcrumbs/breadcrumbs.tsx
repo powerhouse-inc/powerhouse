@@ -84,7 +84,7 @@ export function Breadcrumbs<T extends string = string>(
             ))}
             {isAddingNewItem ? (
                 <AddNewItemInput
-                    initialValue={deepestSelectedItem.label}
+                    defaultValue={deepestSelectedItem.label}
                     placeholder="New Folder"
                     onSubmit={value => {
                         props.onSubmitInput({
