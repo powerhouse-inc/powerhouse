@@ -14,7 +14,7 @@ import { Immutable } from 'document-model/document';
 import path from 'path';
 import { useEffect, useState } from 'react';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
-import { sanitizePath } from 'src/utils/path';
+import { getLastIndexFromPath, sanitizePath } from 'src/utils/path';
 
 function mapDocumentDriveNodeToTreeItem(
     node: Immutable<Node>,
@@ -113,6 +113,21 @@ export default function DriveContainer(props: DriveContainerProps) {
     }
 
     function addVirtualNewFolder(item: TreeItem, drive: DriveTreeItem) {
+        const driveNodes = documentDrive?.state.drives.find(
+            driveItem => driveItem.id === drive.id
+        )?.nodes;
+
+        const findPath = `${item.id}/new-folder`;
+        const lastIndex = getLastIndexFromPath(
+            [...(driveNodes || [])],
+            findPath
+        );
+
+        const virtualPathName =
+            'new-folder' + (lastIndex === null ? '' : `-${lastIndex + 1}`);
+        const virtualFolderName =
+            'New Folder' + (lastIndex === null ? '' : ` ${lastIndex + 1}`);
+
         setDrives(drives => {
             const newDrives = drives.map(driveItem => {
                 if (driveItem.id === drive.id) {
@@ -122,8 +137,8 @@ export default function DriveContainer(props: DriveContainerProps) {
                             treeItem.isSelected = false;
                             treeItem.children = treeItem.children || [];
                             treeItem.children.push({
-                                id: `${treeItem.id}/virtual-new-folder`,
-                                label: 'New Folder',
+                                id: `${treeItem.id}/${virtualPathName}`,
+                                label: virtualFolderName,
                                 type: ItemType.Folder,
                                 action: ActionType.New,
                             });
