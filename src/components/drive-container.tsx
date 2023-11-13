@@ -70,6 +70,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     const [drives, setDrives] = useState<DriveTreeItem[]>([]);
     const {
         documentDrive,
+        addFile,
         openFile,
         addFolder,
         deleteNode,
@@ -240,13 +241,13 @@ export default function DriveContainer(props: DriveContainerProps) {
         );
     };
 
-    const onDropEventHandler: DriveViewProps['onDropEvent'] = (
+    const onDropEventHandler: DriveViewProps['onDropEvent'] = async (
         item,
         target,
         event,
         drive
     ) => {
-        const isDropAfter = item.dropAfterItem as boolean;
+        const isDropAfter = !!item.dropAfterItem;
 
         let targetId =
             isDropAfter && !target.expanded
@@ -256,7 +257,17 @@ export default function DriveContainer(props: DriveContainerProps) {
             targetId = '';
         }
 
-        copyOrMoveNode(drive.id, item.data.id, targetId, event.dropOperation);
+        if (item.kind === 'object') {
+            copyOrMoveNode(
+                drive.id,
+                item.data.id,
+                targetId,
+                event.dropOperation
+            );
+        } else if (item.kind === 'file') {
+            const file = await item.getFile();
+            addFile(file, drive.id, path.join(targetId, file.name));
+        }
     };
 
     if (!documentDrive) {
