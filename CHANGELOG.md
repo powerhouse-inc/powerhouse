@@ -1,3 +1,10 @@
+# [1.0.0-alpha.15](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.14...v1.0.0-alpha.15) (2023-11-13)
+
+
+### Features
+
+* fixed dropItem export ([e9319cb](https://github.com/powerhouse-inc/design-system/commit/e9319cb259bdf56a0e9fa374d0f3a1fd71dc3b21))
+
 # [1.0.0-alpha.14](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.13...v1.0.0-alpha.14) (2023-11-13)
 
 
