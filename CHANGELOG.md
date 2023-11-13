@@ -1,3 +1,13 @@
+# [1.0.0-alpha.13](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.12...v1.0.0-alpha.13) (2023-11-13)
+
+
+### Features
+
+* 🚀 Added open folder when hover in drag state ([0195eb3](https://github.com/powerhouse-inc/design-system/commit/0195eb3f64e7d2b7bfe4625fd3e6deba350dad87))
+* added missing props to DriveView ([6a862ea](https://github.com/powerhouse-inc/design-system/commit/6a862ea723eea749bcfcef29ce08b0b85daad658))
+* handle highlight styles when dragging an item ([d270a55](https://github.com/powerhouse-inc/design-system/commit/d270a5554572a88ca8ccbb0cf929ac244d18bcac))
+* reserve icon space in tree-view-item and tree-view-input ([ddca274](https://github.com/powerhouse-inc/design-system/commit/ddca274945affb5bc104235384081ad1346701bb))
+
 # [1.0.0-alpha.12](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.11...v1.0.0-alpha.12) (2023-11-10)
 
 
