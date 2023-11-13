@@ -1,5 +1,5 @@
 import IconGear from '@/assets/icons/gear.svg?react';
-import { DropItem } from '@/powerhouse/hooks';
+import type { DropItem } from '@/powerhouse/hooks';
 import type { DragEndEvent, DragStartEvent, DropEvent } from 'react-aria';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';

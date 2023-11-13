@@ -12,15 +12,20 @@ import {
 } from 'react-aria';
 import { CUSTOM_OBJECT_FORMAT } from '../components/drag-and-drop/constants';
 
-export interface CustomObjectDropItem<T = unknown> {
-    kind: 'object';
-    type: string;
-    data: T;
+export interface CustomDropItem {
     dropAfterItem?: boolean;
     dropBeforeItem?: boolean;
 }
 
-export type DropItem<T> = CustomObjectDropItem<T> | FileDropItem;
+export interface CustomFileDropItem extends FileDropItem, CustomDropItem {}
+
+export interface CustomObjectDropItem<T = unknown> extends CustomDropItem {
+    kind: 'object';
+    type: string;
+    data: T;
+}
+
+export type DropItem<T> = CustomObjectDropItem<T> | CustomFileDropItem;
 
 export interface UseDraggableTargetProps<T = unknown> {
     data: T;
@@ -74,7 +79,11 @@ export function useDraggableTarget<T = unknown>(
                 | undefined;
 
             if (itemFile) {
-                onDropEvent?.(itemFile, data, e);
+                onDropEvent?.(
+                    { ...itemFile, dropAfterItem, dropBeforeItem },
+                    data,
+                    e,
+                );
             }
 
             if (item) {
