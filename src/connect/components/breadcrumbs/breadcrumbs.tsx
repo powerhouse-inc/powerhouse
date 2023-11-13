@@ -1,3 +1,4 @@
+import { Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { TreeItem } from '..';
 import { AddNewItemInput } from './add-new-item-input';
@@ -36,7 +37,7 @@ export type BreadcrumbsProps<T extends string> =
             event: React.MouseEvent<HTMLDivElement, MouseEvent>,
             item: TreeItem<T>,
         ) => void;
-        onNewAddNewItem: (item: TreeItem, option: 'new-folder') => void;
+        onAddNewItem: (item: TreeItem, option: 'new-folder') => void;
         onSubmitInput: (item: TreeItem) => void;
         onCancelInput: (item: TreeItem) => void;
     };
@@ -54,15 +55,17 @@ export function Breadcrumbs<T extends string = string>(
 
     function onAddNew() {
         setIsAddingNewItem(true);
-        props.onNewAddNewItem?.(deepestSelectedItem, 'new-folder');
+        props.onAddNewItem(deepestSelectedItem, 'new-folder');
     }
+
     return (
-        <div>
+        <div className="p-6 flex flex-row items-center gap-2 text-[#9EA0A1]">
             {breadcrumbItems.map(item => (
                 <Breadcrumb
                     key={item.id}
                     item={item}
                     onClick={e => props.onItemClick?.(e, item)}
+                    className="last-of-type:text-[#404446] hover:text-[#404446] transition-colors"
                 />
             ))}
             {isAddingNewItem ? (
@@ -82,7 +85,12 @@ export function Breadcrumbs<T extends string = string>(
                     }}
                 />
             ) : (
-                <button onClick={onAddNew}>+ Add new</button>
+                <button
+                    onClick={onAddNew}
+                    className="flex flex-row items-center justify-center gap-2 ml-1 px-2 py-[6px] bg-[#FCFCFC] rounded-[6px] hover:bg-[#EFEFEF] hover:text-[#404446] transition-colors"
+                >
+                    <Icon name="plus" className="w-[14px] h-[14px]" /> Add new
+                </button>
             )}
         </div>
     );
@@ -94,12 +102,17 @@ export type BreadcrumbProps<T extends string> = {
         item: TreeItem<string>,
     ) => void;
     item: TreeItem<T>;
+    className?: string;
 };
 
 export function Breadcrumb<T extends string>(props: BreadcrumbProps<T>) {
     return (
         <>
-            <div role="button" onClick={e => props.onClick?.(e, props.item)}>
+            <div
+                role="button"
+                className={props.className}
+                onClick={e => props.onClick?.(e, props.item)}
+            >
                 {props.item.label}
             </div>
             /

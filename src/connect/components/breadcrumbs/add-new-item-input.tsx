@@ -1,5 +1,4 @@
-import CheckIcon from '@/assets/icons/check-fill.svg';
-import CancelIcon from '@/assets/icons/xmark.svg';
+import { Icon } from '@/powerhouse';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useKeyboard } from 'react-aria';
 import { Button, Input, PressEvent, TextField } from 'react-aria-components';
@@ -51,7 +50,7 @@ export const AddNewItemInput: React.FC<AddNewItemInputProps> = props => {
         <ClickAwayListener onClickAway={() => onSubmit(text)}>
             <div
                 className={twMerge(
-                    'flex flex-row items-center pr-5',
+                    'flex items-center text-[#404446]',
                     className,
                 )}
                 style={{
@@ -61,29 +60,23 @@ export const AddNewItemInput: React.FC<AddNewItemInputProps> = props => {
                 {...containerProps}
             >
                 <TextField
-                    className="flex flex-1 ml-2 min-w-0"
                     value={text}
                     onChange={setText}
                     aria-label={ariaLabel}
                     autoFocus
                 >
                     <Input
-                        className="flex flex-1 outline-none bg-inherit min-w-0"
+                        className="outline-none bg-inherit"
                         placeholder={placeholder}
                         ref={inputRef}
                     />
                 </TextField>
-                <div className="flex flex-row items-center">
-                    <Button
-                        className="outline-none"
-                        onPress={e => onSubmit(text, e)}
-                    >
-                        <img src={CheckIcon} className="w-6 h-6" />
+                <div className="flex items-center gap-1">
+                    <Button onPress={e => onSubmit(text, e)}>
+                        <Icon name="check" className="w-6 h-6" />
                     </Button>
-                    <Button onPress={onCancel} className="outline-none ml-1">
-                        <div className="w-6 h-6 flex items-center justify-center">
-                            <img src={CancelIcon} alt="" />
-                        </div>
+                    <Button onPress={onCancel}>
+                        <Icon name="xmark" className="w-6 h-6" />
                     </Button>
                 </div>
             </div>

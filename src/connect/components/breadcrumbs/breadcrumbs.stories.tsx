@@ -190,7 +190,7 @@ export const Default: Story = {
                 <Breadcrumbs
                     rootItem={items}
                     onItemClick={onItemClickHandler}
-                    onNewAddNewItem={onItemOptionsClickHandler}
+                    onAddNewItem={onItemOptionsClickHandler}
                     onSubmitInput={onSubmitInputHandler}
                     onCancelInput={onCancelInputHandler}
                 />
