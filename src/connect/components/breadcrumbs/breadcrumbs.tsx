@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { TreeItem } from '..';
+import { AddNewItemInput } from './add-new-item-input';
 
 function findDeepestSelectedPath<T extends string = string>(root: TreeItem<T>) {
     let deepestPath: TreeItem<T>[] = [];
@@ -34,19 +36,56 @@ export type BreadcrumbsProps<T extends string> =
             event: React.MouseEvent<HTMLDivElement, MouseEvent>,
             item: TreeItem<T>,
         ) => void;
+        onNewAddNewItem: (item: TreeItem, option: 'new-folder') => void;
+        onSubmitInput: (item: TreeItem) => void;
+        onCancelInput: (item: TreeItem) => void;
     };
 
 export function Breadcrumbs<T extends string = string>(
     props: BreadcrumbsProps<T>,
 ) {
+    const [isAddingNewItem, setIsAddingNewItem] = useState(false);
     const breadcrumbItems = findDeepestSelectedPath(props.rootItem);
-    return breadcrumbItems.map(item => (
-        <Breadcrumb
-            key={item.id}
-            item={item}
-            onClick={e => props.onItemClick?.(e, item)}
-        />
-    ));
+    const deepestSelectedItem = breadcrumbItems[breadcrumbItems.length - 1];
+
+    if (isAddingNewItem) {
+        breadcrumbItems.pop();
+    }
+
+    function onAddNew() {
+        setIsAddingNewItem(true);
+        props.onNewAddNewItem?.(deepestSelectedItem, 'new-folder');
+    }
+    return (
+        <div>
+            {breadcrumbItems.map(item => (
+                <Breadcrumb
+                    key={item.id}
+                    item={item}
+                    onClick={e => props.onItemClick?.(e, item)}
+                />
+            ))}
+            {isAddingNewItem ? (
+                <AddNewItemInput
+                    initialValue={deepestSelectedItem.label}
+                    placeholder="New Folder"
+                    onSubmit={value => {
+                        props.onSubmitInput({
+                            ...deepestSelectedItem,
+                            label: value,
+                        });
+                        setIsAddingNewItem(false);
+                    }}
+                    onCancel={() => {
+                        props.onCancelInput(deepestSelectedItem);
+                        setIsAddingNewItem(false);
+                    }}
+                />
+            ) : (
+                <button onClick={onAddNew}>+ Add new</button>
+            )}
+        </div>
+    );
 }
 
 export type BreadcrumbProps<T extends string> = {

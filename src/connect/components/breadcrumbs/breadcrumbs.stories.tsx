@@ -2,7 +2,7 @@ import { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { Breadcrumbs } from '.';
 import { ConnectTreeViewProps } from '..';
-import { ItemStatus, ItemType, TreeItem } from '../tree-view-item';
+import { ActionType, ItemStatus, ItemType, TreeItem } from '../tree-view-item';
 
 const meta = {
     title: 'Connect/Components/Breadcrumbs',
@@ -44,7 +44,7 @@ const rootItem: TreeItem = {
                     type: ItemType.Folder,
                     status: ItemStatus.Syncing,
                     expanded: false,
-                    isSelected: false,
+                    isSelected: true,
                     children: [
                         {
                             id: 'drive/folder1/folder1.2/folder1.2.1',
@@ -92,7 +92,9 @@ export const Default: Story = {
         rootItem,
     },
     render: function Wrapper(args) {
-        const [rootItem, setItems] = useState(args.rootItem);
+        const [items, setItems] = useState(args.rootItem);
+
+        console.log({ items });
 
         const traverseTree = (
             item: TreeItem,
@@ -128,11 +130,69 @@ export const Default: Story = {
             });
         };
 
+        const onCancelInputHandler = (item: TreeItem) => {
+            const newTree = traverseTree(items, treeItem => {
+                if (treeItem.id === item.id) {
+                    treeItem.action = undefined;
+                }
+
+                return treeItem;
+            });
+
+            setItems(newTree);
+        };
+
+        const onSubmitInputHandler = (item: TreeItem) => {
+            const newTree = traverseTree(items, treeItem => {
+                if (treeItem.id === item.id) {
+                    treeItem.action = undefined;
+                    treeItem.label = item.label;
+                    item.id = item.id.replace(
+                        /\/new-folder$/,
+                        `/${item.label}`,
+                    );
+                }
+
+                return treeItem;
+            });
+
+            setItems(newTree);
+        };
+
+        const onItemOptionsClickHandler = (
+            item: TreeItem,
+            option: 'new-folder',
+        ) => {
+            if (option === 'new-folder') {
+                const newTree = traverseTree(items, treeItem => {
+                    if (treeItem.id === item.id) {
+                        treeItem.expanded = true;
+                        treeItem.isSelected = false;
+                        treeItem.children = treeItem.children || [];
+                        treeItem.children.push({
+                            id: `${treeItem.id}/new-folder`,
+                            label: 'New Folder',
+                            type: ItemType.Folder,
+                            action: ActionType.New,
+                            isSelected: true,
+                        });
+                    }
+
+                    return treeItem;
+                });
+
+                setItems(newTree);
+            }
+        };
+
         return (
             <div className="p-10 bg-white">
                 <Breadcrumbs
-                    rootItem={rootItem}
+                    rootItem={items}
                     onItemClick={onItemClickHandler}
+                    onNewAddNewItem={onItemOptionsClickHandler}
+                    onSubmitInput={onSubmitInputHandler}
+                    onCancelInput={onCancelInputHandler}
                 />
             </div>
         );
