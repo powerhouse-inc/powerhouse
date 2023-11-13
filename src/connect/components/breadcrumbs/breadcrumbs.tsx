@@ -59,7 +59,7 @@ export function Breadcrumbs<T extends string = string>(
     }
 
     return (
-        <div className="p-6 flex flex-row items-center gap-2 text-[#9EA0A1]">
+        <div className="p-6 flex flex-row items-center gap-2 text-[#9EA0A1] h-9">
             {breadcrumbItems.map(item => (
                 <Breadcrumb
                     key={item.id}
