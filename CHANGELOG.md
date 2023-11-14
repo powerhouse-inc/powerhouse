@@ -1,3 +1,11 @@
+# [1.0.0-alpha.18](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2023-11-14)
+
+
+### Features
+
+* temp remove icon component ([0f1156c](https://github.com/powerhouse-inc/design-system/commit/0f1156c676dd18ccf26313f143ae1330a72d1f59))
+* temp switch to inline svg ([3beeab9](https://github.com/powerhouse-inc/design-system/commit/3beeab9c563f862a85559c2f854f270239caec37))
+
 # [1.0.0-alpha.17](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2023-11-14)
 
 
