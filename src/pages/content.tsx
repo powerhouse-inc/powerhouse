@@ -5,6 +5,7 @@ import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import {
     preloadTabs,
     useFileNodeDocument,
@@ -20,6 +21,8 @@ const Content = () => {
     const selectedPath = useSelectedPath();
     const { addFile, addDocument, deleteNode } = useDocumentDrive();
     const documentModels = useDocumentModels();
+    const { onItemOptionsClick, onItemClick, onSubmitInput } =
+        useDrivesContainer();
 
     const [selectedFileNode, setSelectedFileNode] = useState<
         { drive: string; path: string } | undefined
@@ -95,7 +98,7 @@ const Content = () => {
     return (
         <div className="flex h-full flex-col bg-[#F4F4F4] p-6">
             {selectedDocument ? (
-                <div>
+                <div className="rounded-[20px] bg-[#FCFCFC] p-4">
                     <DocumentEditor
                         document={selectedDocument}
                         onChange={updateDocument}
@@ -110,11 +113,24 @@ const Content = () => {
                         {selectedDrive && (
                             <Breadcrumbs
                                 rootItem={selectedDrive}
-                                onItemClick={(e, item) =>
-                                    selectFolder(selectedDrive.id, item.id)
+                                onItemClick={
+                                    (e, item) =>
+                                        onItemClick(
+                                            e,
+                                            item as any,
+                                            selectedDrive.id as any
+                                        ) // TODO deal with generics
                                 }
-                                onAddNewItem={console.log}
-                                onSubmitInput={console.log}
+                                onAddNewItem={(item, option) =>
+                                    onItemOptionsClick(
+                                        item as any,
+                                        option,
+                                        selectedDrive as any
+                                    )
+                                }
+                                onSubmitInput={item =>
+                                    onSubmitInput(item, selectedDrive as any)
+                                }
                                 onCancelInput={console.log}
                             />
                         )}

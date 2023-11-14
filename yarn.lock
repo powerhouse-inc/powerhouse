@@ -974,10 +974,10 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
-"@powerhousedao/design-system@^1.0.0-alpha.16":
-  version "1.0.0-alpha.16"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.16.tgz#0c376433ee080923e672bcaebd62a5845159fe78"
-  integrity sha512-CiIRP+tQDPQUblgZa2F/8wQAj0WPvGZjuvaWFX/1KUhpxFfZ78r2DEV35C9Vi/F7248JP00Zqmhtsar413KZgA==
+"@powerhousedao/design-system@^1.0.0-alpha.17":
+  version "1.0.0-alpha.17"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.17.tgz#b7eacd845ddb9767e831dd6978ab4f8e69530686"
+  integrity sha512-DSv0fUE6GGkjijvos/7YsXFK7YD7avt/rDARzlRmJFPBVHjg/xP1aupxg2rJClJySUs3s0dVzmPC0DPqi1LxBg==
 
 "@react-aria/breadcrumbs@^3.5.1":
   version "3.5.1"

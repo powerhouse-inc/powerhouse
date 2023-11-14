@@ -48,9 +48,14 @@ export const useSelectedDrive = () =>
     useAtomValue(
         useMemo(
             () =>
-                selectAtom(drivesAtom, drives =>
-                    drives.find(drive => drive.isSelected)
-                ),
+                selectAtom(drivesAtom, drives => {
+                    const selected = findDeepestSelectedPath(drives);
+                    if (selected.length) {
+                        return selected[0];
+                    } else {
+                        return undefined;
+                    }
+                }),
             []
         )
     );
@@ -101,18 +106,12 @@ export const useSelectFolder = () => {
         setDrives(drives =>
             traverseDriveById(drives, drive, treeItem => {
                 if (treeItem.id === path) {
-                    return {
-                        ...treeItem,
-                        expanded: !treeItem.expanded,
-                        isSelected: true,
-                    };
+                    treeItem.expanded = !treeItem.expanded;
+                    treeItem.isSelected = !treeItem.isSelected;
                 } else {
-                    return {
-                        ...treeItem,
-                        isSelected:
-                            treeItem.id === drive || path.includes(treeItem.id),
-                    };
+                    treeItem.isSelected = false;
                 }
+                return treeItem;
             })
         );
     };

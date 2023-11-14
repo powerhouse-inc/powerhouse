@@ -1,13 +1,10 @@
 import {
-    ActionType,
     DriveTreeItem,
     DriveView,
     DriveViewProps,
     ItemType,
-    OnItemOptionsClickHandler,
     TreeItem,
     traverseDriveById,
-    traverseTree,
 } from '@powerhousedao/design-system';
 import { Drive, Node } from 'document-model-libs/document-drive';
 import { Immutable } from 'document-model/document';
@@ -17,9 +14,9 @@ import {
     isChildrenRootNode,
     useDocumentDrive,
 } from 'src/hooks/useDocumentDrive';
+import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { SortOptions } from 'src/services/document-drive';
-import { useDrives, useSelectFolder } from 'src/store';
-import { getLastIndexFromPath, sanitizePath } from 'src/utils/path';
+import { useDrives } from 'src/store';
 
 function findNodeById(id: string, treeItem: TreeItem): TreeItem | undefined {
     if (treeItem.id === id) {
@@ -72,7 +69,7 @@ function mapDocumentDriveToTreeItem(
         label: drive.name,
         type: ItemType.LocalDrive,
         expanded: treeItem?.expanded ?? true,
-        isSelected: treeItem?.isSelected ?? true,
+        isSelected: treeItem?.isSelected ?? false,
         children: nodes.map(node =>
             mapDocumentDriveNodeToTreeItem(
                 node,
@@ -92,23 +89,16 @@ export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
 
     const [drives, setDrives] = useDrives();
-    const selectFolder = useSelectFolder();
-    const {
-        documentDrive,
-        addFile,
-        openFile,
-        addFolder,
-        deleteNode,
-        renameNode,
-        copyOrMoveNode,
-    } = useDocumentDrive();
+    const { documentDrive, addFile, copyOrMoveNode } = useDocumentDrive();
+    const { onItemOptionsClick, onItemClick, onSubmitInput } =
+        useDrivesContainer();
 
     function updateDrives() {
         setDrives(oldItems => {
             const newItems = documentDrive?.state.drives.map(drive =>
                 mapDocumentDriveToTreeItem(
-                    drive,
-                    oldItems.find(item => item.id === drive.id)
+                    drive
+                    // oldItems.find(item => item.id === drive.id) TODO keep expanded/selected state
                 )
             );
             return newItems ?? [];
@@ -119,128 +109,9 @@ export default function DriveContainer(props: DriveContainerProps) {
         updateDrives();
     }, [documentDrive]);
 
-    function handleNodeClick(item: TreeItem, drive: DriveTreeItem) {
-        if (item.type === ItemType.File) {
-            openFile(drive.id, item.id);
-        } else {
-            selectFolder(drive.id, item.id);
-        }
-    }
-
-    function addNewFolder(item: TreeItem, drive: DriveTreeItem) {
-        const normalizedPath = item.id.replace(drive.id, '');
-        const basePath = normalizedPath.split('/').slice(0, -1).join('/');
-
-        const newPath = path.join(basePath, sanitizePath(item.label));
-
-        if (newPath === '.') return cancelInputHandler();
-        addFolder(drive.id, newPath, item.label);
-    }
-
-    function addVirtualNewFolder(item: TreeItem, drive: DriveTreeItem) {
-        const driveNodes = documentDrive?.state.drives.find(
-            driveItem => driveItem.id === drive.id
-        )?.nodes;
-
-        const findPath = `${item.id}/new-folder`;
-        const lastIndex = getLastIndexFromPath(
-            [...(driveNodes || [])],
-            findPath
-        );
-
-        const virtualPathName =
-            'new-folder' + (lastIndex === null ? '' : `-${lastIndex + 1}`);
-        const virtualFolderName =
-            'New Folder' + (lastIndex === null ? '' : ` ${lastIndex + 1}`);
-
-        setDrives(drives => {
-            const newDrives = drives.map(driveItem => {
-                if (driveItem.id === drive.id) {
-                    return traverseTree(driveItem, treeItem => {
-                        if (treeItem.id === item.id) {
-                            treeItem.expanded = true;
-                            treeItem.isSelected = false;
-                            treeItem.children = treeItem.children || [];
-                            treeItem.children.push({
-                                id: `${treeItem.id}/${virtualPathName}`,
-                                label: virtualFolderName,
-                                type: ItemType.Folder,
-                                action: ActionType.New,
-                            });
-                        }
-
-                        return { ...treeItem };
-                    }) as DriveTreeItem<
-                        'duplicate' | 'new-folder' | 'rename' | 'delete'
-                    >;
-                }
-
-                return { ...driveItem };
-            });
-
-            return newDrives;
-        });
-    }
-
-    function updateItem(item: TreeItem, drive: DriveTreeItem) {
-        setDrives(drives =>
-            drives.map(_drive => {
-                if (_drive.id !== drive.id) {
-                    return _drive;
-                }
-                return traverseTree(drive, _item =>
-                    _item.id !== item.id ? _item : item
-                ) as DriveTreeItem<
-                    'duplicate' | 'new-folder' | 'rename' | 'delete'
-                >;
-            })
-        );
-    }
-
-    function setItemUpdate(item: TreeItem, drive: DriveTreeItem) {
-        updateItem(
-            {
-                ...item,
-                action: ActionType.Update,
-            },
-            drive
-        );
-    }
-
-    async function updateNodeName(item: TreeItem, drive: DriveTreeItem) {
-        renameNode(drive.id, item.id, item.label);
-    }
-
-    function submitInputHandler(item: TreeItem, drive: DriveTreeItem) {
-        if (item.action === ActionType.New) {
-            addNewFolder(item, drive);
-            return;
-        }
-
-        updateNodeName(item, drive);
-    }
-
     function cancelInputHandler() {
         updateDrives();
     }
-
-    const handleItemOptionsClick: OnItemOptionsClickHandler = (
-        item,
-        option,
-        drive
-    ) => {
-        switch (option) {
-            case 'new-folder':
-                addVirtualNewFolder(item, drive);
-                break;
-            case 'rename':
-                setItemUpdate(item, drive);
-                break;
-            case 'delete':
-                deleteNode(drive.id, item.id);
-                break;
-        }
-    };
 
     const onDragStartHandler: DriveViewProps['onDragStart'] = () =>
         setDisableHoverStyles?.(true);
@@ -308,11 +179,11 @@ export default function DriveContainer(props: DriveContainerProps) {
             type="local"
             name={documentDrive.name}
             drives={drives}
-            onItemClick={(_, item, drive) => {
-                handleNodeClick(item, drive);
-            }}
-            onItemOptionsClick={handleItemOptionsClick}
-            onSubmitInput={submitInputHandler}
+            onItemClick={onItemClick}
+            onItemOptionsClick={onItemOptionsClick}
+            onSubmitInput={(item, drive) =>
+                onSubmitInput(item, drive, cancelInputHandler)
+            }
             onCancelInput={cancelInputHandler}
             onDragStart={onDragStartHandler}
             onDragEnd={onDragEndHandler}

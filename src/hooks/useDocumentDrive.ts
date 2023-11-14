@@ -45,7 +45,9 @@ export function useDocumentDrive(
     }
 
     useEffect(() => {
-        fetchDocumentDrive();
+        if (!document) {
+            fetchDocumentDrive();
+        }
     }, []);
 
     async function openFile(drive: string, path: string) {
@@ -67,7 +69,7 @@ export function useDocumentDrive(
         if (path === drive || path == '.') {
             path = '';
         }
-        console.log(join(path, sanitize(name ?? document.name)));
+
         const node = await documentDrive?.addFile(
             {
                 drive,

@@ -72,8 +72,8 @@ export const DocumentEditor: React.FC<IProps> = ({
 
     return (
         <div className="relative h-full">
-            <div className="flex justify-end gap-4">
-                <div>
+            <div className="mb-4 flex justify-end gap-10">
+                <div className="flex gap-4">
                     <Button onClick={undo} disabled={!canUndo}>
                         Undo
                     </Button>
@@ -81,7 +81,7 @@ export const DocumentEditor: React.FC<IProps> = ({
                         Redo
                     </Button>
                 </div>
-                <div>
+                <div className="flex gap-4">
                     <Button onClick={onSave}>Save</Button>
                     <Button onClick={onClose}>Close</Button>
                 </div>
