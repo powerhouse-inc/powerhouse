@@ -1,0 +1,65 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`UpgradeDriveModal Component should match snapshot 1`] = `
+<div
+  class="bg-overlay fixed inset-0 flex justify-center items-start animate-in fade-in duration-300 ease-out"
+  data-entering="true"
+  data-rac=""
+  data-testid="upgrade-drive-modal"
+  style="--visual-viewport-height: 768px;"
+>
+  <div
+    class="flex justify-center relative top-10 animate-in zoom-in-95 ease-out duration-300"
+    data-entering="true"
+    data-rac=""
+  >
+    <div
+      style="border: 0px; clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; width: 1px; white-space: nowrap;"
+    >
+      <button
+        aria-label="Dismiss"
+        id="react-aria-:r0:"
+        tabindex="-1"
+      />
+    </div>
+    <section
+      class="bg-white outline-none rounded-3xl"
+      role="dialog"
+      tabindex="-1"
+    >
+      <div
+        class="w-[400px] p-6 text-[#565868]"
+      >
+        <div
+          class="text-2xl text-[#404446] font-bold pb-2 border-b border-[#E5E7E8]"
+        >
+          Upgrade to cloud drive
+        </div>
+        <div
+          class="text-[#6C7275] bg-[#F3F5F7] p-4 rounded-md my-6 text-center"
+        >
+          You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?
+        </div>
+        <div
+          class="mt-8 flex justify-between gap-3"
+        >
+          <button
+            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#F3F5F7] text-[##141718] flex-1"
+            data-rac=""
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#404446] text-[#FEFEFE] flex-1"
+            data-rac=""
+            type="button"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+`;
