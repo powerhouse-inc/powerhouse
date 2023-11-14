@@ -7,6 +7,7 @@ import {
     DocumentDriveState,
     FileNode,
     FolderNode,
+    UpdateFileInput,
 } from 'document-model-libs/document-drive';
 import { Action, Document } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
@@ -81,6 +82,12 @@ const electronApi = {
         addFile: (input: AddFileInput, document: Document) =>
             ipcRenderer.invoke(
                 'documentDrive:addFile',
+                input,
+                document
+            ) as Promise<FileNode>,
+        updateFile: (input: UpdateFileInput, document: Document) =>
+            ipcRenderer.invoke(
+                'documentDrive:updateFile',
                 input,
                 document
             ) as Promise<FileNode>,

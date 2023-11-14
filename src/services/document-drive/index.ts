@@ -6,6 +6,7 @@ import {
     FileNode,
     FolderNode,
     Node,
+    UpdateFileInput,
 } from 'document-model-libs/document-drive';
 import { Action, Document, Immutable } from 'document-model/document';
 
@@ -22,6 +23,7 @@ export interface IDocumentDrive {
         driveId: string
     ) => Promise<Document<S, A>>;
     addFile(file: AddFileInput, document: Document): Promise<FileNode>;
+    updateFile(file: UpdateFileInput, document: Document): Promise<FileNode>;
     addFolder(folder: AddFolderInput): Promise<FolderNode>;
     deleteNode(drive: string, path: string): Promise<void>;
     renameNode(drive: string, path: string, name: string): Promise<Node>;

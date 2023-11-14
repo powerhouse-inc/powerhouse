@@ -1,14 +1,10 @@
-import {
-    Action,
-    Document,
-    DocumentModel,
-    Editor,
-    actions,
-} from 'document-model/document';
+import { Action, Document, actions } from 'document-model/document';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
+import { useDocumentModel, useEditor } from 'src/store/document-model';
 import { useDocumentReducer } from 'src/utils/document-model';
+import Button from './button';
 
 export interface EditorProps<T = unknown, A extends Action = Action> {
     document: Document<T, A>;
@@ -19,44 +15,82 @@ export type EditorComponent<T = unknown, A extends Action = Action> = (
     props: EditorProps<T, A>
 ) => JSX.Element;
 
-export function wrapEditor<T, A extends Action>(
-    documentModel: DocumentModel<T, A>,
-    editor: Editor<T, A>
-) {
-    const EditorComponent = editor.Component;
-    return ({ document: initialDocument, onChange }: EditorProps<T, A>) => {
-        const theme = useAtomValue(themeAtom);
-        const [document, dispatch] = useDocumentReducer(
-            documentModel.reducer,
-            initialDocument
-        );
-
-        useEffect(() => {
-            onChange?.(document);
-        }, [document]);
-
-        const operations = document ? [...document.operations].reverse() : [];
-
-        function undo() {
-            dispatch(actions.undo());
-        }
-
-        function redo() {
-            dispatch(actions.redo());
-        }
-
-        const canUndo = document && document.revision > 0;
-        const canRedo =
-            document && document.revision < document.operations.length;
-
-        return (
-            <div className="relative h-full">
-                <EditorComponent
-                    editorContext={{ theme }}
-                    document={document}
-                    dispatch={dispatch}
-                />
-            </div>
-        );
-    };
+export interface IProps extends EditorProps {
+    onSave: () => void;
+    onClose: () => void;
 }
+
+export const DocumentEditor: React.FC<IProps> = ({
+    document: initialDocument,
+    onChange,
+    onSave,
+    onClose,
+}) => {
+    const documentModel = useDocumentModel(initialDocument.documentType);
+    const editor = useEditor(initialDocument.documentType);
+    if (!documentModel) {
+        return (
+            <h3>
+                Document of type {initialDocument.documentType} is not
+                supported.
+            </h3>
+        );
+    }
+
+    if (!editor) {
+        return (
+            <h3>
+                No editor available for document of type{' '}
+                {initialDocument.documentType}
+            </h3>
+        );
+    }
+
+    const EditorComponent = editor.Component;
+    const theme = useAtomValue(themeAtom);
+    const [document, dispatch] = useDocumentReducer(
+        documentModel.reducer,
+        initialDocument
+    );
+
+    useEffect(() => {
+        onChange?.(document);
+    }, [document]);
+
+    const operations = document ? [...document.operations].reverse() : [];
+
+    function undo() {
+        dispatch(actions.undo());
+    }
+
+    function redo() {
+        dispatch(actions.redo());
+    }
+
+    const canUndo = document && document.revision > 0;
+    const canRedo = document && document.revision < document.operations.length;
+
+    return (
+        <div className="relative h-full">
+            <div className="flex justify-end gap-4">
+                <div>
+                    <Button onClick={undo} disabled={!canUndo}>
+                        Undo
+                    </Button>
+                    <Button onClick={redo} disabled={!canRedo}>
+                        Redo
+                    </Button>
+                </div>
+                <div>
+                    <Button onClick={onSave}>Save</Button>
+                    <Button onClick={onClose}>Close</Button>
+                </div>
+            </div>
+            <EditorComponent
+                editorContext={{ theme }}
+                document={document}
+                dispatch={dispatch}
+            />
+        </div>
+    );
+};
