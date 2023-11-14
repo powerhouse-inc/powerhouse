@@ -16,7 +16,7 @@ import {
 } from 'src/hooks/useDocumentDrive';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { SortOptions } from 'src/services/document-drive';
-import { useDrives } from 'src/store';
+import { findDeepestSelectedPath, useDrives } from 'src/store';
 
 function findNodeById(id: string, treeItem: TreeItem): TreeItem | undefined {
     if (treeItem.id === id) {
@@ -59,17 +59,19 @@ function mapDocumentDriveNodeToTreeItem<T extends string>(
 
 function mapDocumentDriveToTreeItem(
     drive: Immutable<Drive>,
+    defaultSelected = false,
     treeItem?: DriveTreeItem
 ): DriveTreeItem {
     const nodes = drive.nodes.filter(
         node => !node.path.includes('/') && node.kind === 'folder'
     );
+    console.log(treeItem?.isSelected, defaultSelected);
     return {
         id: drive.id,
         label: drive.name,
         type: ItemType.LocalDrive,
         expanded: treeItem?.expanded ?? true,
-        isSelected: treeItem?.isSelected ?? false,
+        isSelected: treeItem?.isSelected ?? defaultSelected,
         children: nodes.map(node =>
             mapDocumentDriveNodeToTreeItem(
                 node,
@@ -95,12 +97,18 @@ export default function DriveContainer(props: DriveContainerProps) {
 
     function updateDrives() {
         setDrives(oldItems => {
-            const newItems = documentDrive?.state.drives.map(drive =>
-                mapDocumentDriveToTreeItem(
-                    drive
+            const selectedPath = findDeepestSelectedPath(oldItems);
+            const noSelectedNode = !selectedPath.length;
+            const newItems = documentDrive?.state.drives.map((drive, index) => {
+                const isDriveSelected =
+                    selectedPath.length === 1 &&
+                    selectedPath[0].id === drive.id;
+                return mapDocumentDriveToTreeItem(
+                    drive,
+                    isDriveSelected || (index === 0 && noSelectedNode) // selects first drive if there is no node selected
                     // oldItems.find(item => item.id === drive.id) TODO keep expanded/selected state
-                )
-            );
+                );
+            });
             return newItems ?? [];
         });
     }
