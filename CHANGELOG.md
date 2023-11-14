@@ -1,3 +1,11 @@
+# [1.0.0-alpha.17](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2023-11-14)
+
+
+### Bug Fixes
+
+* move icons file to assets directory ([63eeef1](https://github.com/powerhouse-inc/design-system/commit/63eeef10f8aea3354b7901ffe70b1f2e2aba0477))
+* update path for icons file ([5b25ea1](https://github.com/powerhouse-inc/design-system/commit/5b25ea1f9f89523cbcdef5bcda87cdf19172352e))
+
 # [1.0.0-alpha.16](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.15...v1.0.0-alpha.16) (2023-11-13)
 
 
