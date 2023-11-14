@@ -1,4 +1,3 @@
-import { Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { TreeItem } from '..';
 import { AddNewItemInput } from './add-new-item-input';
@@ -103,7 +102,14 @@ export function Breadcrumbs<T extends string = string>(
                     onClick={onAddNew}
                     className="flex flex-row items-center justify-center gap-2 ml-1 px-2 py-[6px] bg-[#FCFCFC] rounded-[6px] hover:bg-[#EFEFEF] hover:text-[#404446] transition-colors"
                 >
-                    <Icon name="plus" className="w-[14px] h-[14px]" /> Add new
+                    <svg
+                        viewBox="0 0 15 15"
+                        fill="currentcolor"
+                        className="w-[14px] h-[14px]"
+                    >
+                        <path d="M7.69559 0.850788C8.17872 0.840217 8.57895 1.22331 8.58952 1.70644L8.70436 6.95519L13.9531 6.84035C14.4362 6.82978 14.8365 7.21286 14.847 7.696C14.8576 8.17913 14.4745 8.57936 13.9914 8.58993L8.74264 8.70477L8.85748 13.9535C8.86805 14.4366 8.48496 14.8369 8.00183 14.8474C7.51869 14.858 7.11847 14.4749 7.1079 13.9918L6.99306 8.74305L1.74431 8.85789C1.26118 8.86846 0.860955 8.48537 0.850384 8.00223C0.839813 7.5191 1.2229 7.11887 1.70603 7.1083L6.95478 6.99347L6.83994 1.74472C6.82937 1.26158 7.21246 0.861359 7.69559 0.850788Z" />
+                    </svg>
+                    Add new
                 </button>
             )}
         </div>
