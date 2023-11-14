@@ -12,7 +12,7 @@ export const App: React.FC = () => {
             children: [
                 {
                     path: '',
-                    lazy: () => import('src/pages/tabs'),
+                    lazy: () => import('src/pages/content'),
                 },
                 {
                     path: 'settings',

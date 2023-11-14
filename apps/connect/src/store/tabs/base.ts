@@ -5,7 +5,7 @@ import {
     DocumentModel,
     Editor,
 } from 'document-model/document';
-import { EditorComponent, wrapEditor } from 'src/components/editors';
+import { EditorComponent } from 'src/components/editors';
 
 import tabNew from 'src/components/tabs/tab-new';
 
@@ -99,8 +99,8 @@ export function createDocumentTab<T = unknown, A extends Action = Action>(
         documentModel.documentModel.id as TabType,
         id,
         name ?? document.name,
-        document,
-        wrapEditor(documentModel, editor)
+        document
+        // wrapEditor(documentModel, editor) TODO
     );
 }
 

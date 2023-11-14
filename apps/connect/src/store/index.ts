@@ -7,6 +7,7 @@ export const sidebarDisableHoverStyles = atom(false);
 
 export const userAtom = atom<string | undefined>(undefined);
 
+export * from './document-drive';
 export * from './tabs';
 export * from './theme';
 export default { themeAtom, sidebarCollapsedAtom, userAtom };

@@ -12,9 +12,13 @@ import {
 import { Drive, Node } from 'document-model-libs/document-drive';
 import { Immutable } from 'document-model/document';
 import path from 'path';
-import { useEffect, useState } from 'react';
-import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import { useEffect } from 'react';
+import {
+    isChildrenRootNode,
+    useDocumentDrive,
+} from 'src/hooks/useDocumentDrive';
 import { SortOptions } from 'src/services/document-drive';
+import { useDrives, useSelectFolder } from 'src/store';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils/path';
 
 function findNodeById(id: string, treeItem: TreeItem): TreeItem | undefined {
@@ -31,16 +35,6 @@ function mapDocumentDriveNodeToTreeItem<T extends string>(
     treeItem?: TreeItem
 ): TreeItem<T> {
     const isFolder = node.kind === 'folder';
-    const isChildrenRootNode = (childrenPath: string) => {
-        const isChildrenNode = childrenPath.startsWith(node.path);
-        if (!isChildrenNode) return false;
-
-        const parentSegments = node.path.split('/').length;
-        const childrenSegments = childrenPath.split('/').length;
-
-        const isChildrenRoot = parentSegments + 1 === childrenSegments;
-        return isChildrenRoot;
-    };
 
     return {
         id: node.path,
@@ -50,7 +44,9 @@ function mapDocumentDriveNodeToTreeItem<T extends string>(
         isSelected: treeItem?.isSelected,
         children: isFolder
             ? allNodes
-                  .filter(childrenNode => isChildrenRootNode(childrenNode.path))
+                  .filter(childrenNode =>
+                      isChildrenRootNode(node.path, childrenNode.path)
+                  )
                   .map(childrenNode =>
                       mapDocumentDriveNodeToTreeItem(
                           childrenNode,
@@ -68,21 +64,22 @@ function mapDocumentDriveToTreeItem(
     drive: Immutable<Drive>,
     treeItem?: DriveTreeItem
 ): DriveTreeItem {
+    const nodes = drive.nodes.filter(
+        node => !node.path.includes('/') && node.kind === 'folder'
+    );
     return {
         id: drive.id,
         label: drive.name,
         type: ItemType.LocalDrive,
         expanded: treeItem?.expanded ?? true,
-        isSelected: treeItem?.isSelected,
-        children: drive.nodes
-            .filter(node => !node.path.includes('/'))
-            .map(node =>
-                mapDocumentDriveNodeToTreeItem(
-                    node,
-                    drive.nodes,
-                    treeItem ? findNodeById(node.path, treeItem) : undefined
-                )
-            ),
+        isSelected: treeItem?.isSelected ?? true,
+        children: nodes.map(node =>
+            mapDocumentDriveNodeToTreeItem(
+                node,
+                drive.nodes.filter(node => node.kind === 'folder'),
+                treeItem ? findNodeById(node.path, treeItem) : undefined
+            )
+        ),
     };
 }
 
@@ -94,7 +91,8 @@ interface DriveContainerProps {
 export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
 
-    const [drives, setDrives] = useState<DriveTreeItem[]>([]);
+    const [drives, setDrives] = useDrives();
+    const selectFolder = useSelectFolder();
     const {
         documentDrive,
         addFile,
@@ -125,18 +123,7 @@ export default function DriveContainer(props: DriveContainerProps) {
         if (item.type === ItemType.File) {
             openFile(drive.id, item.id);
         } else {
-            setDrives(drives =>
-                traverseDriveById(drives, drive.id, treeItem => {
-                    if (treeItem.id === item.id) {
-                        return {
-                            ...treeItem,
-                            expanded: !treeItem.expanded,
-                        };
-                    }
-
-                    return treeItem;
-                })
-            );
+            selectFolder(drive.id, item.id);
         }
     }
 
@@ -308,7 +295,7 @@ export default function DriveContainer(props: DriveContainerProps) {
             );
         } else if (item.kind === 'file') {
             const file = await item.getFile();
-            addFile(file, drive.id, path.join(targetId, file.name));
+            addFile(file, drive.id, targetId);
         }
     };
 

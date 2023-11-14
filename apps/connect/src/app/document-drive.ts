@@ -11,6 +11,9 @@ export default async (store: ElectronStore, path: string, ipcMain: IpcMain) => {
     ipcMain.handle('documentDrive:addFile', (_e, input, document) =>
         documentDrive.addFile(input, document)
     );
+    ipcMain.handle('documentDrive:updateFile', async (_e, input, document) =>
+        documentDrive.updateFile(input, document)
+    );
     ipcMain.handle('documentDrive:addFolder', (_e, input) =>
         documentDrive.addFolder(input)
     );

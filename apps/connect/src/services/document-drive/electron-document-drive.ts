@@ -106,7 +106,11 @@ class ElectronDocumentDrive implements IDocumentDrive {
         return this.deserialize(result, store);
     }
 
-    private async saveFile(driveId: string, path: string, document: Document) {
+    private async saveFileFs(
+        driveId: string,
+        path: string,
+        document: Document
+    ) {
         return fs.writeFile(
             this.getPath(driveId, path),
             JSON.stringify(document),
@@ -166,7 +170,7 @@ class ElectronDocumentDrive implements IDocumentDrive {
     }
 
     async addFile(input: AddFileInput, document: Document) {
-        await this.saveFile(input.drive, input.path, document);
+        await this.saveFileFs(input.drive, input.path, document);
         this.document.addFile(input);
 
         const node = this.getNode(input.drive, input.path);
@@ -179,8 +183,16 @@ class ElectronDocumentDrive implements IDocumentDrive {
     }
 
     async updateFile(input: UpdateFileInput, document: Document) {
-        await this.saveFile(input.drive, input.path, document);
+        await this.saveFileFs(input.drive, input.path, document);
         this.document.updateFile(input);
+
+        const node = this.getNode(input.drive, input.path);
+        if (!node || !isFileNode(node)) {
+            throw new Error('Error updating file');
+        }
+
+        this.save();
+        return node;
     }
 
     async deleteNode(drive: string, path: string) {

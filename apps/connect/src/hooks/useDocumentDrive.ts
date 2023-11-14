@@ -4,9 +4,10 @@ import {
 } from 'document-model-libs/document-drive';
 import { Document, Immutable, utils } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
+import { join } from 'path';
 import { useEffect, useMemo } from 'react';
+import sanitize from 'sanitize-filename';
 import { IDocumentDrive, SortOptions } from 'src/services/document-drive';
-import { useTabs } from 'src/store';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
 
@@ -14,12 +15,22 @@ export const documentDriveAtom = atom<Immutable<
     Document<DocumentDriveState, DocumentDriveAction>
 > | null>(null);
 
+export const isChildrenRootNode = (path: string, childrenPath: string) => {
+    const isChildrenNode = childrenPath.startsWith(path);
+    if (!isChildrenNode) return false;
+
+    const parentSegments = path.split('/').length;
+    const childrenSegments = childrenPath.split('/').length;
+
+    const isChildrenRoot = parentSegments + 1 === childrenSegments;
+    return isChildrenRoot;
+};
+
 export function useDocumentDrive(
     documentDrive: IDocumentDrive | undefined = window.electronAPI
         ?.documentDrive
 ) {
     const getDocumentModel = useGetDocumentModel();
-    const { addTab, fromDocument, updateTab } = useTabs();
 
     const [document, setDocument] = useAtom(documentDriveAtom);
 
@@ -37,26 +48,58 @@ export function useDocumentDrive(
         fetchDocumentDrive();
     }, []);
 
-    async function openFile(drive: string, path: string, tab?: string) {
+    async function openFile(drive: string, path: string) {
         const document = await documentDrive?.openFile(drive, path);
         if (!document) {
             throw new Error(
                 `There was an error opening file with ${path} on drive ${drive}`
             );
         }
-        const documentTab = await fromDocument(document, tab);
-        return tab ? updateTab(documentTab) : addTab(documentTab);
+        return document;
     }
 
-    async function addFile(file: File, drive: string, path: string) {
-        const document = await loadFile(file, getDocumentModel);
+    async function addDocument(
+        document: Document,
+        drive: string,
+        path: string,
+        name: string
+    ) {
+        if (path === drive || path == '.') {
+            path = '';
+        }
+        console.log(join(path, sanitize(name ?? document.name)));
         const node = await documentDrive?.addFile(
+            {
+                drive,
+                path: join(path, sanitize(name ?? document.name)),
+                documentType: document.documentType,
+                hash: utils.hashDocument(document),
+                name: name ?? document.name,
+            },
+            document
+        );
+        await fetchDocumentDrive();
+        return node;
+    }
+
+    async function addFile(file: string | File, drive: string, path: string) {
+        const document = await loadFile(file, getDocumentModel);
+        return addDocument(
+            document,
+            drive,
+            path,
+            typeof file === 'string' ? document.name : file.name
+        );
+    }
+
+    async function updateFile(document: Document, drive: string, path: string) {
+        const node = await documentDrive?.updateFile(
             {
                 drive,
                 path,
                 documentType: document.documentType,
                 hash: utils.hashDocument(document),
-                name: document.name || file.name,
+                name: document.name || undefined,
             },
             document
         );
@@ -102,15 +145,28 @@ export function useDocumentDrive(
         return fetchDocumentDrive();
     }
 
+    function getChildren(drive: string, path?: string) {
+        const nodes =
+            document?.state.drives.find(item => item.id === drive)?.nodes ?? [];
+        return nodes.filter(node =>
+            path
+                ? isChildrenRootNode(path, node.path)
+                : !node.path.includes('/')
+        );
+    }
+
     return useMemo(
         () => ({
             documentDrive: document,
+            addDocument,
             openFile,
             addFile,
+            updateFile,
             addFolder,
             deleteNode,
             renameNode,
             copyOrMoveNode,
+            getChildren,
         }),
         [document]
     );
