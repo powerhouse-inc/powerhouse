@@ -9,7 +9,7 @@ import { selectAtom } from 'jotai/utils';
 import { useEffect, useMemo, useState } from 'react';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
 
-function findDeepestSelectedPath<T extends string = string>(
+export function findDeepestSelectedPath<T extends string = string>(
     drives: TreeItem<T>[]
 ) {
     let deepestPath: TreeItem[] = [];
@@ -52,6 +52,8 @@ export const useSelectedDrive = () =>
                     const selected = findDeepestSelectedPath(drives);
                     if (selected.length) {
                         return selected[0];
+                    } else if (drives.length) {
+                        return drives[0];
                     } else {
                         return undefined;
                     }
@@ -62,7 +64,18 @@ export const useSelectedDrive = () =>
 
 export const useSelectedPath = () =>
     useAtomValue(
-        useMemo(() => selectAtom(drivesAtom, findDeepestSelectedPath), [])
+        useMemo(
+            () =>
+                selectAtom(drivesAtom, drives => {
+                    const path = findDeepestSelectedPath(drives);
+                    return path.length
+                        ? path
+                        : drives.length
+                        ? [drives[0]]
+                        : [];
+                }),
+            []
+        )
     );
 
 export const useFileNodeDocument = (drive?: string, path?: string) => {

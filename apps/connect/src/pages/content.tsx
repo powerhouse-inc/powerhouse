@@ -87,7 +87,7 @@ const Content = () => {
         const node = await addDocument(
             documentModel.utils.createDocument(),
             selectedDrive?.id ?? '',
-            currentNode.id,
+            currentNode?.id ?? '',
             `New ${documentModel.documentModel.name}`
         );
         if (node) {
@@ -98,7 +98,7 @@ const Content = () => {
     return (
         <div className="flex h-full flex-col bg-[#F4F4F4] p-6">
             {selectedDocument ? (
-                <div className="rounded-[20px] bg-[#FCFCFC] p-4">
+                <div className="flex-1 rounded-[20px] bg-[#FCFCFC] p-4">
                     <DocumentEditor
                         document={selectedDocument}
                         onChange={updateDocument}
@@ -113,14 +113,13 @@ const Content = () => {
                         {selectedDrive && (
                             <Breadcrumbs
                                 rootItem={selectedDrive}
-                                onItemClick={
-                                    (e, item) =>
-                                        onItemClick(
-                                            e,
-                                            item as any,
-                                            selectedDrive.id as any
-                                        ) // TODO deal with generics
-                                }
+                                onItemClick={(e, item) => {
+                                    onItemClick(
+                                        e,
+                                        item as any,
+                                        selectedDrive as any
+                                    ); // TODO deal with generics
+                                }}
                                 onAddNewItem={(item, option) =>
                                     onItemOptionsClick(
                                         item as any,
@@ -136,7 +135,7 @@ const Content = () => {
                         )}
                         <div className="px-4">
                             <div className="py-3">
-                                {selectedDrive && selectedPath.length && (
+                                {selectedDrive && selectedPath.length ? (
                                     <FolderView
                                         drive={selectedDrive.id}
                                         folder={
@@ -150,7 +149,7 @@ const Content = () => {
                                         }
                                         onFileDeleted={deleteNode}
                                     />
-                                )}
+                                ) : null}
                             </div>
                             <h3 className="mb-3 mt-4 text-xl font-bold">
                                 New document

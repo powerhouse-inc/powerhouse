@@ -33,7 +33,7 @@ export const FolderView: React.FC<IProps> = ({
                 {folders.map(folder => (
                     <button
                         key={folder.path}
-                        className="flex flex-col items-center"
+                        className="flex flex-col items-center rounded-md p-2 hover:bg-black/5"
                         onClick={() => onFolderSelected(drive, folder.path)}
                     >
                         <IconFolder className="mb-2" />
