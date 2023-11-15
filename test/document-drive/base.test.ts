@@ -15,42 +15,27 @@ describe('DocumentDrive Class', () => {
         > = utils.createDocument();
         documentDrive = reducer(
             documentDrive,
-            actions.addDrive({
-                id: 'drive',
-                hash: '',
-                name: 'drive',
-                nodes: [],
-            }),
-        );
-        documentDrive = reducer(
-            documentDrive,
             actions.addFolder({
-                drive: 'drive',
-                hash: '',
+                id: '1',
                 name: '1',
-                path: '1',
             }),
         );
         documentDrive = reducer(
             documentDrive,
             actions.addFolder({
-                drive: 'drive',
-                hash: '',
+                id: '1.1',
                 name: '1.1',
-                path: '1/1.1',
+                parentFolder: '1',
             }),
         );
-
-        expect(documentDrive.state.drives[0].nodes.length).toBe(2);
 
         documentDrive = reducer(
             documentDrive,
             actions.deleteNode({
-                drive: 'drive',
-                path: '1',
+                id: '1',
             }),
         );
 
-        expect(documentDrive.state.drives[0].nodes.length).toBe(0);
+        expect(documentDrive.state.nodes.length).toBe(0);
     });
 });

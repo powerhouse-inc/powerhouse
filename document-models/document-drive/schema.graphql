@@ -1,91 +1,68 @@
 type FolderNode {
-    path: String!
+    id: String!
     name: String!
-    hash: String!
     kind: String!
+    parentFolder: String
 }
 
 type FileNode {
-    path: String!
+    id: String!
     name: String!
-    hash: String!
     kind: String!
     documentType: String!
+    parentFolder: String
 }
 
 union Node = FolderNode | FileNode
 
-type Drive {
+type DocumentDriveState {
     id: ID!
     name: String!
-    hash: String!
     nodes: [Node!]!
-}
-
-type DocumentDriveState {
-    drives: [Drive!]!
+    icon: String
+    remoteUrl: String
 }
 
 # Node
 
 input AddFileInput {
-    drive: ID!
-    path: String!
+    id: String!
     name: String!
-    hash: String!
     documentType: String!
+    document: String!
+    parentFolder: String
 }
 
 input AddFolderInput {
-    drive: ID!
-    path: String!
+    id: ID!
     name: String!
-    hash: String!
+    parentFolder: String
 }
 
 input DeleteNodeInput {
-    drive: ID!
-    path: String!
+    id: String!
 }
 
 input UpdateFileInput {
-    drive: ID!
-    path: String!
+    id: ID!
+    parentFolder: String
     name: String
-    hash: String
     documentType: String
-    document: String
 }
 
 input UpdateNodeInput {
-    drive: ID!
-    path: String!
+    id: ID!
+    parentFolder: String
     name: String
     hash: String
 }
 
 input CopyNodeInput {
-    drive: ID!
-    srcPath: String!
-    distPath: String!
+    srcFolder: String!
+	targetParentFolder: String
 }
 
-# Drive
-
-input AddDriveInput {
-    id: ID!
-    name: String!
-    hash: String!
-    nodes: [Node!]!
-}
-
-input UpdateDriveInput {
-    id: ID!
-    name: String
-    hash: String
-    nodes: [Node!]
-}
-
-input DeleteDriveInput {
-    id: ID!
+input MoveNodeInput {
+    srcFolder: String!
+	targetParentFolder: String
 }

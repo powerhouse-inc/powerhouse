@@ -4,81 +4,81 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { FileNode } from '../..';
+import { FileNode, Node, getDescendants } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
 
 export const reducer: DocumentDriveNodeOperations = {
     addFileOperation(state, action) {
-        const drive = state.drives.find(
-            drive => drive.id === action.input.drive,
-        );
-
-        if (drive?.nodes.find(node => node.path === action.input.path)) {
-            throw new Error(
-                `Node with path ${action.input.path} already exists!`,
-            );
+        if (state.nodes.find(node => node.id === action.input.id)) {
+            throw new Error(`Node with id ${action.input.id} already exists!`);
         }
 
-        drive?.nodes.push({ ...action.input, kind: 'file' });
+        state.nodes.push({
+            ...action.input,
+            kind: 'file',
+            parentFolder: action.input.parentFolder ?? null,
+        });
     },
     addFolderOperation(state, action) {
-        const drive = state.drives.find(
-            drive => drive.id === action.input.drive,
-        );
-        drive?.nodes.push({ ...action.input, kind: 'folder' });
+        if (state.nodes.find(node => node.id === action.input.id)) {
+            throw new Error(`Node with id ${action.input.id} already exists!`);
+        }
+        state.nodes.push({
+            ...action.input,
+            kind: 'folder',
+            parentFolder: action.input.parentFolder ?? null,
+        });
     },
     deleteNodeOperation(state, action) {
-        const drive = state.drives.find(
-            drive => drive.id === action.input.drive,
-        );
-        if (drive) {
-            drive.nodes = drive.nodes.filter(
-                node => !node.path.startsWith(action.input.path),
-            );
+        const node = state.nodes.find(node => node.id === action.input.id);
+        if (!node) {
+            throw new Error(`Node with id ${action.input.id} not found`);
         }
+        const descendants = getDescendants(node, state.nodes);
+        state.nodes = state.nodes.filter(
+            node =>
+                node.id !== action.input.id &&
+                !descendants.find(descendant => descendant.id === node.id),
+        );
     },
     updateFileOperation(state, action) {
-        const drive = state.drives.find(
-            drive => drive.id === action.input.drive,
+        state.nodes = state.nodes.map(node =>
+            node.id === action.input.id
+                ? {
+                      ...node,
+                      ...{
+                          name: action.input.name ?? node.name,
+
+                          documentType:
+                              action.input.documentType ??
+                              (node as FileNode).documentType,
+                      },
+                  }
+                : node,
         );
-        if (drive) {
-            drive.nodes = drive.nodes.map(node =>
-                node.path === action.input.path
-                    ? {
-                          ...node,
-                          ...{
-                              path: action.input.path ?? node.path,
-                              hash: action.input.hash ?? node.hash,
-                              name: action.input.name ?? node.name,
-                              documentType:
-                                  action.input.documentType ??
-                                  (node as FileNode).documentType,
-                          },
-                      }
-                    : node,
-            );
-        }
     },
     updateNodeOperation(state, action) {
-        const drive = state.drives.find(
-            drive => drive.id === action.input.drive,
+        state.nodes = state.nodes.map(node =>
+            node.id === action.input.id
+                ? {
+                      ...node,
+                      ...{
+                          name: action.input.name ?? node.name,
+                          parentFolder:
+                              action.input.parentFolder === null
+                                  ? null
+                                  : node.parentFolder,
+                      },
+                  }
+                : node,
         );
-        if (drive) {
-            drive.nodes = drive.nodes.map(node =>
-                node.path === action.input.path
-                    ? {
-                          ...node,
-                          ...{
-                              hash: action.input.hash ?? node.hash,
-                              name: action.input.name ?? node.name,
-                          },
-                      }
-                    : node,
-            );
-        }
     },
     copyNodeOperation(state, action) {
         // TODO: Implement "copyNodeOperation" reducer
         throw new Error('Reducer "copyNodeOperation" not yet implemented');
+    },
+    moveNodeOperation(state, action) {
+        // TODO: Implement "moveNodeOperation" reducer
+        throw new Error('Reducer "moveNodeOperation" not yet implemented');
     },
 };
