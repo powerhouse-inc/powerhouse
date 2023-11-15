@@ -10,17 +10,14 @@ export default defineConfig({
     plugins: [
         react({
             include: 'src/**/*.tsx',
-            babel: { minified: false },
-            plugins: [jotaiDebugLabel, jotaiReactRefresh],
+            babel: { minified: false, plugins: [jotaiDebugLabel, jotaiReactRefresh] },
         }),
         svgr(),
     ],
     build: { minify: false, sourcemap: false },
     resolve: {
         alias: {
-            // eslint-disable-next-line no-undef
             '@/assets': path.resolve(__dirname, './assets'),
-            // eslint-disable-next-line no-undef
             src: path.resolve(__dirname, './src'),
             path: 'rollup-plugin-node-polyfills/polyfills/path',
         },
