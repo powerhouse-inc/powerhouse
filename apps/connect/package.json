@@ -16,8 +16,8 @@
         "publish": "electron-forge publish",
         "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
         "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|jsx|tsx|json)\"",
-        "dev:web": "vite -c vite.renderer.config.mjs",
-        "build:web": "vite build -c vite.renderer.config.mjs"
+        "dev:web": "vite -c vite.renderer.config.ts",
+        "build:web": "vite build -c vite.renderer.config.ts"
     },
     "devDependencies": {
         "@electron-forge/cli": "^6.1.1",
