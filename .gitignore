@@ -61,3 +61,6 @@ yalc.lock
 # Electron-Forge
 out/
 .vercel
+
+# Generated assets
+public/icons.svg
