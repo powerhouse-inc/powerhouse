@@ -4,6 +4,8 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import type { ForgeConfig } from '@electron-forge/shared-types';
+import * as fs from 'fs/promises';
+import path from 'path';
 
 const config: ForgeConfig = {
     packagerConfig: {
@@ -47,7 +49,19 @@ const config: ForgeConfig = {
                 password: 'password',
             },
         },
-    ]
+  ],
+  hooks: {
+      generateAssets: async () => {
+          try {
+              const sourcePath = path.resolve(__dirname, 'node_modules/@powerhousedao/design-system/dist/icons.svg');
+              const destinationPath = path.resolve(__dirname, 'public/icons.svg');
+          
+              await fs.copyFile(sourcePath, destinationPath);
+            } catch (error) {
+              console.error('Error occurred while copying the file:', error);
+            }
+      }
+  }
 };
 
 export default config;
