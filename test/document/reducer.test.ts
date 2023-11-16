@@ -55,6 +55,7 @@ describe('Base reducer', () => {
         expect(setNameAction).toStrictEqual({
             type: SET_NAME,
             input: 'Document',
+            scope: 'global',
         });
     });
 

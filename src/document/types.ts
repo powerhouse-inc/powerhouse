@@ -21,6 +21,8 @@ export type Action<T extends string = string, I = unknown> = {
     input: I;
     /** The attachments included in the action. */
     attachments?: AttachmentInput[] | undefined;
+    /** The scope of the action, can either be 'global' or 'local'. Defaults to 'global' */
+    scope?: OperationScope;
 };
 
 export type ActionWithAttachment<

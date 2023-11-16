@@ -8,6 +8,7 @@ import {
     ImmutableStateReducer,
     Reducer,
     Immutable,
+    OperationScope,
 } from '../types';
 import { hash } from './node';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
@@ -38,6 +39,7 @@ export function createAction<A extends Action>(
     input?: A['input'],
     attachments?: Action['attachments'],
     validator?: () => { parse(v: unknown): A },
+    scope: OperationScope = 'global',
 ): A {
     if (!type) {
         throw new Error('Empty action type');
@@ -47,11 +49,15 @@ export function createAction<A extends Action>(
         throw new Error(`Invalid action type: ${type}`);
     }
 
-    const action = attachments ? { type, input, attachments } : { type, input };
+    const action: Action = { type, input, scope };
+
+    if (attachments) {
+        action['attachments'] = attachments;
+    }
 
     validator?.().parse(action);
 
-    return action as unknown as A;
+    return action as A;
 }
 
 /**

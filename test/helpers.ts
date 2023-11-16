@@ -32,9 +32,10 @@ export const countReducer = createReducer<CountState, CountAction>(
 );
 
 export const mapOperations = (operations: Operation[]) => {
-    return operations.map(({ input, type, index }) => ({
+    return operations.map(({ input, type, index, scope }) => ({
         input,
         type,
         index,
+        scope,
     }));
 };
