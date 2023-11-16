@@ -1,6 +1,10 @@
 import { setName } from '../../src/document/actions';
 import { SET_NAME } from '../../src/document/actions/types';
-import { createAction, createDocument } from '../../src/document/utils';
+import {
+    createAction,
+    createDocument,
+    createReducer,
+} from '../../src/document/utils';
 import { emptyReducer } from '../helpers';
 
 describe('Base reducer', () => {
@@ -77,5 +81,24 @@ describe('Base reducer', () => {
                 input: 0 as unknown as string,
             }),
         ).toThrow();
+    });
+
+    it('should dispatch trigger action', async () => {
+        expect.assertions(1);
+        const document = createDocument();
+        const reducer = createReducer((_state, action, dispatch) => {
+            if (action.type === 'CREATE_DOCUMENT') {
+                dispatch?.({ type: 'CREATE_CHILD_DOCUMENT', input: '' });
+            }
+        });
+
+        const triggerAction = {
+            type: 'CREATE_DOCUMENT',
+            input: '',
+        };
+
+        reducer(document, triggerAction, action => {
+            expect(action.type).toBe('CREATE_CHILD_DOCUMENT');
+        });
     });
 });

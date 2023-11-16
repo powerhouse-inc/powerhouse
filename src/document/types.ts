@@ -42,6 +42,7 @@ export type ActionWithAttachment<
 export type Reducer<State, A extends Action> = (
     state: Document<State, A>,
     action: A | BaseAction,
+    dispatch?: (action: Action) => void,
 ) => Document<State, A>;
 
 /**
@@ -59,11 +60,13 @@ export type Reducer<State, A extends Action> = (
 export type ImmutableReducer<State, A extends Action> = (
     state: Draft<Document<State, A>>,
     action: A | BaseAction,
+    dispatch?: (action: Action) => void,
 ) => Document<State, A> | void;
 
 export type ImmutableStateReducer<State, A extends Action> = (
     state: Draft<State>,
     action: A,
+    dispatch?: (action: Action) => void,
 ) => State | void;
 
 /**

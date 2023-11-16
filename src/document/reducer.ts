@@ -157,6 +157,7 @@ export function baseReducer<T, A extends Action>(
     document: Document<T, A>,
     action: A | BaseAction,
     customReducer: ImmutableStateReducer<T, A>,
+    dispatch?: (action: Action) => void,
 ) {
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first
@@ -175,7 +176,7 @@ export function baseReducer<T, A extends Action>(
     newDocument = produce(newDocument, draft => {
         // the reducer runs on a immutable version of
         // provided state
-        const returnedDraft = customReducer(draft.state, action as A);
+        const returnedDraft = customReducer(draft.state, action as A, dispatch);
 
         // if the reducer creates a new state object instead
         // of mutating the draft then returns the new state

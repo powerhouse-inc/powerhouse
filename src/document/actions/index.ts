@@ -15,7 +15,8 @@ import { BaseAction } from './types';
 function replayOperations<T, A extends Action>(
     initialState: Partial<ExtendedState<T>>,
     operations: Array<A | BaseAction>,
-    reducer: ImmutableStateReducer<T, A>
+    reducer: ImmutableStateReducer<T, A>,
+    dispatch?: (action: Action) => void,
 ): Document<T, A> {
     // builds a new document from the initial data
     const document = createDocument<T, A>(initialState);
@@ -27,15 +28,15 @@ function replayOperations<T, A extends Action>(
     // runs all the operations on the new document
     // and returns the resulting state
     return operations.reduce(
-        (document, operation) => wrappedReducer(document, operation),
-        document
+        (document, operation) => wrappedReducer(document, operation, dispatch),
+        document,
     );
 }
 
 // updates the name of the document
 export function setNameOperation<T, A extends Action>(
     document: Document<T, A>,
-    name: string
+    name: string,
 ): Document<T, A> {
     return { ...document, name };
 }
@@ -44,7 +45,7 @@ export function setNameOperation<T, A extends Action>(
 export function undoOperation<T, A extends Action>(
     document: Document<T, A>,
     count: number,
-    wrappedReducer: ImmutableStateReducer<T, A>
+    wrappedReducer: ImmutableStateReducer<T, A>,
 ): Document<T, A> {
     // undo can't be higher than the number of active operations
     const undoCount = Math.min(count, document.revision);
@@ -53,12 +54,12 @@ export function undoOperation<T, A extends Action>(
     // undone operations
     const operations = document.operations.slice(
         0,
-        document.revision - undoCount
+        document.revision - undoCount,
     );
     const newDocument = replayOperations(
         document.initialState,
         operations,
-        wrappedReducer
+        wrappedReducer,
     );
 
     // updates the state and the revision number but
@@ -74,7 +75,7 @@ export function undoOperation<T, A extends Action>(
 export function redoOperation<T, A extends Action>(
     document: Document<T, A>,
     count: number,
-    wrappedReducer: ImmutableStateReducer<T, A>
+    wrappedReducer: ImmutableStateReducer<T, A>,
 ): Document<T, A> {
     // the number of undone operations is retrieved from the revision number
     const undoCount = document.operations.length - document.revision;
@@ -89,12 +90,12 @@ export function redoOperation<T, A extends Action>(
     // into account the redone operations
     const operations = document.operations.slice(
         0,
-        document.revision + redoCount
+        document.revision + redoCount,
     );
     const newDocument = replayOperations(
         document.initialState,
         operations,
-        wrappedReducer
+        wrappedReducer,
     );
 
     // updates the state and the revision number but
@@ -110,7 +111,7 @@ export function pruneOperation<T, A extends Action>(
     document: Document<T, A>,
     start: number | null | undefined,
     end: number | null | undefined,
-    wrappedReducer: ImmutableStateReducer<T, A>
+    wrappedReducer: ImmutableStateReducer<T, A>,
 ): Document<T, A> {
     start = start || 0;
     end = end || document.operations.length;
@@ -123,7 +124,7 @@ export function pruneOperation<T, A extends Action>(
     const newDocument = replayOperations(
         document.initialState,
         actionsToKeepStart.concat(actionsToPrune),
-        wrappedReducer
+        wrappedReducer,
     );
 
     const { name, state: newState } = newDocument;
@@ -136,13 +137,13 @@ export function pruneOperation<T, A extends Action>(
             loadState({ name, state: newState }, actionsToPrune.length),
             ...actionsToKeepEnd,
         ],
-        wrappedReducer
+        wrappedReducer,
     );
 }
 
 export function loadStateOperation<T, A extends Action>(
     oldDocument: Document<T, A>,
-    newDocument: { name: string; state?: T }
+    newDocument: { name: string; state?: T },
 ): Document<T, A> {
     return {
         ...oldDocument,

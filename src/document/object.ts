@@ -18,15 +18,21 @@ import { loadFromFile, saveToFile, readOnly } from './utils';
 export abstract class BaseDocument<T, A extends Action> {
     protected _document: Document<T, A>;
     private _reducer: Reducer<T, A>;
+    private _dispatch?: (action: Action) => void;
 
     /**
      * Constructs a BaseDocument instance with an initial state.
      * @param reducer - The reducer function that updates the state.
      * @param document - The initial state of the document.
      */
-    constructor(reducer: Reducer<T, A>, document: Document<T, A>) {
+    constructor(
+        reducer: Reducer<T, A>,
+        document: Document<T, A>,
+        dispatch?: (action: Action) => void,
+    ) {
         this._reducer = reducer;
         this._document = document;
+        this._dispatch = dispatch;
     }
 
     /**
@@ -35,7 +41,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @returns The Document instance.
      */
     protected dispatch(action: A | BaseAction) {
-        this._document = this._reducer(this._document, action);
+        this._document = this._reducer(this._document, action, this._dispatch);
         return this;
     }
 

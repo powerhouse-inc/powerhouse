@@ -1,5 +1,5 @@
 import { DocumentModelState } from './types';
-import { ExtendedState } from '../../document';
+import { Action, ExtendedState } from '../../document';
 import { applyMixins, BaseDocument } from '../../document/object';
 import { DocumentModelAction } from './actions';
 import { reducer } from './reducer';
@@ -39,8 +39,9 @@ class DocumentModel extends BaseDocument<
 
     constructor(
         initialState?: Partial<ExtendedState<Partial<DocumentModelState>>>,
+        dispatch?: (action: Action) => void,
     ) {
-        super(reducer, utils.createDocument(initialState));
+        super(reducer, utils.createDocument(initialState), dispatch);
     }
 
     public saveToFile(path: string, name?: string) {

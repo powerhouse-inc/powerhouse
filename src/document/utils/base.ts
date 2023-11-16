@@ -82,8 +82,8 @@ export function createReducer<S = unknown, A extends Action = Action>(
     reducer: ImmutableStateReducer<S, A>,
     documentReducer = baseReducer,
 ): Reducer<S, A> {
-    return (document, action) => {
-        return documentReducer(document, action, reducer);
+    return (document, action, dispatch) => {
+        return documentReducer(document, action, reducer, dispatch);
     };
 }
 
