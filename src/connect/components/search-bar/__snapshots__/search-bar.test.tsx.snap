@@ -3,15 +3,16 @@
 exports[`ConnectSearchBar Component should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="flex flex-row bg-[#FCFCFC] px-4 h-[52px] items-center rounded-xl border border-[#EFEFEF]"
+    class="flex flex-row text-[#6F767E] bg-[#FCFCFC] px-4 h-[52px] items-center rounded-xl border border-[#EFEFEF]"
   >
-    <div
+    <svg
       class="mr-3"
+      style="width: 24px; height: 24px;"
     >
-      <img
-        src="test-file-stub"
+      <use
+        href="/icons.svg#search"
       />
-    </div>
+    </svg>
     <div
       class="flex flex-1 min-w-0"
       data-rac=""
@@ -40,9 +41,13 @@ exports[`ConnectSearchBar Component should match snapshot 1`] = `
       >
         File type
       </div>
-      <img
-        src="test-file-stub"
-      />
+      <svg
+        style="width: 24px; height: 24px;"
+      >
+        <use
+          href="/icons.svg#chevron-down"
+        />
+      </svg>
     </button>
   </div>
 </DocumentFragment>

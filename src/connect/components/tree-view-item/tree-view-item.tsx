@@ -3,6 +3,7 @@ import {
     ConnectDropdownMenuItem,
 } from '@/connect/components/dropdown-menu';
 import {
+    Icon,
     TreeViewItem,
     TreeViewItemProps,
     UseDraggableTargetProps,
@@ -10,21 +11,6 @@ import {
 } from '@/powerhouse';
 import { useRef } from 'react';
 import { twMerge } from 'tailwind-merge';
-
-import CheckFilledIcon from '@/assets/icons/check-filled.svg';
-import CheckIcon from '@/assets/icons/check.svg';
-import CloudSlashIcon from '@/assets/icons/cloud-slash.svg';
-import FilesIcon from '@/assets/icons/files-earmark-fill.svg';
-import FolderClose from '@/assets/icons/folder-close-fill.svg';
-import FolderOpen from '@/assets/icons/folder-open-fill.svg';
-import FolderIcon from '@/assets/icons/folder-plus-fill.svg';
-import HDDIcon from '@/assets/icons/hdd-fill.svg';
-import MIcon from '@/assets/icons/m-fill.svg';
-import PencilIcon from '@/assets/icons/pencil-fill.svg';
-import ServerIcon from '@/assets/icons/server-fill.svg';
-import SyncingIcon from '@/assets/icons/syncing.svg';
-import TrashIcon from '@/assets/icons/trash-fill.svg';
-import DotsIcon from '@/assets/icons/vertical-dots.svg';
 
 export enum ItemType {
     Folder = 'folder',
@@ -62,22 +48,22 @@ export const DefaultOptions = [
     {
         id: 'duplicate',
         label: 'Duplicate',
-        icon: FilesIcon,
+        icon: <Icon name="files-earmark" />,
     },
     {
         id: 'new-folder',
         label: 'New Folder',
-        icon: FolderIcon,
+        icon: <Icon name="folder-plus" />,
     },
     {
         id: 'rename',
         label: 'Rename',
-        icon: PencilIcon,
+        icon: <Icon name="pencil" />,
     },
     {
         id: 'delete',
         label: 'Delete',
-        icon: TrashIcon,
+        icon: <Icon name="trash" />,
         className: 'text-[#EA4335]',
     },
 ] as const;
@@ -103,13 +89,13 @@ export interface ConnectTreeViewItemProps<T extends string = DefaultOptionId>
 const getStatusIcon = (status: ItemStatus) => {
     switch (status) {
         case ItemStatus.Available:
-            return CheckIcon;
+            return <Icon name="check" color="#34A853" />;
         case ItemStatus.AvailableOffline:
-            return CheckFilledIcon;
+            return <Icon name="check" color="#34A853" />;
         case ItemStatus.Syncing:
-            return SyncingIcon;
+            return <Icon name="syncing" color="#3E90F0" />;
         case ItemStatus.Offline:
-            return CloudSlashIcon;
+            return <Icon name="cloud-slash" color="#EA4335" />;
     }
 };
 
@@ -117,17 +103,17 @@ const getItemIcon = (type: ItemType) => {
     switch (type) {
         case ItemType.Folder:
             return {
-                icon: FolderClose,
-                expandedIcon: FolderOpen,
+                icon: <Icon name="folder-close" color="#6C7275" />,
+                expandedIcon: <Icon name="folder-open" color="#6C7275" />,
             };
         case ItemType.File:
             return {};
         case ItemType.LocalDrive:
-            return { icon: HDDIcon };
+            return { icon: <Icon name="hdd" /> };
         case ItemType.NetworkDrive:
-            return { icon: ServerIcon };
+            return { icon: <Icon name="server" /> };
         case ItemType.PublicDrive:
-            return { icon: MIcon };
+            return { icon: <Icon name="m" /> };
     }
 };
 
@@ -201,7 +187,11 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
                     offset: -10,
                 }}
             >
-                <img src={DotsIcon} className="w-6 h-6 pointer-events-none" />
+                <Icon
+                    name="vertical-dots"
+                    className="pointer-events-none"
+                    color="#6C7275"
+                />
             </ConnectDropdownMenu>
         );
 

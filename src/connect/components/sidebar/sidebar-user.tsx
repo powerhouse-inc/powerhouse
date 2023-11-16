@@ -1,4 +1,4 @@
-import ImgPowerhouse from '@/assets/icons/powerhouse-rounded.png';
+import ImgPowerhouse from '@/assets/powerhouse-rounded.png';
 
 export interface SidebarUserProps {
     username: string;

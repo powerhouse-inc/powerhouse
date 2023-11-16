@@ -25,7 +25,13 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
           data-rac=""
           type="button"
         >
-          <div />
+          <svg
+            style="color: rgb(124, 135, 142); width: 16px; height: 16px;"
+          >
+            <use
+              href="/icons.svg#arrow-left"
+            />
+          </svg>
         </button>
       </div>
       <div
@@ -68,7 +74,13 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
         data-rac=""
         type="button"
       >
-        <div />
+        <svg
+          style="width: 24px; height: 24px;"
+        >
+          <use
+            href="/icons.svg#settings"
+          />
+        </svg>
         <span
           class="font-semibold text-sm leading-6 text-[#404446] expanding:hidden collapsed:hidden"
         >

@@ -1,8 +1,4 @@
-import BarChartIcon from '@/assets/icons/bar-chart-fill.svg';
-import BriefCaseIcon from '@/assets/icons/briefcase-fill.svg';
-import GlobeIcon from '@/assets/icons/globe.svg';
-import PersonIcon from '@/assets/icons/person-fill.svg';
-import ProjectIcon from '@/assets/icons/project-fill.svg';
+import { Icon } from '@/powerhouse';
 import type { Meta, StoryObj } from '@storybook/react';
 import { ConnectSearchBar, ConnectSearchBarProps } from './search-bar';
 
@@ -10,27 +6,27 @@ const filterItems: ConnectSearchBarProps['filterItems'] = [
     {
         id: 'project',
         label: '.project',
-        icon: ProjectIcon,
+        icon: <Icon name="project" color="#FF6A55" size={16} />,
     },
     {
         id: 'budget',
         label: '.budget',
-        icon: BarChartIcon,
+        icon: <Icon name="bar-chart" color="#8E55EA" size={16} />,
     },
     {
         id: 'profile',
         label: '.profile',
-        icon: PersonIcon,
+        icon: <Icon name="person" color="#3E90F0" size={16} />,
     },
     {
         id: 'legal',
         label: '.legal',
-        icon: BriefCaseIcon,
+        icon: <Icon name="briefcase" color="#4BAB71" size={16} />,
     },
     {
         id: 'atlas',
         label: '.Atlas',
-        icon: GlobeIcon,
+        icon: <Icon name="globe" color="#FF8A00" size={16} />,
     },
 ];
 

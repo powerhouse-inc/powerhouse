@@ -1,10 +1,6 @@
+import { Icon } from '@/powerhouse';
 import type { Meta, StoryObj } from '@storybook/react';
 import { ConnectDropdownMenu } from './dropdown-menu';
-
-import FilesIcon from '@/assets/icons/files-earmark-fill.svg';
-import FolderIcon from '@/assets/icons/folder-plus-fill.svg';
-import PencilIcon from '@/assets/icons/pencil-fill.svg';
-import TrashIcon from '@/assets/icons/trash-fill.svg';
 
 const meta = {
     title: 'Connect/Components/DropdownMenu',
@@ -33,22 +29,22 @@ export const Primary: Story = {
             {
                 id: 'duplicate',
                 label: 'Duplicate',
-                icon: FilesIcon,
+                icon: <Icon name="files-earmark" />,
             },
             {
                 id: 'new-folder',
                 label: 'New Folder',
-                icon: FolderIcon,
+                icon: <Icon name="folder-plus" />,
             },
             {
                 id: 'rename',
                 label: 'Rename',
-                icon: PencilIcon,
+                icon: <Icon name="pencil" />,
             },
             {
                 id: 'delete',
                 label: 'Delete',
-                icon: TrashIcon,
+                icon: <Icon name="trash" />,
                 className: 'text-[#EA4335]',
             },
         ],

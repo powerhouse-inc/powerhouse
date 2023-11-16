@@ -1,8 +1,10 @@
-import CheckIcon from '@/assets/icons/check-fill.svg';
-import FolderOpen from '@/assets/icons/folder-open-fill.svg';
-import CancelIcon from '@/assets/icons/xmark.svg';
 import type { Meta, StoryObj } from '@storybook/react';
+import { Icon } from '..';
 import { TreeViewInput } from './tree-view-input';
+
+const icon = <Icon name="folder-open" color="#6C7275" />;
+const submitIcon = <Icon name="check" color="#6C7275" />;
+const cancelIcon = <Icon name="xmark" color="#6C7275" />;
 
 const meta: Meta<typeof TreeViewInput> = {
     title: 'Powerhouse/Components/TreeView/TreeViewInput',
@@ -24,16 +26,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Primary: Story = {
     args: {
-        icon: <img src={FolderOpen} />,
+        icon,
+        submitIcon,
+        cancelIcon,
         initialValue: 'My Documents',
         level: 0,
         placeholder: 'Folder Name',
-        submitIcon: <img src={CheckIcon} className="w-6 h-6" />,
-        cancelIcon: (
-            <div className="w-6 h-6 flex items-center justify-center">
-                <img src={CancelIcon} alt="" />
-            </div>
-        ),
     },
 };
 
@@ -46,16 +44,12 @@ export const WithStyles: Story = {
         ),
     ],
     args: {
+        icon,
+        submitIcon,
+        cancelIcon,
         className: 'bg-[#F1F5F9] rounded-lg h-12',
-        icon: <img src={FolderOpen} />,
         initialValue: 'My Documents',
         level: 0,
         placeholder: 'Folder Name',
-        submitIcon: <img src={CheckIcon} className="w-6 h-6" />,
-        cancelIcon: (
-            <div className="w-6 h-6 flex items-center justify-center">
-                <img src={CancelIcon} alt="" />
-            </div>
-        ),
     },
 };

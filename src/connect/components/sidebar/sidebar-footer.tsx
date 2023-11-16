@@ -1,5 +1,4 @@
-import IconSettings from '@/assets/icons/settings.svg?react';
-import { SidebarFooter, SidebarFooterProps } from '@/powerhouse';
+import { Icon, SidebarFooter, SidebarFooterProps } from '@/powerhouse';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 import { SidebarUser, SidebarUserProps } from './sidebar-user';
@@ -24,7 +23,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         >
             <SidebarUser username={username} address={address} />
             <Button className="flex gap-3 py-3 w-full px-5 expanding:px-3 collapsed:px-3">
-                <IconSettings />
+                <Icon name="settings" />
                 <span className="font-semibold text-sm leading-6 text-[#404446] expanding:hidden collapsed:hidden">
                     Settings
                 </span>

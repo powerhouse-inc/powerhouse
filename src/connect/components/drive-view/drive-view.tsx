@@ -1,4 +1,4 @@
-import IconGear from '@/assets/icons/gear.svg?react';
+import { Icon } from '@/powerhouse';
 import type { DropItem } from '@/powerhouse/hooks';
 import type { DragEndEvent, DragStartEvent, DropEvent } from 'react-aria';
 import { Button } from 'react-aria-components';
@@ -99,7 +99,7 @@ export function DriveView<T extends string = DefaultOptionId>(
                     {name}
                 </p>
                 <Button>
-                    <IconGear />
+                    <Icon name="gear" size={16} color="#6C7275" />
                 </Button>
             </div>
             <div className="py-2">

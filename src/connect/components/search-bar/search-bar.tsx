@@ -3,9 +3,7 @@ import { TextInput, TextInputProps } from '@/powerhouse/components/text-input';
 import { mergeClassNameProps } from '@/powerhouse/utils';
 import React, { useMemo } from 'react';
 
-import ArrowDownIcon from '@/assets/icons/chevron-down.svg';
-import SearchIcon from '@/assets/icons/search.svg';
-
+import { Icon } from '@/powerhouse';
 import { FilterItem, FilterItemType } from './filter-item';
 
 export interface ConnectSearchBarProps extends TextInputProps {
@@ -51,11 +49,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
         )
     );
 
-    const startAdornment = (
-        <div className="mr-3">
-            <img src={SearchIcon} />
-        </div>
-    );
+    const startAdornment = <Icon name="search" className="mr-3" />;
 
     const endAdornment = (
         <DropdownMenu
@@ -67,7 +61,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
             menuItemClassName="hover:bg-[#F4F4F4] rounded-lg overflow-hidden cursor-pointer h-10"
         >
             {filterLabelContent}
-            <img src={ArrowDownIcon} />
+            <Icon name="chevron-down" />
         </DropdownMenu>
     );
 
@@ -80,7 +74,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
             inputProps={{ placeholder, className: 'text-sm' }}
             {...mergeClassNameProps(
                 containerProps,
-                'bg-[#FCFCFC] px-4 h-[52px] items-center rounded-xl border border-[#EFEFEF]',
+                'text-[#6F767E] bg-[#FCFCFC] px-4 h-[52px] items-center rounded-xl border border-[#EFEFEF]',
             )}
         />
     );
