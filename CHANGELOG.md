@@ -1,3 +1,10 @@
+# [1.0.0-alpha.19](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.18...v1.0.0-alpha.19) (2023-11-16)
+
+
+### Features
+
+* 79 improvement use native svgs instead of react components for icons ([#90](https://github.com/powerhouse-inc/design-system/issues/90)) ([0c5eaa4](https://github.com/powerhouse-inc/design-system/commit/0c5eaa411677f6c8afcb7b6a78c4274b13058cef))
+
 # [1.0.0-alpha.18](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2023-11-14)
 
 
