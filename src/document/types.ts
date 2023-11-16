@@ -65,6 +65,12 @@ export type ImmutableStateReducer<State, A extends Action> = (
 ) => State | void;
 
 /**
+ * Scope of an operation.
+ * Global: The operation is synchronized everywhere in the network. This is the default document operation.
+ * Local: The operation is applied only locally (to a local state). Used for local settings such as a drive's local path
+ */
+export type OperationScope = 'global' | 'local';
+/**
  * An operation that was applied to a {@link Document}.
  *
  * @remarks

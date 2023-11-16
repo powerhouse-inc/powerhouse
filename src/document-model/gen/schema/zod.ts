@@ -43,6 +43,7 @@ import {
     SetOperationNameInput,
     SetOperationReducerInput,
     SetOperationSchemaInput,
+    SetOperationScopeInput,
     SetOperationTemplateInput,
     SetStateSchemaInput,
     State,
@@ -119,6 +120,7 @@ export function AddOperationInputSchema(): z.ZodObject<
         reducer: z.string().nullish(),
         schema: z.string().nullish(),
         template: z.string().nullish(),
+        scope: z.literal('local').or(z.literal('global')).nullish(),
     });
 }
 
@@ -299,6 +301,7 @@ export function OperationSchema(): z.ZodObject<Properties<Operation>> {
         reducer: z.string().nullable(),
         schema: z.string().nullable(),
         template: z.string().nullable(),
+        scope: z.literal('local').or(z.literal('global')),
     });
 }
 
@@ -492,6 +495,15 @@ export function SetOperationNameInputSchema(): z.ZodObject<
     return z.object({
         id: z.string(),
         name: z.string().nullish(),
+    });
+}
+
+export function SetOperationScopeInputSchema(): z.ZodObject<
+    Properties<SetOperationScopeInput>
+> {
+    return z.object({
+        id: z.string(),
+        scope: z.literal('global').or(z.literal('local')),
     });
 }
 

@@ -1,3 +1,5 @@
+import { OperationScope } from "../../../document";
+
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -50,6 +52,7 @@ export type AddOperationInput = {
   reducer?: InputMaybe<Scalars['String']['input']>;
   schema?: InputMaybe<Scalars['String']['input']>;
   template?: InputMaybe<Scalars['String']['input']>;
+  scope?: InputMaybe<OperationScope>;
 };
 
 export type AddStateExampleInput = {
@@ -106,6 +109,8 @@ export type DocumentModelState = {
   name: Scalars['String']['output'];
   specifications: Array<DocumentSpecification>;
 };
+
+export type DocumentModelMeta = unknown;
 
 export type DocumentSpecification = {
   __typename?: 'DocumentSpecification';
@@ -389,6 +394,7 @@ export type Operation = {
   reducer: Maybe<Scalars['String']['output']>;
   schema: Maybe<Scalars['String']['output']>;
   template: Maybe<Scalars['String']['output']>;
+  scope: OperationScope;
 };
 
 export type OperationError = {
@@ -494,6 +500,11 @@ export type SetOperationErrorTemplateInput = {
 export type SetOperationNameInput = {
   id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SetOperationScopeInput = {
+  id: Scalars['ID']['input'];
+  scope: InputMaybe<OperationScope>;
 };
 
 export type SetOperationReducerInput = {

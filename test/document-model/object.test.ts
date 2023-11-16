@@ -114,6 +114,7 @@ describe('DocumentModel Class', () => {
             description: '<SetModuleExtension.description>',
             template: '<SetModuleExtension.template>',
             reducer: '<SetModuleExtension.reducer>',
+            scope: 'local',
         });
 
         model.addOperation({
@@ -141,6 +142,7 @@ describe('DocumentModel Class', () => {
                     reducer: '<SetModuleExtension.reducer>',
                     examples: [],
                     errors: [],
+                    scope: 'local',
                 },
             ],
         });
@@ -159,6 +161,7 @@ describe('DocumentModel Class', () => {
                     reducer: '',
                     examples: [],
                     errors: [],
+                    scope: 'global',
                 },
             ],
         });
@@ -189,6 +192,7 @@ describe('DocumentModel Class', () => {
                     reducer: '',
                     examples: [],
                     errors: [],
+                    scope: 'global',
                 },
                 {
                     id: setModuleExtensionId,
@@ -199,6 +203,7 @@ describe('DocumentModel Class', () => {
                     reducer: '<SetModuleExtension.reducer>',
                     examples: [],
                     errors: [],
+                    scope: 'local',
                 },
             ],
         });
@@ -218,6 +223,7 @@ describe('DocumentModel Class', () => {
                 reducer: '<SetModuleExtension.reducer>',
                 examples: [],
                 errors: [],
+                scope: 'local',
             },
             {
                 id: addStateExampleId,
@@ -228,6 +234,7 @@ describe('DocumentModel Class', () => {
                 reducer: '',
                 examples: [],
                 errors: [],
+                scope: 'global',
             },
         ]);
 
@@ -251,6 +258,10 @@ describe('DocumentModel Class', () => {
             id: addStateExampleId,
             template: '<SetAuthorName.template>',
         });
+        model.setOperationScope({
+            id: addStateExampleId,
+            scope: 'local',
+        });
 
         const updatedValue = {
             id: addStateExampleId,
@@ -261,6 +272,7 @@ describe('DocumentModel Class', () => {
             reducer: '<SetAuthorName.reducer>',
             examples: [],
             errors: [],
+            scope: 'local',
         };
 
         expect(model.state.specifications[0].modules[1].operations[1]).toEqual(

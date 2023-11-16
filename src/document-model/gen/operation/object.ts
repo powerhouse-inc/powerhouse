@@ -10,7 +10,8 @@ import {
     MoveOperationInput,
     DeleteOperationInput,
     ReorderModuleOperationsInput,
-    DocumentModelState
+    DocumentModelState,
+    SetOperationScopeInput
 } from '../types';
 import {
     addOperation,
@@ -22,6 +23,7 @@ import {
     moveOperation,
     deleteOperation,
     reorderModuleOperations,
+    setOperationScope,
 } from './creators';
 import { DocumentModelAction } from '../actions';
 
@@ -34,6 +36,10 @@ export default class DocumentModel_Operation extends BaseDocument<
     
     public setOperationName(input: SetOperationNameInput) {
         return this.dispatch(setOperationName(input));
+    }
+
+    public setOperationScope(input: SetOperationScopeInput) {
+        return this.dispatch(setOperationScope(input));
     }
     
     public setOperationSchema(input: SetOperationSchemaInput) {

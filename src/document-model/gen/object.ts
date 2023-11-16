@@ -20,7 +20,7 @@ export * from './operation-example/object';
 export * from './operation/object';
 export * from './state/object';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+// eslint-disable-next-line @typescript-eslint/no-empty-interface, @typescript-eslint/no-unsafe-declaration-merging
 interface DocumentModel
     extends DocumentModel_Header,
         DocumentModel_Versioning,
@@ -30,6 +30,7 @@ interface DocumentModel
         DocumentModel_Operation,
         DocumentModel_State {}
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 class DocumentModel extends BaseDocument<
     DocumentModelState,
     DocumentModelAction

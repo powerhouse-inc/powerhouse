@@ -24,6 +24,7 @@ export const reducer: DocumentModelOperationOperations = {
                     reducer: action.input.reducer || '',
                     errors: [],
                     examples: [],
+                    scope: action.input.scope || 'global',
                 });
             }
         }
@@ -37,6 +38,19 @@ export const reducer: DocumentModelOperationOperations = {
                 if (latestSpec.modules[i].operations[j].id == action.input.id) {
                     latestSpec.modules[i].operations[j].name =
                         action.input.name || '';
+                }
+            }
+        }
+    },
+
+    setOperationScopeOperation(state, action) {
+        const latestSpec =
+            state.specifications[state.specifications.length - 1];
+        for (let i = 0; i < latestSpec.modules.length; i++) {
+            for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+                if (latestSpec.modules[i].operations[j].id == action.input.id) {
+                    latestSpec.modules[i].operations[j].scope =
+                        action.input.scope || 'global';
                 }
             }
         }
@@ -137,7 +151,7 @@ export const reducer: DocumentModelOperationOperations = {
         for (let i = 0; i < latestSpec.modules.length; i++) {
             if (latestSpec.modules[i].id == action.input.moduleId) {
                 latestSpec.modules[i].operations.sort(
-                    operationSorter(action.input.order)
+                    operationSorter(action.input.order),
                 );
             }
         }

@@ -27,6 +27,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetModelId',
@@ -37,6 +38,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetModelExtension',
@@ -47,6 +49,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetModelDescription',
@@ -57,6 +60,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetAuthorName',
@@ -67,6 +71,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetAuthorWebsite',
@@ -77,6 +82,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                     ],
                     id: '',
@@ -94,6 +100,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'UpdateChangeLogItem',
@@ -104,6 +111,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'DeleteChangeLogItem',
@@ -114,6 +122,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'ReorderChangeLogItems',
@@ -124,6 +133,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'ReleaseNewVersion',
@@ -134,6 +144,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                     ],
                     id: '',
@@ -151,6 +162,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetModuleName',
@@ -161,6 +173,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetModuleDescription',
@@ -171,6 +184,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'DeleteModule',
@@ -181,6 +195,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'ReorderModules',
@@ -191,6 +206,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                     ],
                     id: '',
@@ -208,6 +224,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationErrorCode',
@@ -218,6 +235,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationErrorName',
@@ -228,6 +246,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationErrorDescription',
@@ -238,6 +257,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationErrorTemplate',
@@ -248,6 +268,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'DeleteOperationError',
@@ -258,6 +279,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'ReorderOperationErrors',
@@ -268,6 +290,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                     ],
                     id: '',
@@ -285,6 +308,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'UpdateOperationExample',
@@ -295,6 +319,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'DeleteOperationExample',
@@ -305,6 +330,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'ReorderOperationExamples',
@@ -315,6 +341,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                     ],
                     id: '',
@@ -332,6 +359,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationName',
@@ -342,6 +370,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationSchema',
@@ -352,6 +381,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationDescription',
@@ -362,6 +392,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationTemplate',
@@ -372,6 +403,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetOperationReducer',
@@ -382,6 +414,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'MoveOperation',
@@ -392,6 +425,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'DeleteOperation',
@@ -402,6 +436,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'ReorderModuleOperations',
@@ -412,6 +447,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                     ],
                     id: '',
@@ -429,6 +465,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'SetInitialState',
@@ -439,6 +476,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'AddStateExample',
@@ -449,6 +487,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'UpdateStateExample',
@@ -459,6 +498,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'DeleteStateExample',
@@ -469,6 +509,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                         {
                             name: 'ReorderStateExamples',
@@ -479,6 +520,7 @@ export const documentModel: DocumentModelState = {
                             reducer: '',
                             examples: [],
                             errors: [],
+                            scope: 'global',
                         },
                     ],
                     id: '',

@@ -186,6 +186,11 @@ const stateReducer: ImmutableStateReducer<
             OperationReducer.setOperationNameOperation(state, action);
             break;
 
+        case 'SET_OPERATION_SCOPE':
+            z.SetOperationScopeInputSchema().parse(action.input);
+            OperationReducer.setOperationScopeOperation(state, action);
+            break;
+
         case 'SET_OPERATION_SCHEMA':
             z.SetOperationSchemaInputSchema().parse(action.input);
             OperationReducer.setOperationSchemaOperation(state, action);

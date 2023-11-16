@@ -10,6 +10,7 @@ import {
     MoveOperationInput,
     DeleteOperationInput,
     ReorderModuleOperationsInput,
+    SetOperationScopeInput,
 } from '../types';
 import {
     AddOperationAction,
@@ -21,6 +22,7 @@ import {
     MoveOperationAction,
     DeleteOperationAction,
     ReorderModuleOperationsAction,
+    SetOperationScopeAction,
 } from './actions';
 
 export const addOperation = (input: AddOperationInput) =>
@@ -29,9 +31,15 @@ export const addOperation = (input: AddOperationInput) =>
         {...input}
     );
 
-export const setOperationName = (input: SetOperationNameInput) =>
+    export const setOperationName = (input: SetOperationNameInput) =>
     createAction<SetOperationNameAction>(
         'SET_OPERATION_NAME',
+        {...input}
+    );
+
+    export const setOperationScope = (input: SetOperationScopeInput) =>
+    createAction<SetOperationScopeAction>(
+        'SET_OPERATION_SCOPE',
         {...input}
     );
 
