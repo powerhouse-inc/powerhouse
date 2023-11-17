@@ -10,6 +10,7 @@ if (typeof window !== 'undefined') {
     window.process = window.process || { hrtime: () => [0, 0] }; // Fix error - TypeError: process.hrtime is not a function
     // @ts-ignore
     window.z = z;
+    process.hrtime = () => [0, 0]; // Fix error - TypeError: process.hrtime is not a function
     window.global = window; // type-graphql error - global is not defined
 }
 

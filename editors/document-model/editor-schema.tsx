@@ -12,7 +12,7 @@ interface IProps extends SchemaEditorProps {
     onGenerate: (created: {
         documentName: string;
         schema: string;
-        validator: () => z.ZodObject<any>;
+        validator: () => z.AnyZodObject;
     }) => void;
     theme: styles.ColorTheme;
 }
@@ -24,29 +24,6 @@ export default function EditorSchema({
     ...props
 }: IProps) {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-
-    function focusEditor() {
-        setCode(`type ${name} {\n\t\n}`);
-        setTimeout(() => {
-            editorRef.current?.setPosition({ lineNumber: 2, column: 2 });
-            editorRef.current?.focus();
-        });
-    }
-
-    // useEffect(() => {
-    // setCode(defaultCode);
-    // if (!name) {
-    //     return;
-    // }
-    // const timeout = setTimeout(() => {
-    //     editorRef.current?.setPosition({ lineNumber: 2, column: 2 });
-    //     editorRef.current?.focus();
-    // }, 500);
-    // return () => {
-    //     clearTimeout(timeout);
-    // };
-    // }, [name]);
-
     const [code, setCode] = useState(props.value || '');
 
     useEffect(() => {
@@ -57,7 +34,7 @@ export default function EditorSchema({
 
     const [schema, setSchema] = useState<GraphQLSchema>();
     const [validationSchema, setValidationSchema] =
-        useState<() => z.ZodObject<any> | null>();
+        useState<() => z.AnyZodObject>();
 
     // const monaco = useMonaco();
     // const [completionProvider, setCompletionProvider] =
@@ -111,7 +88,7 @@ export default function EditorSchema({
     //     setCompletionProvider(newProvider);
     // }, [monaco, editorRef.current, schema]);
 
-    async function generateSchema(code: string) {
+    async function generateSchema(code: string, name: string) {
         // using callbacks instead of await due to rollup error
         codegen(code).then(result => {
             import(/* @vite-ignore */ result).then(validators => {
@@ -127,16 +104,16 @@ export default function EditorSchema({
         if (!editorRef.current) {
             return;
         }
-
-        editorRef.current.onDidBlurEditorText(() => {
+        const listener = editorRef.current.onDidBlurEditorText(() => {
             const value = editorRef.current?.getValue();
             if (value) {
-                generateSchema(value);
+                generateSchema(value, name);
             } else {
                 // TODO clear current schema?
             }
         });
-    }, [editorRef.current]);
+        return listener.dispose;
+    }, [name]);
 
     return (
         <div>

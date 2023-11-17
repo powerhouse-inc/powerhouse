@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { styles } from 'document-model-editors';
 
 interface IProps extends EditorProps {
-    validator?: () => z.ZodObject<any>;
+    validator?: () => z.AnyZodObject;
     onCreate: (create: string) => void;
     theme: styles.ColorTheme;
 }
@@ -65,7 +65,14 @@ export default function EditorInitialState({
                     ...props.options,
                 }}
             />
-            <p style={{ marginTop: 10, fontSize: '1.1rem', color: 'red' }}>
+            <p
+                style={{
+                    minHeight: 20,
+                    marginTop: 10,
+                    fontSize: '1.1rem',
+                    color: 'red',
+                }}
+            >
                 {errorMessage}
             </p>
         </div>

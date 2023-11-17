@@ -4,12 +4,11 @@ import {
     DocumentModelAction,
     DocumentModelState,
 } from 'document-model/document-model';
-import { CSSProperties, useEffect, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useState } from 'react';
 import { pascalCase } from 'change-case';
 import { styles, TextInput } from 'document-model-editors';
 import GraphQLEditor from './graphql-editor';
-import JSONEditor, { isJSONEqual } from '../common/json-editor';
-import { type OnMount } from '@monaco-editor/react';
+import { isJSONEqual } from '../common/json-editor';
 import z from 'zod';
 import EditorSchema from './editor-schema';
 import EditorInitialState from './editor-initital-state';
@@ -18,7 +17,7 @@ export type IProps = EditorProps<DocumentModelState, DocumentModelAction>;
 type SchemaState = {
     documentName: string;
     schema: string;
-    validator: () => z.ZodObject<any>;
+    validator: () => z.AnyZodObject;
 };
 
 function Editor(props: IProps) {
@@ -210,42 +209,59 @@ function Editor(props: IProps) {
                 </div>
                 {!specification ? null : (
                     <>
-                        <div style={{ width: '50%', display: 'inline-block' }}>
-                            <h4 style={{ marginBottom: '16px' }}>
-                                State Schema
-                            </h4>
-                            <EditorSchema
-                                name={document.state.name}
-                                value={specification.state.schema}
-                                onGenerate={schema => {
-                                    setSchemaState(state => ({
-                                        ...state,
-                                        ...schema,
-                                    }));
-                                    if (
-                                        schema.schema !==
-                                        specification.state.schema
-                                    ) {
-                                        setStateSchema(schema.schema);
-                                    }
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    width: '50%',
+                                    display: 'inline-block',
                                 }}
-                                theme={theme}
-                                height={200}
-                            />
-                        </div>
-                        <div style={{ width: '50%', display: 'inline-block' }}>
-                            <h4 style={{ marginBottom: '16px' }}>
-                                Initial State
-                            </h4>
-                            <EditorInitialState
-                                height={200}
-                                value={specification.state.initialValue}
-                                validator={schemaState?.validator}
-                                onCreate={value => {
-                                    setInitialValue(JSON.parse(value));
+                            >
+                                <h4 style={{ marginBottom: '16px' }}>
+                                    State Schema
+                                </h4>
+                                <EditorSchema
+                                    name={document.state.name}
+                                    value={specification.state.schema}
+                                    onGenerate={schema => {
+                                        setSchemaState(state => ({
+                                            ...state,
+                                            ...schema,
+                                        }));
+                                        if (
+                                            schema.schema !==
+                                            specification.state.schema
+                                        ) {
+                                            setStateSchema(schema.schema);
+                                        }
+                                    }}
+                                    theme={theme}
+                                    height={200}
+                                />
+                            </div>
+                            <div
+                                style={{
+                                    width: '50%',
+                                    display: 'inline-block',
                                 }}
-                                theme={theme}
-                            />
+                            >
+                                <h4 style={{ marginBottom: '16px' }}>
+                                    Initial State
+                                </h4>
+                                <EditorInitialState
+                                    height={200}
+                                    value={specification.state.initialValue}
+                                    validator={schemaState?.validator}
+                                    onCreate={value => {
+                                        setInitialValue(JSON.parse(value));
+                                    }}
+                                    theme={theme}
+                                />
+                            </div>
                         </div>
                         {specification.modules.map(m => (
                             <div key={m.id}>
