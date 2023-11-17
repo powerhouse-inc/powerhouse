@@ -20,6 +20,7 @@ exports[`TreeViewInput Component should match snapshot 1`] = `
         data-focused="true"
         data-rac=""
         id="react-aria-:r5:"
+        title=""
         type="text"
         value="My Documents"
       />

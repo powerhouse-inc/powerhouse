@@ -9,7 +9,7 @@ export interface TreeViewItemProps
     open?: boolean;
     icon?: React.JSX.Element;
     expandedIcon?: React.JSX.Element;
-    secondaryIcon?: React.JSX.Element;
+    secondaryIcon?: React.ReactNode;
     level?: number;
     onClick?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
     onOptionsClick?: (
@@ -115,12 +115,12 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         </div>
                     )}
                     {optionsContent && (
-                        <div className="box-content hidden h-6 w-6 px-3 group-hover/tree-item:inline-block">
+                        <div className="box-content hidden h-6 w-6 self-center px-3 group-hover/tree-item:inline-block">
                             {optionsContent}
                         </div>
                     )}
                     {secondaryIcon && (
-                        <span className="pointer-events-none mx-3 flex self-end group-hover/tree-item:hidden">
+                        <span className="pointer-events-none mr-[18px] flex self-center group-hover/tree-item:hidden">
                             {secondaryIcon}
                         </span>
                     )}

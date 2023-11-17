@@ -11,12 +11,13 @@ import {
 } from '@/powerhouse';
 import { useRef } from 'react';
 import { twMerge } from 'tailwind-merge';
+import { StatusIndicator } from '../status-indicator';
 
 export enum ItemType {
     Folder = 'folder',
     File = 'file',
     LocalDrive = 'local-drive',
-    NetworkDrive = 'network-drive',
+    CloudDrive = 'cloud-drive',
     PublicDrive = 'public-drive',
 }
 
@@ -36,12 +37,15 @@ export interface TreeItem<T extends string = string> {
     id: string;
     label: string;
     type: ItemType;
+    isConnected?: boolean;
+    syncStatus?: 'not-synced-yet' | 'syncing' | 'synced';
     action?: ActionType;
     status?: ItemStatus;
     expanded?: boolean;
     children?: TreeItem<T>[];
     isSelected?: boolean;
     options?: ConnectDropdownMenuItem<T>[];
+    error?: Error;
 }
 
 export const DefaultOptions = [
@@ -86,19 +90,6 @@ export interface ConnectTreeViewItemProps<T extends string = DefaultOptionId>
     disableHighlightStyles?: boolean;
 }
 
-const getStatusIcon = (status: ItemStatus) => {
-    switch (status) {
-        case ItemStatus.Available:
-            return <Icon name="check" color="#34A853" />;
-        case ItemStatus.AvailableOffline:
-            return <Icon name="check" color="#34A853" />;
-        case ItemStatus.Syncing:
-            return <Icon name="syncing" color="#3E90F0" />;
-        case ItemStatus.Offline:
-            return <Icon name="cloud-slash" color="#EA4335" />;
-    }
-};
-
 const getItemIcon = (type: ItemType) => {
     switch (type) {
         case ItemType.Folder:
@@ -110,7 +101,7 @@ const getItemIcon = (type: ItemType) => {
             return {};
         case ItemType.LocalDrive:
             return { icon: <Icon name="hdd" /> };
-        case ItemType.NetworkDrive:
+        case ItemType.CloudDrive:
             return { icon: <Icon name="server" /> };
         case ItemType.PublicDrive:
             return { icon: <Icon name="m" /> };
@@ -195,6 +186,42 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
             </ConnectDropdownMenu>
         );
 
+    const getStatusIcon = () => {
+        if (item.type === ItemType.LocalDrive) {
+            return <StatusIndicator type="local-drive" error={item.error} />;
+        }
+
+        if (
+            item.type === ItemType.CloudDrive ||
+            item.type === ItemType.PublicDrive
+        ) {
+            const sharedProps = {
+                type: item.type,
+                error: item.error,
+                isConnected: item.isConnected ?? false,
+            };
+
+            if (item.status === ItemStatus.AvailableOffline) {
+                return (
+                    <StatusIndicator
+                        {...sharedProps}
+                        availability="available-offline"
+                        syncStatus={item.syncStatus ?? 'not-synced-yet'}
+                    />
+                );
+            }
+
+            if (item.status === ItemStatus.Available) {
+                return (
+                    <StatusIndicator
+                        {...sharedProps}
+                        availability="cloud-only"
+                    />
+                );
+            }
+        }
+    };
+
     return (
         <TreeViewItem
             {...(onDropEvent && { ...dragProps, ...dropProps })}
@@ -218,9 +245,7 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
                 ...restButtonProps,
             }}
             optionsContent={optionsContent}
-            {...(item.status && {
-                secondaryIcon: getStatusIcon(item.status),
-            })}
+            secondaryIcon={getStatusIcon()}
             {...getItemIcon(item.type)}
             {...divProps}
         >

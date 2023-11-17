@@ -15,7 +15,7 @@ export type DriveType = 'public' | 'local' | 'cloud';
 
 export interface DriveTreeItem<T extends string = DefaultOptionId>
     extends TreeItem<T> {
-    type: ItemType.LocalDrive | ItemType.NetworkDrive | ItemType.PublicDrive;
+    type: ItemType.LocalDrive | ItemType.CloudDrive | ItemType.PublicDrive;
 }
 
 export type OnItemOptionsClickHandler<T extends string = DefaultOptionId> = (

@@ -23,6 +23,7 @@ exports[`ConnectSearchBar Component should match snapshot 1`] = `
         data-rac=""
         id="react-aria-:r0:"
         placeholder="Search Files"
+        title=""
         type="text"
         value=""
       />

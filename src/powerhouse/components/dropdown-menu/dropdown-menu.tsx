@@ -1,8 +1,8 @@
 import React from 'react';
 import {
     Button,
-    Item,
     Menu,
+    MenuItem,
     MenuTrigger,
     Popover,
     PopoverProps,
@@ -47,7 +47,7 @@ export function DropdownMenu<T extends string>(props: DropdownMenuProps<T>) {
                     )}
                 >
                     {items.map(item => (
-                        <Item
+                        <MenuItem
                             id={item.id}
                             key={item.id}
                             className={twMerge(
@@ -56,7 +56,7 @@ export function DropdownMenu<T extends string>(props: DropdownMenuProps<T>) {
                             )}
                         >
                             {item.content}
-                        </Item>
+                        </MenuItem>
                     ))}
                 </Menu>
             </Popover>

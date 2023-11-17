@@ -165,14 +165,14 @@ export const Sidebar: Story = {
                         {
                             id: 'cloud 1',
                             label: 'Powerhouse Team Drive',
-                            type: ItemType.NetworkDrive,
+                            type: ItemType.CloudDrive,
                             expanded: false,
                             children: items,
                         },
                         {
                             id: 'cloud 2',
                             label: 'Powerhouse Team Drive',
-                            type: ItemType.NetworkDrive,
+                            type: ItemType.CloudDrive,
                             expanded: true,
                             children: items,
                         },

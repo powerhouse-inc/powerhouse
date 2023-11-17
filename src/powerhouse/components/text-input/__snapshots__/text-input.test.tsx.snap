@@ -17,6 +17,7 @@ exports[`Modal Component should match snapshot 1`] = `
         class="flex flex-1 outline-none bg-inherit min-w-0"
         data-rac=""
         id="react-aria-:r0:"
+        title=""
         type="text"
         value=""
       />
