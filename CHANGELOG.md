@@ -1,3 +1,10 @@
+# [1.0.0-alpha.21](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.20...v1.0.0-alpha.21) (2023-11-17)
+
+
+### Features
+
+* **modal:** added upgrade drive modal ([6ac9f40](https://github.com/powerhouse-inc/design-system/commit/6ac9f406f4f1e2cfcc78d9348dabc1fa4aa6d200))
+
 # [1.0.0-alpha.20](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.19...v1.0.0-alpha.20) (2023-11-17)
 
 
