@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { reducer } from '../../document-models/budget-statement';
 import {
     addComment,
@@ -64,7 +65,7 @@ describe('Budget Statement Comment reducer', () => {
             }),
         );
 
-        jest.useFakeTimers({ now: new Date('2023-03-16') });
+        vi.useFakeTimers({ now: new Date('2023-03-16') });
         document = reducer(
             document,
             updateComment({ key: '123', comment: 'Test 2' }),
@@ -106,7 +107,7 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should generate comment key and timestamp if undefined', async () => {
-        jest.useFakeTimers({ now: new Date('2023-03-16') });
+        vi.useFakeTimers({ now: new Date('2023-03-16') });
         const document = createDocument();
         const newDocument = reducer(
             document,

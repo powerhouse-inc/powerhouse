@@ -10,4 +10,4 @@ In this project, you can use the following npm scripts:
 -   `build`: Build the library project.
 -   `storybook`: Start Storybook in development mode.
 -   `build-storybook`: Build Storybook.
--   `test`: Run Jest for testing.
+-   `test`: Run Vitest for testing.

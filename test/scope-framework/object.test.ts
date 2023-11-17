@@ -1,11 +1,10 @@
-import { hashKey } from '../../src/document/utils';
-import { ScopeFramework } from '../../src/scope-framework';
+import { utils } from 'document-model/document';
 import {
-    ScopeFramework as ScopeFrameworkObject,
+    ScopeFramework,
     SectionComponent,
-} from '../../src/scope-framework/gen';
+} from '../../document-models/scope-framework';
 
-const buildExampleDocument = (): ScopeFrameworkObject => {
+const buildExampleDocument = (): ScopeFramework => {
     const framework = new ScopeFramework();
 
     const scopeId = framework.state.elements[0].id;
@@ -20,7 +19,7 @@ const buildExampleDocument = (): ScopeFrameworkObject => {
     });
 
     framework.addElement({
-        id: hashKey(),
+        id: utils.hashKey(),
         path: 'A.1.1',
         type: 'Article',
         name: 'Scope Improvement',
@@ -31,7 +30,7 @@ const buildExampleDocument = (): ScopeFrameworkObject => {
     });
 
     framework.addElement({
-        id: hashKey(),
+        id: utils.hashKey(),
         path: 'A.1.1.1',
         type: 'Section',
         name: 'Role of Scope Advisors',
@@ -42,7 +41,7 @@ const buildExampleDocument = (): ScopeFrameworkObject => {
     });
 
     framework.addElement({
-        id: hashKey(),
+        id: utils.hashKey(),
         path: 'A.1.1.2',
         type: 'Section',
         name: 'Role of Governance Nebulae',
@@ -53,7 +52,7 @@ const buildExampleDocument = (): ScopeFrameworkObject => {
     });
 
     framework.addElement({
-        id: hashKey(),
+        id: utils.hashKey(),
         path: 'A.1.2',
         type: 'Article',
         name: 'Spirit of the Atlas',
@@ -64,7 +63,7 @@ const buildExampleDocument = (): ScopeFrameworkObject => {
     });
 
     framework.addElement({
-        id: hashKey(),
+        id: utils.hashKey(),
         path: 'A.1.2.1',
         type: 'Section',
         name: 'Universal Alignment and the Spirit of the Atlas',
@@ -75,7 +74,7 @@ const buildExampleDocument = (): ScopeFrameworkObject => {
     });
 
     framework.addElement({
-        id: hashKey(),
+        id: utils.hashKey(),
         path: 'A.1.2.2',
         type: 'Section',
         name: 'Interpretation of the Spirit of the Atlas',
@@ -86,7 +85,7 @@ const buildExampleDocument = (): ScopeFrameworkObject => {
     });
 
     framework.addElement({
-        id: hashKey(),
+        id: utils.hashKey(),
         path: 'A.1.1.3',
         type: 'Section',
         name: 'Atlas Operational Platform',
@@ -110,7 +109,7 @@ describe('ScopeFramework Class', () => {
         expect(framework.state.rootPath).toBe('A');
         expect(framework.state.elements.length).toBe(1);
         expect(framework.state.elements[0].id).toMatch(
-            /^[a-zA-Z0-9+\\/]{27}=$/
+            /^[a-zA-Z0-9+\\/]{27}=$/,
         );
         expect(framework.state.elements[0].name).toBe('Scope Name');
         expect(framework.state.elements[0].path).toBe('A.1');
@@ -131,7 +130,7 @@ describe('ScopeFramework Class', () => {
         });
 
         framework.addElement({
-            id: hashKey(),
+            id: utils.hashKey(),
             type: 'Article',
             path: 'B.1.3',
             name: null,
@@ -139,11 +138,11 @@ describe('ScopeFramework Class', () => {
         });
 
         expect(
-            framework.state.elements.filter(e => e.path == 'B.1.3').length
+            framework.state.elements.filter(e => e.path == 'B.1.3').length,
         ).toBe(1);
 
         const elementId = framework.state.elements.filter(
-            e => e.path == 'B.1.3'
+            e => e.path == 'B.1.3',
         )[0].id;
 
         framework.updateElementType({
@@ -179,17 +178,17 @@ describe('ScopeFramework Class', () => {
             .filter(e => e.id == elementId)
             .forEach(e => {
                 expect((e.components as SectionComponent).content).toBe(
-                    'NEW CONTENT'
+                    'NEW CONTENT',
                 );
             });
 
         const removeId = framework.state.elements.filter(
-            e => e.path == 'B.1.2'
+            e => e.path == 'B.1.2',
         )[0]?.id;
         framework.removeElement({ id: removeId });
         expect(
             framework.state.elements.filter(e => e.path.startsWith('B.1.2'))
-                .length
+                .length,
         ).toBe(0);
     });
 });

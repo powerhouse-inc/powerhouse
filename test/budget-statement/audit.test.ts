@@ -6,12 +6,12 @@ import {
     addAuditReport,
     deleteAuditReport,
 } from '../../document-models/budget-statement/gen/creators';
-import utils from '../../document-models/budget-statement/gen/utils';
-import { Operation } from '../../src/document';
-import { getLocalFile, getRemoteFile } from '../../src/document/utils';
-import { readFile } from '../../src/document/utils/node';
+import { utils } from '../../document-models/budget-statement';
+import { Operation, utils as baseUtils } from 'document-model/document';
 
 const { createDocument, loadFromFile, saveToFile } = utils;
+
+const { getLocalFile, getRemoteFile } = baseUtils;
 
 describe('Budget Statement Audit Report reducer', () => {
     const tempDir = './test/budget-statement/temp/audit/';
@@ -232,16 +232,12 @@ describe('Budget Statement Audit Report reducer', () => {
             ),
         );
         expect(newDocument.state.auditReports[0]).toStrictEqual({
-            report: 'Pv/RLgAirXe5QEWGG+W4PTlQCv0=',
+            report: file.hash,
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
-        expect(
-            newDocument.attachments['Pv/RLgAirXe5QEWGG+W4PTlQCv0='].data.length,
-        ).toBeGreaterThan(0);
-        expect(
-            newDocument.attachments['Pv/RLgAirXe5QEWGG+W4PTlQCv0='].mimeType,
-        ).toBe('application/pdf');
+        expect(newDocument.attachments[file.hash].data).toEqual(file.data);
+        expect(newDocument.attachments[file.hash].mimeType).toBe(file.mimeType);
         expect(document.state.auditReports).toStrictEqual([]);
         expect(document.attachments).toStrictEqual({});
     });
@@ -261,7 +257,7 @@ describe('Budget Statement Audit Report reducer', () => {
             ),
         );
         const zipPath = await saveToFile(document, tempDir);
-        const file = readFile(zipPath);
+        const file = fs.readFileSync(zipPath);
         const zip = new JSZip();
         await zip.loadAsync(file);
 

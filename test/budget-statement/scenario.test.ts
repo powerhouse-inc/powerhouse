@@ -34,7 +34,6 @@ describe('Budget Statement scenario 1', () => {
             budgetStatement = reducer(budgetStatement, json.operation);
             expect(budgetStatement.state).toStrictEqual(json.state);
         } catch (error) {
-            // eslint-disable-next-line jest/no-conditional-expect
             expect(json.error?.message).toBe((error as Error).message);
         }
     });
@@ -50,7 +49,7 @@ class BudgetStatementTest extends BudgetStatement {
             )
             .join('');
 
-        // @ts-ignore
+        // @ts-expect-error dynamic access
         return this[method](action.input, action.attachments);
     }
 }
@@ -72,7 +71,6 @@ describe('Budget Statement scenario 1 with object methods', () => {
             );
             expect(budgetStatement.state).toStrictEqual(json.state);
         } catch (error) {
-            // eslint-disable-next-line jest/no-conditional-expect
             expect(json.error?.message).toBe((error as Error).message);
         }
     });

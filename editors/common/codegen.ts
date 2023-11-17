@@ -6,11 +6,11 @@ import * as ts from 'typescript';
 import { z } from 'zod';
 
 if (typeof window !== 'undefined') {
-    // @ts-ignore
-    window.process = window.process || { hrtime: () => [0, 0] }; // Fix error - TypeError: process.hrtime is not a function
-    // @ts-ignore
+    // @ts-expect-error polyfill
     window.z = z;
+    // @ts-expect-error polyfill
     process.hrtime = () => [0, 0]; // Fix error - TypeError: process.hrtime is not a function
+    window.process = window.process || { hrtime: () => [0, 0] }; // Fix error - TypeError: process.hrtime is not a function
     window.global = window; // type-graphql error - global is not defined
 }
 

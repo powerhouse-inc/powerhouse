@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { reducer } from '../../document-models/budget-statement';
 import {
     addVesting,
@@ -85,7 +86,7 @@ describe('Budget Statement Vesting reducer', () => {
     });
 
     it('should generate vesting key if undefined', async () => {
-        jest.useFakeTimers({ now: new Date('2023-03-16') });
+        vi.useFakeTimers({ now: new Date('2023-03-16') });
         const document = createDocument();
         const newDocument = reducer(
             document,

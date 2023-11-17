@@ -9,7 +9,7 @@ import {
     setQuoteCurrency,
 } from '../../document-models/budget-statement/gen/creators';
 import utils from '../../document-models/budget-statement/gen/utils';
-import { setName } from '../../src/document/actions';
+import { actions } from 'document-model/document';
 
 const { createDocument } = utils;
 
@@ -23,13 +23,13 @@ describe('Budget Statement reducer', () => {
 
     it('should update name', async () => {
         const document = createDocument();
-        const newDocument = reducer(document, setName('SES Jan 2023'));
+        const newDocument = reducer(document, actions.setName('SES Jan 2023'));
         expect(newDocument.name).toBe('SES Jan 2023');
     });
 
     it('should update revision', async () => {
         const document = createDocument();
-        const newDocument = reducer(document, setName('SES Jan 2023'));
+        const newDocument = reducer(document, actions.setName('SES Jan 2023'));
         expect(newDocument.revision).toBe(1);
     });
 

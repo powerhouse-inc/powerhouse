@@ -1,14 +1,6 @@
 import fs from 'fs';
-import {
-    BudgetStatement,
-    reducer,
-} from '../../document-models/budget-statement';
-import { createAccount } from '../../document-models/budget-statement/custom/utils';
-import {
-    BudgetStatementAction,
-    BudgetStatementState,
-} from '../../document-models/budget-statement/gen';
-import { loadFromInput } from '../../src/document/utils/file';
+import { BudgetStatement } from '../../document-models/budget-statement';
+import { createAccount, utils } from '../../document-models/budget-statement';
 
 describe('Budget Statement Class', () => {
     afterAll(() => {
@@ -176,10 +168,7 @@ describe('Budget Statement Class', () => {
         const file = fs.readFileSync(
             './test/budget-statement/temp/march.phbs.zip',
         );
-        const budgetStatement = await loadFromInput<
-            BudgetStatementState,
-            BudgetStatementAction
-        >(file.buffer, reducer);
+        const budgetStatement = await utils.loadFromInput(file.buffer);
         expect(budgetStatement.name).toBe('march');
         expect(budgetStatement.state.month).toBe('03/2023');
     });

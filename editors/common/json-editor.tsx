@@ -1,11 +1,11 @@
 import { Editor as CodeEditor, EditorProps } from '@monaco-editor/react';
 import { useEffect, useState } from 'react';
-import { ColorTheme } from './styles';
+import { styles } from 'document-model-editors';
 
 type IProps = Omit<EditorProps, 'value' | 'onChange' | 'theme'> & {
     value: JSON;
     onChange: (value: JSON) => void;
-    theme: ColorTheme;
+    theme: styles.ColorTheme;
 };
 
 export function isJSONEqual(json: JSON, text: string) {
@@ -27,7 +27,9 @@ export default function JSONEditor({
         try {
             const state = JSON.parse(value);
             onChange(state);
-        } catch {}
+        } catch {
+            /* empty */
+        }
     }
 
     useEffect(() => {

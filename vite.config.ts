@@ -1,12 +1,13 @@
-import { resolve } from 'path';
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
 import { getConfig } from '@acaldas/powerhouse';
 import { readdirSync } from 'node:fs';
+import { InlineConfig } from 'vitest';
 
 const { documentModelsDir, editorsDir } = getConfig();
 
-const entry = {
+const entry: Record<string, string> = {
     index: 'index.ts',
     'document-models': resolve(documentModelsDir, 'index.ts'),
     editors: resolve(editorsDir, 'index.ts'),
@@ -28,7 +29,15 @@ export default defineConfig(({ mode }) => {
         'react-dom',
     ];
 
+    const test: InlineConfig = {
+        globals: true,
+        coverage: {
+            enabled: true,
+        },
+    };
+
     return {
+        test,
         build: {
             outDir: `dist`,
             emptyOutDir: true,
