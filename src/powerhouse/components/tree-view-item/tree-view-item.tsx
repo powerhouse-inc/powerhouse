@@ -22,26 +22,6 @@ export interface TreeViewItemProps
     bottomIndicator?: React.ReactNode;
 }
 
-const injectLevelProps = (
-    children: React.ReactNode,
-    level: number,
-): React.ReactNode => {
-    return React.Children.map(children, child => {
-        if (React.isValidElement(child)) {
-            const customProps = {
-                level: level + 1,
-            };
-
-            return React.cloneElement(child, {
-                ...(child.props as TreeViewItemProps),
-                ...customProps,
-            });
-        }
-
-        return child;
-    });
-};
-
 export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
     const {
         open,
@@ -66,7 +46,6 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
     } = buttonProps;
 
     const levelPadding = level * 10;
-    const caretPadding = children ? 0 : 24;
 
     return (
         <div {...divProps}>
@@ -85,17 +64,15 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 )}
                 <div
                     className="flex w-full cursor-pointer flex-row"
-                    style={{ paddingLeft: `${levelPadding + caretPadding}px` }}
+                    style={{ paddingLeft: `${levelPadding}px` }}
                 >
-                    {children && (
-                        <Icon
-                            name="caret"
-                            className={twMerge(
-                                open && 'rotate-90',
-                                'ease delay-50 pointer-events-none transition',
-                            )}
-                        />
-                    )}
+                    <Icon
+                        name="caret"
+                        className={twMerge(
+                            open && 'rotate-90',
+                            'ease delay-50 pointer-events-none transition',
+                        )}
+                    />
                     {icon && (
                         <span className="pointer-events-none">
                             {open ? expandedIcon || icon : icon}
@@ -126,7 +103,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
             </div>
             {children && (
                 <div className={twMerge(!open && 'hidden')}>
-                    {injectLevelProps(children, level)}
+                    {children}
                 </div>
             )}
         </div>

@@ -24,6 +24,8 @@ export enum ItemType {
 export enum ActionType {
     Update = 'update',
     New = 'new',
+    UpdateAndMove = 'update-and-move',
+    UpdateAndCopy = 'update-and-copy',
 }
 
 export enum ItemStatus {
@@ -33,19 +35,20 @@ export enum ItemStatus {
     Offline = 'offline',
 }
 
-export interface TreeItem<T extends string = string> {
+export interface TreeItem {
     id: string;
     label: string;
     type: ItemType;
     isConnected?: boolean;
     syncStatus?: 'not-synced-yet' | 'syncing' | 'synced';
+    path: string;
     action?: ActionType;
     status?: ItemStatus;
     expanded?: boolean;
-    children?: TreeItem<T>[];
+    children?: TreeItem[];
     isSelected?: boolean;
-    options?: ConnectDropdownMenuItem<T>[];
     error?: Error;
+    options?: ConnectDropdownMenuItem[];
 }
 
 export const DefaultOptions = [
@@ -74,19 +77,19 @@ export const DefaultOptions = [
 
 export type DefaultOptionId = (typeof DefaultOptions)[number]['id'];
 
-export interface ConnectTreeViewItemProps<T extends string = DefaultOptionId>
+export interface ConnectTreeViewItemProps
     extends Pick<
         TreeViewItemProps,
         'children' | 'onClick' | 'buttonProps' | 'level'
     > {
-    item: TreeItem<T>;
-    onDropEvent?: UseDraggableTargetProps<TreeItem<T>>['onDropEvent'];
-    onDropActivate?: (dropTargetItem: TreeItem<T>) => void;
-    defaultOptions?: ConnectDropdownMenuItem<T>[];
-    onOptionsClick?: (item: TreeItem<T>, option: T) => void;
+    item: TreeItem;
+    onDropEvent?: UseDraggableTargetProps<TreeItem>['onDropEvent'];
+    onDropActivate?: (dropTargetItem: TreeItem) => void;
+    defaultOptions?: ConnectDropdownMenuItem[];
+    onOptionsClick?: (item: TreeItem, option: DefaultOptionId) => void;
     disableDropBetween?: boolean;
-    onDragStart?: UseDraggableTargetProps<TreeItem<T>>['onDragStart'];
-    onDragEnd?: UseDraggableTargetProps<TreeItem<T>>['onDragEnd'];
+    onDragStart?: UseDraggableTargetProps<TreeItem>['onDragStart'];
+    onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
     disableHighlightStyles?: boolean;
 }
 
@@ -108,8 +111,8 @@ const getItemIcon = (type: ItemType) => {
     }
 };
 
-export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
-    props: ConnectTreeViewItemProps<T>,
+export function ConnectTreeViewItem(
+    props: ConnectTreeViewItemProps,
 ) {
     const {
         item,
@@ -131,7 +134,7 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
     const containerRef = useRef(null);
 
     const { dragProps, dropProps, isDropTarget, isDragging } =
-        useDraggableTarget<TreeItem<T>>({
+        useDraggableTarget<TreeItem>({
             onDragEnd,
             onDragStart,
             data: item,
@@ -163,13 +166,13 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
     const { className: buttonClassName, ...restButtonProps } = buttonProps;
 
     const optionsContent = onOptionsClick && (
-        <ConnectDropdownMenu<T>
+        <ConnectDropdownMenu
             items={
-                item.options || (defaultOptions as ConnectDropdownMenuItem<T>[])
+                item.options || (defaultOptions as ConnectDropdownMenuItem[])
             }
             menuClassName="bg-white cursor-pointer"
             menuItemClassName="hover:bg-[#F1F5F9] px-2"
-            onItemClick={option => onOptionsClick(item, option)}
+            onItemClick={option => onOptionsClick(item, option as DefaultOptionId)}
             popoverProps={{
                 triggerRef: containerRef,
                 placement: 'bottom end',

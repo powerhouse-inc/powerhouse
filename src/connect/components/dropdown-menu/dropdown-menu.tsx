@@ -2,25 +2,23 @@ import { DropdownMenu, DropdownMenuProps } from '@/powerhouse';
 import { useMemo } from 'react';
 import { twMerge } from 'tailwind-merge';
 
-export interface ConnectDropdownMenuItem<T extends string = string> {
-    id: T;
+export interface ConnectDropdownMenuItem {
+    id: string;
     icon?: React.JSX.Element;
     label: string;
     className?: string;
 }
 
-export interface ConnectDropdownMenuProps<T extends string = string>
-    extends Omit<DropdownMenuProps<T>, 'items'> {
-    items: ConnectDropdownMenuItem<T>[];
+export interface ConnectDropdownMenuProps
+    extends Omit<DropdownMenuProps, 'items'> {
+    items: ConnectDropdownMenuItem[];
 }
 
-export function ConnectDropdownMenu<T extends string = string>(
-    props: ConnectDropdownMenuProps<T>,
-) {
+export function ConnectDropdownMenu(props: ConnectDropdownMenuProps) {
     const { items, children, onItemClick, menuClassName, ...dropDownProps } =
         props;
 
-    const dropdownItems = useMemo<DropdownMenuProps<T>['items']>(
+    const dropdownItems = useMemo<DropdownMenuProps['items']>(
         () =>
             items.map(item => ({
                 id: item.id,
@@ -45,7 +43,7 @@ export function ConnectDropdownMenu<T extends string = string>(
     );
 
     return (
-        <DropdownMenu<T>
+        <DropdownMenu
             items={dropdownItems}
             onItemClick={onItemClick}
             menuClassName={twMerge(

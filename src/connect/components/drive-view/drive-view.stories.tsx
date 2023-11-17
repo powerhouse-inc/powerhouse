@@ -1,8 +1,127 @@
-import { traverseDriveById } from '@/connect/utils';
 import type { Meta, StoryObj } from '@storybook/react';
-import { useState } from 'react';
-import { ItemStatus, ItemType } from '../tree-view-item';
+import { ItemType, ItemStatus } from '../tree-view-item';
 import { DriveView, DriveViewProps } from './drive-view';
+import { ItemsContextProvider, useItemsContext } from '../../context/ItemsContext';
+import { useGetDriveParent } from '@/connect/hooks/tree-view/useGetDriveParent';
+import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
+
+const drives = [
+    ...generateMockDriveData({
+        path: 'public-only-connected',
+        label: 'Public Only Connected',
+        type: ItemType.PublicDrive,
+        status: ItemStatus.Available,
+        isConnected: true,
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'public-only-disconnected',
+        label: 'Public Only Disconnected',
+        isConnected: false,
+        status: ItemStatus.Available,
+        type: ItemType.PublicDrive,
+        expanded: true,
+    }),
+    ...generateMockDriveData({
+        path: 'public-available-offline-synced',
+        label: 'Available Offline Synced',
+        type: ItemType.PublicDrive,
+        status: ItemStatus.AvailableOffline,
+        isConnected: true,
+        syncStatus: 'synced',
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'public-available-offline-syncing',
+        label: 'Available Offline Syncing',
+        type: ItemType.PublicDrive,
+        status: ItemStatus.AvailableOffline,
+        isConnected: true,
+        syncStatus: 'syncing',
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'public-available-offline-not-yet-synced',
+        label: 'Available Offline Not Synced Yet',
+        type: ItemType.PublicDrive,
+        status: ItemStatus.AvailableOffline,
+        isConnected: true,
+        syncStatus: 'not-synced-yet',
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'public-available-offline-disconnected',
+        label: 'Available Offline Disconnected',
+        isConnected: false,
+        status: ItemStatus.Available,
+        type: ItemType.PublicDrive,
+        expanded: true,
+    }),
+    ...generateMockDriveData({
+        path: 'cloud-only-connected',
+        label: 'Cloud Only Connected',
+        type: ItemType.CloudDrive,
+        status: ItemStatus.Available,
+        isConnected: true,
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'cloud-only-disconnected',
+        label: 'Cloud Only Disconnected',
+        isConnected: false,
+        status: ItemStatus.Available,
+        type: ItemType.CloudDrive,
+        expanded: true,
+    }),
+    ...generateMockDriveData({
+        path: 'cloud-available-offline-synced',
+        label: 'Available Offline Synced',
+        type: ItemType.CloudDrive,
+        status: ItemStatus.AvailableOffline,
+        isConnected: true,
+        syncStatus: 'synced',
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'cloud-available-offline-syncing',
+        label: 'Available Offline Syncing',
+        type: ItemType.CloudDrive,
+        status: ItemStatus.AvailableOffline,
+        isConnected: true,
+        syncStatus: 'syncing',
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'cloud-available-offline-not-yet-synced',
+        label: 'Available Offline Not Synced Yet',
+        type: ItemType.CloudDrive,
+        status: ItemStatus.AvailableOffline,
+        isConnected: true,
+        syncStatus: 'not-synced-yet',
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'cloud-available-offline-disconnected',
+        label: 'Available Offline Disconnected',
+        isConnected: false,
+        status: ItemStatus.Available,
+        type: ItemType.CloudDrive,
+        expanded: true,
+    }),
+    ...generateMockDriveData({
+        path: 'local-available',
+        label: 'Local Available',
+        type: ItemType.LocalDrive,
+        expanded: true,
+    }),
+    ...generateMockDriveData({
+        path: 'local-error',
+        label: 'Local Error',
+        type: ItemType.LocalDrive,
+        expanded: true,
+        error: new Error('Something went wrong'),
+    }),
+];
 
 const meta: Meta<typeof DriveView> = {
     title: 'Connect/Components/DriveView',
@@ -12,9 +131,11 @@ const meta: Meta<typeof DriveView> = {
     },
     decorators: [
         Story => (
-            <div className="w-[420px] bg-neutral-1 to-neutral-1 p-10">
-                <Story />
-            </div>
+            <ItemsContextProvider items={drives}>
+                <div className="w-[420px] bg-neutral-1 to-neutral-1 p-10">
+                    <Story />
+                </div>
+            </ItemsContextProvider>
         ),
     ],
     argTypes: {
@@ -25,7 +146,6 @@ const meta: Meta<typeof DriveView> = {
             options: ['public', 'local', 'cloud'],
         },
         name: { control: { type: 'string' } },
-        drives: { control: { type: 'object' } },
         onItemClick: { control: { type: 'action' } },
         onDropEvent: { control: { type: 'action' } },
         onItemOptionsClick: { control: { type: 'action' } },
@@ -40,225 +160,56 @@ const meta: Meta<typeof DriveView> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const items = [
-    {
-        id: 'drive/folder1',
-        label: 'Folder 1',
-        type: ItemType.Folder,
-        status: ItemStatus.Syncing,
-        expanded: false,
-        children: [
-            {
-                id: 'drive/folder1/folder1.1',
-                label: 'Folder 1.1',
-                type: ItemType.Folder,
-                status: ItemStatus.Syncing,
-                expanded: false,
-            },
-            {
-                id: 'drive/folder1/folder1.2',
-                label: 'Folder 1.2',
-                type: ItemType.Folder,
-                status: ItemStatus.Syncing,
-                expanded: false,
-                children: [
-                    {
-                        id: 'drive/folder1/folder1.2/folder1.2.1',
-                        label: 'Folder 1.2.1',
-                        type: ItemType.Folder,
-                        status: ItemStatus.Syncing,
-                        expanded: false,
-                    },
-                ],
-            },
-        ],
-    },
-    {
-        id: 'drive/folder2',
-        label: 'Folder 2',
-        type: ItemType.Folder,
-        status: ItemStatus.AvailableOffline,
-        expanded: false,
-        children: [
-            {
-                id: 'drive/folder2/folder2.1',
-                label: 'Folder 2.1',
-                type: ItemType.Folder,
-                status: ItemStatus.AvailableOffline,
-                expanded: false,
-            },
-        ],
-    },
-    {
-        id: 'drive/folder3',
-        label: 'Folder 3',
-        type: ItemType.Folder,
-        status: ItemStatus.Offline,
-        expanded: false,
-    },
-];
-
 const DriveViewImpl = (args: DriveViewProps) => {
-    const { drives: initialDrives, onItemClick, ...restArgs } = args;
-    const [drives, setDrives] = useState(initialDrives);
+    const { onItemClick, ...restArgs } = args;
+    const { setItems } = useItemsContext();
+    const getDriveParent = useGetDriveParent();
 
     const onItemClickHandler: DriveViewProps['onItemClick'] = (
         e,
         item,
-        drive,
     ) => {
-        const newDrives = traverseDriveById(drives, drive.id, treeItem => {
-            if (treeItem.id === item.id) {
+        setItems((prevItems) => prevItems.map((prevItem) => {
+            if (prevItem.id === item.id) {
                 return {
-                    ...treeItem,
-                    expanded: !treeItem.expanded,
+                    ...prevItem,
+                    isSelected: true,
+                    expanded: !prevItem.expanded,
                 };
             }
 
-            return treeItem;
-        });
+            return { ...prevItem, isSelected: false };
+        }));
 
-        setDrives(newDrives);
-        onItemClick?.(e, item, drive);
+        const parent = getDriveParent(item.path);
+        
+        console.log('drive:', parent);
+        console.log('item:', item);
+
+        onItemClick?.(e, item);
     };
 
     return (
         <DriveView
             {...restArgs}
-            drives={drives}
             onItemClick={onItemClickHandler}
         />
     );
 };
 
+
+
 export const Public: Story = {
     args: {
-        drives: [
-            {
-                id: 'public-only-connected',
-                label: 'Public Only Connected',
-                type: ItemType.PublicDrive,
-                status: ItemStatus.Available,
-                isConnected: true,
-                expanded: false,
-                children: items,
-            },
-            {
-                id: 'public-only-disconnected',
-                label: 'Public Only Disconnected',
-                isConnected: false,
-                status: ItemStatus.Available,
-                type: ItemType.PublicDrive,
-                expanded: true,
-                children: items,
-            },
-            {
-                id: 'available-offline-synced',
-                label: 'Available Offline Synced',
-                type: ItemType.PublicDrive,
-                status: ItemStatus.AvailableOffline,
-                isConnected: true,
-                syncStatus: 'synced',
-                expanded: false,
-                children: items,
-            },
-            {
-                id: 'available-offline-syncing',
-                label: 'Available Offline Syncing',
-                type: ItemType.PublicDrive,
-                status: ItemStatus.AvailableOffline,
-                isConnected: true,
-                syncStatus: 'syncing',
-                expanded: false,
-                children: items,
-            },
-            {
-                id: 'available-offline-not-yet-synced',
-                label: 'Available Offline Not Synced Yet',
-                type: ItemType.PublicDrive,
-                status: ItemStatus.AvailableOffline,
-                isConnected: true,
-                syncStatus: 'not-synced-yet',
-                expanded: false,
-                children: items,
-            },
-            {
-                id: 'available-offline-disconnected',
-                label: 'Available Offline Disconnected',
-                isConnected: false,
-                status: ItemStatus.Available,
-                type: ItemType.PublicDrive,
-                expanded: true,
-                children: items,
-            },
-        ],
         name: 'Public drives',
         type: 'public',
     },
     render: args => <DriveViewImpl {...(args as DriveViewProps)} />,
 };
 
+
 export const Cloud: Story = {
     args: {
-        drives: [
-            {
-                id: 'cloud-only-connected',
-                label: 'Cloud Only Connected',
-                type: ItemType.CloudDrive,
-                status: ItemStatus.Available,
-                isConnected: true,
-                expanded: false,
-                children: items,
-            },
-            {
-                id: 'cloud-only-disconnected',
-                label: 'Cloud Only Disconnected',
-                isConnected: false,
-                status: ItemStatus.Available,
-                type: ItemType.CloudDrive,
-                expanded: true,
-                children: items,
-            },
-            {
-                id: 'available-offline-synced',
-                label: 'Available Offline Synced',
-                type: ItemType.CloudDrive,
-                status: ItemStatus.AvailableOffline,
-                isConnected: true,
-                syncStatus: 'synced',
-                expanded: false,
-                children: items,
-            },
-            {
-                id: 'available-offline-syncing',
-                label: 'Available Offline Syncing',
-                type: ItemType.CloudDrive,
-                status: ItemStatus.AvailableOffline,
-                isConnected: true,
-                syncStatus: 'syncing',
-                expanded: false,
-                children: items,
-            },
-            {
-                id: 'available-offline-not-yet-synced',
-                label: 'Available Offline Not Synced Yet',
-                type: ItemType.CloudDrive,
-                status: ItemStatus.AvailableOffline,
-                isConnected: true,
-                syncStatus: 'not-synced-yet',
-                expanded: false,
-                children: items,
-            },
-            {
-                id: 'available-offline-disconnected',
-                label: 'Available Offline Disconnected',
-                isConnected: false,
-                status: ItemStatus.Available,
-                type: ItemType.CloudDrive,
-                expanded: true,
-                children: items,
-            },
-        ],
         name: 'Secure Cloud Storage',
         type: 'cloud',
     },
@@ -267,23 +218,6 @@ export const Cloud: Story = {
 
 export const Local: Story = {
     args: {
-        drives: [
-            {
-                id: 'local-available',
-                label: 'Local Available',
-                type: ItemType.LocalDrive,
-                expanded: true,
-                children: items,
-            },
-            {
-                id: 'local-error',
-                label: 'Local Error',
-                type: ItemType.LocalDrive,
-                expanded: true,
-                error: new Error('Something went wrong'),
-                children: items,
-            },
-        ],
         name: 'My Local Drives',
         type: 'local',
     },

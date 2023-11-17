@@ -1,14 +1,29 @@
-import { traverseTree } from '@/connect/utils';
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { ActionType, ItemStatus, ItemType, TreeItem } from '../tree-view-item';
+import { ActionType, ItemType, TreeItem } from '../tree-view-item';
 import { ConnectTreeView, ConnectTreeViewProps } from './tree-view';
+import { ItemsContextProvider, useItemsContext } from '@/connect/context/ItemsContext';
+import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
 
-const meta = {
+const treeItems = generateMockDriveData({
+    path: 'drive',
+    label: 'Local Drive',
+    type: ItemType.LocalDrive,
+    expanded: false,
+    isSelected: false,
+});
+
+const meta: Meta<typeof ConnectTreeView> = {
     title: 'Connect/Components/TreeView',
     component: ConnectTreeView,
+    decorators: [
+        Story => (
+            <ItemsContextProvider items={treeItems}>
+                <Story />
+            </ItemsContextProvider>
+        ),
+    ],
     argTypes: {
-        items: { control: { type: 'object' } },
         onItemClick: { control: { type: 'action' } },
         onDropEvent: { control: { type: 'action' } },
         onItemOptionsClick: { control: { type: 'action' } },
@@ -19,87 +34,14 @@ const meta = {
         onDragStart: { control: { type: 'action' } },
         onDragEnd: { control: { type: 'action' } },
     },
-} satisfies Meta<typeof ConnectTreeView>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const treeItem: TreeItem = {
-    id: 'drive',
-    label: 'Local Drive',
-    type: ItemType.LocalDrive,
-    expanded: false,
-    isSelected: false,
-    children: [
-        {
-            id: 'drive/folder1',
-            label: 'Folder 1',
-            type: ItemType.Folder,
-            status: ItemStatus.Syncing,
-            expanded: false,
-            isSelected: false,
-            children: [
-                {
-                    id: 'drive/folder1/folder1.1',
-                    label: 'Folder 1.1',
-                    type: ItemType.Folder,
-                    status: ItemStatus.Syncing,
-                    expanded: false,
-                    isSelected: false,
-                },
-                {
-                    id: 'drive/folder1/folder1.2',
-                    label: 'Folder 1.2',
-                    type: ItemType.Folder,
-                    status: ItemStatus.Syncing,
-                    expanded: false,
-                    isSelected: false,
-                    children: [
-                        {
-                            id: 'drive/folder1/folder1.2/folder1.2.1',
-                            label: 'Folder 1.2.1',
-                            type: ItemType.Folder,
-                            status: ItemStatus.Syncing,
-                            expanded: false,
-                            isSelected: false,
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            id: 'drive/folder2',
-            label: 'Folder 2',
-            type: ItemType.Folder,
-            status: ItemStatus.AvailableOffline,
-            expanded: false,
-            isSelected: false,
-            children: [
-                {
-                    id: 'drive/folder2/folder2.1',
-                    label: 'Folder 2.1',
-                    type: ItemType.Folder,
-                    status: ItemStatus.AvailableOffline,
-                    expanded: false,
-                    isSelected: false,
-                },
-            ],
-        },
-        {
-            id: 'drive/folder3',
-            label: 'Folder 3',
-            type: ItemType.Folder,
-            status: ItemStatus.Offline,
-            expanded: false,
-            isSelected: false,
-        },
-    ],
-};
-
 const TreeViewImpl = (args: ConnectTreeViewProps) => {
     const {
         onItemClick,
-        items: argItems,
         onItemOptionsClick,
         onCancelInput,
         onSubmitInput,
@@ -108,28 +50,25 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
         onDragEnd,
         ...treeViewProps
     } = args;
-    const [items, setItems] = useState(argItems);
     const [disableHighlight, setDisableHighlight] = useState(false);
+    const { setItems } = useItemsContext();
 
     const onItemClickHandler: ConnectTreeViewProps['onItemClick'] = (
         e,
         item,
     ) => {
         onItemClick?.(e, item);
-        setItems(prevState => {
-            const newTree = traverseTree(prevState, treeItem => {
-                if (treeItem.id === item.id) {
-                    treeItem.isSelected = true;
-                    treeItem.expanded = !treeItem.expanded;
-                } else {
-                    treeItem.isSelected = false;
-                }
+        setItems((itemsContext) => itemsContext.map((itemContext) => {
+            const newItem = { ...itemContext };
+            if (newItem.id === item.id) {
+                newItem.isSelected = true;
+                newItem.expanded = !itemContext.expanded;
+            } else {
+                newItem.isSelected = false;
+            }
 
-                return treeItem;
-            });
-
-            return newTree;
-        });
+            return newItem;
+        }));
     };
 
     const onItemOptionsClickHandler: ConnectTreeViewProps['onItemOptionsClick'] =
@@ -137,90 +76,82 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
             onItemOptionsClick?.(item, option);
 
             if (option === 'rename') {
-                const newTree = traverseTree(items, treeItem => {
-                    if (treeItem.id === item.id) {
-                        treeItem.action = ActionType.Update;
+                setItems((prevItems) => prevItems.map((prevItem) => {
+                    const newItem = { ...prevItem };
+
+                    if (prevItem.id === item.id) {
+                        newItem.action = ActionType.Update;
                     } else {
-                        treeItem.action = undefined;
-                        treeItem.isSelected = false;
+                        newItem.action = undefined;
+                        newItem.isSelected = false;
                     }
 
-                    return treeItem;
-                });
+                    return newItem;
+                }));
 
-                setItems(newTree);
                 return;
             }
 
             if (option === 'new-folder') {
-                const newTree = traverseTree(items, treeItem => {
-                    if (treeItem.id === item.id) {
-                        treeItem.expanded = true;
-                        treeItem.isSelected = false;
-                        treeItem.children = treeItem.children || [];
-                        treeItem.children.push({
-                            id: `${treeItem.id}/new-folder`,
+                setItems((prevItems) => {
+                    const newItems = prevItems.map((prevItem) => {
+                        if (prevItem.id === item.id) {
+                            return { ...prevItem, expanded: true, isSelected: false };
+                        }
+                        return prevItem;
+                    });
+
+                    return [
+                        ...newItems,
+                        {
+                            id: `${item.id}/new-folder`,
+                            path: `${item.path}/new-folder`,
                             label: 'New Folder',
                             type: ItemType.Folder,
                             action: ActionType.New,
-                        });
-                    }
-
-                    return treeItem;
+                        },
+                    ];
                 });
-
-                setItems(newTree);
             }
         };
 
     const onCancelInputHandler: ConnectTreeViewProps['onCancelInput'] =
         item => {
             onCancelInput?.(item);
-            const newTree = traverseTree(items, treeItem => {
-                if (treeItem.id === item.id) {
-                    treeItem.action = undefined;
-                }
+            setItems((prevItems) => {
+                const newItems = prevItems.reduce<TreeItem[]>((acc, prevItem) => {
+                    if (prevItem.action === ActionType.New) return acc;
+                    if (prevItem.action === ActionType.Update) {
+                        return [...acc, { ...prevItem, action: undefined }];
+                    }
+                    return [...acc, prevItem];
+                }, []);
 
-                return treeItem;
+                return newItems;
             });
-
-            setItems(newTree);
         };
 
     const onSubmitInputHandler: ConnectTreeViewProps['onSubmitInput'] =
         item => {
             onSubmitInput?.(item);
-            const newTree = traverseTree(items, treeItem => {
-                if (treeItem.id === item.id) {
-                    treeItem.action = undefined;
-                    treeItem.label = item.label;
-                    item.id = item.id.replace(
-                        /\/new-folder$/,
-                        `/${item.label}`,
-                    );
+            setItems((prevItems) => prevItems.map((prevItem) => {
+                if (prevItem.id === item.id) {
+                    return { ...prevItem, ...item, action: undefined };
                 }
 
-                return treeItem;
-            });
-
-            setItems(newTree);
+                return prevItem;
+            }));
         };
 
     const onDropActivateHandler: ConnectTreeViewProps['onDropActivate'] =
         item => {
             onDropActivate?.(item);
-
-            setItems(prevState => {
-                const newTree = traverseTree(prevState, treeItem => {
-                    if (treeItem.id === item.id) {
-                        treeItem.expanded = true;
-                    }
-
-                    return treeItem;
-                });
-
-                return newTree;
-            });
+            setItems((prevItems) => prevItems.map((prevItem) => {
+                if (item.id === prevItem.id) {
+                    return {...prevItem, expanded: true};
+                }
+                return prevItem;
+            }));
         };
 
     const onDragStartHandler: ConnectTreeViewProps['onDragStart'] = (
@@ -242,7 +173,6 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
     return (
         <div className="bg-white p-10">
             <ConnectTreeView
-                items={items}
                 onItemClick={onItemClickHandler}
                 onCancelInput={onCancelInputHandler}
                 onSubmitInput={onSubmitInputHandler}
@@ -251,15 +181,13 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
                 disableHighlightStyles={disableHighlight}
                 onDragStart={onDragStartHandler}
                 onDragEnd={onDragEndHandler}
+                filterPath='drive'
                 {...treeViewProps}
             />
         </div>
     );
 };
 
-export const TreeView: Story = {
-    args: {
-        items: treeItem,
-    },
+export const TreeView: Partial<Story> = {
     render: args => <TreeViewImpl {...args} />,
 };

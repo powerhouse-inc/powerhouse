@@ -1,10 +1,10 @@
 import { Icon } from '@/powerhouse';
-import type { DropItem } from '@/powerhouse/hooks';
-import type { DragEndEvent, DragStartEvent, DropEvent } from 'react-aria';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
+import { usePathContent } from '@/connect/hooks/tree-view/usePathContent';
 import {
     ConnectTreeView,
+    ConnectTreeViewProps,
     ConnectTreeViewItemProps,
     DefaultOptionId,
     ItemType,
@@ -13,66 +13,54 @@ import {
 
 export type DriveType = 'public' | 'local' | 'cloud';
 
-export interface DriveTreeItem<T extends string = DefaultOptionId>
-    extends TreeItem<T> {
+export interface DriveTreeItem
+    extends TreeItem {
     type: ItemType.LocalDrive | ItemType.CloudDrive | ItemType.PublicDrive;
 }
 
-export type OnItemOptionsClickHandler<T extends string = DefaultOptionId> = (
-    item: TreeItem<T>,
-    option: T,
-    drive: DriveTreeItem<T>,
+export type OnItemOptionsClickHandler = (
+    item: TreeItem,
+    option: DefaultOptionId,
+    drive: DriveTreeItem,
 ) => void;
 
-export interface DriveViewProps<T extends string = DefaultOptionId>
-    extends Omit<
+export interface DriveViewProps extends Omit<
         React.HTMLAttributes<HTMLDivElement>,
         'onDragEnd' | 'onDragStart'
     > {
     type: DriveType;
     name: string;
-    drives: DriveTreeItem<T>[];
-    defaultItemOptions?: ConnectTreeViewItemProps<T>['defaultOptions'];
-    onDropEvent?: (
-        item: DropItem<TreeItem<T>>,
-        target: TreeItem<T>,
-        event: DropEvent,
-        drive: DriveTreeItem<T>,
-    ) => void;
-    onItemClick?: (
-        event: React.MouseEvent<HTMLDivElement>,
-        item: TreeItem<T>,
-        drive: DriveTreeItem<T>,
-    ) => void;
-    onSubmitInput?: (item: TreeItem, drive: DriveTreeItem<T>) => void;
-    onCancelInput?: (item: TreeItem, drive: DriveTreeItem<T>) => void;
-    onItemOptionsClick?: OnItemOptionsClickHandler<T>;
+    defaultItemOptions?: ConnectTreeViewItemProps['defaultOptions'];
+    drivePath?: string;
+    onDropEvent?: ConnectTreeViewProps['onDropEvent'];
+    onItemClick?: ConnectTreeViewProps['onItemClick'];
+    onSubmitInput?: ConnectTreeViewProps['onSubmitInput'];
+    onCancelInput?: ConnectTreeViewProps['onCancelInput'];
+    onItemOptionsClick?: ConnectTreeViewProps['onItemOptionsClick'];
     disableHighlightStyles?: boolean;
-
-    onDropActivate?: (
-        drive: DriveTreeItem<T>,
-        dropTargetItem: TreeItem,
-    ) => void;
-    onDragStart?: (
-        drive: DriveTreeItem<T>,
-        dragItem: TreeItem,
-        event: DragStartEvent,
-    ) => void;
-    onDragEnd?: (
-        drive: DriveTreeItem<T>,
-        dragItem: TreeItem,
-        event: DragEndEvent,
-    ) => void;
+    onDropActivate?: ConnectTreeViewProps['onDropActivate'];
+    onDragStart?: ConnectTreeViewProps['onDragStart'];
+    onDragEnd?: ConnectTreeViewProps['onDragEnd'];
 }
 
-export function DriveView<T extends string = DefaultOptionId>(
-    props: DriveViewProps<T>,
-) {
+const filterDriveByType = (drive: DriveTreeItem, type: DriveType) => {
+    switch (type) {
+        case 'public':
+            return drive.type === ItemType.PublicDrive;
+        case 'local':
+            return drive.type === ItemType.LocalDrive;
+        case 'cloud':
+            return drive.type === ItemType.CloudDrive;
+        default:
+            return false;
+    }
+}
+
+export function DriveView(props: DriveViewProps) {
     const {
         className,
         type,
         name,
-        drives,
         onDropEvent,
         onItemClick,
         onSubmitInput,
@@ -83,8 +71,17 @@ export function DriveView<T extends string = DefaultOptionId>(
         onDragEnd,
         onCancelInput,
         disableHighlightStyles,
+        drivePath = '/',
         ...restProps
     } = props;
+
+    const drives = usePathContent(drivePath) as DriveTreeItem[];
+    const allowedDrives = drives
+        .filter((drive) => filterDriveByType(drive, type))
+        .map((drive) => drive.path);
+
+    console.log('drives:', drives);
+
     return (
         <div
             className={twMerge(
@@ -103,30 +100,19 @@ export function DriveView<T extends string = DefaultOptionId>(
                 </Button>
             </div>
             <div className="py-2">
-                {drives.map(drive => (
-                    <ConnectTreeView<T>
-                        key={drive.id}
-                        items={drive}
-                        disableHighlightStyles={disableHighlightStyles}
-                        onDragEnd={(...args) => onDragEnd?.(drive, ...args)}
-                        onDragStart={(...args) => onDragStart?.(drive, ...args)}
-                        onDropEvent={(...args) => onDropEvent?.(...args, drive)}
-                        onItemClick={(...args) => onItemClick?.(...args, drive)}
-                        onDropActivate={(...args) =>
-                            onDropActivate?.(drive, ...args)
-                        }
-                        onCancelInput={(...args) =>
-                            onCancelInput?.(...args, drive)
-                        }
-                        onSubmitInput={(...args) =>
-                            onSubmitInput?.(...args, drive)
-                        }
-                        onItemOptionsClick={(...args) =>
-                            onItemOptionsClick?.(...args, drive)
-                        }
-                        defaultItemOptions={defaultItemOptions}
-                    />
-                ))}
+                <ConnectTreeView
+                    allowedPaths={allowedDrives}
+                    disableHighlightStyles={disableHighlightStyles}
+                    onDragEnd={onDragEnd}
+                    onDragStart={onDragStart}
+                    onDropEvent={onDropEvent}
+                    onItemClick={onItemClick}
+                    onDropActivate={onDropActivate}
+                    onCancelInput={onCancelInput}
+                    onSubmitInput={onSubmitInput}
+                    onItemOptionsClick={onItemOptionsClick}
+                    defaultItemOptions={defaultItemOptions}
+                />
             </div>
         </div>
     );

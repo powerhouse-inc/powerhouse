@@ -1,24 +1,52 @@
-import { traverseDriveById } from '@/connect/utils';
 import { action } from '@storybook/addon-actions';
 import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
-import { useState } from 'react';
+import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
+import { ItemsContextProvider, useItemsContext } from '@/connect/context/ItemsContext';
 import {
     ConnectSidebar,
     DriveView,
     DriveViewProps,
-    ItemStatus,
     ItemType,
 } from '..';
+
+const drives = [
+    ...generateMockDriveData({
+        path: 'drive',
+        label: 'MakerDAO Atlas',
+        type: ItemType.PublicDrive,
+        expanded: true,
+    }),
+    ...generateMockDriveData({
+        path: 'cloud',
+        label: 'Powerhouse Team Drive',
+        type: ItemType.CloudDrive,
+        expanded: false,
+    }),
+    ...generateMockDriveData({
+        path: 'cloud-2',
+        label: 'Powerhouse Team Drive 2',
+        type: ItemType.CloudDrive,
+        expanded: true,
+    }),
+    ...generateMockDriveData({
+        path: 'local',
+        label: 'Local Device',
+        type: ItemType.LocalDrive,
+        expanded: true,
+    }),
+];
 
 const meta: Meta<typeof ConnectSidebar> = {
     title: 'Connect/Components',
     component: ConnectSidebar,
     decorators: [
         Story => (
-            <div className="relative h-screen">
-                <Story />
-            </div>
+            <ItemsContextProvider items={drives}>
+                <div className="relative h-screen">
+                    <Story />
+                </div>
+            </ItemsContextProvider>
         ),
     ],
     parameters: {
@@ -32,95 +60,39 @@ type Story = StoryObj<typeof meta>;
 const onItemOptionsClick = action('onItemOptionsClick');
 
 const DriveViewImpl = (args: DriveViewProps) => {
-    const { drives: initialDrives, onItemClick, ...restArgs } = args;
-    const [drives, setDrives] = useState(initialDrives);
+    const { onItemClick, ...restArgs } = args;
+    const { setItems } = useItemsContext();
 
     const onItemClickHandler: DriveViewProps['onItemClick'] = (
         e,
         item,
-        drive,
     ) => {
-        const newDrives = traverseDriveById(drives, drive.id, treeItem => {
-            if (treeItem.id === item.id) {
+        setItems((prevItems) => prevItems.map((prevItem) => {
+            if (prevItem.id === item.id) {
                 return {
-                    ...treeItem,
-                    expanded: !treeItem.expanded,
+                    ...prevItem,
+                    expanded: !prevItem.expanded,
+                    isSelected: true,
                 };
             }
 
-            return treeItem;
-        });
+            return {
+                ...prevItem,
+                isSelected: false,
+            };
+        }));
 
-        setDrives(newDrives);
-        onItemClick?.(e, item, drive);
+        onItemClick?.(e, item);
     };
 
     return (
         <DriveView
             {...restArgs}
-            drives={drives}
             onItemClick={onItemClickHandler}
         />
     );
 };
 
-const items = [
-    {
-        id: 'drive/folder1',
-        label: 'Folder 1',
-        type: ItemType.Folder,
-        status: ItemStatus.Syncing,
-        expanded: false,
-        children: [
-            {
-                id: 'drive/folder1/folder1.1',
-                label: 'Folder 1.1',
-                type: ItemType.Folder,
-                status: ItemStatus.Syncing,
-                expanded: false,
-            },
-            {
-                id: 'drive/folder1/folder1.2',
-                label: 'Folder 1.2',
-                type: ItemType.Folder,
-                status: ItemStatus.Syncing,
-                expanded: false,
-                children: [
-                    {
-                        id: 'drive/folder1/folder1.2/folder1.2.1',
-                        label: 'Folder 1.2.1',
-                        type: ItemType.Folder,
-                        status: ItemStatus.Syncing,
-                        expanded: false,
-                    },
-                ],
-            },
-        ],
-    },
-    {
-        id: 'drive/folder2',
-        label: 'Folder 2',
-        type: ItemType.Folder,
-        status: ItemStatus.AvailableOffline,
-        expanded: false,
-        children: [
-            {
-                id: 'drive/folder2/folder2.1',
-                label: 'Folder 2.1',
-                type: ItemType.Folder,
-                status: ItemStatus.AvailableOffline,
-                expanded: false,
-            },
-        ],
-    },
-    {
-        id: 'drive/folder3',
-        label: 'Folder 3',
-        type: ItemType.Folder,
-        status: ItemStatus.Offline,
-        expanded: false,
-    },
-];
 
 export const Sidebar: Story = {
     decorators: [
@@ -146,51 +118,17 @@ export const Sidebar: Story = {
                     name="Public Drives"
                     className="mx-2 mb-2"
                     onItemOptionsClick={onItemOptionsClick}
-                    drives={[
-                        {
-                            id: 'drive',
-                            label: 'MakerDAO Atlas',
-                            type: ItemType.PublicDrive,
-                            expanded: true,
-                            children: items,
-                        },
-                    ]}
                 />
                 <DriveViewImpl
                     type="cloud"
                     name="Secure Cloud Storage"
                     className="mb-2"
                     onItemOptionsClick={onItemOptionsClick}
-                    drives={[
-                        {
-                            id: 'cloud 1',
-                            label: 'Powerhouse Team Drive',
-                            type: ItemType.CloudDrive,
-                            expanded: false,
-                            children: items,
-                        },
-                        {
-                            id: 'cloud 2',
-                            label: 'Powerhouse Team Drive',
-                            type: ItemType.CloudDrive,
-                            expanded: true,
-                            children: items,
-                        },
-                    ]}
                 />
                 <DriveViewImpl
                     type="local"
                     name="My Local Drives"
                     onItemOptionsClick={onItemOptionsClick}
-                    drives={[
-                        {
-                            id: 'local',
-                            label: 'Local Device',
-                            type: ItemType.LocalDrive,
-                            expanded: true,
-                            children: items,
-                        },
-                    ]}
                 />
             </>
         ),
