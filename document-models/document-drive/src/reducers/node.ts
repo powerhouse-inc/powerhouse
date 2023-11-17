@@ -4,7 +4,7 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { FileNode, Node, getDescendants } from '../..';
+import { FileNode, getDescendants } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
 
 export const reducer: DocumentDriveNodeOperations = {
@@ -48,7 +48,6 @@ export const reducer: DocumentDriveNodeOperations = {
                       ...node,
                       ...{
                           name: action.input.name ?? node.name,
-
                           documentType:
                               action.input.documentType ??
                               (node as FileNode).documentType,

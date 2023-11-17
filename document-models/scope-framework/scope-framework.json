@@ -23,7 +23,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "AddElement",
@@ -33,7 +34,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "UpdateElementType",
@@ -43,7 +45,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "UpdateElementName",
@@ -53,7 +56,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "UpdateElementComponents",
@@ -63,7 +67,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "RemoveElement",
@@ -73,7 +78,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "ReorderElements",
@@ -83,7 +89,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "MoveElement",
@@ -93,7 +100,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         }
                     ],
                     "id": "",

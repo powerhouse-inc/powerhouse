@@ -26,43 +26,41 @@ type DocumentDriveState {
 # Node
 
 input AddFileInput {
-    id: String!
+    id: ID!
     name: String!
     documentType: String!
-    document: String!
-    parentFolder: String
+    parentFolder: ID
 }
 
 input AddFolderInput {
     id: ID!
     name: String!
-    parentFolder: String
+    parentFolder: ID
 }
 
 input DeleteNodeInput {
-    id: String!
+    id: ID!
 }
 
 input UpdateFileInput {
     id: ID!
-    parentFolder: String
+    parentFolder: ID
     name: String
     documentType: String
 }
 
 input UpdateNodeInput {
     id: ID!
-    parentFolder: String
+    parentFolder: ID
     name: String
-    hash: String
 }
 
 input CopyNodeInput {
-    srcFolder: String!
-	targetParentFolder: String
+    srcFolder: ID!
+    targetParentFolder: ID
 }
 
 input MoveNodeInput {
-    srcFolder: String!
-	targetParentFolder: String
+    srcFolder: ID!
+    targetParentFolder: ID
 }

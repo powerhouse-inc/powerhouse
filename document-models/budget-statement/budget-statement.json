@@ -23,7 +23,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "UpdateAccount",
@@ -33,7 +34,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "DeleteAccount",
@@ -43,7 +45,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "SortAccounts",
@@ -53,7 +56,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         }
                     ],
                     "id": "",
@@ -70,7 +74,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "UpdateLineItem",
@@ -80,7 +85,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "DeleteLineItem",
@@ -90,7 +96,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "SortLineItems",
@@ -100,7 +107,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         }
                     ],
                     "id": "",
@@ -117,7 +125,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "SetMonth",
@@ -127,7 +136,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "SetFtes",
@@ -137,7 +147,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "SetQuoteCurrency",
@@ -147,7 +158,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         }
                     ],
                     "id": "",
@@ -164,7 +176,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "DeleteAuditReport",
@@ -174,7 +187,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         }
                     ],
                     "id": "",
@@ -191,7 +205,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "UpdateComment",
@@ -201,7 +216,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "DeleteComment",
@@ -211,7 +227,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         }
                     ],
                     "id": "",
@@ -228,7 +245,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "UpdateVesting",
@@ -238,7 +256,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         },
                         {
                             "name": "DeleteVesting",
@@ -248,7 +267,8 @@
                             "template": "",
                             "reducer": "",
                             "examples": [],
-                            "errors": []
+                            "errors": [],
+                            "scope": "global"
                         }
                     ],
                     "id": "",

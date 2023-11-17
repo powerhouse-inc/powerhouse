@@ -30,7 +30,8 @@
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "AfnDCBOfdGrU+bkibtHuikyJXHY=",
@@ -40,7 +41,8 @@
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "v3ZXOHRIxLzCaRPU9lYz65Erlnk=",
@@ -50,7 +52,8 @@
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "+ZoYYO2TLmhBnmr03y/lUZ7Pqu0=",
@@ -60,7 +63,8 @@
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "XxvmrG51cWoeVFX1qCrH5N7kJwM=",
@@ -70,7 +74,8 @@
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "BhYmPnigaKFIA6fASbTvrULfW4U=",
@@ -80,7 +85,8 @@
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         }
                     ]
                 }

@@ -26,71 +26,78 @@
                             "id": "7xiTdxonc9yEASR8sfV/KnbSV10=",
                             "name": "ADD_FILE",
                             "description": "",
-                            "schema": "input AddFileInput {\n    id: String!\n    name: String!\n    documentType: String!\n    document: String!\n    parentFolder: String\n}",
+                            "schema": "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    parentFolder: ID\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "4lzNMMKKdIAtEU6i12xLgi9hp+U=",
                             "name": "ADD_FOLDER",
                             "description": "",
-                            "schema": "input AddFolderInput {\n    id: ID!\n    name: String!\n    parentFolder: String\n}",
+                            "schema": "input AddFolderInput {\n    id: ID!\n    name: String!\n    parentFolder: ID\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "53jH2/3TWTTcgCJiv2C+BmuC6i0=",
                             "name": "DELETE_NODE",
                             "description": "",
-                            "schema": "input DeleteNodeInput {\n    id: String!\n}",
+                            "schema": "input DeleteNodeInput {\n    id: ID!\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "pNn+Y1/HVq/GNMk7t0u3g3gtMLE=",
                             "name": "UPDATE_FILE",
                             "description": "",
-                            "schema": "input UpdateFileInput {\n    id: ID!\n    parentFolder: String\n    name: String\n    documentType: String\n}",
+                            "schema": "input UpdateFileInput {\n    id: ID!\n    parentFolder: ID\n    name: String\n    documentType: String\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "P0x1M8Mnt+Q/+9nggkwgVbfybsc=",
                             "name": "UPDATE_NODE",
                             "description": "",
-                            "schema": "input UpdateNodeInput {\n    id: ID!\n    parentFolder: String\n    name: String\n    hash: String\n}",
+                            "schema": "input UpdateNodeInput {\n    id: ID!\n    parentFolder: ID\n    name: String\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "vnQ7OB5b3wGLgjhbgJqAIpA+JLE=",
                             "name": "COPY_NODE",
                             "description": "",
-                            "schema": "input CopyNodeInput {\n    srcFolder: String!\n\ttargetParentFolder: String\n}",
+                            "schema": "input CopyNodeInput {\n    srcFolder: ID!\n\ttargetParentFolder: ID\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         },
                         {
                             "id": "VNyiD/sNGzk6k9A1Qe7s8dmrJxA=",
                             "name": "MOVE_NODE",
                             "description": "",
-                            "schema": "input MoveNodeInput {\n    srcFolder: String!\n\ttargetParentFolder: String\n}",
+                            "schema": "input MoveNodeInput {\n    srcFolder: ID!\n\ttargetParentFolder: ID\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
-                            "examples": []
+                            "examples": [],
+                            "scope": "global"
                         }
                     ]
                 }
