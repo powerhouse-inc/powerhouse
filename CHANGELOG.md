@@ -1,3 +1,10 @@
+# [1.0.0-alpha.20](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.19...v1.0.0-alpha.20) (2023-11-17)
+
+
+### Features
+
+* add official tailwind prettier plugin ([#91](https://github.com/powerhouse-inc/design-system/issues/91)) ([a44956d](https://github.com/powerhouse-inc/design-system/commit/a44956d62b3c7720bc53fc5c0e53742469c26fdb))
+
 # [1.0.0-alpha.19](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.18...v1.0.0-alpha.19) (2023-11-16)
 
 
