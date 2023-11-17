@@ -10,12 +10,12 @@ exports[`TreeViewInput Component should match snapshot 1`] = `
       Icon
     </div>
     <div
-      class="flex flex-1 ml-2 min-w-0"
+      class="ml-2 flex min-w-0 flex-1"
       data-rac=""
     >
       <input
         aria-label="input-label"
-        class="flex flex-1 outline-none bg-inherit min-w-0"
+        class="flex min-w-0 flex-1 bg-inherit outline-none"
         data-focus-visible="true"
         data-focused="true"
         data-rac=""
@@ -37,7 +37,7 @@ exports[`TreeViewInput Component should match snapshot 1`] = `
         </div>
       </button>
       <button
-        class="outline-none ml-1"
+        class="ml-1 outline-none"
         data-rac=""
         type="button"
       >

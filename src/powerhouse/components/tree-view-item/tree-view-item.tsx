@@ -82,7 +82,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 onClick={onClick}
                 style={containerButtonStyle}
                 className={twMerge(
-                    'flex flex-col w-full cursor-pointer select-none group/tree-item focus:outline-none relative max-h-[49px]',
+                    'group/tree-item relative flex max-h-[49px] w-full cursor-pointer select-none flex-col focus:outline-none',
                     containerButtonClassName,
                 )}
                 {...containerButtonProps}
@@ -91,7 +91,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                     <div className="absolute top-0 w-full">{topIndicator}</div>
                 )}
                 <div
-                    className="flex flex-row w-full cursor-pointer"
+                    className="flex w-full cursor-pointer flex-row"
                     style={{ paddingLeft: `${levelPadding + caretPadding}px` }}
                 >
                     {children && (
@@ -99,7 +99,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                             name="caret"
                             className={twMerge(
                                 open && 'rotate-90',
-                                'transition ease delay-50 pointer-events-none',
+                                'ease delay-50 pointer-events-none transition',
                             )}
                         />
                     )}
@@ -109,18 +109,18 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         </span>
                     )}
                     {label && (
-                        <div className="ml-2 flex flex-1 overflow-hidden whitespace-nowrap relative">
-                            <span className="absolute right-0 w-12 h-full bg-gradient-to-r from-transparent to-inherit" />
+                        <div className="relative ml-2 flex flex-1 overflow-hidden whitespace-nowrap">
+                            <span className="absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-inherit" />
                             {label}
                         </div>
                     )}
                     {optionsContent && (
-                        <div className="w-6 h-6 px-3 box-content hidden group-hover/tree-item:inline-block">
+                        <div className="box-content hidden h-6 w-6 px-3 group-hover/tree-item:inline-block">
                             {optionsContent}
                         </div>
                     )}
                     {secondaryIcon && (
-                        <span className="flex self-end mx-3 group-hover/tree-item:hidden pointer-events-none">
+                        <span className="pointer-events-none mx-3 flex self-end group-hover/tree-item:hidden">
                             {secondaryIcon}
                         </span>
                     )}

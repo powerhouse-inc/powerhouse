@@ -3,24 +3,24 @@
 exports[`Connect Sidebar Component should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="group group/sidebar expanded duration-300 flex flex-col h-full overflow-hidden transition-none animate-in fade-in bg-neutral-1 shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]"
+    class="group/sidebar group expanded flex h-full flex-col overflow-hidden transition-none duration-300 animate-in fade-in bg-neutral-1 shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]"
     data-testid="sidebar"
     style="width: 304px;"
   >
     <div
-      class="flex-1 overflow-auto no-scrollbar transition-shadow"
+      class="no-scrollbar flex-1 overflow-auto transition-shadow"
     >
       <div
-        class="flex-shrink-0 pt-11 px-2 flex gap-4 justify-center mb-4"
+        class="flex-shrink-0 mb-4 flex justify-center gap-4 px-2 pt-11"
       >
         <input
-          class="flex-1 border border-neutral-3 rounded-md py-3 px-5 leading-none placeholder-shown:bg-transparent collapsed:hidden expanding:hidden"
+          class="flex-1 rounded-md border border-neutral-3 px-5 py-3 leading-none placeholder-shown:bg-transparent collapsed:hidden expanding:hidden"
           placeholder="Create new document"
         />
         <button
-          class="border border-neutral-3 rounded-md p-3 hover:bg-[#F1F5F9] outline-none
+          class="rounded-md border border-neutral-3 p-3 outline-none hover:bg-[#F1F5F9]
                 collapsed:rotate-180 collapsed:border-[rgba(49,53,56,0.12)] collapsed:bg-neutral-3
-                collapsed:hover:bg-[#F1F5F9] collapsed:shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]
+                collapsed:shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)] collapsed:hover:bg-[#F1F5F9]
                 expanding:hidden"
           data-rac=""
           type="button"
@@ -35,16 +35,16 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
         </button>
       </div>
       <div
-        class="expanded:block hidden"
+        class="hidden expanded:block"
       />
     </div>
     <div
       class="flex-shrink-0 border-t border-[#2326271A] p-4 collapsed:px-1 expanding:px-1"
     >
       <div
-        class="flex gap-2 bg-white py-[10px] rounded-sm px-3 collapsing:bg-transparent
-            collapsed:px-1 collapsed:justify-center collapsed:bg-transparent
-            expanding:px-1 expanding:justify-center expanding:bg-transparent
+        class="flex gap-2 rounded-sm bg-white px-3 py-[10px] collapsed:justify-center
+            collapsed:bg-transparent collapsed:px-1 collapsing:bg-transparent
+            expanding:justify-center expanding:bg-transparent expanding:px-1
         "
       >
         <img
@@ -58,19 +58,19 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
           class="collapsed:hidden expanding:hidden"
         >
           <p
-            class="font-semibold text-sm text-[#404446]"
+            class="text-sm font-semibold text-[#404446]"
           >
             Willow
           </p>
           <p
-            class="font-semibold text-xs text-[#94A3B8]"
+            class="text-xs font-semibold text-[#94A3B8]"
           >
             0x123
           </p>
         </div>
       </div>
       <button
-        class="flex gap-3 py-3 w-full px-5 expanding:px-3 collapsed:px-3"
+        class="flex w-full gap-3 px-5 py-3 collapsed:px-3 expanding:px-3"
         data-rac=""
         type="button"
       >
@@ -82,7 +82,7 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
           />
         </svg>
         <span
-          class="font-semibold text-sm leading-6 text-[#404446] expanding:hidden collapsed:hidden"
+          class="text-sm font-semibold leading-6 text-[#404446] collapsed:hidden expanding:hidden"
         >
           Settings
         </span>

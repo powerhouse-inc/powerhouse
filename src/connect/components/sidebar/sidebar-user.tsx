@@ -10,9 +10,9 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
     address,
 }) => (
     <div
-        className={`flex gap-2 bg-white py-[10px] rounded-sm px-3 collapsing:bg-transparent
-            collapsed:px-1 collapsed:justify-center collapsed:bg-transparent
-            expanding:px-1 expanding:justify-center expanding:bg-transparent
+        className={`flex gap-2 rounded-sm bg-white px-3 py-[10px] collapsed:justify-center
+            collapsed:bg-transparent collapsed:px-1 collapsing:bg-transparent
+            expanding:justify-center expanding:bg-transparent expanding:px-1
         `}
     >
         <img
@@ -23,8 +23,8 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
             className="object-contain"
         />
         <div className="collapsed:hidden expanding:hidden">
-            <p className="font-semibold text-sm text-[#404446]">{username}</p>
-            <p className="font-semibold text-xs text-[#94A3B8]">{address}</p>
+            <p className="text-sm font-semibold text-[#404446]">{username}</p>
+            <p className="text-xs font-semibold text-[#94A3B8]">{address}</p>
         </div>
     </div>
 );

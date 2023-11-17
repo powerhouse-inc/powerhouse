@@ -18,7 +18,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const children = (
-    <div className="w-[465px] h-[300px] p-10 flex flex-col justify-between">
+    <div className="flex h-[300px] w-[465px] flex-col justify-between p-10">
         <div className="text-xl">Header</div>
         <div>
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Labore, ea.

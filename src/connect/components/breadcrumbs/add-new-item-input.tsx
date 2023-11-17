@@ -64,7 +64,7 @@ export const AddNewItemInput: React.FC<AddNewItemInputProps> = props => {
                     autoFocus
                 >
                     <Input
-                        className="outline-none bg-inherit"
+                        className="bg-inherit outline-none"
                         placeholder={placeholder}
                         ref={inputRef}
                     />

@@ -46,11 +46,11 @@ export const ConnectDeleteItemModal = (props: ConnectDeleteItemModalProps) => {
             onClose={onClose}
             {...restProps}
         >
-            <div className="w-[465px] py-12 px-8 text-[#565868]">
-                <div className="text-2xl font-semibold text-center">
+            <div className="w-[465px] px-8 py-12 text-[#565868]">
+                <div className="text-center text-2xl font-semibold">
                     {header}
                 </div>
-                <div className="text-xl mt-8 text-center">{body}</div>
+                <div className="mt-8 text-center text-xl">{body}</div>
                 <div className="mt-8 flex justify-center gap-3">
                     <Button
                         onPress={onClose}

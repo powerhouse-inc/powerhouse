@@ -89,13 +89,13 @@ export function DriveView<T extends string = DefaultOptionId>(
         <div
             className={twMerge(
                 'pb-2',
-                type === 'public' && 'bg-bg to-bg rounded-lg',
+                type === 'public' && 'rounded-lg bg-bg to-bg',
                 className,
             )}
             {...restProps}
         >
-            <div className="border-y border-bg px-4 py-3 flex items-center justify-between">
-                <p className="text-[#9EA0A1] font-medium text-sm leading-6">
+            <div className="flex items-center justify-between border-y border-bg px-4 py-3">
+                <p className="text-sm font-medium leading-6 text-[#9EA0A1]">
                     {name}
                 </p>
                 <Button>

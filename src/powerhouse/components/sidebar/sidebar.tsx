@@ -45,8 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             currentState === 'collapsing'
                 ? 'collapsed'
                 : currentState === 'expanding'
-                ? 'expanded'
-                : currentState,
+                  ? 'expanded'
+                  : currentState,
         );
     });
 
@@ -63,8 +63,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {...props}
             ref={ref}
             className={twMerge(
-                `group group/sidebar ${state} duration-300
-                 flex flex-col h-full overflow-hidden transition-none`,
+                `group/sidebar group ${state} flex
+                 h-full flex-col overflow-hidden transition-none duration-300`,
                 className,
                 ['collapsing', 'expanding'].includes(state) &&
                     'animate-out fade-out',

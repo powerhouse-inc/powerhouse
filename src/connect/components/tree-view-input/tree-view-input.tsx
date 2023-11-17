@@ -33,16 +33,16 @@ export const ConnectTreeViewInput: React.FC<
             submitIcon={
                 <Icon
                     name="check"
-                    className="hover:text-[#34A853] transition-colors"
+                    className="transition-colors hover:text-[#34A853]"
                 />
             }
             cancelIcon={
                 <Icon
                     name="xmark"
-                    className="hover:text-[#EA4335] transition-colors"
+                    className="transition-colors hover:text-[#EA4335]"
                 />
             }
-            className={twMerge('bg-[#F1F5F9] rounded-lg h-12', className)}
+            className={twMerge('h-12 rounded-lg bg-[#F1F5F9]', className)}
             initialValue={item.label}
             onSubmit={value => onSubmit({ ...item, label: value })}
             onCancel={() => onCancel(item)}

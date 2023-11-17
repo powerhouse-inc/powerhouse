@@ -15,18 +15,18 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
         <SidebarHeader
             {...props}
             className={twMerge(
-                'pt-11 px-2 flex gap-4 justify-center mb-4',
+                'mb-4 flex justify-center gap-4 px-2 pt-11',
                 className,
             )}
         >
             <input
                 placeholder="Create new document"
-                className="flex-1 border border-neutral-3 rounded-md py-3 px-5 leading-none placeholder-shown:bg-transparent collapsed:hidden expanding:hidden"
+                className="flex-1 rounded-md border border-neutral-3 px-5 py-3 leading-none placeholder-shown:bg-transparent collapsed:hidden expanding:hidden"
             />
             <Button
-                className={`border border-neutral-3 rounded-md p-3 hover:bg-[#F1F5F9] outline-none
+                className={`rounded-md border border-neutral-3 p-3 outline-none hover:bg-[#F1F5F9]
                 collapsed:rotate-180 collapsed:border-[rgba(49,53,56,0.12)] collapsed:bg-neutral-3
-                collapsed:hover:bg-[#F1F5F9] collapsed:shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]
+                collapsed:shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)] collapsed:hover:bg-[#F1F5F9]
                 expanding:hidden`}
                 onPress={() => onToggle()}
             >

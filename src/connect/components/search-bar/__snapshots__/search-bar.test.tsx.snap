@@ -31,13 +31,13 @@ exports[`ConnectSearchBar Component should match snapshot 1`] = `
       aria-expanded="false"
       aria-haspopup="true"
       aria-label="menu"
-      class="ml-3 flex flex-row outline-none h-full items-center"
+      class="ml-3 flex h-full flex-row items-center outline-none"
       data-rac=""
       id="react-aria-:r5:"
       type="button"
     >
       <div
-        class="mr-2 text-sm text-[#6F767E] font-semibold"
+        class="mr-2 text-sm font-semibold text-[#6F767E]"
       >
         File type
       </div>

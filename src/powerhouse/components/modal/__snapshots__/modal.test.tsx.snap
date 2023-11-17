@@ -2,14 +2,14 @@
 
 exports[`Modal Component should match snapshot 1`] = `
 <div
-  class="bg-overlay fixed inset-0 flex justify-center items-start animate-in fade-in duration-300 ease-out"
+  class="bg-overlay fixed inset-0 flex items-start justify-center duration-300 ease-out animate-in fade-in"
   data-entering="true"
   data-rac=""
   data-testid="modal"
   style="--visual-viewport-height: 768px;"
 >
   <div
-    class="flex justify-center relative animate-in zoom-in-95 ease-out duration-300"
+    class="relative flex justify-center duration-300 ease-out animate-in zoom-in-95"
     data-entering="true"
     data-rac=""
   >

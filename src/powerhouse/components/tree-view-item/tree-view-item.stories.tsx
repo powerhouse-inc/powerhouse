@@ -11,7 +11,7 @@ const meta: Meta<typeof TreeViewItem> = {
     component: TreeViewItem,
     decorators: [
         Story => (
-            <div className="w-[312px] p-8 bg-white to-white">
+            <div className="w-[312px] bg-white to-white p-8">
                 <Story />
             </div>
         ),
@@ -35,7 +35,7 @@ const optionsContent = (
             e.stopPropagation();
             action('options-click')(e);
         }}
-        className="w-6 h-6 focus:outline-none"
+        className="h-6 w-6 focus:outline-none"
     >
         <Icon
             name="vertical-dots"

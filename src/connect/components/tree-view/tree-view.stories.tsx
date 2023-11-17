@@ -240,7 +240,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
     };
 
     return (
-        <div className="p-10 bg-white">
+        <div className="bg-white p-10">
             <ConnectTreeView
                 items={items}
                 onItemClick={onItemClickHandler}

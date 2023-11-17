@@ -73,13 +73,13 @@ export function Breadcrumbs<T extends string = string>(
     }
 
     return (
-        <div className="p-6 flex flex-row items-center gap-2 text-[#9EA0A1] h-9">
+        <div className="flex h-9 flex-row items-center gap-2 p-6 text-[#9EA0A1]">
             {breadcrumbItems.map(item => (
                 <Breadcrumb
                     key={item.id}
                     item={item}
                     onClick={e => props.onItemClick?.(e, item)}
-                    className="last-of-type:text-[#404446] hover:text-[#404446] transition-colors"
+                    className="transition-colors last-of-type:text-[#404446] hover:text-[#404446]"
                 />
             ))}
             {isAddingNewItem ? (
@@ -101,7 +101,7 @@ export function Breadcrumbs<T extends string = string>(
             ) : (
                 <button
                     onClick={onAddNew}
-                    className="flex flex-row items-center justify-center gap-2 ml-1 px-2 py-[6px] bg-[#FCFCFC] rounded-[6px] hover:bg-[#EFEFEF] hover:text-[#404446] transition-colors"
+                    className="ml-1 flex flex-row items-center justify-center gap-2 rounded-[6px] bg-[#FCFCFC] px-2 py-[6px] transition-colors hover:bg-[#EFEFEF] hover:text-[#404446]"
                 >
                     <Icon name="plus" size={14} />
                     Add new

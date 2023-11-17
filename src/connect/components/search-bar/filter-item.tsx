@@ -22,7 +22,7 @@ export const FilterItem: React.FC<FilterItemProps> = props => {
             )}
         >
             {item.icon}
-            <div className="text-sm text-[#6C7275] font-semibold">
+            <div className="text-sm font-semibold text-[#6C7275]">
                 {item.label}
             </div>
         </div>

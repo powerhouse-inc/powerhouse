@@ -12,7 +12,7 @@ const meta: Meta<typeof DriveView> = {
     },
     decorators: [
         Story => (
-            <div className="bg-neutral-1 p-10 w-[312px] to-neutral-1">
+            <div className="w-[312px] bg-neutral-1 to-neutral-1 p-10">
                 <Story />
             </div>
         ),

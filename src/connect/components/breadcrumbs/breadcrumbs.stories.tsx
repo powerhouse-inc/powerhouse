@@ -184,7 +184,7 @@ export const Default: Story = {
         };
 
         return (
-            <div className="p-10 bg-white">
+            <div className="bg-white p-10">
                 <Breadcrumbs
                     rootItem={items}
                     onItemClick={onItemClickHandler}

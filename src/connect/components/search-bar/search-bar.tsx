@@ -43,7 +43,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
         <FilterItem item={selectedItemFilter} className="gap-x-1" />
     ) : (
         filterLabel && (
-            <div className="mr-2 text-sm text-[#6F767E] font-semibold">
+            <div className="mr-2 text-sm font-semibold text-[#6F767E]">
                 {filterLabel}
             </div>
         )
@@ -56,7 +56,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
             items={items || []}
             onItemClick={onFilterSelect}
             popoverProps={{ placement: 'bottom right', offset: 4 }}
-            className="ml-3 flex flex-row outline-none h-full items-center"
+            className="ml-3 flex h-full flex-row items-center outline-none"
             menuClassName="bg-[#FCFCFC] border border-[#F4F4F4] rounded-xl p-2"
             menuItemClassName="hover:bg-[#F4F4F4] rounded-lg overflow-hidden cursor-pointer h-10"
         >

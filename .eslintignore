@@ -3,3 +3,6 @@ build
 jest.config.js
 tailwind.config.js
 vite.config.ts
+prettier.config.js
+commitlint.config.js
+.lintstagedrc.js

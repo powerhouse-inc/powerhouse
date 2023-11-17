@@ -158,7 +158,7 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
     const bottomIndicator = (
         <div
             {...dropDividerProps}
-            className="w-full bottom-[-2px] absolute h-1 flex flex-row items-center z-[1]"
+            className="absolute bottom-[-2px] z-[1] flex h-1 w-full flex-row items-center"
         >
             <div
                 className={twMerge(

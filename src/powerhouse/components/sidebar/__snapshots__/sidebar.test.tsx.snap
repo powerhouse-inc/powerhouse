@@ -3,11 +3,11 @@
 exports[`Sidebar Component should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="group group/sidebar expanded duration-300 flex flex-col h-full overflow-hidden transition-none animate-in fade-in bg-neutral-1 shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]"
+    class="group/sidebar group expanded flex h-full flex-col overflow-hidden transition-none duration-300 animate-in fade-in bg-neutral-1 shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]"
     style="width: 300px;"
   >
     <div
-      class="flex-1 overflow-auto no-scrollbar transition-shadow"
+      class="no-scrollbar flex-1 overflow-auto transition-shadow"
     >
       <div
         class="flex-shrink-0"

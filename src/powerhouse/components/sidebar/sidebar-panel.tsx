@@ -46,7 +46,7 @@ export function SidebarPanel({
         <>
             <div
                 className={twMerge(
-                    'flex-1 overflow-auto no-scrollbar transition-shadow',
+                    'no-scrollbar flex-1 overflow-auto transition-shadow',
                     className,
                 )}
                 ref={containerRef}
@@ -57,7 +57,7 @@ export function SidebarPanel({
             </div>
             {hasScroll && (
                 <div
-                    className="h-[50px] mt-[-50px] w-full pointer-events-none z-10"
+                    className="pointer-events-none z-10 mt-[-50px] h-[50px] w-full"
                     style={{
                         boxShadow: 'inset 0px -33px 32px -16px rgba(0,0,0,0.1)',
                     }}

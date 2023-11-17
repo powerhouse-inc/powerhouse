@@ -7,7 +7,7 @@ describe('Modal Component', () => {
             <TextInput
                 startAdornment={<div>Start</div>}
                 endAdornment={<div>End</div>}
-                className="bg-white rounded-2xl p-2"
+                className="rounded-2xl bg-white p-2"
                 textFieldProps={{ 'aria-label': 'test' }}
             />,
         );
@@ -20,7 +20,7 @@ describe('Modal Component', () => {
             <TextInput
                 startAdornment={<div>Start</div>}
                 endAdornment={<div>End</div>}
-                className="bg-white rounded-2xl p-2"
+                className="rounded-2xl bg-white p-2"
                 textFieldProps={{ 'aria-label': 'test' }}
             />,
         );
@@ -33,7 +33,7 @@ describe('Modal Component', () => {
             <TextInput
                 startAdornment={<div>Start</div>}
                 endAdornment={<div>End</div>}
-                className="bg-white rounded-2xl p-2"
+                className="rounded-2xl bg-white p-2"
                 textFieldProps={{ 'aria-label': 'test' }}
             />,
         );
@@ -48,7 +48,7 @@ describe('Modal Component', () => {
             <TextInput
                 startAdornment={<div>Start</div>}
                 endAdornment={<div>End</div>}
-                className="bg-white rounded-2xl p-2"
+                className="rounded-2xl bg-white p-2"
                 textFieldProps={{ 'aria-label': 'test' }}
                 onChange={onChange}
             />,

@@ -42,7 +42,7 @@ export function DropdownMenu<T extends string>(props: DropdownMenuProps<T>) {
                 <Menu
                     onAction={key => onItemClick(key as T)}
                     className={twMerge(
-                        'outline-none overflow-hidden',
+                        'overflow-hidden outline-none',
                         menuClassName,
                     )}
                 >

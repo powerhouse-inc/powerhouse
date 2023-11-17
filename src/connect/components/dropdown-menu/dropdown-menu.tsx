@@ -28,12 +28,12 @@ export function ConnectDropdownMenu<T extends string = string>(
                     <div
                         key={item.id}
                         className={twMerge(
-                            'flex flex-row h-9 items-center px-3',
+                            'flex h-9 flex-row items-center px-3',
                             item.className,
                         )}
                     >
                         {item.icon && (
-                            <span className="inline-block mr-2">
+                            <span className="mr-2 inline-block">
                                 {item.icon}
                             </span>
                         )}

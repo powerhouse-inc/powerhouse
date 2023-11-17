@@ -71,14 +71,14 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
             >
                 {icon}
                 <TextField
-                    className="flex flex-1 ml-2 min-w-0"
+                    className="ml-2 flex min-w-0 flex-1"
                     value={text}
                     onChange={setText}
                     aria-label={ariaLabel}
                     autoFocus
                 >
                     <Input
-                        className="flex flex-1 outline-none bg-inherit min-w-0"
+                        className="flex min-w-0 flex-1 bg-inherit outline-none"
                         placeholder={placeholder}
                         ref={inputRef}
                     />
@@ -93,7 +93,7 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
                     {cancelIcon && (
                         <Button
                             onPress={onCancel}
-                            className="outline-none ml-1"
+                            className="ml-1 outline-none"
                         >
                             {cancelIcon}
                         </Button>

@@ -35,11 +35,11 @@ export const Modal: React.FC<ModalProps> = props => {
         <ModalOverlay
             className={({ isEntering, isExiting }) =>
                 twMerge(
-                    'bg-overlay fixed inset-0 flex justify-center items-start',
+                    'bg-overlay fixed inset-0 flex items-start justify-center',
                     typeof modalOverlayClassName === 'string' &&
                         modalOverlayClassName,
-                    isEntering && 'animate-in fade-in duration-300 ease-out',
-                    isExiting && 'animate-out fade-out duration-200 ease-in',
+                    isEntering && 'duration-300 ease-out animate-in fade-in',
+                    isExiting && 'duration-200 ease-in animate-out fade-out',
                 )
             }
             isDismissable
@@ -50,13 +50,13 @@ export const Modal: React.FC<ModalProps> = props => {
             <AriaModal
                 className={({ isEntering, isExiting }) =>
                     twMerge(
-                        'flex justify-center relative',
+                        'relative flex justify-center',
                         typeof ariaModalClassName === 'string' &&
                             ariaModalClassName,
                         isEntering &&
-                            'animate-in zoom-in-95 ease-out duration-300',
+                            'duration-300 ease-out animate-in zoom-in-95',
                         isExiting &&
-                            'animate-out zoom-out-95 ease-in duration-200',
+                            'duration-200 ease-in animate-out zoom-out-95',
                     )
                 }
                 {...ariaModalProps}
