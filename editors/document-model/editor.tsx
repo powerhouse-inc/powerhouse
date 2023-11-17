@@ -1,17 +1,16 @@
-import { utils, EditorProps } from 'document-model/document';
+import { utils, EditorProps, OperationScope } from 'document-model/document';
 import {
     actions,
     DocumentModelAction,
     DocumentModelState,
 } from 'document-model/document-model';
 import { CSSProperties, useEffect, useState } from 'react';
-import { pascalCase } from 'change-case';
 import { styles, TextInput } from 'document-model-editors';
-import GraphQLEditor from './graphql-editor';
 import { isJSONEqual } from '../common/json-editor';
 import z from 'zod';
 import EditorSchema from './editor-schema';
 import EditorInitialState from './editor-initital-state';
+import EditorOperation from './editor-operation';
 export type IProps = EditorProps<DocumentModelState, DocumentModelAction>;
 
 type SchemaState = {
@@ -103,6 +102,10 @@ function Editor(props: IProps) {
 
     const updateOperationSchema = (id: string, schema: string) => {
         dispatch(actions.setOperationSchema({ id, schema }));
+    };
+
+    const updateOperationScope = (id: string, scope: OperationScope) => {
+        dispatch(actions.setOperationScope({ id, scope }));
     };
 
     const deleteOperation = (id: string) => {
@@ -297,40 +300,18 @@ function Editor(props: IProps) {
                                     size="small"
                                 />
                                 {m.operations.map(op => (
-                                    <div key={op.id}>
-                                        <TextInput
-                                            key={op.id + '#name'}
-                                            theme={theme}
-                                            autoFocus={false}
-                                            onSubmit={name =>
-                                                updateOperationName(op.id, name)
-                                            }
-                                            onEmpty={() =>
-                                                deleteOperation(op.id)
-                                            }
-                                            value={op.name || ''}
-                                            clearOnSubmit={false}
-                                            size="medium"
-                                        />
-                                        <GraphQLEditor
-                                            theme={theme}
-                                            key={op.id + '#schema'}
-                                            schema={
-                                                op.schema ||
-                                                `input ${pascalCase(
-                                                    op.name || '',
-                                                )}Input {
-    
-}`
-                                            }
-                                            onChange={schema =>
-                                                updateOperationSchema(
-                                                    op.id,
-                                                    schema,
-                                                )
-                                            }
-                                        />
-                                    </div>
+                                    <EditorOperation
+                                        key={op.id}
+                                        id={op.id}
+                                        theme={theme}
+                                        name={op.name}
+                                        schema={op.schema}
+                                        scope={op.scope}
+                                        onDelete={deleteOperation}
+                                        onUpdateName={updateOperationName}
+                                        onUpdateSchema={updateOperationSchema}
+                                        onUpdateScope={updateOperationScope}
+                                    />
                                 ))}
                                 <TextInput
                                     key={m.id + '#newOperation'}
