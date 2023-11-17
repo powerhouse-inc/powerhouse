@@ -1,3 +1,10 @@
+# [1.0.0-alpha.22](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.21...v1.0.0-alpha.22) (2023-11-17)
+
+
+### Features
+
+* 75 drive status indicator local cloud available offline ([#92](https://github.com/powerhouse-inc/design-system/issues/92)) ([f0d98ad](https://github.com/powerhouse-inc/design-system/commit/f0d98ad87a2a729213e0061511e8b3318ea5acaa))
+
 # [1.0.0-alpha.21](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.20...v1.0.0-alpha.21) (2023-11-17)
 
 
