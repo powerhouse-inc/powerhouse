@@ -1,24 +1,25 @@
 import React from 'react';
 
+import { usePathContent } from '../../hooks/tree-view/usePathContent';
+import {
+    ConnectTreeViewInput,
+    ConnectTreeViewInputProps,
+} from '../tree-view-input';
 import {
     ActionType,
     ConnectTreeViewItem,
     ConnectTreeViewItemProps,
     TreeItem,
 } from '../tree-view-item';
-import { usePathContent } from '../../hooks/tree-view/usePathContent';
-import {
-    ConnectTreeViewInput,
-    ConnectTreeViewInputProps,
-} from '../tree-view-input';
 
-export interface ConnectTreeViewProps extends Omit<
+export interface ConnectTreeViewProps
+    extends Omit<
         React.HTMLAttributes<HTMLElement>,
         'onClick' | 'onDragStart' | 'onDragEnd'
     > {
     onDropEvent?: ConnectTreeViewItemProps['onDropEvent'];
     onItemClick?: (
-        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+        event: React.MouseEvent<HTMLDivElement>,
         item: TreeItem,
     ) => void;
     onItemOptionsClick?: ConnectTreeViewItemProps['onOptionsClick'];
@@ -52,9 +53,11 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
 
     return (
         <>
-            {items.map((item) => {
-                if (item.action === ActionType.New ||
-                    item.action === ActionType.Update) {
+            {items.map(item => {
+                if (
+                    item.action === ActionType.New ||
+                    item.action === ActionType.Update
+                ) {
                     return (
                         <ConnectTreeViewInput
                             item={item}

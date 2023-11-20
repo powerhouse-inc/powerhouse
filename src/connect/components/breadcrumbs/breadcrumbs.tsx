@@ -7,12 +7,12 @@ import { AddNewItemInput } from './add-new-item-input';
  * Finds the deepest selected item's path in the TreeView state.
  * We want a linear representation of the path since we only show the path to the deepest selected item and ignore the other children.
  */
-function findDeepestSelectedPath<T extends string = string>(root: TreeItem<T>) {
-    let deepestPath: TreeItem<T>[] = [];
+function findDeepestSelectedPath(root: TreeItem) {
+    let deepestPath: TreeItem[] = [];
     const currentDepth = 0;
     let maxDepth = -1;
 
-    function dfs(node: TreeItem<T>, path: TreeItem<T>[], depth: number) {
+    function dfs(node: TreeItem, path: TreeItem[], depth: number) {
         // Add the current node to the path
         path.push(node);
 
@@ -34,17 +34,16 @@ function findDeepestSelectedPath<T extends string = string>(root: TreeItem<T>) {
     return deepestPath;
 }
 
-export type BreadcrumbsProps<T extends string> =
-    React.HTMLAttributes<HTMLDivElement> & {
-        rootItem: TreeItem<T>;
-        onItemClick?: (
-            event: React.MouseEvent<HTMLDivElement>,
-            item: TreeItem<T>,
-        ) => void;
-        onAddNewItem: (item: TreeItem, option: 'new-folder') => void;
-        onSubmitInput: (item: TreeItem) => void;
-        onCancelInput: (item: TreeItem) => void;
-    };
+export type BreadcrumbsProps = React.HTMLAttributes<HTMLDivElement> & {
+    rootItem: TreeItem;
+    onItemClick?: (
+        event: React.MouseEvent<HTMLDivElement>,
+        item: TreeItem,
+    ) => void;
+    onAddNewItem: (item: TreeItem, option: 'new-folder') => void;
+    onSubmitInput: (item: TreeItem) => void;
+    onCancelInput: (item: TreeItem) => void;
+};
 
 /**
  * The `Breadcrumbs` component displays the current path of the selected item.
@@ -52,9 +51,7 @@ export type BreadcrumbsProps<T extends string> =
  * The component mirrors the state and setters of the TreeView, and should be used together with it.
  * The `TreeItem` type is the source of truth.
  */
-export function Breadcrumbs<T extends string = string>(
-    props: BreadcrumbsProps<T>,
-) {
+export function Breadcrumbs(props: BreadcrumbsProps) {
     const [isAddingNewItem, setIsAddingNewItem] = useState(false);
     const breadcrumbItems = findDeepestSelectedPath(props.rootItem);
     const deepestSelectedItem = breadcrumbItems[breadcrumbItems.length - 1];
@@ -111,13 +108,13 @@ export function Breadcrumbs<T extends string = string>(
     );
 }
 
-export type BreadcrumbProps<T extends string> = {
+export type BreadcrumbProps = {
     onClick?: (event: React.MouseEvent<HTMLDivElement>, item: TreeItem) => void;
-    item: TreeItem<T>;
+    item: TreeItem;
     className?: string;
 };
 
-export function Breadcrumb<T extends string>(props: BreadcrumbProps<T>) {
+export function Breadcrumb(props: BreadcrumbProps) {
     return (
         <>
             <div

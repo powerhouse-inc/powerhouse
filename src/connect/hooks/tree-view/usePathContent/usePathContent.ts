@@ -1,5 +1,5 @@
-import { useItemsContext } from '@/connect/context/ItemsContext';
 import { TreeItem } from '@/connect/components/tree-view-item';
+import { useItemsContext } from '@/connect/context/ItemsContext';
 import { filterItemsByPath, isSubPath } from '@/connect/utils/path';
 
 /**
@@ -17,9 +17,9 @@ export const usePathContent = (path = '', allowedPaths = ['']) => {
         return allowedPaths.some(allowedPath => {
             return isSubPath(item.path, allowedPath, true);
         });
-    }
+    };
 
-    return filterItemsByPath(items, path, filterAllowedPaths);
+    return filterItemsByPath<TreeItem>(items, path, filterAllowedPaths);
 };
 
 export default usePathContent;

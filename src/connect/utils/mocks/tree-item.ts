@@ -1,8 +1,10 @@
-import { TreeItem, ItemType, ItemStatus } from '@/connect/components/tree-view-item';
+import { ItemType, TreeItem } from '@/connect/components/tree-view-item';
 
-const randomId = function(length = 10) {
-    return Math.random().toString(36).substring(2, length + 2);
-  };
+const randomId = function (length = 10) {
+    return Math.random()
+        .toString(36)
+        .substring(2, length + 2);
+};
 
 /**
  * Generates mock drive data based on the provided drive item.
@@ -73,7 +75,7 @@ export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
             type: ItemType.Folder,
             expanded: false,
             isSelected: false,
-        }
+        },
     ];
 
     return treeItems;
