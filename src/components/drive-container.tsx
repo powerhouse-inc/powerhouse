@@ -65,7 +65,6 @@ function mapDocumentDriveToTreeItem(
     const nodes = drive.nodes.filter(
         node => !node.path.includes('/') && node.kind === 'folder'
     );
-    console.log(treeItem?.isSelected, defaultSelected);
     return {
         id: drive.id,
         label: drive.name,

@@ -18,6 +18,7 @@ export type EditorComponent<T = unknown, A extends Action = Action> = (
 export interface IProps extends EditorProps {
     onSave: () => void;
     onClose: () => void;
+    onExport: () => void;
 }
 
 export const DocumentEditor: React.FC<IProps> = ({
@@ -25,6 +26,7 @@ export const DocumentEditor: React.FC<IProps> = ({
     onChange,
     onSave,
     onClose,
+    onExport,
 }) => {
     const documentModel = useDocumentModel(initialDocument.documentType);
     const editor = useEditor(initialDocument.documentType);
@@ -73,6 +75,7 @@ export const DocumentEditor: React.FC<IProps> = ({
     return (
         <div className="relative h-full">
             <div className="mb-4 flex justify-end gap-10">
+                <Button onClick={onExport}>Export</Button>
                 <div className="flex gap-4">
                     <Button onClick={undo} disabled={!canUndo}>
                         Undo

@@ -1,6 +1,6 @@
 import type { Document, DocumentModel } from 'document-model/document';
 
-export async function saveFile(
+export async function exportFile(
     document: Document,
     getDocumentModel: (documentType: string) => DocumentModel | undefined
 ) {
