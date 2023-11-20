@@ -53,7 +53,7 @@ describe('UpgradeDriveModal Component', () => {
     });
 
     it('should trigger onClose callback when cancel is clicked', () => {
-        const onClose = jest.fn();
+        const onClose = vi.fn();
         const cancelLabel = 'Cancel';
 
         render(
@@ -75,7 +75,7 @@ describe('UpgradeDriveModal Component', () => {
     });
 
     it('should trigger onDelete callback when CTA is clicked', () => {
-        const onDelete = jest.fn();
+        const onDelete = vi.fn();
         const continueLabel = 'Continue';
 
         render(

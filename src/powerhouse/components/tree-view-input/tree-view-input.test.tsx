@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { Mock } from 'vitest';
 import { TreeViewInput } from './tree-view-input';
 
 describe('TreeViewInput Component', () => {
-    let onSubmit: jest.Mock;
-    let onCancel: jest.Mock;
+    let onSubmit: Mock;
+    let onCancel: Mock;
 
     const props = {
         level: 0,
@@ -16,8 +17,8 @@ describe('TreeViewInput Component', () => {
 
     beforeEach(() => {
         // jest.useFakeTimers();
-        onSubmit = jest.fn();
-        onCancel = jest.fn();
+        onSubmit = vi.fn();
+        onCancel = vi.fn();
 
         render(
             <TreeViewInput

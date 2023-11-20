@@ -53,7 +53,7 @@ jobs:
               run: yarn --frozen-lockfile
 
             - name: Test
-              run: yarn test --ci
+              run: yarn test
 
     storybook:
         name: Storybook

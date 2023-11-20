@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ConnectSearchBar Component should match snapshot 1`] = `
+exports[`ConnectSearchBar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
     class="flex flex-row text-[#6F767E] bg-[#FCFCFC] px-4 h-[52px] items-center rounded-xl border border-[#EFEFEF]"

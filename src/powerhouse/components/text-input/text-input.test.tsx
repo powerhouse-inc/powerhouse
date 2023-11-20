@@ -42,7 +42,7 @@ describe('Modal Component', () => {
     });
 
     it('should call onChange when input value change', () => {
-        const onChange = jest.fn();
+        const onChange = vi.fn();
 
         render(
             <TextInput

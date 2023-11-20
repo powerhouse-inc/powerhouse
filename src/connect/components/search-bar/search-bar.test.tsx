@@ -59,7 +59,7 @@ describe('ConnectSearchBar Component', () => {
     });
 
     it('should call onFilterSelect when a filter is selected', () => {
-        const onFilterSelect = jest.fn();
+        const onFilterSelect = vi.fn();
 
         render(
             <ConnectSearchBar
@@ -80,7 +80,7 @@ describe('ConnectSearchBar Component', () => {
     });
 
     it('should call onChange when input value is changed', () => {
-        const onChange = jest.fn();
+        const onChange = vi.fn();
 
         render(
             <ConnectSearchBar

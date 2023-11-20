@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`DropDownMenu Component should match snapshot (open menu) 1`] = `
+exports[`DropDownMenu Component > should match snapshot (open menu) 1`] = `
 <DocumentFragment>
   <button
     aria-controls="react-aria-:r3:"
@@ -22,7 +22,7 @@ exports[`DropDownMenu Component should match snapshot (open menu) 1`] = `
 </DocumentFragment>
 `;
 
-exports[`DropDownMenu Component should match snapshot 1`] = `
+exports[`DropDownMenu Component > should match snapshot 1`] = `
 <DocumentFragment>
   <button
     aria-expanded="false"

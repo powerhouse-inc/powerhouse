@@ -77,7 +77,7 @@ describe('DropDownMenu Component', () => {
     });
 
     it.each(items)('should call fn callback for item %s', item => {
-        const onItemClick = jest.fn();
+        const onItemClick = vi.fn();
 
         render(
             <DropdownMenu onItemClick={onItemClick} items={items}>

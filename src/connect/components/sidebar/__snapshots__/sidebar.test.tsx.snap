@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Connect Sidebar Component should match snapshot 1`] = `
+exports[`Connect Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
     class="group/sidebar group expanded flex h-full flex-col overflow-hidden transition-none duration-300 animate-in fade-in bg-neutral-1 shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]"
@@ -51,7 +51,7 @@ exports[`Connect Sidebar Component should match snapshot 1`] = `
           alt="Willow"
           class="object-contain"
           height="40"
-          src="test-file-stub"
+          src="/src/assets/powerhouse-rounded.png"
           width="40"
         />
         <div

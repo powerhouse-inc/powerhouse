@@ -25,7 +25,7 @@ describe('Modal Component', () => {
     });
 
     it('should call onClose callback when press esc', () => {
-        const onClose = jest.fn();
+        const onClose = vi.fn();
         render(
             <Modal open={true} onClose={onClose}>
                 <div>Modal Content</div>

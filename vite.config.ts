@@ -5,8 +5,13 @@ import dts from 'vite-plugin-dts';
 import { libInjectCss } from 'vite-plugin-lib-inject-css';
 import pkg from './package.json';
 
-export default defineConfig(props => {
+export default defineConfig(() => {
     return {
+        test: {
+            globals: true,
+            environment: 'jsdom',
+            setupFiles: './src/powerhouse/tests/setupTests.ts',
+        },
         plugins: [
             react(),
             libInjectCss(),

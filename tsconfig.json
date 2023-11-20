@@ -14,15 +14,17 @@
         "paths": {
             "@/*": ["./src/*"]
         },
-        "types": ["vite/client"]
+        "types": ["vite/client", "vitest/globals"]
     },
 
-    "types": ["jest", "@testing-library/jest-dom"],
+    "types": ["@testing-library/jest-dom"],
     "include": [
         "src/**/*.ts",
         "src/**/*.tsx",
         ".storybook/**/*.ts",
-        ".storybook/**/*.tsx"
+        ".storybook/**/*.tsx",
+        "*.config.ts",
+        "*.config.js"
     ],
     "exclude": ["dist", "node_modules"]
 }

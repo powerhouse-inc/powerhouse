@@ -17,7 +17,7 @@ describe('DragAndDrop Components', () => {
         });
 
         it('should call children render prop function', () => {
-            const children = jest.fn();
+            const children = vi.fn();
 
             render(<Draggable item={{ id: 'item-1' }}>{children}</Draggable>);
 
@@ -38,7 +38,7 @@ describe('DragAndDrop Components', () => {
 
     describe('DropTarget', () => {
         it('should match snapshot', () => {
-            const onDropEvent = jest.fn();
+            const onDropEvent = vi.fn();
 
             const { asFragment } = render(
                 <DropTarget target={{ id: 'item-1' }} onDropEvent={onDropEvent}>
@@ -50,8 +50,8 @@ describe('DragAndDrop Components', () => {
         });
 
         it('should call children render prop function', () => {
-            const children = jest.fn();
-            const onDropEvent = jest.fn();
+            const children = vi.fn();
+            const onDropEvent = vi.fn();
 
             render(
                 <DropTarget target={{ id: 'item-1' }} onDropEvent={onDropEvent}>
@@ -64,7 +64,7 @@ describe('DragAndDrop Components', () => {
         });
 
         it('should inject props to the div wrapper element', () => {
-            const onDropEvent = jest.fn();
+            const onDropEvent = vi.fn();
 
             render(
                 <DropTarget
@@ -92,8 +92,8 @@ describe('DragAndDrop Components', () => {
         });
 
         it('should call children render prop function', () => {
-            const children = jest.fn();
-            const onDropEvent = jest.fn();
+            const children = vi.fn();
+            const onDropEvent = vi.fn();
 
             render(
                 <DraggableTarget
@@ -112,7 +112,7 @@ describe('DragAndDrop Components', () => {
         });
 
         it('should inject props to the div wrapper elements', () => {
-            const onDropEvent = jest.fn();
+            const onDropEvent = vi.fn();
 
             render(
                 <DraggableTarget
