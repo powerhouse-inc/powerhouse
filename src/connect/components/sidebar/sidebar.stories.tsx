@@ -2,7 +2,8 @@ import { action } from '@storybook/addon-actions';
 import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
 import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
-import { ItemsContextProvider, useItemsContext } from '@/connect/context/ItemsContext';
+import { ItemsContextProvider } from '@/connect/context/ItemsContext';
+import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
 import {
     ConnectSidebar,
     DriveView,
@@ -61,27 +62,13 @@ const onItemOptionsClick = action('onItemOptionsClick');
 
 const DriveViewImpl = (args: DriveViewProps) => {
     const { onItemClick, ...restArgs } = args;
-    const { setItems } = useItemsContext();
+    const actions = useItemActions();
 
     const onItemClickHandler: DriveViewProps['onItemClick'] = (
         e,
         item,
     ) => {
-        setItems((prevItems) => prevItems.map((prevItem) => {
-            if (prevItem.id === item.id) {
-                return {
-                    ...prevItem,
-                    expanded: !prevItem.expanded,
-                    isSelected: true,
-                };
-            }
-
-            return {
-                ...prevItem,
-                isSelected: false,
-            };
-        }));
-
+        actions.toggleExpandedAndSelect(item.id);
         onItemClick?.(e, item);
     };
 

@@ -35,21 +35,26 @@ export enum ItemStatus {
     Offline = 'offline',
 }
 
-export interface TreeItem {
+export interface BaseTreeItem {
     id: string;
+    path: string;
     label: string;
     type: ItemType;
-    isConnected?: boolean;
-    syncStatus?: 'not-synced-yet' | 'syncing' | 'synced';
-    path: string;
-    action?: ActionType;
-    status?: ItemStatus;
-    expanded?: boolean;
-    children?: TreeItem[];
-    isSelected?: boolean;
     error?: Error;
+    status?: ItemStatus;
+    isConnected?: boolean;
     options?: ConnectDropdownMenuItem[];
+    syncStatus?: 'not-synced-yet' | 'syncing' | 'synced';
+    expanded?: boolean;
 }
+
+export interface UITreeItem {
+    action?: ActionType;
+    expanded?: boolean;
+    isSelected?: boolean;
+}
+
+export type TreeItem = BaseTreeItem & UITreeItem;
 
 export const DefaultOptions = [
     {

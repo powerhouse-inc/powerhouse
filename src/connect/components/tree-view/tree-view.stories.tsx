@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { ActionType, ItemType, TreeItem } from '../tree-view-item';
+import { ActionType, ItemType } from '../tree-view-item';
 import { ConnectTreeView, ConnectTreeViewProps } from './tree-view';
 import { ItemsContextProvider, useItemsContext } from '@/connect/context/ItemsContext';
 import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
+import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
 
 const treeItems = generateMockDriveData({
     path: 'drive',
@@ -52,23 +53,14 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
     } = args;
     const [disableHighlight, setDisableHighlight] = useState(false);
     const { setItems } = useItemsContext();
+    const actions = useItemActions();
 
     const onItemClickHandler: ConnectTreeViewProps['onItemClick'] = (
         e,
         item,
     ) => {
         onItemClick?.(e, item);
-        setItems((itemsContext) => itemsContext.map((itemContext) => {
-            const newItem = { ...itemContext };
-            if (newItem.id === item.id) {
-                newItem.isSelected = true;
-                newItem.expanded = !itemContext.expanded;
-            } else {
-                newItem.isSelected = false;
-            }
-
-            return newItem;
-        }));
+        actions.toggleExpandedAndSelect(item.id);
     };
 
     const onItemOptionsClickHandler: ConnectTreeViewProps['onItemOptionsClick'] =
@@ -76,41 +68,18 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
             onItemOptionsClick?.(item, option);
 
             if (option === 'rename') {
-                setItems((prevItems) => prevItems.map((prevItem) => {
-                    const newItem = { ...prevItem };
-
-                    if (prevItem.id === item.id) {
-                        newItem.action = ActionType.Update;
-                    } else {
-                        newItem.action = undefined;
-                        newItem.isSelected = false;
-                    }
-
-                    return newItem;
-                }));
-
+                actions.setItemAction(item.id, ActionType.Update);
                 return;
             }
 
             if (option === 'new-folder') {
-                setItems((prevItems) => {
-                    const newItems = prevItems.map((prevItem) => {
-                        if (prevItem.id === item.id) {
-                            return { ...prevItem, expanded: true, isSelected: false };
-                        }
-                        return prevItem;
-                    });
-
-                    return [
-                        ...newItems,
-                        {
-                            id: `${item.id}/new-folder`,
-                            path: `${item.path}/new-folder`,
-                            label: 'New Folder',
-                            type: ItemType.Folder,
-                            action: ActionType.New,
-                        },
-                    ];
+                actions.setExpandedItem(item.id, true);
+                actions.newVirtualItem({
+                    id: `${item.id}/new-folder`,
+                    path: `${item.path}/new-folder`,
+                    label: 'New Folder',
+                    type: ItemType.Folder,
+                    action: ActionType.New,
                 });
             }
         };
@@ -118,40 +87,39 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
     const onCancelInputHandler: ConnectTreeViewProps['onCancelInput'] =
         item => {
             onCancelInput?.(item);
-            setItems((prevItems) => {
-                const newItems = prevItems.reduce<TreeItem[]>((acc, prevItem) => {
-                    if (prevItem.action === ActionType.New) return acc;
-                    if (prevItem.action === ActionType.Update) {
-                        return [...acc, { ...prevItem, action: undefined }];
-                    }
-                    return [...acc, prevItem];
-                }, []);
-
-                return newItems;
-            });
+            actions.setItemAction(item.id, null);
+            actions.deleteVirtualItem(item.id);
         };
 
     const onSubmitInputHandler: ConnectTreeViewProps['onSubmitInput'] =
         item => {
             onSubmitInput?.(item);
-            setItems((prevItems) => prevItems.map((prevItem) => {
-                if (prevItem.id === item.id) {
-                    return { ...prevItem, ...item, action: undefined };
-                }
-
-                return prevItem;
-            }));
+            switch (item.action) {
+                case ActionType.New:
+                    setItems((prevState) => {
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                        const { action, expanded, isSelected, ...newItem } = item;
+                        return [...prevState, newItem];
+                    });
+                    actions.deleteVirtualItem(item.id);
+                    break;
+                case ActionType.Update:
+                    setItems((prevItems) => prevItems.map((prevItem) => {
+                        actions.setItemAction(item.id, null);
+                        if (prevItem.id === item.id) return { ...prevItem, ...item };
+        
+                        return prevItem;
+                    }));
+                    break;
+                default:
+                    break;
+            }
         };
 
     const onDropActivateHandler: ConnectTreeViewProps['onDropActivate'] =
         item => {
             onDropActivate?.(item);
-            setItems((prevItems) => prevItems.map((prevItem) => {
-                if (item.id === prevItem.id) {
-                    return {...prevItem, expanded: true};
-                }
-                return prevItem;
-            }));
+            actions.setExpandedItem(item.id, true);
         };
 
     const onDragStartHandler: ConnectTreeViewProps['onDragStart'] = (

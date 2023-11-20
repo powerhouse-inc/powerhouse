@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { ItemType, ItemStatus } from '../tree-view-item';
 import { DriveView, DriveViewProps } from './drive-view';
-import { ItemsContextProvider, useItemsContext } from '../../context/ItemsContext';
+import { ItemsContextProvider } from '../../context/ItemsContext';
 import { useGetDriveParent } from '@/connect/hooks/tree-view/useGetDriveParent';
 import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
+import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
 
 const drives = [
     ...generateMockDriveData({
@@ -162,24 +163,26 @@ type Story = StoryObj<typeof meta>;
 
 const DriveViewImpl = (args: DriveViewProps) => {
     const { onItemClick, ...restArgs } = args;
-    const { setItems } = useItemsContext();
+    
+    const actions = useItemActions();
     const getDriveParent = useGetDriveParent();
 
     const onItemClickHandler: DriveViewProps['onItemClick'] = (
         e,
         item,
     ) => {
-        setItems((prevItems) => prevItems.map((prevItem) => {
-            if (prevItem.id === item.id) {
-                return {
-                    ...prevItem,
-                    isSelected: true,
-                    expanded: !prevItem.expanded,
-                };
-            }
+        actions.toggleExpandedAndSelect(item.id);
+        // setItems((prevItems) => prevItems.map((prevItem) => {
+        //     if (prevItem.id === item.id) {
+        //         return {
+        //             ...prevItem,
+        //             isSelected: true,
+        //             expanded: !prevItem.expanded,
+        //         };
+        //     }
 
-            return { ...prevItem, isSelected: false };
-        }));
+        //     return { ...prevItem, isSelected: false };
+        // }));
 
         const parent = getDriveParent(item.path);
         

@@ -1,14 +1,26 @@
-import { TreeItem } from '@/connect/components/tree-view-item';
+import { TreeItem, BaseTreeItem, UITreeItem } from '@/connect/components/tree-view-item';
 import React, { useContext, useState } from 'react';
 
-interface TreeItemContext {
+export interface TreeItemContext {
     items: TreeItem[];
-    setItems: React.Dispatch<React.SetStateAction<TreeItem[]>>;
+    uiState: UITreeItemState;
+    baseItems: BaseTreeItem[];
+    virtualItems: BaseTreeItem[];
+    setUIState: React.Dispatch<React.SetStateAction<UITreeItemState>>;
+    setBaseItems: React.Dispatch<React.SetStateAction<BaseTreeItem[]>>;
+    setVirtualItems: React.Dispatch<React.SetStateAction<BaseTreeItem[]>>;
+    setItems: React.Dispatch<React.SetStateAction<BaseTreeItem[]>>;
 }
 
 const defaultTreeItemContextValue: TreeItemContext = {
     items: [],
+    uiState: {},
+    baseItems: [],
+    virtualItems: [],
     setItems: () => {},
+    setUIState: () => {},
+    setBaseItems: () => {},
+    setVirtualItems: () => {},
 };
 
 export const ItemsContext = React.createContext<TreeItemContext>(
@@ -17,19 +29,38 @@ export const ItemsContext = React.createContext<TreeItemContext>(
 
 export interface ItemsContextProviderProps {
     children?: React.ReactNode;
-    items?: TreeItem[];
+    items?: BaseTreeItem[];
+}
+
+// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
+export interface UITreeItemState {
+    [key: string]: UITreeItem;
 }
 
 export const ItemsContextProvider: React.FC<ItemsContextProviderProps> = ({
     children,
     items: initialItems,
 }) => {
-    const [items, setItems] = useState<TreeItem[]>(
-        initialItems || defaultTreeItemContextValue.items,
-    );
+    const [uiState, setUIState] = useState<UITreeItemState>({});
+    const [virtualItems, setVirtualItems] = useState<Array<BaseTreeItem>>([]);
+    const [baseItems, setBaseItems] = useState<Array<BaseTreeItem>>(initialItems || []);
+
+    const items = [...baseItems, ...virtualItems].map((item) => ({
+        ...item,
+        ...uiState[item.id],
+    }));
 
     return (
-        <ItemsContext.Provider value={{ items, setItems }}>
+        <ItemsContext.Provider value={{
+            items,
+            uiState,
+            baseItems,
+            setUIState,
+            virtualItems,
+            setBaseItems,
+            setVirtualItems,
+            setItems: setBaseItems,
+        }}>
             {children}
         </ItemsContext.Provider>
     );
