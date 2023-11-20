@@ -35,7 +35,7 @@ export function TextInputVariant(props: TextInputProps) {
 
     const onKeyUp = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter') {
-            if (e.target && props.onSubmit) {
+            if (props.onSubmit) {
                 props.onSubmit((e.target as HTMLInputElement).value);
             }
 
@@ -141,8 +141,8 @@ export function TextInputVariant(props: TextInputProps) {
                 onKeyUp={onKeyUp}
                 style={style}
                 value={state.value}
-                onFocus={e => setFocus(true)}
-                onBlur={e => setFocus(false)}
+                onFocus={() => setFocus(true)}
+                onBlur={() => setFocus(false)}
                 tabIndex={props.labelStyle ? -1 : 1}
                 spellCheck={state.hasFocus}
             ></textarea>

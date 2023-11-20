@@ -162,29 +162,27 @@ export function ConnectTreeViewItem<T extends string = DefaultOptionId>(
 
     const { className: buttonClassName, ...restButtonProps } = buttonProps;
 
-    const optionsContent = (defaultOptions || item.options) &&
-        onOptionsClick && (
-            <ConnectDropdownMenu<T>
-                items={
-                    item.options ||
-                    (defaultOptions as ConnectDropdownMenuItem<T>[])
-                }
-                menuClassName="bg-white cursor-pointer"
-                menuItemClassName="hover:bg-[#F1F5F9] px-2"
-                onItemClick={option => onOptionsClick?.(item, option)}
-                popoverProps={{
-                    triggerRef: containerRef,
-                    placement: 'bottom end',
-                    offset: -10,
-                }}
-            >
-                <Icon
-                    name="vertical-dots"
-                    className="pointer-events-none"
-                    color="#6C7275"
-                />
-            </ConnectDropdownMenu>
-        );
+    const optionsContent = onOptionsClick && (
+        <ConnectDropdownMenu<T>
+            items={
+                item.options || (defaultOptions as ConnectDropdownMenuItem<T>[])
+            }
+            menuClassName="bg-white cursor-pointer"
+            menuItemClassName="hover:bg-[#F1F5F9] px-2"
+            onItemClick={option => onOptionsClick(item, option)}
+            popoverProps={{
+                triggerRef: containerRef,
+                placement: 'bottom end',
+                offset: -10,
+            }}
+        >
+            <Icon
+                name="vertical-dots"
+                className="pointer-events-none"
+                color="#6C7275"
+            />
+        </ConnectDropdownMenu>
+    );
 
     const getStatusIcon = () => {
         if (item.type === ItemType.LocalDrive) {

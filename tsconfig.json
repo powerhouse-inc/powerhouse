@@ -13,7 +13,8 @@
         "jsx": "react-jsx",
         "paths": {
             "@/*": ["./src/*"]
-        }
+        },
+        "types": ["vite/client"]
     },
 
     "types": ["jest", "@testing-library/jest-dom"],

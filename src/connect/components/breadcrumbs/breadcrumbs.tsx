@@ -38,7 +38,7 @@ export type BreadcrumbsProps<T extends string> =
     React.HTMLAttributes<HTMLDivElement> & {
         rootItem: TreeItem<T>;
         onItemClick?: (
-            event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+            event: React.MouseEvent<HTMLDivElement>,
             item: TreeItem<T>,
         ) => void;
         onAddNewItem: (item: TreeItem, option: 'new-folder') => void;
@@ -112,10 +112,7 @@ export function Breadcrumbs<T extends string = string>(
 }
 
 export type BreadcrumbProps<T extends string> = {
-    onClick?: (
-        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-        item: TreeItem<string>,
-    ) => void;
+    onClick?: (event: React.MouseEvent<HTMLDivElement>, item: TreeItem) => void;
     item: TreeItem<T>;
     className?: string;
 };

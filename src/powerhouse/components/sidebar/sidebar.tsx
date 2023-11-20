@@ -8,8 +8,7 @@ export interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
     minWidth: string;
 }
 
-export interface SidebarHeaderProps
-    extends React.HTMLAttributes<HTMLDivElement> {}
+export type SidebarHeaderProps = React.HTMLAttributes<HTMLDivElement>;
 
 export function SidebarHeader({
     className,
@@ -18,8 +17,7 @@ export function SidebarHeader({
     return <div className={twMerge('flex-shrink-0', className)} {...props} />;
 }
 
-export interface SidebarFooterProps
-    extends React.HTMLAttributes<HTMLDivElement> {}
+export type SidebarFooterProps = React.HTMLAttributes<HTMLDivElement>;
 
 export function SidebarFooter({ className, ...props }: SidebarFooterProps) {
     return <div className={twMerge('flex-shrink-0', className)} {...props} />;

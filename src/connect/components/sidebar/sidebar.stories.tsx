@@ -128,7 +128,7 @@ export const Sidebar: Story = {
             const [, setArgs] = useArgs<typeof ctx.args>();
 
             const onToggle = () => {
-                ctx.args.onToggle?.();
+                ctx.args.onToggle();
                 setArgs({ collapsed: !ctx.args.collapsed });
             };
 

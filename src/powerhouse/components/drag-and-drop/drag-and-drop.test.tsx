@@ -111,7 +111,7 @@ describe('DragAndDrop Components', () => {
             });
         });
 
-        it('should inject props to the div wrapper elements', async () => {
+        it('should inject props to the div wrapper elements', () => {
             const onDropEvent = jest.fn();
 
             render(

@@ -2,15 +2,13 @@
 
 exports[`UpgradeDriveModal Component should match snapshot 1`] = `
 <div
-  class="bg-overlay fixed inset-0 flex justify-center items-start animate-in fade-in duration-300 ease-out"
-  data-entering="true"
+  class="bg-overlay fixed inset-0 flex items-start justify-center"
   data-rac=""
   data-testid="upgrade-drive-modal"
   style="--visual-viewport-height: 768px;"
 >
   <div
-    class="flex justify-center relative top-10 animate-in zoom-in-95 ease-out duration-300"
-    data-entering="true"
+    class="relative flex justify-center top-10"
     data-rac=""
   >
     <div
@@ -31,12 +29,12 @@ exports[`UpgradeDriveModal Component should match snapshot 1`] = `
         class="w-[400px] p-6 text-[#565868]"
       >
         <div
-          class="text-2xl text-[#404446] font-bold pb-2 border-b border-[#E5E7E8]"
+          class="border-b border-[#E5E7E8] pb-2 text-2xl font-bold text-[#404446]"
         >
           Upgrade to cloud drive
         </div>
         <div
-          class="text-[#6C7275] bg-[#F3F5F7] p-4 rounded-md my-6 text-center"
+          class="my-6 rounded-md bg-[#F3F5F7] p-4 text-center text-[#6C7275]"
         >
           You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?
         </div>
@@ -44,14 +42,14 @@ exports[`UpgradeDriveModal Component should match snapshot 1`] = `
           class="mt-8 flex justify-between gap-3"
         >
           <button
-            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#F3F5F7] text-[##141718] flex-1"
+            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-[#F3F5F7] text-[##141718]"
             data-rac=""
             type="button"
           >
             Cancel
           </button>
           <button
-            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#404446] text-[#FEFEFE] flex-1"
+            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-[#404446] text-[#FEFEFE]"
             data-rac=""
             type="button"
           >

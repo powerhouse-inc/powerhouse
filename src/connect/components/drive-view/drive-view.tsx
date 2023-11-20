@@ -40,7 +40,7 @@ export interface DriveViewProps<T extends string = DefaultOptionId>
         drive: DriveTreeItem<T>,
     ) => void;
     onItemClick?: (
-        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+        event: React.MouseEvent<HTMLDivElement>,
         item: TreeItem<T>,
         drive: DriveTreeItem<T>,
     ) => void;

@@ -39,7 +39,7 @@ export const AddNewItemInput: React.FC<AddNewItemInputProps> = props => {
                 onSubmit(text);
             }
             if (e.key === 'Escape') {
-                onCancel?.();
+                onCancel();
             }
         },
     });

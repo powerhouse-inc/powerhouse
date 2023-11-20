@@ -4,8 +4,11 @@
         "es2021": true
     },
     "extends": [
-        "standard-with-typescript",
+        "eslint:recommended",
         "plugin:react/recommended",
+        "plugin:@typescript-eslint/strict-type-checked",
+        "plugin:@typescript-eslint/stylistic-type-checked",
+        "plugin:storybook/recommended",
         "prettier"
     ],
     "overrides": [
@@ -19,11 +22,14 @@
             }
         }
     ],
+    "parser": "@typescript-eslint/parser",
     "parserOptions": {
         "ecmaVersion": "latest",
-        "sourceType": "module"
+        "sourceType": "module",
+        "tsconfigRootDir": ".",
+        "project": true
     },
-    "plugins": ["react", "jest-dom"],
+    "plugins": ["react", "jest-dom", "@typescript-eslint"],
     "rules": {
         "react/prop-types": "off",
         "react/react-in-jsx-scope": "off",
@@ -34,7 +40,8 @@
         "@typescript-eslint/strict-boolean-expressions": "off",
         "@typescript-eslint/prefer-nullish-coalescing": "off",
         "@typescript-eslint/no-confusing-void-expression": "off",
-        "@typescript-eslint/consistent-type-definitions": "off"
+        "@typescript-eslint/consistent-type-definitions": "off",
+        "@typescript-eslint/no-empty-function": "off"
     },
     "settings": {
         "react": {

@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 
-export interface SidebarPanelProps
-    extends React.HTMLAttributes<HTMLDivElement> {}
+export type SidebarPanelProps = React.HTMLAttributes<HTMLDivElement>;
 
 export function SidebarPanel({
     className,

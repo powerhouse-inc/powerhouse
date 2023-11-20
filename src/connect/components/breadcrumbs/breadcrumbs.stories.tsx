@@ -157,10 +157,7 @@ export const Default: Story = {
             setItems(newTree);
         };
 
-        const onItemOptionsClickHandler = (
-            item: TreeItem,
-            option: 'new-folder',
-        ) => {
+        const onItemOptionsClickHandler = (item: TreeItem, option: string) => {
             if (option === 'new-folder') {
                 const newTree = traverseTree(items, treeItem => {
                     if (treeItem.id === item.id) {

@@ -11,10 +11,8 @@ export interface TreeViewItemProps
     expandedIcon?: React.JSX.Element;
     secondaryIcon?: React.ReactNode;
     level?: number;
-    onClick?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
-    onOptionsClick?: (
-        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    ) => void;
+    onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
+    onOptionsClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
     buttonProps?: React.DetailedHTMLProps<
         React.HTMLAttributes<HTMLDivElement>,
         HTMLDivElement
@@ -30,16 +28,12 @@ const injectLevelProps = (
 ): React.ReactNode => {
     return React.Children.map(children, child => {
         if (React.isValidElement(child)) {
-            if (child.type === React.Fragment) {
-                return injectLevelProps(child.props.children, level);
-            }
-
-            const customProps: Partial<TreeViewItemProps> = {
+            const customProps = {
                 level: level + 1,
             };
 
             return React.cloneElement(child, {
-                ...child.props,
+                ...(child.props as TreeViewItemProps),
                 ...customProps,
             });
         }
@@ -57,7 +51,6 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         icon,
         expandedIcon,
         secondaryIcon,
-        onOptionsClick,
         optionsContent,
         topIndicator,
         bottomIndicator,

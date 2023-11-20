@@ -20,7 +20,7 @@ export interface ConnectTreeViewProps<T extends string = string>
     items: TreeItem<T>;
     onDropEvent?: ConnectTreeViewItemProps<T>['onDropEvent'];
     onItemClick?: (
-        event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+        event: React.MouseEvent<HTMLDivElement>,
         item: TreeItem<T>,
     ) => void;
     onItemOptionsClick?: ConnectTreeViewItemProps<T>['onOptionsClick'];
