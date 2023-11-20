@@ -1,3 +1,10 @@
+# [1.0.0-alpha.23](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.22...v1.0.0-alpha.23) (2023-11-20)
+
+
+### Features
+
+* add new configs for typescript eslint ([#93](https://github.com/powerhouse-inc/design-system/issues/93)) ([074c53b](https://github.com/powerhouse-inc/design-system/commit/074c53b5097cb33a10e36a52825d185db1132c6c))
+
 # [1.0.0-alpha.22](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.21...v1.0.0-alpha.22) (2023-11-17)
 
 
