@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import Tabs from 'src/components/tabs';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { useTabs } from 'src/store/tabs';
-import { loadFile, saveFile } from 'src/utils/file';
+import { exportFile, loadFile } from 'src/utils/file';
 
 const TabsContainer = () => {
     const tabs = useTabs();
@@ -26,7 +26,7 @@ const TabsContainer = () => {
             throw new Error('Current tab is not a document');
         }
 
-        saveFile(tab.document, getDocumentModel);
+        exportFile(tab.document, getDocumentModel);
     }
 
     useEffect(() => {

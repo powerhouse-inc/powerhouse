@@ -1,5 +1,5 @@
 import { Breadcrumbs, ConnectSearchBar } from '@powerhousedao/design-system';
-import { DocumentModel } from 'document-model/document';
+import { Document, DocumentModel } from 'document-model/document';
 import { useEffect, useState } from 'react';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
@@ -13,7 +13,11 @@ import {
     useSelectedDrive,
     useSelectedPath,
 } from 'src/store';
-import { useDocumentModels } from 'src/store/document-model';
+import {
+    useDocumentModels,
+    useGetDocumentModel,
+} from 'src/store/document-model';
+import { exportFile } from 'src/utils';
 
 const Content = () => {
     const selectFolder = useSelectFolder();
@@ -21,9 +25,9 @@ const Content = () => {
     const selectedPath = useSelectedPath();
     const { addFile, addDocument, deleteNode } = useDocumentDrive();
     const documentModels = useDocumentModels();
+    const getDocumentModel = useGetDocumentModel();
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
-
     const [selectedFileNode, setSelectedFileNode] = useState<
         { drive: string; path: string } | undefined
     >(undefined);
@@ -95,6 +99,10 @@ const Content = () => {
         }
     }
 
+    async function exportDocument(document: Document) {
+        exportFile(document, getDocumentModel);
+    }
+
     return (
         <div className="flex h-full flex-col bg-[#F4F4F4] p-6">
             {selectedDocument ? (
@@ -104,6 +112,7 @@ const Content = () => {
                         onChange={updateDocument}
                         onSave={saveDocument}
                         onClose={() => setSelectedFileNode(undefined)}
+                        onExport={() => exportDocument(selectedDocument)}
                     />
                 </div>
             ) : (
