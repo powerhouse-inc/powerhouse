@@ -28,6 +28,7 @@ export const TreeViewInput: Story = {
     args: {
         item: {
             id: 'MyDrive/Documents/MyDocuments',
+            path: 'MyDrive/Documents/MyDocuments',
             label: 'My-Documents',
             type: ItemType.Folder,
             action: ActionType.Update,

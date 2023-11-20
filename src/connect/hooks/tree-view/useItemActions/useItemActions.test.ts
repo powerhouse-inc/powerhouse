@@ -1,8 +1,8 @@
+import { ActionType, ItemType } from '@/connect/components/tree-view-item';
+import { TreeItemContext } from '@/connect/context/ItemsContext';
 import { renderHook } from '@testing-library/react';
 import { treeItems } from '../mocks';
 import { useItemActions } from './useItemActions';
-import { TreeItemContext } from '@/connect/context/ItemsContext';
-import { ItemType, ActionType } from '@/connect/components/tree-view-item';
 
 /* eslint-disable */
 const baseItem = {
@@ -10,13 +10,13 @@ const baseItem = {
     expanded: true,
     path: 'drive-id/base-item',
     label: 'Base Item',
-    type: ItemType.Folder
+    type: ItemType.Folder,
 };
 
-const setItems = jest.fn();
-const setUIState = jest.fn();
-const setBaseItems = jest.fn();
-const setVirtualItems = jest.fn();
+const setItems = vi.fn();
+const setUIState = vi.fn();
+const setBaseItems = vi.fn();
+const setVirtualItems = vi.fn();
 const uiState: TreeItemContext['uiState'] = {};
 const baseItems: TreeItemContext['baseItems'] = [baseItem];
 const virtualItems: TreeItemContext['virtualItems'] = [];
@@ -32,13 +32,12 @@ const useItemsContextReturnValue = {
     setVirtualItems,
 };
 
-jest.mock('../../../context/ItemsContext', () => ({
+vi.mock('../../../context/ItemsContext', () => ({
     useItemsContext: () => useItemsContextReturnValue,
 }));
 
 describe('TreeView hooks', () => {
     describe('useItemActions', () => {
-        
         beforeEach(() => {
             setItems.mockClear();
             setUIState.mockClear();
@@ -303,11 +302,19 @@ describe('TreeView hooks', () => {
                 result.current.toggleExpandedAndSelect(itemID);
                 const [setUIStateCallback] = setUIState.mock.calls[0];
                 const newState = setUIStateCallback({
-                    [itemID]: { isSelected: false, expanded: false, otherProp: true },
+                    [itemID]: {
+                        isSelected: false,
+                        expanded: false,
+                        otherProp: true,
+                    },
                 });
 
                 expect(newState).toEqual({
-                    [itemID]: { isSelected: true, expanded: true, otherProp: true },
+                    [itemID]: {
+                        isSelected: true,
+                        expanded: true,
+                        otherProp: true,
+                    },
                 });
             });
 
@@ -320,15 +327,39 @@ describe('TreeView hooks', () => {
                 result.current.toggleExpandedAndSelect(itemID);
                 const [setUIStateCallback] = setUIState.mock.calls[0];
                 const newState = setUIStateCallback({
-                    [itemID1]: { isSelected: true, expanded: true, otherProp: true },
-                    [itemID2]: { isSelected: false, expanded: false, otherProp: false },
-                    [itemID]: { isSelected: false, expanded: false, otherProp: false },
+                    [itemID1]: {
+                        isSelected: true,
+                        expanded: true,
+                        otherProp: true,
+                    },
+                    [itemID2]: {
+                        isSelected: false,
+                        expanded: false,
+                        otherProp: false,
+                    },
+                    [itemID]: {
+                        isSelected: false,
+                        expanded: false,
+                        otherProp: false,
+                    },
                 });
 
                 expect(newState).toEqual({
-                    [itemID1]: { isSelected: false, expanded: true, otherProp: true },
-                    [itemID2]: { isSelected: false, expanded: false, otherProp: false },
-                    [itemID]: { isSelected: true, expanded: true, otherProp: false },
+                    [itemID1]: {
+                        isSelected: false,
+                        expanded: true,
+                        otherProp: true,
+                    },
+                    [itemID2]: {
+                        isSelected: false,
+                        expanded: false,
+                        otherProp: false,
+                    },
+                    [itemID]: {
+                        isSelected: true,
+                        expanded: true,
+                        otherProp: false,
+                    },
                 });
             });
 
@@ -360,7 +391,7 @@ describe('TreeView hooks', () => {
                 });
             });
         });
-        
+
         describe('setItemAction', () => {
             it('should call setUIState when setItemAction is called', () => {
                 const { result } = renderHook(() => useItemActions());
@@ -492,7 +523,7 @@ describe('TreeView hooks', () => {
 
                 expect(newVirtualItems).toEqual([virtualItem]);
                 expect(newUIState).toEqual({
-                    [baseItem.id]: { expanded }
+                    [baseItem.id]: { expanded },
                 });
             });
         });
@@ -517,13 +548,18 @@ describe('TreeView hooks', () => {
                 result.current.deleteVirtualItem(baseItem.id);
                 const [setVirtualItemsCallback] = setVirtualItems.mock.calls[1];
                 const [setUIStateCallback] = setUIState.mock.calls[1];
-                const newVirtualItems = setVirtualItemsCallback([virtualItem, { ...virtualItem, id: 'other-item' }]);
+                const newVirtualItems = setVirtualItemsCallback([
+                    virtualItem,
+                    { ...virtualItem, id: 'other-item' },
+                ]);
                 const newUIState = setUIStateCallback({
                     [baseItem.id]: { expanded },
                     'other-item': { expanded: true },
                 });
 
-                expect(newVirtualItems).toEqual([{ ...virtualItem, id: 'other-item' }]);
+                expect(newVirtualItems).toEqual([
+                    { ...virtualItem, id: 'other-item' },
+                ]);
                 expect(newUIState).toEqual({
                     'other-item': { expanded: true },
                 });

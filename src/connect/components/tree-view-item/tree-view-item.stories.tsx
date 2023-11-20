@@ -31,6 +31,7 @@ export const TreeViewItem: Story = {
         level: 0,
         item: {
             id: 'drive/folder1',
+            path: 'drive/folder1',
             label: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua',
             type: ItemType.Folder,
             status: ItemStatus.Syncing,

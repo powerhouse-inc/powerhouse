@@ -3,9 +3,9 @@ import { driveItem, treeItems } from '../mocks';
 import { usePathContent } from './usePathContent';
 
 /* eslint-disable */
-const setItems = jest.fn();
+const setItems = vi.fn();
 
-jest.mock('../../../context/ItemsContext', () => ({
+vi.mock('../../../context/ItemsContext', () => ({
     useItemsContext: () => ({ items: treeItems, setItems }),
 }));
 
