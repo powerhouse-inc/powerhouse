@@ -9,5 +9,3 @@ export const useGetItemByPath = () => {
 
     return getItemByPath;
 };
-
-export default useGetItemByPath;

@@ -7,7 +7,7 @@ import { getRootPath } from '@/connect/utils/path';
  */
 export const useGetDriveParent = () => {
     const { items } = useItemsContext();
-    
+
     const getDriveParent = (path: string) => {
         const rootPath = getRootPath(path);
 
@@ -19,5 +19,3 @@ export const useGetDriveParent = () => {
 
     return getDriveParent;
 };
-
-export default useGetDriveParent;

@@ -1,4 +1,8 @@
-import { TreeItem, BaseTreeItem, UITreeItem } from '@/connect/components/tree-view-item';
+import {
+    BaseTreeItem,
+    TreeItem,
+    UITreeItem,
+} from '@/connect/components/tree-view-item';
 import React, { useContext, useState } from 'react';
 
 export interface TreeItemContext {
@@ -32,10 +36,7 @@ export interface ItemsContextProviderProps {
     items?: BaseTreeItem[];
 }
 
-// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
-export interface UITreeItemState {
-    [key: string]: UITreeItem;
-}
+export type UITreeItemState = Record<string, UITreeItem | undefined>;
 
 export const ItemsContextProvider: React.FC<ItemsContextProviderProps> = ({
     children,
@@ -43,24 +44,28 @@ export const ItemsContextProvider: React.FC<ItemsContextProviderProps> = ({
 }) => {
     const [uiState, setUIState] = useState<UITreeItemState>({});
     const [virtualItems, setVirtualItems] = useState<Array<BaseTreeItem>>([]);
-    const [baseItems, setBaseItems] = useState<Array<BaseTreeItem>>(initialItems || []);
+    const [baseItems, setBaseItems] = useState<Array<BaseTreeItem>>(
+        initialItems || [],
+    );
 
-    const items = [...baseItems, ...virtualItems].map((item) => ({
+    const items = [...baseItems, ...virtualItems].map(item => ({
         ...item,
         ...uiState[item.id],
     }));
 
     return (
-        <ItemsContext.Provider value={{
-            items,
-            uiState,
-            baseItems,
-            setUIState,
-            virtualItems,
-            setBaseItems,
-            setVirtualItems,
-            setItems: setBaseItems,
-        }}>
+        <ItemsContext.Provider
+            value={{
+                items,
+                uiState,
+                baseItems,
+                setUIState,
+                virtualItems,
+                setBaseItems,
+                setVirtualItems,
+                setItems: setBaseItems,
+            }}
+        >
             {children}
         </ItemsContext.Provider>
     );

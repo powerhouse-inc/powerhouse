@@ -1,11 +1,11 @@
+import { usePathContent } from '@/connect/hooks/tree-view/usePathContent';
 import { Icon } from '@/powerhouse';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
-import { usePathContent } from '@/connect/hooks/tree-view/usePathContent';
 import {
     ConnectTreeView,
-    ConnectTreeViewProps,
     ConnectTreeViewItemProps,
+    ConnectTreeViewProps,
     DefaultOptionId,
     ItemType,
     TreeItem,
@@ -13,8 +13,7 @@ import {
 
 export type DriveType = 'public' | 'local' | 'cloud';
 
-export interface DriveTreeItem
-    extends TreeItem {
+export interface DriveTreeItem extends TreeItem {
     type: ItemType.LocalDrive | ItemType.CloudDrive | ItemType.PublicDrive;
 }
 
@@ -24,7 +23,8 @@ export type OnItemOptionsClickHandler = (
     drive: DriveTreeItem,
 ) => void;
 
-export interface DriveViewProps extends Omit<
+export interface DriveViewProps
+    extends Omit<
         React.HTMLAttributes<HTMLDivElement>,
         'onDragEnd' | 'onDragStart'
     > {
@@ -54,7 +54,7 @@ const filterDriveByType = (drive: DriveTreeItem, type: DriveType) => {
         default:
             return false;
     }
-}
+};
 
 export function DriveView(props: DriveViewProps) {
     const {
@@ -77,10 +77,8 @@ export function DriveView(props: DriveViewProps) {
 
     const drives = usePathContent(drivePath) as DriveTreeItem[];
     const allowedDrives = drives
-        .filter((drive) => filterDriveByType(drive, type))
-        .map((drive) => drive.path);
-
-    console.log('drives:', drives);
+        .filter(drive => filterDriveByType(drive, type))
+        .map(drive => drive.path);
 
     return (
         <div

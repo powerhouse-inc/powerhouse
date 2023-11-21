@@ -21,5 +21,3 @@ export const usePathContent = (path = '', allowedPaths = ['']) => {
 
     return filterItemsByPath<TreeItem>(items, path, filterAllowedPaths);
 };
-
-export default usePathContent;

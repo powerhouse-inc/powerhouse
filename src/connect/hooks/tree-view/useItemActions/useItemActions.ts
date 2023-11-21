@@ -1,18 +1,20 @@
 import { ActionType, TreeItem } from '@/connect/components/tree-view-item';
-import { useItemsContext, UITreeItemState } from '@/connect/context/ItemsContext';
+import {
+    UITreeItemState,
+    useItemsContext,
+} from '@/connect/context/ItemsContext';
 
 export const useItemActions = () => {
     const { setUIState, setVirtualItems, baseItems } = useItemsContext();
-    
+
     /**
      * Sets the item as selected in the UI state.
      * @param itemID - The ID of the item to be selected.
      */
     const setSelectedItem = (itemID: string) => {
-        setUIState((prevState) => {
-            const uiValues = Object
-                .entries(prevState)
-                .reduce<UITreeItemState>((acc, entry) => {
+        setUIState(prevState => {
+            const uiValues = Object.entries(prevState).reduce<UITreeItemState>(
+                (acc, entry) => {
                     const [key, value] = entry;
                     const uiState = {
                         ...acc,
@@ -20,7 +22,9 @@ export const useItemActions = () => {
                     };
 
                     return uiState;
-                }, {});
+                },
+                {},
+            );
 
             const newItemState = {
                 [itemID]: {
@@ -39,7 +43,7 @@ export const useItemActions = () => {
      * @param expanded - The expanded state to set (default: true).
      */
     const setExpandedItem = (itemID: string, expanded = true) => {
-        setUIState((prevState) => ({
+        setUIState(prevState => ({
             ...prevState,
             [itemID]: {
                 ...prevState[itemID],
@@ -50,16 +54,16 @@ export const useItemActions = () => {
 
     /**
      * Toggles the expanded state of an item and selects it.
-     * 
+     *
      * @param itemID - The ID of the item to toggle and select.
      */
     const toggleExpandedAndSelect = (itemID: string) => {
-        const baseItemExpanded = baseItems.find((item) => item.id === itemID)?.expanded || false;
+        const baseItemExpanded =
+            baseItems.find(item => item.id === itemID)?.expanded || false;
 
-        setUIState((prevState) => {
-            const uiValues = Object
-                .entries(prevState)
-                .reduce<UITreeItemState>((acc, entry) => {
+        setUIState(prevState => {
+            const uiValues = Object.entries(prevState).reduce<UITreeItemState>(
+                (acc, entry) => {
                     const [key, value] = entry;
                     const uiState = {
                         ...acc,
@@ -70,11 +74,13 @@ export const useItemActions = () => {
                     };
 
                     return uiState;
-                }, {});
+                },
+                {},
+            );
 
-
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            const newExpandedState = !(prevState[itemID]?.expanded ?? baseItemExpanded)
+            const newExpandedState = !(
+                prevState[itemID]?.expanded ?? baseItemExpanded
+            );
             const newItemState = {
                 [itemID]: {
                     ...prevState[itemID],
@@ -89,14 +95,15 @@ export const useItemActions = () => {
 
     /**
      * Adds a new virtual item to the TreeItems state.
-     * 
+     *
      * @param virtualItem - The virtual item to be added.
      */
     const newVirtualItem = (virtualItem: TreeItem) => {
-        const { action, expanded, isSelected, ...baseVirtualItem } = virtualItem;
+        const { action, expanded, isSelected, ...baseVirtualItem } =
+            virtualItem;
 
-        setVirtualItems((prevState) => [...prevState, baseVirtualItem]);
-        setUIState((prevState) => ({
+        setVirtualItems(prevState => [...prevState, baseVirtualItem]);
+        setUIState(prevState => ({
             ...prevState,
             [virtualItem.id]: {
                 action,
@@ -111,8 +118,10 @@ export const useItemActions = () => {
      * @param itemID - The ID of the item to be deleted.
      */
     const deleteVirtualItem = (itemID: string) => {
-        setVirtualItems((prevState) => prevState.filter((item) => item.id !== itemID));
-        setUIState((prevState) => {
+        setVirtualItems(prevState =>
+            prevState.filter(item => item.id !== itemID),
+        );
+        setUIState(prevState => {
             const newUIState = Object.entries(prevState)
                 .filter(([key]) => key !== itemID)
                 .reduce<UITreeItemState>((acc, [key, value]) => {
@@ -132,7 +141,7 @@ export const useItemActions = () => {
      * @param actionType - The type of action to be set. If not provided or null, the action will be undefined.
      */
     const setItemAction = (itemID: string, actionType?: ActionType | null) => {
-        setUIState((prevState) => {
+        setUIState(prevState => {
             const itemState = {
                 ...prevState[itemID],
                 action: actionType || undefined,
@@ -154,5 +163,3 @@ export const useItemActions = () => {
         toggleExpandedAndSelect,
     };
 };
-
-export default useItemActions;

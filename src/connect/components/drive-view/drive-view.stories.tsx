@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ItemType, ItemStatus } from '../tree-view-item';
-import { DriveView, DriveViewProps } from './drive-view';
-import { ItemsContextProvider } from '../../context/ItemsContext';
 import { useGetDriveParent } from '@/connect/hooks/tree-view/useGetDriveParent';
-import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
 import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
+import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
+import type { Meta, StoryObj } from '@storybook/react';
+import { ItemsContextProvider } from '../../context/ItemsContext';
+import { ItemStatus, ItemType } from '../tree-view-item';
+import { DriveView, DriveViewProps } from './drive-view';
 
 const drives = [
     ...generateMockDriveData({
@@ -163,44 +163,23 @@ type Story = StoryObj<typeof meta>;
 
 const DriveViewImpl = (args: DriveViewProps) => {
     const { onItemClick, ...restArgs } = args;
-    
+
     const actions = useItemActions();
     const getDriveParent = useGetDriveParent();
 
-    const onItemClickHandler: DriveViewProps['onItemClick'] = (
-        e,
-        item,
-    ) => {
+    const onItemClickHandler: DriveViewProps['onItemClick'] = (e, item) => {
         actions.toggleExpandedAndSelect(item.id);
-        // setItems((prevItems) => prevItems.map((prevItem) => {
-        //     if (prevItem.id === item.id) {
-        //         return {
-        //             ...prevItem,
-        //             isSelected: true,
-        //             expanded: !prevItem.expanded,
-        //         };
-        //     }
-
-        //     return { ...prevItem, isSelected: false };
-        // }));
 
         const parent = getDriveParent(item.path);
-        
+
         console.log('drive:', parent);
         console.log('item:', item);
 
         onItemClick?.(e, item);
     };
 
-    return (
-        <DriveView
-            {...restArgs}
-            onItemClick={onItemClickHandler}
-        />
-    );
+    return <DriveView {...restArgs} onItemClick={onItemClickHandler} />;
 };
-
-
 
 export const Public: Story = {
     args: {
@@ -209,7 +188,6 @@ export const Public: Story = {
     },
     render: args => <DriveViewImpl {...(args as DriveViewProps)} />,
 };
-
 
 export const Cloud: Story = {
     args: {
