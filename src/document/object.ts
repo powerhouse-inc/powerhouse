@@ -1,5 +1,6 @@
 import { loadState, prune, redo, setName, undo } from './actions';
-import { BaseAction } from './actions/types';
+import type { BaseAction } from './actions/types';
+import type { Signal } from './signal';
 import type {
     Action,
     AttachmentRef,
@@ -18,7 +19,7 @@ import { loadFromFile, saveToFile, readOnly } from './utils';
 export abstract class BaseDocument<T, A extends Action> {
     protected _document: Document<T, A>;
     private _reducer: Reducer<T, A>;
-    private _dispatch?: (action: Action) => void;
+    private _dispatch?: (signal: Signal) => void;
 
     /**
      * Constructs a BaseDocument instance with an initial state.
@@ -28,7 +29,7 @@ export abstract class BaseDocument<T, A extends Action> {
     constructor(
         reducer: Reducer<T, A>,
         document: Document<T, A>,
-        dispatch?: (action: Action) => void,
+        dispatch?: (signal: Signal) => void,
     ) {
         this._reducer = reducer;
         this._document = document;

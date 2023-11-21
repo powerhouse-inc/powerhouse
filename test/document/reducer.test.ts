@@ -1,3 +1,4 @@
+import { CreateChildDocumentInput, utils } from '../../src/document';
 import { setName } from '../../src/document/actions';
 import { SET_NAME } from '../../src/document/actions/types';
 import {
@@ -84,11 +85,20 @@ describe('Base reducer', () => {
     });
 
     it('should dispatch trigger action', async () => {
-        expect.assertions(1);
+        expect.assertions(4);
         const document = createDocument();
+
+        const id = utils.hashKey();
         const reducer = createReducer((_state, action, dispatch) => {
             if (action.type === 'CREATE_DOCUMENT') {
-                dispatch?.({ type: 'CREATE_CHILD_DOCUMENT', input: '' });
+                dispatch?.({
+                    type: 'CREATE_CHILD_DOCUMENT',
+                    input: {
+                        id,
+                        documentType: 'test',
+                        initialState: { value: 'test' },
+                    },
+                });
             }
         });
 
@@ -99,6 +109,10 @@ describe('Base reducer', () => {
 
         reducer(document, triggerAction, action => {
             expect(action.type).toBe('CREATE_CHILD_DOCUMENT');
+            const input = action.input as CreateChildDocumentInput;
+            expect(input.id).toBe(id);
+            expect(input.documentType).toBe('test');
+            expect(input.initialState).toStrictEqual({ value: 'test' });
         });
     });
 });

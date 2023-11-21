@@ -1,3 +1,4 @@
+import { Signal } from '../signal';
 import {
     Action,
     Document,
@@ -16,7 +17,7 @@ function replayOperations<T, A extends Action>(
     initialState: Partial<ExtendedState<T>>,
     operations: Array<A | BaseAction>,
     reducer: ImmutableStateReducer<T, A>,
-    dispatch?: (action: Action) => void,
+    dispatch?: (signal: Signal) => void,
 ): Document<T, A> {
     // builds a new document from the initial data
     const document = createDocument<T, A>(initialState);
