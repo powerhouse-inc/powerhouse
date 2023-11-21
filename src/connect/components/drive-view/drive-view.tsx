@@ -97,7 +97,7 @@ export function DriveView(props: DriveViewProps) {
                     <Icon name="gear" size={16} color="#6C7275" />
                 </Button>
             </div>
-            <div className="py-2">
+            <div className="px-2 py-2">
                 <ConnectTreeView
                     allowedPaths={allowedDrives}
                     disableHighlightStyles={disableHighlightStyles}

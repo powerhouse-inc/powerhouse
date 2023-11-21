@@ -169,7 +169,6 @@ const DriveViewImpl = (args: DriveViewProps) => {
 
     const onItemClickHandler: DriveViewProps['onItemClick'] = (e, item) => {
         actions.toggleExpandedAndSelect(item.id);
-
         const parent = getDriveParent(item.path);
 
         console.log('drive:', parent);

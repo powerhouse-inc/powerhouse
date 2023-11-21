@@ -95,12 +95,13 @@ export const Sidebar: Story = {
                 <DriveViewImpl
                     type="cloud"
                     name="Secure Cloud Storage"
-                    className="mb-2"
+                    className="mx-2 mb-2"
                     onItemOptionsClick={onItemOptionsClick}
                 />
                 <DriveViewImpl
                     type="local"
                     name="My Local Drives"
+                    className="mx-2 mb-2"
                     onItemOptionsClick={onItemOptionsClick}
                 />
             </>
