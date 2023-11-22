@@ -1,3 +1,17 @@
+# [1.0.0-alpha.24](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.23...v1.0.0-alpha.24) (2023-11-22)
+
+
+### Bug Fixes
+
+* lint errors ([5ba59c0](https://github.com/powerhouse-inc/design-system/commit/5ba59c023b63e0664714ff302f17206dc0778191))
+
+
+### Features
+
+* **breadcrumbs:** 🚀 refactor breadcrumbs to use ItemsProvider ([8f82ee4](https://github.com/powerhouse-inc/design-system/commit/8f82ee40a17579ae9b44ebd81bdcd70d6df5a99b))
+* fix PR comments ([020a7a9](https://github.com/powerhouse-inc/design-system/commit/020a7a9e1a46e941e58b9b55f169daa256de778b))
+* **tree-view:** 🚀 base implementation of flat list items ([09be612](https://github.com/powerhouse-inc/design-system/commit/09be6127ac17a09540b6c6c4f7e24aa97c95ae51))
+
 # [1.0.0-alpha.23](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.22...v1.0.0-alpha.23) (2023-11-20)
 
 
