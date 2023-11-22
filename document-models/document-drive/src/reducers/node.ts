@@ -4,11 +4,11 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { FileNode, getDescendants } from '../..';
+import { FileNode, getDescendants, isFileNode } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
 
 export const reducer: DocumentDriveNodeOperations = {
-    addFileOperation(state, action) {
+    addFileOperation(state, action, dispatch) {
         if (state.nodes.find(node => node.id === action.input.id)) {
             throw new Error(`Node with id ${action.input.id} already exists!`);
         }
@@ -17,6 +17,14 @@ export const reducer: DocumentDriveNodeOperations = {
             ...action.input,
             kind: 'file',
             parentFolder: action.input.parentFolder ?? null,
+        });
+
+        dispatch?.({
+            type: 'CREATE_CHILD_DOCUMENT',
+            input: {
+                id: action.input.id,
+                documentType: action.input.documentType,
+            },
         });
     },
     addFolderOperation(state, action) {
@@ -29,7 +37,7 @@ export const reducer: DocumentDriveNodeOperations = {
             parentFolder: action.input.parentFolder ?? null,
         });
     },
-    deleteNodeOperation(state, action) {
+    deleteNodeOperation(state, action, dispatch) {
         const node = state.nodes.find(node => node.id === action.input.id);
         if (!node) {
             throw new Error(`Node with id ${action.input.id} not found`);
@@ -40,6 +48,17 @@ export const reducer: DocumentDriveNodeOperations = {
                 node.id !== action.input.id &&
                 !descendants.find(descendant => descendant.id === node.id),
         );
+
+        [node, ...descendants]
+            .filter(node => isFileNode(node))
+            .forEach(node => {
+                dispatch?.({
+                    type: 'DELETE_CHILD_DOCUMENT',
+                    input: {
+                        id: node.id,
+                    },
+                });
+            });
     },
     updateFileOperation(state, action) {
         state.nodes = state.nodes.map(node =>
