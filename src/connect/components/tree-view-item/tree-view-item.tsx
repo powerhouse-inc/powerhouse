@@ -4,6 +4,7 @@ import {
     ConnectDropdownMenuItem,
 } from '@/connect/components/dropdown-menu';
 import {
+    DivProps,
     Icon,
     ItemContainerProps,
     TreeViewItem,
@@ -86,13 +87,17 @@ export type DefaultOptionId = (typeof defaultDropdownMenuOptions)[number]['id'];
 export type ConnectTreeViewItemProps = {
     item: TreeItem;
     children: React.ReactNode;
+    mode?: 'read' | 'write';
     onClick: MouseEventHandler<HTMLDivElement>;
+    onSubmitInput?: (item: TreeItem) => void;
+    onCancelInput?: (item: TreeItem) => void;
     level?: number;
-    itemContainerProps?: ItemContainerProps;
+    divPropsDivProps?: DivProps;
     onDropEvent?: UseDraggableTargetProps<TreeItem>['onDropEvent'];
     onDropActivate?: (dropTargetItem: TreeItem) => void;
     defaultOptions?: ConnectDropdownMenuItem[];
     onOptionsClick?: (item: TreeItem, option: string) => void;
+    itemContainerProps?: ItemContainerProps;
     disableDropBetween?: boolean;
     onDragStart?: UseDraggableTargetProps<TreeItem>['onDragStart'];
     onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
@@ -121,6 +126,8 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     const {
         item,
         onClick,
+        onSubmitInput,
+        onCancelInput,
         children,
         onDragEnd,
         onDragStart,
@@ -139,14 +146,10 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     const [mouseIsWithinItemContainer, setMouseIsWithinItemContainer] =
         useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [hasRoundedCorners, setHasRoundedCorners] = useState(true);
 
     const { dragProps, dropProps, isDropTarget, isDragging } =
         useDraggableTarget<TreeItem>({
-            onDragEnd: (item, event) => {
-                setHasRoundedCorners(true);
-                onDragEnd?.(item, event);
-            },
+            onDragEnd,
             onDragStart,
             data: item,
             onDropEvent,
@@ -171,7 +174,8 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     }, []);
 
     const isHighlighted = getIsHighlighted();
-    const showDropdownMenuButton = mouseIsWithinItemContainer || isHighlighted;
+    const showDropdownMenuButton =
+        props.mode === 'read' && (mouseIsWithinItemContainer || isHighlighted);
     const statusIcon = getStatusIcon();
 
     const dropdownMenuButton = (
@@ -194,14 +198,6 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         </div>
     );
 
-    function onMouseDown() {
-        setHasRoundedCorners(false);
-    }
-
-    function onMouseUp() {
-        setHasRoundedCorners(true);
-    }
-
     function onMouseMove(event: MouseEvent) {
         const isMouseInsideContainer = getIsMouseInsideContainer(
             containerRef,
@@ -218,10 +214,24 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         onOptionsClick?.(item, option);
     }
 
+    const onClickHandler: MouseEventHandler<HTMLDivElement> = event => {
+        if (props.mode === 'write') return;
+        onClick(event);
+    };
+
+    function onSubmitHandler(value: string) {
+        onSubmitInput?.({ ...item, label: value });
+    }
+
+    function onCancelHandler() {
+        onCancelInput?.(item);
+    }
+
     function getIsHighlighted() {
         if (isDropTarget) return true;
         if (disableHighlightStyles) return false;
         if (isDragging) return false;
+        if (props.mode === 'write') return true;
         if (item.isSelected) return true;
         if (isDropdownMenuOpen) return true;
         return false;
@@ -234,17 +244,13 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         const backgroundClass = isHighlighted ? 'bg-[#F1F5F9]' : '';
 
         const className = twMerge(
-            'hover:bg-[#F1F5F9]',
-            hasRoundedCorners ? 'rounded-lg' : '',
-            'py-3 transition-colors',
+            'hover:bg-[#F1F5F9] peer-hover:bg-[#F1F5F9] py-3 transition-colors rounded-lg',
             backgroundClass,
             itemContainerClassName,
         );
 
         return {
             className,
-            onMouseDown,
-            onMouseUp,
             ref: containerRef,
             ...restItemContainerProps,
         };
@@ -302,7 +308,9 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 {...(onDropEvent && { ...dragProps, ...dropProps })}
                 bottomIndicator={!disableDropBetween && bottomIndicator}
                 level={level}
-                onClick={onClick}
+                onClick={onClickHandler}
+                onSubmitInput={onSubmitHandler}
+                onCancelInput={onCancelHandler}
                 label={item.label}
                 open={item.expanded}
                 itemContainerProps={getItemContainerProps()}

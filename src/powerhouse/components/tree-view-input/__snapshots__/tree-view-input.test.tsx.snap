@@ -3,19 +3,15 @@
 exports[`TreeViewInput Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="flex flex-row items-center pr-5"
-    style="padding-left: 24px;"
+    class="flex items-center"
   >
-    <div>
-      Icon
-    </div>
     <div
-      class="ml-2 flex min-w-0 flex-1"
+      class="w-full"
       data-rac=""
     >
       <input
         aria-label="input-label"
-        class="flex min-w-0 flex-1 bg-inherit outline-none"
+        class="w-full bg-inherit outline-none"
         data-focus-visible="true"
         data-focused="true"
         data-rac=""
@@ -26,7 +22,7 @@ exports[`TreeViewInput Component > should match snapshot 1`] = `
       />
     </div>
     <div
-      class="flex flex-row items-center"
+      class="flex items-center gap-1"
     >
       <button
         class="outline-none"
@@ -34,16 +30,16 @@ exports[`TreeViewInput Component > should match snapshot 1`] = `
         type="button"
       >
         <div>
-          Submit Icon
+          submit
         </div>
       </button>
       <button
-        class="ml-1 outline-none"
+        class="outline-none"
         data-rac=""
         type="button"
       >
         <div>
-          Cancel Icon
+          cancel
         </div>
       </button>
     </div>

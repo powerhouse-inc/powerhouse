@@ -3,28 +3,27 @@ import { Mock } from 'vitest';
 import { TreeViewInput } from './tree-view-input';
 
 describe('TreeViewInput Component', () => {
-    let onSubmit: Mock;
-    let onCancel: Mock;
+    let onSubmitInput: Mock;
+    let onCancelInput: Mock;
 
     const props = {
         level: 0,
         'aria-label': 'input',
         icon: 'Icon',
-        initialValue: 'My Documents',
-        submitIcon: 'Submit Icon',
-        cancelIcon: 'Cancel Icon',
+        defaultValue: 'My Documents',
+        submitIcon: <div>submit</div>,
+        cancelIcon: <div>cancel</div>,
     };
 
     beforeEach(() => {
-        // jest.useFakeTimers();
-        onSubmit = vi.fn();
-        onCancel = vi.fn();
+        onSubmitInput = vi.fn();
+        onCancelInput = vi.fn();
 
         render(
             <TreeViewInput
                 {...props}
-                onSubmit={onSubmit}
-                onCancel={onCancel}
+                onSubmitInput={onSubmitInput}
+                onCancelInput={onCancelInput}
             />,
         );
     });
@@ -32,14 +31,12 @@ describe('TreeViewInput Component', () => {
     it('should match snapshot', () => {
         const { asFragment } = render(
             <TreeViewInput
-                level={0}
                 aria-label="input-label"
-                onSubmit={() => {}}
-                onCancel={() => {}}
-                icon={<div>Icon</div>}
-                initialValue="My Documents"
-                submitIcon={<div>Submit Icon</div>}
-                cancelIcon={<div>Cancel Icon</div>}
+                onSubmitInput={() => {}}
+                onCancelInput={() => {}}
+                defaultValue="My Documents"
+                submitIcon={<div>submit</div>}
+                cancelIcon={<div>cancel</div>}
             />,
         );
 
@@ -47,57 +44,59 @@ describe('TreeViewInput Component', () => {
     });
 
     it('should render correctly', () => {
-        expect(screen.getByText(props.icon)).toBeInTheDocument();
         expect(
-            screen.getByDisplayValue(props.initialValue),
+            screen.getByDisplayValue(props.defaultValue),
         ).toBeInTheDocument();
-        expect(screen.getByText(props.submitIcon)).toBeInTheDocument();
-        expect(screen.getByText(props.cancelIcon)).toBeInTheDocument();
+        expect(screen.getByText('submit')).toBeInTheDocument();
+        expect(screen.getByText('cancel')).toBeInTheDocument();
     });
 
-    it('should call onSubmit when click submit icon', () => {
-        fireEvent.click(screen.getByText(props.submitIcon));
+    it('should call onSubmitInput when click submit icon', () => {
+        fireEvent.click(screen.getByText('submit'));
 
-        expect(onSubmit).toHaveBeenCalled();
+        expect(onSubmitInput).toHaveBeenCalled();
     });
 
-    it('should call onSubmit when press enter key', () => {
+    it('should call onSubmitInput when press enter key', () => {
         fireEvent.keyUp(screen.getByLabelText('input'), {
             key: 'Enter',
         });
 
-        expect(onSubmit).toHaveBeenCalled();
+        expect(onSubmitInput).toHaveBeenCalled();
     });
 
-    it('should call onSubmit when click outside', async () => {
-        await waitFor(() => screen.getByText(props.submitIcon), {
+    it('should call onSubmitInput when click outside', async () => {
+        await waitFor(() => screen.getByText('submit'), {
             timeout: 100,
         });
         fireEvent.click(document.body);
 
-        expect(onSubmit).toHaveBeenCalled();
+        expect(onSubmitInput).toHaveBeenCalled();
     });
 
-    it('should call onCancel when click cancel icon', () => {
-        fireEvent.click(screen.getByText(props.cancelIcon));
+    it('should call onCancelInput when click cancel icon', () => {
+        fireEvent.click(screen.getByText('cancel'));
 
-        expect(onCancel).toHaveBeenCalled();
+        expect(onCancelInput).toHaveBeenCalled();
     });
 
-    it('should call onCancel when press Esc key', () => {
+    it('should call onCancelInput when press Esc key', () => {
         fireEvent.keyUp(screen.getByLabelText('input'), {
             key: 'Escape',
         });
 
-        expect(onCancel).toHaveBeenCalled();
+        expect(onCancelInput).toHaveBeenCalled();
     });
 
-    it('should call onSubmit with text value', () => {
+    it('should call onSubmitInput with text value', () => {
         fireEvent.change(screen.getByLabelText('input'), {
             target: { value: 'new value' },
         });
 
-        fireEvent.click(screen.getByText(props.submitIcon));
-        expect(onSubmit).toHaveBeenCalledWith('new value', expect.anything());
+        fireEvent.click(screen.getByText('submit'));
+        expect(onSubmitInput).toHaveBeenCalledWith(
+            'new value',
+            expect.anything(),
+        );
     });
 });

@@ -6,34 +6,27 @@ import { twMerge } from 'tailwind-merge';
 
 export interface TreeViewInputProps
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSubmit'> {
-    icon?: React.ReactNode;
-    cancelIcon?: React.ReactNode;
-    submitIcon: React.ReactNode;
-    level?: number;
-    initialValue?: string;
-    placeholder?: string;
-    onCancel?: () => void;
-    onSubmit: (value: string, event?: PressEvent) => void;
-    'aria-label'?: string;
+    cancelIcon?: React.JSX.Element;
+    submitIcon?: React.JSX.Element;
+    onCancelInput?: () => void;
+    onSubmitInput?: (value: string, event?: PressEvent) => void;
 }
 
 export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
     const {
-        icon,
-        level = 0,
         submitIcon,
         cancelIcon,
-        onSubmit,
-        onCancel,
+        onSubmitInput,
+        onCancelInput,
         className,
         style,
         placeholder,
         'aria-label': ariaLabel,
-        initialValue = '',
+        defaultValue = '',
         ...containerProps
     } = props;
 
-    const [text, setText] = useState(initialValue);
+    const [text, setText] = useState(defaultValue.toString());
     const inputRef = useRef<HTMLInputElement>(null);
 
     useLayoutEffect(() => {
@@ -45,59 +38,47 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
     const { keyboardProps } = useKeyboard({
         onKeyUp(e) {
             if (e.key === 'Enter') {
-                onSubmit(text);
+                onSubmitInput?.(text);
             }
             if (e.key === 'Escape') {
-                onCancel?.();
+                onCancelInput?.();
             }
         },
     });
 
-    const paddingLeft = 10 * level + 24;
-
     return (
-        <ClickAwayListener onClickAway={() => onSubmit(text)}>
+        <ClickAwayListener onClickAway={() => onSubmitInput?.(text)}>
             <div
-                className={twMerge(
-                    'flex flex-row items-center pr-5',
-                    className,
-                )}
+                className={twMerge('flex items-center', className)}
                 style={{
-                    paddingLeft,
                     ...style,
                 }}
                 {...keyboardProps}
                 {...containerProps}
             >
-                {icon}
                 <TextField
-                    className="ml-2 flex min-w-0 flex-1"
+                    className="w-full"
                     value={text}
                     onChange={setText}
                     aria-label={ariaLabel}
                     autoFocus
                 >
                     <Input
-                        className="flex min-w-0 flex-1 bg-inherit outline-none"
+                        className="w-full bg-inherit outline-none"
                         placeholder={placeholder}
                         ref={inputRef}
                     />
                 </TextField>
-                <div className="flex flex-row items-center">
+                <div className="flex items-center gap-1">
                     <Button
+                        onPress={e => onSubmitInput?.(text, e)}
                         className="outline-none"
-                        onPress={e => onSubmit(text, e)}
                     >
                         {submitIcon}
                     </Button>
-                    {cancelIcon && (
-                        <Button
-                            onPress={onCancel}
-                            className="ml-1 outline-none"
-                        >
-                            {cancelIcon}
-                        </Button>
-                    )}
+                    <Button className="outline-none" onPress={onCancelInput}>
+                        {cancelIcon}
+                    </Button>
                 </div>
             </div>
         </ClickAwayListener>

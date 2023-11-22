@@ -1,10 +1,8 @@
-import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Icon } from '..';
-import { TreeViewItem, TreeViewItemProps } from './tree-view-item';
+import { TreeViewItem } from './tree-view-item';
 const folderCloseIcon = <Icon name="folder-close" color="#6C7275" />;
 const folderOpenIcon = <Icon name="folder-open" color="#6C7275" />;
-const syncingIcon = <Icon name="syncing" color="#3E90F0" />;
 
 const meta: Meta<typeof TreeViewItem> = {
     title: 'Powerhouse/Components/TreeView/TreeViewItem',
@@ -20,7 +18,6 @@ const meta: Meta<typeof TreeViewItem> = {
         children: { control: { type: 'text' } },
         label: { control: { type: 'text' } },
         onClick: { control: { type: 'action' } },
-        onOptionsClick: { control: { type: 'action' } },
         level: { control: { type: 'number' } },
     },
 };
@@ -28,131 +25,45 @@ const meta: Meta<typeof TreeViewItem> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const optionsContent = (
-    <div
-        role="button"
-        onClick={e => {
-            e.stopPropagation();
-            action('options-click')(e);
-        }}
-        className="h-6 w-6 focus:outline-none"
-    >
-        <Icon
-            name="vertical-dots"
-            color="#6F767E"
-            className="pointer-events-none"
-        />
-    </div>
-);
-
-export const Primary: Story = {
+const Template: Story = {
     args: {
         label: 'Local Device',
         icon: folderCloseIcon,
         expandedIcon: folderOpenIcon,
-        secondaryIcon: syncingIcon,
-        optionsContent,
-        children: (
-            <>
-                <TreeViewItem
-                    label="Folder 1"
-                    icon={folderCloseIcon}
-                    expandedIcon={folderOpenIcon}
-                >
-                    <TreeViewItem
-                        label="Folder 1.1"
-                        icon={folderCloseIcon}
-                        expandedIcon={folderOpenIcon}
-                    ></TreeViewItem>
-                    <TreeViewItem
-                        label="Folder 1.2"
-                        icon={folderCloseIcon}
-                        expandedIcon={folderOpenIcon}
-                    >
-                        <TreeViewItem
-                            label="Folder 1.2.1"
-                            icon={folderCloseIcon}
-                            expandedIcon={folderOpenIcon}
-                        ></TreeViewItem>
-                    </TreeViewItem>
-                </TreeViewItem>
-                <TreeViewItem
-                    label="Folder 2"
-                    icon={folderCloseIcon}
-                    expandedIcon={folderOpenIcon}
-                >
-                    <TreeViewItem
-                        label="Folder 2.1"
-                        icon={folderCloseIcon}
-                        expandedIcon={folderOpenIcon}
-                    ></TreeViewItem>
-                </TreeViewItem>
-            </>
-        ),
     },
 };
-
-const itemClassName = 'rounded-lg py-3 hover:bg-[#F1F5F9] hover:to-[#F1F5F9]';
-
-const StyledTreeViewItem: React.FC<TreeViewItemProps> = props => {
-    return (
-        <TreeViewItem
-            {...props}
-            itemContainerProps={{
-                className: itemClassName,
-            }}
-        >
-            {props.children}
-        </TreeViewItem>
-    );
-};
-
-export const WithStyles: Story = {
+export const ReadMode: Story = {
+    ...Template,
     args: {
-        label: 'Local Device',
-        icon: folderCloseIcon,
-        expandedIcon: folderOpenIcon,
-        secondaryIcon: syncingIcon,
-        optionsContent,
+        ...Template.args,
+        mode: 'read'
+    }
+}
+
+export const ReadModeWithStyles: Story = {
+    ...ReadMode,
+    args: {
+        ...ReadMode.args,
         itemContainerProps: {
-            className: itemClassName,
+            className: 'rounded-lg py-3 hover:bg-[#F1F5F9] hover:to-[#F1F5F9]',
         },
-        children: (
-            <>
-                <StyledTreeViewItem
-                    label="Folder 1"
-                    icon={folderCloseIcon}
-                    expandedIcon={folderOpenIcon}
-                >
-                    <StyledTreeViewItem
-                        label="Folder 1.1"
-                        icon={folderCloseIcon}
-                        expandedIcon={folderOpenIcon}
-                    ></StyledTreeViewItem>
-                    <StyledTreeViewItem
-                        label="Folder 1.2"
-                        icon={folderCloseIcon}
-                        expandedIcon={folderOpenIcon}
-                    >
-                        <StyledTreeViewItem
-                            label="Folder 1.2.1"
-                            icon={folderCloseIcon}
-                            expandedIcon={folderOpenIcon}
-                        ></StyledTreeViewItem>
-                    </StyledTreeViewItem>
-                </StyledTreeViewItem>
-                <StyledTreeViewItem
-                    label="Folder 2"
-                    icon={folderCloseIcon}
-                    expandedIcon={folderOpenIcon}
-                >
-                    <StyledTreeViewItem
-                        label="Folder 2.1"
-                        icon={folderCloseIcon}
-                        expandedIcon={folderOpenIcon}
-                    ></StyledTreeViewItem>
-                </StyledTreeViewItem>
-            </>
-        ),
-    },
+    }
+};
+
+export const WriteMode: Story = {
+    ...Template,
+    args: {
+        ...Template.args,
+        mode: 'write'
+    }
+}
+
+export const WriteModeWithStyles: Story = {
+    ...WriteMode,
+    args: {
+        ...WriteMode.args,
+        itemContainerProps: {
+            className: 'rounded-lg py-3 hover:bg-[#F1F5F9] hover:to-[#F1F5F9]',
+        },
+    }
 };

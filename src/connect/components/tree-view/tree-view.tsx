@@ -2,10 +2,6 @@ import React from 'react';
 
 import { usePathContent } from '../../hooks/tree-view/usePathContent';
 import {
-    ConnectTreeViewInput,
-    ConnectTreeViewInputProps,
-} from '../tree-view-input';
-import {
     ActionType,
     ConnectTreeViewItem,
     ConnectTreeViewItemProps,
@@ -21,11 +17,11 @@ export interface ConnectTreeViewProps
         event: React.MouseEvent<HTMLDivElement>,
         item: TreeItem,
     ) => void;
-    onDropEvent?: ConnectTreeViewItemProps['onDropEvent'];
     onItemOptionsClick?: ConnectTreeViewItemProps['onOptionsClick'];
+    onDropEvent?: ConnectTreeViewItemProps['onDropEvent'];
     defaultItemOptions?: ConnectTreeViewItemProps['defaultOptions'];
-    onSubmitInput?: ConnectTreeViewInputProps['onSubmit'];
-    onCancelInput?: ConnectTreeViewInputProps['onCancel'];
+    onSubmitInput?: ConnectTreeViewItemProps['onSubmitInput'];
+    onCancelInput?: ConnectTreeViewItemProps['onCancelInput'];
     onDropActivate?: ConnectTreeViewItemProps['onDropActivate'];
     onDragStart?: ConnectTreeViewItemProps['onDragStart'];
     onDragEnd?: ConnectTreeViewItemProps['onDragEnd'];
@@ -54,26 +50,22 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     return (
         <>
             {items.map(item => {
-                if (
+                const mode =
                     item.action === ActionType.New ||
-                    item.action === ActionType.Update
-                ) {
-                    return (
-                        <ConnectTreeViewInput
-                            item={item}
-                            key={item.id}
-                            level={level}
-                            onSubmit={onSubmitInput}
-                            onCancel={onCancelInput}
-                        />
-                    );
-                }
+                    item.action === ActionType.Update ||
+                    item.action === ActionType.UpdateAndCopy ||
+                    item.action === ActionType.UpdateAndMove
+                        ? 'write'
+                        : 'read';
 
                 return (
                     <ConnectTreeViewItem
+                        mode={mode}
                         item={item}
                         level={level}
                         key={item.id}
+                        onSubmitInput={onSubmitInput}
+                        onCancelInput={onCancelInput}
                         onDropEvent={onDropEvent}
                         onOptionsClick={onItemOptionsClick}
                         defaultOptions={defaultItemOptions}
