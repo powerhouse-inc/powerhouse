@@ -2,8 +2,10 @@ import React from 'react';
 import { twMerge } from 'tailwind-merge';
 import { Icon } from '..';
 
-export interface TreeViewItemProps
-    extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onClick'> {
+export type TreeViewItemProps = Omit<
+    React.HTMLAttributes<HTMLDivElement>,
+    'onClick'
+> & {
     label: string;
     children?: React.ReactNode;
     open?: boolean;
@@ -13,14 +15,13 @@ export interface TreeViewItemProps
     level?: number;
     onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
     onOptionsClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
-    buttonProps?: React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLDivElement>,
-        HTMLDivElement
-    >;
+    itemContainerProps?: ItemContainerProps;
     optionsContent?: React.ReactNode;
     topIndicator?: React.ReactNode;
     bottomIndicator?: React.ReactNode;
-}
+};
+
+export type ItemContainerProps = React.ComponentProps<'div'>;
 
 export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
     const {
@@ -30,20 +31,18 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         children,
         icon,
         expandedIcon,
-        secondaryIcon,
-        optionsContent,
         topIndicator,
         bottomIndicator,
         level = 0,
-        buttonProps = {},
+        itemContainerProps = {},
         ...divProps
     } = props;
 
     const {
-        className: containerButtonClassName,
-        style: containerButtonStyle,
-        ...containerButtonProps
-    } = buttonProps;
+        className: containerClassName,
+        style: containerStyle,
+        ...containerProps
+    } = itemContainerProps;
 
     const levelPadding = level * 10;
 
@@ -52,18 +51,18 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
             <div
                 role="button"
                 onClick={onClick}
-                style={containerButtonStyle}
+                style={containerStyle}
                 className={twMerge(
-                    'group/tree-item relative flex max-h-[49px] w-full cursor-pointer select-none flex-col focus:outline-none',
-                    containerButtonClassName,
+                    'flex w-full cursor-pointer select-none flex-col bg-transparent focus:outline-none',
+                    containerClassName,
                 )}
-                {...containerButtonProps}
+                {...containerProps}
             >
                 {topIndicator && (
                     <div className="absolute top-0 w-full">{topIndicator}</div>
                 )}
                 <div
-                    className="flex w-full cursor-pointer flex-row"
+                    className="flex w-full cursor-pointer"
                     style={{ paddingLeft: `${levelPadding}px` }}
                 >
                     <Icon
@@ -79,20 +78,10 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                         </span>
                     )}
                     {label && (
-                        <div className="relative ml-2 flex flex-1 overflow-hidden whitespace-nowrap">
+                        <div className="relative ml-2 overflow-hidden whitespace-nowrap">
                             <span className="absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-inherit" />
                             {label}
                         </div>
-                    )}
-                    {optionsContent && (
-                        <div className="box-content hidden h-6 w-6 self-center px-3 group-hover/tree-item:inline-block">
-                            {optionsContent}
-                        </div>
-                    )}
-                    {secondaryIcon && (
-                        <span className="pointer-events-none mr-[18px] flex self-center group-hover/tree-item:hidden">
-                            {secondaryIcon}
-                        </span>
                     )}
                 </div>
                 {bottomIndicator && (
@@ -102,9 +91,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                 )}
             </div>
             {children && (
-                <div className={twMerge(!open && 'hidden')}>
-                    {children}
-                </div>
+                <div className={twMerge(!open && 'hidden')}>{children}</div>
             )}
         </div>
     );

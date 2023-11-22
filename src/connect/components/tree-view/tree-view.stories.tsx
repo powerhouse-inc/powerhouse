@@ -1,10 +1,13 @@
+import {
+    ItemsContextProvider,
+    useItemsContext,
+} from '@/connect/context/ItemsContext';
+import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
+import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { ActionType, ItemType } from '../tree-view-item';
 import { ConnectTreeView, ConnectTreeViewProps } from './tree-view';
-import { ItemsContextProvider, useItemsContext } from '@/connect/context/ItemsContext';
-import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
-import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
 
 const treeItems = generateMockDriveData({
     path: 'drive',
@@ -96,20 +99,24 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
             onSubmitInput?.(item);
             switch (item.action) {
                 case ActionType.New:
-                    setItems((prevState) => {
+                    setItems(prevState => {
                         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                        const { action, expanded, isSelected, ...newItem } = item;
+                        const { action, expanded, isSelected, ...newItem } =
+                            item;
                         return [...prevState, newItem];
                     });
                     actions.deleteVirtualItem(item.id);
                     break;
                 case ActionType.Update:
-                    setItems((prevItems) => prevItems.map((prevItem) => {
-                        actions.setItemAction(item.id, null);
-                        if (prevItem.id === item.id) return { ...prevItem, ...item };
-        
-                        return prevItem;
-                    }));
+                    setItems(prevItems =>
+                        prevItems.map(prevItem => {
+                            actions.setItemAction(item.id, null);
+                            if (prevItem.id === item.id)
+                                return { ...prevItem, ...item };
+
+                            return prevItem;
+                        }),
+                    );
                     break;
                 default:
                     break;
@@ -149,7 +156,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
                 disableHighlightStyles={disableHighlight}
                 onDragStart={onDragStartHandler}
                 onDragEnd={onDragEndHandler}
-                filterPath='drive'
+                filterPath="drive"
                 {...treeViewProps}
             />
         </div>

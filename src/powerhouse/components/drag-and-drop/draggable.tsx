@@ -15,8 +15,6 @@ export interface DraggableProps<Item = unknown>
 export function Draggable<Item = unknown>(props: DraggableProps<Item>) {
     const { item, children, dataType, ...divProps } = props;
 
-    if (!children) return null;
-
     const { dragProps, isDragging } = useDrag({
         getItems: () => [
             {
@@ -26,8 +24,12 @@ export function Draggable<Item = unknown>(props: DraggableProps<Item>) {
     });
 
     return (
-        <div {...dragProps} role="button" tabIndex={0} {...divProps}>
-            {children({ isDragging })}
-        </div>
+        <>
+            {children ? (
+                <div {...dragProps} role="button" tabIndex={0} {...divProps}>
+                    {children({ isDragging })}
+                </div>
+            ) : null}
+        </>
     );
 }

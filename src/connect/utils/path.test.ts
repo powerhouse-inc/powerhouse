@@ -1,4 +1,4 @@
-import { filterItemsByPath, isRootPath, isSubPath, getRootPath } from './path';
+import { filterItemsByPath, getRootPath, isRootPath, isSubPath } from './path';
 
 describe('Utils', () => {
     describe('isRootPath', () => {
@@ -172,8 +172,8 @@ describe('Utils', () => {
             expect(getRootPath('/documents/budget/2021/file/')).toBe(
                 'documents',
             );
-            expect(getRootPath('/')).toBe('/')
-            expect(getRootPath('')).toBe('/')
+            expect(getRootPath('/')).toBe('/');
+            expect(getRootPath('')).toBe('/');
         });
     });
 });

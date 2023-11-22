@@ -98,7 +98,7 @@ const StyledTreeViewItem: React.FC<TreeViewItemProps> = props => {
     return (
         <TreeViewItem
             {...props}
-            buttonProps={{
+            itemContainerProps={{
                 className: itemClassName,
             }}
         >
@@ -114,7 +114,7 @@ export const WithStyles: Story = {
         expandedIcon: folderOpenIcon,
         secondaryIcon: syncingIcon,
         optionsContent,
-        buttonProps: {
+        itemContainerProps: {
             className: itemClassName,
         },
         children: (

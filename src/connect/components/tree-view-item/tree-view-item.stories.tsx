@@ -14,7 +14,6 @@ const meta: Meta<typeof ConnectTreeViewItem> = {
     argTypes: {
         onClick: { control: { type: 'action' } },
         onOptionsClick: { control: { type: 'action' } },
-        buttonProps: { control: { type: 'object' } },
         level: { control: { type: 'number' } },
         item: { control: { type: 'object' } },
         defaultOptions: { control: { type: 'object' } },

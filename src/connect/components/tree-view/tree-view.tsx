@@ -17,11 +17,11 @@ export interface ConnectTreeViewProps
         React.HTMLAttributes<HTMLElement>,
         'onClick' | 'onDragStart' | 'onDragEnd'
     > {
-    onDropEvent?: ConnectTreeViewItemProps['onDropEvent'];
     onItemClick?: (
         event: React.MouseEvent<HTMLDivElement>,
         item: TreeItem,
     ) => void;
+    onDropEvent?: ConnectTreeViewItemProps['onDropEvent'];
     onItemOptionsClick?: ConnectTreeViewItemProps['onOptionsClick'];
     defaultItemOptions?: ConnectTreeViewItemProps['defaultOptions'];
     onSubmitInput?: ConnectTreeViewInputProps['onSubmit'];

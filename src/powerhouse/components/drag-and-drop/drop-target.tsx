@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
 import { useRef } from 'react';
 import { DropEvent, TextDropItem, useDrop } from 'react-aria';
 
@@ -21,11 +20,10 @@ export function DropTarget<Target = unknown, Item = unknown>(
 ) {
     const { children, target, onDropEvent, dataType, ...divProps } = props;
 
-    if (!children) return null;
-
     const ref = useRef(null);
     const { dropProps, isDropTarget } = useDrop({
         ref,
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         async onDrop(e) {
             const item = e.items.find(
                 item =>
@@ -43,8 +41,12 @@ export function DropTarget<Target = unknown, Item = unknown>(
     });
 
     return (
-        <div {...divProps} {...dropProps} ref={ref}>
-            {children({ isDropTarget })}
-        </div>
+        <>
+            {children ? (
+                <div {...divProps} {...dropProps} ref={ref}>
+                    {children({ isDropTarget })}
+                </div>
+            ) : null}
+        </>
     );
 }

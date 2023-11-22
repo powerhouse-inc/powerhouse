@@ -1,15 +1,10 @@
+import { ItemsContextProvider } from '@/connect/context/ItemsContext';
+import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
+import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
 import { action } from '@storybook/addon-actions';
 import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
-import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
-import { ItemsContextProvider } from '@/connect/context/ItemsContext';
-import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
-import {
-    ConnectSidebar,
-    DriveView,
-    DriveViewProps,
-    ItemType,
-} from '..';
+import { ConnectSidebar, DriveView, DriveViewProps, ItemType } from '..';
 
 const drives = [
     ...generateMockDriveData({
@@ -64,22 +59,13 @@ const DriveViewImpl = (args: DriveViewProps) => {
     const { onItemClick, ...restArgs } = args;
     const actions = useItemActions();
 
-    const onItemClickHandler: DriveViewProps['onItemClick'] = (
-        e,
-        item,
-    ) => {
+    const onItemClickHandler: DriveViewProps['onItemClick'] = (e, item) => {
         actions.toggleExpandedAndSelect(item.id);
         onItemClick?.(e, item);
     };
 
-    return (
-        <DriveView
-            {...restArgs}
-            onItemClick={onItemClickHandler}
-        />
-    );
+    return <DriveView {...restArgs} onItemClick={onItemClickHandler} />;
 };
-
 
 export const Sidebar: Story = {
     decorators: [
