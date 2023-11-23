@@ -3581,15 +3581,18 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model-libs@^1.1.12:
-  version "1.1.12"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.12.tgz#0439b377bf7e52c1997b6a9e367eb14bedf5bd41"
-  integrity sha512-HnC2p5Jj7gY0OjuV30f71/DciHBC5rA+Bshso95uiaEXApskDK262sxKyNNU6sp9rL4a5bWc0aW5d6ccWbaJ8A==
+"document-drive@file:.yalc/document-drive":
+  version "0.0.1"
+  dependencies:
+    sanitize-filename "^1.6.3"
 
-document-model@^1.0.8:
-  version "1.0.8"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.8.tgz#7981651fc782696d26f89fe80d25b00c9e251983"
-  integrity sha512-+PpSButQnyDzRdZWw3zytzS8taqdVEa1nMdJWwiznc+AlVotWQxJA4W0wZx8D8rEaCHFTK/y8UfyVaIekemtxg==
+"document-model-libs@file:.yalc/document-model-libs":
+  version "1.1.14"
+
+document-model@^1.0.11:
+  version "1.0.11"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.11.tgz#949efc1e20b73c44ced82fce163cce202a7e8d08"
+  integrity sha512-eTw772D5K5PQYViE4TyqTG4Tm/2IQ/NWf4gCMbL5w5pJ61+gJHPDy/Z25swLPIi4DKLW5uqhXzM+ZD9+Cole7A==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
@@ -4237,7 +4240,7 @@ fs-extra@^10.0.0, fs-extra@^10.1.0:
     jsonfile "^6.0.1"
     universalify "^2.0.0"
 
-fs-extra@^11.1.0, fs-extra@^11.1.1:
+fs-extra@^11.1.0:
   version "11.1.1"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-11.1.1.tgz#da69f7c39f3b002378b0954bb6ae7efdc0876e2d"
   integrity sha512-MGIE4HOvQCeUCzmlHs0vXpih4ysz4wg9qiSAu6cd42lVwPbTM1TjV7RusoyQqMmk/95gdQZX72u+YW+c3eEpFQ==

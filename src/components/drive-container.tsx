@@ -10,15 +10,30 @@ import {
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
-import { Drive } from 'document-model-libs/document-drive';
+import { DocumentDriveState, Node } from 'document-model-libs/document-drive';
 import path from 'path';
 import { useEffect } from 'react';
-import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import {
+    SortOptions,
+    useDocumentDriveServer,
+} from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
-import { SortOptions } from 'src/services/document-drive';
 
-function driveToBaseItems(drive: Drive): Array<BaseTreeItem> {
+function driveToBaseItems(drive: DocumentDriveState): Array<BaseTreeItem> {
     const driveID = encodeID(drive.id);
+
+    function getNodePath(node: Node, allNodes: Node[]): string {
+        if (!node.parentFolder) {
+            return '';
+        }
+        const parentNode = allNodes.find(
+            _node => _node.id === node.parentFolder
+        );
+        if (!parentNode) {
+            throw new Error('Invalid parent node');
+        }
+        return path.join(getNodePath(parentNode, allNodes), node.id);
+    }
 
     const driveNode: BaseTreeItem = {
         id: driveID,
@@ -27,10 +42,10 @@ function driveToBaseItems(drive: Drive): Array<BaseTreeItem> {
         type: ItemType.LocalDrive,
     };
 
-    const nodes: Array<BaseTreeItem> = drive.nodes.map(node => ({
-        id: node.path,
+    const nodes: Array<BaseTreeItem> = drive.nodes.map((node, _i, nodes) => ({
+        id: node.id,
         label: node.name,
-        path: path.join(driveID, node.path),
+        path: path.join(driveID, getNodePath(node, nodes)),
         type: node.kind === 'folder' ? ItemType.Folder : ItemType.File,
     }));
 
@@ -44,31 +59,26 @@ interface DriveContainerProps {
 
 export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
-    const { setBaseItems, baseItems } = useItemsContext();
+    const { setBaseItems } = useItemsContext();
     const actions = useItemActions();
 
-    const { documentDrive, addFile, copyOrMoveNode } = useDocumentDrive();
+    const { documentDrives, addFile, copyOrMoveNode } =
+        useDocumentDriveServer();
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
 
-    console.log('documentDrive', documentDrive);
-    console.log('baseItems', baseItems);
-
     function updateBaseItems() {
         const baseItems: Array<BaseTreeItem> =
-            documentDrive?.state.drives.reduce<Array<BaseTreeItem>>(
-                (acc, drive) => {
-                    return [...acc, ...driveToBaseItems(drive as Drive)];
-                },
-                []
-            ) ?? [];
+            documentDrives.reduce<Array<BaseTreeItem>>((acc, drive) => {
+                return [...acc, ...driveToBaseItems(drive.state)];
+            }, []) ?? [];
 
         setBaseItems(baseItems);
     }
 
     useEffect(() => {
         updateBaseItems();
-    }, [documentDrive]);
+    }, [documentDrives]);
 
     const cancelInputHandler: DriveViewProps['onCancelInput'] = item => {
         if (item.action === ActionType.Update) {
@@ -126,24 +136,24 @@ export default function DriveContainer(props: DriveContainerProps) {
             addFile(file, decodedDriveID, targetId);
         }
     };
-
-    if (!documentDrive) {
-        return null;
-    }
-
+    console.log(documentDrives);
     return (
-        <DriveView
-            type="local"
-            name={documentDrive.name}
-            onItemClick={onItemClick}
-            onItemOptionsClick={onItemOptionsClick}
-            onSubmitInput={item => onSubmitInput(item)}
-            onCancelInput={cancelInputHandler}
-            onDragStart={onDragStartHandler}
-            onDragEnd={onDragEndHandler}
-            onDropEvent={onDropEventHandler}
-            onDropActivate={onDropActivateHandler}
-            disableHighlightStyles={disableHoverStyles}
-        />
+        <>
+            {documentDrives.map(drive => (
+                <DriveView
+                    type="local"
+                    name={drive.state.name}
+                    onItemClick={onItemClick}
+                    onItemOptionsClick={onItemOptionsClick}
+                    onSubmitInput={item => onSubmitInput(item)}
+                    onCancelInput={cancelInputHandler}
+                    onDragStart={onDragStartHandler}
+                    onDragEnd={onDragEndHandler}
+                    onDropEvent={onDropEventHandler}
+                    onDropActivate={onDropActivateHandler}
+                    disableHighlightStyles={disableHoverStyles}
+                />
+            ))}
+        </>
     );
 }

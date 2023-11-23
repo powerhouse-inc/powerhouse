@@ -3,7 +3,7 @@ import { Action, DocumentModel, Editor } from 'document-model/document';
 import { module as DocumentModelLib } from 'document-model/document-model';
 import { atom, useAtomValue } from 'jotai';
 
-const documentModels = [
+export const documentModels = [
     DocumentModelLib,
     ...Lib.documentModels,
 ] as DocumentModel[];
