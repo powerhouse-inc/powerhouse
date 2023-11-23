@@ -1,40 +1,50 @@
-import { Breadcrumbs, ConnectSearchBar } from '@powerhousedao/design-system';
+import {
+    ActionType,
+    Breadcrumbs,
+    ConnectSearchBar,
+    ItemType,
+    TreeItem,
+    decodeID,
+    encodeID,
+    getRootPath,
+    useGetItemByPath,
+    useItemActions,
+} from '@powerhousedao/design-system';
 import { Document, DocumentModel } from 'document-model/document';
+import path from 'path';
 import { useEffect, useState } from 'react';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
-import {
-    preloadTabs,
-    useFileNodeDocument,
-    useSelectFolder,
-    useSelectedDrive,
-    useSelectedPath,
-} from 'src/store';
+import { preloadTabs, useFileNodeDocument, useSelectedPath } from 'src/store';
 import {
     useDocumentModels,
     useGetDocumentModel,
 } from 'src/store/document-model';
 import { exportFile } from 'src/utils';
+import { v4 as uuid } from 'uuid';
 
 const Content = () => {
-    const selectFolder = useSelectFolder();
-    const selectedDrive = useSelectedDrive();
-    const selectedPath = useSelectedPath();
+    const [selectedPath, setSelectedPath] = useSelectedPath();
+    const getItemByPath = useGetItemByPath();
+    const actions = useItemActions();
+
+    const selectedFolder = getItemByPath(selectedPath || '');
+    const driveID = getRootPath(selectedFolder?.path ?? '');
+    const decodedDriveID = decodeID(driveID);
+
     const { addFile, addDocument, deleteNode } = useDocumentDrive();
     const documentModels = useDocumentModels();
     const getDocumentModel = useGetDocumentModel();
-    const { onItemOptionsClick, onItemClick, onSubmitInput } =
-        useDrivesContainer();
+    const { onSubmitInput } = useDrivesContainer();
+
     const [selectedFileNode, setSelectedFileNode] = useState<
         { drive: string; path: string } | undefined
     >(undefined);
     const [selectedDocument, updateDocument, saveDocument] =
         useFileNodeDocument(selectedFileNode?.drive, selectedFileNode?.path);
-
-    const currentNode = selectedPath[selectedPath.length - 1];
 
     // preload document editors
     useEffect(() => {
@@ -43,18 +53,18 @@ const Content = () => {
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
-            if (!selectedDrive) {
+            if (!selectedPath) {
                 return;
             }
-            const fileNode = await addFile(file, selectedDrive.id, '');
+            const fileNode = await addFile(file, decodedDriveID, '');
             if (fileNode) {
                 setSelectedFileNode({
-                    drive: selectedDrive.id,
+                    drive: decodedDriveID,
                     path: fileNode.path,
                 });
             }
         });
-    }, [selectedDrive]);
+    }, [selectedPath]);
 
     async function handleFileSave() {
         if (!selectedDocument) {
@@ -84,24 +94,60 @@ const Content = () => {
     }, [saveDocument]);
 
     async function createDocument(documentModel: DocumentModel) {
-        if (!selectedDrive) {
+        if (!driveID || !selectedFolder) {
             throw new Error('No drive selected');
         }
 
+        // remove first segment of path
+        const itemPath = selectedFolder.path.split('/').slice(1).join('/');
+
         const node = await addDocument(
             documentModel.utils.createDocument(),
-            selectedDrive?.id ?? '',
-            currentNode?.id ?? '',
+            decodedDriveID,
+            itemPath,
             `New ${documentModel.documentModel.name}`
         );
+
         if (node) {
-            setSelectedFileNode({ drive: selectedDrive.id, path: node.path });
+            setSelectedFileNode({ drive: decodedDriveID, path: node.path });
         }
     }
 
     async function exportDocument(document: Document) {
         exportFile(document, getDocumentModel);
     }
+
+    const selectFolder = (item: TreeItem) => {
+        actions.setExpandedItem(item.id, true);
+        actions.setSelectedItem(item.id);
+        setSelectedPath(item.path);
+    };
+
+    const onFolderSelectedHandler = (drive: string, folderPath: string) => {
+        const itemPath = path.join(encodeID(drive), folderPath);
+        const item = getItemByPath(itemPath);
+
+        if (item) {
+            selectFolder(item);
+        }
+    };
+
+    const submitNewFolderAndSelect = (basepath: string, label: string) => {
+        const itemPath = path.join(basepath, label);
+        onSubmitInput({
+            label,
+            id: uuid(),
+            path: itemPath,
+            type: ItemType.Folder,
+            action: ActionType.New,
+        });
+
+        const item = getItemByPath(itemPath);
+
+        if (item) {
+            selectFolder(item);
+        }
+    };
 
     return (
         <div className="flex h-full flex-col bg-[#F4F4F4] p-6">
@@ -119,46 +165,35 @@ const Content = () => {
                 <>
                     <ConnectSearchBar className="mb-5 flex-shrink-0 bg-[#FCFCFC]" />
                     <div className="flex-grow overflow-auto rounded-[20px] bg-[#FCFCFC] p-2">
-                        {selectedDrive && (
+                        {selectedPath && (
                             <Breadcrumbs
-                                rootItem={selectedDrive}
-                                onItemClick={(e, item) => {
-                                    onItemClick(
-                                        e,
-                                        item as any,
-                                        selectedDrive as any
-                                    ); // TODO deal with generics
+                                filterPath={selectedPath}
+                                onItemClick={(e, itemPath) => {
+                                    const item = getItemByPath(itemPath);
+                                    if (item) {
+                                        selectFolder(item);
+                                    }
                                 }}
-                                onAddNewItem={(item, option) =>
-                                    onItemOptionsClick(
-                                        item as any,
-                                        option,
-                                        selectedDrive as any
-                                    )
-                                }
-                                onSubmitInput={item =>
-                                    onSubmitInput(item, selectedDrive as any)
-                                }
+                                onAddNewItem={() => {}}
+                                onSubmitInput={submitNewFolderAndSelect}
                                 onCancelInput={console.log}
                             />
                         )}
                         <div className="px-4">
                             <div className="py-3">
-                                {selectedDrive && selectedPath.length ? (
+                                {selectedFolder && (
                                     <FolderView
-                                        drive={selectedDrive.id}
-                                        folder={
-                                            currentNode.id !== selectedDrive.id
-                                                ? currentNode
-                                                : undefined
+                                        drive={decodedDriveID}
+                                        folder={selectedFolder}
+                                        onFolderSelected={
+                                            onFolderSelectedHandler
                                         }
-                                        onFolderSelected={selectFolder}
                                         onFileSelected={(drive, path) =>
                                             setSelectedFileNode({ drive, path })
                                         }
                                         onFileDeleted={deleteNode}
                                     />
-                                ) : null}
+                                )}
                             </div>
                             <h3 className="mb-3 mt-4 text-xl font-bold">
                                 New document

@@ -1,28 +1,33 @@
 import {
     ActionType,
-    DriveTreeItem,
     DriveViewProps,
     ItemType,
     TreeItem,
-    traverseTree,
+    decodeID,
+    getRootPath,
+    useItemActions,
 } from '@powerhousedao/design-system';
 import path from 'path';
-import { useDrives, useSelectFolder } from 'src/store';
+import { useSelectedPath } from 'src/store';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils';
+import { v4 as uuid } from 'uuid';
 import { useDocumentDrive } from './useDocumentDrive';
 
 export function useDrivesContainer() {
-    const [, setDrives] = useDrives();
-    const { documentDrive, openFile, addFolder, deleteNode, renameNode } =
-        useDocumentDrive();
-    const selectFolder = useSelectFolder();
+    const actions = useItemActions();
+    const [, setSelectedPath] = useSelectedPath();
 
-    function addVirtualNewFolder(item: TreeItem, drive: DriveTreeItem) {
+    const { openFile, addFolder, deleteNode, renameNode, documentDrive } =
+        useDocumentDrive();
+
+    function addVirtualNewFolder(item: TreeItem, driveID: string) {
         const driveNodes = documentDrive?.state.drives.find(
-            driveItem => driveItem.id === drive.id
+            driveItem => driveItem.id === decodeID(driveID)
         )?.nodes;
 
-        const findPath = `${item.id}/new-folder`;
+        const baseItemPath = item.path.split('/').slice(1).join('/');
+        const findPath = path.join(baseItemPath, 'new-folder');
+
         const lastIndex = getLastIndexFromPath(
             [...(driveNodes || [])],
             findPath
@@ -33,120 +38,82 @@ export function useDrivesContainer() {
         const virtualFolderName =
             'New Folder' + (lastIndex === null ? '' : ` ${lastIndex + 1}`);
 
-        setDrives(drives => {
-            const newDrives = drives.map(driveItem => {
-                if (driveItem.id === drive.id) {
-                    return traverseTree(driveItem, treeItem => {
-                        if (treeItem.id === item.id) {
-                            treeItem.expanded = true;
-                            treeItem.isSelected = false;
-                            treeItem.children = treeItem.children || [];
-                            treeItem.children.push({
-                                id: `${treeItem.id}/${virtualPathName}`,
-                                label: virtualFolderName,
-                                type: ItemType.Folder,
-                                action: ActionType.New,
-                            });
-                        }
-
-                        return { ...treeItem };
-                    }) as DriveTreeItem<
-                        'duplicate' | 'new-folder' | 'rename' | 'delete'
-                    >;
-                }
-
-                return { ...driveItem };
-            });
-
-            return newDrives;
+        actions.newVirtualItem({
+            id: uuid(),
+            label: virtualFolderName,
+            path: path.join(item.path, virtualPathName),
+            type: ItemType.Folder,
+            action: ActionType.New,
         });
     }
 
     function addNewFolder(
         item: TreeItem,
-        drive: DriveTreeItem,
+        driveID: string,
         onCancel?: () => void
     ) {
-        const normalizedPath = item.id.replace(drive.id, '');
-        const basePath = normalizedPath.split('/').slice(0, -1).join('/');
-
+        const basePath = item.path.split('/').slice(1, -1).join('/');
         const newPath = path.join(basePath, sanitizePath(item.label));
+
         if (newPath === '.') return onCancel?.();
 
-        addFolder(drive.id, newPath, item.label);
+        const decodedDriveID = decodeID(driveID);
+        addFolder(decodedDriveID, newPath, item.label);
     }
 
-    function updateItem(item: TreeItem, drive: DriveTreeItem) {
-        setDrives(drives =>
-            drives.map(_drive => {
-                if (_drive.id !== drive.id) {
-                    return _drive;
-                }
-                return traverseTree(drive, _item =>
-                    _item.id !== item.id ? _item : item
-                ) as DriveTreeItem<
-                    'duplicate' | 'new-folder' | 'rename' | 'delete'
-                >;
-            })
-        );
-    }
-
-    function setItemUpdate(item: TreeItem, drive: DriveTreeItem) {
-        updateItem(
-            {
-                ...item,
-                action: ActionType.Update,
-            },
-            drive
-        );
-    }
-
-    const onItemClick: DriveViewProps['onItemClick'] = (
-        _event,
-        item,
-        drive
-    ) => {
+    const onItemClick: DriveViewProps['onItemClick'] = (_event, item) => {
         if (item.type === ItemType.File) {
-            openFile(drive.id, item.id);
+            const decodedDriveID = decodeID(getRootPath(item.path));
+            openFile(decodedDriveID, item.id);
         } else {
-            selectFolder(drive.id, item.id);
+            setSelectedPath(item.path);
+            actions.toggleExpandedAndSelect(item.id);
         }
     };
 
     const onItemOptionsClick: DriveViewProps['onItemOptionsClick'] = (
         item,
-        option,
-        drive
+        option
     ) => {
+        const driveID = item.path.split('/')[0];
+
         switch (option) {
             case 'new-folder':
-                addVirtualNewFolder(item, drive);
+                actions.setExpandedItem(item.id, true);
+                addVirtualNewFolder(item, driveID);
                 break;
             case 'rename':
-                setItemUpdate(item, drive);
+                actions.setItemAction(item.id, ActionType.Update);
                 break;
             case 'delete':
-                deleteNode(drive.id, item.id);
+                deleteNode(decodeID(driveID), item.id);
                 break;
         }
     };
 
-    async function updateNodeName(item: TreeItem, drive: DriveTreeItem) {
-        renameNode(drive.id, item.id, item.label);
+    async function updateNodeName(item: TreeItem, driveID: string) {
+        const baseItemPath = item.path.split('/').slice(1).join('/');
+        const decodedDriveID = decodeID(driveID);
+
+        renameNode(decodedDriveID, baseItemPath, item.label);
     }
 
-    const onSubmitInput = (
-        item: TreeItem,
-        drive: DriveTreeItem,
-        onCancel?: () => void
-    ) => {
+    const onSubmitInput = (item: TreeItem, onCancel?: () => void) => {
+        const driveID = item.path.split('/')[0];
+
         if (item.action === ActionType.New) {
-            addNewFolder(item, drive, onCancel);
+            actions.deleteVirtualItem(item.id);
+            addNewFolder(item, driveID, onCancel);
             return;
         }
 
-        updateNodeName(item, drive);
+        actions.setItemAction(item.id, null);
+        updateNodeName(item, driveID);
     };
 
-    return { onItemClick, onItemOptionsClick, onSubmitInput };
+    return {
+        onItemClick,
+        onItemOptionsClick,
+        onSubmitInput,
+    };
 }

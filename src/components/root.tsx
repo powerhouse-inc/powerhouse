@@ -1,5 +1,6 @@
 import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
+import { ItemsContextProvider } from '@powerhousedao/design-system';
 import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
@@ -34,45 +35,47 @@ const Root = () => {
         : { dropProps: {}, isDropTarget: false };
 
     return (
-        <div
-            className={`theme-${theme} h-screen text-text`}
-            data-theme={'ph-' + theme}
-        >
-            {isElectron && (
-                <div
-                    className={`h-[30px] w-full
-                ${isMac && 'justify-center'}
-                z-90 flex items-center bg-titlebar
-                [-webkit-app-region:drag]`}
-                >
-                    <IconLogo className="ml-1 mr-[2px] p-[6px]" />
-                    <IconConnect className="h-3 w-fit" />
-                </div>
-            )}
+        <ItemsContextProvider>
             <div
-                className={`flex items-stretch overflow-auto
-                    ${isElectron ? 'h-[calc(100vh-30px)]' : 'h-screen'}
-                    ${isDropTarget ? 'bg-light' : 'bg-bg'}
-                `}
-                {...dropProps}
-                role="presentation"
-                tabIndex={0}
+                className={`theme-${theme} h-screen text-text`}
+                data-theme={'ph-' + theme}
             >
-                <Suspense>
-                    <Sidebar />
-                    <div className="relative flex-1 overflow-auto">
-                        <Outlet />
-                    </div>
+                {isElectron && (
                     <div
-                        ref={ref}
-                        className={`pointer-events-none fixed inset-0 bg-current
-                        transition-opacity duration-150 ease-in-out
-                        ${isDropTarget ? 'opacity-10' : 'opacity-0'}
+                        className={`h-[30px] w-full
+                    ${isMac && 'justify-center'}
+                    z-90 flex items-center bg-titlebar
+                    [-webkit-app-region:drag]`}
+                    >
+                        <IconLogo className="ml-1 mr-[2px] p-[6px]" />
+                        <IconConnect className="h-3 w-fit" />
+                    </div>
+                )}
+                <div
+                    className={`flex items-stretch overflow-auto
+                        ${isElectron ? 'h-[calc(100vh-30px)]' : 'h-screen'}
+                        ${isDropTarget ? 'bg-light' : 'bg-bg'}
                     `}
-                    ></div>
-                </Suspense>
+                    {...dropProps}
+                    role="presentation"
+                    tabIndex={0}
+                >
+                    <Suspense>
+                        <Sidebar />
+                        <div className="relative flex-1 overflow-auto">
+                            <Outlet />
+                        </div>
+                        <div
+                            ref={ref}
+                            className={`pointer-events-none fixed inset-0 bg-current
+                            transition-opacity duration-150 ease-in-out
+                            ${isDropTarget ? 'opacity-10' : 'opacity-0'}
+                        `}
+                        ></div>
+                    </Suspense>
+                </div>
             </div>
-        </div>
+        </ItemsContextProvider>
     );
 };
 

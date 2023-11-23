@@ -1,84 +1,40 @@
 import {
-    DriveTreeItem,
+    ActionType,
+    BaseTreeItem,
     DriveView,
     DriveViewProps,
     ItemType,
-    TreeItem,
-    traverseDriveById,
+    decodeID,
+    encodeID,
+    getRootPath,
+    useItemActions,
+    useItemsContext,
 } from '@powerhousedao/design-system';
-import { Drive, Node } from 'document-model-libs/document-drive';
-import { Immutable } from 'document-model/document';
+import { Drive } from 'document-model-libs/document-drive';
 import path from 'path';
 import { useEffect } from 'react';
-import {
-    isChildrenRootNode,
-    useDocumentDrive,
-} from 'src/hooks/useDocumentDrive';
+import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { SortOptions } from 'src/services/document-drive';
-import { findDeepestSelectedPath, useDrives } from 'src/store';
 
-function findNodeById(id: string, treeItem: TreeItem): TreeItem | undefined {
-    if (treeItem.id === id) {
-        return treeItem;
-    }
+function driveToBaseItems(drive: Drive): Array<BaseTreeItem> {
+    const driveID = encodeID(drive.id);
 
-    return treeItem.children?.find(item => findNodeById(id, item));
-}
+    const driveNode: BaseTreeItem = {
+        id: driveID,
+        label: drive.name,
+        path: driveID,
+        type: ItemType.LocalDrive,
+    };
 
-function mapDocumentDriveNodeToTreeItem<T extends string>(
-    node: Immutable<Node>,
-    allNodes: Immutable<Array<Node>>,
-    treeItem?: TreeItem
-): TreeItem<T> {
-    const isFolder = node.kind === 'folder';
-
-    return {
+    const nodes: Array<BaseTreeItem> = drive.nodes.map(node => ({
         id: node.path,
         label: node.name,
-        type: isFolder ? ItemType.Folder : ItemType.File,
-        expanded: treeItem?.expanded,
-        isSelected: treeItem?.isSelected,
-        children: isFolder
-            ? allNodes
-                  .filter(childrenNode =>
-                      isChildrenRootNode(node.path, childrenNode.path)
-                  )
-                  .map(childrenNode =>
-                      mapDocumentDriveNodeToTreeItem(
-                          childrenNode,
-                          allNodes,
-                          treeItem
-                              ? findNodeById(node.path, treeItem)
-                              : undefined
-                      )
-                  )
-            : undefined,
-    };
-}
+        path: path.join(driveID, node.path),
+        type: node.kind === 'folder' ? ItemType.Folder : ItemType.File,
+    }));
 
-function mapDocumentDriveToTreeItem(
-    drive: Immutable<Drive>,
-    defaultSelected = false,
-    treeItem?: DriveTreeItem
-): DriveTreeItem {
-    const nodes = drive.nodes.filter(
-        node => !node.path.includes('/') && node.kind === 'folder'
-    );
-    return {
-        id: drive.id,
-        label: drive.name,
-        type: ItemType.LocalDrive,
-        expanded: treeItem?.expanded ?? true,
-        isSelected: treeItem?.isSelected ?? defaultSelected,
-        children: nodes.map(node =>
-            mapDocumentDriveNodeToTreeItem(
-                node,
-                drive.nodes.filter(node => node.kind === 'folder'),
-                treeItem ? findNodeById(node.path, treeItem) : undefined
-            )
-        ),
-    };
+    return [driveNode, ...nodes];
 }
 
 interface DriveContainerProps {
@@ -88,37 +44,40 @@ interface DriveContainerProps {
 
 export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
+    const { setBaseItems, baseItems } = useItemsContext();
+    const actions = useItemActions();
 
-    const [drives, setDrives] = useDrives();
     const { documentDrive, addFile, copyOrMoveNode } = useDocumentDrive();
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
 
-    function updateDrives() {
-        setDrives(oldItems => {
-            const selectedPath = findDeepestSelectedPath(oldItems);
-            const noSelectedNode = !selectedPath.length;
-            const newItems = documentDrive?.state.drives.map((drive, index) => {
-                const isDriveSelected =
-                    selectedPath.length === 1 &&
-                    selectedPath[0].id === drive.id;
-                return mapDocumentDriveToTreeItem(
-                    drive,
-                    isDriveSelected || (index === 0 && noSelectedNode) // selects first drive if there is no node selected
-                    // oldItems.find(item => item.id === drive.id) TODO keep expanded/selected state
-                );
-            });
-            return newItems ?? [];
-        });
+    console.log('documentDrive', documentDrive);
+    console.log('baseItems', baseItems);
+
+    function updateBaseItems() {
+        const baseItems: Array<BaseTreeItem> =
+            documentDrive?.state.drives.reduce<Array<BaseTreeItem>>(
+                (acc, drive) => {
+                    return [...acc, ...driveToBaseItems(drive as Drive)];
+                },
+                []
+            ) ?? [];
+
+        setBaseItems(baseItems);
     }
 
     useEffect(() => {
-        updateDrives();
+        updateBaseItems();
     }, [documentDrive]);
 
-    function cancelInputHandler() {
-        updateDrives();
-    }
+    const cancelInputHandler: DriveViewProps['onCancelInput'] = item => {
+        if (item.action === ActionType.Update) {
+            actions.setItemAction(item.id, null);
+            return;
+        }
+
+        actions.deleteVirtualItem(item.id);
+    };
 
     const onDragStartHandler: DriveViewProps['onDragStart'] = () =>
         setDisableHoverStyles?.(true);
@@ -126,30 +85,18 @@ export default function DriveContainer(props: DriveContainerProps) {
     const onDragEndHandler: DriveViewProps['onDragEnd'] = () =>
         setDisableHoverStyles?.(false);
 
-    const onDropActivateHandler: DriveViewProps['onDropActivate'] = (
-        drive,
-        droptarget
-    ) => {
-        setDrives(drives =>
-            traverseDriveById(drives, drive.id, treeItem => {
-                if (treeItem.id === droptarget.id) {
-                    return {
-                        ...treeItem,
-                        expanded: true,
-                    };
-                }
-
-                return treeItem;
-            })
-        );
-    };
+    const onDropActivateHandler: DriveViewProps['onDropActivate'] =
+        droptarget => {
+            actions.setExpandedItem(droptarget.id, true);
+        };
 
     const onDropEventHandler: DriveViewProps['onDropEvent'] = async (
         item,
         target,
-        event,
-        drive
+        event
     ) => {
+        const driveID = getRootPath(target.path);
+
         const isDropAfter = !!item.dropAfterItem;
         const sortOptions: SortOptions | undefined = isDropAfter
             ? { afterNodePath: target.id }
@@ -159,13 +106,16 @@ export default function DriveContainer(props: DriveContainerProps) {
             isDropAfter && !target.expanded
                 ? path.dirname(target.id)
                 : target.id;
-        if (targetId === drive.id || targetId == '.') {
+
+        if (targetId === driveID || targetId == '.') {
             targetId = '';
         }
 
+        const decodedDriveID = decodeID(driveID);
+
         if (item.kind === 'object') {
             copyOrMoveNode(
-                drive.id,
+                decodedDriveID,
                 item.data.id,
                 targetId,
                 event.dropOperation,
@@ -173,7 +123,7 @@ export default function DriveContainer(props: DriveContainerProps) {
             );
         } else if (item.kind === 'file') {
             const file = await item.getFile();
-            addFile(file, drive.id, targetId);
+            addFile(file, decodedDriveID, targetId);
         }
     };
 
@@ -185,12 +135,9 @@ export default function DriveContainer(props: DriveContainerProps) {
         <DriveView
             type="local"
             name={documentDrive.name}
-            drives={drives}
             onItemClick={onItemClick}
             onItemOptionsClick={onItemOptionsClick}
-            onSubmitInput={(item, drive) =>
-                onSubmitInput(item, drive, cancelInputHandler)
-            }
+            onSubmitInput={item => onSubmitInput(item)}
             onCancelInput={cancelInputHandler}
             onDragStart={onDragStartHandler}
             onDragEnd={onDragEndHandler}
