@@ -12,6 +12,7 @@ import path from 'path';
 import initDocumentDrive from './app/document-drive';
 import store from './app/store';
 import { Theme } from './store';
+import { documentModels } from './store/document-model';
 
 const isMac = process.platform === 'darwin';
 
@@ -331,7 +332,7 @@ app.on('activate', () => {
     }
 });
 
-initDocumentDrive(store, app.getPath('userData'), ipcMain);
+initDocumentDrive(documentModels, app.getPath('userData'), ipcMain);
 
 // keeps track of the logged in user
 let user: string;

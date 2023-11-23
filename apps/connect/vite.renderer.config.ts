@@ -10,7 +10,10 @@ export default defineConfig({
     plugins: [
         react({
             include: 'src/**/*.tsx',
-            babel: { minified: false, plugins: [jotaiDebugLabel, jotaiReactRefresh] },
+            babel: {
+                minified: false,
+                plugins: [jotaiDebugLabel, jotaiReactRefresh],
+            },
         }),
         svgr(),
     ],
@@ -20,6 +23,7 @@ export default defineConfig({
             '@/assets': path.resolve(__dirname, './assets'),
             src: path.resolve(__dirname, './src'),
             path: 'rollup-plugin-node-polyfills/polyfills/path',
+            process: 'rollup-plugin-node-polyfills/polyfills/process-es6',
         },
     },
 });

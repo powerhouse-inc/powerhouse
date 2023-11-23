@@ -11,19 +11,19 @@ import path from 'path';
 import { useSelectedPath } from 'src/store';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils';
 import { v4 as uuid } from 'uuid';
-import { useDocumentDrive } from './useDocumentDrive';
+import { useDocumentDriveServer } from './useDocumentDriveServer';
 
 export function useDrivesContainer() {
     const actions = useItemActions();
     const [, setSelectedPath] = useSelectedPath();
 
-    const { openFile, addFolder, deleteNode, renameNode, documentDrive } =
-        useDocumentDrive();
+    const { openFile, addFolder, deleteNode, renameNode, documentDrives } =
+        useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
-        const driveNodes = documentDrive?.state.drives.find(
-            driveItem => driveItem.id === decodeID(driveID)
-        )?.nodes;
+        const driveNodes = documentDrives?.find(
+            driveItem => driveItem.state.id === decodeID(driveID)
+        )?.state.nodes;
 
         const baseItemPath = item.path.split('/').slice(1).join('/');
         const findPath = path.join(baseItemPath, 'new-folder');

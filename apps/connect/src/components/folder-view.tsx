@@ -2,14 +2,14 @@ import { ReactComponent as IconFile } from '@/assets/icons/file2.svg';
 import { ReactComponent as IconFolder } from '@/assets/icons/folder.svg';
 import { TreeItem } from '@powerhousedao/design-system';
 import { FileNode, FolderNode } from 'document-model-libs/document-drive';
-import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 
 interface IProps {
     drive: string;
     folder?: TreeItem;
-    onFolderSelected: (drive: string, path: string) => void;
-    onFileSelected: (drive: string, path: string) => void;
-    onFileDeleted: (drive: string, path: string) => void;
+    onFolderSelected: (drive: string, id: string) => void;
+    onFileSelected: (drive: string, id: string) => void;
+    onFileDeleted: (drive: string, id: string) => void;
 }
 
 export const FolderView: React.FC<IProps> = ({
@@ -19,8 +19,7 @@ export const FolderView: React.FC<IProps> = ({
     onFileSelected,
     onFileDeleted,
 }) => {
-    const { getChildren } = useDocumentDrive();
-
+    const { getChildren } = useDocumentDriveServer();
     const children = getChildren(drive, folder?.id);
     const folders = children.filter(
         node => node.kind === 'folder'
@@ -32,9 +31,9 @@ export const FolderView: React.FC<IProps> = ({
             <ul className="mb-3 flex gap-5">
                 {folders.map(folder => (
                     <button
-                        key={folder.path}
+                        key={folder.id}
                         className="flex flex-col items-center rounded-md p-2 hover:bg-black/5"
-                        onClick={() => onFolderSelected(drive, folder.path)}
+                        onClick={() => onFolderSelected(drive, folder.id)}
                     >
                         <IconFolder className="mb-2" />
                         <p>{folder.name}</p>
@@ -45,9 +44,9 @@ export const FolderView: React.FC<IProps> = ({
                 <tbody>
                     {files?.map(file => (
                         <tr
-                            key={file.path}
+                            key={file.id}
                             className="cursor-pointer rounded-md hover:bg-black/5"
-                            onClick={() => onFileSelected(drive, file.path)}
+                            onClick={() => onFileSelected(drive, file.id)}
                         >
                             <td className="flex flex-[66%] items-center">
                                 <IconFile />
@@ -63,7 +62,7 @@ export const FolderView: React.FC<IProps> = ({
                                     className="text-red-500 hover:underline"
                                     onClick={e => {
                                         e.stopPropagation();
-                                        onFileDeleted(drive, file.path);
+                                        onFileDeleted(drive, file.id);
                                     }}
                                 >
                                     Delete

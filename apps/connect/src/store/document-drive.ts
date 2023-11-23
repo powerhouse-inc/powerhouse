@@ -1,13 +1,13 @@
 import { Document } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useState } from 'react';
-import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 
 export const selectedPath = atom<string | null>(null);
 export const useSelectedPath = () => useAtom(selectedPath);
 
-export const useFileNodeDocument = (drive?: string, path?: string) => {
-    const { openFile, updateFile } = useDocumentDrive();
+export const useFileNodeDocument = (drive?: string, id?: string) => {
+    const { openFile, updateFile } = useDocumentDriveServer();
     const [selectedDocument, setSelectedDocument] = useState<
         Document | undefined
     >();
@@ -23,17 +23,18 @@ export const useFileNodeDocument = (drive?: string, path?: string) => {
     }
 
     useEffect(() => {
-        if (drive && path) {
-            fetchDocument(drive, path);
+        if (drive && id) {
+            fetchDocument(drive, id);
         } else {
             setSelectedDocument(undefined);
         }
-    }, [drive, path]);
+    }, [drive, id]);
 
     async function saveDocument() {
-        if (drive && path && selectedDocument) {
-            await updateFile(selectedDocument, drive, path);
-            await fetchDocument(drive, path);
+        if (drive && id && selectedDocument) {
+            // TODO this should add an operation to the child document
+            await updateFile(drive, id, selectedDocument.documentType);
+            await fetchDocument(drive, id);
         }
     }
 

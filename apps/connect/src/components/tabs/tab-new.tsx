@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useRef } from 'react';
 import { useDropFile, useOpenFile } from 'src/hooks';
-import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { preloadTabs, useTabs, useTheme } from 'src/store';
 import { documentModelsAtom } from 'src/store/document-model';
 import Button from '../button';
@@ -10,16 +10,16 @@ export default () => {
     const ref = useRef(null);
     const theme = useTheme();
     const { selectedTab, updateTab, fromDocument } = useTabs();
-    const { documentDrive, addFile, openFile } = useDocumentDrive();
+    const { documentDrives, addFile, openFile } = useDocumentDriveServer();
     const { dropProps, isDropTarget } = useDropFile(ref);
     const documentModels = useAtomValue(documentModelsAtom);
 
     const handleOpenFile = useOpenFile(async (document, file) => {
-        const drive = documentDrive?.state.drives[0]; // TODO improve default drive selection
+        const drive = documentDrives?.[0]; // TODO improve default drive selection
         if (drive) {
-            const node = await addFile(file, drive.id, file.name);
+            const node = await addFile(file, drive.state.id, file.name);
             if (node) {
-                openFile(drive.id, node.path, selectedTab);
+                openFile(drive.state.id, node.id);
             }
         } else {
             updateTab(await fromDocument(document, selectedTab));

@@ -1,17 +1,13 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
+import { DriveInput, IDocumentDriveServer } from 'document-drive';
+import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import {
-    AddFileInput,
-    AddFolderInput,
-    DocumentDriveAction,
-    DocumentDriveState,
-    FileNode,
-    FolderNode,
-    UpdateFileInput,
-} from 'document-model-libs/document-drive';
-import { Action, Document } from 'document-model/document';
+    CreateChildDocumentInput,
+    Document,
+    Operation,
+} from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
-import { IDocumentDrive, SortOptions } from './services/document-drive';
 import { Theme } from './store';
 
 const electronApi = {
@@ -66,56 +62,32 @@ const electronApi = {
     },
     setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
     documentDrive: {
-        getDocument: () =>
-            ipcRenderer.invoke('documentDrive') as Promise<
-                Document<DocumentDriveState, DocumentDriveAction>
-            >,
-        openFile: <S = unknown, A extends Action = Action>(
-            drive: string,
-            file: string
-        ) =>
+        getDrives: () =>
+            ipcRenderer.invoke('documentDrive:getDrives') as Promise<string[]>,
+        getDrive: () =>
             ipcRenderer.invoke(
-                'documentDrive:openFile',
+                'documentDrive:getDrive'
+            ) as Promise<DocumentDriveDocument>,
+        addDrive: (drive: DriveInput) =>
+            ipcRenderer.invoke('documentDrive:addDrive', drive),
+        deleteDrive: (id: string) =>
+            ipcRenderer.invoke('documentDrive:deleteDrive', id),
+        getDocuments: (drive: string) =>
+            ipcRenderer.invoke('documentDrive:getDocuments', drive),
+        getDocument: (drive: string, id: string) =>
+            ipcRenderer.invoke('documentDrive:getDocument', drive, id),
+        createDocument: (drive: string, input: CreateChildDocumentInput) =>
+            ipcRenderer.invoke('documentDrive:createDocument', drive, input),
+        deleteDocument: (drive: string, id: string) =>
+            ipcRenderer.invoke('documentDrive:deleteDocument', drive, id),
+        addOperation: (drive: string, id: string, operation: Operation) =>
+            ipcRenderer.invoke(
+                'documentDrive:addOperation',
                 drive,
-                file
-            ) as Promise<Document<S, A>>,
-        addFile: (input: AddFileInput, document: Document) =>
-            ipcRenderer.invoke(
-                'documentDrive:addFile',
-                input,
-                document
-            ) as Promise<FileNode>,
-        updateFile: (input: UpdateFileInput, document: Document) =>
-            ipcRenderer.invoke(
-                'documentDrive:updateFile',
-                input,
-                document
-            ) as Promise<FileNode>,
-        addFolder: (input: AddFolderInput) =>
-            ipcRenderer.invoke(
-                'documentDrive:addFolder',
-                input
-            ) as Promise<FolderNode>,
-        deleteNode: (drive: string, path: string) =>
-            ipcRenderer.invoke('documentDrive:deleteNode', drive, path),
-        renameNode: (drive: string, path: string, name: string) =>
-            ipcRenderer.invoke('documentDrive:renameNode', drive, path, name),
-        copyOrMoveNode: (
-            drive: string,
-            srcPath: string,
-            destPath: string,
-            operation: string,
-            sortOptions?: SortOptions
-        ) =>
-            ipcRenderer.invoke(
-                'documentDrive:copyOrMoveNode',
-                drive,
-                srcPath,
-                destPath,
-                operation,
-                sortOptions
+                id,
+                operation
             ),
-    } satisfies IDocumentDrive,
+    } satisfies IDocumentDriveServer,
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

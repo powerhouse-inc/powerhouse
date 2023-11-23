@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTabs } from 'src/store';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
-import { useDocumentDrive } from './useDocumentDrive';
+import { useDocumentDriveServer } from './useDocumentDriveServer';
 
 export function useDropFile(ref: React.RefObject<HTMLElement>) {
     const {
@@ -18,7 +18,7 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
     } = useTabs();
     const navigate = useNavigate();
     const getDocumentModel = useGetDocumentModel();
-    const { documentDrive, addFile, openFile } = useDocumentDrive();
+    const { documentDrives, addFile, openFile } = useDocumentDriveServer();
 
     const onDrop = useCallback(
         async (e: DropEvent) => {
@@ -28,11 +28,15 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
                     const document = await loadFile(file, getDocumentModel);
                     const tab = await fromDocument(document, selectedTab);
 
-                    const drive = documentDrive?.state.drives[0]; // TODO improve default drive selection
+                    const drive = documentDrives?.[0]; // TODO improve default drive selection
                     if (drive) {
-                        const node = await addFile(file, file.name, drive.id);
+                        const node = await addFile(
+                            file,
+                            file.name,
+                            drive.state.id
+                        );
                         if (node) {
-                            openFile(drive.id, node.path);
+                            openFile(drive.state.id, node.id);
                         }
                     } else {
                         addTab(tab);
@@ -53,7 +57,7 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
                 }
             }
         },
-        [addTab, selectedTab, getItem, updateTab, documentDrive]
+        [addTab, selectedTab, getItem, updateTab, documentDrives]
     );
 
     return useDrop({

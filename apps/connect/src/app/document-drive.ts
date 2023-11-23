@@ -1,37 +1,56 @@
+import {
+    CreateDocumentInput,
+    DocumentDriveServer,
+    DriveInput,
+} from 'document-drive/server';
+import { MemoryStorage } from 'document-drive/storage';
+import { DocumentModel, Operation } from 'document-model/document';
 import { IpcMain } from 'electron';
-import ElectronStore from 'electron-store';
-import { initElectronDocumentDrive } from 'src/services/document-drive';
 
-export default async (store: ElectronStore, path: string, ipcMain: IpcMain) => {
-    const documentDrive = await initElectronDocumentDrive(store, path);
-    ipcMain.handle('documentDrive', () => documentDrive.getDocument());
-    ipcMain.handle('documentDrive:openFile', async (_e, drive, path) =>
-        documentDrive.openFile(drive, path)
+export default (
+    documentModels: DocumentModel[],
+    path: string,
+    ipcMain: IpcMain
+) => {
+    const documentDrive = new DocumentDriveServer(
+        documentModels,
+        // new FilesystemStorage(path)
+        new MemoryStorage()
     );
-    ipcMain.handle('documentDrive:addFile', (_e, input, document) =>
-        documentDrive.addFile(input, document)
+
+    documentDrive.addDrive({ id: '1', name: 'Local Device', icon: null });
+
+    ipcMain.handle('documentDrive:getDrives', () => documentDrive.getDrives());
+    ipcMain.handle('documentDrive:getDrive', (_e, id: string) =>
+        documentDrive.getDrive(id)
     );
-    ipcMain.handle('documentDrive:updateFile', async (_e, input, document) =>
-        documentDrive.updateFile(input, document)
+    ipcMain.handle('documentDrive:addDrive', (_e, input: DriveInput) =>
+        documentDrive.addDrive(input)
     );
-    ipcMain.handle('documentDrive:addFolder', (_e, input) =>
-        documentDrive.addFolder(input)
+    ipcMain.handle('documentDrive:deleteDrive', (_e, id: string) =>
+        documentDrive.deleteDrive(id)
     );
-    ipcMain.handle('documentDrive:deleteNode', async (_e, drive, path) =>
-        documentDrive.deleteNode(drive, path)
-    );
-    ipcMain.handle('documentDrive:renameNode', async (_e, drive, path, name) =>
-        documentDrive.renameNode(drive, path, name)
+
+    ipcMain.handle('documentDrive:getDocuments', (_e, drive: string) =>
+        documentDrive.getDocuments(drive)
     );
     ipcMain.handle(
-        'documentDrive:copyOrMoveNode',
-        async (_e, drive, srcPath, destPath, operation, sortOptions) =>
-            documentDrive.copyOrMoveNode(
-                drive,
-                srcPath,
-                destPath,
-                operation,
-                sortOptions
-            )
+        'documentDrive:getDocument',
+        (_e, drive: string, id: string) => documentDrive.getDocument(drive, id)
+    );
+    ipcMain.handle(
+        'documentDrive:createDocument',
+        (_e, drive: string, input: CreateDocumentInput) =>
+            documentDrive.createDocument(drive, input)
+    );
+    ipcMain.handle(
+        'documentDrive:deleteDocument',
+        (_e, drive: string, id: string) =>
+            documentDrive.deleteDocument(drive, id)
+    );
+    ipcMain.handle(
+        'documentDrive:addOperation',
+        (_e, drive: string, id: string, operation: Operation) =>
+            documentDrive.addOperation(drive, id, operation)
     );
 };

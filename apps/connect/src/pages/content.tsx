@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
-import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
+import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { preloadTabs, useFileNodeDocument, useSelectedPath } from 'src/store';
 import {
@@ -35,16 +35,16 @@ const Content = () => {
     const driveID = getRootPath(selectedFolder?.path ?? '');
     const decodedDriveID = decodeID(driveID);
 
-    const { addFile, addDocument, deleteNode } = useDocumentDrive();
+    const { addFile, addDocument, deleteNode } = useDocumentDriveServer();
     const documentModels = useDocumentModels();
     const getDocumentModel = useGetDocumentModel();
     const { onSubmitInput } = useDrivesContainer();
 
     const [selectedFileNode, setSelectedFileNode] = useState<
-        { drive: string; path: string } | undefined
+        { drive: string; id: string } | undefined
     >(undefined);
     const [selectedDocument, updateDocument, saveDocument] =
-        useFileNodeDocument(selectedFileNode?.drive, selectedFileNode?.path);
+        useFileNodeDocument(selectedFileNode?.drive, selectedFileNode?.id);
 
     // preload document editors
     useEffect(() => {
@@ -60,7 +60,7 @@ const Content = () => {
             if (fileNode) {
                 setSelectedFileNode({
                     drive: decodedDriveID,
-                    path: fileNode.path,
+                    id: fileNode.id,
                 });
             }
         });
@@ -100,7 +100,7 @@ const Content = () => {
 
         // remove first segment of path
         const itemPath = selectedFolder.path.split('/').slice(1).join('/');
-
+        // TODO change to parentFolder
         const node = await addDocument(
             documentModel.utils.createDocument(),
             decodedDriveID,
