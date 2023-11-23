@@ -4,9 +4,9 @@ import { TreeItem } from '@powerhousedao/design-system';
 import { FileNode, FolderNode } from 'document-model-libs/document-drive';
 import { useDocumentDrive } from 'src/hooks/useDocumentDrive';
 
-interface IProps<T extends string = string> {
+interface IProps {
     drive: string;
-    folder?: TreeItem<T>;
+    folder?: TreeItem;
     onFolderSelected: (drive: string, path: string) => void;
     onFileSelected: (drive: string, path: string) => void;
     onFileDeleted: (drive: string, path: string) => void;
