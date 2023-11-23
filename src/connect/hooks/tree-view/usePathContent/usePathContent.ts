@@ -1,4 +1,4 @@
-import { TreeItem } from '@/connect/components/tree-view-item';
+import { ItemType, TreeItem } from '@/connect/components/tree-view-item';
 import { useItemsContext } from '@/connect/context/ItemsContext';
 import { filterItemsByPath, isSubPath } from '@/connect/utils/path';
 
@@ -10,13 +10,22 @@ import { filterItemsByPath, isSubPath } from '@/connect/utils/path';
  * @param allowedPaths - The list of allowed paths to filter the content by.
  * @returns The filtered content of the specified path.
  */
-export const usePathContent = (path = '', allowedPaths = ['']) => {
+export const usePathContent = (
+    path = '',
+    allowedPaths = [''],
+    allowedTypes: Array<ItemType> = [],
+) => {
     const { items } = useItemsContext();
 
     const filterAllowedPaths = (item: TreeItem) => {
-        return allowedPaths.some(allowedPath => {
+        const isAllowedPath = allowedPaths.some(allowedPath => {
             return isSubPath(item.path, allowedPath, true);
         });
+
+        const isAllowedType =
+            allowedTypes.length === 0 ? true : allowedTypes.includes(item.type);
+
+        return isAllowedPath && isAllowedType;
     };
 
     return filterItemsByPath<TreeItem>(items, path, filterAllowedPaths);

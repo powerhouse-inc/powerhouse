@@ -1,3 +1,4 @@
+import { useGetItemByPath } from '@/connect/hooks/tree-view/useGetItemByPath';
 import { Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { AddNewItemInput } from './add-new-item-input';
@@ -77,6 +78,9 @@ export type BreadcrumbProps = {
 export function Breadcrumb(props: BreadcrumbProps) {
     const label = props.filterPath.split('/').pop();
 
+    const getItemByPath = useGetItemByPath();
+    const item = getItemByPath(props.filterPath);
+
     return (
         <>
             <div
@@ -84,7 +88,7 @@ export function Breadcrumb(props: BreadcrumbProps) {
                 className={props.className}
                 onClick={e => props.onClick?.(e, props.filterPath)}
             >
-                {label}
+                {item?.label || label}
             </div>
             /
         </>

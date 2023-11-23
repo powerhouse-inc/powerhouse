@@ -76,6 +76,13 @@ export function DriveView(props: DriveViewProps) {
     } = props;
 
     const drives = usePathContent(drivePath) as DriveTreeItem[];
+
+    const allowedTypes = [
+        ItemType.CloudDrive,
+        ItemType.Folder,
+        ItemType.LocalDrive,
+        ItemType.PublicDrive,
+    ];
     const allowedDrives = drives
         .filter(drive => filterDriveByType(drive, type))
         .map(drive => drive.path);
@@ -110,6 +117,7 @@ export function DriveView(props: DriveViewProps) {
                     onSubmitInput={onSubmitInput}
                     onItemOptionsClick={onItemOptionsClick}
                     defaultItemOptions={defaultItemOptions}
+                    allowedTypes={allowedTypes}
                 />
             </div>
         </div>

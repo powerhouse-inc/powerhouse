@@ -5,6 +5,7 @@ import {
     ActionType,
     ConnectTreeViewItem,
     ConnectTreeViewItemProps,
+    ItemType,
     TreeItem,
 } from '../tree-view-item';
 
@@ -29,6 +30,7 @@ export interface ConnectTreeViewProps
     filterPath?: string;
     level?: number;
     allowedPaths?: string[];
+    allowedTypes?: ItemType[];
 }
 
 export function ConnectTreeView(props: ConnectTreeViewProps) {
@@ -42,10 +44,11 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
         filterPath,
         level = 0,
         allowedPaths,
+        allowedTypes,
         ...elementProps
     } = props;
 
-    const items = usePathContent(filterPath, allowedPaths);
+    const items = usePathContent(filterPath, allowedPaths, allowedTypes);
 
     return (
         <>
