@@ -1,3 +1,10 @@
+# [1.0.0-alpha.25](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2023-11-24)
+
+
+### Bug Fixes
+
+* 🚀 DriveView and Sidebar styles ([dae21c6](https://github.com/powerhouse-inc/design-system/commit/dae21c60a85b330d42e2eb87b6af9b2983129c66))
+
 # [1.0.0-alpha.24](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.23...v1.0.0-alpha.24) (2023-11-22)
 
 
