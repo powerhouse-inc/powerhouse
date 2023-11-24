@@ -64,9 +64,10 @@ const electronApi = {
     documentDrive: {
         getDrives: () =>
             ipcRenderer.invoke('documentDrive:getDrives') as Promise<string[]>,
-        getDrive: () =>
+        getDrive: (id: string) =>
             ipcRenderer.invoke(
-                'documentDrive:getDrive'
+                'documentDrive:getDrive',
+                id
             ) as Promise<DocumentDriveDocument>,
         addDrive: (drive: DriveInput) =>
             ipcRenderer.invoke('documentDrive:addDrive', drive),

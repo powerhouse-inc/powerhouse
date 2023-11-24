@@ -1,19 +1,16 @@
-import * as Lib from 'document-model-libs';
-import { Action, DocumentModel, Editor } from 'document-model/document';
+import * as DocumentModels from 'document-model-libs/document-models';
+import { Action, DocumentModel } from 'document-model/document';
 import { module as DocumentModelLib } from 'document-model/document-model';
 import { atom, useAtomValue } from 'jotai';
 
 export const documentModels = [
     DocumentModelLib,
-    ...Lib.documentModels,
+    ...Object.values(DocumentModels),
 ] as DocumentModel[];
-const editors = [...Lib.editors] as Editor[];
 
 export const documentModelsAtom = atom(documentModels);
-export const editorsAtom = atom(editors);
 
 export const useDocumentModels = () => useAtomValue(documentModelsAtom);
-export const useEditors = () => useAtomValue(editorsAtom);
 
 function getDocumentModel<S = unknown, A extends Action = Action>(
     documentType: string,
@@ -24,10 +21,6 @@ function getDocumentModel<S = unknown, A extends Action = Action>(
         | undefined;
 }
 
-const getEditor = (documentType: string, editors: Editor[]) =>
-    editors.find(e => e.documentTypes.includes(documentType)) ||
-    editors.find(e => e.documentTypes.includes('*'));
-
 export function useDocumentModel<S = unknown, A extends Action = Action>(
     documentType: string
 ) {
@@ -35,18 +28,8 @@ export function useDocumentModel<S = unknown, A extends Action = Action>(
     return getDocumentModel<S, A>(documentType, documentModels);
 }
 
-export const useEditor = (documentType: string) => {
-    const editors = useEditors();
-    return getEditor(documentType, editors);
-};
-
 export const useGetDocumentModel = () => {
     const documentModels = useDocumentModels();
     return (documentType: string) =>
         getDocumentModel(documentType, documentModels);
-};
-
-export const useGetEditor = () => {
-    const editors = useEditors();
-    return (documentType: string) => getEditor(documentType, editors);
 };

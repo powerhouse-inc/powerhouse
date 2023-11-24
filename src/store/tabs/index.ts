@@ -2,11 +2,8 @@ import type { Document } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { useMemo } from 'react';
 import { ListData } from 'react-stately';
-import {
-    useDocumentModels,
-    useGetDocumentModel,
-    useGetEditor,
-} from '../document-model';
+import { useDocumentModels, useGetDocumentModel } from '../document-model';
+import { useGetEditor } from '../editor';
 import { Tab, createTab } from './base';
 export * from './base';
 

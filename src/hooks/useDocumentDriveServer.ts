@@ -33,7 +33,6 @@ export function useDocumentDriveServer(
         }
         try {
             const driveIds = await server?.getDrives();
-            console.log(driveIds);
             const drives = await Promise.all(
                 driveIds.map(id => server.getDrive(id))
             );
