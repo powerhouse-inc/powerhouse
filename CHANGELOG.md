@@ -1,3 +1,10 @@
+# [1.0.0-alpha.26](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2023-11-24)
+
+
+### Features
+
+* added missing exports + filter types + encode/decode utils ([3f87485](https://github.com/powerhouse-inc/design-system/commit/3f87485a2bdbdb3c1c96673273dfb2daebcd86ac))
+
 # [1.0.0-alpha.25](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2023-11-24)
 
 
