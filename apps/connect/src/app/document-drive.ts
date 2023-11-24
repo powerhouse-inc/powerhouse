@@ -3,8 +3,8 @@ import {
     DocumentDriveServer,
     DriveInput,
 } from 'document-drive/server';
-import { MemoryStorage } from 'document-drive/storage';
-import { DocumentModel, Operation } from 'document-model/document';
+import { FilesystemStorage } from 'document-drive/storage';
+import { DocumentModel, Operation, utils } from 'document-model/document';
 import { IpcMain } from 'electron';
 
 export default (
@@ -14,11 +14,18 @@ export default (
 ) => {
     const documentDrive = new DocumentDriveServer(
         documentModels,
-        // new FilesystemStorage(path)
-        new MemoryStorage()
+        new FilesystemStorage(path)
     );
 
-    documentDrive.addDrive({ id: '1', name: 'Local Device', icon: null });
+    documentDrive.getDrives().then(drives => {
+        if (!drives.length) {
+            documentDrive.addDrive({
+                id: utils.hashKey(),
+                name: 'Local Device',
+                icon: null,
+            });
+        }
+    });
 
     ipcMain.handle('documentDrive:getDrives', () => documentDrive.getDrives());
     ipcMain.handle('documentDrive:getDrive', (_e, id: string) =>

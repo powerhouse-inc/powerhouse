@@ -136,11 +136,11 @@ export default function DriveContainer(props: DriveContainerProps) {
             addFile(file, decodedDriveID, targetId);
         }
     };
-    console.log(documentDrives);
     return (
         <>
             {documentDrives.map(drive => (
                 <DriveView
+                    key={drive.state.id}
                     type="local"
                     name={drive.state.name}
                     onItemClick={onItemClick}

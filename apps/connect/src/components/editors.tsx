@@ -2,7 +2,8 @@ import { Action, Document, actions } from 'document-model/document';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
-import { useDocumentModel, useEditor } from 'src/store/document-model';
+import { useDocumentModel } from 'src/store/document-model';
+import { useEditor } from 'src/store/editor';
 import { useDocumentReducer } from 'src/utils/document-model';
 import Button from './button';
 

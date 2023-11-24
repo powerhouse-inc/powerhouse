@@ -52,13 +52,14 @@ export function useDrivesContainer() {
         driveID: string,
         onCancel?: () => void
     ) {
-        const basePath = item.path.split('/').slice(1, -1).join('/');
+        const basePathComponents = item.path.split('/').slice(1, -1);
+        const basePath = basePathComponents.join('/');
         const newPath = path.join(basePath, sanitizePath(item.label));
 
         if (newPath === '.') return onCancel?.();
 
         const decodedDriveID = decodeID(driveID);
-        addFolder(decodedDriveID, newPath, item.label);
+        addFolder(decodedDriveID, item.label, basePathComponents.pop());
     }
 
     const onItemClick: DriveViewProps['onItemClick'] = (_event, item) => {
