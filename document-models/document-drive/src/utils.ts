@@ -29,3 +29,69 @@ export function getDescendants(node: Node, allNodes: Node[]): Node[] {
     const descendants = children.map(child => getDescendants(child, allNodes));
     return [...children, ...descendants.flat()];
 }
+
+export type GenerateNodesCopySrc = {
+    srcId: Node['id'];
+    targetName?: Node['name'];
+    targetParentFolder?: Node['parentFolder'];
+};
+
+export type GenerateNodesCopyIdGenerator = (prevId: Node['id']) => Node['id'];
+
+/**
+ * Generates a copy of nodes based on the provided source and target information.
+ * @param src - The source information for generating the copy.
+ * @param idGenerator - The function used to generate new IDs for the copied nodes.
+ * @param nodes - The array of nodes to copy from.
+ * @returns An array of copied nodes with updated IDs and parent folders.
+ * @throws Error if the root node with the specified ID is not found.
+ */
+export function generateNodesCopy(
+    src: GenerateNodesCopySrc,
+    idGenerator: GenerateNodesCopyIdGenerator,
+    nodes: Node[],
+) {
+    const rootNode = nodes.find(node => node.id === src.srcId);
+
+    if (!rootNode) {
+        throw new Error(`Node with id ${src.srcId} not found`);
+    }
+
+    const nodesToCopy = [
+        {
+            ...rootNode,
+            name: src.targetName || rootNode.name,
+            parentFolder: src.targetParentFolder || rootNode.parentFolder,
+        },
+        ...getDescendants(rootNode, nodes),
+    ];
+
+    const ids: Record<string, string | undefined> = {};
+
+    // Add targetParentFolder to ids so that is not replaced by a new id
+    if (src.targetParentFolder) {
+        ids[src.targetParentFolder] = src.targetParentFolder;
+    }
+
+    const getNewNodeId = (id: string): string => {
+        let newId = ids[id];
+
+        if (!newId) {
+            const oldId = id;
+            newId = idGenerator(id);
+            ids[oldId] = newId;
+        }
+
+        return newId;
+    };
+
+    const copiedNodes = nodesToCopy.map(node => ({
+        ...node,
+        id: getNewNodeId(node.id),
+        parentFolder: node.parentFolder
+            ? getNewNodeId(node.parentFolder)
+            : null,
+    }));
+
+    return copiedNodes;
+}

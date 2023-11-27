@@ -58,6 +58,7 @@ input UpdateNodeInput {
 input CopyNodeInput {
     srcId: ID!
     targetId: ID!
+    targetName: String
     targetParentFolder: ID
 }
 

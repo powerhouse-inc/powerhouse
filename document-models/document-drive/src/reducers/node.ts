@@ -91,12 +91,50 @@ export const reducer: DocumentDriveNodeOperations = {
                 : node,
         );
     },
-    copyNodeOperation(state, action) {
-        // TODO: Implement "copyNodeOperation" reducer
-        throw new Error('Reducer "copyNodeOperation" not yet implemented');
+    copyNodeOperation(state, action, dispatch) {
+        const node = state.nodes.find(node => node.id === action.input.srcId);
+
+        if (!node) {
+            throw new Error(`Node with id ${action.input.srcId} not found`);
+        }
+
+        state.nodes.push({
+            ...node,
+            id: action.input.targetId,
+            name: action.input.targetName || node.name,
+            parentFolder: action.input.targetParentFolder || null,
+        });
+
+        if (isFileNode(node)) {
+            dispatch?.({
+                // TODO: Change to COPY_CHILD_DOCUMENT
+                type: 'CREATE_CHILD_DOCUMENT',
+                input: {
+                    id: action.input.targetId,
+                    name: action.input.targetName || node.name,
+                    documentType: action.input.documentType,
+                },
+            });
+        }
     },
     moveNodeOperation(state, action) {
-        // TODO: Implement "moveNodeOperation" reducer
-        throw new Error('Reducer "moveNodeOperation" not yet implemented');
+        const node = state.nodes.find(
+            node => node.id === action.input.srcFolder,
+        );
+
+        if (!node) {
+            throw new Error(`Node with id ${action.input.srcFolder} not found`);
+        }
+
+        state.nodes = state.nodes.map(node => {
+            if (node.id === action.input.srcFolder) {
+                return {
+                    ...node,
+                    parentFolder: action.input.targetParentFolder || null,
+                };
+            }
+
+            return node;
+        });
     },
 };
