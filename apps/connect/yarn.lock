@@ -3581,13 +3581,17 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-"document-drive@file:.yalc/document-drive":
+document-drive@^0.0.1:
   version "0.0.1"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.1.tgz#07a21422f75c4f0b388a70251eace8bc6f2a58ca"
+  integrity sha512-mCNVINENC8+MWrjXV+NCsjhfXIqPT7iE/gRS3f2MILH8i92uZyQAUSovX1rNg/5Bfom97BDESeioH8gtKZwH7Q==
   dependencies:
     sanitize-filename "^1.6.3"
 
-"document-model-libs@file:.yalc/document-model-libs":
+document-model-libs@^1.1.14:
   version "1.1.14"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.14.tgz#db4e17eb6921d0544d6020268b650b3f82228704"
+  integrity sha512-z6KekHdXGwwJF0OVuk/FdHXP0l13y691TL9JkvQr2nw1xqXE/jzolrZeYU9hmAnXFEvHXmzMx5JolPkK6je5iA==
 
 document-model@^1.0.11:
   version "1.0.11"
