@@ -24,7 +24,7 @@ function driveToBaseItems(drive: DocumentDriveState): Array<BaseTreeItem> {
 
     function getNodePath(node: Node, allNodes: Node[]): string {
         if (!node.parentFolder) {
-            return '';
+            return encodeID(node.id);
         }
         const parentNode = allNodes.find(
             _node => _node.id === node.parentFolder
@@ -32,7 +32,8 @@ function driveToBaseItems(drive: DocumentDriveState): Array<BaseTreeItem> {
         if (!parentNode) {
             throw new Error('Invalid parent node');
         }
-        return path.join(getNodePath(parentNode, allNodes), node.id);
+
+        return path.join(getNodePath(parentNode, allNodes), encodeID(node.id));
     }
 
     const driveNode: BaseTreeItem = {
@@ -48,7 +49,6 @@ function driveToBaseItems(drive: DocumentDriveState): Array<BaseTreeItem> {
         path: path.join(driveID, getNodePath(node, nodes)),
         type: node.kind === 'folder' ? ItemType.Folder : ItemType.File,
     }));
-
     return [driveNode, ...nodes];
 }
 
@@ -72,7 +72,6 @@ export default function DriveContainer(props: DriveContainerProps) {
             documentDrives.reduce<Array<BaseTreeItem>>((acc, drive) => {
                 return [...acc, ...driveToBaseItems(drive.state)];
             }, []) ?? [];
-
         setBaseItems(baseItems);
     }
 

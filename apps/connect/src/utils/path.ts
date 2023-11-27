@@ -5,15 +5,17 @@ export const sanitizePath = (path: string) =>
 
 export const getLastIndexFromPath = (
     nodes: Array<Node>,
-    path: string
+    name: string,
+    parentFolder?: string
 ): number | null => {
-    const regexp = new RegExp(`^${path}(-\\d+)?$`, 'i');
+    const regexp = new RegExp(`^${name}(-\\d+)?$`, 'i');
 
     const filteredNodes = nodes
-        ?.filter(node => regexp.test(node.path))
-        .map(node => node.path)
-        .map(path => {
-            const index = path.match(/(\d+)?$/i);
+        .filter(
+            node => node.parentFolder == parentFolder && regexp.test(node.name)
+        )
+        .map(node => {
+            const index = node.name.match(/(\d+)?$/i);
             if (index) return Number(index[0]);
             return 0;
         })

@@ -1,4 +1,5 @@
 import { IDocumentDriveServer } from 'document-drive/server';
+import { isDocumentDrive } from 'document-drive/utils';
 import {
     DocumentDriveAction,
     DocumentDriveDocument,
@@ -85,9 +86,9 @@ export function useDocumentDriveServer(
 
         await fetchDocumentDrives();
 
-        // if (!isDocumentDrive(newDrive)) {
-        //     throw new Error('Received document is not a Document Drive');
-        // }
+        if (!isDocumentDrive(newDrive)) {
+            throw new Error('Received document is not a Document Drive');
+        }
         return newDrive as DocumentDriveDocument;
     }
 
