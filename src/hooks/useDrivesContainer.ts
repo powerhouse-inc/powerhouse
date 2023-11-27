@@ -10,6 +10,7 @@ import {
 } from '@powerhousedao/design-system';
 import { DocumentDriveState, Node } from 'document-model-libs/document-drive';
 import path from 'path';
+import { useModal } from 'src/components/modal';
 import { useSelectedPath } from 'src/store';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils';
 import { v4 as uuid } from 'uuid';
@@ -50,16 +51,11 @@ export function driveToBaseItems(
 
 export function useDrivesContainer() {
     const actions = useItemActions();
+    const { showModal } = useModal();
     const [, setSelectedPath] = useSelectedPath();
 
-    const {
-        addFolder,
-        deleteNode,
-        renameNode,
-        deleteDrive,
-        renameDrive,
-        documentDrives,
-    } = useDocumentDriveServer();
+    const { addFolder, renameNode, deleteDrive, renameDrive, documentDrives } =
+        useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
         const driveNodes = documentDrives?.find(
@@ -138,7 +134,11 @@ export function useDrivesContainer() {
                 ) {
                     deleteDrive(decodeID(item.id));
                 } else {
-                    deleteNode(decodeID(driveID), item.id);
+                    showModal('deleteItem', {
+                        itemId: item.id,
+                        itemName: item.label,
+                        driveId: decodeID(driveID),
+                    });
                 }
                 break;
             case 'delete-drive':
