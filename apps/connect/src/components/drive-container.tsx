@@ -3,54 +3,21 @@ import {
     BaseTreeItem,
     DriveView,
     DriveViewProps,
-    ItemType,
     decodeID,
-    encodeID,
     getRootPath,
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
-import { DocumentDriveState, Node } from 'document-model-libs/document-drive';
 import path from 'path';
 import { useEffect } from 'react';
 import {
     SortOptions,
     useDocumentDriveServer,
 } from 'src/hooks/useDocumentDriveServer';
-import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
-
-function driveToBaseItems(drive: DocumentDriveState): Array<BaseTreeItem> {
-    const driveID = encodeID(drive.id);
-
-    function getNodePath(node: Node, allNodes: Node[]): string {
-        if (!node.parentFolder) {
-            return encodeID(node.id);
-        }
-        const parentNode = allNodes.find(
-            _node => _node.id === node.parentFolder
-        );
-        if (!parentNode) {
-            throw new Error('Invalid parent node');
-        }
-
-        return path.join(getNodePath(parentNode, allNodes), encodeID(node.id));
-    }
-
-    const driveNode: BaseTreeItem = {
-        id: driveID,
-        label: drive.name,
-        path: driveID,
-        type: ItemType.LocalDrive,
-    };
-
-    const nodes: Array<BaseTreeItem> = drive.nodes.map((node, _i, nodes) => ({
-        id: node.id,
-        label: node.name,
-        path: path.join(driveID, getNodePath(node, nodes)),
-        type: node.kind === 'folder' ? ItemType.Folder : ItemType.File,
-    }));
-    return [driveNode, ...nodes];
-}
+import {
+    driveToBaseItems,
+    useDrivesContainer,
+} from 'src/hooks/useDrivesContainer';
 
 interface DriveContainerProps {
     disableHoverStyles?: boolean;
