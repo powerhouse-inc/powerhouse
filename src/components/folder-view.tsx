@@ -1,6 +1,6 @@
 import { ReactComponent as IconFile } from '@/assets/icons/file2.svg';
 import { ReactComponent as IconFolder } from '@/assets/icons/folder.svg';
-import { TreeItem } from '@powerhousedao/design-system';
+import { TreeItem, decodeID } from '@powerhousedao/design-system';
 import { FileNode, FolderNode } from 'document-model-libs/document-drive';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 
@@ -24,6 +24,7 @@ export const FolderView: React.FC<IProps> = ({
     const folders = children.filter(
         node => node.kind === 'folder'
     ) as FolderNode[];
+    const decodedDriveID = decodeID(drive);
     const files = children.filter(node => node.kind === 'file') as FileNode[];
 
     return (
@@ -33,7 +34,9 @@ export const FolderView: React.FC<IProps> = ({
                     <button
                         key={folder.id}
                         className="flex flex-col items-center rounded-md p-2 hover:bg-black/5"
-                        onClick={() => onFolderSelected(drive, folder.id)}
+                        onClick={() =>
+                            onFolderSelected(decodedDriveID, folder.id)
+                        }
                     >
                         <IconFolder className="mb-2" />
                         <p>{folder.name}</p>
@@ -46,7 +49,9 @@ export const FolderView: React.FC<IProps> = ({
                         <tr
                             key={file.id}
                             className="cursor-pointer rounded-md hover:bg-black/5"
-                            onClick={() => onFileSelected(drive, file.id)}
+                            onClick={() =>
+                                onFileSelected(decodedDriveID, file.id)
+                            }
                         >
                             <td className="flex flex-[66%] items-center">
                                 <IconFile />
@@ -62,7 +67,7 @@ export const FolderView: React.FC<IProps> = ({
                                     className="text-red-500 hover:underline"
                                     onClick={e => {
                                         e.stopPropagation();
-                                        onFileDeleted(drive, file.id);
+                                        onFileDeleted(decodedDriveID, file.id);
                                     }}
                                 >
                                     Delete

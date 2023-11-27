@@ -127,8 +127,8 @@ export function useDocumentDriveServer(
     }
 
     async function updateFile(
-        id: string,
         driveId: string,
+        id: string,
         documentType?: string,
         name?: string,
         parentFolder?: string

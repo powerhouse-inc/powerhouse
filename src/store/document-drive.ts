@@ -12,9 +12,9 @@ export const useFileNodeDocument = (drive?: string, id?: string) => {
         Document | undefined
     >();
 
-    async function fetchDocument(drive: string, path: string) {
+    async function fetchDocument(drive: string, id: string) {
         try {
-            const document = await openFile(drive, path);
+            const document = await openFile(drive, id);
             setSelectedDocument(document);
         } catch (error) {
             setSelectedDocument(undefined);

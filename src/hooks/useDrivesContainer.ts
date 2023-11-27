@@ -1,17 +1,53 @@
 import {
     ActionType,
+    BaseTreeItem,
     DriveViewProps,
     ItemType,
     TreeItem,
     decodeID,
+    encodeID,
     getRootPath,
     useItemActions,
 } from '@powerhousedao/design-system';
+import { DocumentDriveState, Node } from 'document-model-libs/document-drive';
 import path from 'path';
 import { useSelectedPath } from 'src/store';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
+
+export function getNodePath(node: Node, allNodes: Node[]): string {
+    if (!node.parentFolder) {
+        return encodeID(node.id);
+    }
+    const parentNode = allNodes.find(_node => _node.id === node.parentFolder);
+    if (!parentNode) {
+        throw new Error('Invalid parent node');
+    }
+
+    return path.join(getNodePath(parentNode, allNodes), encodeID(node.id));
+}
+
+export function driveToBaseItems(
+    drive: DocumentDriveState
+): Array<BaseTreeItem> {
+    const driveID = encodeID(drive.id);
+
+    const driveNode: BaseTreeItem = {
+        id: driveID,
+        label: drive.name,
+        path: driveID,
+        type: ItemType.LocalDrive,
+    };
+
+    const nodes: Array<BaseTreeItem> = drive.nodes.map((node, _i, nodes) => ({
+        id: node.id,
+        label: node.name,
+        path: path.join(driveID, getNodePath(node, nodes)),
+        type: node.kind === 'folder' ? ItemType.Folder : ItemType.File,
+    }));
+    return [driveNode, ...nodes];
+}
 
 export function useDrivesContainer() {
     const actions = useItemActions();

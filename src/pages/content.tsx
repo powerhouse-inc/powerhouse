@@ -35,16 +35,21 @@ const Content = () => {
     const driveID = getRootPath(selectedFolder?.path ?? '');
     const decodedDriveID = decodeID(driveID);
 
-    const { addFile, addDocument, deleteNode } = useDocumentDriveServer();
+    const { addFile, addDocument, deleteNode, documentDrives } =
+        useDocumentDriveServer();
     const documentModels = useDocumentModels();
     const getDocumentModel = useGetDocumentModel();
     const { onSubmitInput } = useDrivesContainer();
+
+    const driveNodes = documentDrives.find(
+        drive => drive.state.id === decodedDriveID
+    )?.state.nodes;
 
     const [selectedFileNode, setSelectedFileNode] = useState<
         { drive: string; id: string } | undefined
     >(undefined);
     const [selectedDocument, updateDocument, saveDocument] =
-        useFileNodeDocument(selectedFileNode?.drive, selectedFileNode?.id);
+        useFileNodeDocument(decodedDriveID, selectedFileNode?.id);
 
     // preload document editors
     useEffect(() => {
@@ -57,6 +62,10 @@ const Content = () => {
                 return;
             }
             const fileNode = await addFile(file, decodedDriveID, '');
+            if (!driveNodes) {
+                throw new Error(`Drive with id ${decodedDriveID} not found`);
+            }
+
             if (fileNode) {
                 setSelectedFileNode({
                     drive: decodedDriveID,
@@ -99,17 +108,23 @@ const Content = () => {
         }
 
         // remove first segment of path
-        const itemPath = selectedFolder.path.split('/').slice(1).join('/');
-        // TODO change to parentFolder
+        const parentFolder = selectedFolder.path.split('/').slice(1).pop();
+
         const node = await addDocument(
             documentModel.utils.createDocument(),
             decodedDriveID,
-            itemPath,
-            `New ${documentModel.documentModel.name}`
+            `New ${documentModel.documentModel.name}`,
+            parentFolder ? decodeID(parentFolder) : undefined
         );
 
         if (node) {
-            setSelectedFileNode({ drive: decodedDriveID, path: node.path });
+            if (!driveNodes) {
+                throw new Error(`Drive with id ${decodedDriveID} not found`);
+            }
+            setSelectedFileNode({
+                drive: decodedDriveID,
+                id: node.id,
+            });
         }
     }
 
@@ -188,8 +203,8 @@ const Content = () => {
                                         onFolderSelected={
                                             onFolderSelectedHandler
                                         }
-                                        onFileSelected={(drive, path) =>
-                                            setSelectedFileNode({ drive, path })
+                                        onFileSelected={(drive, id) =>
+                                            setSelectedFileNode({ drive, id })
                                         }
                                         onFileDeleted={deleteNode}
                                     />
