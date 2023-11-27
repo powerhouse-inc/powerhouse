@@ -13,6 +13,8 @@ import {
 } from '@/powerhouse';
 import { MouseEventHandler, useEffect, useRef, useState } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
+import { DriveSettingsFormSubmitHandler } from '../drive-settings-form';
+import { DriveSettingsModal } from '../drive-settings-modal';
 import { StatusIndicator } from '../status-indicator';
 
 export enum ItemType {
@@ -47,6 +49,7 @@ export interface BaseTreeItem {
     isConnected?: boolean;
     options?: ConnectDropdownMenuItem[];
     syncStatus?: 'not-synced-yet' | 'syncing' | 'synced';
+    sharingType?: 'private' | 'shared' | 'public';
     expanded?: boolean;
 }
 
@@ -143,6 +146,8 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     } = props;
 
     const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
+    const [isDriveSettingsModalOpen, setIsDriveSettingsModalOpen] =
+        useState(false);
     const [mouseIsWithinItemContainer, setMouseIsWithinItemContainer] =
         useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -177,6 +182,22 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     const showDropdownMenuButton =
         props.mode === 'read' && (mouseIsWithinItemContainer || isHighlighted);
     const statusIcon = getStatusIcon();
+    const isDrive =
+        item.type === ItemType.LocalDrive ||
+        item.type === ItemType.CloudDrive ||
+        item.type === ItemType.PublicDrive;
+    const itemOptions =
+        item.options ?? (defaultOptions as ConnectDropdownMenuItem[]);
+    const dropdownMenuItems = isDrive
+        ? [
+              {
+                  id: 'settings',
+                  label: 'Settings',
+                  icon: <Icon name="gear" />,
+              },
+              ...itemOptions,
+          ]
+        : itemOptions;
 
     const dropdownMenuButton = (
         <button onClick={() => setIsDropdownMenuOpen(true)}>
@@ -210,7 +231,11 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         setIsDropdownMenuOpen(!isDropdownMenuOpen);
     }
 
-    function onItemClick(option: string) {
+    function onItemOptionsClick(option: string) {
+        if (option === 'settings') {
+            setIsDriveSettingsModalOpen(true);
+            return;
+        }
         onOptionsClick?.(item, option);
     }
 
@@ -221,6 +246,32 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
 
     function onSubmitHandler(value: string) {
         onSubmitInput?.({ ...item, label: value });
+    }
+
+    const driveSettingsFormSubmitHandler: DriveSettingsFormSubmitHandler =
+        data => {
+            onOptionsClick?.(
+                { ...item, label: data.driveName },
+                'rename-drive',
+            );
+            onOptionsClick?.(
+                { ...item, sharingType: data.sharingType },
+                'change-sharing-type',
+            );
+            onOptionsClick?.(
+                {
+                    ...item,
+                    status: data.availableOffline
+                        ? ItemStatus.AvailableOffline
+                        : ItemStatus.Available,
+                },
+                'change-availability',
+            );
+            setIsDriveSettingsModalOpen(false);
+        };
+
+    function onDeleteDriveHandler() {
+        onOptionsClick?.(item, 'delete-drive');
     }
 
     function onCancelHandler() {
@@ -325,19 +376,40 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
             <ConnectDropdownMenu
                 isOpen={isDropdownMenuOpen}
                 onOpenChange={onDropdownMenuOpenChange}
-                items={
-                    item.options ??
-                    (defaultOptions as ConnectDropdownMenuItem[])
-                }
+                items={dropdownMenuItems}
                 menuClassName="bg-white cursor-pointer"
                 menuItemClassName="hover:bg-[#F1F5F9] px-2"
-                onItemClick={onItemClick}
+                onItemClick={onItemOptionsClick}
                 popoverProps={{
                     triggerRef: containerRef,
                     placement: 'bottom end',
                     offset: -10,
                 }}
             />
+            {isDrive && (
+                <DriveSettingsModal
+                    formProps={{
+                        driveName: item.label,
+                        // todo: make this required for drives
+                        sharingType: item.sharingType ?? 'public',
+                        availableOffline:
+                            item.status === ItemStatus.AvailableOffline,
+                        location:
+                            item.type === ItemType.LocalDrive
+                                ? 'local'
+                                : 'cloud',
+                        onCancel() {
+                            setIsDriveSettingsModalOpen(false);
+                        },
+                        onDeleteDrive: onDeleteDriveHandler,
+                        onSubmit: driveSettingsFormSubmitHandler,
+                    }}
+                    modalProps={{
+                        open: isDriveSettingsModalOpen,
+                        onClose: () => setIsDriveSettingsModalOpen(false),
+                    }}
+                />
+            )}
         </article>
     );
 }

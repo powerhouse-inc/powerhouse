@@ -102,5 +102,8 @@
     },
     "resolutions": {
         "jackspeak": "2.1.1"
+    },
+    "dependencies": {
+        "react-hook-form": "^7.48.2"
     }
 }

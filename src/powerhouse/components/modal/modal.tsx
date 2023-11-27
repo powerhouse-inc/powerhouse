@@ -35,7 +35,7 @@ export const Modal: React.FC<ModalProps> = props => {
         <ModalOverlay
             className={({ isEntering, isExiting }) =>
                 twMerge(
-                    'bg-overlay fixed inset-0 flex items-start justify-center',
+                    'bg-overlay fixed inset-0 grid place-items-center',
                     typeof modalOverlayClassName === 'string' &&
                         modalOverlayClassName,
                     isEntering && 'duration-300 ease-out animate-in fade-in',

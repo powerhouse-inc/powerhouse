@@ -2,7 +2,7 @@
 
 exports[`Modal Component > should match snapshot 1`] = `
 <div
-  class="bg-overlay fixed inset-0 flex items-start justify-center"
+  class="bg-overlay fixed inset-0 grid place-items-center"
   data-rac=""
   data-testid="delete-modal"
   style="--visual-viewport-height: 768px;"
