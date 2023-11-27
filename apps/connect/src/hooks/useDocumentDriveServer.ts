@@ -4,6 +4,7 @@ import {
     DocumentDriveAction,
     DocumentDriveDocument,
     actions,
+    utils as documentDriveUtils,
     isFileNode,
     isFolderNode,
     reducer,
@@ -198,21 +199,46 @@ export function useDocumentDriveServer(
     }
 
     async function copyOrMoveNode(
-        drive: string,
-        srcPath: string,
-        destPath: string,
+        driveId: string,
+        srcId: string,
+        targetId: string,
         operation: string,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO: use this later for sorting
         sortOptions?: SortOptions
     ) {
-        // TODO
-        // await documentDrive?.copyOrMoveNode(
-        //     drive,
-        //     srcPath,
-        //     destPath,
-        //     operation,
-        //     sortOptions
-        // );
-        // return fetchDocumentDrive();
+        if (srcId === targetId) return;
+
+        const drive = documentDrives.find(drive => drive.state.id === driveId);
+
+        if (operation === 'copy' && drive) {
+            const targetParentFolder = targetId === '' ? null : targetId;
+            const generateId = () => utils.hashKey();
+
+            const copyNodesInput = documentDriveUtils.generateNodesCopy(
+                {
+                    srcId,
+                    targetParentFolder,
+                },
+                generateId,
+                drive.state.nodes
+            );
+
+            const copyActions = copyNodesInput.map(copyNodeInput =>
+                actions.copyNode(copyNodeInput)
+            );
+
+            for (const action of copyActions) {
+                await _addDriveOperation(driveId, action);
+            }
+        } else {
+            await _addDriveOperation(
+                driveId,
+                actions.moveNode({
+                    srcFolder: srcId,
+                    targetParentFolder: targetId,
+                })
+            );
+        }
     }
 
     async function addOperation(
