@@ -6,6 +6,7 @@ import {
 import { FilesystemStorage } from 'document-drive/storage';
 import { DocumentModel, Operation, utils } from 'document-model/document';
 import { IpcMain } from 'electron';
+import { join } from 'path';
 
 export default (
     documentModels: DocumentModel[],
@@ -14,7 +15,7 @@ export default (
 ) => {
     const documentDrive = new DocumentDriveServer(
         documentModels,
-        new FilesystemStorage(path)
+        new FilesystemStorage(join(path, 'Document Drives'))
     );
 
     documentDrive.getDrives().then(drives => {

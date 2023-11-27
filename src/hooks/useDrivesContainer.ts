@@ -25,12 +25,11 @@ export function useDrivesContainer() {
             driveItem => driveItem.state.id === decodeID(driveID)
         )?.state.nodes;
 
-        const baseItemPath = item.path.split('/').slice(1).join('/');
-        const findPath = path.join(baseItemPath, 'new-folder');
-
+        const parentFolder = item.path.split('/').slice(1).pop();
         const lastIndex = getLastIndexFromPath(
             [...(driveNodes || [])],
-            findPath
+            'New Folder',
+            parentFolder ? decodeID(parentFolder) : undefined
         );
 
         const virtualPathName =
@@ -56,10 +55,15 @@ export function useDrivesContainer() {
         const basePath = basePathComponents.join('/');
         const newPath = path.join(basePath, sanitizePath(item.label));
 
+        // TODO is this needed?
         if (newPath === '.') return onCancel?.();
-
         const decodedDriveID = decodeID(driveID);
-        addFolder(decodedDriveID, item.label, basePathComponents.pop());
+        const parentFolder = basePathComponents.pop();
+        addFolder(
+            decodedDriveID,
+            item.label,
+            parentFolder ? decodeID(parentFolder) : undefined
+        );
     }
 
     const onItemClick: DriveViewProps['onItemClick'] = (_event, item) => {
