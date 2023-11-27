@@ -8,7 +8,7 @@ import {
     isFolderNode,
     reducer,
 } from 'document-model-libs/document-drive';
-import { Document, utils } from 'document-model/document';
+import { Document, Operation, utils } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useMemo } from 'react';
 import { useGetDocumentModel } from 'src/store/document-model';
@@ -215,6 +215,24 @@ export function useDocumentDriveServer(
         // return fetchDocumentDrive();
     }
 
+    async function addOperation(
+        driveId: string,
+        id: string,
+        operation: Operation
+    ) {
+        if (!server) {
+            throw new Error('Server is not defined');
+        }
+
+        const drive = documentDrives.find(drive => drive.state.id === driveId);
+        if (!drive) {
+            throw new Error(`Drive with id ${driveId} not found`);
+        }
+
+        const newDocument = await server.addOperation(driveId, id, operation);
+        return newDocument;
+    }
+
     function getChildren(driveId: string, id?: string) {
         return (
             documentDrives
@@ -236,6 +254,7 @@ export function useDocumentDriveServer(
             deleteNode,
             renameNode,
             copyOrMoveNode,
+            addOperation,
             getChildren,
         }),
         [documentDrives]

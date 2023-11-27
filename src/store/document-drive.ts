@@ -1,4 +1,4 @@
-import { Document } from 'document-model/document';
+import { Document, Operation } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
@@ -7,7 +7,7 @@ export const selectedPath = atom<string | null>(null);
 export const useSelectedPath = () => useAtom(selectedPath);
 
 export const useFileNodeDocument = (drive?: string, id?: string) => {
-    const { openFile, updateFile } = useDocumentDriveServer();
+    const { openFile, addOperation: _addOperation } = useDocumentDriveServer();
     const [selectedDocument, setSelectedDocument] = useState<
         Document | undefined
     >();
@@ -30,13 +30,13 @@ export const useFileNodeDocument = (drive?: string, id?: string) => {
         }
     }, [drive, id]);
 
-    async function saveDocument() {
-        if (drive && id && selectedDocument) {
-            // TODO this should add an operation to the child document
-            await updateFile(drive, id, selectedDocument.documentType);
-            await fetchDocument(drive, id);
+    async function addOperation(operation: Operation) {
+        if (drive && id) {
+            const document = await _addOperation(drive, id, operation);
+            // TODO check new remote document vs local document
+            setSelectedDocument(document);
         }
     }
 
-    return [selectedDocument, setSelectedDocument, saveDocument] as const;
+    return [selectedDocument, setSelectedDocument, addOperation] as const;
 };
