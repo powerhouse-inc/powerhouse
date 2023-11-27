@@ -111,8 +111,7 @@ export const reducer: DocumentDriveNodeOperations = {
                 type: 'CREATE_CHILD_DOCUMENT',
                 input: {
                     id: action.input.targetId,
-                    name: action.input.targetName || node.name,
-                    documentType: action.input.documentType,
+                    documentType: node.documentType,
                 },
             });
         }

@@ -81,7 +81,7 @@
                             "id": "vnQ7OB5b3wGLgjhbgJqAIpA+JLE=",
                             "name": "COPY_NODE",
                             "description": "",
-                            "schema": "input CopyNodeInput {\n    srcId: ID!\n    targetId: ID!\n    targetParentFolder: ID\n}",
+                            "schema": "input CopyNodeInput {\n    srcId: ID!\n    targetId: ID!\n    targetName: String\n    targetParentFolder: ID\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
