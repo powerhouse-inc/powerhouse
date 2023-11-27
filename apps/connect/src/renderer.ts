@@ -27,6 +27,7 @@
  */
 import { createRoot } from 'react-dom/client';
 import App from './components/app';
+import './i18n';
 import './index.css';
 
 createRoot(document.getElementById('app') as HTMLElement).render(App);
