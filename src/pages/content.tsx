@@ -61,7 +61,13 @@ const Content = () => {
             if (!selectedPath) {
                 return;
             }
-            const fileNode = await addFile(file, decodedDriveID, '');
+
+            const fileNode = await addFile(
+                file.content,
+                decodedDriveID,
+                file.name,
+                selectedFolder ? decodeID(selectedFolder.id) : undefined
+            );
             if (!driveNodes) {
                 throw new Error(`Drive with id ${decodedDriveID} not found`);
             }
@@ -91,9 +97,9 @@ const Content = () => {
         const parentFolder = selectedFolder.path.split('/').slice(1).pop();
 
         const node = await addDocument(
-            documentModel.utils.createDocument(),
             decodedDriveID,
             `New ${documentModel.documentModel.name}`,
+            documentModel.documentModel.id,
             parentFolder ? decodeID(parentFolder) : undefined
         );
 
