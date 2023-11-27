@@ -8,7 +8,7 @@ import {
     shell,
 } from 'electron';
 import fs from 'node:fs';
-import path from 'path';
+import path, { basename } from 'path';
 import initDocumentDrive from './app/document-drive';
 import store from './app/store';
 import { Theme } from './store';
@@ -22,8 +22,13 @@ app.commandLine.appendSwitch('enable-experimental-web-platform-features');
 
 async function handleFile(path: string, window?: Electron.BrowserWindow) {
     try {
-        const file = fs.readFileSync(path, { encoding: 'binary' }).toString();
-
+        const content = fs
+            .readFileSync(path, { encoding: 'binary' })
+            .toString();
+        const file = {
+            name: basename(path),
+            content,
+        };
         const _window = window ?? BrowserWindow.getFocusedWindow();
         if (_window) {
             _window.webContents.send('openFile', file);

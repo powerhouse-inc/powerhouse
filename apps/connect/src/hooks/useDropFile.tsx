@@ -25,20 +25,22 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
             for (const item of e.items) {
                 if (item.kind === 'file') {
                     const file = await item.getFile();
-                    const document = await loadFile(file, getDocumentModel);
-                    const tab = await fromDocument(document, selectedTab);
 
                     const drive = documentDrives?.[0]; // TODO improve default drive selection
                     if (drive) {
                         const node = await addFile(
                             file,
+                            drive.state.id,
                             file.name,
-                            drive.state.id
+                            undefined // TODO selectedFolder as parent folder
                         );
+
                         if (node) {
                             openFile(drive.state.id, node.id);
                         }
                     } else {
+                        const document = await loadFile(file, getDocumentModel);
+                        const tab = await fromDocument(document, selectedTab);
                         addTab(tab);
                     }
                     navigate('/');

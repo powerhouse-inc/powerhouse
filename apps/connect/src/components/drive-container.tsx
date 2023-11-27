@@ -99,7 +99,7 @@ export default function DriveContainer(props: DriveContainerProps) {
             );
         } else if (item.kind === 'file') {
             const file = await item.getFile();
-            addFile(file, decodedDriveID, targetId);
+            addFile(file, decodedDriveID, undefined, targetId);
         }
     };
     return (

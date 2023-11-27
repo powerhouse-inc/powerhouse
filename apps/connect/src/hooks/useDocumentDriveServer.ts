@@ -94,19 +94,20 @@ export function useDocumentDriveServer(
     }
 
     async function addDocument(
-        document: Document,
         driveId: string,
         name: string,
-        parentFolder?: string
+        documentType: string,
+        parentFolder?: string,
+        document?: Document
     ) {
         const id = utils.hashKey();
         const drive = await _addDriveOperation(
             driveId,
             actions.addFile({
                 id,
-                name: name ?? document.name,
+                name,
                 parentFolder,
-                documentType: document.documentType,
+                documentType,
                 // TODO Add support for document as initial state
             })
         );
@@ -115,15 +116,30 @@ export function useDocumentDriveServer(
         if (!node || !isFileNode(node)) {
             throw new Error('There was an error adding document');
         }
+
+        if (document) {
+            await server?.createDocument(drive.state.id, {
+                id,
+                documentType,
+                document,
+            });
+        }
         return node;
     }
 
-    async function addFile(file: string | File, drive: string, name?: string) {
+    async function addFile(
+        file: string | File,
+        drive: string,
+        name?: string,
+        parentFolder?: string
+    ) {
         const document = await loadFile(file, getDocumentModel);
         return addDocument(
-            document,
             drive,
-            name || typeof file === 'string' ? document.name : file.name
+            name || (typeof file === 'string' ? document.name : file.name),
+            document.documentType,
+            parentFolder,
+            document
         );
     }
 

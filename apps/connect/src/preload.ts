@@ -14,8 +14,13 @@ const electronApi = {
     ready: () => ipcRenderer.send('ready'),
     fileSaved: (document: Document, path?: string) =>
         ipcRenderer.invoke('fileSaved', document, path),
-    handleFileOpen: (listener: (file: string) => void) => {
-        function callback(event: IpcRendererEvent, file: string) {
+    handleFileOpen: (
+        listener: (file: { name: string; content: string }) => void
+    ) => {
+        function callback(
+            event: IpcRendererEvent,
+            file: { name: string; content: string }
+        ) {
             listener(file);
         }
         ipcRenderer.on('openFile', callback);
