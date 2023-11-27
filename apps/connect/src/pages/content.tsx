@@ -10,7 +10,7 @@ import {
     useGetItemByPath,
     useItemActions,
 } from '@powerhousedao/design-system';
-import { Document, DocumentModel } from 'document-model/document';
+import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
 import { useEffect, useState } from 'react';
 import Button from 'src/components/button';
@@ -48,7 +48,7 @@ const Content = () => {
     const [selectedFileNode, setSelectedFileNode] = useState<
         { drive: string; id: string } | undefined
     >(undefined);
-    const [selectedDocument, updateDocument, saveDocument] =
+    const [selectedDocument, updateDocument, addOperation] =
         useFileNodeDocument(decodedDriveID, selectedFileNode?.id);
 
     // preload document editors
@@ -75,32 +75,12 @@ const Content = () => {
         });
     }, [selectedPath]);
 
-    async function handleFileSave() {
+    function handleAddOperation(operation: Operation) {
         if (!selectedDocument) {
             throw new Error('No document selected');
         }
-
-        saveDocument();
+        addOperation(operation);
     }
-
-    useEffect(() => {
-        const removeHandler =
-            window.electronAPI?.handleFileSave(handleFileSave);
-
-        function handleKeyboardSave(e: KeyboardEvent) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                handleFileSave();
-            }
-        }
-
-        document.addEventListener('keydown', handleKeyboardSave);
-
-        return () => {
-            removeHandler?.();
-            document.removeEventListener('keydown', handleKeyboardSave);
-        };
-    }, [saveDocument]);
 
     async function createDocument(documentModel: DocumentModel) {
         if (!driveID || !selectedFolder) {
@@ -171,9 +151,9 @@ const Content = () => {
                     <DocumentEditor
                         document={selectedDocument}
                         onChange={updateDocument}
-                        onSave={saveDocument}
                         onClose={() => setSelectedFileNode(undefined)}
                         onExport={() => exportDocument(selectedDocument)}
+                        onAddOperation={handleAddOperation}
                     />
                 </div>
             ) : (
@@ -189,7 +169,7 @@ const Content = () => {
                                         selectFolder(item);
                                     }
                                 }}
-                                onAddNewItem={() => {}}
+                                onAddNewItem={() => undefined}
                                 onSubmitInput={submitNewFolderAndSelect}
                                 onCancelInput={console.log}
                             />

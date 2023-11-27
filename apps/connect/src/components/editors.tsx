@@ -1,10 +1,16 @@
-import { Action, Document, actions } from 'document-model/document';
+import {
+    Action,
+    BaseAction,
+    Document,
+    Operation,
+    actions,
+} from 'document-model/document';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { themeAtom } from 'src/store';
 import { useDocumentModel } from 'src/store/document-model';
 import { useEditor } from 'src/store/editor';
-import { useDocumentReducer } from 'src/utils/document-model';
+import { useDocumentDispatch } from 'src/utils/document-model';
 import Button from './button';
 
 export interface EditorProps<T = unknown, A extends Action = Action> {
@@ -17,17 +23,17 @@ export type EditorComponent<T = unknown, A extends Action = Action> = (
 ) => JSX.Element;
 
 export interface IProps extends EditorProps {
-    onSave: () => void;
     onClose: () => void;
     onExport: () => void;
+    onAddOperation: (operation: Operation) => void;
 }
 
 export const DocumentEditor: React.FC<IProps> = ({
     document: initialDocument,
     onChange,
-    onSave,
     onClose,
     onExport,
+    onAddOperation,
 }) => {
     const documentModel = useDocumentModel(initialDocument.documentType);
     const editor = useEditor(initialDocument.documentType);
@@ -51,10 +57,15 @@ export const DocumentEditor: React.FC<IProps> = ({
 
     const EditorComponent = editor.Component;
     const theme = useAtomValue(themeAtom);
-    const [document, dispatch] = useDocumentReducer(
+    const [document, _dispatch] = useDocumentDispatch(
         documentModel.reducer,
         initialDocument
     );
+
+    function dispatch(action: BaseAction | Action) {
+        const operation = _dispatch(action);
+        onAddOperation(operation);
+    }
 
     useEffect(() => {
         onChange?.(document);
@@ -86,7 +97,6 @@ export const DocumentEditor: React.FC<IProps> = ({
                     </Button>
                 </div>
                 <div className="flex gap-4">
-                    <Button onClick={onSave}>Save</Button>
                     <Button onClick={onClose}>Close</Button>
                 </div>
             </div>
