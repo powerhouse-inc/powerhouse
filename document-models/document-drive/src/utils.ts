@@ -1,4 +1,4 @@
-import { FileNode, FolderNode, Node } from '..';
+import { CopyNodeInput, FileNode, FolderNode, Node } from '..';
 
 export function isFileNode(node: Node): node is FileNode {
     return node.kind === 'file';
@@ -50,7 +50,7 @@ export function generateNodesCopy(
     src: GenerateNodesCopySrc,
     idGenerator: GenerateNodesCopyIdGenerator,
     nodes: Node[],
-) {
+): CopyNodeInput[] {
     const rootNode = nodes.find(node => node.id === src.srcId);
 
     if (!rootNode) {
@@ -85,13 +85,14 @@ export function generateNodesCopy(
         return newId;
     };
 
-    const copiedNodes = nodesToCopy.map(node => ({
-        ...node,
-        id: getNewNodeId(node.id),
-        parentFolder: node.parentFolder
+    const copyNodesInput = nodesToCopy.map<CopyNodeInput>(node => ({
+        srcId: node.id,
+        targetId: getNewNodeId(node.id),
+        targetName: node.name,
+        targetParentFolder: node.parentFolder
             ? getNewNodeId(node.parentFolder)
             : null,
     }));
 
-    return copiedNodes;
+    return copyNodesInput;
 }

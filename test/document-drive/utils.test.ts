@@ -1,6 +1,7 @@
 import {
     utils,
     DocumentDriveState,
+    CopyNodeInput,
 } from '../../document-models/document-drive';
 
 const baseNodes: DocumentDriveState['nodes'] = [
@@ -47,24 +48,24 @@ describe('DocumentDrive Utils', () => {
 
     describe('generateNodesCopy', () => {
         it('should return a copy of the affected nodes (subfolders and files) with new id', () => {
-            const expectedResult: DocumentDriveState['nodes'] = [
+            const expectedResult: CopyNodeInput[] = [
                 {
-                    id: '1-copy',
-                    name: 'Folder 1',
-                    parentFolder: null,
-                    kind: 'folder',
+                    srcId: '1',
+                    targetId: '1-copy',
+                    targetName: 'Folder 1',
+                    targetParentFolder: null,
                 },
                 {
-                    id: '1.1-copy',
-                    name: 'Folder 1.1',
-                    parentFolder: '1-copy',
-                    kind: 'folder',
+                    srcId: '1.1',
+                    targetId: '1.1-copy',
+                    targetName: 'Folder 1.1',
+                    targetParentFolder: '1-copy',
                 },
                 {
-                    id: '1.1.1-copy',
-                    name: 'Folder 1.1.1',
-                    parentFolder: '1.1-copy',
-                    kind: 'folder',
+                    srcId: '1.1.1',
+                    targetId: '1.1.1-copy',
+                    targetName: 'Folder 1.1.1',
+                    targetParentFolder: '1.1-copy',
                 },
             ];
 
@@ -79,24 +80,24 @@ describe('DocumentDrive Utils', () => {
         });
 
         it('should return a copy of the affected nodes (subfolders and files) with new id and new name for the target node', () => {
-            const expectedResult: DocumentDriveState['nodes'] = [
+            const expectedResult: CopyNodeInput[] = [
                 {
-                    id: '1-copy',
-                    name: 'New Name',
-                    parentFolder: null,
-                    kind: 'folder',
+                    srcId: '1',
+                    targetId: '1-copy',
+                    targetName: 'New Name',
+                    targetParentFolder: null,
                 },
                 {
-                    id: '1.1-copy',
-                    name: 'Folder 1.1',
-                    parentFolder: '1-copy',
-                    kind: 'folder',
+                    srcId: '1.1',
+                    targetId: '1.1-copy',
+                    targetName: 'Folder 1.1',
+                    targetParentFolder: '1-copy',
                 },
                 {
-                    id: '1.1.1-copy',
-                    name: 'Folder 1.1.1',
-                    parentFolder: '1.1-copy',
-                    kind: 'folder',
+                    srcId: '1.1.1',
+                    targetId: '1.1.1-copy',
+                    targetName: 'Folder 1.1.1',
+                    targetParentFolder: '1.1-copy',
                 },
             ];
 
@@ -111,12 +112,12 @@ describe('DocumentDrive Utils', () => {
         });
 
         it('should copy a single node inside another', () => {
-            const expectedResult: DocumentDriveState['nodes'] = [
+            const expectedResult: CopyNodeInput[] = [
                 {
-                    id: '1.1.1-copy',
-                    name: 'Folder 1.1.1',
-                    parentFolder: '1.1',
-                    kind: 'folder',
+                    srcId: '1.1.1',
+                    targetId: '1.1.1-copy',
+                    targetName: 'Folder 1.1.1',
+                    targetParentFolder: '1.1',
                 },
             ];
 
@@ -131,24 +132,24 @@ describe('DocumentDrive Utils', () => {
         });
 
         it('should copy target and sub-nodes into a different node', () => {
-            const expectedResult: DocumentDriveState['nodes'] = [
+            const expectedResult: CopyNodeInput[] = [
                 {
-                    id: '1-copy',
-                    name: 'Folder 1',
-                    parentFolder: '2',
-                    kind: 'folder',
+                    srcId: '1',
+                    targetId: '1-copy',
+                    targetName: 'Folder 1',
+                    targetParentFolder: '2',
                 },
                 {
-                    id: '1.1-copy',
-                    name: 'Folder 1.1',
-                    parentFolder: '1-copy',
-                    kind: 'folder',
+                    srcId: '1.1',
+                    targetId: '1.1-copy',
+                    targetName: 'Folder 1.1',
+                    targetParentFolder: '1-copy',
                 },
                 {
-                    id: '1.1.1-copy',
-                    name: 'Folder 1.1.1',
-                    parentFolder: '1.1-copy',
-                    kind: 'folder',
+                    srcId: '1.1.1',
+                    targetId: '1.1.1-copy',
+                    targetName: 'Folder 1.1.1',
+                    targetParentFolder: '1.1-copy',
                 },
             ];
 
@@ -163,24 +164,24 @@ describe('DocumentDrive Utils', () => {
         });
 
         it('should copy target and sub-nodes into a different node with a different name', () => {
-            const expectedResult: DocumentDriveState['nodes'] = [
+            const expectedResult: CopyNodeInput[] = [
                 {
-                    id: '1-copy',
-                    name: 'New Name',
-                    parentFolder: '2',
-                    kind: 'folder',
+                    srcId: '1',
+                    targetId: '1-copy',
+                    targetName: 'New Name',
+                    targetParentFolder: '2',
                 },
                 {
-                    id: '1.1-copy',
-                    name: 'Folder 1.1',
-                    parentFolder: '1-copy',
-                    kind: 'folder',
+                    srcId: '1.1',
+                    targetId: '1.1-copy',
+                    targetName: 'Folder 1.1',
+                    targetParentFolder: '1-copy',
                 },
                 {
-                    id: '1.1.1-copy',
-                    name: 'Folder 1.1.1',
-                    parentFolder: '1.1-copy',
-                    kind: 'folder',
+                    srcId: '1.1.1',
+                    targetId: '1.1.1-copy',
+                    targetName: 'Folder 1.1.1',
+                    targetParentFolder: '1.1-copy',
                 },
             ];
 
