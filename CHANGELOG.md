@@ -1,3 +1,10 @@
+# [1.0.0-alpha.27](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.26...v1.0.0-alpha.27) (2023-11-27)
+
+
+### Bug Fixes
+
+* 🎨 SidebarUser styles ([32ad83d](https://github.com/powerhouse-inc/design-system/commit/32ad83d9d2849cac7e01338fc1d354baf5a6398a))
+
 # [1.0.0-alpha.26](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2023-11-24)
 
 
