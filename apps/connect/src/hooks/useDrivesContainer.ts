@@ -53,8 +53,14 @@ export function useDrivesContainer() {
     const actions = useItemActions();
     const [, setSelectedPath] = useSelectedPath();
 
-    const { openFile, addFolder, deleteNode, renameNode, documentDrives } =
-        useDocumentDriveServer();
+    const {
+        openFile,
+        addFolder,
+        deleteNode,
+        renameNode,
+        deleteDrive,
+        documentDrives,
+    } = useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
         const driveNodes = documentDrives?.find(
@@ -127,7 +133,20 @@ export function useDrivesContainer() {
                 actions.setItemAction(item.id, ActionType.Update);
                 break;
             case 'delete':
-                deleteNode(decodeID(driveID), item.id);
+                if (
+                    [
+                        ItemType.CloudDrive,
+                        ItemType.LocalDrive,
+                        ItemType.PublicDrive,
+                    ].includes(item.type)
+                ) {
+                    deleteDrive(decodeID(item.id));
+                } else {
+                    deleteNode(decodeID(driveID), item.id);
+                }
+                break;
+            case 'delete-drive':
+                deleteDrive(decodeID(item.id));
                 break;
         }
     };

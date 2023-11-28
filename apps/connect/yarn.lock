@@ -1003,10 +1003,12 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
-"@powerhousedao/design-system@^1.0.0-alpha.26":
-  version "1.0.0-alpha.26"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.26.tgz#314f88517103d271804758c470f1678f28ae7251"
-  integrity sha512-J20+++0jxDY3FyeF+q08W3vmL68VtrgWooNJUGWydXiol5Z+k2FxHZ5B1GGlJsXH8TD1AsEZYdJdbWRkvmQFkQ==
+"@powerhousedao/design-system@^1.0.0-alpha.29":
+  version "1.0.0-alpha.29"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.29.tgz#5d8c6084168ac9ef8ba52e33aeb1e3fd1705b230"
+  integrity sha512-orgpUzi41sxxbL8UEQkqVV0ZKX/JhD7qk656E49pTqOl3zH4rXQtVCX23l0T7TO+JW6L/mfd8mJRFAT/aJEt5g==
+  dependencies:
+    react-hook-form "^7.48.2"
 
 "@react-aria/breadcrumbs@^3.5.8":
   version "3.5.8"
@@ -3581,10 +3583,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.2.tgz#76dce330d96f782b0fffb320c1a1a1888ac34570"
-  integrity sha512-F1Mx+JtkomgpwC1QqACEJLhXv4Wv+MbUl1/SX/41KbrpBWmXQCgWwGfFmpJu66EYj4WKU7E3tWgm1umNTboUdA==
+document-drive@^0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.3.tgz#b9c0be02e3a891a375e2524347190fc2257a01d7"
+  integrity sha512-+IjGn/fdAKs+cTy0fElobKCM9vHxf+sXHsSISk+f4ifSrZ+o58G/VCBGc0tOSej2f0KeE4QSLF6jyRI+Pynk3g==
   dependencies:
     sanitize-filename "^1.6.3"
 
@@ -6030,6 +6032,11 @@ react-dom@^18.2.0:
   dependencies:
     loose-envify "^1.1.0"
     scheduler "^0.23.0"
+
+react-hook-form@^7.48.2:
+  version "7.48.2"
+  resolved "https://registry.yarnpkg.com/react-hook-form/-/react-hook-form-7.48.2.tgz#01150354d2be61412ff56a030b62a119283b9935"
+  integrity sha512-H0T2InFQb1hX7qKtDIZmvpU1Xfn/bdahWBN1fH19gSe4bBEqTfmlr7H3XWTaVtiK4/tpPaI1F3355GPMZYge+A==
 
 react-refresh@^0.14.0:
   version "0.14.0"

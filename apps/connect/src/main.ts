@@ -104,7 +104,7 @@ ipcMain.on('theme', (_, theme) => {
 const createWindow = async (options?: {
     onReady?: (window: BrowserWindow) => void;
 }) => {
-    const theme = store.get('theme', 'light') as Theme;
+    const theme = 'light'; // store.get('theme', 'light') as Theme; TODO retrieve initial theme from store
 
     const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
 
