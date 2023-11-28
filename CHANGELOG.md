@@ -1,3 +1,10 @@
+# [1.0.0-alpha.29](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2023-11-28)
+
+
+### Bug Fixes
+
+* hide delete when danger zone collapsed ([a08907e](https://github.com/powerhouse-inc/design-system/commit/a08907e7fa7d71af43667347261bc4d31de2efcf))
+
 # [1.0.0-alpha.28](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.27...v1.0.0-alpha.28) (2023-11-27)
 
 
