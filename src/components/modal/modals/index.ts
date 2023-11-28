@@ -1,18 +1,15 @@
-import { DeleteItemModal, DeleteItemModalProps } from './DeleteItemModal';
-import { UpgradeDriveModal, UpgradeDriveModalProps } from './UpgradeDriveModal';
+import { DeleteItemModal } from './DeleteItemModal';
+import { UpgradeDriveModal } from './UpgradeDriveModal';
 
-export type ModalType = keyof ModalPropsMapping;
-
-export type Modals = {
-    [K in ModalType]: React.ComponentType<ModalPropsMapping[K]>;
-};
-
-export interface ModalPropsMapping {
-    deleteItem: DeleteItemModalProps;
-    upgradeDrive: UpgradeDriveModalProps;
-}
-
-export const modals: Modals = {
+export const modals = {
     deleteItem: DeleteItemModal,
     upgradeDrive: UpgradeDriveModal,
+} as const;
+
+export type Modals = typeof modals;
+
+export type ModalType = keyof Modals;
+
+export type ModalPropsMapping = {
+    [K in ModalType]: React.ComponentProps<Modals[K]>;
 };
