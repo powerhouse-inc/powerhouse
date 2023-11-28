@@ -61,12 +61,13 @@ const Content = () => {
             if (!selectedPath) {
                 return;
             }
-
             const fileNode = await addFile(
                 file.content,
                 decodedDriveID,
                 file.name,
-                selectedFolder ? decodeID(selectedFolder.id) : undefined
+                selectedFolder && selectedFolder.type === ItemType.Folder
+                    ? decodeID(selectedFolder.id)
+                    : undefined
             );
             if (!driveNodes) {
                 throw new Error(`Drive with id ${decodedDriveID} not found`);

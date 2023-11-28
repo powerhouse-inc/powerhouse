@@ -273,6 +273,13 @@
   dependencies:
     "@babel/helper-plugin-utils" "^7.19.0"
 
+"@babel/runtime@^7.12.5":
+  version "7.23.4"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.23.4.tgz#36fa1d2b36db873d25ec631dcc4923fdc1cf2e2e"
+  integrity sha512-2Yv65nlWnWlSpe3fXEyX5i7fx5kIKo4Qbcj+hMO0odwaneFjfXw5fdum+4yL20O0QiaHpia0cYQ9xpNMqrBwHg==
+  dependencies:
+    regenerator-runtime "^0.14.0"
+
 "@babel/template@^7.20.7":
   version "7.20.7"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.20.7.tgz#a15090c2839a83b02aa996c0b4994005841fd5a8"
@@ -3583,17 +3590,17 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.3:
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.3.tgz#b9c0be02e3a891a375e2524347190fc2257a01d7"
-  integrity sha512-+IjGn/fdAKs+cTy0fElobKCM9vHxf+sXHsSISk+f4ifSrZ+o58G/VCBGc0tOSej2f0KeE4QSLF6jyRI+Pynk3g==
+document-drive@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.4.tgz#10d5966161aa38658dab76eab039c4f5e95d13a1"
+  integrity sha512-Cn7QqH0yGjs55k2s+S12zB0PHd/NS34/E2KO5CEf/8ZNNWpNQG5Mp12icijN9aFOPueSalxD/UZA+m5giBd7XA==
   dependencies:
     sanitize-filename "^1.6.3"
 
-document-model-libs@^1.1.17:
-  version "1.1.17"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.17.tgz#a3b2caa6b8baa7932f4ba8e1dca78f0c9caf07b3"
-  integrity sha512-5CBvRNzyoIjUu3fR1+VbJeIMP7BtbZv7R2NgnnxcKINMGZL7RZNMae1/+AVU7Svo6SbrbP+TucB3LEwyyFMeOw==
+document-model-libs@^1.1.20:
+  version "1.1.20"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.20.tgz#04b9ca6455005523b75c045c866fdc3b63ab3220"
+  integrity sha512-lld0abICMTX7dsURqHEsvxsI8QbamhlAZrJXV41L89rE2KNsXeeDmvKs5gGfZeJz4O5jSYNNhOQ0GTQf7E651Q==
 
 document-model@^1.0.11:
   version "1.0.11"
@@ -6033,6 +6040,13 @@ react-dom@^18.2.0:
     loose-envify "^1.1.0"
     scheduler "^0.23.0"
 
+react-error-boundary@^4.0.11:
+  version "4.0.11"
+  resolved "https://registry.yarnpkg.com/react-error-boundary/-/react-error-boundary-4.0.11.tgz#36bf44de7746714725a814630282fee83a7c9a1c"
+  integrity sha512-U13ul67aP5DOSPNSCWQ/eO0AQEYzEFkVljULQIjMV0KlffTAhxuDoBKdO0pb/JZ8mDhMKFZ9NZi0BmLGUiNphw==
+  dependencies:
+    "@babel/runtime" "^7.12.5"
+
 react-hook-form@^7.48.2:
   version "7.48.2"
   resolved "https://registry.yarnpkg.com/react-hook-form/-/react-hook-form-7.48.2.tgz#01150354d2be61412ff56a030b62a119283b9935"
@@ -6181,6 +6195,11 @@ rechoir@^0.8.0:
   integrity sha512-/vxpCXddiX8NGfGO/mTafwjq4aFa/71pvamip0++IQk3zG8cbCj0fifNPrjjF1XMXUne91jL9OoxmdykoEtifQ==
   dependencies:
     resolve "^1.20.0"
+
+regenerator-runtime@^0.14.0:
+  version "0.14.0"
+  resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.14.0.tgz#5e19d68eb12d486f797e15a3c6a918f7cec5eb45"
+  integrity sha512-srw17NI0TUWHuGa5CFGGmhfNIeja30WMBfbslPNhf6JrqQlLN5gcrvig1oqPxiVaXb0oW0XRKtH6Nngs5lKCIA==
 
 require-directory@^2.1.1:
   version "2.1.1"

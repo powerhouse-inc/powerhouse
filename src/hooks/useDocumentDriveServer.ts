@@ -288,6 +288,10 @@ export function useDocumentDriveServer(
         return fetchDocumentDrives();
     }
 
+    async function renameDrive(id: string, name: string) {
+        return _addDriveOperation(id, actions.setDriveName({ name }));
+    }
+
     function getChildren(driveId: string, id?: string) {
         return (
             documentDrives
@@ -312,6 +316,7 @@ export function useDocumentDriveServer(
             addOperation,
             getChildren,
             deleteDrive,
+            renameDrive,
         }),
         [documentDrives]
     );
