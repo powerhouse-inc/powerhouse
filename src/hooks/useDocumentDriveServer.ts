@@ -275,6 +275,19 @@ export function useDocumentDriveServer(
         return newDocument;
     }
 
+    async function deleteDrive(id: string) {
+        if (!server) {
+            throw new Error('Server is not defined');
+        }
+
+        const drive = documentDrives.find(drive => drive.state.id === id);
+        if (!drive) {
+            throw new Error(`Drive with id ${id} not found`);
+        }
+        await server.deleteDrive(id);
+        return fetchDocumentDrives();
+    }
+
     function getChildren(driveId: string, id?: string) {
         return (
             documentDrives
@@ -298,6 +311,7 @@ export function useDocumentDriveServer(
             copyOrMoveNode,
             addOperation,
             getChildren,
+            deleteDrive,
         }),
         [documentDrives]
     );

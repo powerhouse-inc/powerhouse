@@ -103,23 +103,19 @@ export default function DriveContainer(props: DriveContainerProps) {
         }
     };
     return (
-        <>
-            {documentDrives.map(drive => (
-                <DriveView
-                    key={drive.state.id}
-                    type="local"
-                    name={drive.state.name}
-                    onItemClick={onItemClick}
-                    onItemOptionsClick={onItemOptionsClick}
-                    onSubmitInput={item => onSubmitInput(item)}
-                    onCancelInput={cancelInputHandler}
-                    onDragStart={onDragStartHandler}
-                    onDragEnd={onDragEndHandler}
-                    onDropEvent={onDropEventHandler}
-                    onDropActivate={onDropActivateHandler}
-                    disableHighlightStyles={disableHoverStyles}
-                />
-            ))}
-        </>
+        <DriveView
+            key="local"
+            type="local"
+            name={'My Local Drives'}
+            onItemClick={onItemClick}
+            onItemOptionsClick={onItemOptionsClick}
+            onSubmitInput={item => onSubmitInput(item)}
+            onCancelInput={cancelInputHandler}
+            onDragStart={onDragStartHandler}
+            onDragEnd={onDragEndHandler}
+            onDropEvent={onDropEventHandler}
+            onDropActivate={onDropActivateHandler}
+            disableHighlightStyles={disableHoverStyles}
+        />
     );
 }
