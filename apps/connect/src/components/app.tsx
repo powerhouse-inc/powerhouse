@@ -39,11 +39,11 @@ const Preloader = () => {
 export default (
     <React.StrictMode>
         {/* TODO loading */}
-        <ModalManager>
-            <Suspense fallback={<></>}>
-                <Preloader />
+        <Suspense fallback={<></>}>
+            <Preloader />
+            <ModalManager>
                 <App />
-            </Suspense>
-        </ModalManager>
+            </ModalManager>
+        </Suspense>
     </React.StrictMode>
 );

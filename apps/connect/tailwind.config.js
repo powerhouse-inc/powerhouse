@@ -2,6 +2,9 @@ import { createThemes } from 'tw-colors';
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+    corePlugins: {
+        preflight: false,
+    },
     mode: 'jit',
     content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
     theme: {
