@@ -92,7 +92,25 @@
                             "id": "VNyiD/sNGzk6k9A1Qe7s8dmrJxA=",
                             "name": "MOVE_NODE",
                             "description": "",
-                            "schema": "input MoveNodeInput {\n    srcFolder: ID!\n\ttargetParentFolder: ID\n}",
+                            "schema": "input MoveNodeInput {\n    srcFolder: ID!\n    targetParentFolder: ID\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                },
+                {
+                    "id": "0dHwHlxOM9x0vMZ+gLnKxf2qTEo=",
+                    "name": "Drive",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "qGCiPGpTt/cyz3HzyrBn92z1dsU=",
+                            "name": "SET_NAME",
+                            "description": "",
+                            "schema": "input SetNameInput {\n    name: String!\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
