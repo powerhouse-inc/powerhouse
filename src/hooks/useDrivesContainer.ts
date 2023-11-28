@@ -152,10 +152,8 @@ export function useDrivesContainer() {
     };
 
     async function updateNodeName(item: TreeItem, driveID: string) {
-        const baseItemPath = item.path.split('/').slice(1).join('/');
         const decodedDriveID = decodeID(driveID);
-
-        renameNode(decodedDriveID, baseItemPath, item.label);
+        renameNode(decodedDriveID, item.id, item.label);
     }
 
     const onSubmitInput = (item: TreeItem, onCancel?: () => void) => {
