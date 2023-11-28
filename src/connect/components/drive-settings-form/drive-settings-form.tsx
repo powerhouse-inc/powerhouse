@@ -193,7 +193,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                     Delete drive
                 </button>
             </div>
-            {showDeleteDrive ? (
+            {showDeleteDrive && showDangerZone ? (
                 <DeleteDrive
                     {...props}
                     onCancel={() => setShowDeleteDrive(false)}
