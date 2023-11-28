@@ -6,7 +6,6 @@ import {
     TreeItem,
     decodeID,
     encodeID,
-    getRootPath,
     useItemActions,
 } from '@powerhousedao/design-system';
 import { DocumentDriveState, Node } from 'document-model-libs/document-drive';
@@ -22,7 +21,7 @@ export function getNodePath(node: Node, allNodes: Node[]): string {
     }
     const parentNode = allNodes.find(_node => _node.id === node.parentFolder);
     if (!parentNode) {
-        throw new Error('Invalid parent node');
+        throw new Error(`Invalid parent node ${node.parentFolder}`);
     }
 
     return path.join(getNodePath(parentNode, allNodes), encodeID(node.id));
@@ -54,11 +53,11 @@ export function useDrivesContainer() {
     const [, setSelectedPath] = useSelectedPath();
 
     const {
-        openFile,
         addFolder,
         deleteNode,
         renameNode,
         deleteDrive,
+        renameDrive,
         documentDrives,
     } = useDocumentDriveServer();
 
@@ -109,10 +108,7 @@ export function useDrivesContainer() {
     }
 
     const onItemClick: DriveViewProps['onItemClick'] = (_event, item) => {
-        if (item.type === ItemType.File) {
-            const decodedDriveID = decodeID(getRootPath(item.path));
-            openFile(decodedDriveID, item.id);
-        } else {
+        if (item.type !== ItemType.File) {
             setSelectedPath(item.path);
             actions.toggleExpandedAndSelect(item.id);
         }
@@ -147,6 +143,9 @@ export function useDrivesContainer() {
                 break;
             case 'delete-drive':
                 deleteDrive(decodeID(item.id));
+                break;
+            case 'rename-drive':
+                renameDrive(decodeID(item.id), item.label);
                 break;
         }
     };
