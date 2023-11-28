@@ -1,3 +1,10 @@
+# [1.0.0-alpha.30](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.29...v1.0.0-alpha.30) (2023-11-28)
+
+
+### Features
+
+* added missing export modal ([8cb96c3](https://github.com/powerhouse-inc/design-system/commit/8cb96c37d75b8fc3d3531b0a8cb9ab334d1bff70))
+
 # [1.0.0-alpha.29](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2023-11-28)
 
 
