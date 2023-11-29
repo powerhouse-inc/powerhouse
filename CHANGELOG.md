@@ -1,3 +1,10 @@
+# [1.0.0-alpha.31](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.30...v1.0.0-alpha.31) (2023-11-29)
+
+
+### Features
+
+* convert tw config to ts ([#108](https://github.com/powerhouse-inc/design-system/issues/108)) ([ed4a10b](https://github.com/powerhouse-inc/design-system/commit/ed4a10b8e42d5ef4b6202f1fcd94c2ff4b519e91))
+
 # [1.0.0-alpha.30](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.29...v1.0.0-alpha.30) (2023-11-28)
 
 
