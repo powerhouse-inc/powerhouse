@@ -10,12 +10,10 @@ import {
     reducer,
 } from 'document-model-libs/document-drive';
 import { Document, Operation, utils } from 'document-model/document';
-import { atom, useAtom } from 'jotai';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
-
-export const documentDrivesAtom = atom<DocumentDriveDocument[]>([]);
+import { useDocumentDrives } from './useDocumentDrives';
 
 // TODO this should be added to the document model
 export interface SortOptions {
@@ -25,31 +23,13 @@ export interface SortOptions {
 export function useDocumentDriveServer(
     server: IDocumentDriveServer | undefined = window.electronAPI?.documentDrive
 ) {
-    const getDocumentModel = useGetDocumentModel();
-
-    const [documentDrives, setDocumentDrives] = useAtom(documentDrivesAtom);
-
-    async function fetchDocumentDrives() {
-        if (!server) {
-            return setDocumentDrives([]);
-        }
-        try {
-            const driveIds = await server?.getDrives();
-            const drives = await Promise.all(
-                driveIds.map(id => server.getDrive(id))
-            );
-            setDocumentDrives(drives);
-        } catch (error) {
-            console.error(error);
-            setDocumentDrives([]);
-        }
+    if (!server) {
+        throw new Error('Invalid Document Drive Server');
     }
 
-    useEffect(() => {
-        if (!documentDrives.length) {
-            fetchDocumentDrives();
-        }
-    }, []);
+    const getDocumentModel = useGetDocumentModel();
+
+    const [documentDrives, refreshDocumentDrives] = useDocumentDrives(server);
 
     async function openFile(drive: string, id: string) {
         const document = await server?.getDocument(drive, id);
@@ -85,7 +65,7 @@ export function useDocumentDriveServer(
 
         const newDrive = await server.addOperation(driveId, '', operation);
 
-        await fetchDocumentDrives();
+        await refreshDocumentDrives();
 
         if (!isDocumentDrive(newDrive)) {
             throw new Error('Received document is not a Document Drive');
@@ -291,7 +271,7 @@ export function useDocumentDriveServer(
             throw new Error(`Drive with id ${id} not found`);
         }
         await server.deleteDrive(id);
-        return fetchDocumentDrives();
+        return refreshDocumentDrives();
     }
 
     async function renameDrive(id: string, name: string) {
