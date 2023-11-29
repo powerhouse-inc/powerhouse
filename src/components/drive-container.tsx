@@ -1,5 +1,4 @@
 import {
-    ActionType,
     BaseTreeItem,
     DriveView,
     DriveViewProps,
@@ -47,7 +46,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     }, [documentDrives]);
 
     const cancelInputHandler: DriveViewProps['onCancelInput'] = item => {
-        if (item.action === ActionType.Update) {
+        if (item.action === 'update') {
             actions.setItemAction(item.id, null);
             return;
         }
@@ -105,7 +104,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     return (
         <DriveView
             key="local"
-            type="local"
+            type="local-drive"
             name={'My Local Drives'}
             onItemClick={onItemClick}
             onItemOptionsClick={onItemOptionsClick}

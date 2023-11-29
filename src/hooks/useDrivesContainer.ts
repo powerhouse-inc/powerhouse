@@ -1,8 +1,6 @@
 import {
-    ActionType,
     BaseTreeItem,
     DriveViewProps,
-    ItemType,
     TreeItem,
     decodeID,
     encodeID,
@@ -37,14 +35,14 @@ export function driveToBaseItems(
         id: driveID,
         label: drive.name,
         path: driveID,
-        type: ItemType.LocalDrive,
+        type: 'local-drive',
     };
 
     const nodes: Array<BaseTreeItem> = drive.nodes.map((node, _i, nodes) => ({
         id: node.id,
         label: node.name,
         path: path.join(driveID, getNodePath(node, nodes)),
-        type: node.kind === 'folder' ? ItemType.Folder : ItemType.File,
+        type: node.kind === 'folder' ? 'folder' : 'file',
     }));
     return [driveNode, ...nodes];
 }
@@ -78,8 +76,8 @@ export function useDrivesContainer() {
             id: uuid(),
             label: virtualFolderName,
             path: path.join(item.path, virtualPathName),
-            type: ItemType.Folder,
-            action: ActionType.New,
+            type: 'folder',
+            action: 'new',
         });
     }
 
@@ -104,7 +102,7 @@ export function useDrivesContainer() {
     }
 
     const onItemClick: DriveViewProps['onItemClick'] = (_event, item) => {
-        if (item.type !== ItemType.File) {
+        if (item.type !== 'file') {
             setSelectedPath(item.path);
             actions.toggleExpandedAndSelect(item.id);
         }
@@ -122,15 +120,13 @@ export function useDrivesContainer() {
                 addVirtualNewFolder(item, driveID);
                 break;
             case 'rename':
-                actions.setItemAction(item.id, ActionType.Update);
+                actions.setItemAction(item.id, 'update');
                 break;
             case 'delete':
                 if (
-                    [
-                        ItemType.CloudDrive,
-                        ItemType.LocalDrive,
-                        ItemType.PublicDrive,
-                    ].includes(item.type)
+                    ['cloud-drive', 'local-drive', 'public-drive'].includes(
+                        item.type
+                    )
                 ) {
                     deleteDrive(decodeID(item.id));
                 } else {
@@ -158,7 +154,7 @@ export function useDrivesContainer() {
     const onSubmitInput = (item: TreeItem, onCancel?: () => void) => {
         const driveID = item.path.split('/')[0];
 
-        if (item.action === ActionType.New) {
+        if (item.action === 'new') {
             actions.deleteVirtualItem(item.id);
             addNewFolder(item, driveID, onCancel);
             return;

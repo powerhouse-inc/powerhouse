@@ -1,8 +1,6 @@
 import {
-    ActionType,
     Breadcrumbs,
     ConnectSearchBar,
-    ItemType,
     TreeItem,
     decodeID,
     encodeID,
@@ -65,7 +63,7 @@ const Content = () => {
                 file.content,
                 decodedDriveID,
                 file.name,
-                selectedFolder && selectedFolder.type === ItemType.Folder
+                selectedFolder && selectedFolder.type === 'folder'
                     ? decodeID(selectedFolder.id)
                     : undefined
             );
@@ -140,8 +138,8 @@ const Content = () => {
             label,
             id: uuid(),
             path: itemPath,
-            type: ItemType.Folder,
-            action: ActionType.New,
+            type: 'folder',
+            action: 'new',
         });
 
         const item = getItemByPath(itemPath);
