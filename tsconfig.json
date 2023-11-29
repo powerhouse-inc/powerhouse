@@ -24,7 +24,8 @@
         ".storybook/**/*.ts",
         ".storybook/**/*.tsx",
         "*.config.ts",
-        "*.config.js"
+        "*.config.js",
+        "scripts/**/*.ts",
     ],
     "exclude": ["dist", "node_modules"]
 }

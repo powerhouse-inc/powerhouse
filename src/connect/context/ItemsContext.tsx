@@ -1,9 +1,5 @@
-import {
-    BaseTreeItem,
-    TreeItem,
-    UITreeItem,
-} from '@/connect/components/tree-view-item';
-import React, { useContext, useState } from 'react';
+import { BaseTreeItem, TreeItem, UITreeItem } from '@/connect';
+import { createContext, useContext, useState } from 'react';
 
 export interface TreeItemContext {
     items: TreeItem[];
@@ -27,7 +23,7 @@ const defaultTreeItemContextValue: TreeItemContext = {
     setVirtualItems: () => {},
 };
 
-export const ItemsContext = React.createContext<TreeItemContext>(
+export const ItemsContext = createContext<TreeItemContext>(
     defaultTreeItemContextValue,
 );
 

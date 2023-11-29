@@ -1,18 +1,17 @@
 import {
     ItemsContextProvider,
+    generateMockDriveData,
+    useItemActions,
     useItemsContext,
-} from '@/connect/context/ItemsContext';
-import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
-import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
+} from '@/connect';
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { ActionType, ItemType } from '../tree-view-item';
-import { ConnectTreeView, ConnectTreeViewProps } from './tree-view';
+import { ConnectTreeView, ConnectTreeViewProps } from '.';
 
 const treeItems = generateMockDriveData({
     path: 'drive',
     label: 'Local Drive',
-    type: ItemType.LocalDrive,
+    type: 'local-drive',
     expanded: false,
     isSelected: false,
 });
@@ -71,7 +70,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
             onItemOptionsClick?.(item, option);
 
             if (option === 'rename') {
-                actions.setItemAction(item.id, ActionType.Update);
+                actions.setItemAction(item.id, 'update');
                 return;
             }
 
@@ -81,8 +80,8 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
                     id: `${item.id}/new-folder`,
                     path: `${item.path}/new-folder`,
                     label: 'New Folder',
-                    type: ItemType.Folder,
-                    action: ActionType.New,
+                    type: 'folder',
+                    action: 'new',
                 });
             }
         };
@@ -98,7 +97,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
         item => {
             onSubmitInput?.(item);
             switch (item.action) {
-                case ActionType.New:
+                case 'new':
                     setItems(prevState => {
                         // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         const { action, expanded, isSelected, ...newItem } =
@@ -107,7 +106,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
                     });
                     actions.deleteVirtualItem(item.id);
                     break;
-                case ActionType.Update:
+                case 'update':
                     setItems(prevItems =>
                         prevItems.map(prevItem => {
                             actions.setItemAction(item.id, null);

@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useKeyboard } from 'react-aria';
 import { Button, Input, PressEvent, TextField } from 'react-aria-components';
 import ClickAwayListener from 'react-click-away-listener';

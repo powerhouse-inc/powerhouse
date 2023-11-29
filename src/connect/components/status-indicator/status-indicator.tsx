@@ -1,3 +1,4 @@
+import { SyncStatus } from '@/connect';
 import {
     AvailableIcon,
     ErrorIcon,
@@ -26,7 +27,7 @@ type CloudOnlyProps = SharedPublicOrCloudProps & {
 
 type AvailableOfflineProps = SharedPublicOrCloudProps & {
     availability: 'available-offline';
-    syncStatus: 'not-synced-yet' | 'syncing' | 'synced';
+    syncStatus: SyncStatus;
 };
 
 export type PublicOrCloudDriveProps = CloudOnlyProps | AvailableOfflineProps;

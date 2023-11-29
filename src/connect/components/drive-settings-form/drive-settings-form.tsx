@@ -1,13 +1,13 @@
+import { Divider, DriveSettingsSelect, SharingType, Toggle } from '@/connect';
 import { Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { twJoin, twMerge } from 'tailwind-merge';
-import { Divider, DriveSettingsSelect, Toggle } from '..';
 import { DeleteDrive } from './delete-drive';
 
 type Inputs = {
     driveName: string;
-    sharingType: 'private' | 'shared' | 'public';
+    sharingType: SharingType;
     availableOffline: boolean;
 };
 

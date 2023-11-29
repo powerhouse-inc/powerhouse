@@ -1,7 +1,8 @@
-import { CSSProperties, ComponentProps } from 'react';
+import { IconName } from '@/powerhouse';
+import { CSSProperties, ComponentPropsWithoutRef } from 'react';
 
-export type IconProps = ComponentProps<'svg'> & {
-    name: string;
+export type IconProps = ComponentPropsWithoutRef<'svg'> & {
+    name: IconName;
     size?: CSSProperties['width'];
     color?: CSSProperties['color'];
 };

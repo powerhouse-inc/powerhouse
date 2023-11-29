@@ -1,8 +1,9 @@
-import { ActionType, TreeItem } from '@/connect/components/tree-view-item';
 import {
+    TreeItem,
+    TreeItemAction,
     UITreeItemState,
     useItemsContext,
-} from '@/connect/context/ItemsContext';
+} from '@/connect';
 
 export const useItemActions = () => {
     const { setUIState, setVirtualItems, baseItems } = useItemsContext();
@@ -140,7 +141,10 @@ export const useItemActions = () => {
      * @param itemID - The ID of the item.
      * @param actionType - The type of action to be set. If not provided or null, the action will be undefined.
      */
-    const setItemAction = (itemID: string, actionType?: ActionType | null) => {
+    const setItemAction = (
+        itemID: string,
+        actionType?: TreeItemAction | null,
+    ) => {
         setUIState(prevState => {
             const itemState = {
                 ...prevState[itemID],

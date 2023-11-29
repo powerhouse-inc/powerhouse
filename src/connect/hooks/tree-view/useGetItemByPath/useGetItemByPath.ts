@@ -1,4 +1,4 @@
-import { useItemsContext } from '@/connect/context/ItemsContext';
+import { useItemsContext } from '@/connect';
 
 export const useGetItemByPath = () => {
     const { items } = useItemsContext();

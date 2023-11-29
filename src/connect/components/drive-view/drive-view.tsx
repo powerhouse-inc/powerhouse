@@ -1,27 +1,15 @@
-import { usePathContent } from '@/connect/hooks/tree-view/usePathContent';
-import { Icon } from '@/powerhouse';
-import { Button } from 'react-aria-components';
-import { twMerge } from 'tailwind-merge';
 import {
     ConnectTreeView,
     ConnectTreeViewItemProps,
     ConnectTreeViewProps,
-    DefaultOptionId,
-    ItemType,
-    TreeItem,
-} from '..';
-
-export type DriveType = 'public' | 'local' | 'cloud';
-
-export interface DriveTreeItem extends TreeItem {
-    type: ItemType.LocalDrive | ItemType.CloudDrive | ItemType.PublicDrive;
-}
-
-export type OnItemOptionsClickHandler = (
-    item: TreeItem,
-    option: DefaultOptionId,
-    drive: DriveTreeItem,
-) => void;
+    DriveTreeItem,
+    DriveType,
+    TreeItemType,
+    usePathContent,
+} from '@/connect';
+import { Icon } from '@/powerhouse';
+import { Button } from 'react-aria-components';
+import { twMerge } from 'tailwind-merge';
 
 export interface DriveViewProps
     extends Omit<
@@ -45,12 +33,12 @@ export interface DriveViewProps
 
 const filterDriveByType = (drive: DriveTreeItem, type: DriveType) => {
     switch (type) {
-        case 'public':
-            return drive.type === ItemType.PublicDrive;
-        case 'local':
-            return drive.type === ItemType.LocalDrive;
-        case 'cloud':
-            return drive.type === ItemType.CloudDrive;
+        case 'public-drive':
+            return drive.type === 'public-drive';
+        case 'local-drive':
+            return drive.type === 'local-drive';
+        case 'cloud-drive':
+            return drive.type === 'cloud-drive';
         default:
             return false;
     }
@@ -77,11 +65,11 @@ export function DriveView(props: DriveViewProps) {
 
     const drives = usePathContent(drivePath) as DriveTreeItem[];
 
-    const allowedTypes = [
-        ItemType.CloudDrive,
-        ItemType.Folder,
-        ItemType.LocalDrive,
-        ItemType.PublicDrive,
+    const allowedTypes: TreeItemType[] = [
+        'cloud-drive',
+        'folder',
+        'local-drive',
+        'public-drive',
     ];
     const allowedDrives = drives
         .filter(drive => filterDriveByType(drive, type))
@@ -91,7 +79,7 @@ export function DriveView(props: DriveViewProps) {
         <div
             className={twMerge(
                 'pb-2',
-                type === 'public' && 'rounded-lg bg-bg to-bg',
+                type === 'public-drive' && 'rounded-lg bg-bg to-bg',
                 className,
             )}
             {...restProps}

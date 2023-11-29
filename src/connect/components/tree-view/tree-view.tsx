@@ -1,13 +1,10 @@
-import React from 'react';
-
-import { usePathContent } from '../../hooks/tree-view/usePathContent';
 import {
-    ActionType,
     ConnectTreeViewItem,
     ConnectTreeViewItemProps,
-    ItemType,
     TreeItem,
-} from '../tree-view-item';
+    TreeItemType,
+    usePathContent,
+} from '@/connect';
 
 export interface ConnectTreeViewProps
     extends Omit<
@@ -30,7 +27,7 @@ export interface ConnectTreeViewProps
     filterPath?: string;
     level?: number;
     allowedPaths?: string[];
-    allowedTypes?: ItemType[];
+    allowedTypes?: TreeItemType[];
 }
 
 export function ConnectTreeView(props: ConnectTreeViewProps) {
@@ -54,10 +51,10 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
         <>
             {items.map(item => {
                 const mode =
-                    item.action === ActionType.New ||
-                    item.action === ActionType.Update ||
-                    item.action === ActionType.UpdateAndCopy ||
-                    item.action === ActionType.UpdateAndMove
+                    item.action === 'new' ||
+                    item.action === 'update' ||
+                    item.action === 'update-and-copy' ||
+                    item.action === 'update-and-move'
                         ? 'write'
                         : 'read';
 

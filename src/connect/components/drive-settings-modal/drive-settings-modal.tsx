@@ -1,4 +1,4 @@
-import { Modal } from '@/powerhouse';
+import { DivProps, Modal } from '@/powerhouse';
 import { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { Divider } from '..';
@@ -6,11 +6,10 @@ import { DriveSettingsForm } from '../drive-settings-form';
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 type FormProps = ComponentPropsWithoutRef<typeof DriveSettingsForm>;
-type ContainerProps = ComponentPropsWithoutRef<'div'>;
 export type DriveSettingsModalProps = {
     formProps: FormProps;
     modalProps?: ModalProps;
-    containerProps?: ContainerProps;
+    containerProps?: DivProps;
 };
 export function DriveSettingsModal(props: DriveSettingsModalProps) {
     function handleDeleteDrive() {

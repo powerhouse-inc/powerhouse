@@ -20,7 +20,7 @@ export function getIsMouseInsideContainer(
     return isWithinContainer;
 }
 
-export type ReplacementsType = {
+type ReplacementsType = {
     encode: [RegExp, string];
     decode: [RegExp, string];
 }[];

@@ -1,4 +1,4 @@
-import { useAnimation } from '@/powerhouse/hooks/animation';
+import { useAnimation } from '@/powerhouse';
 import { useEffect, useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 
@@ -10,10 +10,7 @@ export interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export type SidebarHeaderProps = React.HTMLAttributes<HTMLDivElement>;
 
-export function SidebarHeader({
-    className,
-    ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+export function SidebarHeader({ className, ...props }: SidebarHeaderProps) {
     return <div className={twMerge('flex-shrink-0', className)} {...props} />;
 }
 

@@ -1,9 +1,9 @@
-import { useGetItemByPath } from '@/connect/hooks/tree-view/useGetItemByPath';
-import { Icon } from '@/powerhouse';
+import { useGetItemByPath } from '@/connect';
+import { DivProps, Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { AddNewItemInput } from './add-new-item-input';
 
-export type BreadcrumbsProps = React.HTMLAttributes<HTMLDivElement> & {
+export type BreadcrumbsProps = DivProps & {
     filterPath: string;
     onItemClick?: (
         event: React.MouseEvent<HTMLDivElement>,

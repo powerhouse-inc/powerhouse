@@ -1,7 +1,7 @@
-import { ComponentPropsWithoutRef } from 'react';
+import { DivProps } from '@/powerhouse';
 import { twMerge } from 'tailwind-merge';
 
-export function Divider(props: ComponentPropsWithoutRef<'div'>) {
+export function Divider(props: DivProps) {
     return (
         <div
             {...props}

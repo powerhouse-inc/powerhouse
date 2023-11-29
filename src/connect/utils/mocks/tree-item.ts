@@ -1,4 +1,4 @@
-import { ItemType, TreeItem } from '@/connect/components/tree-view-item';
+import { TreeItem } from '@/connect';
 
 export const randomId = function (length = 10) {
     return Math.random()
@@ -24,43 +24,43 @@ export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
             id: randomId(),
             path: `${drive}/folder1`,
             label: 'Folder 1',
-            type: ItemType.Folder,
+            type: 'folder',
         },
         {
             id: randomId(),
             path: `${drive}/folder1/folder1.1`,
             label: 'Folder 1.1',
-            type: ItemType.Folder,
+            type: 'folder',
         },
         {
             id: randomId(),
             path: `${drive}/folder1/folder1.2`,
             label: 'Folder 1.2',
-            type: ItemType.Folder,
+            type: 'folder',
         },
         {
             id: randomId(),
             path: `${drive}/folder1/folder1.2/folder1.2.1`,
             label: 'Folder 1.2.1',
-            type: ItemType.Folder,
+            type: 'folder',
         },
         {
             id: randomId(),
             path: `${drive}/folder2`,
             label: 'Folder 2',
-            type: ItemType.Folder,
+            type: 'folder',
         },
         {
             id: randomId(),
             path: `${drive}/folder2/folder2.1`,
             label: 'Folder 2.1',
-            type: ItemType.Folder,
+            type: 'folder',
         },
         {
             id: randomId(),
             path: `${drive}/folder3`,
             label: 'Folder 3',
-            type: ItemType.Folder,
+            type: 'folder',
         },
     ];
 

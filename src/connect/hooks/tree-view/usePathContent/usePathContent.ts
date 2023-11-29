@@ -1,6 +1,10 @@
-import { ItemType, TreeItem } from '@/connect/components/tree-view-item';
-import { useItemsContext } from '@/connect/context/ItemsContext';
-import { filterItemsByPath, isSubPath } from '@/connect/utils/path';
+import {
+    TreeItem,
+    TreeItemType,
+    filterItemsByPath,
+    isSubPath,
+    useItemsContext,
+} from '@/connect';
 
 /**
  * Custom hook that retrieves the content of a specific path in a tree view,
@@ -13,7 +17,7 @@ import { filterItemsByPath, isSubPath } from '@/connect/utils/path';
 export const usePathContent = (
     path = '',
     allowedPaths = [''],
-    allowedTypes: Array<ItemType> = [],
+    allowedTypes: Array<TreeItemType> = [],
 ) => {
     const { items } = useItemsContext();
 

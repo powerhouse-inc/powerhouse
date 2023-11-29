@@ -43,11 +43,7 @@
         "@typescript-eslint/no-confusing-void-expression": "off",
         "@typescript-eslint/consistent-type-definitions": "off",
         "@typescript-eslint/no-empty-function": "off",
-        "@typescript-eslint/no-misused-promises": [2, {
-            "checksVoidReturn": {
-              "attributes": false
-            }
-          }]
+        "@typescript-eslint/no-misused-promises": "off"
     },
     "settings": {
         "react": {

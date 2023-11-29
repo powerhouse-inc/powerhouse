@@ -1,4 +1,4 @@
-import { useDraggableTarget } from '@/powerhouse/hooks/useDraggableTarget';
+import { useDraggableTarget } from '@/powerhouse';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Draggable } from './draggable';

@@ -1,5 +1,4 @@
-import { useItemsContext } from '@/connect/context/ItemsContext';
-import { getRootPath } from '@/connect/utils/path';
+import { getRootPath, useItemsContext } from '@/connect';
 
 /**
  * Custom hook to get the parent drive item based on the given path.

@@ -1,25 +1,22 @@
-import React, { ComponentPropsWithoutRef } from 'react';
+import { DivProps } from '@/powerhouse';
 import { twMerge } from 'tailwind-merge';
 import { Icon, TreeViewInput, TreeViewInputProps } from '..';
 
-export type DivProps = ComponentPropsWithoutRef<'div'>;
-
-export type TreeViewItemProps = ComponentPropsWithoutRef<'div'> & {
-    label: string;
-    mode?: 'read' | 'write';
-    children?: React.ReactNode;
-    open?: boolean;
-    onOptionsClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
-    icon?: React.JSX.Element;
-    expandedIcon?: React.JSX.Element;
-    secondaryIcon?: React.ReactNode;
-    level?: number;
-    itemContainerProps?: DivProps;
-    topIndicator?: React.ReactNode;
-    bottomIndicator?: React.ReactNode;
-} & Partial<TreeViewInputProps>;
-
-export type ItemContainerProps = React.ComponentProps<'div'>;
+export type TreeViewItemProps = DivProps &
+    Partial<TreeViewInputProps> & {
+        label: string;
+        mode?: 'read' | 'write';
+        children?: React.ReactNode;
+        open?: boolean;
+        onOptionsClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
+        icon?: React.JSX.Element;
+        expandedIcon?: React.JSX.Element;
+        secondaryIcon?: React.ReactNode;
+        level?: number;
+        itemContainerProps?: DivProps;
+        topIndicator?: React.ReactNode;
+        bottomIndicator?: React.ReactNode;
+    };
 
 export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
     const {
