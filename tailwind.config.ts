@@ -1,10 +1,11 @@
-/** @type {import('tailwindcss').Config} */
-const reactAriaComponents = require('tailwindcss-react-aria-components');
-const themeSwapper = require('tailwindcss-theme-swapper');
-const animate = require('tailwindcss-animate');
-const plugin = require('tailwindcss/plugin');
+import type { Config } from 'tailwindcss';
+import animate from 'tailwindcss-animate';
+import reactAriaComponents from 'tailwindcss-react-aria-components';
+// @ts-expect-error this is only used in legacy components and can be removed. it does not have a types file
+import themeSwapper from 'tailwindcss-theme-swapper';
+import plugin from 'tailwindcss/plugin';
 
-module.exports = {
+const config = {
     content: [
         './src/**/*.{html,js,ts,tsx}',
         '.storybook/**/*.{html,js,ts,tsx}',
@@ -14,7 +15,9 @@ module.exports = {
     },
     plugins: [
         animate,
-        reactAriaComponents({ prefix: 'rac' }),
+        reactAriaComponents(),
+        // todo: theme swapper is only used in legacy components and can be removed
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         themeSwapper({
             themes: [
                 {
@@ -49,4 +52,6 @@ module.exports = {
             addVariant('expanding', ':merge(.group).expanding &');
         }),
     ],
-};
+} satisfies Config;
+
+export default config;
