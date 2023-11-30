@@ -3,7 +3,9 @@ import {
     DriveView,
     DriveViewProps,
     decodeID,
+    encodeID,
     getRootPath,
+    useFilterPathContent,
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
@@ -27,6 +29,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
     const { setBaseItems } = useItemsContext();
     const actions = useItemActions();
+    const filterPathContent = useFilterPathContent();
 
     const { documentDrives, addFile, copyOrMoveNode } =
         useDocumentDriveServer();
@@ -77,10 +80,12 @@ export default function DriveContainer(props: DriveContainerProps) {
             ? { afterNodePath: target.id }
             : undefined;
 
-        let targetId =
+        const targetPath =
             isDropAfter && !target.expanded
-                ? path.dirname(target.id)
-                : target.id;
+                ? path.dirname(target.path)
+                : target.path;
+
+        let targetId = targetPath.split('/').pop() ?? '';
 
         if (targetId === driveID || targetId == '.') {
             targetId = '';
@@ -89,11 +94,34 @@ export default function DriveContainer(props: DriveContainerProps) {
         const decodedDriveID = decodeID(driveID);
 
         if (item.kind === 'object') {
+            const filterPath = filterPathContent(
+                treeItem =>
+                    treeItem.label === item.data.label &&
+                    treeItem.id !== item.data.id,
+                { path: targetPath }
+            );
+
+            if (filterPath.length > 0) {
+                actions.setExpandedItem(target.id, true);
+                actions.newVirtualItem({
+                    id: `(from)${item.data.id}`,
+                    label: `${item.data.label} (2)`,
+                    path: path.join(targetPath, encodeID(item.data.id)),
+                    type: item.data.type,
+                    action:
+                        event.dropOperation === 'copy'
+                            ? 'update-and-copy'
+                            : 'update-and-move',
+                });
+                return;
+            }
+
             copyOrMoveNode(
                 decodedDriveID,
                 item.data.id,
-                targetId,
+                decodeID(targetId),
                 event.dropOperation,
+                undefined,
                 sortOptions
             );
         } else if (item.kind === 'file') {

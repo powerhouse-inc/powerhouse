@@ -4,6 +4,7 @@ import {
     TreeItem,
     decodeID,
     encodeID,
+    getRootPath,
     useItemActions,
 } from '@powerhousedao/design-system';
 import { DocumentDriveState, Node } from 'document-model-libs/document-drive';
@@ -52,8 +53,14 @@ export function useDrivesContainer() {
     const { showModal } = useModal();
     const [, setSelectedPath] = useSelectedPath();
 
-    const { addFolder, renameNode, deleteDrive, renameDrive, documentDrives } =
-        useDocumentDriveServer();
+    const {
+        addFolder,
+        renameNode,
+        deleteDrive,
+        renameDrive,
+        documentDrives,
+        copyOrMoveNode,
+    } = useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
         const driveNodes = documentDrives?.find(
@@ -157,6 +164,34 @@ export function useDrivesContainer() {
         if (item.action === 'new') {
             actions.deleteVirtualItem(item.id);
             addNewFolder(item, driveID, onCancel);
+            return;
+        }
+
+        if (
+            item.action === 'update-and-copy' ||
+            item.action === 'update-and-move'
+        ) {
+            actions.deleteVirtualItem(item.id);
+
+            const driveID = getRootPath(item.path);
+            const srcID = item.id.replace('(from)', '');
+            const targetPath = path.dirname(item.path);
+            const operation =
+                item.action === 'update-and-copy' ? 'copy' : 'move';
+
+            let targetId = targetPath.split('/').pop() ?? '';
+
+            if (targetId === driveID || targetId == '.') {
+                targetId = '';
+            }
+
+            copyOrMoveNode(
+                decodeID(driveID),
+                srcID,
+                decodeID(targetId),
+                operation,
+                item.label
+            );
             return;
         }
 

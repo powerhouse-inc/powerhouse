@@ -219,6 +219,7 @@ export function useDocumentDriveServer(
         srcId: string,
         targetId: string,
         operation: string,
+        targetName?: string,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO: use this later for sorting
         sortOptions?: SortOptions
     ) {
@@ -234,6 +235,7 @@ export function useDocumentDriveServer(
                 {
                     srcId,
                     targetParentFolder,
+                    ...(targetName && { targetName }),
                 },
                 generateId,
                 drive.state.nodes
@@ -254,6 +256,10 @@ export function useDocumentDriveServer(
                     targetParentFolder: targetId,
                 })
             );
+
+            if (targetName) {
+                await renameNode(driveId, srcId, targetName);
+            }
         }
     }
 
