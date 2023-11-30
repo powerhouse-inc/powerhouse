@@ -196,6 +196,12 @@ export function useDrivesContainer() {
         }
 
         actions.setItemAction(item.id, null);
+
+        if (item.label === '') {
+            onCancel?.();
+            return;
+        }
+
         updateNodeName(item, driveID);
     };
 
