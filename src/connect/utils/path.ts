@@ -58,24 +58,26 @@ export const isSubPath = (
     return regexp.test(path);
 };
 
-/**
- * Filters items by path.
- *
- * @param items - The items to filter.
- * @param filterPath - The path to filter by.
- * @param customFilter - A custom filter function.
- * @returns The filtered items.
- */
-
 type CustomFilterType<T> = (item: T) => boolean;
+
+/**
+ * Filters an array of items by their path.
+ *
+ * @template T - The type of the items in the array.
+ * @param {Array<T>} items - The array of items to filter.
+ * @param {string} [filterPath=''] - The path to filter by. Use "*" to match all paths.
+ * @param {CustomFilterType<T>} [customFilter=() => true] - A custom filter function to apply to each item.
+ * @returns {Array<T>} - The filtered array of items.
+ */
 export const filterItemsByPath = <T extends { path: string }>(
     items: Array<T>,
     filterPath = '',
     customFilter: CustomFilterType<T> = () => true,
 ): Array<T> =>
-    items.filter(
-        item => isRootPath(item.path, filterPath) && customFilter(item),
-    );
+    items.filter(item => {
+        if (filterPath === '*') return customFilter(item);
+        return isRootPath(item.path, filterPath) && customFilter(item);
+    });
 
 /**
  * Returns the root path of a given path.
