@@ -1,3 +1,10 @@
+# [1.0.0-alpha.32](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.31...v1.0.0-alpha.32) (2023-11-30)
+
+
+### Features
+
+* 🚀 added useGetPathContent and useFilterPathContent hooks ([5df94e9](https://github.com/powerhouse-inc/design-system/commit/5df94e984583763bebd8dd2305226a9f272c1e74))
+
 # [1.0.0-alpha.31](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.30...v1.0.0-alpha.31) (2023-11-29)
 
 
