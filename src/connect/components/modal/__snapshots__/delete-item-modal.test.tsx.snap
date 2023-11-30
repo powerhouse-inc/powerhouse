@@ -2,62 +2,49 @@
 
 exports[`Modal Component > should match snapshot 1`] = `
 <div
-  class="bg-overlay fixed inset-0 grid place-items-center"
-  data-rac=""
+  aria-describedby="radix-:r2:"
+  aria-labelledby="radix-:r1:"
+  class="bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in rounded-3xl"
+  data-state="open"
   data-testid="delete-modal"
-  style="--visual-viewport-height: 768px;"
+  id="radix-:r0:"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
 >
   <div
-    class="relative flex justify-center top-10"
-    data-rac=""
+    class="w-[465px] px-8 py-12 text-[#565868]"
   >
     <div
-      style="border: 0px; clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; width: 1px; white-space: nowrap;"
+      class="text-center text-2xl font-semibold"
+    >
+      Delete “Ecosystem Actors” folder?
+    </div>
+    <div
+      class="mt-8 text-center text-xl"
+    >
+      Are you sure you want to delete this folder? All files and subfolders within it will be removed.
+    </div>
+    <div
+      class="mt-8 flex justify-center gap-3"
     >
       <button
-        aria-label="Dismiss"
-        id="react-aria-:r0:"
-        tabindex="-1"
-      />
-    </div>
-    <section
-      class="bg-white outline-none rounded-3xl"
-      role="dialog"
-      tabindex="-1"
-    >
-      <div
-        class="w-[465px] px-8 py-12 text-[#565868]"
+        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#E8ECEFBF] text-[#141718]"
+        data-focus-visible="true"
+        data-focused="true"
+        data-rac=""
+        type="button"
       >
-        <div
-          class="text-center text-2xl font-semibold"
-        >
-          Delete “Ecosystem Actors” folder?
-        </div>
-        <div
-          class="mt-8 text-center text-xl"
-        >
-          Are you sure you want to delete this folder? All files and subfolders within it will be removed.
-        </div>
-        <div
-          class="mt-8 flex justify-center gap-3"
-        >
-          <button
-            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#E8ECEFBF] text-[#141718]"
-            data-rac=""
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#EA4335] text-[#FEFEFE]"
-            data-rac=""
-            type="button"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </section>
+        Cancel
+      </button>
+      <button
+        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#EA4335] text-[#FEFEFE]"
+        data-rac=""
+        type="button"
+      >
+        Delete
+      </button>
+    </div>
   </div>
 </div>
 `;

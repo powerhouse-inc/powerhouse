@@ -2,62 +2,49 @@
 
 exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
 <div
-  class="bg-overlay fixed inset-0 grid place-items-center"
-  data-rac=""
+  aria-describedby="radix-:r2:"
+  aria-labelledby="radix-:r1:"
+  class="bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in rounded-3xl"
+  data-state="open"
   data-testid="upgrade-drive-modal"
-  style="--visual-viewport-height: 768px;"
+  id="radix-:r0:"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
 >
   <div
-    class="relative flex justify-center top-10"
-    data-rac=""
+    class="w-[400px] p-6 text-[#565868]"
   >
     <div
-      style="border: 0px; clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; width: 1px; white-space: nowrap;"
+      class="border-b border-[#E5E7E8] pb-2 text-2xl font-bold text-[#404446]"
+    >
+      Upgrade to cloud drive
+    </div>
+    <div
+      class="my-6 rounded-md bg-[#F3F5F7] p-4 text-center text-[#6C7275]"
+    >
+      You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?
+    </div>
+    <div
+      class="mt-8 flex justify-between gap-3"
     >
       <button
-        aria-label="Dismiss"
-        id="react-aria-:r0:"
-        tabindex="-1"
-      />
-    </div>
-    <section
-      class="bg-white outline-none rounded-3xl"
-      role="dialog"
-      tabindex="-1"
-    >
-      <div
-        class="w-[400px] p-6 text-[#565868]"
+        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-[#F3F5F7] text-[##141718]"
+        data-focus-visible="true"
+        data-focused="true"
+        data-rac=""
+        type="button"
       >
-        <div
-          class="border-b border-[#E5E7E8] pb-2 text-2xl font-bold text-[#404446]"
-        >
-          Upgrade to cloud drive
-        </div>
-        <div
-          class="my-6 rounded-md bg-[#F3F5F7] p-4 text-center text-[#6C7275]"
-        >
-          You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?
-        </div>
-        <div
-          class="mt-8 flex justify-between gap-3"
-        >
-          <button
-            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-[#F3F5F7] text-[##141718]"
-            data-rac=""
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-[#404446] text-[#FEFEFE]"
-            data-rac=""
-            type="button"
-          >
-            Continue
-          </button>
-        </div>
-      </div>
-    </section>
+        Cancel
+      </button>
+      <button
+        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-[#404446] text-[#FEFEFE]"
+        data-rac=""
+        type="button"
+      >
+        Continue
+      </button>
+    </div>
   </div>
 </div>
 `;

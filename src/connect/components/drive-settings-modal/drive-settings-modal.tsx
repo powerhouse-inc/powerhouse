@@ -14,16 +14,16 @@ export type DriveSettingsModalProps = {
 export function DriveSettingsModal(props: DriveSettingsModalProps) {
     function handleDeleteDrive() {
         props.formProps.onDeleteDrive();
-        props.modalProps?.onClose?.();
+        props.modalProps?.onOpenChange?.(false);
     }
     function handleCancel() {
         props.formProps.onCancel();
-        props.modalProps?.onClose?.();
+        props.modalProps?.onOpenChange?.(false);
     }
     return (
         <Modal
             {...props.modalProps}
-            dialogProps={{
+            contentProps={{
                 className: 'rounded-2xl',
             }}
         >

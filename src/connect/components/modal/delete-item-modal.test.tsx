@@ -6,7 +6,6 @@ describe('Modal Component', () => {
         render(
             <ConnectDeleteItemModal
                 open={true}
-                onClose={() => {}}
                 data-testid="delete-modal"
                 body="Are you sure you want to delete this folder? All files and subfolders within it will be removed."
                 cancelLabel="Cancel"
@@ -31,7 +30,6 @@ describe('Modal Component', () => {
         render(
             <ConnectDeleteItemModal
                 open={true}
-                onClose={() => {}}
                 data-testid="delete-modal"
                 body={bodyText}
                 cancelLabel={cancelLabel}
@@ -59,7 +57,7 @@ describe('Modal Component', () => {
         render(
             <ConnectDeleteItemModal
                 open={true}
-                onClose={onClose}
+                onOpenChange={onClose}
                 data-testid="delete-modal"
                 body="Are you sure you want to delete this folder? All files and subfolders within it will be removed."
                 cancelLabel={cancelLabel}
@@ -81,7 +79,6 @@ describe('Modal Component', () => {
         render(
             <ConnectDeleteItemModal
                 open={true}
-                onClose={() => {}}
                 data-testid="delete-modal"
                 body="Are you sure you want to delete this folder? All files and subfolders within it will be removed."
                 cancelLabel="Cancel"

@@ -24,7 +24,6 @@ export const Default: Story = {
         },
         modalProps: {
             open: true,
-            onClose() {},
         },
     },
     render: function Wrapper(args) {
@@ -50,12 +49,12 @@ export const Default: Story = {
                     {...args}
                     modalProps={{
                         ...args.modalProps,
-                        onClose: () => {
+                        onOpenChange: open => {
                             setArgs({
                                 ...args,
                                 modalProps: {
                                     ...args.modalProps,
-                                    open: false,
+                                    open,
                                 },
                             });
                         },

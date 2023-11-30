@@ -1,17 +1,20 @@
-import { Modal, ModalProps } from '@/powerhouse';
+import { Modal } from '@/powerhouse';
+import React, { ComponentPropsWithoutRef } from 'react';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
 const buttonStyles =
     'min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all';
 
-export interface ConnectUpgradeDriveModalProps extends ModalProps {
+export type ConnectUpgradeDriveModalProps = ComponentPropsWithoutRef<
+    typeof Modal
+> & {
     header: React.ReactNode;
     body: React.ReactNode;
     onContinue: () => void;
     cancelLabel: string;
     continueLabel: string;
-}
+};
 
 export const ConnectUpgradeDriveModal = (
     props: ConnectUpgradeDriveModalProps,
@@ -19,32 +22,26 @@ export const ConnectUpgradeDriveModal = (
     const {
         body,
         header,
-        onClose,
+        onOpenChange,
         onContinue,
         cancelLabel,
         continueLabel,
-        modalProps = {},
-        dialogProps = {},
+        overlayProps,
+        contentProps,
         ...restProps
     } = props;
 
-    const { className: modalClassName, ...restModalProps } = modalProps;
-    const { className: dialogClassName, ...restDialogProps } = dialogProps;
-
     return (
         <Modal
-            modalProps={{
-                className: twMerge(
-                    'top-10',
-                    typeof modalClassName === 'string' && modalClassName,
-                ),
-                ...restModalProps,
+            overlayProps={{
+                ...overlayProps,
+                className: twMerge('top-10', overlayProps?.className),
             }}
-            dialogProps={{
-                className: twMerge('rounded-3xl', dialogClassName),
-                ...restDialogProps,
+            contentProps={{
+                ...contentProps,
+                className: twMerge('rounded-3xl', contentProps?.className),
             }}
-            onClose={onClose}
+            onOpenChange={onOpenChange}
             {...restProps}
         >
             <div className="w-[400px] p-6 text-[#565868]">
@@ -56,7 +53,7 @@ export const ConnectUpgradeDriveModal = (
                 </div>
                 <div className="mt-8 flex justify-between gap-3">
                     <Button
-                        onPress={onClose}
+                        onPress={() => onOpenChange?.(false)}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-[#F3F5F7] text-[##141718]',

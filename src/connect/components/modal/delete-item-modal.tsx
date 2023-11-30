@@ -1,48 +1,45 @@
-import { Modal, ModalProps } from '@/powerhouse';
+import { Modal } from '@/powerhouse';
+import React, { ComponentPropsWithoutRef } from 'react';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
 const buttonStyles =
     'min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all';
 
-export interface ConnectDeleteItemModalProps extends ModalProps {
+export type ConnectDeleteItemModalProps = ComponentPropsWithoutRef<
+    typeof Modal
+> & {
     header: React.ReactNode;
     body: React.ReactNode;
     onDelete: () => void;
     cancelLabel: string;
     deleteLabel: string;
-}
+};
 
 export const ConnectDeleteItemModal = (props: ConnectDeleteItemModalProps) => {
     const {
         body,
         header,
-        onClose,
+        onOpenChange,
         onDelete,
         cancelLabel,
         deleteLabel,
-        modalProps = {},
-        dialogProps = {},
+        overlayProps,
+        contentProps,
         ...restProps
     } = props;
 
-    const { className: modalClassName, ...restModalProps } = modalProps;
-    const { className: dialogClassName, ...restDialogProps } = dialogProps;
-
     return (
         <Modal
-            modalProps={{
-                className: twMerge(
-                    'top-10',
-                    typeof modalClassName === 'string' && modalClassName,
-                ),
-                ...restModalProps,
+            overlayProps={{
+                ...overlayProps,
+                className: twMerge('top-10', overlayProps?.className),
             }}
-            dialogProps={{
-                className: twMerge('rounded-3xl', dialogClassName),
-                ...restDialogProps,
+            contentProps={{
+                ...contentProps,
+                className: twMerge('rounded-3xl', contentProps?.className),
             }}
-            onClose={onClose}
+            onOpenChange={onOpenChange}
             {...restProps}
         >
             <div className="w-[465px] px-8 py-12 text-[#565868]">
@@ -52,7 +49,7 @@ export const ConnectDeleteItemModal = (props: ConnectDeleteItemModalProps) => {
                 <div className="mt-8 text-center text-xl">{body}</div>
                 <div className="mt-8 flex justify-center gap-3">
                     <Button
-                        onPress={onClose}
+                        onPress={() => onOpenChange?.(false)}
                         className={twMerge(
                             buttonStyles,
                             'bg-[#E8ECEFBF] text-[#141718]',

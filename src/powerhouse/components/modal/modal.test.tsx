@@ -1,10 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { Modal } from './modal';
+import { Modal } from '.';
 
 describe('Modal Component', () => {
     it('should match snapshot', () => {
         render(
-            <Modal open={true} onClose={() => {}} data-testid="modal">
+            <Modal open={true} data-testid="modal">
                 <div>Modal Content</div>
             </Modal>,
         );
@@ -16,7 +16,7 @@ describe('Modal Component', () => {
 
     it('should display modal content when open', () => {
         render(
-            <Modal open={true} onClose={() => {}}>
+            <Modal open={true}>
                 <div>Modal Content</div>
             </Modal>,
         );
@@ -27,7 +27,7 @@ describe('Modal Component', () => {
     it('should call onClose callback when press esc', () => {
         const onClose = vi.fn();
         render(
-            <Modal open={true} onClose={onClose}>
+            <Modal open={true} onOpenChange={onClose}>
                 <div>Modal Content</div>
             </Modal>,
         );

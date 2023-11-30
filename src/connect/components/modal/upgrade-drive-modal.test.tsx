@@ -6,7 +6,6 @@ describe('UpgradeDriveModal Component', () => {
         render(
             <ConnectUpgradeDriveModal
                 open={true}
-                onClose={() => {}}
                 data-testid="upgrade-drive-modal"
                 body="You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
                 cancelLabel="Cancel"
@@ -31,7 +30,6 @@ describe('UpgradeDriveModal Component', () => {
         render(
             <ConnectUpgradeDriveModal
                 open={true}
-                onClose={() => {}}
                 data-testid="upgrade-drive-modal"
                 body={bodyText}
                 cancelLabel={cancelLabel}
@@ -59,7 +57,7 @@ describe('UpgradeDriveModal Component', () => {
         render(
             <ConnectUpgradeDriveModal
                 open={true}
-                onClose={onClose}
+                onOpenChange={onClose}
                 data-testid="upgrade-drive-modal"
                 cancelLabel={cancelLabel}
                 body="You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
@@ -81,7 +79,6 @@ describe('UpgradeDriveModal Component', () => {
         render(
             <ConnectUpgradeDriveModal
                 open={true}
-                onClose={() => {}}
                 data-testid="upgrade-drive-modal"
                 body="You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
                 cancelLabel="Cancel"

@@ -2,33 +2,18 @@
 
 exports[`Modal Component > should match snapshot 1`] = `
 <div
-  class="bg-overlay fixed inset-0 grid place-items-center"
-  data-rac=""
+  aria-describedby="radix-:r2:"
+  aria-labelledby="radix-:r1:"
+  class="bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in"
+  data-state="open"
   data-testid="modal"
-  style="--visual-viewport-height: 768px;"
+  id="radix-:r0:"
+  role="dialog"
+  style="pointer-events: auto;"
+  tabindex="-1"
 >
-  <div
-    class="relative flex justify-center"
-    data-rac=""
-  >
-    <div
-      style="border: 0px; clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; width: 1px; white-space: nowrap;"
-    >
-      <button
-        aria-label="Dismiss"
-        id="react-aria-:r0:"
-        tabindex="-1"
-      />
-    </div>
-    <section
-      class="bg-white outline-none"
-      role="dialog"
-      tabindex="-1"
-    >
-      <div>
-        Modal Content
-      </div>
-    </section>
+  <div>
+    Modal Content
   </div>
 </div>
 `;

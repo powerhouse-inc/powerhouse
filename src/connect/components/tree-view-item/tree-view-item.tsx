@@ -331,7 +331,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                     }}
                     modalProps={{
                         open: isDriveSettingsModalOpen,
-                        onClose: () => setIsDriveSettingsModalOpen(false),
+                        onOpenChange: setIsDriveSettingsModalOpen,
                     }}
                 />
             )}

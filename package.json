@@ -108,6 +108,7 @@
         "jackspeak": "2.1.1"
     },
     "dependencies": {
+        "@radix-ui/react-dialog": "^1.0.5",
         "react-hook-form": "^7.48.2"
     }
 }
