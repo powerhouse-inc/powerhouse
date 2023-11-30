@@ -1010,10 +1010,10 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
-"@powerhousedao/design-system@1.0.0-alpha.30":
-  version "1.0.0-alpha.30"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.30.tgz#f5cdf23a95da0facb4034f7db3b342632c694cdb"
-  integrity sha512-9+8w+rMtGEJm4mwS7jSj2pemkDo2aMNiGQuk957ITLFHFnjWrJvkjqLVX0qHrVrI9bR65dHLEEZCSxNA3GA4cw==
+"@powerhousedao/design-system@1.0.0-alpha.32":
+  version "1.0.0-alpha.32"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.32.tgz#633021f8d04468ee4e403c002c99534d50ab67e5"
+  integrity sha512-dnL7ztvko/Z1FUGjWWTpJP3mg7lXnYzfxxH4bD8F7REGmdsWRzy6x9E6B8Pi9auX6HHB8Mp3mhnfFiNDTje48Q==
   dependencies:
     react-hook-form "^7.48.2"
 
