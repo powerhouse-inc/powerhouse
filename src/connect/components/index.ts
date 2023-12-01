@@ -5,6 +5,7 @@ export * from './drive-settings-modal';
 export * from './drive-settings-select';
 export * from './drive-view';
 export * from './dropdown-menu';
+export * from './form-input';
 export * from './modal';
 export * from './search-bar';
 export * from './sidebar';

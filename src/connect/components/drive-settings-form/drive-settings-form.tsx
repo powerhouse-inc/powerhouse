@@ -1,4 +1,10 @@
-import { Divider, DriveSettingsSelect, SharingType, Toggle } from '@/connect';
+import {
+    Divider,
+    DriveSettingsSelect,
+    FormInput,
+    SharingType,
+    Toggle,
+} from '@/connect';
 import { Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
@@ -83,14 +89,12 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             >
                 Drive Name
             </label>
-            <div className="flex gap-2 rounded-xl bg-[#F4F4F4] p-3 text-[#6C7275]">
-                <Icon name="drive" />
-                <input
-                    id="driveName"
-                    className="w-full bg-transparent font-semibold outline-none"
-                    {...register('driveName')}
-                />
-            </div>
+            <FormInput
+                icon={<Icon name="drive" />}
+                id="driveName"
+                required
+                {...register('driveName')}
+            />
             <Divider className="mb-[18px] mt-4" />
             <label
                 htmlFor="sharingType"

@@ -1,6 +1,7 @@
 import {
     ComponentPropsWithRef,
     FocusEventHandler,
+    FormEventHandler,
     ForwardedRef,
     forwardRef,
     useState,
@@ -24,13 +25,13 @@ export const FormInput = forwardRef(function FormInput(
     props: FormInputProps,
     ref: ForwardedRef<HTMLInputElement>,
 ) {
-    const [dirty, setDirty] = useState(!!props.value);
+    const [dirty, setDirty] = useState(props.value !== '');
     const [error, setError] = useState<React.ReactNode>('');
     const isError = error !== '';
     const type = props.type ?? 'text';
 
     const onBlur: FocusEventHandler<HTMLInputElement> = e => {
-        const { validity, value } = e.target;
+        const { validity, value } = e.currentTarget;
         const {
             patternMismatch,
             tooLong,
@@ -64,6 +65,12 @@ export const FormInput = forwardRef(function FormInput(
         props.onBlur?.(e);
     };
 
+    const onInput: FormEventHandler<HTMLInputElement> = e => {
+        if (e.currentTarget.value !== '') {
+            setError('');
+        }
+    };
+
     return (
         <div>
             <div
@@ -82,6 +89,7 @@ export const FormInput = forwardRef(function FormInput(
                     {...props}
                     type={type}
                     onBlur={onBlur}
+                    onInput={onInput}
                     ref={ref}
                     className={twMerge(
                         'w-full bg-transparent font-semibold outline-none',
