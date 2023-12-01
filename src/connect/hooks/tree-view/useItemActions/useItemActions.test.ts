@@ -10,7 +10,7 @@ const baseItem = {
     expanded: true,
     path: 'drive-id/base-item',
     label: 'Base Item',
-    type: 'folder' as const,
+    type: 'FOLDER' as const,
 };
 
 const setItems = vi.fn();
@@ -405,7 +405,7 @@ describe('TreeView hooks', () => {
             it('should create a new uiState with action when there is no state for the current item', () => {
                 const { result } = renderHook(() => useItemActions());
                 const itemID = treeItems[1].id;
-                const action = 'update';
+                const action = 'UPDATE';
 
                 result.current.setItemAction(itemID, action);
                 const [setUIStateCallback] = setUIState.mock.calls[0];
@@ -419,12 +419,12 @@ describe('TreeView hooks', () => {
             it('should update item action', () => {
                 const { result } = renderHook(() => useItemActions());
                 const itemID = treeItems[1].id;
-                const action = 'update';
+                const action = 'UPDATE';
 
                 result.current.setItemAction(itemID, action);
                 const [setUIStateCallback] = setUIState.mock.calls[0];
                 const newState = setUIStateCallback({
-                    [itemID]: { action: 'new' },
+                    [itemID]: { action: 'NEW' },
                 });
 
                 expect(newState).toEqual({
@@ -439,7 +439,7 @@ describe('TreeView hooks', () => {
                 result.current.setItemAction(itemID, null);
                 const [setUIStateCallback] = setUIState.mock.calls[0];
                 const newState = setUIStateCallback({
-                    [itemID]: { action: 'new' },
+                    [itemID]: { action: 'NEW' },
                 });
 
                 expect(newState).toEqual({
@@ -454,7 +454,7 @@ describe('TreeView hooks', () => {
                 result.current.setItemAction(itemID, undefined);
                 const [setUIStateCallback] = setUIState.mock.calls[0];
                 const newState = setUIStateCallback({
-                    [itemID]: { action: 'new' },
+                    [itemID]: { action: 'NEW' },
                 });
 
                 expect(newState).toEqual({
@@ -465,7 +465,7 @@ describe('TreeView hooks', () => {
             it('should not change another property besides action', () => {
                 const { result } = renderHook(() => useItemActions());
                 const itemID = treeItems[1].id;
-                const action = 'update';
+                const action = 'UPDATE';
 
                 result.current.setItemAction(itemID, action);
                 const [setUIStateCallback] = setUIState.mock.calls[0];
@@ -481,18 +481,18 @@ describe('TreeView hooks', () => {
             it('should not change another item state properties', () => {
                 const { result } = renderHook(() => useItemActions());
                 const itemID = treeItems[1].id;
-                const action = 'update';
+                const action = 'UPDATE';
 
                 result.current.setItemAction(itemID, action);
                 const [setUIStateCallback] = setUIState.mock.calls[0];
                 const newState = setUIStateCallback({
-                    'other-item': { action: 'new', isSelected: true },
+                    'other-item': { action: 'NEW', isSelected: true },
                     'other-item2': { isSelected: false },
-                    [itemID]: { action: 'new', isSelected: false },
+                    [itemID]: { action: 'NEW', isSelected: false },
                 });
 
                 expect(newState).toEqual({
-                    'other-item': { action: 'new', isSelected: true },
+                    'other-item': { action: 'NEW', isSelected: true },
                     'other-item2': { isSelected: false },
                     [itemID]: { action, isSelected: false },
                 });

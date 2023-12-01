@@ -11,7 +11,7 @@ import { ConnectTreeView, ConnectTreeViewProps } from '.';
 const treeItems = generateMockDriveData({
     path: 'drive',
     label: 'Local Drive',
-    type: 'local-drive',
+    type: 'LOCAL_DRIVE',
     expanded: false,
     isSelected: false,
 });
@@ -70,7 +70,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
             onItemOptionsClick?.(item, option);
 
             if (option === 'rename') {
-                actions.setItemAction(item.id, 'update');
+                actions.setItemAction(item.id, 'UPDATE');
                 return;
             }
 
@@ -80,8 +80,8 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
                     id: `${item.id}/new-folder`,
                     path: `${item.path}/new-folder`,
                     label: 'New Folder',
-                    type: 'folder',
-                    action: 'new',
+                    type: 'FOLDER',
+                    action: 'NEW',
                 });
             }
         };
@@ -97,7 +97,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
         item => {
             onSubmitInput?.(item);
             switch (item.action) {
-                case 'new':
+                case 'NEW':
                     setItems(prevState => {
                         // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         const { action, expanded, isSelected, ...newItem } =
@@ -106,7 +106,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
                     });
                     actions.deleteVirtualItem(item.id);
                     break;
-                case 'update':
+                case 'UPDATE':
                     setItems(prevItems =>
                         prevItems.map(prevItem => {
                             actions.setItemAction(item.id, null);

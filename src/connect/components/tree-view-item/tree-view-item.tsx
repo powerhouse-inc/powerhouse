@@ -96,9 +96,9 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         props.mode === 'read' && (mouseIsWithinItemContainer || isHighlighted);
     const statusIcon = getStatusIcon();
     const isDrive =
-        item.type === 'local-drive' ||
-        item.type === 'cloud-drive' ||
-        item.type === 'public-drive';
+        item.type === 'LOCAL_DRIVE' ||
+        item.type === 'CLOUD_DRIVE' ||
+        item.type === 'PUBLIC_DRIVE';
     const itemOptions =
         item.options ?? (defaultOptions as ConnectDropdownMenuItem[]);
     const dropdownMenuItems = isDrive
@@ -175,8 +175,8 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 {
                     ...item,
                     status: data.availableOffline
-                        ? 'available-offline'
-                        : 'available',
+                        ? 'AVAILABLE_OFFLINE'
+                        : 'AVAILABLE',
                 },
                 'change-availability',
             );
@@ -203,18 +203,18 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
 
     function getItemIcon() {
         switch (item.type) {
-            case 'folder':
+            case 'FOLDER':
                 return {
                     icon: <Icon name="folder-close" color="#6C7275" />,
                     expandedIcon: <Icon name="folder-open" color="#6C7275" />,
                 };
-            case 'file':
+            case 'FILE':
                 return {};
-            case 'local-drive':
+            case 'LOCAL_DRIVE':
                 return { icon: <Icon name="hdd" /> };
-            case 'cloud-drive':
+            case 'CLOUD_DRIVE':
                 return { icon: <Icon name="server" /> };
-            case 'public-drive':
+            case 'PUBLIC_DRIVE':
                 return { icon: <Icon name="m" /> };
         }
     }
@@ -242,17 +242,17 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         const iconProps = {
             className: 'm-1.5',
         };
-        if (item.type === 'local-drive') {
+        if (item.type === 'LOCAL_DRIVE') {
             return (
                 <StatusIndicator
-                    type="local-drive"
+                    type="LOCAL_DRIVE"
                     error={item.error}
                     iconProps={iconProps}
                 />
             );
         }
 
-        if (item.type === 'cloud-drive' || item.type === 'public-drive') {
+        if (item.type === 'CLOUD_DRIVE' || item.type === 'PUBLIC_DRIVE') {
             const sharedProps = {
                 type: item.type,
                 error: item.error,
@@ -260,17 +260,17 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 iconProps,
             };
 
-            if (item.status === 'available-offline') {
+            if (item.status === 'AVAILABLE_OFFLINE') {
                 return (
                     <StatusIndicator
                         {...sharedProps}
-                        availability="available-offline"
-                        syncStatus={item.syncStatus ?? 'not-synced-yet'}
+                        availability="AVAILABLE_OFFLINE"
+                        syncStatus={item.syncStatus ?? 'NOT_SYNCED_YET'}
                     />
                 );
             }
 
-            if (item.status === 'available') {
+            if (item.status === 'AVAILABLE') {
                 return (
                     <StatusIndicator
                         {...sharedProps}
@@ -319,10 +319,10 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                     formProps={{
                         driveName: item.label,
                         // todo: make this required for drives
-                        sharingType: item.sharingType ?? 'public',
-                        availableOffline: item.status === 'available-offline',
+                        sharingType: item.sharingType ?? 'PUBLIC',
+                        availableOffline: item.status === 'AVAILABLE_OFFLINE',
                         location:
-                            item.type === 'local-drive' ? 'local' : 'cloud',
+                            item.type === 'LOCAL_DRIVE' ? 'local' : 'cloud',
                         onCancel() {
                             setIsDriveSettingsModalOpen(false);
                         },

@@ -14,7 +14,7 @@ import { BreadcrumbProps, Breadcrumbs, BreadcrumbsProps } from '.';
 const treeItems = generateMockDriveData({
     path: 'drive',
     label: 'Local Drive',
-    type: 'local-drive',
+    type: 'LOCAL_DRIVE',
     expanded: false,
     isSelected: false,
 });
@@ -82,7 +82,7 @@ export const Default: Story = {
                 id: randomId(),
                 path: `${basepath}/${label}`,
                 label,
-                type: 'folder',
+                type: 'FOLDER',
             };
 
             setBaseItems(prev => [...prev, newItem]);
@@ -100,8 +100,8 @@ export const Default: Story = {
                 id: randomId(),
                 path: `${basePath}/new-folder`,
                 label: option,
-                type: 'folder',
-                action: 'new',
+                type: 'FOLDER',
+                action: 'NEW',
             });
         };
 

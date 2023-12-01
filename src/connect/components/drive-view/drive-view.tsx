@@ -33,12 +33,12 @@ export interface DriveViewProps
 
 const filterDriveByType = (drive: DriveTreeItem, type: DriveType) => {
     switch (type) {
-        case 'public-drive':
-            return drive.type === 'public-drive';
-        case 'local-drive':
-            return drive.type === 'local-drive';
-        case 'cloud-drive':
-            return drive.type === 'cloud-drive';
+        case 'PUBLIC_DRIVE':
+            return drive.type === 'PUBLIC_DRIVE';
+        case 'LOCAL_DRIVE':
+            return drive.type === 'LOCAL_DRIVE';
+        case 'CLOUD_DRIVE':
+            return drive.type === 'CLOUD_DRIVE';
         default:
             return false;
     }
@@ -66,10 +66,10 @@ export function DriveView(props: DriveViewProps) {
     const drives = usePathContent(drivePath) as DriveTreeItem[];
 
     const allowedTypes: TreeItemType[] = [
-        'cloud-drive',
-        'folder',
-        'local-drive',
-        'public-drive',
+        'CLOUD_DRIVE',
+        'FOLDER',
+        'LOCAL_DRIVE',
+        'PUBLIC_DRIVE',
     ];
     const allowedDrives = drives
         .filter(drive => filterDriveByType(drive, type))
@@ -79,7 +79,7 @@ export function DriveView(props: DriveViewProps) {
         <div
             className={twMerge(
                 'pb-2',
-                type === 'public-drive' && 'rounded-lg bg-bg to-bg',
+                type === 'PUBLIC_DRIVE' && 'rounded-lg bg-bg to-bg',
                 className,
             )}
             {...restProps}

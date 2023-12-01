@@ -1,27 +1,24 @@
 import { ConnectDropdownMenuItem, defaultDropdownMenuOptions } from '@/connect';
 
-export type TreeItemType =
-    | 'folder'
-    | 'file'
-    | 'local-drive'
-    | 'cloud-drive'
-    | 'public-drive';
+export type DriveType = 'PUBLIC_DRIVE' | 'LOCAL_DRIVE' | 'CLOUD_DRIVE';
+
+export type TreeItemType = ('FOLDER' | 'FILE') | DriveType;
 
 export type TreeItemAction =
-    | 'update'
-    | 'new'
-    | 'update-and-move'
-    | 'update-and-copy';
+    | 'UPDATE'
+    | 'NEW'
+    | 'UPDATE_AND_MOVE'
+    | 'UPDATE_AND_COPY';
 
 export type TreeItemStatus =
-    | 'available'
-    | 'available-offline'
-    | 'syncing'
-    | 'offline';
+    | 'AVAILABLE'
+    | 'AVAILABLE_OFFLINE'
+    | 'SYNCING'
+    | 'OFFLINE';
 
-export type SyncStatus = 'not-synced-yet' | 'syncing' | 'synced';
+export type SyncStatus = 'NOT_SYNCED_YET' | 'SYNCING' | 'SYNCED';
 
-export type SharingType = 'private' | 'shared' | 'public';
+export type SharingType = 'PRIVATE' | 'SHARED' | 'PUBLIC';
 
 export type BaseTreeItem = {
     id: string;
@@ -44,8 +41,6 @@ export type UITreeItem = {
 };
 
 export type TreeItem = BaseTreeItem & UITreeItem;
-
-export type DriveType = 'public-drive' | 'local-drive' | 'cloud-drive';
 
 export type DriveTreeItem = TreeItem & {
     type: DriveType;

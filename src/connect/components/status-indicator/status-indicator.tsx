@@ -13,11 +13,11 @@ type SharedProps = {
 };
 
 export type LocalProps = SharedProps & {
-    type: 'local-drive';
+    type: 'LOCAL_DRIVE';
 };
 
 type SharedPublicOrCloudProps = SharedProps & {
-    type: 'public-drive' | 'cloud-drive';
+    type: 'PUBLIC_DRIVE' | 'CLOUD_DRIVE';
     isConnected: boolean;
 };
 
@@ -26,7 +26,7 @@ type CloudOnlyProps = SharedPublicOrCloudProps & {
 };
 
 type AvailableOfflineProps = SharedPublicOrCloudProps & {
-    availability: 'available-offline';
+    availability: 'AVAILABLE_OFFLINE';
     syncStatus: SyncStatus;
 };
 
@@ -37,7 +37,7 @@ export function StatusIndicator(props: StatusIndicatorProps) {
     if (props.error) {
         return <ErrorIcon {...props.iconProps} />;
     }
-    if (props.type === 'local-drive') {
+    if (props.type === 'LOCAL_DRIVE') {
         return <SyncedIcon {...props.iconProps} />;
     }
 
@@ -55,15 +55,15 @@ export function PublicOrCloudDriveStatusIndicator(
     }
 
     if (props.isConnected) {
-        if (props.syncStatus === 'syncing') {
+        if (props.syncStatus === 'SYNCING') {
             return <SyncingIcon {...props.iconProps} />;
         }
-        if (props.syncStatus === 'synced') {
+        if (props.syncStatus === 'SYNCED') {
             return <SyncedIcon {...props.iconProps} />;
         }
     }
 
-    if (props.syncStatus === 'not-synced-yet') {
+    if (props.syncStatus === 'NOT_SYNCED_YET') {
         return <SyncedIcon {...props.iconProps} />;
     }
 

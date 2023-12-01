@@ -13,20 +13,20 @@ type PublicOrCloudDriveStory = StoryObj<PublicOrCloudDriveProps>;
 
 export const LocalDriveSuccess: LocalDriveStory = {
     args: {
-        type: 'local-drive',
+        type: 'LOCAL_DRIVE',
     },
 };
 
 export const LocalDriveError: LocalDriveStory = {
     args: {
-        type: 'local-drive',
+        type: 'LOCAL_DRIVE',
         error: new Error('Something went wrong'),
     },
 };
 
 export const LocalDriveWithStyles: LocalDriveStory = {
     args: {
-        type: 'local-drive',
+        type: 'LOCAL_DRIVE',
         iconProps: {
             className: 'text-[#000] hover:text-pink-500',
         },
@@ -35,8 +35,8 @@ export const LocalDriveWithStyles: LocalDriveStory = {
 
 const PublicAvailableOfflineTemplate: PublicOrCloudDriveStory = {
     args: {
-        type: 'public-drive',
-        availability: 'available-offline',
+        type: 'PUBLIC_DRIVE',
+        availability: 'AVAILABLE_OFFLINE',
     },
 };
 
@@ -53,7 +53,7 @@ export const PublicAvailableOfflineWithConnectionSyncing: PublicOrCloudDriveStor
         ...PublicAvailableOfflineWithConnectionTemplate,
         args: {
             ...PublicAvailableOfflineWithConnectionTemplate.args,
-            syncStatus: 'syncing',
+            syncStatus: 'SYNCING',
         },
     };
 
@@ -62,7 +62,7 @@ export const PublicAvailableOfflineWithConnectionSynced: PublicOrCloudDriveStory
         ...PublicAvailableOfflineWithConnectionTemplate,
         args: {
             ...PublicAvailableOfflineWithConnectionTemplate.args,
-            syncStatus: 'synced',
+            syncStatus: 'SYNCED',
         },
     };
 
@@ -88,7 +88,7 @@ export const PublicAvailableOfflineNoConnectionNotSyncedYet: PublicOrCloudDriveS
         ...PublicAvailableOfflineNoConnectionTemplate,
         args: {
             ...PublicAvailableOfflineNoConnectionTemplate.args,
-            syncStatus: 'not-synced-yet',
+            syncStatus: 'NOT_SYNCED_YET',
         },
     };
 
@@ -103,8 +103,8 @@ export const PublicAvailableOfflineNoConnectionFailed: PublicOrCloudDriveStory =
 
 const CloudAvailableOfflineTemplate: PublicOrCloudDriveStory = {
     args: {
-        type: 'cloud-drive',
-        availability: 'available-offline',
+        type: 'CLOUD_DRIVE',
+        availability: 'AVAILABLE_OFFLINE',
     },
 };
 
@@ -121,7 +121,7 @@ export const CloudAvailableOfflineWithConnectionSyncing: PublicOrCloudDriveStory
         ...CloudAvailableOfflineWithConnectionTemplate,
         args: {
             ...CloudAvailableOfflineWithConnectionTemplate.args,
-            syncStatus: 'syncing',
+            syncStatus: 'SYNCING',
         },
     };
 
@@ -130,7 +130,7 @@ export const CloudAvailableOfflineWithConnectionSynced: PublicOrCloudDriveStory 
         ...CloudAvailableOfflineWithConnectionTemplate,
         args: {
             ...CloudAvailableOfflineWithConnectionTemplate.args,
-            syncStatus: 'synced',
+            syncStatus: 'SYNCED',
         },
     };
 
@@ -156,7 +156,7 @@ export const CloudAvailableOfflineNoConnectionNotSyncedYet: PublicOrCloudDriveSt
         ...CloudAvailableOfflineNoConnectionTemplate,
         args: {
             ...CloudAvailableOfflineNoConnectionTemplate.args,
-            syncStatus: 'not-synced-yet',
+            syncStatus: 'NOT_SYNCED_YET',
         },
     };
 
@@ -171,7 +171,7 @@ export const CloudAvailableOfflineNoConnectionFailed: PublicOrCloudDriveStory =
 
 const PublicCloudOnlyTemplate: PublicOrCloudDriveStory = {
     args: {
-        type: 'public-drive',
+        type: 'PUBLIC_DRIVE',
         availability: 'cloud-only',
     },
 };
@@ -194,8 +194,8 @@ export const PublicCloudOnlyNoConnection: PublicOrCloudDriveStory = {
 
 const CloudCloudOnlyTemplate: PublicOrCloudDriveStory = {
     args: {
-        type: 'cloud-drive',
-        availability: 'available-offline',
+        type: 'CLOUD_DRIVE',
+        availability: 'AVAILABLE_OFFLINE',
     },
 };
 

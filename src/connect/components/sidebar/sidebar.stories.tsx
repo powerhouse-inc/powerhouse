@@ -10,25 +10,25 @@ const drives = [
     ...generateMockDriveData({
         path: 'drive',
         label: 'MakerDAO Atlas',
-        type: 'public-drive',
+        type: 'PUBLIC_DRIVE',
         expanded: true,
     }),
     ...generateMockDriveData({
         path: 'cloud',
         label: 'Powerhouse Team Drive',
-        type: 'cloud-drive',
+        type: 'CLOUD_DRIVE',
         expanded: false,
     }),
     ...generateMockDriveData({
         path: 'cloud-2',
         label: 'Powerhouse Team Drive 2',
-        type: 'cloud-drive',
+        type: 'CLOUD_DRIVE',
         expanded: true,
     }),
     ...generateMockDriveData({
         path: 'local',
         label: 'Local Device',
-        type: 'local-drive',
+        type: 'LOCAL_DRIVE',
         expanded: true,
     }),
 ];
@@ -87,19 +87,19 @@ export const Sidebar: Story = {
         children: (
             <>
                 <DriveViewImpl
-                    type="public-drive"
+                    type="PUBLIC_DRIVE"
                     name="Public Drives"
                     className="mx-2 mb-2"
                     onItemOptionsClick={onItemOptionsClick}
                 />
                 <DriveViewImpl
-                    type="cloud-drive"
+                    type="CLOUD_DRIVE"
                     name="Secure Cloud Storage"
                     className="mx-2 mb-2"
                     onItemOptionsClick={onItemOptionsClick}
                 />
                 <DriveViewImpl
-                    type="local-drive"
+                    type="LOCAL_DRIVE"
                     name="My Local Drives"
                     className="mx-2 mb-2"
                     onItemOptionsClick={onItemOptionsClick}

@@ -34,17 +34,17 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
 
     const sharingTypeOptions = [
         {
-            value: 'private',
+            value: 'PRIVATE',
             icon: <Icon name="lock" />,
             description: 'Only available to you',
         },
         {
-            value: 'shared',
+            value: 'SHARED',
             icon: <Icon name="people" />,
             description: 'Only available to people in this drive',
         },
         {
-            value: 'public',
+            value: 'PUBLIC',
             icon: <Icon name="globe" />,
             description: 'Available to everyone',
             disabled: true,
