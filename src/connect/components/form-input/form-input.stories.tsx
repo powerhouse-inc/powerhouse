@@ -37,6 +37,54 @@ export const WithValue: Story = {
     },
 };
 
+export const Email: Story = {
+    ...Template,
+    args: {
+        ...Template.args,
+        type: 'email',
+        placeholder: 'you@powerhouse.io',
+    },
+};
+
+export const Password: Story = {
+    ...Template,
+    args: {
+        ...Template.args,
+        type: 'password',
+        placeholder: 'YourPassword123',
+    },
+};
+
+export const WithLengthLimits: Story = {
+    ...Template,
+    args: {
+        ...Template.args,
+        minLength: 2,
+        maxLength: 3,
+    },
+};
+
+export const WithRegexPattern: Story = {
+    ...Template,
+    args: {
+        ...Template.args,
+        pattern: '[a-c]{3}',
+    },
+};
+
+export const WithCustomErrorMessage: Story = {
+    ...Template,
+    args: {
+        ...Template.args,
+        required: true,
+        customErrorMessages: {
+            valueMissing: (
+                <span className="text-pink-500">This field is required</span>
+            ),
+        },
+    },
+};
+
 export const Required: Story = {
     ...Template,
     args: {
