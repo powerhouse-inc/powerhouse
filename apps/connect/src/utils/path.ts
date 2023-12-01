@@ -8,7 +8,7 @@ export const getLastIndexFromPath = (
     name: string,
     parentFolder?: string
 ): number | null => {
-    const regexp = new RegExp(`^${name}(-\\d+)?$`, 'i');
+    const regexp = new RegExp(`^${name}(\\s\\d+)?$`, 'i');
 
     const filteredNodes = nodes
         .filter(
