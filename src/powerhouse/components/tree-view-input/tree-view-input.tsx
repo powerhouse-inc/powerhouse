@@ -69,15 +69,15 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
                         ref={inputRef}
                     />
                 </TextField>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center pr-2">
+                    <Button className="outline-none" onPress={onCancelInput}>
+                        {cancelIcon}
+                    </Button>
                     <Button
                         onPress={e => onSubmitInput?.(text, e)}
                         className="outline-none"
                     >
                         {submitIcon}
-                    </Button>
-                    <Button className="outline-none" onPress={onCancelInput}>
-                        {cancelIcon}
                     </Button>
                 </div>
             </div>

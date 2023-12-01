@@ -18,6 +18,9 @@ import {
 import { MouseEventHandler, useEffect, useRef, useState } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
 
+const submitIcon = <Icon name="check" color="#6C7275" />;
+const cancelIcon = <Icon name="xmark" color="#6C7275" />;
+
 export type ConnectTreeViewItemProps = {
     item: TreeItem;
     children: React.ReactNode;
@@ -293,6 +296,8 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 label={item.label}
                 open={item.expanded}
                 itemContainerProps={getItemContainerProps()}
+                submitIcon={submitIcon}
+                cancelIcon={cancelIcon}
                 {...getItemIcon()}
                 {...divProps}
             >

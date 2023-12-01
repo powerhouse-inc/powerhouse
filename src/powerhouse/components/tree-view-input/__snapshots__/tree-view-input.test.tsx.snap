@@ -22,7 +22,7 @@ exports[`TreeViewInput Component > should match snapshot 1`] = `
       />
     </div>
     <div
-      class="flex items-center gap-1"
+      class="flex items-center pr-2"
     >
       <button
         class="outline-none"
@@ -30,7 +30,7 @@ exports[`TreeViewInput Component > should match snapshot 1`] = `
         type="button"
       >
         <div>
-          submit
+          cancel
         </div>
       </button>
       <button
@@ -39,7 +39,7 @@ exports[`TreeViewInput Component > should match snapshot 1`] = `
         type="button"
       >
         <div>
-          cancel
+          submit
         </div>
       </button>
     </div>
