@@ -1,3 +1,10 @@
+# [1.0.0-alpha.34](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.33...v1.0.0-alpha.34) (2023-12-01)
+
+
+### Features
+
+* added default icons for TreeViewInput ([0fc0929](https://github.com/powerhouse-inc/design-system/commit/0fc092987911357ba986df1b4cd85888069ccc93))
+
 # [1.0.0-alpha.33](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.32...v1.0.0-alpha.33) (2023-12-01)
 
 
