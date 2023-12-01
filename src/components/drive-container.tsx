@@ -49,7 +49,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     }, [documentDrives]);
 
     const cancelInputHandler: DriveViewProps['onCancelInput'] = item => {
-        if (item.action === 'update') {
+        if (item.action === 'UPDATE') {
             actions.setItemAction(item.id, null);
             return;
         }
@@ -110,8 +110,8 @@ export default function DriveContainer(props: DriveContainerProps) {
                     type: item.data.type,
                     action:
                         event.dropOperation === 'copy'
-                            ? 'update-and-copy'
-                            : 'update-and-move',
+                            ? 'UPDATE_AND_COPY'
+                            : 'UPDATE_AND_MOVE',
                 });
                 return;
             }
@@ -132,7 +132,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     return (
         <DriveView
             key="local"
-            type="local-drive"
+            type="LOCAL_DRIVE"
             name={'My Local Drives'}
             onItemClick={onItemClick}
             onItemOptionsClick={onItemOptionsClick}
