@@ -1,3 +1,10 @@
+# [1.0.0-alpha.33](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.32...v1.0.0-alpha.33) (2023-12-01)
+
+
+### Features
+
+* capitalize string unions ([#114](https://github.com/powerhouse-inc/design-system/issues/114)) ([4f8be09](https://github.com/powerhouse-inc/design-system/commit/4f8be09eb90f5191f62c7e74a7c3f5ef85afd744))
+
 # [1.0.0-alpha.32](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.31...v1.0.0-alpha.32) (2023-11-30)
 
 
