@@ -36,14 +36,14 @@ export function driveToBaseItems(
         id: driveID,
         label: drive.name,
         path: driveID,
-        type: 'local-drive',
+        type: 'LOCAL_DRIVE',
     };
 
     const nodes: Array<BaseTreeItem> = drive.nodes.map((node, _i, nodes) => ({
         id: node.id,
         label: node.name,
         path: path.join(driveID, getNodePath(node, nodes)),
-        type: node.kind === 'folder' ? 'folder' : 'file',
+        type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
     }));
     return [driveNode, ...nodes];
 }
@@ -83,8 +83,8 @@ export function useDrivesContainer() {
             id: uuid(),
             label: virtualFolderName,
             path: path.join(item.path, virtualPathName),
-            type: 'folder',
-            action: 'new',
+            type: 'FOLDER',
+            action: 'NEW',
         });
     }
 
@@ -109,7 +109,7 @@ export function useDrivesContainer() {
     }
 
     const onItemClick: DriveViewProps['onItemClick'] = (_event, item) => {
-        if (item.type !== 'file') {
+        if (item.type !== 'FILE') {
             setSelectedPath(item.path);
             actions.toggleExpandedAndSelect(item.id);
         }
@@ -127,7 +127,7 @@ export function useDrivesContainer() {
                 addVirtualNewFolder(item, driveID);
                 break;
             case 'rename':
-                actions.setItemAction(item.id, 'update');
+                actions.setItemAction(item.id, 'UPDATE');
                 break;
             case 'delete':
                 if (
@@ -161,15 +161,15 @@ export function useDrivesContainer() {
     const onSubmitInput = (item: TreeItem, onCancel?: () => void) => {
         const driveID = item.path.split('/')[0];
 
-        if (item.action === 'new') {
+        if (item.action === 'NEW') {
             actions.deleteVirtualItem(item.id);
             addNewFolder(item, driveID, onCancel);
             return;
         }
 
         if (
-            item.action === 'update-and-copy' ||
-            item.action === 'update-and-move'
+            item.action === 'UPDATE_AND_COPY' ||
+            item.action === 'UPDATE_AND_MOVE'
         ) {
             actions.deleteVirtualItem(item.id);
 
@@ -177,7 +177,7 @@ export function useDrivesContainer() {
             const srcID = item.id.replace('(from)', '');
             const targetPath = path.dirname(item.path);
             const operation =
-                item.action === 'update-and-copy' ? 'copy' : 'move';
+                item.action === 'UPDATE_AND_COPY' ? 'copy' : 'move';
 
             let targetId = targetPath.split('/').pop() ?? '';
 

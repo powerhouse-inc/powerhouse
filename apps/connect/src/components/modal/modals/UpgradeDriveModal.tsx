@@ -22,12 +22,14 @@ export const UpgradeDriveModal: React.FC<UpgradeDriveModalProps> = props => {
     return (
         <ConnectUpgradeDriveModal
             open={open}
-            onClose={onClose}
             onContinue={onContinue}
             header={t('modals.upgradeDrive.header')}
             body={t('modals.upgradeDrive.body')}
             cancelLabel={t('common.cancel')}
             continueLabel={t('common.continue')}
+            onOpenChange={status => {
+                if (!status) return onClose();
+            }}
         />
     );
 };

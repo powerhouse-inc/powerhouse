@@ -63,7 +63,7 @@ const Content = () => {
                 file.content,
                 decodedDriveID,
                 file.name,
-                selectedFolder && selectedFolder.type === 'folder'
+                selectedFolder && selectedFolder.type === 'FOLDER'
                     ? decodeID(selectedFolder.id)
                     : undefined
             );
@@ -138,8 +138,8 @@ const Content = () => {
             label,
             id: uuid(),
             path: itemPath,
-            type: 'folder',
-            action: 'new',
+            type: 'FOLDER',
+            action: 'NEW',
         });
 
         const item = getItemByPath(itemPath);
