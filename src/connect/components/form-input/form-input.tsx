@@ -98,7 +98,14 @@ export const FormInput = forwardRef(function FormInput(
                     )}
                 />
             </div>
-            {isError && <p className="text-xs text-[#EA4335]">{error}</p>}
+            <p
+                className={twMerge(
+                    'invisible min-h-[16px] text-xs text-[#EA4335]',
+                    isError && 'visible',
+                )}
+            >
+                {error}
+            </p>
         </div>
     );
 });
