@@ -1,3 +1,14 @@
+# [1.0.0-alpha.35](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.34...v1.0.0-alpha.35) (2023-12-04)
+
+
+### Features
+
+* add form input component ([ff5e380](https://github.com/powerhouse-inc/design-system/commit/ff5e380bfd2bf5e0848081771dfc6dd32f4020ac))
+* add validation ([61e905f](https://github.com/powerhouse-inc/design-system/commit/61e905fc9cedf15a5a25635c241a79721f8da0bd))
+* call props on input in handler ([5fd2266](https://github.com/powerhouse-inc/design-system/commit/5fd2266d28f02f89298ed5b3c9e0416be44852c3))
+* leave space for error message so that input doesnt move ([1937f7b](https://github.com/powerhouse-inc/design-system/commit/1937f7b4e88b7186e80bca0693ceeadde1376626))
+* use form input in drive settings form ([8bb6254](https://github.com/powerhouse-inc/design-system/commit/8bb62540cb6fe09f20930366d18fa4abde017348))
+
 # [1.0.0-alpha.34](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.33...v1.0.0-alpha.34) (2023-12-01)
 
 
