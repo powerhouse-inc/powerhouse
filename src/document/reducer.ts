@@ -17,7 +17,7 @@ import {
 import { z } from './schema';
 import { Action, Document, ImmutableStateReducer } from './types';
 import { isBaseAction, hashDocument } from './utils';
-import { Signal } from './signal';
+import { Signal, SignalDispatch } from './signal';
 
 /**
  * Gets the next revision number based on the provided action.
@@ -158,7 +158,7 @@ export function baseReducer<T, A extends Action>(
     document: Document<T, A>,
     action: A | BaseAction,
     customReducer: ImmutableStateReducer<T, A>,
-    dispatch?: (signal: Signal) => void,
+    dispatch?: SignalDispatch,
 ) {
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first

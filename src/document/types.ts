@@ -4,7 +4,7 @@ import type { DocumentModelState } from '../document-model/';
 import type { BaseAction } from './actions/types';
 import { BaseDocument } from './object';
 import { FileInput } from './utils';
-import { Signal } from './signal';
+import { SignalDispatch } from './signal';
 export { z } from './schema';
 export type * from './schema/types';
 export type { FileInput } from './utils';
@@ -43,7 +43,7 @@ export type ActionWithAttachment<
 export type Reducer<State, A extends Action> = (
     state: Document<State, A>,
     action: A | BaseAction,
-    dispatch?: (signal: Signal) => void,
+    dispatch?: SignalDispatch,
 ) => Document<State, A>;
 
 /**
@@ -61,13 +61,13 @@ export type Reducer<State, A extends Action> = (
 export type ImmutableReducer<State, A extends Action> = (
     state: Draft<Document<State, A>>,
     action: A | BaseAction,
-    dispatch?: (signal: Signal) => void,
+    dispatch?: SignalDispatch,
 ) => Document<State, A> | void;
 
 export type ImmutableStateReducer<State, A extends Action> = (
     state: Draft<State>,
     action: A,
-    dispatch?: (signal: Signal) => void,
+    dispatch?: SignalDispatch,
 ) => State | void;
 
 /**

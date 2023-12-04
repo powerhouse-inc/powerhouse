@@ -1,5 +1,5 @@
 import { DocumentModelState } from './types';
-import { ExtendedState, Signal } from '../../document';
+import { ExtendedState, SignalDispatch } from '../../document';
 import { applyMixins, BaseDocument } from '../../document/object';
 import { DocumentModelAction } from './actions';
 import { reducer } from './reducer';
@@ -39,7 +39,7 @@ class DocumentModel extends BaseDocument<
 
     constructor(
         initialState?: Partial<ExtendedState<Partial<DocumentModelState>>>,
-        dispatch?: (signal: Signal) => void,
+        dispatch?: SignalDispatch,
     ) {
         super(reducer, utils.createDocument(initialState), dispatch);
     }

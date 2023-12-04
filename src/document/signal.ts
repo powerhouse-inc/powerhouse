@@ -24,3 +24,5 @@ export type DeleteChildDocumentSignal = ISignal<
 >;
 
 export type Signal = CreateChildDocumentSignal | DeleteChildDocumentSignal;
+
+export type SignalDispatch = (signal: Signal) => void;
