@@ -19,7 +19,7 @@ import { loadFromFile, saveToFile, readOnly } from './utils';
 export abstract class BaseDocument<T, A extends Action> {
     protected _document: Document<T, A>;
     private _reducer: Reducer<T, A>;
-    private _dispatch?: SignalDispatch;
+    private _signalDispatch?: SignalDispatch;
 
     /**
      * Constructs a BaseDocument instance with an initial state.
@@ -29,11 +29,11 @@ export abstract class BaseDocument<T, A extends Action> {
     constructor(
         reducer: Reducer<T, A>,
         document: Document<T, A>,
-        dispatch?: SignalDispatch,
+        signalDispatch?: SignalDispatch,
     ) {
         this._reducer = reducer;
         this._document = document;
-        this._dispatch = dispatch;
+        this._signalDispatch = signalDispatch;
     }
 
     /**
@@ -42,7 +42,11 @@ export abstract class BaseDocument<T, A extends Action> {
      * @returns The Document instance.
      */
     protected dispatch(action: A | BaseAction) {
-        this._document = this._reducer(this._document, action, this._dispatch);
+        this._document = this._reducer(
+            this._document,
+            action,
+            this._signalDispatch,
+        );
         return this;
     }
 
