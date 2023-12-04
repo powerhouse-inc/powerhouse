@@ -11,7 +11,7 @@ import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../src/red
 <%_ }); %>
 
 const stateReducer: ImmutableStateReducer<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> =
-    (state, action) => {
+    (state, action, dispatch) => {
         if (utils.isBaseAction(action)) {
             return state;
         }
@@ -23,7 +23,7 @@ const stateReducer: ImmutableStateReducer<<%= h.changeCase.pascal(documentType) 
         '                ' + (o.schema !== null ? 
             'z.' + h.changeCase.pascalCase(o.name) + 'InputSchema().parse(action.input);\n' : 
             'if (Object.keys(action.input).length > 0) throw new Error("Expected empty input for action ' + h.changeCase.constant(o.name) + '");\n') +
-        '                ' + h.changeCase.pascal(m.name) + 'Reducer.' + h.changeCase.camel(o.name) + 'Operation(state, action);\n' +
+        '                ' + h.changeCase.pascal(m.name) + 'Reducer.' + h.changeCase.camel(o.name) + 'Operation(state, action, dispatch);\n' +
         '                break;\n'        
     ).join('\n')).join('\n')
 %>

@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/object.ts"
 force: true
 ---
-import { BaseDocument, ExtendedState, applyMixins } from 'document-model/document';
+import { BaseDocument, ExtendedState, applyMixins, SignalDispatch } from 'document-model/document';
 import { <%= h.changeCase.pascal(documentType) %>State } from './types';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 import { reducer } from './reducer';
@@ -23,8 +23,8 @@ interface <%= h.changeCase.pascal(documentType) %> extends
 class <%= h.changeCase.pascal(documentType) %> extends BaseDocument<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> {
     static fileExtension = '<%= extension %>';
 
-    constructor(initialState?: Partial<ExtendedState<Partial<<%= h.changeCase.pascal(documentType) %>State>>>) {
-        super(reducer, utils.createDocument(initialState));
+    constructor(initialState?: Partial<ExtendedState<Partial<<%= h.changeCase.pascal(documentType) %>State>>>, dispatch?: SignalDispatch) {
+        super(reducer, utils.createDocument(initialState), dispatch);
     }
 
     public saveToFile(path: string, name?: string) {
