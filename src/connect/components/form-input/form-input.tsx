@@ -69,6 +69,7 @@ export const FormInput = forwardRef(function FormInput(
         if (e.currentTarget.value !== '') {
             setError('');
         }
+        props.onInput?.(e);
     };
 
     return (
