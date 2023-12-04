@@ -69,6 +69,6 @@ input MoveNodeInput {
 
 # Drive
 
-input SetNameInput {
+input SetDriveNameInput {
     name: String!
 }

@@ -7,7 +7,7 @@
 import { DocumentDriveDriveOperations } from '../../gen/drive/operations';
 
 export const reducer: DocumentDriveDriveOperations = {
-    setNameOperation(state, action) {
+    setDriveNameOperation(state, action) {
         state.name = action.input.name;
     },
 };

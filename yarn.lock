@@ -18,18 +18,20 @@
     "@graphql-tools/utils" "^10.0.0"
     graphlib "^2.1.8"
 
-"@acaldas/powerhouse@^1.0.11":
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/@acaldas/powerhouse/-/powerhouse-1.0.11.tgz#f77d5a5dd3e6b6ffcae4cbc2d484faa715722d8d"
-  integrity sha512-b2Vq0KpF2xrgSICGgm6yo4/DlCrZ0nUccKOUX4phVZFGS7FWjOQumZmtkcgl89JOqMtWoLfjBOANsvkQBE17OA==
+"@acaldas/powerhouse@^1.0.12":
+  version "1.0.12"
+  resolved "https://registry.yarnpkg.com/@acaldas/powerhouse/-/powerhouse-1.0.12.tgz#fb3cadc8a9689fdd556822d161f713ae1329de6f"
+  integrity sha512-186nS2fQBpHWG/siJXJxR7f59VluJIwq+SR/+UvHbTJzm4XwdBngCzNoJ+0kl3CxFtrvSi9I2za/68lSrSJhDQ==
   dependencies:
     "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
+    "@anatine/zod-mock" "^3.13.2"
+    "@faker-js/faker" "^8.1.0"
     "@graphql-codegen/cli" "^5.0.0"
     "@graphql-codegen/typescript" "^4.0.1"
     "@types/node" "^20.5.9"
     arg "^5.0.2"
     change-case "^4.1.2"
-    document-model "^1.0.5"
+    document-model "^1.0.13"
     enquirer "^2.4.1"
     execa "^8.0.1"
     hygen "^6.2.11"
@@ -43,6 +45,13 @@
   dependencies:
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
+
+"@anatine/zod-mock@^3.13.2":
+  version "3.13.3"
+  resolved "https://registry.yarnpkg.com/@anatine/zod-mock/-/zod-mock-3.13.3.tgz#4236adfcd31a42dde093b044a661cc2db0b74bf9"
+  integrity sha512-AN+0YEFE7s6BpuALQHhEoVmJmD+0gPnf4Fehc6oE5NHbM3X2ZD5fW5M6vvot29NWUB6nxvj0gu+BPQ9cVnxALw==
+  dependencies:
+    randexp "^0.5.3"
 
 "@ardatan/relay-compiler@12.0.0":
   version "12.0.0"
@@ -1536,6 +1545,11 @@
   version "8.54.0"
   resolved "https://registry.yarnpkg.com/@eslint/js/-/js-8.54.0.tgz#4fab9a2ff7860082c304f750e94acd644cf984cf"
   integrity sha512-ut5V+D+fOoWPgGGNj83GGjnntO39xDy6DWxO0wb7Jp3DcMX0TfIqdzHF85VTQkerdyGmuuMD9AKAo5KiNlf/AQ==
+
+"@faker-js/faker@^8.1.0":
+  version "8.3.1"
+  resolved "https://registry.yarnpkg.com/@faker-js/faker/-/faker-8.3.1.tgz#7753df0cb88d7649becf984a96dd1bd0a26f43e3"
+  integrity sha512-FdgpFxY6V6rLZE9mmIBb9hM0xpfvQOSNOLnzolzKwsE1DH+gC7lEKV1p1IbR0lAYyvYd5a4u3qWJzowUkw1bIw==
 
 "@fal-works/esbuild-plugin-global-externals@^2.1.2":
   version "2.1.2"
@@ -5523,10 +5537,10 @@ document-model-editors@^1.0.1:
   resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-1.0.1.tgz#b56ba13fe14f459aa5b0814c324a80608524876d"
   integrity sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==
 
-document-model@^1.0.11, document-model@^1.0.5:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.11.tgz#949efc1e20b73c44ced82fce163cce202a7e8d08"
-  integrity sha512-eTw772D5K5PQYViE4TyqTG4Tm/2IQ/NWf4gCMbL5w5pJ61+gJHPDy/Z25swLPIi4DKLW5uqhXzM+ZD9+Cole7A==
+document-model@^1.0.13:
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.13.tgz#c76ae5c3966b42e1cc2cdce8e0e679d9c5dfc361"
+  integrity sha512-JlkcddHvDk6CwYOswbmHJcK1XvOufVziPxHog++DGF+KvpG4wglI/VNu/SwXJqFwVaF3tRxbZDetiP1hRcF22w==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
@@ -5571,6 +5585,11 @@ dotenv@^16.0.0:
   version "16.3.1"
   resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-16.3.1.tgz#369034de7d7e5b120972693352a3bf112172cc3e"
   integrity sha512-IPzF4w4/Rd94bA9imS68tZBaYyBWSCE47V1RGuMrB94iyTOIEwRmVL2x/4An+6mETpLrKJ5hQkB8W4kFAadeIQ==
+
+drange@^1.0.2:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/drange/-/drange-1.1.1.tgz#b2aecec2aab82fcef11dbbd7b9e32b83f8f6c0b8"
+  integrity sha512-pYxfDYpued//QpnLIm4Avk7rsNtAtQkUES2cwAYSvD/wd2pKD71gN2Ebj3e7klzXwjocvE8c5vx/1fxwpqmSxA==
 
 dset@^3.1.2:
   version "3.1.3"
@@ -8661,6 +8680,14 @@ ramda@0.29.0:
   resolved "https://registry.yarnpkg.com/ramda/-/ramda-0.29.0.tgz#fbbb67a740a754c8a4cbb41e2a6e0eb8507f55fb"
   integrity sha512-BBea6L67bYLtdbOqfp8f58fPMqEwx0doL+pAi8TZyp2YWz8R9G8z9x75CZI8W+ftqhFHCpEX2cRnUUXK130iKA==
 
+randexp@^0.5.3:
+  version "0.5.3"
+  resolved "https://registry.yarnpkg.com/randexp/-/randexp-0.5.3.tgz#f31c2de3148b30bdeb84b7c3f59b0ebb9fec3738"
+  integrity sha512-U+5l2KrcMNOUPYvazA3h5ekF80FHTUG+87SEAmHZmolh1M+i/WyTCxVzmi+tidIa1tM4BSe8g2Y/D3loWDjj+w==
+  dependencies:
+    drange "^1.0.2"
+    ret "^0.2.0"
+
 range-parser@~1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/range-parser/-/range-parser-1.2.1.tgz#3cf37023d199e1c24d1a55b84800c2f3e6468031"
@@ -9008,6 +9035,11 @@ restore-cursor@^3.1.0:
   dependencies:
     onetime "^5.1.0"
     signal-exit "^3.0.2"
+
+ret@^0.2.0:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/ret/-/ret-0.2.2.tgz#b6861782a1f4762dce43402a71eb7a283f44573c"
+  integrity sha512-M0b3YWQs7R3Z917WRQy1HHA7Ba7D8hvZg6UE5mLykJxQVE2ju0IXbGlaHPPlkY+WN7wFP+wUMXmBFA0aV6vYGQ==
 
 reusify@^1.0.4:
   version "1.0.4"
