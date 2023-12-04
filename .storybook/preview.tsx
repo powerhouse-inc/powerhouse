@@ -1,5 +1,5 @@
 import { withThemeByDataAttribute } from '@storybook/addon-themes';
-import type { Preview } from '@storybook/react';
+import type { Preview, ReactRenderer } from '@storybook/react';
 import '../src/globals.css';
 
 const preview: Preview = {
@@ -13,7 +13,7 @@ const preview: Preview = {
         },
     },
     decorators: [
-        withThemeByDataAttribute({
+        withThemeByDataAttribute<ReactRenderer>({
             themes: {
                 light: 'ph-light',
                 dark: 'ph-dark',
