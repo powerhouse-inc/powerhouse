@@ -1,3 +1,5 @@
+import { Document } from './types';
+
 export interface ISignal<T extends string = string, I = unknown> {
     type: T;
     input: I;

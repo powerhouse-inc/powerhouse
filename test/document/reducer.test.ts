@@ -96,7 +96,7 @@ describe('Base reducer', () => {
                     input: {
                         id,
                         documentType: 'test',
-                        initialState: { value: 'test' },
+                        document: createDocument({ state: { value: 'test' } }),
                     },
                 });
             }
@@ -112,7 +112,9 @@ describe('Base reducer', () => {
             const input = action.input as CreateChildDocumentInput;
             expect(input.id).toBe(id);
             expect(input.documentType).toBe('test');
-            expect(input.initialState).toStrictEqual({ value: 'test' });
+            expect(input.document?.initialState.state).toStrictEqual({
+                value: 'test',
+            });
         });
     });
 });
