@@ -107,11 +107,10 @@ export const reducer: DocumentDriveNodeOperations = {
 
         if (isFileNode(node)) {
             dispatch?.({
-                // TODO: Change to COPY_CHILD_DOCUMENT
-                type: 'CREATE_CHILD_DOCUMENT',
+                type: 'COPY_CHILD_DOCUMENT',
                 input: {
                     id: action.input.targetId,
-                    documentType: node.documentType,
+                    newId: action.input.targetId,
                 },
             });
         }
