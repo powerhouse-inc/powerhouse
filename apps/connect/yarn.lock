@@ -1017,10 +1017,10 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
-"@powerhousedao/design-system@1.0.0-alpha.33":
-  version "1.0.0-alpha.33"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.33.tgz#d6898df2e58a23aa790bc71f42fdb5b0c3271924"
-  integrity sha512-6DdqL8/bl0dgQh2k+UuB5MNjM88gC28R8YI4wqM1a87lapr3QCDqRoOOUO3l2IUAyu2wOgIF6+OF6kghlfhdGw==
+"@powerhousedao/design-system@^1.0.0-alpha.35":
+  version "1.0.0-alpha.35"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.35.tgz#73033fb5fa00d4f9d4a182daa2d210ff461dc05e"
+  integrity sha512-DKIjJTTaouMTryfaPW7Gp5s5lSLslcj9kDFCfGOatBtBx0z/1fKHhT4gbMU7YgPDedcYsLg1knXI+62ZPQRKlQ==
   dependencies:
     "@radix-ui/react-dialog" "^1.0.5"
     react-hook-form "^7.48.2"
@@ -3752,22 +3752,22 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.4:
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.4.tgz#10d5966161aa38658dab76eab039c4f5e95d13a1"
-  integrity sha512-Cn7QqH0yGjs55k2s+S12zB0PHd/NS34/E2KO5CEf/8ZNNWpNQG5Mp12icijN9aFOPueSalxD/UZA+m5giBd7XA==
+document-drive@^0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.5.tgz#ce53148d2b97bd4e36a881cfcc5459543401c944"
+  integrity sha512-Z3Yr3wL8X8ZZtlmXVoosDxvYPuGhsPVHqg/jNYUcpIRJiWjSMXjg4pu5Pv22DJ2fSOTibbZKQeKEtSMMaoSyLw==
   dependencies:
     sanitize-filename "^1.6.3"
 
-document-model-libs@^1.1.20:
-  version "1.1.20"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.20.tgz#04b9ca6455005523b75c045c866fdc3b63ab3220"
-  integrity sha512-lld0abICMTX7dsURqHEsvxsI8QbamhlAZrJXV41L89rE2KNsXeeDmvKs5gGfZeJz4O5jSYNNhOQ0GTQf7E651Q==
+document-model-libs@^1.1.23:
+  version "1.1.23"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.23.tgz#f1599af11d7ba3d371ab29ce1db9b71df7a29ac8"
+  integrity sha512-jOhkxuvDwWQaM7vSHttqWWPukq3PpToB7iH+s2YFKRX1hkZbMIdywteBBzgXo8fcu3FhAFzGSB3/EYza43AWTA==
 
-document-model@^1.0.11:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.11.tgz#949efc1e20b73c44ced82fce163cce202a7e8d08"
-  integrity sha512-eTw772D5K5PQYViE4TyqTG4Tm/2IQ/NWf4gCMbL5w5pJ61+gJHPDy/Z25swLPIi4DKLW5uqhXzM+ZD9+Cole7A==
+document-model@^1.0.15:
+  version "1.0.15"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.15.tgz#f2f66b2e7ef5330335f6dcc5ecf0d21511696ad6"
+  integrity sha512-om5cr100jGh1TkaHIBQhCUrj+WmDgSo9LGlQx9Yy7qqn2IshO+yNxyN85vNBma7TALTbjynvhS1EfjkNL1KRHw==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
