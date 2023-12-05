@@ -181,19 +181,15 @@ const Content = () => {
                         )}
                         <div className="px-4">
                             <div className="py-3">
-                                {selectedFolder && (
-                                    <FolderView
-                                        drive={decodedDriveID}
-                                        folder={selectedFolder}
-                                        onFolderSelected={
-                                            onFolderSelectedHandler
-                                        }
-                                        onFileSelected={(drive, id) =>
-                                            setSelectedFileNode({ drive, id })
-                                        }
-                                        onFileDeleted={deleteNode}
-                                    />
-                                )}
+                                <FolderView
+                                    drive={decodedDriveID}
+                                    folder={selectedFolder}
+                                    onFolderSelected={onFolderSelectedHandler}
+                                    onFileSelected={(drive, id) =>
+                                        setSelectedFileNode({ drive, id })
+                                    }
+                                    onFileDeleted={deleteNode}
+                                />
                             </div>
                             <h3 className="mb-3 mt-4 text-xl font-bold">
                                 New document

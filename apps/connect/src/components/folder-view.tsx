@@ -20,7 +20,11 @@ export const FolderView: React.FC<IProps> = ({
     onFileDeleted,
 }) => {
     const { getChildren } = useDocumentDriveServer();
-    const children = getChildren(drive, folder?.id);
+    const folderId = folder ? decodeID(folder.id) : undefined;
+    const children = getChildren(
+        drive,
+        folderId !== drive ? folderId : undefined
+    );
     const folders = children.filter(
         node => node.kind === 'folder'
     ) as FolderNode[];
