@@ -129,7 +129,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
             <div
                 className={twJoin(
                     'h-0.5 w-full',
-                    isDropDividerTarget && 'bg-[#3E90F0]',
+                    isDropDividerTarget && 'bg-blue-800',
                 )}
             />
         </div>
@@ -226,10 +226,10 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         const { className: itemContainerClassName, ...restItemContainerProps } =
             itemContainerProps;
 
-        const backgroundClass = isHighlighted ? 'bg-[#F1F5F9]' : '';
+        const backgroundClass = isHighlighted ? 'bg-slate-50' : '';
 
         const className = twMerge(
-            'hover:bg-[#F1F5F9] peer-hover:bg-[#F1F5F9] py-3 transition-colors rounded-lg',
+            'hover:bg-slate-50 peer-hover:bg-slate-50 py-3 transition-colors rounded-lg',
             backgroundClass,
             itemContainerClassName,
         );
@@ -311,7 +311,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 onOpenChange={onDropdownMenuOpenChange}
                 items={dropdownMenuItems}
                 menuClassName="bg-white cursor-pointer"
-                menuItemClassName="hover:bg-[#F1F5F9] px-2"
+                menuItemClassName="hover:bg-slate-50 px-2"
                 onItemClick={onItemOptionsClick}
                 popoverProps={{
                     triggerRef: containerRef,

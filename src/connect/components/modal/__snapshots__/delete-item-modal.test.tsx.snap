@@ -13,7 +13,7 @@ exports[`Modal Component > should match snapshot 1`] = `
   tabindex="-1"
 >
   <div
-    class="w-[465px] px-8 py-12 text-[#565868]"
+    class="w-[465px] px-8 py-12 text-slate-300"
   >
     <div
       class="text-center text-2xl font-semibold"
@@ -29,7 +29,7 @@ exports[`Modal Component > should match snapshot 1`] = `
       class="mt-8 flex justify-center gap-3"
     >
       <button
-        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#E8ECEFBF] text-[#141718]"
+        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-grey-600/75 text-slate-700"
         data-focus-visible="true"
         data-focused="true"
         data-rac=""
@@ -38,7 +38,7 @@ exports[`Modal Component > should match snapshot 1`] = `
         Cancel
       </button>
       <button
-        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-[#EA4335] text-[#FEFEFE]"
+        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-red-900 text-grey-50"
         data-rac=""
         type="button"
       >

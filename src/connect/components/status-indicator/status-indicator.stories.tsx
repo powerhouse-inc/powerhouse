@@ -28,7 +28,7 @@ export const LocalDriveWithStyles: LocalDriveStory = {
     args: {
         type: 'LOCAL_DRIVE',
         iconProps: {
-            className: 'text-[#000] hover:text-pink-500',
+            className: 'text-slate-900 hover:text-pink-500',
         },
     },
 };

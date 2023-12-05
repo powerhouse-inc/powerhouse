@@ -6,7 +6,7 @@ export function Divider(props: DivProps) {
         <div
             {...props}
             className={twMerge(
-                'h-[1px] rounded-[1px] bg-[#EFEFEF]',
+                'h-[1px] rounded-[1px] bg-grey-200',
                 props.className,
             )}
         />

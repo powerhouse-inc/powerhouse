@@ -85,7 +85,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
         <form onSubmit={handleSubmit(props.onSubmit)}>
             <label
                 htmlFor="driveName"
-                className="mb-3 block font-semibold text-[#9EA0A1]"
+                className="mb-3 block font-semibold text-grey-500"
             >
                 Drive Name
             </label>
@@ -98,7 +98,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             <Divider className="mb-[18px] mt-4" />
             <label
                 htmlFor="sharingType"
-                className="mb-3 block font-semibold text-[#9EA0A1]"
+                className="mb-3 block font-semibold text-grey-500"
             >
                 Sharing settings
             </label>
@@ -115,10 +115,10 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             />
             <Divider className="my-3" />
             <div
-                className="flex cursor-pointer justify-between text-[#9EA0A1]"
+                className="flex cursor-pointer justify-between text-grey-500"
                 onClick={() => setShowLocationSettings(!showLocationSettings)}
             >
-                <h2 className=" font-semibold text-[#9EA0A1]">Location</h2>
+                <h2 className=" font-semibold text-grey-500">Location</h2>
                 <Icon
                     name="chevron-down"
                     className={twJoin(
@@ -134,7 +134,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                 )}
             >
                 <div
-                    className="my-3 flex items-center gap-2 rounded-xl border border-[#F4F4F4] p-3 text-[#404446]"
+                    className="my-3 flex items-center gap-2 rounded-xl border border-grey-100 p-3 text-grey-800"
                     style={{
                         boxShadow:
                             '0px 4px 8px -4px rgba(0, 0, 0, 0.02), 0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset',
@@ -143,12 +143,12 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                     {locationInfo.icon}
                     <div>
                         <p>{locationInfo.title}</p>
-                        <p className="text-xs text-[#6C7275]">
+                        <p className="text-xs text-slate-200">
                             {locationInfo.description}
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center rounded-xl bg-[#F4F4F4] p-3 text-[#6C7275]">
+                <div className="flex items-center rounded-xl bg-grey-100 p-3 text-slate-200">
                     <div className="flex-1">
                         <label
                             htmlFor="availableOffline"
@@ -156,7 +156,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                         >
                             Make available offline
                         </label>
-                        <p className="text-xs text-[#9EA0A1]">
+                        <p className="text-xs text-grey-500">
                             Check this options if you keep a local backup
                             <br />
                             available at all times.
@@ -170,10 +170,10 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             </div>
             <Divider className="my-3" />
             <div
-                className="flex cursor-pointer justify-between text-[#9EA0A1]"
+                className="flex cursor-pointer justify-between text-grey-500"
                 onClick={() => setShowDangerZone(!showDangerZone)}
             >
-                <h2 className=" font-semibold text-[#9EA0A1]">Danger zone</h2>
+                <h2 className=" font-semibold text-grey-500">Danger zone</h2>
                 <Icon
                     name="chevron-down"
                     className={twJoin(
@@ -190,7 +190,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             >
                 <button
                     type="button"
-                    className="mt-3 flex gap-2 py-3 font-semibold text-[#EA4335] transition hover:brightness-125"
+                    className="mt-3 flex gap-2 py-3 font-semibold text-red-900 transition hover:brightness-125"
                     onClick={() => setShowDeleteDrive(true)}
                 >
                     <Icon name="trash" />
@@ -208,11 +208,11 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                     <input
                         type="submit"
                         value="Confirm"
-                        className="mb-4 w-full cursor-pointer rounded-xl bg-[#404446] px-6 py-3 text-center font-semibold text-[#FEFEFE] transition hover:brightness-125"
+                        className="mb-4 w-full cursor-pointer rounded-xl bg-grey-800 px-6 py-3 text-center font-semibold text-grey-50 transition hover:brightness-125"
                     />
                     <button
                         onClick={props.onCancel}
-                        className="w-full rounded-xl border border-[#E7E9EA] bg-[#F3F5F7] px-6 py-3 text-center font-semibold text-[#6C7275] transition hover:opacity-80"
+                        className="w-full rounded-xl border border-grey-200 bg-slate-50 px-6 py-3 text-center font-semibold text-slate-200 transition hover:opacity-80"
                     >
                         Cancel
                     </button>

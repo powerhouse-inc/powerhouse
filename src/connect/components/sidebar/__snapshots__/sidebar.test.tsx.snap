@@ -18,9 +18,9 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           placeholder="Create new document"
         />
         <button
-          class="rounded-md border border-neutral-3 p-3 outline-none hover:bg-[#F1F5F9]
+          class="rounded-md border border-neutral-3 p-3 outline-none hover:bg-slate-50
                 collapsed:rotate-180 collapsed:border-[rgba(49,53,56,0.12)] collapsed:bg-neutral-3
-                collapsed:shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)] collapsed:hover:bg-[#F1F5F9]
+                collapsed:shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)] collapsed:hover:bg-slate-50
                 expanding:hidden"
           data-rac=""
           type="button"
@@ -39,7 +39,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       />
     </div>
     <div
-      class="flex-shrink-0 border-t border-[#2326271A] p-4 collapsed:px-1 expanding:px-1"
+      class="flex-shrink-0 border-t border-slate-700/10 p-4 collapsed:px-1 expanding:px-1"
     >
       <div
         class="flex gap-2 rounded-sm px-3 py-[10px] collapsed:justify-center
@@ -58,12 +58,12 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           class="collapsed:hidden expanding:hidden"
         >
           <p
-            class="text-sm font-semibold text-[#404446]"
+            class="text-sm font-semibold text-grey-800"
           >
             Willow
           </p>
           <p
-            class="text-xs font-semibold text-[#94A3B8]"
+            class="text-text-grey-600 text-xs font-semibold"
           >
             0x123
           </p>
@@ -82,7 +82,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           />
         </svg>
         <span
-          class="text-sm font-semibold leading-6 text-[#404446] collapsed:hidden expanding:hidden"
+          class="text-sm font-semibold leading-6 text-grey-800 collapsed:hidden expanding:hidden"
         >
           Settings
         </span>

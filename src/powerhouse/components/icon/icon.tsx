@@ -48,13 +48,13 @@ function getDimensions(size?: IconProps['size']) {
  * @example
  * // since we also pass on the `className` attribute, you can also use the `Icon` component with Tailwind CSS classes.
  * ```tsx
- * <Icon name="arrow-left" className="text-[#7C878E] w-16 h-16" />
+ * <Icon name="arrow-left" className="text-slate-800 w-16 h-16" />
  * ```
  *
  * @example
  * // if you need to override the color of an icon where you _use_ the icon, for example if the icon is passed as a prop to another component, you can wrap the icon in another element and set the text color on the wrapper.
  * ```tsx
- * <span className="text-[#7C878E]">
+ * <span className="text-slate-800">
  *    {icon}
  * </span>
  * ```

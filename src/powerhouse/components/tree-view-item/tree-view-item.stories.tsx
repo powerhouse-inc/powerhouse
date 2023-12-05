@@ -36,34 +36,34 @@ export const ReadMode: Story = {
     ...Template,
     args: {
         ...Template.args,
-        mode: 'read'
-    }
-}
+        mode: 'read',
+    },
+};
 
 export const ReadModeWithStyles: Story = {
     ...ReadMode,
     args: {
         ...ReadMode.args,
         itemContainerProps: {
-            className: 'rounded-lg py-3 hover:bg-[#F1F5F9] hover:to-[#F1F5F9]',
+            className: 'rounded-lg py-3 hover:bg-slate-50 hover:to-slate-50',
         },
-    }
+    },
 };
 
 export const WriteMode: Story = {
     ...Template,
     args: {
         ...Template.args,
-        mode: 'write'
-    }
-}
+        mode: 'write',
+    },
+};
 
 export const WriteModeWithStyles: Story = {
     ...WriteMode,
     args: {
         ...WriteMode.args,
         itemContainerProps: {
-            className: 'rounded-lg py-3 hover:bg-[#F1F5F9] hover:to-[#F1F5F9]',
+            className: 'rounded-lg py-3 hover:bg-slate-50 hover:to-slate-50',
         },
-    }
+    },
 };

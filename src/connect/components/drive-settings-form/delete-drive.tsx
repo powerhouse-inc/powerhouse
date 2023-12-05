@@ -20,11 +20,11 @@ export function DeleteDrive(props: DeleteDriveProps) {
 
     return (
         <div>
-            <p className="mb-2 rounded-[6px] bg-[#F3F5F7] p-4 text-center text-[#6C7275]">
+            <p className="mb-2 rounded-[6px] bg-slate-50 p-4 text-center text-slate-200">
                 Are you sure you want to delete this drive? All files and
                 subfolders within it will be removed. Do you want to proceed?
             </p>
-            <div className="mb-6 flex gap-2 rounded-xl bg-[#F4F4F4] p-3  text-[#6C7275]">
+            <div className="mb-6 flex gap-2 rounded-xl bg-grey-100 p-3  text-slate-200">
                 <Icon name="lock" />
                 <input
                     value={driveNameInput}
@@ -37,14 +37,14 @@ export function DeleteDrive(props: DeleteDriveProps) {
             <div className="flex gap-3">
                 <button
                     onClick={props.onCancel}
-                    className="w-full rounded-xl bg-[#F3F5F7] px-6 py-3 text-[#6C7275] transition hover:opacity-80"
+                    className="w-full rounded-xl bg-slate-50 px-6 py-3 text-slate-200 transition hover:opacity-80"
                 >
                     Cancel
                 </button>
                 <button
                     onClick={handleDeleteDrive}
                     disabled={!isAllowedToDelete}
-                    className="w-full rounded-xl bg-[#EA4335] px-6 py-3 text-[#EFEFEF] transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50 disabled:brightness-100"
+                    className="w-full rounded-xl bg-red-900 px-6 py-3 text-grey-200 transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50 disabled:brightness-100"
                 >
                     Delete
                 </button>

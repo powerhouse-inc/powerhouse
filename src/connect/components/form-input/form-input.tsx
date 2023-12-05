@@ -76,13 +76,13 @@ export const FormInput = forwardRef(function FormInput(
         <div>
             <div
                 className={twMerge(
-                    'mb-1 flex gap-2 rounded-xl border border-transparent bg-[#F4F4F4] p-3 text-[#404446] placeholder:text-[#9EA0A1]',
-                    isError && 'border-[#EA4335]',
+                    'mb-1 flex gap-2 rounded-xl border border-transparent bg-grey-100 p-3 text-grey-800 placeholder:text-grey-500',
+                    isError && 'border-red-900',
                     props.containerClassName,
                 )}
             >
                 <span
-                    className={twJoin((!dirty || isError) && 'text-[#6C7275]')}
+                    className={twJoin((!dirty || isError) && 'text-slate-200')}
                 >
                     {props.icon}
                 </span>
@@ -100,7 +100,7 @@ export const FormInput = forwardRef(function FormInput(
             </div>
             <p
                 className={twMerge(
-                    'invisible min-h-[16px] text-xs text-[#EA4335]',
+                    'invisible min-h-[16px] text-xs text-red-900',
                     isError && 'visible',
                 )}
             >

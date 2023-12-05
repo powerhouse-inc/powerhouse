@@ -17,7 +17,8 @@ export const Primary: Story = {
     args: {
         submitIcon,
         cancelIcon,
-        defaultValue: 'My Documents lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, voluptatum.',
+        defaultValue:
+            'My Documents lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, voluptatum.',
         placeholder: 'Folder Name',
     },
 };
@@ -33,6 +34,6 @@ export const WithStyles: Story = {
     ],
     args: {
         ...Primary.args,
-        className: 'bg-[#F1F5F9] rounded-lg h-12',
+        className: 'bg-slate-50 rounded-lg h-12',
     },
 };

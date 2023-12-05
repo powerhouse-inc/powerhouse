@@ -20,6 +20,6 @@ export const defaultDropdownMenuOptions = [
         id: 'delete',
         label: 'Delete',
         icon: <Icon name="trash" />,
-        className: 'text-[#EA4335]',
+        className: 'text-red-900',
     },
 ] as const;
