@@ -4,7 +4,13 @@ import {
     DriveInput,
 } from 'document-drive/server';
 import { FilesystemStorage } from 'document-drive/storage';
-import { DocumentModel, Operation, utils } from 'document-model/document';
+import { DocumentDriveAction } from 'document-model-libs/document-drive';
+import {
+    BaseAction,
+    DocumentModel,
+    Operation,
+    utils,
+} from 'document-model/document';
 import { IpcMain } from 'electron';
 import { join } from 'path';
 
@@ -60,5 +66,29 @@ export default (
         'documentDrive:addOperation',
         (_e, drive: string, id: string, operation: Operation) =>
             documentDrive.addOperation(drive, id, operation)
+    );
+
+    ipcMain.handle(
+        'documentDrive:addOperations',
+        (_e, drive: string, id: string, operations: Operation[]) =>
+            documentDrive.addOperations(drive, id, operations)
+    );
+
+    ipcMain.handle(
+        'documentDrive:addDriveOperation',
+        (
+            _e,
+            drive: string,
+            operation: Operation<DocumentDriveAction | BaseAction>
+        ) => documentDrive.addDriveOperation(drive, operation)
+    );
+
+    ipcMain.handle(
+        'documentDrive:addDriveOperations',
+        (
+            _e,
+            drive: string,
+            operations: Operation<DocumentDriveAction | BaseAction>[]
+        ) => documentDrive.addDriveOperations(drive, operations)
     );
 };

@@ -1,8 +1,12 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import { DriveInput, IDocumentDriveServer } from 'document-drive';
-import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import {
+    DocumentDriveAction,
+    DocumentDriveDocument,
+} from 'document-model-libs/document-drive';
+import {
+    BaseAction,
     CreateChildDocumentInput,
     Document,
     Operation,
@@ -92,6 +96,31 @@ const electronApi = {
                 drive,
                 id,
                 operation
+            ),
+        addOperations: (drive: string, id: string, operations: Operation[]) =>
+            ipcRenderer.invoke(
+                'documentDrive:addOperations',
+                drive,
+                id,
+                operations
+            ),
+        addDriveOperation: (
+            drive: string,
+            operation: Operation<DocumentDriveAction | BaseAction>
+        ) =>
+            ipcRenderer.invoke(
+                'documentDrive:addDriveOperation',
+                drive,
+                operation
+            ),
+        addDriveOperations: (
+            drive: string,
+            operations: Operation<DocumentDriveAction | BaseAction>[]
+        ) =>
+            ipcRenderer.invoke(
+                'documentDrive:addDriveOperations',
+                drive,
+                operations
             ),
     } satisfies IDocumentDriveServer,
 };

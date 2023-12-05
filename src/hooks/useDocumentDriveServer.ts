@@ -63,14 +63,14 @@ export function useDocumentDriveServer(
             throw new Error('There was an error applying the operation');
         }
 
-        const newDrive = await server.addOperation(driveId, '', operation);
+        const newDrive = await server.addDriveOperation(driveId, operation);
 
         await refreshDocumentDrives();
 
-        if (!isDocumentDrive(newDrive)) {
+        if (!isDocumentDrive(newDrive.document)) {
             throw new Error('Received document is not a Document Drive');
         }
-        return newDrive as DocumentDriveDocument;
+        return newDrive.document as DocumentDriveDocument;
     }
 
     async function addDocument(
@@ -258,7 +258,7 @@ export function useDocumentDriveServer(
         }
 
         const newDocument = await server.addOperation(driveId, id, operation);
-        return newDocument;
+        return newDocument.document;
     }
 
     async function deleteDrive(id: string) {
