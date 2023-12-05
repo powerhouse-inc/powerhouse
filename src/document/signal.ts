@@ -6,7 +6,7 @@ export interface ISignal<T extends string = string, I = unknown> {
 export type CreateChildDocumentInput = {
     id: string;
     documentType: string;
-    initialState?: unknown;
+    document?: Document;
 };
 
 export type CreateChildDocumentSignal = ISignal<
@@ -23,6 +23,19 @@ export type DeleteChildDocumentSignal = ISignal<
     DeleteChildDocumentInput
 >;
 
-export type Signal = CreateChildDocumentSignal | DeleteChildDocumentSignal;
+export type CopyChildDocumentInput = {
+    id: string;
+    newId: string;
+};
+
+export type CopyChildDocumentSignal = ISignal<
+    'COPY_CHILD_DOCUMENT',
+    CopyChildDocumentInput
+>;
+
+export type Signal =
+    | CreateChildDocumentSignal
+    | DeleteChildDocumentSignal
+    | CopyChildDocumentSignal;
 
 export type SignalDispatch = (signal: Signal) => void;
