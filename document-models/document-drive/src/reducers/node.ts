@@ -109,7 +109,7 @@ export const reducer: DocumentDriveNodeOperations = {
             dispatch?.({
                 type: 'COPY_CHILD_DOCUMENT',
                 input: {
-                    id: action.input.targetId,
+                    id: action.input.srcId,
                     newId: action.input.targetId,
                 },
             });
