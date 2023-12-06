@@ -3,7 +3,7 @@ import {
     DocumentDriveServer,
     DriveInput,
 } from 'document-drive/server';
-import { FilesystemStorage } from 'document-drive/storage';
+import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { DocumentDriveAction } from 'document-model-libs/document-drive';
 import { BaseAction, DocumentModel, Operation } from 'document-model/document';
 import { IpcMain } from 'electron';
