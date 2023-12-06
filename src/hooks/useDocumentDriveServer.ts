@@ -10,8 +10,9 @@ import {
     reducer,
 } from 'document-model-libs/document-drive';
 import { Document, Operation, utils } from 'document-model/document';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useGetDocumentModel } from 'src/store/document-model';
+import { BrowserDocumentDriveServer } from 'src/utils/browser-document-drive';
 import { loadFile } from 'src/utils/file';
 import { useDocumentDrives } from './useDocumentDrives';
 
@@ -20,12 +21,27 @@ export interface SortOptions {
     afterNodePath?: string;
 }
 
+const DefaultDocumentDriveServer =
+    window.electronAPI?.documentDrive ?? BrowserDocumentDriveServer;
+
 export function useDocumentDriveServer(
-    server: IDocumentDriveServer | undefined = window.electronAPI?.documentDrive
+    server: IDocumentDriveServer | undefined = DefaultDocumentDriveServer
 ) {
     if (!server) {
         throw new Error('Invalid Document Drive Server');
     }
+
+    useEffect(() => {
+        server.getDrives().then(drives => {
+            if (!drives.length) {
+                server.addDrive({
+                    id: utils.hashKey(),
+                    name: 'Local Device',
+                    icon: null,
+                });
+            }
+        });
+    }, []);
 
     const getDocumentModel = useGetDocumentModel();
 
