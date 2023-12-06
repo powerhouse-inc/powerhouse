@@ -1,3 +1,10 @@
+# [1.0.0-alpha.36](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.35...v1.0.0-alpha.36) (2023-12-06)
+
+
+### Bug Fixes
+
+* removed / from icon url ([79751d1](https://github.com/powerhouse-inc/design-system/commit/79751d1492f7002e6986e990737657b410dad43d))
+
 # [1.0.0-alpha.35](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.34...v1.0.0-alpha.35) (2023-12-04)
 
 
