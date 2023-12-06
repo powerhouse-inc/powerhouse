@@ -17,7 +17,10 @@ export default defineConfig({
         }),
         svgr(),
     ],
-    build: { minify: false, sourcemap: false },
+    build: {
+        minify: false,
+        sourcemap: false,
+    },
     resolve: {
         alias: {
             '@/assets': path.resolve(__dirname, './assets'),

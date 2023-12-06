@@ -1,6 +1,6 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
-import { DriveInput, IDocumentDriveServer } from 'document-drive';
+import type { DriveInput, IDocumentDriveServer } from 'document-drive/server';
 import {
     DocumentDriveAction,
     DocumentDriveDocument,

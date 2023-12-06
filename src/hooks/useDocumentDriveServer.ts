@@ -31,21 +31,22 @@ export function useDocumentDriveServer(
         throw new Error('Invalid Document Drive Server');
     }
 
+    const getDocumentModel = useGetDocumentModel();
+
+    const [documentDrives, refreshDocumentDrives] = useDocumentDrives(server);
+
     useEffect(() => {
-        server.getDrives().then(drives => {
+        server.getDrives().then(async drives => {
             if (!drives.length) {
-                server.addDrive({
+                await server.addDrive({
                     id: utils.hashKey(),
                     name: 'Local Device',
                     icon: null,
                 });
+                refreshDocumentDrives();
             }
         });
     }, []);
-
-    const getDocumentModel = useGetDocumentModel();
-
-    const [documentDrives, refreshDocumentDrives] = useDocumentDrives(server);
 
     async function openFile(drive: string, id: string) {
         const document = await server?.getDocument(drive, id);

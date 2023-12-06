@@ -1,4 +1,4 @@
-import { IDocumentDriveServer } from 'document-drive';
+import type { IDocumentDriveServer } from 'document-drive/server';
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';

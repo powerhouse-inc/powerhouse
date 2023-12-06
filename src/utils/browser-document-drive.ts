@@ -1,4 +1,5 @@
-import { BrowserStorage, DocumentDriveServer } from 'document-drive';
+import { DocumentDriveServer } from 'document-drive/server';
+import { BrowserStorage } from 'document-drive/storage/browser';
 import { documentModels } from 'src/store/document-model';
 
 export const BrowserDocumentDriveServer = new DocumentDriveServer(
