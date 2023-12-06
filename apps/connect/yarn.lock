@@ -3752,10 +3752,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.5:
-  version "0.0.5"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.5.tgz#ce53148d2b97bd4e36a881cfcc5459543401c944"
-  integrity sha512-Z3Yr3wL8X8ZZtlmXVoosDxvYPuGhsPVHqg/jNYUcpIRJiWjSMXjg4pu5Pv22DJ2fSOTibbZKQeKEtSMMaoSyLw==
+document-drive@^0.0.7:
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.7.tgz#89b4fb01c96ac96daca37be565fa3d14a186d523"
+  integrity sha512-JtcROrT1EZdRPqflp9qAxrNdh4bf1AByWQAgo9cdC9V+zhH/IKMxqtYFRTnTK/mlC3BKn6eS3T2SDWi2lvqxPw==
   dependencies:
     sanitize-filename "^1.6.3"
 
@@ -5173,6 +5173,13 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
+lie@3.1.1:
+  version "3.1.1"
+  resolved "https://registry.yarnpkg.com/lie/-/lie-3.1.1.tgz#9a436b2cc7746ca59de7a41fa469b3efb76bd87e"
+  integrity sha512-RiNhHysUjhrDQntfYSfY4MU24coXXdEOgw9WGcKHNeEwffDYbF//u87M1EWaMGzuFoSbqW0C9C6lEEhDOAswfw==
+  dependencies:
+    immediate "~3.0.5"
+
 lie@~3.3.0:
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/lie/-/lie-3.3.0.tgz#dcf82dee545f46074daf200c7c1c5a08e0f40f6a"
@@ -5213,6 +5220,13 @@ load-json-file@^2.0.0:
     parse-json "^2.2.0"
     pify "^2.0.0"
     strip-bom "^3.0.0"
+
+localforage@^1.10.0:
+  version "1.10.0"
+  resolved "https://registry.yarnpkg.com/localforage/-/localforage-1.10.0.tgz#5c465dc5f62b2807c3a84c0c6a1b1b3212781dd4"
+  integrity sha512-14/H1aX7hzBBmmh7sGPd+AOMkkIrHM3Z1PAyGgZigA1H1p5O5ANnMyWzvpAETtG68/dC4pC0ncy3+PPGzXZHPg==
+  dependencies:
+    lie "3.1.1"
 
 locate-path@^2.0.0:
   version "2.0.0"
