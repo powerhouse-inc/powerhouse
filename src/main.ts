@@ -267,6 +267,7 @@ const createWindow = async (options?: {
         options?.onReady?.(mainWindow);
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const menu = Menu.buildFromTemplate(template as any);
     Menu.setApplicationMenu(menu);
 
