@@ -10,7 +10,7 @@ exports[`ConnectSearchBar Component > should match snapshot 1`] = `
       style="width: 24px; height: 24px;"
     >
       <use
-        href="/icons.svg#search"
+        href="icons.svg#search"
       />
     </svg>
     <div
@@ -46,7 +46,7 @@ exports[`ConnectSearchBar Component > should match snapshot 1`] = `
         style="width: 24px; height: 24px;"
       >
         <use
-          href="/icons.svg#chevron-down"
+          href="icons.svg#chevron-down"
         />
       </svg>
     </button>

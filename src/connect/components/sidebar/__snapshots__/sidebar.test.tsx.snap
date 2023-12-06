@@ -29,7 +29,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
             style="color: rgb(124, 135, 142); width: 16px; height: 16px;"
           >
             <use
-              href="/icons.svg#arrow-left"
+              href="icons.svg#arrow-left"
             />
           </svg>
         </button>
@@ -78,7 +78,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           style="width: 24px; height: 24px;"
         >
           <use
-            href="/icons.svg#settings"
+            href="icons.svg#settings"
           />
         </svg>
         <span

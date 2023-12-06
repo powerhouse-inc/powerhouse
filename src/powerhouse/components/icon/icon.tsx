@@ -75,7 +75,7 @@ export function Icon({ name, size = 24, color, ...props }: IconProps) {
     };
     return (
         <svg {...props} style={style}>
-            <use href={`/icons.svg#${name}`} />
+            <use href={`icons.svg#${name}`} />
         </svg>
     );
 }
