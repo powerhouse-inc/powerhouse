@@ -1,11 +1,19 @@
 {
     "name": "document-model-electron",
-    "productName": "Powerhouse Connect",
+    "productName": "Powerhouse-Connect",
     "version": "1.0.1",
     "description": "Powerhouse Connect",
     "main": ".vite/build/main.js",
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/powerhouse-inc/document-model-electron.git"
+    },
+    "bugs": {
+        "url": "https://github.com/powerhouse-inc/document-model-electron/issues"
+    },
+    "homepage": "https://github.com/powerhouse-inc/document-model-electron#readme",
     "scripts": {
         "start": "electron-forge start",
         "package": "electron-forge package",
@@ -15,11 +23,14 @@
         "make:windows": "electron-forge make -p win32",
         "publish": "electron-forge publish",
         "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
-        "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|jsx|tsx|json)\"",
+        "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
         "dev:web": "vite -c vite.renderer.config.ts",
-        "build:web": "vite build -c vite.renderer.config.ts"
+        "build:web": "vite build -c vite.renderer.config.ts",
+        "prepare": "husky install"
     },
     "devDependencies": {
+        "@commitlint/cli": "^18.4.3",
+        "@commitlint/config-conventional": "^18.4.3",
         "@electron-forge/cli": "^6.1.1",
         "@electron-forge/maker-deb": "^6.1.1",
         "@electron-forge/maker-rpm": "^6.1.1",
@@ -27,6 +38,11 @@
         "@electron-forge/maker-zip": "^6.1.1",
         "@electron-forge/plugin-vite": "^6.1.1",
         "@electron-forge/publisher-electron-release-server": "^6.2.1",
+        "@electron-forge/publisher-github": "^7.2.0",
+        "@semantic-release/changelog": "^6.0.3",
+        "@semantic-release/git": "^10.0.1",
+        "@semantic-release/github": "^9.2.4",
+        "@semantic-release/release-notes-generator": "^12.1.0",
         "@types/react": "^18.0.35",
         "@types/react-dom": "^18.0.11",
         "@types/uuid": "^9.0.7",
@@ -38,6 +54,8 @@
         "electron": "24.0.0",
         "eslint": "^8.40.0",
         "eslint-config-prettier": "^8.8.0",
+        "husky": "^8.0.3",
+        "lint-staged": "^15.2.0",
         "postcss": "^8.4.23",
         "prettier": "^2.8.8",
         "prettier-plugin-organize-imports": "^3.2.2",
@@ -48,6 +66,7 @@
         "rollup-plugin-node-polyfills": "^0.2.1",
         "rollup-plugin-shim": "^1.0.0",
         "sanitize-filename": "^1.6.3",
+        "semantic-release": "^22.0.9",
         "tailwindcss": "^3.3.2",
         "tw-colors": "^1.2.6",
         "typescript": "^5.2.2",
@@ -55,11 +74,10 @@
         "vite-tsconfig-paths": "^4.2.0"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "^1.0.0-alpha.35",
+        "@powerhousedao/design-system": "1.0.0-alpha.36",
         "@typescript-eslint/eslint-plugin": "^5.59.5",
         "document-drive": "^0.0.8",
         "document-model": "^1.0.15",
-        "electron-deeplink": "^1.0.10",
         "electron-is-dev": "^2.0.0",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
