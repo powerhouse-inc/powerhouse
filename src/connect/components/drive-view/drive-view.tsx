@@ -85,7 +85,7 @@ export function DriveView(props: DriveViewProps) {
             {...restProps}
         >
             <div className="flex items-center justify-between border-y border-bg px-4 py-3">
-                <p className="text-sm font-medium leading-6 text-grey-500">
+                <p className="text-sm font-medium leading-6 text-gray-500">
                     {name}
                 </p>
                 <Button>

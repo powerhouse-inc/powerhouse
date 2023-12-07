@@ -48,7 +48,7 @@ export const AddNewItemInput: React.FC<AddNewItemInputProps> = props => {
         <ClickAwayListener onClickAway={() => onSubmit(text)}>
             <div
                 className={twMerge(
-                    'flex items-center text-grey-800',
+                    'flex items-center text-gray-800',
                     className,
                 )}
                 style={{

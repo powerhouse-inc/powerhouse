@@ -85,7 +85,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
         <form onSubmit={handleSubmit(props.onSubmit)}>
             <label
                 htmlFor="driveName"
-                className="mb-3 block font-semibold text-grey-500"
+                className="mb-3 block font-semibold text-gray-500"
             >
                 Drive Name
             </label>
@@ -98,7 +98,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             <Divider className="mb-[18px] mt-4" />
             <label
                 htmlFor="sharingType"
-                className="mb-3 block font-semibold text-grey-500"
+                className="mb-3 block font-semibold text-gray-500"
             >
                 Sharing settings
             </label>
@@ -115,10 +115,10 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             />
             <Divider className="my-3" />
             <div
-                className="flex cursor-pointer justify-between text-grey-500"
+                className="flex cursor-pointer justify-between text-gray-500"
                 onClick={() => setShowLocationSettings(!showLocationSettings)}
             >
-                <h2 className=" font-semibold text-grey-500">Location</h2>
+                <h2 className=" font-semibold text-gray-500">Location</h2>
                 <Icon
                     name="chevron-down"
                     className={twJoin(
@@ -134,7 +134,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                 )}
             >
                 <div
-                    className="my-3 flex items-center gap-2 rounded-xl border border-grey-100 p-3 text-grey-800"
+                    className="my-3 flex items-center gap-2 rounded-xl border border-gray-100 p-3 text-gray-800"
                     style={{
                         boxShadow:
                             '0px 4px 8px -4px rgba(0, 0, 0, 0.02), 0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset',
@@ -148,7 +148,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center rounded-xl bg-grey-100 p-3 text-slate-200">
+                <div className="flex items-center rounded-xl bg-gray-100 p-3 text-slate-200">
                     <div className="flex-1">
                         <label
                             htmlFor="availableOffline"
@@ -156,7 +156,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                         >
                             Make available offline
                         </label>
-                        <p className="text-xs text-grey-500">
+                        <p className="text-xs text-gray-500">
                             Check this options if you keep a local backup
                             <br />
                             available at all times.
@@ -170,10 +170,10 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             </div>
             <Divider className="my-3" />
             <div
-                className="flex cursor-pointer justify-between text-grey-500"
+                className="flex cursor-pointer justify-between text-gray-500"
                 onClick={() => setShowDangerZone(!showDangerZone)}
             >
-                <h2 className=" font-semibold text-grey-500">Danger zone</h2>
+                <h2 className=" font-semibold text-gray-500">Danger zone</h2>
                 <Icon
                     name="chevron-down"
                     className={twJoin(
@@ -208,11 +208,11 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                     <input
                         type="submit"
                         value="Confirm"
-                        className="mb-4 w-full cursor-pointer rounded-xl bg-grey-800 px-6 py-3 text-center font-semibold text-grey-50 transition hover:brightness-125"
+                        className="mb-4 w-full cursor-pointer rounded-xl bg-gray-800 px-6 py-3 text-center font-semibold text-gray-50 transition hover:brightness-125"
                     />
                     <button
                         onClick={props.onCancel}
-                        className="w-full rounded-xl border border-grey-200 bg-slate-50 px-6 py-3 text-center font-semibold text-slate-200 transition hover:opacity-80"
+                        className="w-full rounded-xl border border-gray-200 bg-slate-50 px-6 py-3 text-center font-semibold text-slate-200 transition hover:opacity-80"
                     >
                         Cancel
                     </button>

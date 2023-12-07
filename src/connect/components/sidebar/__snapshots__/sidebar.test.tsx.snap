@@ -58,12 +58,12 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           class="collapsed:hidden expanding:hidden"
         >
           <p
-            class="text-sm font-semibold text-grey-800"
+            class="text-sm font-semibold text-gray-800"
           >
             Willow
           </p>
           <p
-            class="text-text-grey-600 text-xs font-semibold"
+            class="text-text-gray-600 text-xs font-semibold"
           >
             0x123
           </p>
@@ -82,7 +82,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           />
         </svg>
         <span
-          class="text-sm font-semibold leading-6 text-grey-800 collapsed:hidden expanding:hidden"
+          class="text-sm font-semibold leading-6 text-gray-800 collapsed:hidden expanding:hidden"
         >
           Settings
         </span>

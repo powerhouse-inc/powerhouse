@@ -24,7 +24,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
             <SidebarUser username={username} address={address} />
             <Button className="flex w-full gap-3 px-5 py-3 collapsed:px-3 expanding:px-3">
                 <Icon name="settings" />
-                <span className="text-sm font-semibold leading-6 text-grey-800 collapsed:hidden expanding:hidden">
+                <span className="text-sm font-semibold leading-6 text-gray-800 collapsed:hidden expanding:hidden">
                     Settings
                 </span>
             </Button>

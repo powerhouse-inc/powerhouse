@@ -45,7 +45,7 @@ export const ConnectUpgradeDriveModal = (
             {...restProps}
         >
             <div className="w-[400px] p-6 text-slate-300">
-                <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-grey-800">
+                <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800">
                     {header}
                 </div>
                 <div className="my-6 rounded-md bg-slate-50 p-4 text-center text-slate-200">
@@ -65,7 +65,7 @@ export const ConnectUpgradeDriveModal = (
                         onPress={onContinue}
                         className={twMerge(
                             buttonStyles,
-                            'flex-1 bg-grey-800 text-grey-50',
+                            'flex-1 bg-gray-800 text-gray-50',
                         )}
                     >
                         {continueLabel}

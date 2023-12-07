@@ -3,7 +3,7 @@
 exports[`ConnectSearchBar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="flex flex-row text-slate-200 bg-grey-50 px-4 h-[52px] items-center rounded-xl border border-grey-200"
+    class="flex flex-row text-slate-200 bg-gray-50 px-4 h-[52px] items-center rounded-xl border border-gray-200"
   >
     <svg
       class="mr-3"

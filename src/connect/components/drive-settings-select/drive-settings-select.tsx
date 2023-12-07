@@ -34,12 +34,12 @@ export const DriveSettingsSelect = forwardRef(function DriveSettingsSelect(
     const itemsToShow = props.items.filter(item => item.value !== props.value);
 
     return (
-        <div className="rounded-xl bg-grey-100" ref={ref}>
+        <div className="rounded-xl bg-gray-100" ref={ref}>
             <div
                 onClick={() => setShowItems(!showItems)}
                 id={props.id}
                 className={twJoin(
-                    'flex min-w-[360px] cursor-pointer items-center justify-between  pr-3 text-grey-800 outline-none',
+                    'flex min-w-[360px] cursor-pointer items-center justify-between  pr-3 text-gray-800 outline-none',
                 )}
             >
                 <ItemContainer {...selectedItem} />
@@ -71,8 +71,8 @@ export const DriveSettingsSelect = forwardRef(function DriveSettingsSelect(
 
 function ItemContainer(props: SelectItem & { onItemClick?: () => void }) {
     const className = twJoin(
-        props.disabled ? 'text-grey-500 cursor-not-allowed' : 'text-grey-800',
-        'flex h-full items-center gap-2 py-3 pl-3 text-start cursor-pointer outline-none last:rounded-b-xl',
+        props.disabled ? 'text-gray-500 cursor-not-allowed' : 'text-gray-800',
+        'flex h-full cursor-pointer items-center gap-2 py-3 pl-3 text-start outline-none last:rounded-b-xl',
     );
     return (
         <div className={className} onClick={props.onItemClick}>

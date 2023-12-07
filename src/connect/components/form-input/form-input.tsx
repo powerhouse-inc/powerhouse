@@ -76,7 +76,7 @@ export const FormInput = forwardRef(function FormInput(
         <div>
             <div
                 className={twMerge(
-                    'mb-1 flex gap-2 rounded-xl border border-transparent bg-grey-100 p-3 text-grey-800 placeholder:text-grey-500',
+                    'mb-1 flex gap-2 rounded-xl border border-transparent bg-gray-100 p-3 text-gray-800 placeholder:text-gray-500',
                     isError && 'border-red-900',
                     props.containerClassName,
                 )}
