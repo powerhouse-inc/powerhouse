@@ -28,6 +28,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build_and_publish:
     needs: [release]
+    permissions:
+      contents: write
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
