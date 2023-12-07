@@ -11,25 +11,50 @@ export interface IncrementAction extends Action {
 export interface DecrementAction extends Action {
     type: 'DECREMENT';
 }
-export type CountAction = IncrementAction | DecrementAction;
+
+export interface SetLocalNameAction extends Action {
+    type: 'SET_LOCAL_NAME';
+    input: string;
+}
+export type CountAction =
+    | IncrementAction
+    | DecrementAction
+    | SetLocalNameAction;
 
 export type CountState = { count: number };
 
+export type CountLocalState = { name: string };
+
 export const increment = () => createAction<IncrementAction>('INCREMENT');
 export const decrement = () => createAction<DecrementAction>('DECREMENT');
+export const setLocalName = (name: string) =>
+    createAction<SetLocalNameAction>(
+        'SET_LOCAL_NAME',
+        name,
+        undefined,
+        undefined,
+        'local',
+    );
 
-export const countReducer = createReducer<CountState, CountAction>(
-    (state, action) => {
-        switch (action.type) {
-            case 'INCREMENT':
-                return { count: state.count + 1 };
-            case 'DECREMENT':
-                return { count: state.count - 1 };
-            default:
-                return state;
-        }
-    },
-);
+export const countReducer = createReducer<
+    CountState,
+    CountAction,
+    CountLocalState
+>((state, action) => {
+    switch (action.type) {
+        case 'INCREMENT':
+            state.global.count += 1;
+            break;
+        case 'DECREMENT':
+            state.global.count -= 1;
+            break;
+        case 'SET_LOCAL_NAME':
+            state.local.name = action.input;
+            break;
+        default:
+            return state;
+    }
+});
 
 export const mapOperations = (operations: Operation[]) => {
     return operations.map(({ input, type, index, scope }) => ({

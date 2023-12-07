@@ -10,7 +10,7 @@ describe('REDO operation', () => {
         document = emptyReducer(document, redo(1));
 
         expect(document.name).toBe('TEST_1');
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
         ]);
         expect(document.revision).toBe(1);
@@ -25,7 +25,7 @@ describe('REDO operation', () => {
         document = emptyReducer(document, redo(2));
 
         expect(document.name).toBe('TEST_2');
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -40,7 +40,7 @@ describe('REDO operation', () => {
         document = emptyReducer(document, redo(1));
 
         expect(document.name).toBe('TEST_1');
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -56,7 +56,7 @@ describe('REDO operation', () => {
         document = emptyReducer(document, redo(1));
 
         expect(document.name).toBe('TEST_2');
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -71,7 +71,7 @@ describe('REDO operation', () => {
         document = emptyReducer(document, redo(5));
 
         expect(document.name).toBe('TEST_2');
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -85,7 +85,7 @@ describe('REDO operation', () => {
         document = emptyReducer(document, setName('TEST_2'));
         document = emptyReducer(document, undo(1));
         document = emptyReducer(document, redo(1));
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_2'), index: 0 },
         ]);
         expect(document.name).toBe('TEST_2');

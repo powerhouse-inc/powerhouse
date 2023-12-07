@@ -75,6 +75,7 @@ export function LoadStateActionSchema(): z.ZodObject<
     return z.object({
         input: z.lazy(() => LoadStateActionInputSchema()),
         type: Load_StateSchema,
+        scope: z.literal('global'),
     });
 }
 
@@ -110,6 +111,7 @@ export function PruneActionSchema(): z.ZodObject<Properties<PruneAction>> {
     return z.object({
         input: z.lazy(() => PruneActionInputSchema()),
         type: PruneSchema,
+        scope: z.literal('global'),
     });
 }
 
@@ -126,6 +128,7 @@ export function RedoActionSchema(): z.ZodObject<Properties<RedoAction>> {
     return z.object({
         input: z.number(),
         type: RedoSchema,
+        scope: z.literal('global'),
     });
 }
 
@@ -133,6 +136,7 @@ export function SetNameActionSchema(): z.ZodObject<Properties<SetNameAction>> {
     return z.object({
         input: z.string(),
         type: Set_NameSchema,
+        scope: z.literal('global'),
     });
 }
 
@@ -153,5 +157,6 @@ export function UndoActionSchema(): z.ZodObject<Properties<UndoAction>> {
     return z.object({
         input: z.number(),
         type: UndoSchema,
+        scope: z.literal('global'),
     });
 }

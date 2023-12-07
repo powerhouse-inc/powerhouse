@@ -16,9 +16,9 @@ import { loadFromFile, saveToFile, readOnly } from './utils';
  * @typeparam T - The type of data stored in the document.
  * @typeparam A - The type of action the document can take.
  */
-export abstract class BaseDocument<T, A extends Action> {
-    protected _document: Document<T, A>;
-    private _reducer: Reducer<T, A>;
+export abstract class BaseDocument<T, A extends Action, L = unknown> {
+    protected _document: Document<T, A, L>;
+    private _reducer: Reducer<T, A, L>;
     private _signalDispatch?: SignalDispatch;
 
     /**
@@ -27,8 +27,8 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param document - The initial state of the document.
      */
     constructor(
-        reducer: Reducer<T, A>,
-        document: Document<T, A>,
+        reducer: Reducer<T, A, L>,
+        document: Document<T, A, L>,
         signalDispatch?: SignalDispatch,
     ) {
         this._reducer = reducer;
@@ -65,7 +65,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param path - The file path where the state is stored.
      */
     async loadFromFile(path: string) {
-        this._document = await loadFromFile<T, A>(path, this._reducer);
+        this._document = await loadFromFile<T, A, L>(path, this._reducer);
     }
 
     /**
@@ -74,11 +74,11 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param reducer - The reducer function that updates the state.
      * @returns The state of the document.
      */
-    protected static async stateFromFile<T, A extends Action>(
+    protected static async stateFromFile<T, A extends Action, L>(
         path: string,
-        reducer: Reducer<T, A>,
+        reducer: Reducer<T, A, L>,
     ) {
-        const state = await loadFromFile<T, A>(path, reducer);
+        const state = await loadFromFile<T, A, L>(path, reducer);
         return state;
     }
 
@@ -195,7 +195,7 @@ export abstract class BaseDocument<T, A extends Action> {
      * @param operations - The operations to apply to the document.
      */
     public loadState(
-        state: Pick<ExtendedState<T>, 'state' | 'name'>,
+        state: Pick<ExtendedState<T, L>, 'state' | 'name'>,
         operations: number,
     ) {
         this.dispatch(loadState(state, operations));

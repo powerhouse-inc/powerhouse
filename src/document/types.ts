@@ -40,11 +40,11 @@ export type ActionWithAttachment<
  * @typeParam State - The type of the document data.
  * @typeParam A - The type of the actions supported by the reducer.
  */
-export type Reducer<State, A extends Action> = (
-    state: Document<State, A>,
+export type Reducer<State, A extends Action, LocalState> = (
+    state: Document<State, A, LocalState>,
     action: A | BaseAction,
     dispatch?: SignalDispatch,
-) => Document<State, A>;
+) => Document<State, A, LocalState>;
 
 /**
  * A {@link Reducer} that prevents mutable code from changing the previous state.
@@ -58,17 +58,17 @@ export type Reducer<State, A extends Action> = (
  * @typeParam State - The type of the document data.
  * @typeParam A - The type of the actions supported by the reducer.
  */
-export type ImmutableReducer<State, A extends Action> = (
-    state: Draft<Document<State, A>>,
+export type ImmutableReducer<State, A extends Action, LocalState> = (
+    state: Draft<Document<State, A, LocalState>>,
     action: A | BaseAction,
     dispatch?: SignalDispatch,
-) => Document<State, A> | void;
+) => Document<State, A, LocalState> | void;
 
-export type ImmutableStateReducer<State, A extends Action> = (
-    state: Draft<State>,
+export type ImmutableStateReducer<S, A extends Action, L = unknown> = (
+    state: Draft<State<S, L>>,
     action: A,
     dispatch?: SignalDispatch,
-) => State | void;
+) => State<S, L> | void;
 
 /**
  * Scope of an operation.
@@ -139,11 +139,28 @@ export type AttachmentInput = Attachment & {
  */
 export type FileRegistry = Record<AttachmentRef, Attachment>;
 
-export type ExtendedState<State = unknown> = DocumentHeader & {
+export type State<GlobalState, LocalState> = {
+    global: GlobalState;
+    local: LocalState;
+};
+
+export type CreateState<S, L> = (
+    state?: Partial<State<Partial<S>, Partial<L>>>,
+) => State<S, L>;
+
+export type ExtendedState<
+    GlobalState,
+    LocalState = unknown,
+> = DocumentHeader & {
     /** The document model specific state. */
-    state: State;
+    state: State<GlobalState, LocalState>;
     /** The index of document attachments. */
     attachments: FileRegistry;
+};
+
+export type DocumentOperations<A extends Action> = {
+    global: Operation<A | BaseAction>[];
+    local: Operation<A>[];
 };
 
 /**
@@ -155,13 +172,17 @@ export type ExtendedState<State = unknown> = DocumentHeader & {
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type Document<S = unknown, A extends Action = Action> =
+export type Document<
+    GlobalState = unknown,
+    A extends Action = Action,
+    LocalState = unknown,
+> =
     /** The document model specific state. */
-    ExtendedState<S> & {
+    ExtendedState<GlobalState, LocalState> & {
         /** The operations history of the document. */
-        operations: Operation<A | BaseAction>[];
+        operations: DocumentOperations<A>;
         /** The initial state of the document, enabling replaying operations. */
-        initialState: ExtendedState<S>;
+        initialState: ExtendedState<GlobalState, LocalState>;
     };
 
 /**
@@ -175,33 +196,38 @@ export type AttachmentRef = string; // TODO `attachment://${string}`;
 export interface DocumentClass<
     S,
     A extends Action = Action,
-    C extends BaseDocument<S, A> = BaseDocument<S, A>,
+    L = unknown,
+    C extends BaseDocument<S, A, L> = BaseDocument<S, A, L>,
 > {
     fileExtension: string;
     fromFile: (path: string) => Promise<C>;
-    new (initialState?: ExtendedState<S>): C;
+    new (initialState?: ExtendedState<S, L>): C;
 }
 
-export type DocumentModelUtils<S = unknown, A extends Action = Action> = {
+export type DocumentModelUtils<
+    S = unknown,
+    A extends Action = Action,
+    L = unknown,
+> = {
     fileExtension: string;
-    createState: (state?: Partial<S>) => S;
+    createState: CreateState<S, L>;
     createExtendedState: (
-        extendedState?: Partial<ExtendedState<Partial<S>>>,
-        createState?: (state?: Partial<S>) => S,
-    ) => ExtendedState<S>;
+        extendedState?: Partial<ExtendedState<Partial<S>, Partial<L>>>,
+        createState?: CreateState<S, L>,
+    ) => ExtendedState<S, L>;
     createDocument: (
-        document?: Partial<ExtendedState<Partial<S>>>,
-        createState?: (state?: Partial<S>) => S,
-    ) => Document<S, A>;
-    loadFromFile: (path: string) => Promise<Document<S, A>>;
-    loadFromInput: (input: FileInput) => Promise<Document<S, A>>;
+        document?: Partial<ExtendedState<Partial<S>, Partial<L>>>,
+        createState?: CreateState<S, L>,
+    ) => Document<S, A, L>;
+    loadFromFile: (path: string) => Promise<Document<S, A, L>>;
+    loadFromInput: (input: FileInput) => Promise<Document<S, A, L>>;
     saveToFile: (
-        document: Document<S, A>,
+        document: Document<S, A, L>,
         path: string,
         name?: string,
     ) => Promise<string>;
     saveToFileHandle: (
-        document: Document<S, A>,
+        document: Document<S, A, L>,
         input: FileSystemFileHandle,
     ) => Promise<void>;
 };
@@ -217,12 +243,13 @@ export type ActionCreator<A extends Action> = // TODO remove any
 export type DocumentModel<
     S = unknown,
     A extends Action = Action,
-    C extends BaseDocument<S, A> = BaseDocument<S, A>,
+    L = unknown,
+    C extends BaseDocument<S, A, L> = BaseDocument<S, A, L>,
 > = {
-    Document: DocumentClass<S, A, C>;
-    reducer: Reducer<S, A>;
+    Document: DocumentClass<S, A, L, C>;
+    reducer: Reducer<S, A, L>;
     actions: Record<string, ActionCreator<A>>;
-    utils: DocumentModelUtils<S, A>;
+    utils: DocumentModelUtils<S, A, L>;
     documentModel: DocumentModelState;
 };
 
@@ -231,14 +258,14 @@ export type EditorContext = {
     debug?: boolean;
 };
 
-export type EditorProps<S, A extends Action> = {
-    document: Document<S, A>;
+export type EditorProps<S, A extends Action, L> = {
+    document: Document<S, A, L>;
     dispatch: (action: A | BaseAction) => void;
     editorContext: EditorContext;
 };
 
-export type Editor<S = unknown, A extends Action = Action> = {
-    Component: FC<EditorProps<S, A>>;
+export type Editor<S = unknown, A extends Action = Action, L = unknown> = {
+    Component: FC<EditorProps<S, A, L>>;
     documentTypes: string[];
 };
 

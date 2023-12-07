@@ -2,8 +2,10 @@ import { SignalDispatch } from '../signal';
 import {
     Action,
     Document,
+    DocumentOperations,
     ExtendedState,
     ImmutableStateReducer,
+    State,
 } from '../types';
 import { createDocument, createReducer } from '../utils';
 import { loadState } from './creators';
@@ -13,14 +15,17 @@ import { BaseAction } from './types';
 // provided reducer, wrapped with the base reducer.
 // This produces and alternate version of the document
 // according to the provided actions.
-function replayOperations<T, A extends Action>(
-    initialState: Partial<ExtendedState<T>>,
-    operations: Array<A | BaseAction>,
-    reducer: ImmutableStateReducer<T, A>,
+function replayOperations<T, A extends Action, L>(
+    initialState: ExtendedState<T, L>,
+    operations: {
+        global: (A | BaseAction)[];
+        local: A[];
+    },
+    reducer: ImmutableStateReducer<T, A, L>,
     dispatch?: SignalDispatch,
-): Document<T, A> {
+): Document<T, A, L> {
     // builds a new document from the initial data
-    const document = createDocument<T, A>(initialState);
+    const document = createDocument<T, A, L>(initialState);
 
     // wraps the provided custom reducer with the
     // base document reducer
@@ -28,38 +33,41 @@ function replayOperations<T, A extends Action>(
 
     // runs all the operations on the new document
     // and returns the resulting state
-    return operations.reduce(
-        (document, operation) => wrappedReducer(document, operation, dispatch),
-        document,
-    );
+    return operations.global
+        .concat(operations.local)
+        .reduce(
+            (document, operation) =>
+                wrappedReducer(document, operation, dispatch),
+            document,
+        );
 }
 
 // updates the name of the document
-export function setNameOperation<T, A extends Action>(
-    document: Document<T, A>,
-    name: string,
-): Document<T, A> {
+export function setNameOperation<T>(document: T, name: string): T {
     return { ...document, name };
 }
 
 // undoes the last `count` operations
-export function undoOperation<T, A extends Action>(
-    document: Document<T, A>,
+export function undoOperation<T, A extends Action, L>(
+    document: Document<T, A, L>,
     count: number,
-    wrappedReducer: ImmutableStateReducer<T, A>,
-): Document<T, A> {
+    wrappedReducer: ImmutableStateReducer<T, A, L>,
+): Document<T, A, L> {
     // undo can't be higher than the number of active operations
     const undoCount = Math.min(count, document.revision);
 
-    // builds the state from the initial data without the
+    // builds the global state from the initial data without the
     // undone operations
-    const operations = document.operations.slice(
+    const globalOperations = document.operations.global.slice(
         0,
         document.revision - undoCount,
     );
     const newDocument = replayOperations(
         document.initialState,
-        operations,
+        {
+            global: globalOperations,
+            local: document.operations.local,
+        },
         wrappedReducer,
     );
 
@@ -73,13 +81,13 @@ export function undoOperation<T, A extends Action>(
 }
 
 // redoes the last `count` undone operations
-export function redoOperation<T, A extends Action>(
-    document: Document<T, A>,
+export function redoOperation<T, A extends Action, L>(
+    document: Document<T, A, L>,
     count: number,
-    wrappedReducer: ImmutableStateReducer<T, A>,
-): Document<T, A> {
+    wrappedReducer: ImmutableStateReducer<T, A, L>,
+): Document<T, A, L> {
     // the number of undone operations is retrieved from the revision number
-    const undoCount = document.operations.length - document.revision;
+    const undoCount = document.operations.global.length - document.revision;
     if (!undoCount) {
         throw new Error('There is no UNDO operation to REDO');
     }
@@ -89,13 +97,16 @@ export function redoOperation<T, A extends Action>(
 
     // builds state from the initial date taking
     // into account the redone operations
-    const operations = document.operations.slice(
+    const globalOperations = document.operations.global.slice(
         0,
         document.revision + redoCount,
     );
     const newDocument = replayOperations(
         document.initialState,
-        operations,
+        {
+            global: globalOperations,
+            local: document.operations.local,
+        },
         wrappedReducer,
     );
 
@@ -108,23 +119,26 @@ export function redoOperation<T, A extends Action>(
     };
 }
 
-export function pruneOperation<T, A extends Action>(
-    document: Document<T, A>,
+export function pruneOperation<T, A extends Action, L>(
+    document: Document<T, A, L>,
     start: number | null | undefined,
     end: number | null | undefined,
-    wrappedReducer: ImmutableStateReducer<T, A>,
-): Document<T, A> {
+    wrappedReducer: ImmutableStateReducer<T, A, L>,
+): Document<T, A, L> {
     start = start || 0;
-    end = end || document.operations.length;
-    const actionsToPrune = document.operations.slice(start, end);
-    const actionsToKeepStart = document.operations.slice(0, start);
-    const actionsToKeepEnd = document.operations.slice(end);
+    end = end || document.operations.global.length;
+    const actionsToPrune = document.operations.global.slice(start, end);
+    const actionsToKeepStart = document.operations.global.slice(0, start);
+    const actionsToKeepEnd = document.operations.global.slice(end);
 
     // runs all operations from the initial state to
     // the end of prune to get name and data
     const newDocument = replayOperations(
         document.initialState,
-        actionsToKeepStart.concat(actionsToPrune),
+        {
+            global: actionsToKeepStart.concat(actionsToPrune),
+            local: document.operations.local,
+        },
         wrappedReducer,
     );
 
@@ -133,23 +147,26 @@ export function pruneOperation<T, A extends Action>(
     // replaces pruned operations with LOAD_STATE
     return replayOperations(
         document.initialState,
-        [
-            ...actionsToKeepStart,
-            loadState({ name, state: newState }, actionsToPrune.length),
-            ...actionsToKeepEnd,
-        ],
+        {
+            global: [
+                ...actionsToKeepStart,
+                loadState({ name, state: newState }, actionsToPrune.length),
+                ...actionsToKeepEnd,
+            ],
+            local: document.operations.local,
+        },
         wrappedReducer,
     );
 }
 
-export function loadStateOperation<T, A extends Action>(
-    oldDocument: Document<T, A>,
-    newDocument: { name: string; state?: T },
-): Document<T, A> {
+export function loadStateOperation<T, A extends Action, L>(
+    oldDocument: Document<T, A, L>,
+    newDocument: { name: string; state?: State<T, L> },
+): Document<T, A, L> {
     return {
         ...oldDocument,
         name: newDocument.name,
-        state: newDocument.state ?? ({} as T),
+        state: newDocument.state ?? ({ global: {}, local: {} } as State<T, L>),
     };
 }
 

@@ -59,6 +59,7 @@ export type Load_State =
 export type LoadStateAction = {
   input: LoadStateActionInput;
   type: Load_State | `${Load_State}`;
+  scope: "global";
 };
 
 export type LoadStateActionInput = {
@@ -119,6 +120,7 @@ export type Prune =
 export type PruneAction = {
   input: PruneActionInput;
   type: Prune | `${Prune}`;
+  scope: "global";
 };
 
 export type PruneActionInput = {
@@ -137,6 +139,7 @@ export type Redo =
 export type RedoAction = {
   input: Scalars['Int']['input'];
   type: Redo | `${Redo}`;
+  scope: "global";
 };
 
 export type Set_Name =
@@ -145,6 +148,7 @@ export type Set_Name =
 export type SetNameAction = {
   input: Scalars['String']['input'];
   type: Set_Name | `${Set_Name}`;
+  scope: "global";
 };
 
 export type SetNameOperation = IOperation & {
@@ -162,4 +166,5 @@ export type Undo =
 export type UndoAction = {
   input: Scalars['Int']['input'];
   type: Undo | `${Undo}`;
+  scope: "global";
 };

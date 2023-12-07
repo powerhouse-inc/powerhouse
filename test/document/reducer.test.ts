@@ -31,20 +31,22 @@ describe('Base reducer', () => {
         jest.useRealTimers();
     });
 
-    it('should update operations list', async () => {
+    it('should update global operations list', async () => {
         jest.useFakeTimers({ now: new Date('2023-01-01') });
         const document = createDocument();
         const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
 
-        expect(newDocument.operations).toStrictEqual([
+        expect(newDocument.operations.global).toStrictEqual([
             {
                 type: 'TEST',
                 timestamp: new Date().toISOString(),
                 index: 0,
                 input: {},
                 hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
+                scope: 'global',
             },
         ]);
+        expect(newDocument.operations.local).toStrictEqual([]);
     });
 
     it('should throw error when creating action with non-string type', () => {
@@ -96,7 +98,9 @@ describe('Base reducer', () => {
                     input: {
                         id,
                         documentType: 'test',
-                        document: createDocument({ state: { value: 'test' } }),
+                        document: createDocument({
+                            state: { global: { value: 'test' }, local: {} },
+                        }),
                     },
                 });
             }
@@ -112,7 +116,7 @@ describe('Base reducer', () => {
             const input = action.input as CreateChildDocumentInput;
             expect(input.id).toBe(id);
             expect(input.documentType).toBe('test');
-            expect(input.document?.initialState.state).toStrictEqual({
+            expect(input.document?.initialState.state.global).toStrictEqual({
                 value: 'test',
             });
         });

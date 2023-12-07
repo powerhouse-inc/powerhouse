@@ -9,6 +9,8 @@ import {
     Reducer,
     Immutable,
     OperationScope,
+    State,
+    CreateState,
 } from '../types';
 import { hash } from './node';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
@@ -78,19 +80,23 @@ export function createAction<A extends Action>(
  *
  * @returns The new reducer.
  */
-export function createReducer<S = unknown, A extends Action = Action>(
-    reducer: ImmutableStateReducer<S, A>,
+export function createReducer<
+    S = unknown,
+    A extends Action = Action,
+    L = unknown,
+>(
+    reducer: ImmutableStateReducer<S, A, L>,
     documentReducer = baseReducer,
-): Reducer<S, A> {
+): Reducer<S, A, L> {
     return (document, action, dispatch) => {
         return documentReducer(document, action, reducer, dispatch);
     };
 }
 
-export const createExtendedState = <S>(
-    initialState?: Partial<ExtendedState<Partial<S>>>,
-    createState?: (state?: Partial<S>) => S,
-): ExtendedState<S> => {
+export const createExtendedState = <S, L>(
+    initialState?: Partial<ExtendedState<Partial<S>, Partial<L>>>,
+    createState?: CreateState<S, L>,
+): ExtendedState<S, L> => {
     return {
         name: '',
         documentType: '',
@@ -101,7 +107,7 @@ export const createExtendedState = <S>(
         ...initialState,
         state:
             createState?.(initialState?.state) ??
-            ((initialState?.state ?? {}) as S),
+            ((initialState?.state ?? { global: {}, local: {} }) as State<S, L>),
     };
 };
 
@@ -116,23 +122,32 @@ export const createExtendedState = <S>(
  *
  * @returns The new document state.
  */
-export const createDocument = <S, A extends Action>(
-    initialState?: Partial<ExtendedState<Partial<S>>>,
-    createState?: (state?: Partial<S>) => S,
-): Document<S, A> => {
-    const state: ExtendedState<S> = createExtendedState(
+export const createDocument = <S, A extends Action, L = unknown>(
+    initialState?: Partial<ExtendedState<Partial<S>, Partial<L>>>,
+    createState?: (
+        state?: Partial<State<Partial<S>, Partial<L>>>,
+    ) => State<S, L>,
+): Document<S, A, L> => {
+    const state: ExtendedState<S, L> = createExtendedState(
         initialState,
         createState,
     );
     return {
         ...state,
         initialState: state,
-        operations: [],
+        operations: { global: [], local: [] },
     };
 };
 
-export const hashDocument = (document: Document) => {
-    return hash(JSONDeterministic(document.state));
+export const hashDocument = (
+    document: Document,
+    scope: OperationScope = 'global',
+) => {
+    return hash(
+        JSONDeterministic(
+            scope === 'local' ? document.state.local : document.state.global,
+        ),
+    );
 };
 
 export const hashKey = (date?: Date, randomLimit = 1000) => {

@@ -19,7 +19,7 @@ export const setName = (name: string) =>
         'SET_NAME',
         name,
         undefined,
-        z.SetNameActionSchema
+        z.SetNameActionSchema,
     );
 
 /**
@@ -56,7 +56,7 @@ export const prune = (start?: number | undefined, end?: number | undefined) =>
         'PRUNE',
         { start, end },
         undefined,
-        z.PruneActionSchema
+        z.PruneActionSchema,
     );
 
 /**
@@ -69,13 +69,13 @@ export const prune = (start?: number | undefined, end?: number | undefined) =>
  * @param operations - Number of operations that were removed from the previous state.
  * @category Actions
  */
-export const loadState = (
-    state: Pick<ExtendedState, 'state' | 'name'>,
-    operations: number
+export const loadState = <S, T>(
+    state: Pick<ExtendedState<S, T>, 'state' | 'name'>,
+    operations: number,
 ) =>
     createAction<LoadStateAction>(
         'LOAD_STATE',
         { state, operations },
         undefined,
-        z.LoadStateActionSchema
+        z.LoadStateActionSchema,
     );

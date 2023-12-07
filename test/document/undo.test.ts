@@ -18,7 +18,7 @@ describe('UNDO operation', () => {
 
         document = emptyReducer(document, undo(1));
 
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
         ]);
         expect(document.name).toBe('');
@@ -32,7 +32,7 @@ describe('UNDO operation', () => {
         expect(document.revision).toBe(2);
 
         document = emptyReducer(document, undo(2));
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -44,7 +44,7 @@ describe('UNDO operation', () => {
         document = emptyReducer(document, setName('TEST_1'));
         document = emptyReducer(document, setName('TEST_2'));
         document = emptyReducer(document, undo(5));
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
@@ -57,7 +57,7 @@ describe('UNDO operation', () => {
         document = emptyReducer(document, setName('TEST_1'));
         document = emptyReducer(document, undo(1));
         document = emptyReducer(document, setName('TEST_2'));
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_2'), index: 0 },
         ]);
         expect(document.name).toBe('TEST_2');
@@ -70,7 +70,7 @@ describe('UNDO operation', () => {
         document = emptyReducer(document, undo(1));
         document = emptyReducer(document, setName('TEST_2'));
         document = emptyReducer(document, undo(1));
-        expect(mapOperations(document.operations)).toStrictEqual([
+        expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_2'), index: 0 },
         ]);
         expect(document.name).toBe('');
@@ -80,11 +80,11 @@ describe('UNDO operation', () => {
     it('should keep document attributes', () => {
         let document = createDocument<CountState, CountAction>({
             documentType: 'powerhouse/counter',
-            state: { count: 0 },
+            state: { global: { count: 0 }, local: {} },
         });
         document = countReducer(document, increment());
         document = countReducer(document, undo(1));
-        expect(document.state.count).toBe(0);
+        expect(document.state.global.count).toBe(0);
         expect(document.documentType).toBe('powerhouse/counter');
     });
 });

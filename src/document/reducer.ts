@@ -17,7 +17,7 @@ import {
 import { z } from './schema';
 import { Action, Document, ImmutableStateReducer } from './types';
 import { isBaseAction, hashDocument } from './utils';
-import { Signal, SignalDispatch } from './signal';
+import { SignalDispatch } from './signal';
 
 /**
  * Gets the next revision number based on the provided action.
@@ -41,10 +41,7 @@ function getNextRevision(document: Document, action: Action): number {
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateHeader<T, A extends Action>(
-    document: Document<T, A>,
-    action: A | BaseAction,
-): Document<T, A> {
+function updateHeader<T extends Document>(document: T, action: Action): T {
     return {
         ...document,
         revision: getNextRevision(document, action),
@@ -59,10 +56,7 @@ function updateHeader<T, A extends Action>(
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateOperations<T, A extends Action>(
-    document: Document<T, A>,
-    action: A | BaseAction,
-): Document<T, A> {
+function updateOperations<T extends Document>(document: T, action: Action): T {
     // UNDO, REDO and PRUNE are meta operations
     // that alter the operations history themselves
     if ([UNDO, REDO, PRUNE, PRUNE].includes(action.type)) {
@@ -71,21 +65,39 @@ function updateOperations<T, A extends Action>(
 
     // removes undone operations from history if there
     // is a new operation after an UNDO
-    const operations = document.operations.slice(0, document.revision);
+    const globalOperations = document.operations.global.slice(
+        0,
+        document.revision,
+    );
+    const localOperations = document.operations.local.slice();
+
+    // adds the operation to its scope operations
+    if (!action.scope || action.scope === 'global') {
+        globalOperations.push({
+            ...action,
+            index: globalOperations.length,
+            timestamp: new Date().toISOString(),
+            hash: '',
+            scope: 'global',
+        });
+    } else if (action.scope === 'local') {
+        localOperations.push({
+            ...action,
+            index: localOperations.length,
+            timestamp: new Date().toISOString(),
+            hash: '',
+            scope: 'local',
+        });
+    }
 
     // adds the action to the operations history with
     // the latest index and current timestamp
     return {
         ...document,
-        operations: [
-            ...operations,
-            {
-                ...action,
-                index: operations.length,
-                timestamp: new Date().toISOString(),
-                hash: '',
-            },
-        ],
+        operations: {
+            global: globalOperations,
+            local: localOperations,
+        },
     };
 }
 
@@ -96,12 +108,11 @@ function updateOperations<T, A extends Action>(
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateDocument<T, A extends Action>(
-    document: Document<T, A>,
-    action: A | BaseAction,
-): Document<T, A> {
+function updateDocument<T extends Document>(document: T, action: Action) {
     let newDocument = updateOperations(document, action);
-    newDocument = updateHeader(newDocument, action);
+    if (!action.scope || action.scope === 'global') {
+        newDocument = updateHeader(newDocument, action);
+    }
     return newDocument;
 }
 
@@ -113,11 +124,11 @@ function updateDocument<T, A extends Action>(
  * @param wrappedReducer The custom reducer function being wrapped by the base reducer.
  * @returns The updated document state.
  */
-function _baseReducer<T, A extends Action>(
-    document: Document<T, A>,
+function _baseReducer<T, A extends Action, L>(
+    document: Document<T, A, L>,
     action: BaseAction,
-    wrappedReducer: ImmutableStateReducer<T, A>,
-): Document<T, A> {
+    wrappedReducer: ImmutableStateReducer<T, A, L>,
+): Document<T, A, L> {
     // throws if action is not valid base action
     z.BaseActionSchema().parse(action);
 
@@ -141,7 +152,6 @@ function _baseReducer<T, A extends Action>(
             return document;
     }
 }
-
 /**
  * Base document reducer that wraps a custom document reducer and handles
  * document-level actions such as undo, redo, prune, and set name.
@@ -154,10 +164,10 @@ function _baseReducer<T, A extends Action>(
  * specific to the document's state.
  * @returns The new state of the document.
  */
-export function baseReducer<T, A extends Action>(
-    document: Document<T, A>,
+export function baseReducer<T, A extends Action, L>(
+    document: Document<T, A, L>,
     action: A | BaseAction,
-    customReducer: ImmutableStateReducer<T, A>,
+    customReducer: ImmutableStateReducer<T, A, L>,
     dispatch?: SignalDispatch,
 ) {
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
@@ -169,7 +179,7 @@ export function baseReducer<T, A extends Action>(
 
     // updates the document revision number, last modified date
     // and operation history
-    newDocument = updateDocument<T, A>(newDocument, action);
+    newDocument = updateDocument(newDocument, action);
 
     // wraps the custom reducer with Immer to avoid
     // mutation bugs and allow writing reducers with
@@ -183,7 +193,7 @@ export function baseReducer<T, A extends Action>(
         // of mutating the draft then returns the new state
         if (returnedDraft) {
             // casts new state as draft to comply with typescript
-            return castDraft<Document<T, A>>({
+            return castDraft<Document<T, A, L>>({
                 ...newDocument,
                 state: returnedDraft,
             });
@@ -192,8 +202,13 @@ export function baseReducer<T, A extends Action>(
 
     return produce(newDocument, draft => {
         // updates the last operation with the hash of the resulting state
-        draft.operations[draft.operations.length - 1].hash =
-            hashDocument(draft);
+        if (!action.scope || action.scope === 'global') {
+            draft.operations.global[draft.operations.global.length - 1].hash =
+                hashDocument(draft, 'global');
+        } else if (action.scope === 'local') {
+            draft.operations.local[draft.operations.local.length - 1].hash =
+                hashDocument(draft, 'local');
+        }
 
         // if the action has attachments then adds them to the document
         if (!isBaseAction(action) && action.attachments) {
