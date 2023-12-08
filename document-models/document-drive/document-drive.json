@@ -116,6 +116,17 @@
                             "errors": [],
                             "examples": [],
                             "scope": "global"
+                        },
+                        {
+                            "id": "qGCiPGpTt/cyz3HzyrBn92z2dsU=",
+                            "name": "SET_SHARING_TYPE",
+                            "description": "",
+                            "schema": "input SetSharingTypeInput {\n    type: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "local"
                         }
                     ]
                 }

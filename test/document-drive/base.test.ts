@@ -1,22 +1,16 @@
-import { Document } from 'document-model';
 import {
     reducer,
     actions,
     utils,
-    DocumentDriveState,
-    DocumentDriveAction,
     DocumentDrive,
 } from '../../document-models/document-drive';
 import { Signal } from 'document-model/document';
 
 describe('DocumentDrive Class', () => {
     it('should rename drive', () => {
-        let documentDrive: Document.Document<
-            DocumentDriveState,
-            DocumentDriveAction
-        > = utils.createDocument();
+        let documentDrive = utils.createDocument();
 
-        expect(documentDrive.state.name).toBe('');
+        expect(documentDrive.state.global.name).toBe('');
 
         documentDrive = reducer(
             documentDrive,
@@ -25,14 +19,11 @@ describe('DocumentDrive Class', () => {
             }),
         );
 
-        expect(documentDrive.state.name).toBe('new name');
+        expect(documentDrive.state.global.name).toBe('new name');
     });
 
     it('should delete children when node is deleted', () => {
-        let documentDrive: Document.Document<
-            DocumentDriveState,
-            DocumentDriveAction
-        > = utils.createDocument();
+        let documentDrive = utils.createDocument();
         documentDrive = reducer(
             documentDrive,
             actions.addFolder({
@@ -56,7 +47,7 @@ describe('DocumentDrive Class', () => {
             }),
         );
 
-        expect(documentDrive.state.nodes.length).toBe(0);
+        expect(documentDrive.state.global.nodes.length).toBe(0);
     });
 
     it('should trigger create child document signal', () => {
@@ -64,7 +55,7 @@ describe('DocumentDrive Class', () => {
         function dispatch(_signal: Signal) {}
         const documentDrive = new DocumentDrive(undefined, dispatch);
         // @ts-expect-error spying on private method
-        const spy = vi.spyOn(documentDrive, '_dispatch');
+        const spy = vi.spyOn(documentDrive, '_signalDispatch');
         documentDrive.addFile({
             id: '1',
             documentType: 'test',
@@ -76,5 +67,17 @@ describe('DocumentDrive Class', () => {
             type: 'CREATE_CHILD_DOCUMENT',
             input: { id: '1', documentType: 'test' },
         });
+    });
+
+    it('should set local sharing type', () => {
+        let documentDrive = utils.createDocument();
+        documentDrive = reducer(
+            documentDrive,
+            actions.setSharingType({
+                type: 'cloud',
+            }),
+        );
+
+        expect(documentDrive.state.local.sharingType).toBe('cloud');
     });
 });

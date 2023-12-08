@@ -72,3 +72,7 @@ input MoveNodeInput {
 input SetDriveNameInput {
     name: String!
 }
+
+input SetSharingTypeInput {
+    type: String!
+}
