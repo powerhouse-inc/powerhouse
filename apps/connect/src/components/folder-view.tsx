@@ -1,8 +1,14 @@
-import { ReactComponent as IconFile } from '@/assets/icons/file2.svg';
-import { ReactComponent as IconFolder } from '@/assets/icons/folder.svg';
-import { TreeItem, decodeID } from '@powerhousedao/design-system';
+import {
+    FileItem,
+    FolderItem,
+    TreeItem,
+    decodeID,
+    encodeID,
+} from '@powerhousedao/design-system';
 import { FileNode, FolderNode } from 'document-model-libs/document-drive';
+import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import { ContentSection } from './content';
 
 interface IProps {
     drive: string;
@@ -19,6 +25,7 @@ export const FolderView: React.FC<IProps> = ({
     onFileSelected,
     onFileDeleted,
 }) => {
+    const { t } = useTranslation();
     const { getChildren } = useDocumentDriveServer();
     const folderId = folder ? decodeID(folder.id) : undefined;
     const children = getChildren(
@@ -33,54 +40,52 @@ export const FolderView: React.FC<IProps> = ({
 
     return (
         <div>
-            <ul className="mb-3 flex gap-5">
-                {folders.map(folder => (
-                    <button
-                        key={folder.id}
-                        className="flex flex-col items-center rounded-md p-2 hover:bg-black/5"
-                        onClick={() =>
-                            onFolderSelected(decodedDriveID, folder.id)
-                        }
-                    >
-                        <IconFolder className="mb-2" />
-                        <p>{folder.name}</p>
-                    </button>
-                ))}
-            </ul>
-            <table className="w-full">
-                <tbody>
-                    {files?.map(file => (
-                        <tr
+            <ContentSection
+                title={t('folderView.sections.folders.title')}
+                className="mb-4"
+            >
+                {folders.length > 0 ? (
+                    folders.map(folder => (
+                        <FolderItem
+                            key={folder.id}
+                            title={folder.name}
+                            className="w-64"
+                            onClick={() =>
+                                onFolderSelected(
+                                    decodedDriveID,
+                                    encodeID(folder.id)
+                                )
+                            }
+                        />
+                    ))
+                ) : (
+                    <div className="mb-8 text-sm text-gray-400">
+                        {t('folderView.sections.folders.empty')}
+                    </div>
+                )}
+            </ContentSection>
+            <ContentSection title={t('folderView.sections.documents.title')}>
+                {files.length > 0 ? (
+                    files.map(file => (
+                        <FileItem
                             key={file.id}
-                            className="cursor-pointer rounded-md hover:bg-black/5"
+                            title={file.name}
+                            subTitle={`MakerDAO/Ecosystem Actors/Powerhouse/${file.name}`}
+                            className="w-64"
+                            onOptionsClick={() =>
+                                onFileDeleted(decodedDriveID, file.id)
+                            }
                             onClick={() =>
                                 onFileSelected(decodedDriveID, file.id)
                             }
-                        >
-                            <td className="flex flex-[66%] items-center">
-                                <IconFile />
-                                <span className="ml-1">{file.name}</span>
-                            </td>
-                            <td>
-                                <small className="ml-3">
-                                    {file.documentType}
-                                </small>
-                            </td>
-                            <td>
-                                <button
-                                    className="text-red-500 hover:underline"
-                                    onClick={e => {
-                                        e.stopPropagation();
-                                        onFileDeleted(decodedDriveID, file.id);
-                                    }}
-                                >
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+                        />
+                    ))
+                ) : (
+                    <div className="mb-8 text-sm text-gray-400">
+                        {t('folderView.sections.documents.empty')}
+                    </div>
+                )}
+            </ContentSection>
         </div>
     );
 };
