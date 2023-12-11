@@ -4397,22 +4397,22 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.8:
-  version "0.0.8"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.8.tgz#858d6aad8599d40c615b106eaccc93decb2961ed"
-  integrity sha512-lctp2DsVICvczoM+0IIJeb/jbh1gPd+PNDvdEQrje7ypHz7pQw6EywMULUy9e8i+vG+tvmcXm/t1FrF3C0ntrw==
+document-drive@^0.0.11:
+  version "0.0.11"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.11.tgz#49d486372ba1ab3e1adb85994ffc748a48b96376"
+  integrity sha512-hgoIF6TM6jU1G59E5XI9T3bXO5zLn87FnJdnNjskfVYErGpMCYryqX/O0id6bqm5946Q0nkXuFpCNW98wqezzA==
   dependencies:
     sanitize-filename "^1.6.3"
 
-document-model-libs@^1.1.23:
-  version "1.1.23"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.23.tgz#f1599af11d7ba3d371ab29ce1db9b71df7a29ac8"
-  integrity sha512-jOhkxuvDwWQaM7vSHttqWWPukq3PpToB7iH+s2YFKRX1hkZbMIdywteBBzgXo8fcu3FhAFzGSB3/EYza43AWTA==
+document-model-libs@^1.1.24:
+  version "1.1.24"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.24.tgz#f936517d353bd2a073063769308d195dd619c033"
+  integrity sha512-VOJ89EXtoDKseJAcHKTF5R79IEJtdMRwlFwrwgnvJca+b4qze4KyOdeuG1dXgEa9G/MzYAa+jM+nFF0BCbdLbg==
 
-document-model@^1.0.15:
-  version "1.0.15"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.15.tgz#f2f66b2e7ef5330335f6dcc5ecf0d21511696ad6"
-  integrity sha512-om5cr100jGh1TkaHIBQhCUrj+WmDgSo9LGlQx9Yy7qqn2IshO+yNxyN85vNBma7TALTbjynvhS1EfjkNL1KRHw==
+document-model@^1.0.16:
+  version "1.0.16"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.16.tgz#fda005bb23b5891b159a670cf393a3afae59a1f4"
+  integrity sha512-Ep3E1ecth2AvKEZfCyOSc+0dz+sjdLOhAPiMrtqaWDQvMlxS31Hm0JkwXViqT6pwlWaKg2vzj3zP4UuoRx/Ptg==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"

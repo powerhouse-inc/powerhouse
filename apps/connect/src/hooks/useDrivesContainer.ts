@@ -2,12 +2,17 @@ import {
     BaseTreeItem,
     DriveViewProps,
     TreeItem,
+    SharingType as TreeItemSharingType,
     decodeID,
     encodeID,
     getRootPath,
     useItemActions,
 } from '@powerhousedao/design-system';
-import { DocumentDriveState, Node } from 'document-model-libs/document-drive';
+import {
+    DocumentDriveDocument,
+    Node,
+    SharingType,
+} from 'document-model-libs/document-drive';
 import path from 'path';
 import { useModal } from 'src/components/modal';
 import { useSelectedPath } from 'src/store';
@@ -28,23 +33,30 @@ export function getNodePath(node: Node, allNodes: Node[]): string {
 }
 
 export function driveToBaseItems(
-    drive: DocumentDriveState
+    drive: DocumentDriveDocument
 ): Array<BaseTreeItem> {
-    const driveID = encodeID(drive.id);
+    const driveID = encodeID(drive.state.global.id);
 
     const driveNode: BaseTreeItem = {
-        id: drive.id,
-        label: drive.name,
+        id: drive.state.global.id,
+        label: drive.state.global.name,
         path: driveID,
-        type: 'LOCAL_DRIVE',
+        type: 'CLOUD_DRIVE',
+        sharingType:
+            drive.state.local.sharingType.toUpperCase() as TreeItemSharingType,
+        status: drive.state.local.availableOffline
+            ? 'AVAILABLE_OFFLINE'
+            : 'AVAILABLE',
     };
 
-    const nodes: Array<BaseTreeItem> = drive.nodes.map((node, _i, nodes) => ({
-        id: node.id,
-        label: node.name,
-        path: path.join(driveID, getNodePath(node, nodes)),
-        type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
-    }));
+    const nodes: Array<BaseTreeItem> = drive.state.global.nodes.map(
+        (node, _i, nodes) => ({
+            id: node.id,
+            label: node.name,
+            path: path.join(driveID, getNodePath(node, nodes)),
+            type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
+        })
+    );
     return [driveNode, ...nodes];
 }
 
@@ -58,14 +70,16 @@ export function useDrivesContainer() {
         renameNode,
         deleteDrive,
         renameDrive,
+        setDriveAvailableOffline,
+        setDriveSharingType,
         documentDrives,
         copyOrMoveNode,
     } = useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
         const driveNodes = documentDrives?.find(
-            driveItem => driveItem.state.id === decodeID(driveID)
-        )?.state.nodes;
+            driveItem => driveItem.state.global.id === decodeID(driveID)
+        )?.state.global.nodes;
 
         const parentFolder = item.path.split('/').slice(1).pop();
         const lastIndex = getLastIndexFromPath(
@@ -120,7 +134,6 @@ export function useDrivesContainer() {
         option
     ) => {
         const driveID = item.path.split('/')[0];
-
         switch (option) {
             case 'new-folder':
                 actions.setExpandedItem(item.id, true);
@@ -131,14 +144,14 @@ export function useDrivesContainer() {
                 break;
             case 'delete':
                 if (
-                    ['cloud-drive', 'local-drive', 'public-drive'].includes(
+                    ['PUBLIC_DRIVE', 'LOCAL_DRIVE', 'CLOUD_DRIVE'].includes(
                         item.type
                     )
                 ) {
                     deleteDrive(decodeID(item.id));
                 } else {
                     showModal('deleteItem', {
-                        itemId: item.id,
+                        itemId: decodeID(item.id),
                         itemName: item.label,
                         driveId: decodeID(driveID),
                     });
@@ -150,6 +163,17 @@ export function useDrivesContainer() {
             case 'rename-drive':
                 renameDrive(decodeID(item.id), item.label);
                 break;
+            case 'change-availability':
+                setDriveAvailableOffline(
+                    decodeID(item.id),
+                    item.status === 'AVAILABLE_OFFLINE'
+                );
+                break;
+            case 'change-sharing-type':
+                setDriveSharingType(
+                    decodeID(item.id),
+                    item.sharingType?.toLowerCase() as SharingType
+                );
         }
     };
 

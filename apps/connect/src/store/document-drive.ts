@@ -20,8 +20,10 @@ export const useSelectedPath = () => {
                 ? decodeID(pathComponents[pathComponents.length - 1])
                 : undefined;
 
-        const drive = documentDrives.find(drive => drive.state.id === driveId);
-        const file = drive?.state.nodes.find(node => node.id === nodeId);
+        const drive = documentDrives.find(
+            drive => drive.state.global.id === driveId
+        );
+        const file = drive?.state.global.nodes.find(node => node.id === nodeId);
         // if drive was deleted then removes selected path
         if (!drive) {
             setSelectedPath(null);
