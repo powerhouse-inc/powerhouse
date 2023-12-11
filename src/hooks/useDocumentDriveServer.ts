@@ -3,6 +3,7 @@ import { isDocumentDrive } from 'document-drive/utils';
 import {
     DocumentDriveAction,
     DocumentDriveDocument,
+    SharingType,
     actions,
     utils as documentDriveUtils,
     isFileNode,
@@ -10,7 +11,7 @@ import {
     reducer,
 } from 'document-model-libs/document-drive';
 import { Document, Operation, utils } from 'document-model/document';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { BrowserDocumentDriveServer } from 'src/utils/browser-document-drive';
 import { loadFile } from 'src/utils/file';
@@ -35,19 +36,6 @@ export function useDocumentDriveServer(
 
     const [documentDrives, refreshDocumentDrives] = useDocumentDrives(server);
 
-    useEffect(() => {
-        server.getDrives().then(async drives => {
-            if (!drives.length) {
-                await server.addDrive({
-                    id: utils.hashKey(),
-                    name: 'Local Device',
-                    icon: null,
-                });
-                refreshDocumentDrives();
-            }
-        });
-    }, []);
-
     async function openFile(drive: string, id: string) {
         const document = await server?.getDocument(drive, id);
         if (!document) {
@@ -66,16 +54,17 @@ export function useDocumentDriveServer(
             throw new Error('Server is not defined');
         }
 
-        let drive = documentDrives.find(drive => drive.state.id === driveId);
+        let drive = documentDrives.find(
+            drive => drive.state.global.id === driveId
+        );
         if (!drive) {
             throw new Error(`Drive with id ${driveId} not found`);
         }
 
         drive = reducer(drive, action);
-
-        const operation = drive.operations.findLast(
-            op => op.type === action.type
-        );
+        const scope = action.scope ?? 'global';
+        const operations = drive.operations[scope];
+        const operation = operations.findLast(op => op.type === action.type);
         if (!operation) {
             throw new Error('There was an error applying the operation');
         }
@@ -109,13 +98,13 @@ export function useDocumentDriveServer(
             })
         );
 
-        const node = drive.state.nodes.find(node => node.id === id);
+        const node = drive.state.global.nodes.find(node => node.id === id);
         if (!node || !isFileNode(node)) {
             throw new Error('There was an error adding document');
         }
 
         if (document) {
-            await server?.createDocument(drive.state.id, {
+            await server?.createDocument(drive.state.global.id, {
                 id,
                 documentType,
                 document,
@@ -157,7 +146,7 @@ export function useDocumentDriveServer(
             })
         );
 
-        const node = drive.state.nodes.find(node => node.id === id);
+        const node = drive.state.global.nodes.find(node => node.id === id);
         if (!node || !isFileNode(node)) {
             throw new Error('There was an error updating document');
         }
@@ -179,7 +168,7 @@ export function useDocumentDriveServer(
             })
         );
 
-        const node = drive.state.nodes.find(node => node.id === id);
+        const node = drive.state.global.nodes.find(node => node.id === id);
         if (!node || !isFolderNode(node)) {
             throw new Error('There was an error adding folder');
         }
@@ -204,7 +193,7 @@ export function useDocumentDriveServer(
             })
         );
 
-        const node = drive.state.nodes.find(node => node.id === id);
+        const node = drive.state.global.nodes.find(node => node.id === id);
         if (!node) {
             throw new Error('There was an error renaming node');
         }
@@ -222,7 +211,9 @@ export function useDocumentDriveServer(
     ) {
         if (srcId === targetId) return;
 
-        const drive = documentDrives.find(drive => drive.state.id === driveId);
+        const drive = documentDrives.find(
+            drive => drive.state.global.id === driveId
+        );
 
         if (operation === 'copy' && drive) {
             const targetParentFolder = targetId === '' ? null : targetId;
@@ -235,7 +226,7 @@ export function useDocumentDriveServer(
                     ...(targetName && { targetName }),
                 },
                 generateId,
-                drive.state.nodes
+                drive.state.global.nodes
             );
 
             const copyActions = copyNodesInput.map(copyNodeInput =>
@@ -269,7 +260,9 @@ export function useDocumentDriveServer(
             throw new Error('Server is not defined');
         }
 
-        const drive = documentDrives.find(drive => drive.state.id === driveId);
+        const drive = documentDrives.find(
+            drive => drive.state.global.id === driveId
+        );
         if (!drive) {
             throw new Error(`Drive with id ${driveId} not found`);
         }
@@ -283,7 +276,9 @@ export function useDocumentDriveServer(
             throw new Error('Server is not defined');
         }
 
-        const drive = documentDrives.find(drive => drive.state.id === id);
+        const drive = documentDrives.find(
+            drive => drive.state.global.id === id
+        );
         if (!drive) {
             throw new Error(`Drive with id ${id} not found`);
         }
@@ -295,11 +290,28 @@ export function useDocumentDriveServer(
         return _addDriveOperation(id, actions.setDriveName({ name }));
     }
 
+    async function setDriveAvailableOffline(
+        id: string,
+        availableOffline: boolean
+    ) {
+        return _addDriveOperation(
+            id,
+            actions.setAvailableOffline({ availableOffline })
+        );
+    }
+
+    async function setDriveSharingType(id: string, sharingType: SharingType) {
+        return _addDriveOperation(
+            id,
+            actions.setSharingType({ type: sharingType })
+        );
+    }
+
     function getChildren(driveId: string, id?: string) {
         return (
             documentDrives
-                .find(drive => drive.state.id === driveId)
-                ?.state.nodes.filter(node =>
+                .find(drive => drive.state.global.id === driveId)
+                ?.state.global.nodes.filter(node =>
                     id ? node.parentFolder === id : !node.parentFolder
                 ) ?? []
         );
@@ -320,6 +332,8 @@ export function useDocumentDriveServer(
             getChildren,
             deleteDrive,
             renameDrive,
+            setDriveAvailableOffline,
+            setDriveSharingType,
         }),
         [documentDrives]
     );

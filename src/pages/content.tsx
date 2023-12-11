@@ -41,8 +41,8 @@ const Content = () => {
     const { onSubmitInput } = useDrivesContainer();
 
     const driveNodes = documentDrives.find(
-        drive => drive.state.id === decodedDriveID
-    )?.state.nodes;
+        drive => drive.state.global.id === decodedDriveID
+    )?.state.global.nodes;
 
     const [selectedFileNode, setSelectedFileNode] = useState<
         { drive: string; id: string } | undefined

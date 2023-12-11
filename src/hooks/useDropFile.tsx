@@ -30,13 +30,13 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
                     if (drive) {
                         const node = await addFile(
                             file,
-                            drive.state.id,
+                            drive.state.global.id,
                             file.name,
                             undefined // TODO selectedFolder as parent folder
                         );
 
                         if (node) {
-                            openFile(drive.state.id, node.id);
+                            openFile(drive.state.global.id, node.id);
                         }
                     } else {
                         const document = await loadFile(file, getDocumentModel);

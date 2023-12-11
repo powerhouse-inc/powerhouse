@@ -54,6 +54,7 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
     const [isInitialized, setIsInitialized] = useAtom(
         documentDrivesInitializedMapAtomFamily(server)
     );
+
     if (!isInitialized) {
         setIsInitialized(true);
         refreshDocumentDrives();

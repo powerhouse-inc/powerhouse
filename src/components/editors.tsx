@@ -13,14 +13,20 @@ import { useEditor } from 'src/store/editor';
 import { useDocumentDispatch } from 'src/utils/document-model';
 import Button from './button';
 
-export interface EditorProps<T = unknown, A extends Action = Action> {
-    document: Document<T, A>;
-    onChange?: (document: Document<T, A>) => void;
+export interface EditorProps<
+    T = unknown,
+    A extends Action = Action,
+    LocalState = unknown
+> {
+    document: Document<T, A, LocalState>;
+    onChange?: (document: Document<T, A, LocalState>) => void;
 }
 
-export type EditorComponent<T = unknown, A extends Action = Action> = (
-    props: EditorProps<T, A>
-) => JSX.Element;
+export type EditorComponent<
+    T = unknown,
+    A extends Action = Action,
+    LocalState = unknown
+> = (props: EditorProps<T, A, LocalState>) => JSX.Element;
 
 export interface IProps extends EditorProps {
     onClose: () => void;
@@ -71,7 +77,9 @@ export const DocumentEditor: React.FC<IProps> = ({
         onChange?.(document);
     }, [document]);
 
-    const operations = document ? [...document.operations].reverse() : [];
+    const operations = document
+        ? [...document.operations.global].reverse()
+        : [];
 
     function undo() {
         dispatch(actions.undo());
@@ -82,7 +90,8 @@ export const DocumentEditor: React.FC<IProps> = ({
     }
 
     const canUndo = document && document.revision > 0;
-    const canRedo = document && document.revision < document.operations.length;
+    const canRedo =
+        document && document.revision < document.operations.global.length;
 
     return (
         <div className="relative h-full">

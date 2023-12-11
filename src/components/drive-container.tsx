@@ -39,7 +39,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     function updateBaseItems() {
         const baseItems: Array<BaseTreeItem> =
             documentDrives.reduce<Array<BaseTreeItem>>((acc, drive) => {
-                return [...acc, ...driveToBaseItems(drive.state)];
+                return [...acc, ...driveToBaseItems(drive)];
             }, []) ?? [];
         setBaseItems(baseItems);
     }
@@ -129,20 +129,37 @@ export default function DriveContainer(props: DriveContainerProps) {
             addFile(file, decodedDriveID, undefined, targetId);
         }
     };
+
     return (
-        <DriveView
-            key="local"
-            type="LOCAL_DRIVE"
-            name={'My Local Drives'}
-            onItemClick={onItemClick}
-            onItemOptionsClick={onItemOptionsClick}
-            onSubmitInput={item => onSubmitInput(item)}
-            onCancelInput={cancelInputHandler}
-            onDragStart={onDragStartHandler}
-            onDragEnd={onDragEndHandler}
-            onDropEvent={onDropEventHandler}
-            onDropActivate={onDropActivateHandler}
-            disableHighlightStyles={disableHoverStyles}
-        />
+        <>
+            {/* <DriveView
+                key="local"
+                type="LOCAL_DRIVE"
+                name={'My Local Drives'}
+                onItemClick={onItemClick}
+                onItemOptionsClick={onItemOptionsClick}
+                onSubmitInput={item => onSubmitInput(item)}
+                onCancelInput={cancelInputHandler}
+                onDragStart={onDragStartHandler}
+                onDragEnd={onDragEndHandler}
+                onDropEvent={onDropEventHandler}
+                onDropActivate={onDropActivateHandler}
+                disableHighlightStyles={disableHoverStyles}
+            /> */}
+            <DriveView
+                key="Cloud"
+                type="CLOUD_DRIVE"
+                name={'Secure Cloud Drives'}
+                onItemClick={onItemClick}
+                onItemOptionsClick={onItemOptionsClick}
+                onSubmitInput={item => onSubmitInput(item)}
+                onCancelInput={cancelInputHandler}
+                onDragStart={onDragStartHandler}
+                onDragEnd={onDragEndHandler}
+                onDropEvent={onDropEventHandler}
+                onDropActivate={onDropActivateHandler}
+                disableHighlightStyles={disableHoverStyles}
+            />
+        </>
     );
 }

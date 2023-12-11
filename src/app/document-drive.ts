@@ -5,7 +5,12 @@ import {
 } from 'document-drive/server';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { DocumentDriveAction } from 'document-model-libs/document-drive';
-import { BaseAction, DocumentModel, Operation } from 'document-model/document';
+import {
+    BaseAction,
+    DocumentModel,
+    Operation,
+    utils,
+} from 'document-model/document';
 import { IpcMain } from 'electron';
 import { join } from 'path';
 
@@ -18,6 +23,23 @@ export default (
         documentModels,
         new FilesystemStorage(join(path, 'Document Drives'))
     );
+
+    documentDrive.getDrives().then(drives => {
+        if (!drives.length) {
+            // documentDrive.addDrive({
+            //     id: utils.hashKey(),
+            //     name: 'Local Device',
+            //     icon: null,
+            //     remoteUrl: null,
+            // });
+            documentDrive.addDrive({
+                id: utils.hashKey(),
+                name: 'Powerhouse',
+                icon: null,
+                remoteUrl: 'FAKE_URL',
+            });
+        }
+    });
 
     ipcMain.handle('documentDrive:getDrives', () => documentDrive.getDrives());
     ipcMain.handle('documentDrive:getDrive', (_e, id: string) =>
