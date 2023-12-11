@@ -74,10 +74,24 @@ describe('DocumentDrive Class', () => {
         documentDrive = reducer(
             documentDrive,
             actions.setSharingType({
-                type: 'cloud',
+                type: 'public',
             }),
         );
 
-        expect(documentDrive.state.local.sharingType).toBe('cloud');
+        expect(documentDrive.state.local.sharingType).toBe('public');
+    });
+
+    it('should set available offline', () => {
+        let documentDrive = utils.createDocument();
+
+        expect(documentDrive.state.local.availableOffline).toBe(false);
+        documentDrive = reducer(
+            documentDrive,
+            actions.setAvailableOffline({
+                availableOffline: true,
+            }),
+        );
+
+        expect(documentDrive.state.local.availableOffline).toBe(true);
     });
 });

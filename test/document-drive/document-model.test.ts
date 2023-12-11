@@ -3,14 +3,23 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import {
+    DocumentDriveLocalState,
+    DocumentDriveState,
+} from '../../document-models/document-drive';
 import utils from '../../document-models/document-drive/gen/utils';
 
-const initialState = {
+const initialGlobalState: DocumentDriveState = {
     id: '',
     name: '',
     nodes: [],
     icon: null,
     remoteUrl: null,
+};
+
+const initialLocalState: DocumentDriveLocalState = {
+    sharingType: 'private',
+    availableOffline: false,
 };
 
 describe('Document Drive Document Model', () => {
@@ -23,6 +32,7 @@ describe('Document Drive Document Model', () => {
 
     it('should create a new Document Drive document with a valid initial state', () => {
         const document = utils.createDocument();
-        expect(document.state).toStrictEqual(initialState);
+        expect(document.state.global).toStrictEqual(initialGlobalState);
+        expect(document.state.local).toStrictEqual(initialLocalState);
     });
 });

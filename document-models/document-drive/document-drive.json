@@ -127,6 +127,17 @@
                             "errors": [],
                             "examples": [],
                             "scope": "local"
+                        },
+                        {
+                            "id": "qGCiPGpTt/cyz3HzyrBn92z3dsU=",
+                            "name": "SET_AVAILABLE_OFFLINE",
+                            "description": "",
+                            "schema": "input SetAvailableOfflineInput {\n    availableOffline: Boolean!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "local"
                         }
                     ]
                 }

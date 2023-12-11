@@ -22,9 +22,44 @@ describe('Drive Operations', () => {
         const input = generateMock(z.SetDriveNameInputSchema());
         const updatedDocument = reducer(document, creators.setDriveName(input));
 
-        expect(updatedDocument.operations).toHaveLength(1);
-        expect(updatedDocument.operations[0].type).toBe('SET_DRIVE_NAME');
-        expect(updatedDocument.operations[0].input).toStrictEqual(input);
-        expect(updatedDocument.operations[0].index).toEqual(0);
+        expect(updatedDocument.operations.global).toHaveLength(1);
+        expect(updatedDocument.operations.local).toHaveLength(0);
+        expect(updatedDocument.operations.global[0].type).toBe(
+            'SET_DRIVE_NAME',
+        );
+        expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+        expect(updatedDocument.operations.global[0].index).toEqual(0);
+    });
+
+    it('should handle setSharingType operation', () => {
+        const input = generateMock(z.SetSharingTypeInputSchema());
+        const updatedDocument = reducer(
+            document,
+            creators.setSharingType(input),
+        );
+
+        expect(updatedDocument.operations.local).toHaveLength(1);
+        expect(updatedDocument.operations.global).toHaveLength(0);
+        expect(updatedDocument.operations.local[0].type).toBe(
+            'SET_SHARING_TYPE',
+        );
+        expect(updatedDocument.operations.local[0].input).toStrictEqual(input);
+        expect(updatedDocument.operations.local[0].index).toEqual(0);
+    });
+
+    it('should handle setAvailableOffline operation', () => {
+        const input = generateMock(z.SetAvailableOfflineInputSchema());
+        const updatedDocument = reducer(
+            document,
+            creators.setAvailableOffline(input),
+        );
+
+        expect(updatedDocument.operations.local).toHaveLength(1);
+        expect(updatedDocument.operations.global).toHaveLength(0);
+        expect(updatedDocument.operations.local[0].type).toBe(
+            'SET_AVAILABLE_OFFLINE',
+        );
+        expect(updatedDocument.operations.local[0].input).toStrictEqual(input);
+        expect(updatedDocument.operations.local[0].index).toEqual(0);
     });
 });

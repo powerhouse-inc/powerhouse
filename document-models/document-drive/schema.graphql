@@ -23,6 +23,11 @@ type DocumentDriveState {
     remoteUrl: String
 }
 
+type DocumentDriveLocalState {
+    sharingType: String!
+    availableOffline: Boolean!
+}
+
 # Node
 
 input AddFileInput {
@@ -75,4 +80,8 @@ input SetDriveNameInput {
 
 input SetSharingTypeInput {
     type: String!
+}
+
+input SetAvailableOfflineInput {
+    availableOffline: Boolean!
 }

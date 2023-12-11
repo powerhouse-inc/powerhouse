@@ -13,4 +13,7 @@ export const reducer: DocumentDriveDriveOperations = {
     setSharingTypeOperation(state, action, dispatch) {
         state.sharingType = action.input.type
     },
+    setAvailableOfflineOperation(state, action, dispatch) {
+        state.availableOffline = action.input.availableOffline;
+    },
 }
