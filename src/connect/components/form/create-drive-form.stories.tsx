@@ -1,10 +1,10 @@
 import { Meta, StoryObj } from '@storybook/react';
-import { DriveSettingsForm } from '.';
+import { CreateDriveForm } from './create-drive-form';
 
 const meta = {
-    title: 'Connect/Components/Drive Settings Form',
-    component: DriveSettingsForm,
-} satisfies Meta<typeof DriveSettingsForm>;
+    title: 'Connect/Components/Create Local Drive Form',
+    component: CreateDriveForm,
+} satisfies Meta<typeof CreateDriveForm>;
 
 export default meta;
 
@@ -15,10 +15,7 @@ const Template: Story = {
         onSubmit: data => {
             console.log(data);
         },
-        driveName: 'My Drive',
-        sharingType: 'PRIVATE',
-        availableOffline: false,
-        location: 'cloud',
+        location: 'CLOUD',
     },
     decorators: [
         Story => (
@@ -31,5 +28,5 @@ const Template: Story = {
 
 export const Default: Story = {
     ...Template,
-    render: args => <DriveSettingsForm {...args} />,
+    render: args => <CreateDriveForm {...args} />,
 };

@@ -1,16 +1,18 @@
 import {
+    ChangeEventHandler,
     ComponentPropsWithRef,
     FocusEventHandler,
-    FormEventHandler,
     ForwardedRef,
     forwardRef,
+    useCallback,
+    useEffect,
     useState,
 } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
 type InputProps = ComponentPropsWithRef<'input'>;
 type FormInputProps = Omit<InputProps, 'className'> & {
     icon: React.JSX.Element;
-    type?: 'text' | 'password' | 'email';
+    type?: 'text' | 'password' | 'email' | 'url';
     inputClassName?: string;
     containerClassName?: string;
     customErrorMessages?: {
@@ -20,15 +22,43 @@ type FormInputProps = Omit<InputProps, 'className'> & {
         typeMismatch?: React.ReactNode;
         valueMissing?: React.ReactNode;
     };
+    errorOverride?: React.ReactNode;
+    onError?: (error?: React.ReactNode) => void;
 };
 export const FormInput = forwardRef(function FormInput(
     props: FormInputProps,
     ref: ForwardedRef<HTMLInputElement>,
 ) {
+    const {
+        icon,
+        containerClassName,
+        inputClassName,
+        errorOverride,
+        onError,
+        ...delegatedProps
+    } = props;
+
     const [dirty, setDirty] = useState(props.value !== '');
-    const [error, setError] = useState<React.ReactNode>('');
+    const [error, setError] = useState<React.ReactNode>(errorOverride ?? '');
     const isError = error !== '';
     const type = props.type ?? 'text';
+
+    const onErrorCallback = useCallback(
+        (error: React.ReactNode) => onError?.(error),
+        [onError],
+    );
+
+    useEffect(() => {
+        if (errorOverride) {
+            setError(errorOverride);
+        }
+    }, [errorOverride]);
+
+    useEffect(() => {
+        if (isError) {
+            onErrorCallback(error);
+        }
+    }, [error, isError, onErrorCallback]);
 
     const onBlur: FocusEventHandler<HTMLInputElement> = e => {
         const { validity, value } = e.currentTarget;
@@ -65,11 +95,11 @@ export const FormInput = forwardRef(function FormInput(
         props.onBlur?.(e);
     };
 
-    const onInput: FormEventHandler<HTMLInputElement> = e => {
+    const onChange: ChangeEventHandler<HTMLInputElement> = e => {
         if (e.currentTarget.value !== '') {
             setError('');
         }
-        props.onInput?.(e);
+        props.onChange?.(e);
     };
 
     return (
@@ -78,23 +108,23 @@ export const FormInput = forwardRef(function FormInput(
                 className={twMerge(
                     'mb-1 flex gap-2 rounded-xl border border-transparent bg-gray-100 p-3 text-gray-800 placeholder:text-gray-500',
                     isError && 'border-red-900',
-                    props.containerClassName,
+                    containerClassName,
                 )}
             >
                 <span
                     className={twJoin((!dirty || isError) && 'text-slate-200')}
                 >
-                    {props.icon}
+                    {icon}
                 </span>
                 <input
-                    {...props}
+                    {...delegatedProps}
                     type={type}
                     onBlur={onBlur}
-                    onInput={onInput}
+                    onChange={onChange}
                     ref={ref}
                     className={twMerge(
                         'w-full bg-transparent font-semibold outline-none',
-                        props.inputClassName,
+                        inputClassName,
                     )}
                 />
             </div>

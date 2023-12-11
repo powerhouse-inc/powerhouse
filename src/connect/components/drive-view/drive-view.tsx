@@ -1,14 +1,16 @@
 import {
+    AddPublicDriveModal,
     ConnectTreeView,
     ConnectTreeViewItemProps,
     ConnectTreeViewProps,
+    CreateDriveModal,
     DriveTreeItem,
     DriveType,
     TreeItemType,
     usePathContent,
 } from '@/connect';
 import { Icon } from '@/powerhouse';
-import { Button } from 'react-aria-components';
+import { useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export interface DriveViewProps
@@ -62,6 +64,7 @@ export function DriveView(props: DriveViewProps) {
         drivePath = '/',
         ...restProps
     } = props;
+    const [showAddModal, setShowAddModal] = useState(false);
 
     const drives = usePathContent(drivePath) as DriveTreeItem[];
 
@@ -88,9 +91,17 @@ export function DriveView(props: DriveViewProps) {
                 <p className="text-sm font-medium leading-6 text-gray-500">
                     {name}
                 </p>
-                <Button>
-                    <Icon name="gear" size={16} color="#6C7275" />
-                </Button>
+                <div className="flex gap-1 text-gray-600">
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="transition hover:text-gray-800"
+                    >
+                        <Icon name="plus-circle" size={16} />
+                    </button>
+                    <button className="transition hover:text-gray-800">
+                        <Icon name="gear" size={16} />
+                    </button>
+                </div>
             </div>
             <div className="px-2 py-2">
                 <ConnectTreeView
@@ -108,6 +119,38 @@ export function DriveView(props: DriveViewProps) {
                     allowedTypes={allowedTypes}
                 />
             </div>
+            {(props.type === 'CLOUD_DRIVE' || props.type === 'LOCAL_DRIVE') && (
+                <CreateDriveModal
+                    modalProps={{
+                        open: showAddModal,
+                        onOpenChange: setShowAddModal,
+                    }}
+                    formProps={{
+                        location:
+                            props.type === 'CLOUD_DRIVE' ? 'CLOUD' : 'LOCAL',
+                        onSubmit: data => {
+                            console.log(data);
+                            setShowAddModal(false);
+                        },
+                        onCancel: () => setShowAddModal(false),
+                    }}
+                />
+            )}
+            {props.type === 'PUBLIC_DRIVE' && (
+                <AddPublicDriveModal
+                    modalProps={{
+                        open: showAddModal,
+                        onOpenChange: setShowAddModal,
+                    }}
+                    formProps={{
+                        onSubmit: data => {
+                            console.log(data);
+                            setShowAddModal(false);
+                        },
+                        onCancel: () => setShowAddModal(false),
+                    }}
+                />
+            )}
         </div>
     );
 }

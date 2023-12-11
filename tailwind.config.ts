@@ -89,6 +89,11 @@ const config = {
             'red-800': 'hsl(var(--color-red-800) / <alpha-value>)',
             'red-900': 'hsl(var(--color-red-900) / <alpha-value>)',
         },
+        boxShadow: {
+            ...defaultTheme.boxShadow,
+            DEFAULT:
+                '0px 4px 8px -4px rgba(0, 0, 0, 0.02), 0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset',
+        },
         extend: {
             keyframes: {
                 'fade-in': {

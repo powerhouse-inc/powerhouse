@@ -1,7 +1,9 @@
 export type IconName =
     | 'arrow-left'
+    | 'arrow-up'
     | 'available'
     | 'bar-chart'
+    | 'brick-globe'
     | 'briefcase'
     | 'caret'
     | 'check'
@@ -23,6 +25,7 @@ export type IconName =
     | 'people'
     | 'person'
     | 'plus'
+    | 'plus-circle'
     | 'project'
     | 'search'
     | 'server'

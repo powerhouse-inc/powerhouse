@@ -9,15 +9,15 @@ export type SelectItem = {
     disabled?: boolean;
 };
 
-export type DriveSettingsSelectProps = {
-    items: SelectItem[];
+export type SelectProps = {
+    items: readonly SelectItem[];
     value: string;
     id: string;
     onChange: (value: string) => void;
 };
 
-export const DriveSettingsSelect = forwardRef(function DriveSettingsSelect(
-    props: DriveSettingsSelectProps,
+export const Select = forwardRef(function Select(
+    props: SelectProps,
     ref: ForwardedRef<HTMLDivElement>,
 ) {
     const [showItems, setShowItems] = useState(false);
@@ -71,14 +71,14 @@ export const DriveSettingsSelect = forwardRef(function DriveSettingsSelect(
 
 function ItemContainer(props: SelectItem & { onItemClick?: () => void }) {
     const className = twJoin(
-        props.disabled ? 'text-gray-500 cursor-not-allowed' : 'text-gray-800',
+        props.disabled ? 'cursor-not-allowed text-gray-500' : 'text-gray-800',
         'flex h-full cursor-pointer items-center gap-2 py-3 pl-3 text-start outline-none last:rounded-b-xl',
     );
     return (
         <div className={className} onClick={props.onItemClick}>
             {props.icon}
             <div>
-                <p className="capitalize">{props.value}</p>
+                <p className="capitalize">{props.value.toLowerCase()}</p>
                 <p className="text-xs">{props.description}</p>
             </div>
         </div>

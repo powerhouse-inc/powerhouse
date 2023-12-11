@@ -229,7 +229,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         const backgroundClass = isHighlighted ? 'bg-slate-50' : '';
 
         const className = twMerge(
-            'hover:bg-slate-50 peer-hover:bg-slate-50 py-3 transition-colors rounded-lg',
+            'rounded-lg py-3 transition-colors hover:bg-slate-50 peer-hover:bg-slate-50',
             backgroundClass,
             itemContainerClassName,
         );
@@ -327,7 +327,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                         sharingType: item.sharingType ?? 'PUBLIC',
                         availableOffline: item.status === 'AVAILABLE_OFFLINE',
                         location:
-                            item.type === 'LOCAL_DRIVE' ? 'local' : 'cloud',
+                            item.type === 'LOCAL_DRIVE' ? 'LOCAL' : 'CLOUD',
                         onCancel() {
                             setIsDriveSettingsModalOpen(false);
                         },

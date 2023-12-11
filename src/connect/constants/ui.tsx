@@ -23,3 +23,40 @@ export const defaultDropdownMenuOptions = [
         className: 'text-red-900',
     },
 ] as const;
+
+export const sharingTypeOptions = [
+    {
+        value: 'PRIVATE',
+        icon: <Icon name="lock" />,
+        description: 'Only available to you',
+    },
+    {
+        value: 'SHARED',
+        icon: <Icon name="people" />,
+        description: 'Only available to people in this drive',
+    },
+    {
+        value: 'PUBLIC',
+        icon: <Icon name="globe" />,
+        description: 'Available to everyone',
+        disabled: true,
+    },
+] as const;
+
+export const locationInfoByLocation = {
+    CLOUD: {
+        title: 'Secure cloud',
+        description: 'End to end encryption between members.',
+        icon: <Icon name="lock" />,
+    },
+    LOCAL: {
+        title: 'Local',
+        description: 'Private and only available to you.',
+        icon: <Icon name="hdd" />,
+    },
+    SWITCHBOARD: {
+        title: 'Switchboard',
+        description: 'Public and available to everyone.',
+        icon: <Icon name="drive" />,
+    },
+} as const;

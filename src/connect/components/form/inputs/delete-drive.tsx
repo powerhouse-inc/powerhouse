@@ -1,4 +1,5 @@
-import { Icon } from '@/powerhouse';
+import { DriveNameInput } from '@/connect';
+import { Button, Icon } from '@/powerhouse';
 import { useState } from 'react';
 
 export type DeleteDriveProps = {
@@ -24,30 +25,28 @@ export function DeleteDrive(props: DeleteDriveProps) {
                 Are you sure you want to delete this drive? All files and
                 subfolders within it will be removed. Do you want to proceed?
             </p>
-            <div className="mb-6 flex gap-2 rounded-xl bg-gray-100 p-3  text-slate-200">
-                <Icon name="lock" />
-                <input
-                    value={driveNameInput}
-                    onChange={e => setDriveNameInput(e.target.value)}
-                    placeholder="Enter drive name..."
-                    id="driveName"
-                    className="w-full bg-transparent font-semibold outline-none"
-                />
-            </div>
+            <DriveNameInput
+                value={driveNameInput}
+                placeholder="Enter drive name..."
+                onChange={event => setDriveNameInput(event.target.value)}
+                icon={<Icon name="lock" />}
+            />
             <div className="flex gap-3">
-                <button
+                <Button
                     onClick={props.onCancel}
-                    className="w-full rounded-xl bg-slate-50 px-6 py-3 text-slate-200 transition hover:opacity-80"
+                    color="light"
+                    className="w-full"
                 >
                     Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                     onClick={handleDeleteDrive}
                     disabled={!isAllowedToDelete}
-                    className="w-full rounded-xl bg-red-900 px-6 py-3 text-gray-200 transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50 disabled:brightness-100"
+                    color="red"
+                    className="w-full"
                 >
                     Delete
-                </button>
+                </Button>
             </div>
         </div>
     );

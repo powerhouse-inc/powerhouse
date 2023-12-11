@@ -1,21 +1,16 @@
+import { AddPublicDriveForm, Divider } from '@/connect';
 import { DivProps, Modal } from '@/powerhouse';
 import { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { Divider } from '..';
-import { DriveSettingsForm } from '../drive-settings-form';
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
-type FormProps = ComponentPropsWithoutRef<typeof DriveSettingsForm>;
-export type DriveSettingsModalProps = {
+type FormProps = ComponentPropsWithoutRef<typeof AddPublicDriveForm>;
+export type AddPublicDriveModalProps = {
     formProps: FormProps;
     modalProps?: ModalProps;
     containerProps?: DivProps;
 };
-export function DriveSettingsModal(props: DriveSettingsModalProps) {
-    function handleDeleteDrive() {
-        props.formProps.onDeleteDrive();
-        props.modalProps?.onOpenChange?.(false);
-    }
+export function AddPublicDriveModal(props: AddPublicDriveModalProps) {
     function handleCancel() {
         props.formProps.onCancel();
         props.modalProps?.onOpenChange?.(false);
@@ -30,15 +25,14 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
             <div
                 {...props.containerProps}
                 className={twMerge(
-                    'max-w-[408px] rounded-2xl p-6',
+                    'min-w-[408px] max-w-[408px] rounded-2xl p-6',
                     props.containerProps?.className,
                 )}
             >
-                <h1 className="text-xl font-bold">Drive Settings</h1>
+                <h1 className="text-xl font-bold">Add drive</h1>
                 <Divider className="mb-[18px] mt-4" />
-                <DriveSettingsForm
+                <AddPublicDriveForm
                     {...props.formProps}
-                    onDeleteDrive={handleDeleteDrive}
                     onCancel={handleCancel}
                 />
             </div>

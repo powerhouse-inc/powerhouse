@@ -143,7 +143,7 @@ const meta: Meta<typeof DriveView> = {
             control: {
                 type: 'select',
             },
-            options: ['PUBLIC', 'local', 'cloud'],
+            options: ['PUBLIC', 'LOCAL', 'CLOUD'],
         },
         name: { control: { type: 'string' } },
         onItemClick: { control: { type: 'action' } },

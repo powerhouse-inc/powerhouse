@@ -1,11 +1,11 @@
 import { useArgs } from '@storybook/preview-api';
 import { Meta, StoryObj } from '@storybook/react';
-import { DriveSettingsModal } from '.';
+import { AddPublicDriveModal } from './add-public-drive-modal';
 
 const meta = {
-    title: 'Connect/Components/Drive Settings Modal',
-    component: DriveSettingsModal,
-} satisfies Meta<typeof DriveSettingsModal>;
+    title: 'Connect/Components/Add Public Drive Modal',
+    component: AddPublicDriveModal,
+} satisfies Meta<typeof AddPublicDriveModal>;
 
 export default meta;
 
@@ -14,13 +14,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
     args: {
         formProps: {
-            driveName: 'My Drive',
-            sharingType: 'PRIVATE',
-            availableOffline: false,
-            location: 'cloud',
             onSubmit() {},
             onCancel() {},
-            onDeleteDrive() {},
         },
         modalProps: {
             open: true,
@@ -45,7 +40,7 @@ export const Default: Story = {
                 >
                     Open Modal
                 </button>
-                <DriveSettingsModal
+                <AddPublicDriveModal
                     {...args}
                     modalProps={{
                         ...args.modalProps,

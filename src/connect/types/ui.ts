@@ -20,6 +20,8 @@ export type SyncStatus = 'NOT_SYNCED_YET' | 'SYNCING' | 'SYNCED';
 
 export type SharingType = 'PRIVATE' | 'SHARED' | 'PUBLIC';
 
+export type DriveLocation = 'LOCAL' | 'CLOUD' | 'SWITCHBOARD';
+
 export type BaseTreeItem = {
     id: string;
     path: string;

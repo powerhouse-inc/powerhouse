@@ -1,12 +1,12 @@
 import { Icon } from '@/powerhouse';
 import { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { DriveSettingsSelect, SelectItem } from '.';
+import { Select, SelectItem } from '.';
 
 const meta = {
-    title: 'Connect/Components/Drive Settings Select',
-    component: DriveSettingsSelect,
-} satisfies Meta<typeof DriveSettingsSelect>;
+    title: 'Connect/Components/Select',
+    component: Select,
+} satisfies Meta<typeof Select>;
 
 export default meta;
 
@@ -51,8 +51,6 @@ export const Default: Story = {
     render: function Wrapper(args) {
         const [value, setValue] = useState(args.items[0].value);
 
-        return (
-            <DriveSettingsSelect {...args} value={value} onChange={setValue} />
-        );
+        return <Select {...args} value={value} onChange={setValue} />;
     },
 };
