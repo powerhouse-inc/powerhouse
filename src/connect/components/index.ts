@@ -4,6 +4,8 @@ export * from './divider';
 export * from './drive-view';
 export * from './dropdown-menu';
 export * from './form';
+export * from './file-item';
+export * from './folder-item';
 export * from './form-input';
 export * from './modal';
 export * from './search-bar';
