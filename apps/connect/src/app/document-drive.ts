@@ -26,17 +26,17 @@ export default (
 
     documentDrive.getDrives().then(drives => {
         if (!drives.length) {
-            // documentDrive.addDrive({
-            //     id: utils.hashKey(),
-            //     name: 'Local Device',
-            //     icon: null,
-            //     remoteUrl: null,
-            // });
             documentDrive.addDrive({
-                id: utils.hashKey(),
-                name: 'Powerhouse',
-                icon: null,
-                remoteUrl: 'FAKE_URL',
+                global: {
+                    id: utils.hashKey(),
+                    name: 'Powerhouse',
+                    icon: null,
+                    remoteUrl: 'FAKE_URL',
+                },
+                local: {
+                    availableOffline: false,
+                    sharingType: 'shared',
+                },
             });
         }
     });
