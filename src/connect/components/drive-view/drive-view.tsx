@@ -1,4 +1,6 @@
 import {
+    AddDriveInput,
+    AddPublicDriveInput,
     AddPublicDriveModal,
     ConnectTreeView,
     ConnectTreeViewItemProps,
@@ -31,6 +33,7 @@ export interface DriveViewProps
     onDropActivate?: ConnectTreeViewProps['onDropActivate'];
     onDragStart?: ConnectTreeViewProps['onDragStart'];
     onDragEnd?: ConnectTreeViewProps['onDragEnd'];
+    onCreateDrive?: (drive: AddDriveInput | AddPublicDriveInput) => void;
 }
 
 const filterDriveByType = (drive: DriveTreeItem, type: DriveType) => {
@@ -62,6 +65,7 @@ export function DriveView(props: DriveViewProps) {
         onCancelInput,
         disableHighlightStyles,
         drivePath = '/',
+        onCreateDrive,
         ...restProps
     } = props;
     const [showAddModal, setShowAddModal] = useState(false);
@@ -129,7 +133,7 @@ export function DriveView(props: DriveViewProps) {
                         location:
                             props.type === 'CLOUD_DRIVE' ? 'CLOUD' : 'LOCAL',
                         onSubmit: data => {
-                            console.log(data);
+                            onCreateDrive?.(data);
                             setShowAddModal(false);
                         },
                         onCancel: () => setShowAddModal(false),
@@ -144,7 +148,7 @@ export function DriveView(props: DriveViewProps) {
                     }}
                     formProps={{
                         onSubmit: data => {
-                            console.log(data);
+                            onCreateDrive?.(data);
                             setShowAddModal(false);
                         },
                         onCancel: () => setShowAddModal(false),

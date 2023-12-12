@@ -1,4 +1,5 @@
 import {
+    AddDriveInput,
     AvailableOfflineToggle,
     Disclosure,
     Divider,
@@ -12,20 +13,22 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useDebounce } from 'usehooks-ts';
 
-type PublicDriveDetails = {
+interface PublicDriveDetails extends AddDriveInput {
     id: string;
     driveName: string;
     sharingType: 'PUBLIC';
     location: 'SWITCHBOARD';
     availableOffline: boolean;
-};
+}
 
 type Inputs = {
     availableOffline: boolean;
 };
 
+export type AddPublicDriveInput = PublicDriveDetails & { url: string };
+
 type AddPublicDriveFormProps = {
-    onSubmit: (data: PublicDriveDetails & { url: string }) => void;
+    onSubmit: (data: AddPublicDriveInput) => void;
     onCancel: () => void;
 };
 

@@ -13,7 +13,7 @@ import { Button, Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 
-type Inputs = {
+export type Inputs = {
     driveName: string;
     sharingType: SharingType;
     availableOffline: boolean;
@@ -27,6 +27,8 @@ type CreateDriveFormProps = {
 };
 
 type CreateDriveFormSubmitHandler = SubmitHandler<Inputs>;
+
+export type AddDriveInput = Inputs;
 
 export function CreateDriveForm(props: CreateDriveFormProps) {
     const [showLocationSettings, setShowLocationSettings] = useState(false);
