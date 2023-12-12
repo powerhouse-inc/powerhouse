@@ -1539,10 +1539,10 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@1.0.0-alpha.38":
-  version "1.0.0-alpha.38"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.38.tgz#9740997ce23f230404e22991f0a2e18d84b78d14"
-  integrity sha512-0rVgQuatK8HNo5OSTmt2WBZfFRBPlwcC+BPdco2fTVg7w6U48XRmb0XDGLDmRVRhHjLZrqX5jD8df4dodRS4qQ==
+"@powerhousedao/design-system@^1.0.0-alpha.39":
+  version "1.0.0-alpha.39"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.39.tgz#cb6ee90d90b356f5f41264cc77c929e6065f4021"
+  integrity sha512-4cC3VWx3FnqZ0nkVem7OKuu6rnPCTJ16u1twYce8PXg+U2p+kJY4pws0BUCbtHiFu20LabZuqX7IHuk9FHjjJg==
   dependencies:
     "@radix-ui/react-dialog" "^1.0.5"
     react-hook-form "^7.48.2"
