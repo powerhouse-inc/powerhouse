@@ -23,7 +23,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                 <div className="p-1">
                     <Icon name="folder-close" size={24} />
                 </div>
-                <div className="ml-3 max-h-6 overflow-hidden whitespace-nowrap font-medium text-slate-200 hover:text-gray-800">
+                <div className="ml-3 max-h-6 overflow-hidden whitespace-nowrap font-medium text-slate-200 group-hover:text-gray-800">
                     {title}
                 </div>
                 <div className="absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-gray-200" />
