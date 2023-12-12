@@ -2,10 +2,10 @@ import {
     Breadcrumbs,
     TreeItem,
     decodeID,
-    encodeID,
     getRootPath,
     useGetItemByPath,
     useItemActions,
+    useItemsContext,
 } from '@powerhousedao/design-system';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
@@ -25,6 +25,7 @@ import { exportFile } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 
 const Content = () => {
+    const { items } = useItemsContext();
     const [selectedPath, setSelectedPath] = useSelectedPath();
     const getItemByPath = useGetItemByPath();
     const actions = useItemActions();
@@ -123,9 +124,8 @@ const Content = () => {
         setSelectedPath(item.path);
     };
 
-    const onFolderSelectedHandler = (drive: string, folderPath: string) => {
-        const itemPath = path.join(encodeID(drive), folderPath);
-        const item = getItemByPath(itemPath);
+    const onFolderSelectedHandler = (itemId: string) => {
+        const item = items.find(item => item.id === itemId);
 
         if (item) {
             selectFolder(item);

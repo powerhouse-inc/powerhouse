@@ -1,30 +1,21 @@
-import { useFilterPathContent } from '@powerhousedao/design-system';
+import { decodeID, useItemsContext } from '@powerhousedao/design-system';
 
 export const useGetReadableItemPath = () => {
-    const filterPathContent = useFilterPathContent();
+    const { items } = useItemsContext();
 
     return (itemId: string) => {
-        const filteredItems = filterPathContent(
-            item => {
-                return item.id === itemId;
-            },
-            { path: '*' }
-        );
+        const filteredItem = items.find(item => item.id === itemId);
+        if (!filteredItem) return '';
 
-        if (filteredItems.length === 0) return '';
-        const [item] = filteredItems;
-
-        const pathSegments = item.path.split('/');
+        const pathSegments = filteredItem.path.split('/');
         const pathNames = pathSegments.map(segmentId => {
-            const filteredItems = filterPathContent(
-                item => item.id === segmentId,
-                { path: '*' }
+            const segmentItem = items.find(
+                item => item.id === decodeID(segmentId)
             );
 
-            if (filteredItems.length === 0) return '';
-            const [item] = filteredItems;
+            if (!segmentItem) return '';
 
-            return item.label;
+            return segmentItem.label;
         });
 
         return pathNames.join('/');

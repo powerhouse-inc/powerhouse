@@ -33,7 +33,7 @@ export function driveToBaseItems(
     const driveID = encodeID(drive.id);
 
     const driveNode: BaseTreeItem = {
-        id: driveID,
+        id: drive.id,
         label: drive.name,
         path: driveID,
         type: 'LOCAL_DRIVE',
