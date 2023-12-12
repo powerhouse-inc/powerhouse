@@ -8,6 +8,7 @@ import {
 import { FileNode, FolderNode } from 'document-model-libs/document-drive';
 import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
 import { ContentSection } from './content';
 
 interface IProps {
@@ -26,6 +27,7 @@ export const FolderView: React.FC<IProps> = ({
     onFileDeleted,
 }) => {
     const { t } = useTranslation();
+    const getReadableItemPath = useGetReadableItemPath();
     const { getChildren } = useDocumentDriveServer();
     const folderId = folder ? decodeID(folder.id) : undefined;
     const children = getChildren(
@@ -70,7 +72,7 @@ export const FolderView: React.FC<IProps> = ({
                         <FileItem
                             key={file.id}
                             title={file.name}
-                            subTitle={`MakerDAO/Ecosystem Actors/Powerhouse/${file.name}`}
+                            subTitle={getReadableItemPath(encodeID(file.id))}
                             className="w-64"
                             onOptionsClick={() =>
                                 onFileDeleted(decodedDriveID, file.id)
