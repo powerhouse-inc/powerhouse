@@ -1,3 +1,10 @@
+# [1.0.0-alpha.38](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.37...v1.0.0-alpha.38) (2023-12-12)
+
+
+### Bug Fixes
+
+* hover styles in FolderItem ([da6d610](https://github.com/powerhouse-inc/design-system/commit/da6d610c0c8d8d5d751ce9e1e143a5d4cf19522b))
+
 # [1.0.0-alpha.37](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.36...v1.0.0-alpha.37) (2023-12-12)
 
 
