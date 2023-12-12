@@ -3,7 +3,6 @@ import React from 'react';
 
 export interface ContentSection extends DivProps {
     title?: string;
-    children?: React.ReactNode;
 }
 
 export const ContentSection: React.FC<ContentSection> = ({
