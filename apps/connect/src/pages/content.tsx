@@ -1,6 +1,5 @@
 import {
     Breadcrumbs,
-    ConnectSearchBar,
     TreeItem,
     decodeID,
     encodeID,
@@ -14,6 +13,7 @@ import { useEffect, useState } from 'react';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
+import { SearchBar } from 'src/components/search-bar';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { preloadTabs, useFileNodeDocument, useSelectedPath } from 'src/store';
@@ -163,7 +163,6 @@ const Content = () => {
                 </div>
             ) : (
                 <>
-                    <ConnectSearchBar className="mb-5 flex-shrink-0 bg-[#FCFCFC]" />
                     <div className="flex-grow overflow-auto rounded-[20px] bg-[#FCFCFC] p-2">
                         {selectedPath && (
                             <Breadcrumbs
@@ -179,8 +178,9 @@ const Content = () => {
                                 onCancelInput={console.log}
                             />
                         )}
+                        <SearchBar />
                         <div className="px-4">
-                            <div className="py-3">
+                            <div className="mb-5">
                                 <FolderView
                                     drive={decodedDriveID}
                                     folder={selectedFolder}

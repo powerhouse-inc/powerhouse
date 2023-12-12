@@ -2,7 +2,24 @@
     "common": {
         "cancel": "Cancel",
         "delete": "Delete",
-        "continue": "Continue"
+        "continue": "Continue",
+        "empty": "Empty"
+    },
+    "searchbar": {
+        "placeholder": "Search Powerhouse",
+        "filterLabel": "File type"
+    },
+    "folderView": {
+        "sections": {
+            "folders": {
+                "title": "Folders",
+                "empty": "No folders 🗂️"
+            },
+            "documents": {
+                "title": "Documents and files",
+                "empty": "No documents or files 📄"
+            }
+        }
     },
     "modals": {
         "deleteItem": {
