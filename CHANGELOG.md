@@ -1,3 +1,10 @@
+# [1.0.0-alpha.39](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.38...v1.0.0-alpha.39) (2023-12-12)
+
+
+### Features
+
+* added onCreateDrive prop to DriveView ([e3a77a7](https://github.com/powerhouse-inc/design-system/commit/e3a77a761c13320cc57662050ddc344396e3dd20))
+
 # [1.0.0-alpha.38](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.37...v1.0.0-alpha.38) (2023-12-12)
 
 
