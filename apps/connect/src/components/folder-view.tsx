@@ -3,12 +3,18 @@ import {
     FolderItem,
     TreeItem,
     decodeID,
+    defaultDropdownMenuOptions,
 } from '@powerhousedao/design-system';
 import { FileNode, FolderNode } from 'document-model-libs/document-drive';
 import { useTranslation } from 'react-i18next';
+import { useModal } from 'src/components/modal';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
 import { ContentSection } from './content';
+
+const itemOptions = defaultDropdownMenuOptions.filter(
+    option => option.id === 'delete'
+);
 
 interface IProps {
     drive: string;
@@ -26,6 +32,7 @@ export const FolderView: React.FC<IProps> = ({
     onFileDeleted,
 }) => {
     const { t } = useTranslation();
+    const { showModal } = useModal();
     const getReadableItemPath = useGetReadableItemPath();
     const { getChildren } = useDocumentDriveServer();
     const folderId = folder ? decodeID(folder.id) : undefined;
@@ -38,6 +45,22 @@ export const FolderView: React.FC<IProps> = ({
     ) as FolderNode[];
     const decodedDriveID = decodeID(drive);
     const files = children.filter(node => node.kind === 'file') as FileNode[];
+
+    const onFolderOptionsClick = (optionId: string, folderNode: FolderNode) => {
+        if (optionId === 'delete') {
+            showModal('deleteItem', {
+                driveId: decodedDriveID,
+                itemId: folderNode.id,
+                itemName: folderNode.name,
+            });
+        }
+    };
+
+    const onFileOptionsClick = (optionId: string, fileNode: FileNode) => {
+        if (optionId === 'delete') {
+            onFileDeleted(decodedDriveID, fileNode.id);
+        }
+    };
 
     return (
         <div>
@@ -52,6 +75,10 @@ export const FolderView: React.FC<IProps> = ({
                             title={folder.name}
                             className="w-64"
                             onClick={() => onFolderSelected(folder.id)}
+                            itemOptions={itemOptions}
+                            onOptionsClick={optionId =>
+                                onFolderOptionsClick(optionId, folder)
+                            }
                         />
                     ))
                 ) : (
@@ -68,8 +95,9 @@ export const FolderView: React.FC<IProps> = ({
                             title={file.name}
                             subTitle={getReadableItemPath(file.id)}
                             className="w-64"
-                            onOptionsClick={() =>
-                                onFileDeleted(decodedDriveID, file.id)
+                            itemOptions={itemOptions}
+                            onOptionsClick={optionId =>
+                                onFileOptionsClick(optionId, file)
                             }
                             onClick={() =>
                                 onFileSelected(decodedDriveID, file.id)
