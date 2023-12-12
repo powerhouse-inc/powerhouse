@@ -184,10 +184,17 @@
   dependencies:
     "@babel/helper-plugin-utils" "^7.22.5"
 
-"@babel/runtime@^7.12.5", "@babel/runtime@^7.13.10", "@babel/runtime@^7.22.5", "@babel/runtime@^7.23.2":
+"@babel/runtime@^7.12.5", "@babel/runtime@^7.22.5", "@babel/runtime@^7.23.2":
   version "7.23.5"
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.23.5.tgz#11edb98f8aeec529b82b211028177679144242db"
   integrity sha512-NdUTHcPe4C99WxPub+K9l9tK5/lV4UXIoaHSYgzco9BCyjKAAwzdBI+wWtYqHt7LJdbo74ZjRPJgzVweq1sz0w==
+  dependencies:
+    regenerator-runtime "^0.14.0"
+
+"@babel/runtime@^7.13.10":
+  version "7.23.6"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.23.6.tgz#c05e610dc228855dc92ef1b53d07389ed8ab521d"
+  integrity sha512-zHd0eUrf5GZoOWVCXp6koAKQTfZV07eit6bGPmJgnZdnSAvvZee6zniW2XMF7Cmc4ISOOnPy3QaSiIJGJkVEDQ==
   dependencies:
     regenerator-runtime "^0.14.0"
 
@@ -4397,10 +4404,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.19:
-  version "0.0.19"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.19.tgz#a2a1c9fbce18193eccf844d14cedbc13349848b8"
-  integrity sha512-LzWHelh9cx1D8h1Av9vBsZWbJRPlhD0CH/erVxtOPFH15Fd7xKK1eaybEvBO2UhEWW9hTtVHVgo1mqvifxC/9Q==
+document-drive@^0.0.20:
+  version "0.0.20"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.20.tgz#0fa4b6978d5ff593e71a025be5eb0688b25a55a5"
+  integrity sha512-A4b8xbkdhMl6ZePbZXLCzjGJYDYOJJDQjIwOR850Z7thRPFNsIHh5qEhwWUADlbTWzuE5Cs6D7+v3XgXrMbn9Q==
   dependencies:
     sanitize-filename "^1.6.3"
 
@@ -8164,9 +8171,9 @@ react-error-boundary@^4.0.11:
     "@babel/runtime" "^7.12.5"
 
 react-hook-form@^7.48.2:
-  version "7.48.2"
-  resolved "https://registry.yarnpkg.com/react-hook-form/-/react-hook-form-7.48.2.tgz#01150354d2be61412ff56a030b62a119283b9935"
-  integrity sha512-H0T2InFQb1hX7qKtDIZmvpU1Xfn/bdahWBN1fH19gSe4bBEqTfmlr7H3XWTaVtiK4/tpPaI1F3355GPMZYge+A==
+  version "7.49.0"
+  resolved "https://registry.yarnpkg.com/react-hook-form/-/react-hook-form-7.49.0.tgz#9a91edfba6b6983d4b443653a9b225a780a42b3e"
+  integrity sha512-gf4qyY4WiqK2hP/E45UUT6wt3Khl49pleEVcIzxhLBrD6m+GMWtLRk0vMrRv45D1ZH8PnpXFwRPv0Pewske2jw==
 
 react-i18next@^13.5.0:
   version "13.5.0"

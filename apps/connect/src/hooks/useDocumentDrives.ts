@@ -43,6 +43,7 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
                 driveIds.map(id => server.getDrive(id))
             );
             setDocumentDrives(drives);
+            return drives;
         } catch (error) {
             console.error(error);
             setDocumentDrives([]);

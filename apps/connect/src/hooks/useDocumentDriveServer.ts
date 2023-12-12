@@ -1,4 +1,4 @@
-import { IDocumentDriveServer } from 'document-drive/server';
+import { DriveInput, IDocumentDriveServer } from 'document-drive/server';
 import { isDocumentDrive } from 'document-drive/utils';
 import {
     DocumentDriveAction,
@@ -281,6 +281,15 @@ export function useDocumentDriveServer(
         return newDocument.document;
     }
 
+    async function addDrive(drive: DriveInput) {
+        const id = drive.global.id || utils.hashKey();
+        await server.addDrive({
+            global: { ...drive.global, id },
+            local: drive.local,
+        });
+        await refreshDocumentDrives();
+    }
+
     async function deleteDrive(id: string) {
         if (!server) {
             throw new Error('Server is not defined');
@@ -311,14 +320,10 @@ export function useDocumentDriveServer(
     }
 
     async function setDriveSharingType(id: string, sharingType: SharingType) {
-        console.log(sharingType);
         return _addDriveOperation(
             id,
             actions.setSharingType({ type: sharingType })
-        ).then(doc => {
-            console.log(doc.state.local);
-            return doc;
-        });
+        );
     }
 
     function getChildren(driveId: string, id?: string) {
@@ -344,6 +349,7 @@ export function useDocumentDriveServer(
             copyOrMoveNode,
             addOperation,
             getChildren,
+            addDrive,
             deleteDrive,
             renameDrive,
             setDriveAvailableOffline,
