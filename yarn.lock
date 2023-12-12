@@ -4397,10 +4397,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.11:
-  version "0.0.11"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.11.tgz#49d486372ba1ab3e1adb85994ffc748a48b96376"
-  integrity sha512-hgoIF6TM6jU1G59E5XI9T3bXO5zLn87FnJdnNjskfVYErGpMCYryqX/O0id6bqm5946Q0nkXuFpCNW98wqezzA==
+document-drive@^0.0.19:
+  version "0.0.19"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.19.tgz#a2a1c9fbce18193eccf844d14cedbc13349848b8"
+  integrity sha512-LzWHelh9cx1D8h1Av9vBsZWbJRPlhD0CH/erVxtOPFH15Fd7xKK1eaybEvBO2UhEWW9hTtVHVgo1mqvifxC/9Q==
   dependencies:
     sanitize-filename "^1.6.3"
 

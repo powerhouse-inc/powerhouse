@@ -69,14 +69,24 @@ export function useDocumentDriveServer(
             throw new Error('There was an error applying the operation');
         }
 
-        const newDrive = await server.addDriveOperation(driveId, operation);
+        try {
+            const newDrive = await server.addDriveOperation(driveId, operation);
 
-        await refreshDocumentDrives();
+            if (!newDrive.success) {
+                console.error(newDrive.error);
+                return newDrive.document;
+            }
 
-        if (!isDocumentDrive(newDrive.document)) {
-            throw new Error('Received document is not a Document Drive');
+            await refreshDocumentDrives();
+
+            if (!isDocumentDrive(newDrive.document)) {
+                throw new Error('Received document is not a Document Drive');
+            }
+            return newDrive.document as DocumentDriveDocument;
+        } catch (error) {
+            console.error(error);
+            return drive;
         }
-        return newDrive.document as DocumentDriveDocument;
     }
 
     async function addDocument(
@@ -301,10 +311,14 @@ export function useDocumentDriveServer(
     }
 
     async function setDriveSharingType(id: string, sharingType: SharingType) {
+        console.log(sharingType);
         return _addDriveOperation(
             id,
             actions.setSharingType({ type: sharingType })
-        );
+        ).then(doc => {
+            console.log(doc.state.local);
+            return doc;
+        });
     }
 
     function getChildren(driveId: string, id?: string) {
