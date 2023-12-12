@@ -11,9 +11,16 @@ export const BrowserDocumentDriveServer = new DocumentDriveServer(
 BrowserDocumentDriveServer.getDrives().then(drives => {
     if (!drives.length) {
         BrowserDocumentDriveServer.addDrive({
-            id: utils.hashKey(),
-            name: 'Local Device',
-            icon: null,
+            global: {
+                id: utils.hashKey(),
+                name: 'Powerhouse',
+                icon: null,
+                remoteUrl: 'FAKE_URL',
+            },
+            local: {
+                availableOffline: false,
+                sharingType: 'shared',
+            },
         });
     }
 });
