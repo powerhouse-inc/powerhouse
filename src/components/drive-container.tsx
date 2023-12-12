@@ -1,4 +1,6 @@
 import {
+    AddDriveInput,
+    AddPublicDriveInput,
     BaseTreeItem,
     DriveView,
     DriveViewProps,
@@ -9,6 +11,7 @@ import {
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
+import { SharingType } from 'document-model-libs/document-drive';
 import path from 'path';
 import { useEffect } from 'react';
 import {
@@ -25,13 +28,25 @@ interface DriveContainerProps {
     setDisableHoverStyles?: (value: boolean) => void;
 }
 
+function isPublicDriveInput(
+    input: AddDriveInput | AddPublicDriveInput
+): input is AddPublicDriveInput {
+    return input.sharingType === 'PUBLIC';
+}
+
+const DriveSections = [
+    { key: 'public', name: 'Public Drives', type: 'PUBLIC_DRIVE' },
+    { key: 'cloud', name: 'Secure Cloud Drives', type: 'CLOUD_DRIVE' },
+    { key: 'local', name: 'My Local Drives', type: 'LOCAL_DRIVE' },
+] as const;
+
 export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
     const { setBaseItems } = useItemsContext();
     const actions = useItemActions();
     const filterPathContent = useFilterPathContent();
 
-    const { documentDrives, addFile, copyOrMoveNode } =
+    const { documentDrives, addFile, copyOrMoveNode, addDrive } =
         useDocumentDriveServer();
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
@@ -130,36 +145,38 @@ export default function DriveContainer(props: DriveContainerProps) {
         }
     };
 
+    const onCreateDriveHandler: DriveViewProps['onCreateDrive'] = input => {
+        addDrive({
+            global: {
+                id: isPublicDriveInput(input) ? input.id : '',
+                icon: null,
+                name: input.driveName,
+                remoteUrl: isPublicDriveInput(input) ? input.url : null,
+            },
+            local: {
+                availableOffline: input.availableOffline,
+                sharingType: input.sharingType.toLowerCase() as SharingType,
+            },
+        });
+    };
+
     return (
         <>
-            {/* <DriveView
-                key="local"
-                type="LOCAL_DRIVE"
-                name={'My Local Drives'}
-                onItemClick={onItemClick}
-                onItemOptionsClick={onItemOptionsClick}
-                onSubmitInput={item => onSubmitInput(item)}
-                onCancelInput={cancelInputHandler}
-                onDragStart={onDragStartHandler}
-                onDragEnd={onDragEndHandler}
-                onDropEvent={onDropEventHandler}
-                onDropActivate={onDropActivateHandler}
-                disableHighlightStyles={disableHoverStyles}
-            /> */}
-            <DriveView
-                key="Cloud"
-                type="CLOUD_DRIVE"
-                name={'Secure Cloud Drives'}
-                onItemClick={onItemClick}
-                onItemOptionsClick={onItemOptionsClick}
-                onSubmitInput={item => onSubmitInput(item)}
-                onCancelInput={cancelInputHandler}
-                onDragStart={onDragStartHandler}
-                onDragEnd={onDragEndHandler}
-                onDropEvent={onDropEventHandler}
-                onDropActivate={onDropActivateHandler}
-                disableHighlightStyles={disableHoverStyles}
-            />
+            {DriveSections.map(drive => (
+                <DriveView
+                    {...drive}
+                    onItemClick={onItemClick}
+                    onItemOptionsClick={onItemOptionsClick}
+                    onSubmitInput={item => onSubmitInput(item)}
+                    onCancelInput={cancelInputHandler}
+                    onDragStart={onDragStartHandler}
+                    onDragEnd={onDragEndHandler}
+                    onDropEvent={onDropEventHandler}
+                    onDropActivate={onDropActivateHandler}
+                    onCreateDrive={onCreateDriveHandler}
+                    disableHighlightStyles={disableHoverStyles}
+                />
+            ))}
         </>
     );
 }

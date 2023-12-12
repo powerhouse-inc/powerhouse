@@ -36,17 +36,20 @@ export function driveToBaseItems(
     drive: DocumentDriveDocument
 ): Array<BaseTreeItem> {
     const driveID = encodeID(drive.state.global.id);
-
+    const { id, name, remoteUrl } = drive.state.global;
+    const { sharingType, availableOffline } = drive.state.local;
     const driveNode: BaseTreeItem = {
-        id: drive.state.global.id,
-        label: drive.state.global.name,
+        id: id,
+        label: name,
         path: driveID,
-        type: 'CLOUD_DRIVE',
-        sharingType:
-            drive.state.local.sharingType.toUpperCase() as TreeItemSharingType,
-        status: drive.state.local.availableOffline
-            ? 'AVAILABLE_OFFLINE'
-            : 'AVAILABLE',
+        type:
+            sharingType === 'public'
+                ? 'PUBLIC_DRIVE'
+                : remoteUrl
+                ? 'CLOUD_DRIVE'
+                : 'LOCAL_DRIVE',
+        sharingType: sharingType.toUpperCase() as TreeItemSharingType,
+        status: availableOffline ? 'AVAILABLE_OFFLINE' : 'AVAILABLE',
     };
 
     const nodes: Array<BaseTreeItem> = drive.state.global.nodes.map(
