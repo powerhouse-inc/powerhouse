@@ -3,7 +3,6 @@ import {
     FolderItem,
     TreeItem,
     decodeID,
-    encodeID,
 } from '@powerhousedao/design-system';
 import { FileNode, FolderNode } from 'document-model-libs/document-drive';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +13,7 @@ import { ContentSection } from './content';
 interface IProps {
     drive: string;
     folder?: TreeItem;
-    onFolderSelected: (drive: string, id: string) => void;
+    onFolderSelected: (itemId: string) => void;
     onFileSelected: (drive: string, id: string) => void;
     onFileDeleted: (drive: string, id: string) => void;
 }
@@ -52,12 +51,7 @@ export const FolderView: React.FC<IProps> = ({
                             key={folder.id}
                             title={folder.name}
                             className="w-64"
-                            onClick={() =>
-                                onFolderSelected(
-                                    decodedDriveID,
-                                    encodeID(folder.id)
-                                )
-                            }
+                            onClick={() => onFolderSelected(folder.id)}
                         />
                     ))
                 ) : (
@@ -72,7 +66,7 @@ export const FolderView: React.FC<IProps> = ({
                         <FileItem
                             key={file.id}
                             title={file.name}
-                            subTitle={getReadableItemPath(encodeID(file.id))}
+                            subTitle={getReadableItemPath(file.id)}
                             className="w-64"
                             onOptionsClick={() =>
                                 onFileDeleted(decodedDriveID, file.id)
