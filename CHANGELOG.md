@@ -1,3 +1,10 @@
+# [1.0.0-alpha.40](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.39...v1.0.0-alpha.40) (2023-12-12)
+
+
+### Features
+
+* added useGetItemById hook ([64e4e1b](https://github.com/powerhouse-inc/design-system/commit/64e4e1b1938a4ad5bf32dacbeaa10c8787d34619))
+
 # [1.0.0-alpha.39](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.38...v1.0.0-alpha.39) (2023-12-12)
 
 
