@@ -3,46 +3,50 @@
 exports[`FileItem Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800"
+    class="relative"
   >
     <div
-      class="relative flex flex-1 flex-row items-center overflow-hidden"
+      class="group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800"
     >
       <div
-        class="mr-1.5"
-      >
-        <img
-          alt="file icon"
-          class="max-w-none"
-          height="34"
-          src="/src/assets/icons/profile.png"
-          width="32"
-        />
-      </div>
-      <div
-        class="overflow-hidden text-gray-800"
+        class="relative flex flex-1 flex-row items-center overflow-hidden"
       >
         <div
-          class="max-h-6 truncate text-sm font-medium"
+          class="mr-1.5"
         >
-          Legal Contract #1
+          <img
+            alt="file icon"
+            class="max-w-none"
+            height="34"
+            src="/src/assets/icons/profile.png"
+            width="32"
+          />
         </div>
         <div
-          class="max-h-6 truncate text-xs font-medium text-gray-600"
+          class="overflow-hidden text-gray-800"
         >
-          MakerDAO/Ecosystem Actors/Powerhouse/Chronicle Labs/Legal Contract 1
+          <div
+            class="max-h-6 truncate text-sm font-medium"
+          >
+            Legal Contract #1
+          </div>
+          <div
+            class="max-h-6 truncate text-xs font-medium text-gray-600"
+          >
+            MakerDAO/Ecosystem Actors/Powerhouse/Chronicle Labs/Legal Contract 1
+          </div>
         </div>
       </div>
-    </div>
-    <div>
-      <svg
-        class="hidden group-hover:inline-block"
-        style="width: 24px; height: 24px;"
-      >
-        <use
-          href="icons.svg#vertical-dots"
-        />
-      </svg>
+      <div>
+        <svg
+          class="hidden group-hover:inline-block"
+          style="width: 24px; height: 24px;"
+        >
+          <use
+            href="icons.svg#vertical-dots"
+          />
+        </svg>
+      </div>
     </div>
   </div>
 </DocumentFragment>
