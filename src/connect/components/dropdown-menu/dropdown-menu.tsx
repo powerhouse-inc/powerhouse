@@ -46,7 +46,7 @@ export function ConnectDropdownMenu(props: ConnectDropdownMenuProps) {
             items={dropdownItems}
             onItemClick={onItemClick}
             menuClassName={twMerge(
-                'py-3 rounded-2xl modal-shadow text-sm font-medium text-slate-200',
+                'modal-shadow rounded-2xl py-3 text-sm font-medium text-slate-200',
                 menuClassName,
             )}
             {...dropDownProps}

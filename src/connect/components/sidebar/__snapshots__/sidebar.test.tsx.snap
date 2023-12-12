@@ -63,7 +63,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
             Willow
           </p>
           <p
-            class="text-text-gray-600 text-xs font-semibold"
+            class="text-xs font-semibold text-gray-600"
           >
             0x123
           </p>

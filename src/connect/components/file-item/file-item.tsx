@@ -53,10 +53,10 @@ export const FileItem: React.FC<FileItemProps> = ({
             <div className="relative flex flex-1 flex-row items-center overflow-hidden">
                 <div className="mr-1.5">{iconNode}</div>
                 <div className="overflow-hidden text-gray-800">
-                    <div className="max-h-6 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
+                    <div className="max-h-6 truncate text-sm font-medium">
                         {title}
                     </div>
-                    <div className="max-h-6 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-medium text-gray-600">
+                    <div className="max-h-6 truncate text-xs font-medium text-gray-600">
                         {subTitle}
                     </div>
                 </div>

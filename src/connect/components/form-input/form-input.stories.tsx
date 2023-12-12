@@ -79,7 +79,7 @@ export const WithCustomErrorMessage: Story = {
         required: true,
         customErrorMessages: {
             valueMissing: (
-                <span className="text-pink-500">This field is required</span>
+                <span className="text-purple-900">This field is required</span>
             ),
         },
     },

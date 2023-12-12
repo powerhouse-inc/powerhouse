@@ -29,6 +29,7 @@ const config = {
         colors: {
             ...defaultTheme.colors,
             transparent: 'transparent',
+            inherit: 'inherit',
             white: 'hsl(var(--color-white) / <alpha-value>)',
             black: 'hsl(var(--color-black) / <alpha-value>)',
             'gray-50': 'hsl(var(--color-gray-50) / <alpha-value>)',
