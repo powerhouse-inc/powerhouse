@@ -114,12 +114,12 @@ export function ReorderableTabList(
     return (
         <Tabs
             orientation="horizontal"
-            className="flex h-full flex-col bg-light"
+            className="bg-light flex h-full flex-col"
         >
             <ul
                 {...mergeProps(tabListProps, collectionProps)}
                 ref={ref}
-                className={`flex flex-shrink-0 items-center
+                className={`flex shrink-0 items-center
                 ${isDropTarget && 'bg-light'}
                 rounded-3xl px-2 pb-4 pt-3 [overflow:overlay]`}
             >
@@ -138,7 +138,7 @@ export function ReorderableTabList(
                     onClick={() => props.onNewTab()}
                 >
                     <div
-                        className={`flex h-6 w-6 items-center justify-center rounded-md hover:bg-accent-3 hover:text-text
+                        className={`hover:bg-accent-3 hover:text-text flex h-6 w-6 items-center justify-center rounded-md
                     ${theme === 'dark' ? 'text-accent-4' : 'text-neutral-2'}`}
                     >
                         <IconCross />

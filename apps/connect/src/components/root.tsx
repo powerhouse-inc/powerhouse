@@ -37,14 +37,14 @@ const Root = () => {
     return (
         <ItemsContextProvider>
             <div
-                className={`theme-${theme} h-screen text-text`}
+                className={`theme-${theme} text-text h-screen`}
                 data-theme={'ph-' + theme}
             >
                 {isElectron && (
                     <div
                         className={`h-[30px] w-full
                     ${isMac && 'justify-center'}
-                    z-90 flex items-center bg-titlebar
+                    z-90 bg-titlebar flex items-center
                     [-webkit-app-region:drag]`}
                     >
                         <IconLogo className="ml-1 mr-[2px] p-[6px]" />
