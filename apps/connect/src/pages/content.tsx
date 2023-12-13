@@ -202,7 +202,7 @@ const Content = () => {
                                         aria-details={
                                             doc.documentModel.description
                                         }
-                                        className="bg-accent-1 text-text"
+                                        className="bg-accent-1 text-slate-800"
                                         onClick={() => createDocument(doc)}
                                     >
                                         <span className="text-sm">
