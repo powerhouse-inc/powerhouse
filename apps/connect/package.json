@@ -26,8 +26,9 @@
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
         "dev:web": "vite -c vite.renderer.config.ts",
         "build:web": "vite build -c vite.renderer.config.ts",
-        "prepare": "husky install",
-        "release": "semantic-release"
+        "prepare": "husky install && npm run prepare:scripts",
+        "release": "semantic-release",
+        "prepare:scripts": "node scripts/index.js"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.3",

@@ -19,3 +19,4 @@ vite.renderer.config.ts
 .commitlintrc.
 .github
 .releaserc
+scripts
