@@ -164,7 +164,7 @@ const Content = () => {
                 </div>
             ) : (
                 <>
-                    <div className="flex-grow overflow-auto rounded-[20px] bg-[#FCFCFC] p-2">
+                    <div className="grow overflow-auto rounded-[20px] bg-[#FCFCFC] p-2">
                         {selectedPath && (
                             <Breadcrumbs
                                 filterPath={selectedPath}

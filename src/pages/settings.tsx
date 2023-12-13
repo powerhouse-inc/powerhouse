@@ -21,7 +21,7 @@ const Settings = () => {
                 <h5 className="mb-8 text-2xl leading-relaxed">
                     Budget Statements
                 </h5>
-                <div className="rounded-[20px] bg-light py-24 text-center">
+                <div className="bg-light rounded-[20px] py-24 text-center">
                     <h5 className="text-2xl leading-relaxed">
                         Google Sheet Intergration
                     </h5>

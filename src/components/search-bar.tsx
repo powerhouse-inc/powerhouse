@@ -38,7 +38,7 @@ export const SearchBar = () => {
 
     return (
         <ConnectSearchBar
-            className="mx-4 mb-4 mt-4 max-w-[642px] flex-shrink-0 bg-[#F4F4F4]"
+            className="m-4 max-w-[642px] shrink-0 bg-[#F4F4F4]"
             placeholder={t('searchbar.placeholder')}
             filterLabel={t('searchbar.filterLabel')}
             filterItems={defaultFilterItems}

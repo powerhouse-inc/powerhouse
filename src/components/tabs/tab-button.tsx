@@ -26,12 +26,10 @@ export default forwardRef((props: IProps, ref) => {
     const As = as;
     return (
         <As
-            className={`mr-3 flex min-w-fit max-w-[144px] cursor-pointer
-            items-center justify-between overflow-hidden text-ellipsis
-            whitespace-nowrap rounded-md border border-accent-3 px-4 py-[6px]
-            text-accent-5 outline-none last-of-type:mr-0 hover:bg-accent-2
-            aria-selected:border-transparent aria-selected:bg-accent-3
-            ${
+            className={`border-accent-3 text-accent-5 hover:bg-accent-2 aria-selected:bg-accent-3 mr-3
+            flex min-w-fit max-w-[144px] cursor-pointer
+            items-center justify-between truncate rounded-md border px-4
+            py-[6px] outline-none last-of-type:mr-0 aria-selected:border-transparent${
                 theme === 'dark'
                     ? 'shadow-button'
                     : 'hover:shadow-button aria-selected:shadow-button'
@@ -43,7 +41,7 @@ export default forwardRef((props: IProps, ref) => {
         >
             <span>{typeof item === 'string' ? item : item.rendered}</span>
             <div
-                className="ml-3 mt-[1px] flex h-[21px] w-[21px] items-center justify-center rounded-full hover:bg-light hover:text-text"
+                className="hover:bg-light hover:text-text ml-3 mt-[1px] flex h-[21px] w-[21px] items-center justify-center rounded-full"
                 onClick={() =>
                     typeof item !== 'string' &&
                     item.value &&
