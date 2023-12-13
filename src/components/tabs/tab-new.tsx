@@ -39,7 +39,7 @@ export default () => {
                         key={doc.documentModel.id}
                         title={doc.documentModel.description}
                         aria-label={doc.documentModel.description}
-                        className="bg-accent-1 text-text"
+                        className="bg-accent-1 text-slate-800"
                         onClick={async () => {
                             updateTab(
                                 await fromDocument(

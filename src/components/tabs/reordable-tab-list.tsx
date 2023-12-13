@@ -138,7 +138,7 @@ export function ReorderableTabList(
                     onClick={() => props.onNewTab()}
                 >
                     <div
-                        className={`hover:bg-accent-3 hover:text-text flex h-6 w-6 items-center justify-center rounded-md
+                        className={`hover:bg-accent-3 flex h-6 w-6 items-center justify-center rounded-md hover:text-slate-800
                     ${theme === 'dark' ? 'text-accent-4' : 'text-neutral-2'}`}
                     >
                         <IconCross />

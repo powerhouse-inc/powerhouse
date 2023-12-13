@@ -6,14 +6,13 @@ import React, { Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useDropFile } from 'src/hooks';
 import { isElectron, isMac } from 'src/hooks/utils';
-import { useTheme, userAtom } from 'src/store';
+import { userAtom } from 'src/store';
 import Sidebar from './sidebar';
 
 const ROOT_FILE_DROP = false;
 
 const Root = () => {
     const ref = React.useRef(null);
-    const theme = useTheme();
 
     const setUser = useSetAtom(userAtom);
 
@@ -36,15 +35,12 @@ const Root = () => {
 
     return (
         <ItemsContextProvider>
-            <div
-                className={`theme-${theme} text-text h-screen`}
-                data-theme={'ph-' + theme}
-            >
+            <div className="h-screen">
                 {isElectron && (
                     <div
                         className={`h-[30px] w-full
                     ${isMac && 'justify-center'}
-                    z-90 bg-titlebar flex items-center
+                    z-50 flex items-center bg-gray-50
                     [-webkit-app-region:drag]`}
                     >
                         <IconLogo className="ml-1 mr-[2px] p-[6px]" />
@@ -54,7 +50,7 @@ const Root = () => {
                 <div
                     className={`flex items-stretch overflow-auto
                         ${isElectron ? 'h-[calc(100vh-30px)]' : 'h-screen'}
-                        ${isDropTarget ? 'bg-light' : 'bg-bg'}
+                        ${isDropTarget ? 'bg-slate-50' : 'bg-white'}
                     `}
                     {...dropProps}
                     role="presentation"
