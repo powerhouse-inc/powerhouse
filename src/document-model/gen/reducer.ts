@@ -22,52 +22,61 @@ const stateReducer: ImmutableStateReducer<
     switch (action.type) {
         case 'SET_MODEL_NAME':
             z.SetModelNameInputSchema().parse(action.input);
-            HeaderReducer.setModelNameOperation(state, action);
+            HeaderReducer.setModelNameOperation(state.global, action);
             break;
 
         case 'SET_MODEL_ID':
             z.SetModelIdInputSchema().parse(action.input);
-            HeaderReducer.setModelIdOperation(state, action);
+            HeaderReducer.setModelIdOperation(state.global, action);
             break;
 
         case 'SET_MODEL_EXTENSION':
             z.SetModelExtensionInputSchema().parse(action.input);
-            HeaderReducer.setModelExtensionOperation(state, action);
+            HeaderReducer.setModelExtensionOperation(state.global, action);
             break;
 
         case 'SET_MODEL_DESCRIPTION':
             z.SetModelDescriptionInputSchema().parse(action.input);
-            HeaderReducer.setModelDescriptionOperation(state, action);
+            HeaderReducer.setModelDescriptionOperation(state.global, action);
             break;
 
         case 'SET_AUTHOR_NAME':
             z.SetAuthorNameInputSchema().parse(action.input);
-            HeaderReducer.setAuthorNameOperation(state, action);
+            HeaderReducer.setAuthorNameOperation(state.global, action);
             break;
 
         case 'SET_AUTHOR_WEBSITE':
             z.SetAuthorWebsiteInputSchema().parse(action.input);
-            HeaderReducer.setAuthorWebsiteOperation(state, action);
+            HeaderReducer.setAuthorWebsiteOperation(state.global, action);
             break;
 
         case 'ADD_CHANGE_LOG_ITEM':
             z.AddChangeLogItemInputSchema().parse(action.input);
-            VersioningReducer.addChangeLogItemOperation(state, action);
+            VersioningReducer.addChangeLogItemOperation(state.global, action);
             break;
 
         case 'UPDATE_CHANGE_LOG_ITEM':
             z.UpdateChangeLogItemInputSchema().parse(action.input);
-            VersioningReducer.updateChangeLogItemOperation(state, action);
+            VersioningReducer.updateChangeLogItemOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'DELETE_CHANGE_LOG_ITEM':
             z.DeleteChangeLogItemInputSchema().parse(action.input);
-            VersioningReducer.deleteChangeLogItemOperation(state, action);
+            VersioningReducer.deleteChangeLogItemOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'REORDER_CHANGE_LOG_ITEMS':
             z.ReorderChangeLogItemsInputSchema().parse(action.input);
-            VersioningReducer.reorderChangeLogItemsOperation(state, action);
+            VersioningReducer.reorderChangeLogItemsOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'RELEASE_NEW_VERSION':
@@ -75,53 +84,62 @@ const stateReducer: ImmutableStateReducer<
                 throw new Error(
                     'Expected empty input for action RELEASE_NEW_VERSION',
                 );
-            VersioningReducer.releaseNewVersionOperation(state, action);
+            VersioningReducer.releaseNewVersionOperation(state.global, action);
             break;
 
         case 'ADD_MODULE':
             z.AddModuleInputSchema().parse(action.input);
-            ModuleReducer.addModuleOperation(state, action);
+            ModuleReducer.addModuleOperation(state.global, action);
             break;
 
         case 'SET_MODULE_NAME':
             z.SetModuleNameInputSchema().parse(action.input);
-            ModuleReducer.setModuleNameOperation(state, action);
+            ModuleReducer.setModuleNameOperation(state.global, action);
             break;
 
         case 'SET_MODULE_DESCRIPTION':
             z.SetModuleDescriptionInputSchema().parse(action.input);
-            ModuleReducer.setModuleDescriptionOperation(state, action);
+            ModuleReducer.setModuleDescriptionOperation(state.global, action);
             break;
 
         case 'DELETE_MODULE':
             z.DeleteModuleInputSchema().parse(action.input);
-            ModuleReducer.deleteModuleOperation(state, action);
+            ModuleReducer.deleteModuleOperation(state.global, action);
             break;
 
         case 'REORDER_MODULES':
             z.ReorderModulesInputSchema().parse(action.input);
-            ModuleReducer.reorderModulesOperation(state, action);
+            ModuleReducer.reorderModulesOperation(state.global, action);
             break;
 
         case 'ADD_OPERATION_ERROR':
             z.AddOperationErrorInputSchema().parse(action.input);
-            OperationErrorReducer.addOperationErrorOperation(state, action);
+            OperationErrorReducer.addOperationErrorOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'SET_OPERATION_ERROR_CODE':
             z.SetOperationErrorCodeInputSchema().parse(action.input);
-            OperationErrorReducer.setOperationErrorCodeOperation(state, action);
+            OperationErrorReducer.setOperationErrorCodeOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'SET_OPERATION_ERROR_NAME':
             z.SetOperationErrorNameInputSchema().parse(action.input);
-            OperationErrorReducer.setOperationErrorNameOperation(state, action);
+            OperationErrorReducer.setOperationErrorNameOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'SET_OPERATION_ERROR_DESCRIPTION':
             z.SetOperationErrorDescriptionInputSchema().parse(action.input);
             OperationErrorReducer.setOperationErrorDescriptionOperation(
-                state,
+                state.global,
                 action,
             );
             break;
@@ -129,33 +147,39 @@ const stateReducer: ImmutableStateReducer<
         case 'SET_OPERATION_ERROR_TEMPLATE':
             z.SetOperationErrorTemplateInputSchema().parse(action.input);
             OperationErrorReducer.setOperationErrorTemplateOperation(
-                state,
+                state.global,
                 action,
             );
             break;
 
         case 'DELETE_OPERATION_ERROR':
             z.DeleteOperationErrorInputSchema().parse(action.input);
-            OperationErrorReducer.deleteOperationErrorOperation(state, action);
+            OperationErrorReducer.deleteOperationErrorOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'REORDER_OPERATION_ERRORS':
             z.ReorderOperationErrorsInputSchema().parse(action.input);
             OperationErrorReducer.reorderOperationErrorsOperation(
-                state,
+                state.global,
                 action,
             );
             break;
 
         case 'ADD_OPERATION_EXAMPLE':
             z.AddOperationExampleInputSchema().parse(action.input);
-            OperationExampleReducer.addOperationExampleOperation(state, action);
+            OperationExampleReducer.addOperationExampleOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'UPDATE_OPERATION_EXAMPLE':
             z.UpdateOperationExampleInputSchema().parse(action.input);
             OperationExampleReducer.updateOperationExampleOperation(
-                state,
+                state.global,
                 action,
             );
             break;
@@ -163,7 +187,7 @@ const stateReducer: ImmutableStateReducer<
         case 'DELETE_OPERATION_EXAMPLE':
             z.DeleteOperationExampleInputSchema().parse(action.input);
             OperationExampleReducer.deleteOperationExampleOperation(
-                state,
+                state.global,
                 action,
             );
             break;
@@ -171,89 +195,98 @@ const stateReducer: ImmutableStateReducer<
         case 'REORDER_OPERATION_EXAMPLES':
             z.ReorderOperationExamplesInputSchema().parse(action.input);
             OperationExampleReducer.reorderOperationExamplesOperation(
-                state,
+                state.global,
                 action,
             );
             break;
 
         case 'ADD_OPERATION':
             z.AddOperationInputSchema().parse(action.input);
-            OperationReducer.addOperationOperation(state, action);
+            OperationReducer.addOperationOperation(state.global, action);
             break;
 
         case 'SET_OPERATION_NAME':
             z.SetOperationNameInputSchema().parse(action.input);
-            OperationReducer.setOperationNameOperation(state, action);
+            OperationReducer.setOperationNameOperation(state.global, action);
             break;
 
         case 'SET_OPERATION_SCOPE':
             z.SetOperationScopeInputSchema().parse(action.input);
-            OperationReducer.setOperationScopeOperation(state, action);
+            OperationReducer.setOperationScopeOperation(state.global, action);
             break;
 
         case 'SET_OPERATION_SCHEMA':
             z.SetOperationSchemaInputSchema().parse(action.input);
-            OperationReducer.setOperationSchemaOperation(state, action);
+            OperationReducer.setOperationSchemaOperation(state.global, action);
             break;
 
         case 'SET_OPERATION_DESCRIPTION':
             z.SetOperationDescriptionInputSchema().parse(action.input);
-            OperationReducer.setOperationDescriptionOperation(state, action);
+            OperationReducer.setOperationDescriptionOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'SET_OPERATION_TEMPLATE':
             z.SetOperationTemplateInputSchema().parse(action.input);
-            OperationReducer.setOperationTemplateOperation(state, action);
+            OperationReducer.setOperationTemplateOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'SET_OPERATION_REDUCER':
             z.SetOperationReducerInputSchema().parse(action.input);
-            OperationReducer.setOperationReducerOperation(state, action);
+            OperationReducer.setOperationReducerOperation(state.global, action);
             break;
 
         case 'MOVE_OPERATION':
             z.MoveOperationInputSchema().parse(action.input);
-            OperationReducer.moveOperationOperation(state, action);
+            OperationReducer.moveOperationOperation(state.global, action);
             break;
 
         case 'DELETE_OPERATION':
             z.DeleteOperationInputSchema().parse(action.input);
-            OperationReducer.deleteOperationOperation(state, action);
+            OperationReducer.deleteOperationOperation(state.global, action);
             break;
 
         case 'REORDER_MODULE_OPERATIONS':
             z.ReorderModuleOperationsInputSchema().parse(action.input);
-            OperationReducer.reorderModuleOperationsOperation(state, action);
+            OperationReducer.reorderModuleOperationsOperation(
+                state.global,
+                action,
+            );
             break;
 
         case 'SET_STATE_SCHEMA':
             z.SetStateSchemaInputSchema().parse(action.input);
-            StateReducer.setStateSchemaOperation(state, action);
+            StateReducer.setStateSchemaOperation(state.global, action);
             break;
 
         case 'SET_INITIAL_STATE':
             z.SetInitialStateInputSchema().parse(action.input);
-            StateReducer.setInitialStateOperation(state, action);
+            StateReducer.setInitialStateOperation(state.global, action);
             break;
 
         case 'ADD_STATE_EXAMPLE':
             z.AddStateExampleInputSchema().parse(action.input);
-            StateReducer.addStateExampleOperation(state, action);
+            StateReducer.addStateExampleOperation(state.global, action);
             break;
 
         case 'UPDATE_STATE_EXAMPLE':
             z.UpdateStateExampleInputSchema().parse(action.input);
-            StateReducer.updateStateExampleOperation(state, action);
+            StateReducer.updateStateExampleOperation(state.global, action);
             break;
 
         case 'DELETE_STATE_EXAMPLE':
             z.DeleteStateExampleInputSchema().parse(action.input);
-            StateReducer.deleteStateExampleOperation(state, action);
+            StateReducer.deleteStateExampleOperation(state.global, action);
             break;
 
         case 'REORDER_STATE_EXAMPLES':
             z.ReorderStateExamplesInputSchema().parse(action.input);
-            StateReducer.reorderStateExamplesOperation(state, action);
+            StateReducer.reorderStateExamplesOperation(state.global, action);
             break;
 
         default:

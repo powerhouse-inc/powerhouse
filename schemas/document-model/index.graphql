@@ -32,6 +32,7 @@ type Operation {
     errors: [OperationError!]!
     examples: [CodeExample!]!
     reducer: String
+    scope: String
 }
 
 type Module {
@@ -47,6 +48,11 @@ type State {
     examples: [CodeExample!]!
 }
 
+type ScopeState {
+    global: State!
+    local: State!
+}
+
 type Author {
     name: String!
     website: String
@@ -54,7 +60,7 @@ type Author {
 
 type DocumentSpecification {
     version: Int!
-    state: State!
+    state: ScopeState!
     modules: [Module!]!
     changeLog: [String!]!
 }

@@ -16,9 +16,16 @@ const initialState: DocumentModelState = {
             version: 1,
             changeLog: [],
             state: {
-                schema: '',
-                initialValue: '',
-                examples: [],
+                global: {
+                    schema: '',
+                    initialValue: '',
+                    examples: [],
+                },
+                local: {
+                    schema: '',
+                    initialValue: '',
+                    examples: [],
+                },
             },
             modules: [],
         },
@@ -28,7 +35,7 @@ const initialState: DocumentModelState = {
 const utils: DocumentModelUtils<DocumentModelState, DocumentModelAction> = {
     fileExtension: 'phdm',
     createState(state) {
-        return { ...initialState, ...state };
+        return { global: { ...initialState, ...state }, local: {} };
     },
     createExtendedState(extendedState) {
         return base.createExtendedState(

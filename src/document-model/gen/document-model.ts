@@ -528,10 +528,17 @@ export const documentModel: DocumentModelState = {
                 },
             ],
             state: {
-                schema: '',
-                initialValue:
-                    '{\n    "id": "",\n    "name": "",\n    "extension": "",\n    "description": "",\n    "author": {\n        "name": "",\n        "website": ""\n    },\n    "specifications": [\n        {\n            "version": 1,\n            "changeLog": [],\n            "state": {\n                "schema": "",\n                "initialValue": "",\n                "examples": []\n            },\n            "modules": []\n        }\n    ]\n}',
-                examples: [],
+                global: {
+                    schema: '',
+                    initialValue:
+                        '{\n    "id": "",\n    "name": "",\n    "extension": "",\n    "description": "",\n    "author": {\n        "name": "",\n        "website": ""\n    },\n    "specifications": [\n        {\n            "version": 1,\n            "changeLog": [],\n            "state": {\n                "schema": "",\n                "initialValue": "",\n                "examples": []\n            },\n            "modules": []\n        }\n    ]\n}',
+                    examples: [],
+                },
+                local: {
+                    schema: '',
+                    initialValue: `{}`,
+                    examples: [],
+                },
             },
         },
     ],

@@ -2,7 +2,6 @@ import { SignalDispatch } from '../signal';
 import {
     Action,
     Document,
-    DocumentOperations,
     ExtendedState,
     ImmutableStateReducer,
     State,

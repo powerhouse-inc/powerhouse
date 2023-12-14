@@ -71,6 +71,7 @@ export type AddOperationInput = {
 };
 
 export type AddStateExampleInput = {
+    scope: Scalars['String']['input'];
     example: Scalars['String']['input'];
     id: Scalars['ID']['input'];
     insertBefore?: InputMaybe<Scalars['ID']['input']>;
@@ -110,6 +111,7 @@ export type DeleteOperationInput = {
 };
 
 export type DeleteStateExampleInput = {
+    scope: Scalars['String']['input'];
     id: Scalars['ID']['input'];
 };
 
@@ -166,16 +168,18 @@ export type DocumentModelState = {
     specifications: Array<DocumentSpecification>;
 };
 
-export type DocumentModelMeta = unknown;
+export type ScopeState = {
+    global: State;
+    local: State;
+};
+
+export type DocumentModelLocalState = Record<string, never>;
 
 export type DocumentSpecification = {
     __typename?: 'DocumentSpecification';
     changeLog: Array<Scalars['String']['output']>;
     modules: Array<Module>;
-    state: {
-        global: State;
-        local: State;
-    };
+    state: ScopeState;
     version: Scalars['Int']['output'];
 };
 
@@ -449,6 +453,7 @@ export type ReorderOperationExamplesInput = {
 };
 
 export type ReorderStateExamplesInput = {
+    scope: Scalars['String']['input'];
     order: Array<Scalars['ID']['input']>;
 };
 
@@ -461,6 +466,7 @@ export type SetAuthorWebsiteInput = {
 };
 
 export type SetInitialStateInput = {
+    scope: Scalars['String']['input'];
     initialValue: Scalars['String']['input'];
 };
 
@@ -541,6 +547,7 @@ export type SetOperationTemplateInput = {
 };
 
 export type SetStateSchemaInput = {
+    scope: Scalars['String']['input'];
     schema: Scalars['String']['input'];
 };
 
@@ -563,6 +570,7 @@ export type UpdateOperationExampleInput = {
 };
 
 export type UpdateStateExampleInput = {
+    scope: Scalars['String']['input'];
     id: Scalars['ID']['input'];
     newExample: Scalars['String']['input'];
 };

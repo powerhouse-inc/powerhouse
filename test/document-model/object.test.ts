@@ -8,17 +8,17 @@ describe('DocumentModel Class', () => {
         expect(model.name).toBe('');
         expect(model.documentType).toBe('powerhouse/document-model');
         expect(model.revision).toBe(0);
-        expect(model.operations.length).toBe(0);
+        expect(model.operations.global.length).toBe(0);
 
-        expect(model.state.id).toBe('');
-        expect(model.state.name).toBe('');
-        expect(model.state.description).toBe('');
-        expect(model.state.extension).toBe('');
-        expect(model.state.specifications.length).toBe(1);
-        expect(model.state.specifications[0].version).toBe(1);
-        expect(model.state.specifications[0].changeLog.length).toBe(0);
-        expect(model.state.specifications[0].modules.length).toBe(0);
-        expect(model.state.author).toEqual({
+        expect(model.state.global.id).toBe('');
+        expect(model.state.global.name).toBe('');
+        expect(model.state.global.description).toBe('');
+        expect(model.state.global.extension).toBe('');
+        expect(model.state.global.specifications.length).toBe(1);
+        expect(model.state.global.specifications[0].version).toBe(1);
+        expect(model.state.global.specifications[0].changeLog.length).toBe(0);
+        expect(model.state.global.specifications[0].modules.length).toBe(0);
+        expect(model.state.global.author).toEqual({
             name: '',
             website: '',
         });
@@ -35,11 +35,11 @@ describe('DocumentModel Class', () => {
             .setAuthorName({ authorName: '<authorName>' })
             .setAuthorWebsite({ authorWebsite: '<authorWebsite>' });
 
-        expect(model.state.id).toBe('<id>');
-        expect(model.state.name).toBe('<name>');
-        expect(model.state.description).toBe('<description>');
-        expect(model.state.extension).toBe('phdm');
-        expect(model.state.author).toEqual({
+        expect(model.state.global.id).toBe('<id>');
+        expect(model.state.global.name).toBe('<name>');
+        expect(model.state.global.description).toBe('<description>');
+        expect(model.state.global.extension).toBe('phdm');
+        expect(model.state.global.author).toEqual({
             name: '<authorName>',
             website: '<authorWebsite>',
         });
@@ -53,31 +53,37 @@ describe('DocumentModel Class', () => {
             .addModule({ id: hashKey(), name: 'header' });
 
         expect(
-            model.state.specifications[0].modules.map(m => m.name),
+            model.state.global.specifications[0].modules.map(m => m.name),
         ).toStrictEqual(['state', 'header']);
 
-        expect(model.state.specifications[0].modules[0].id).toMatch(
+        expect(model.state.global.specifications[0].modules[0].id).toMatch(
             /^[a-zA-Z0-9+\\/]{27}=$/,
         );
-        expect(model.state.specifications[0].modules[0].name).toBe('state');
-        expect(model.state.specifications[0].modules[0].description).toBe('');
-        expect(model.state.specifications[0].modules[0].operations.length).toBe(
-            0,
+        expect(model.state.global.specifications[0].modules[0].name).toBe(
+            'state',
         );
+        expect(
+            model.state.global.specifications[0].modules[0].description,
+        ).toBe('');
+        expect(
+            model.state.global.specifications[0].modules[0].operations.length,
+        ).toBe(0);
 
         model.reorderModules({
             order: [
-                model.state.specifications[0].modules[1].id,
-                model.state.specifications[0].modules[0].id,
+                model.state.global.specifications[0].modules[1].id,
+                model.state.global.specifications[0].modules[0].id,
             ],
         });
 
         expect(
-            model.state.specifications[0].modules.map(m => m.name),
+            model.state.global.specifications[0].modules.map(m => m.name),
         ).toStrictEqual(['header', 'state']);
 
-        const headerModuleId = model.state.specifications[0].modules[0].id;
-        const stateModuleId = model.state.specifications[0].modules[1].id;
+        const headerModuleId =
+            model.state.global.specifications[0].modules[0].id;
+        const stateModuleId =
+            model.state.global.specifications[0].modules[1].id;
 
         model.setModuleName({ id: headerModuleId, name: 'Header' });
         model.setModuleDescription({
@@ -86,7 +92,7 @@ describe('DocumentModel Class', () => {
         });
         model.deleteModule({ id: stateModuleId });
 
-        expect(model.state.specifications[0].modules).toStrictEqual([
+        expect(model.state.global.specifications[0].modules).toStrictEqual([
             {
                 id: headerModuleId,
                 name: 'Header',
@@ -103,8 +109,10 @@ describe('DocumentModel Class', () => {
             .addModule({ id: hashKey(), name: 'header' })
             .addModule({ id: hashKey(), name: 'state' });
 
-        const headerModuleId = model.state.specifications[0].modules[0].id;
-        const stateModuleId = model.state.specifications[0].modules[1].id;
+        const headerModuleId =
+            model.state.global.specifications[0].modules[0].id;
+        const stateModuleId =
+            model.state.global.specifications[0].modules[1].id;
 
         model.addOperation({
             id: hashKey(),
@@ -124,11 +132,11 @@ describe('DocumentModel Class', () => {
         });
 
         const setModuleExtensionId =
-            model.state.specifications[0].modules[0].operations[0].id;
+            model.state.global.specifications[0].modules[0].operations[0].id;
         const addStateExampleId =
-            model.state.specifications[0].modules[1].operations[0].id;
+            model.state.global.specifications[0].modules[1].operations[0].id;
 
-        expect(model.state.specifications[0].modules[0]).toEqual({
+        expect(model.state.global.specifications[0].modules[0]).toEqual({
             id: headerModuleId,
             name: 'header',
             description: '',
@@ -147,7 +155,7 @@ describe('DocumentModel Class', () => {
             ],
         });
 
-        expect(model.state.specifications[0].modules[1]).toEqual({
+        expect(model.state.global.specifications[0].modules[1]).toEqual({
             id: stateModuleId,
             name: 'state',
             description: '',
@@ -171,14 +179,14 @@ describe('DocumentModel Class', () => {
             newModuleId: stateModuleId,
         });
 
-        expect(model.state.specifications[0].modules[0]).toEqual({
+        expect(model.state.global.specifications[0].modules[0]).toEqual({
             id: headerModuleId,
             name: 'header',
             description: '',
             operations: [],
         });
 
-        expect(model.state.specifications[0].modules[1]).toEqual({
+        expect(model.state.global.specifications[0].modules[1]).toEqual({
             id: stateModuleId,
             name: 'state',
             description: '',
@@ -213,7 +221,9 @@ describe('DocumentModel Class', () => {
             order: [setModuleExtensionId, addStateExampleId],
         });
 
-        expect(model.state.specifications[0].modules[1].operations).toEqual([
+        expect(
+            model.state.global.specifications[0].modules[1].operations,
+        ).toEqual([
             {
                 id: setModuleExtensionId,
                 name: 'SetModuleExtension',
@@ -275,16 +285,16 @@ describe('DocumentModel Class', () => {
             scope: 'local',
         };
 
-        expect(model.state.specifications[0].modules[1].operations[1]).toEqual(
-            updatedValue,
-        );
+        expect(
+            model.state.global.specifications[0].modules[1].operations[1],
+        ).toEqual(updatedValue);
 
         model.deleteOperation({ id: setModuleExtensionId });
-        expect(model.state.specifications[0].modules[1].operations.length).toBe(
-            1,
-        );
-        expect(model.state.specifications[0].modules[1].operations[0]).toEqual(
-            updatedValue,
-        );
+        expect(
+            model.state.global.specifications[0].modules[1].operations.length,
+        ).toBe(1);
+        expect(
+            model.state.global.specifications[0].modules[1].operations[0],
+        ).toEqual(updatedValue);
     });
 });

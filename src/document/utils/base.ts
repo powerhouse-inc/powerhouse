@@ -11,6 +11,7 @@ import {
     OperationScope,
     State,
     CreateState,
+    PartialState,
 } from '../types';
 import { hash } from './node';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
@@ -94,7 +95,7 @@ export function createReducer<
 }
 
 export const createExtendedState = <S, L>(
-    initialState?: Partial<ExtendedState<Partial<S>, Partial<L>>>,
+    initialState?: Partial<ExtendedState<PartialState<S>, PartialState<L>>>,
     createState?: CreateState<S, L>,
 ): ExtendedState<S, L> => {
     return {
@@ -123,9 +124,9 @@ export const createExtendedState = <S, L>(
  * @returns The new document state.
  */
 export const createDocument = <S, A extends Action, L = unknown>(
-    initialState?: Partial<ExtendedState<Partial<S>, Partial<L>>>,
+    initialState?: Partial<ExtendedState<PartialState<S>, PartialState<L>>>,
     createState?: (
-        state?: Partial<State<Partial<S>, Partial<L>>>,
+        state?: Partial<State<PartialState<S>, PartialState<L>>>,
     ) => State<S, L>,
 ): Document<S, A, L> => {
     const state: ExtendedState<S, L> = createExtendedState(

@@ -144,8 +144,10 @@ export type State<GlobalState, LocalState> = {
     local: LocalState;
 };
 
+export type PartialState<S> = S | Partial<S>;
+
 export type CreateState<S, L> = (
-    state?: Partial<State<Partial<S>, Partial<L>>>,
+    state?: Partial<State<PartialState<S>, PartialState<L>>>,
 ) => State<S, L>;
 
 export type ExtendedState<
@@ -212,11 +214,13 @@ export type DocumentModelUtils<
     fileExtension: string;
     createState: CreateState<S, L>;
     createExtendedState: (
-        extendedState?: Partial<ExtendedState<Partial<S>, Partial<L>>>,
+        extendedState?: Partial<
+            ExtendedState<PartialState<S>, PartialState<L>>
+        >,
         createState?: CreateState<S, L>,
     ) => ExtendedState<S, L>;
     createDocument: (
-        document?: Partial<ExtendedState<Partial<S>, Partial<L>>>,
+        document?: Partial<ExtendedState<PartialState<S>, PartialState<L>>>,
         createState?: CreateState<S, L>,
     ) => Document<S, A, L>;
     loadFromFile: (path: string) => Promise<Document<S, A, L>>;

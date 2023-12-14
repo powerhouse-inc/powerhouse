@@ -2,6 +2,7 @@ import { setName, undo } from '../../src/document/actions';
 import { createDocument } from '../../src/document/utils';
 import {
     CountAction,
+    CountLocalState,
     countReducer,
     CountState,
     emptyReducer,
@@ -78,10 +79,12 @@ describe('UNDO operation', () => {
     });
 
     it('should keep document attributes', () => {
-        let document = createDocument<CountState, CountAction>({
-            documentType: 'powerhouse/counter',
-            state: { global: { count: 0 }, local: {} },
-        });
+        let document = createDocument<CountState, CountAction, CountLocalState>(
+            {
+                documentType: 'powerhouse/counter',
+                state: { global: { count: 0 }, local: {} },
+            },
+        );
         document = countReducer(document, increment());
         document = countReducer(document, undo(1));
         expect(document.state.global.count).toBe(0);

@@ -38,7 +38,9 @@ class DocumentModel extends BaseDocument<
     static fileExtension = 'phdm';
 
     constructor(
-        initialState?: Partial<ExtendedState<Partial<DocumentModelState>>>,
+        initialState?: Partial<
+            ExtendedState<Partial<DocumentModelState>, unknown>
+        >,
         dispatch?: SignalDispatch,
     ) {
         super(reducer, utils.createDocument(initialState), dispatch);

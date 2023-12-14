@@ -26,6 +26,7 @@ import {
     ReorderOperationErrorsInput,
     ReorderOperationExamplesInput,
     ReorderStateExamplesInput,
+    ScopeState,
     SetAuthorNameInput,
     SetAuthorWebsiteInput,
     SetInitialStateInput,
@@ -128,6 +129,7 @@ export function AddStateExampleInputSchema(): z.ZodObject<
     Properties<AddStateExampleInput>
 > {
     return z.object({
+        scope: z.string(),
         example: z.string(),
         id: z.string(),
         insertBefore: z.string().nullish(),
@@ -195,6 +197,7 @@ export function DeleteStateExampleInputSchema(): z.ZodObject<
     Properties<DeleteStateExampleInput>
 > {
     return z.object({
+        scope: z.string(),
         id: z.string(),
     });
 }
@@ -266,7 +269,7 @@ export function DocumentSpecificationSchema(): z.ZodObject<
         __typename: z.literal('DocumentSpecification').optional(),
         changeLog: z.array(z.string()),
         modules: z.array(ModuleSchema()),
-        state: StateSchema(),
+        state: ScopeStateSchema(),
         version: z.number(),
     });
 }
@@ -366,6 +369,7 @@ export function ReorderStateExamplesInputSchema(): z.ZodObject<
     Properties<ReorderStateExamplesInput>
 > {
     return z.object({
+        scope: z.string(),
         order: z.array(z.string()),
     });
 }
@@ -390,6 +394,7 @@ export function SetInitialStateInputSchema(): z.ZodObject<
     Properties<SetInitialStateInput>
 > {
     return z.object({
+        scope: z.string(),
         initialValue: z.string(),
     });
 }
@@ -538,6 +543,7 @@ export function SetStateSchemaInputSchema(): z.ZodObject<
     Properties<SetStateSchemaInput>
 > {
     return z.object({
+        scope: z.string(),
         schema: z.string(),
     });
 }
@@ -548,6 +554,13 @@ export function StateSchema(): z.ZodObject<Properties<State>> {
         examples: z.array(CodeExampleSchema()),
         initialValue: z.string(),
         schema: z.string(),
+    });
+}
+
+export function ScopeStateSchema(): z.ZodObject<Properties<ScopeState>> {
+    return z.object({
+        global: StateSchema(),
+        local: StateSchema(),
     });
 }
 
@@ -574,6 +587,7 @@ export function UpdateStateExampleInputSchema(): z.ZodObject<
     Properties<UpdateStateExampleInput>
 > {
     return z.object({
+        scope: z.string(),
         id: z.string(),
         newExample: z.string(),
     });

@@ -21,6 +21,7 @@ const actions = { ...BaseActions, ...DocumentModelActions };
 export const module: _DocumentModel<
     DocumentModelState,
     DocumentModelAction,
+    unknown,
     DocumentModel
 > = {
     Document,
