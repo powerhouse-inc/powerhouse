@@ -38,18 +38,18 @@ const Root = () => {
             <div className="h-screen">
                 {isElectron && (
                     <div
-                        className={`h-[30px] w-full
+                        className={`h-8 w-full
                     ${isMac && 'justify-center'}
-                    z-50 flex items-center bg-gray-50
+                    flex items-center bg-gray-50
                     [-webkit-app-region:drag]`}
                     >
-                        <IconLogo className="ml-1 mr-[2px] p-[6px]" />
+                        <IconLogo className="ml-1 mr-0.5 p-1.5" />
                         <IconConnect className="h-3 w-fit" />
                     </div>
                 )}
                 <div
                     className={`flex items-stretch overflow-auto
-                        ${isElectron ? 'h-[calc(100vh-30px)]' : 'h-screen'}
+                        ${isElectron ? 'h-app-height' : 'h-screen'}
                         ${isDropTarget ? 'bg-slate-50' : 'bg-white'}
                     `}
                     {...dropProps}

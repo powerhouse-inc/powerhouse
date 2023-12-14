@@ -23,6 +23,36 @@
             1,
             { "ignoreRestSiblings": true }
         ],
-        "@typescript-eslint/ban-ts-comment": "warn"
+        "@typescript-eslint/ban-ts-comment": "warn",
+        "tailwindcss/classnames-order": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ],
+        "tailwindcss/enforces-negative-arbitrary-values": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ],
+        "tailwindcss/enforces-shorthand": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ],
+        "tailwindcss/no-arbitrary-value": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ],
+        "tailwindcss/no-contradicting-classname": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ],
+        "tailwindcss/no-custom-classname": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ]
     }
 }

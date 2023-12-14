@@ -2,13 +2,12 @@ import { useAtomValue } from 'jotai';
 import { useEffect, useRef } from 'react';
 import { useDropFile, useOpenFile } from 'src/hooks';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { preloadTabs, useTabs, useTheme } from 'src/store';
+import { preloadTabs, useTabs } from 'src/store';
 import { documentModelsAtom } from 'src/store/document-model';
 import Button from '../button';
 
 export default () => {
     const ref = useRef(null);
-    const theme = useTheme();
     const { selectedTab, updateTab, fromDocument } = useTabs();
     const { documentDrives, addFile, openFile } = useDocumentDriveServer();
     const { dropProps, isDropTarget } = useDropFile(ref);
@@ -39,7 +38,7 @@ export default () => {
                         key={doc.documentModel.id}
                         title={doc.documentModel.description}
                         aria-label={doc.documentModel.description}
-                        className="bg-accent-1 text-slate-800"
+                        className="bg-gray-100 text-slate-800"
                         onClick={async () => {
                             updateTab(
                                 await fromDocument(
@@ -57,21 +56,14 @@ export default () => {
             <div
                 {...dropProps}
                 ref={ref}
-                className={`h-[240px] rounded-xl border-2 border-dashed
+                className={`h-60 rounded-xl border-2 border-dashed border-gray-500/20
                 ${
-                    theme === 'dark'
-                        ? 'border-neutral-1/20'
-                        : 'border-accent-5/20'
-                }
-                ${
-                    isDropTarget ? 'bg-light' : 'bg-bg'
+                    isDropTarget ? 'bg-slate-50' : 'bg-white'
                 } my-6 flex max-w-4xl flex-col items-center justify-evenly py-5`}
             >
                 <div className="h-9 select-none opacity-0"></div>
-                <p className="text-accent-5">Drag file here</p>
-                <Button className="button" onClick={handleOpenFile}>
-                    Browse
-                </Button>
+                <p className="text-gray-500">Drag file here</p>
+                <Button onClick={handleOpenFile}>Browse</Button>
             </div>
         </div>
     );

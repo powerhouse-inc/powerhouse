@@ -28,7 +28,7 @@ export default function ({
         });
     }
     return (
-        <div className="bg-bg flex-1 p-6" {...tabPanelProps} ref={ref}>
+        <div className="flex-1 bg-white p-6" {...tabPanelProps} ref={ref}>
             <Editor
                 document={state.selectedItem?.value?.document}
                 onChange={updateTab}

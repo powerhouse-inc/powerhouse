@@ -152,9 +152,9 @@ const Content = () => {
     };
 
     return (
-        <div className="flex h-full flex-col bg-[#F4F4F4] p-6">
+        <div className="flex h-full flex-col bg-gray-100 p-6">
             {selectedFileNode && selectedDocument ? (
-                <div className="flex-1 rounded-[20px] bg-[#FCFCFC] p-4">
+                <div className="flex-1 rounded-2xl bg-gray-50 p-4">
                     <DocumentEditor
                         document={selectedDocument}
                         onClose={() => setSelectedFileNode(undefined)}
@@ -164,7 +164,7 @@ const Content = () => {
                 </div>
             ) : (
                 <>
-                    <div className="grow overflow-auto rounded-[20px] bg-[#FCFCFC] p-2">
+                    <div className="grow overflow-auto rounded-2xl bg-gray-50 p-2">
                         {selectedPath && (
                             <Breadcrumbs
                                 filterPath={selectedPath}
@@ -202,7 +202,7 @@ const Content = () => {
                                         aria-details={
                                             doc.documentModel.description
                                         }
-                                        className="bg-accent-1 text-slate-800"
+                                        className="bg-gray-200 text-slate-800"
                                         onClick={() => createDocument(doc)}
                                     >
                                         <span className="text-sm">

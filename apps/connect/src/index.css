@@ -1,8 +1,11 @@
 @import url('../node_modules/document-model-libs/dist/style.css');
 @import url('../node_modules/@powerhousedao/design-system/dist/style.css');
-@tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    --app-height: calc(100vh - 32px);
+}
 
 body {
     margin: auto;
@@ -15,26 +18,24 @@ select {
     margin: 0 4px;
 }
 
-@layer base {
-    ::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-    }
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
 
-    /* Track */
-    ::-webkit-scrollbar-track {
-        background: hsl(var(--twc-accent-3));
-    }
+/* Track */
+::-webkit-scrollbar-track {
+    background: hsl(var(--slate-50));
+}
 
-    /* Handle */
-    ::-webkit-scrollbar-thumb {
-        background: hsl(var(--twc-titlebar));
-    }
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background: hsl(var(--twc-slate-100));
+}
 
-    /* Handle on hover */
-    ::-webkit-scrollbar-thumb:hover {
-        background: hsl(var(--twc-bg));
-    }
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--white));
 }
 
 @layer components {
