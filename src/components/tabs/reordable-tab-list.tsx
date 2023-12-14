@@ -1,6 +1,5 @@
 import { ReactComponent as IconCross } from '@/assets/icons/cross.svg';
 import type { TabListStateOptions } from '@react-stately/tabs';
-import { useAtomValue } from 'jotai';
 import { useRef } from 'react';
 import {
     DragPreview,
@@ -17,7 +16,6 @@ import {
     useDroppableCollectionState,
     useTabListState,
 } from 'react-stately';
-import { themeAtom } from 'src/store';
 import { Tab } from 'src/store/tabs';
 import TabComponent from './tab';
 import TabButton from './tab-button';
@@ -109,19 +107,17 @@ export function ReorderableTabList(
         ref
     );
 
-    const theme = useAtomValue(themeAtom);
-
     return (
         <Tabs
             orientation="horizontal"
-            className="bg-light flex h-full flex-col"
+            className="flex h-full flex-col bg-slate-50"
         >
             <ul
                 {...mergeProps(tabListProps, collectionProps)}
                 ref={ref}
                 className={`flex shrink-0 items-center
-                ${isDropTarget && 'bg-light'}
-                rounded-3xl px-2 pb-4 pt-3 [overflow:overlay]`}
+                ${isDropTarget && 'bg-slate-50'}
+                rounded-3xl px-2 pb-4 pt-3`}
             >
                 {[...state.collection].map(item => (
                     <TabComponent
@@ -134,13 +130,10 @@ export function ReorderableTabList(
                     />
                 ))}
                 <button
-                    className={`h-[38px] px-2`}
+                    className={`h-10 px-2`}
                     onClick={() => props.onNewTab()}
                 >
-                    <div
-                        className={`hover:bg-accent-3 flex h-6 w-6 items-center justify-center rounded-md hover:text-slate-800
-                    ${theme === 'dark' ? 'text-accent-4' : 'text-neutral-2'}`}
-                    >
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md text-gray-500 hover:bg-slate-100 hover:text-slate-800">
                         <IconCross />
                     </div>
                 </button>
