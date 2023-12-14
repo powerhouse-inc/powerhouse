@@ -7,10 +7,10 @@ import {
 } from 'document-model/document-model';
 import { CSSProperties, useEffect } from 'react';
 import { styles, TextInput } from 'document-model-editors';
-import EditorSchema, { ScopeType } from './editor-schema';
-import EditorInitialState from './editor-initital-state';
+import { ScopeType } from './editor-schema';
 import EditorOperation from './editor-operation';
 import { useSchemaEditor } from './useSchemaEditor';
+import EditorState from './editor-state';
 
 export type IProps = EditorProps<
     DocumentModelState,
@@ -203,146 +203,20 @@ function Editor(props: IProps) {
                 </div>
                 {!globalSchema.specification ? null : (
                     <>
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: '50%',
-                                    display: 'inline-block',
-                                }}
-                            >
-                                <h4 style={{ marginBottom: '16px' }}>
-                                    Global State Schema
-                                </h4>
-                                <EditorSchema
-                                    scope="global"
-                                    name={document.state.global.name}
-                                    value={
-                                        globalSchema.specification.state.global
-                                            .schema
-                                    }
-                                    onGenerate={schema => {
-                                        globalSchema.setSchemaState(state => ({
-                                            ...state,
-                                            ...schema,
-                                        }));
-                                        if (
-                                            schema.schema !==
-                                            globalSchema.specification?.state
-                                                .global.schema
-                                        ) {
-                                            setStateSchema(
-                                                schema.schema,
-                                                'global',
-                                            );
-                                        }
-                                    }}
-                                    theme={theme}
-                                    height={200}
-                                />
-                            </div>
-                            <div
-                                style={{
-                                    width: '50%',
-                                    display: 'inline-block',
-                                }}
-                            >
-                                <h4 style={{ marginBottom: '16px' }}>
-                                    Global Initial State
-                                </h4>
-                                <EditorInitialState
-                                    height={200}
-                                    value={
-                                        globalSchema.specification.state.global
-                                            .initialValue
-                                    }
-                                    validator={
-                                        globalSchema.schemaState?.validator
-                                    }
-                                    onCreate={value => {
-                                        globalSchema.setInitialValue(
-                                            JSON.parse(value),
-                                        );
-                                    }}
-                                    theme={theme}
-                                />
-                            </div>
-                        </div>
-
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: '50%',
-                                    display: 'inline-block',
-                                }}
-                            >
-                                <h4 style={{ marginBottom: '16px' }}>
-                                    Local State Schema
-                                </h4>
-                                <EditorSchema
-                                    scope="local"
-                                    name={document.state.global.name}
-                                    value={
-                                        localSchema.specification?.state.local
-                                            .schema
-                                    }
-                                    onGenerate={schema => {
-                                        localSchema.setSchemaState(state => ({
-                                            ...state,
-                                            ...schema,
-                                        }));
-                                        if (
-                                            schema.schema !==
-                                            localSchema.specification?.state
-                                                .local.schema
-                                        ) {
-                                            setStateSchema(
-                                                schema.schema,
-                                                'local',
-                                            );
-                                        }
-                                    }}
-                                    theme={theme}
-                                    height={200}
-                                />
-                            </div>
-                            <div
-                                style={{
-                                    width: '50%',
-                                    display: 'inline-block',
-                                }}
-                            >
-                                <h4 style={{ marginBottom: '16px' }}>
-                                    Local Initial State
-                                </h4>
-                                <EditorInitialState
-                                    height={200}
-                                    value={
-                                        localSchema.specification?.state.local
-                                            .initialValue
-                                    }
-                                    validator={
-                                        localSchema.schemaState?.validator
-                                    }
-                                    onCreate={value => {
-                                        localSchema.setInitialValue(
-                                            JSON.parse(value),
-                                        );
-                                    }}
-                                    theme={theme}
-                                />
-                            </div>
-                        </div>
-
+                        <EditorState
+                            scope="global"
+                            theme={theme}
+                            schemaHandlers={globalSchema}
+                            setStateSchema={setStateSchema}
+                            name={document.state.global.name}
+                        />
+                        <EditorState
+                            scope="local"
+                            theme={theme}
+                            schemaHandlers={localSchema}
+                            setStateSchema={setStateSchema}
+                            name={document.state.global.name}
+                        />
                         {globalSchema.specification.modules.map(m => (
                             <div key={m.id}>
                                 <TextInput

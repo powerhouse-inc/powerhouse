@@ -31,12 +31,17 @@ export default function EditorSchema({
     const [code, setCode] = useState(props.value || '');
 
     const scopeStateName = scope === 'local' ? 'Local' : '';
+    const scopeSchemaContent = scope === 'global' ? ' {\n\t\n}' : '';
 
     useEffect(() => {
         if (
             !code.includes(`type ${pascalCase(name)}${scopeStateName}State {`)
         ) {
-            setCode(`type ${pascalCase(name)}${scopeStateName}State {\n\t\n}`);
+            setCode(
+                `type ${pascalCase(
+                    name,
+                )}${scopeStateName}State${scopeSchemaContent}`,
+            );
         }
     }, [name]);
 

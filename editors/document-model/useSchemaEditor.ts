@@ -2,6 +2,7 @@ import { State } from 'document-model/document';
 import {
     DocumentModelState,
     DocumentModelLocalState,
+    DocumentSpecification,
 } from 'document-model/document-model';
 import { useEffect, useState } from 'react';
 import z from 'zod';
@@ -21,31 +22,45 @@ interface UseSchemaEditorProps {
     setInitialState: (initialValue: string, scope: ScopeType) => void;
 }
 
-export const useSchemaEditor = (props: UseSchemaEditorProps) => {
+export interface SchemaResult {
+    schemaState?: SchemaState;
+    setSchemaState: React.Dispatch<
+        React.SetStateAction<SchemaState | undefined>
+    >;
+    specification?: DocumentSpecification;
+    setInitialValue: React.Dispatch<React.SetStateAction<JSON>>;
+    initialValue: JSON;
+}
+
+export const useSchemaEditor = (props: UseSchemaEditorProps): SchemaResult => {
     const { state, scope, setInitialState } = props;
 
-    const specification = state[scope].specifications?.length
-        ? state[scope].specifications[state[scope].specifications?.length - 1]
+    const stateScope = state[scope];
+
+    const specification = stateScope.specifications?.length
+        ? stateScope.specifications[stateScope.specifications?.length - 1]
         : undefined;
 
+    const specScope = specification?.state[scope];
+
     const [initialValue, setInitialValue] = useState<JSON>(
-        JSON.parse(specification?.state[scope].initialValue || '{}'),
+        JSON.parse(specScope?.initialValue || '{}'),
     );
 
     useEffect(() => {
-        const currentValue = specification?.state[scope].initialValue || '{}';
+        const currentValue = specScope?.initialValue || '{}';
 
         if (!isJSONEqual(initialValue, currentValue)) {
             setInitialState(JSON.stringify(initialValue), scope);
         }
-    }, [initialValue, specification?.state[scope].initialValue]);
+    }, [initialValue, specScope?.initialValue]);
 
     useEffect(() => {
-        const specValue = specification?.state[scope].initialValue || '{}';
+        const specValue = specScope?.initialValue || '{}';
         if (!isJSONEqual(initialValue, specValue)) {
             setInitialValue(JSON.parse(specValue));
         }
-    }, [specification?.state[scope].initialValue]);
+    }, [specScope?.initialValue]);
 
     const [schemaState, setSchemaState] = useState<SchemaState>();
 
