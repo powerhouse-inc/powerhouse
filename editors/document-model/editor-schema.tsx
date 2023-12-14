@@ -7,8 +7,11 @@ import { SchemaEditor as Editor, SchemaEditorProps } from '@theguild/editor';
 import { pascalCase } from 'change-case';
 import { styles } from 'document-model-editors';
 
+export type ScopeType = 'global' | 'local';
+
 interface IProps extends SchemaEditorProps {
     name: string;
+    scope: ScopeType;
     onGenerate: (created: {
         documentName: string;
         schema: string;
@@ -21,14 +24,19 @@ export default function EditorSchema({
     name,
     onGenerate,
     theme,
+    scope,
     ...props
 }: IProps) {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const [code, setCode] = useState(props.value || '');
 
+    const scopeStateName = scope === 'local' ? 'Local' : '';
+
     useEffect(() => {
-        if (!code.includes(`type ${pascalCase(name)}State {`)) {
-            setCode(`type ${pascalCase(name)}State {\n\t\n}`);
+        if (
+            !code.includes(`type ${pascalCase(name)}${scopeStateName}State {`)
+        ) {
+            setCode(`type ${pascalCase(name)}${scopeStateName}State {\n\t\n}`);
         }
     }, [name]);
 

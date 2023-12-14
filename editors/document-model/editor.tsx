@@ -3,21 +3,20 @@ import {
     actions,
     DocumentModelAction,
     DocumentModelState,
+    DocumentModelLocalState,
 } from 'document-model/document-model';
-import { CSSProperties, useEffect, useState } from 'react';
+import { CSSProperties, useEffect } from 'react';
 import { styles, TextInput } from 'document-model-editors';
-import { isJSONEqual } from '../common/json-editor';
-import z from 'zod';
-import EditorSchema from './editor-schema';
+import EditorSchema, { ScopeType } from './editor-schema';
 import EditorInitialState from './editor-initital-state';
 import EditorOperation from './editor-operation';
-export type IProps = EditorProps<DocumentModelState, DocumentModelAction>;
+import { useSchemaEditor } from './useSchemaEditor';
 
-type SchemaState = {
-    documentName: string;
-    schema: string;
-    validator: () => z.AnyZodObject;
-};
+export type IProps = EditorProps<
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState
+>;
 
 function Editor(props: IProps) {
     const theme: styles.ColorTheme = props.editorContext.theme || 'light';
@@ -39,7 +38,12 @@ function Editor(props: IProps) {
     const { state } = document;
 
     useEffect(() => {
-        if (document.operations.length < 1) {
+        const ops = [
+            ...document.operations.global,
+            ...document.operations.local,
+        ];
+
+        if (ops.length < 1) {
             dispatch(actions.setModelId({ id: '' }));
         }
     }, [document.operations]);
@@ -68,12 +72,12 @@ function Editor(props: IProps) {
         dispatch(actions.setAuthorWebsite({ authorWebsite }));
     };
 
-    const setStateSchema = (schema: string) => {
-        dispatch(actions.setStateSchema({ schema }));
+    const setStateSchema = (schema: string, scope: ScopeType) => {
+        dispatch(actions.setStateSchema({ schema, scope }));
     };
 
-    const setInitialState = (initialValue: string) => {
-        dispatch(actions.setInitialState({ initialValue }));
+    const setInitialState = (initialValue: string, scope: ScopeType) => {
+        dispatch(actions.setInitialState({ initialValue, scope }));
     };
 
     const addModule = (name: string) => {
@@ -112,30 +116,17 @@ function Editor(props: IProps) {
         dispatch(actions.deleteOperation({ id }));
     };
 
-    const specification = state.specifications.length
-        ? state.specifications[state.specifications.length - 1]
-        : undefined;
+    const globalSchema = useSchemaEditor({
+        state,
+        scope: 'global',
+        setInitialState,
+    });
 
-    const [initialValue, setInitialValue] = useState<JSON>(
-        JSON.parse(specification?.state.initialValue || '{}'),
-    );
-
-    useEffect(() => {
-        const currentValue = specification?.state.initialValue || '{}';
-
-        if (!isJSONEqual(initialValue, currentValue)) {
-            setInitialState(JSON.stringify(initialValue));
-        }
-    }, [initialValue, specification?.state.initialValue]);
-
-    useEffect(() => {
-        const specValue = specification?.state.initialValue || '{}';
-        if (!isJSONEqual(initialValue, specValue)) {
-            setInitialValue(JSON.parse(specValue));
-        }
-    }, [specification?.state.initialValue]);
-
-    const [schemaState, setSchemaState] = useState<SchemaState>();
+    const localSchema = useSchemaEditor({
+        state,
+        scope: 'local',
+        setInitialState,
+    });
 
     return (
         <>
@@ -143,7 +134,7 @@ function Editor(props: IProps) {
                 <TextInput
                     key="modelName"
                     theme={theme}
-                    value={state.name}
+                    value={state.global.name}
                     placeholder="Document Model Name"
                     autoFocus={true}
                     onSubmit={setModelName}
@@ -154,7 +145,7 @@ function Editor(props: IProps) {
                     <TextInput
                         key="modelId"
                         theme={theme}
-                        value={state.id}
+                        value={state.global.id}
                         placeholder="Model Type"
                         autoFocus={false}
                         onSubmit={setModelId}
@@ -165,7 +156,7 @@ function Editor(props: IProps) {
                 <TextInput
                     key="modelDescription"
                     theme={theme}
-                    value={state.description}
+                    value={state.global.description}
                     placeholder="Model Description"
                     autoFocus={false}
                     onSubmit={setModuleDescription}
@@ -175,7 +166,7 @@ function Editor(props: IProps) {
                     <TextInput
                         key="modelExtension"
                         theme={theme}
-                        value={state.extension}
+                        value={state.global.extension}
                         placeholder="File Extension(s)"
                         autoFocus={false}
                         onSubmit={setModelExtension}
@@ -189,7 +180,7 @@ function Editor(props: IProps) {
                         <TextInput
                             key="authorName"
                             theme={theme}
-                            value={state.author.name}
+                            value={state.global.author.name}
                             placeholder="Author Name"
                             autoFocus={false}
                             onSubmit={setAuthorName}
@@ -201,7 +192,7 @@ function Editor(props: IProps) {
                         <TextInput
                             key="authorWebsite"
                             theme={theme}
-                            value={state.author.website || ''}
+                            value={state.global.author.website || ''}
                             placeholder="https://"
                             autoFocus={false}
                             onSubmit={setAuthorWebsite}
@@ -210,7 +201,7 @@ function Editor(props: IProps) {
                         />
                     </div>
                 </div>
-                {!specification ? null : (
+                {!globalSchema.specification ? null : (
                     <>
                         <div
                             style={{
@@ -225,21 +216,29 @@ function Editor(props: IProps) {
                                 }}
                             >
                                 <h4 style={{ marginBottom: '16px' }}>
-                                    State Schema
+                                    Global State Schema
                                 </h4>
                                 <EditorSchema
-                                    name={document.state.name}
-                                    value={specification.state.schema}
+                                    scope="global"
+                                    name={document.state.global.name}
+                                    value={
+                                        globalSchema.specification.state.global
+                                            .schema
+                                    }
                                     onGenerate={schema => {
-                                        setSchemaState(state => ({
+                                        globalSchema.setSchemaState(state => ({
                                             ...state,
                                             ...schema,
                                         }));
                                         if (
                                             schema.schema !==
-                                            specification.state.schema
+                                            globalSchema.specification?.state
+                                                .global.schema
                                         ) {
-                                            setStateSchema(schema.schema);
+                                            setStateSchema(
+                                                schema.schema,
+                                                'global',
+                                            );
                                         }
                                     }}
                                     theme={theme}
@@ -253,20 +252,98 @@ function Editor(props: IProps) {
                                 }}
                             >
                                 <h4 style={{ marginBottom: '16px' }}>
-                                    Initial State
+                                    Global Initial State
                                 </h4>
                                 <EditorInitialState
                                     height={200}
-                                    value={specification.state.initialValue}
-                                    validator={schemaState?.validator}
+                                    value={
+                                        globalSchema.specification.state.global
+                                            .initialValue
+                                    }
+                                    validator={
+                                        globalSchema.schemaState?.validator
+                                    }
                                     onCreate={value => {
-                                        setInitialValue(JSON.parse(value));
+                                        globalSchema.setInitialValue(
+                                            JSON.parse(value),
+                                        );
                                     }}
                                     theme={theme}
                                 />
                             </div>
                         </div>
-                        {specification.modules.map(m => (
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                            }}
+                        >
+                            <div
+                                style={{
+                                    width: '50%',
+                                    display: 'inline-block',
+                                }}
+                            >
+                                <h4 style={{ marginBottom: '16px' }}>
+                                    Local State Schema
+                                </h4>
+                                <EditorSchema
+                                    scope="local"
+                                    name={document.state.global.name}
+                                    value={
+                                        localSchema.specification?.state.local
+                                            .schema
+                                    }
+                                    onGenerate={schema => {
+                                        localSchema.setSchemaState(state => ({
+                                            ...state,
+                                            ...schema,
+                                        }));
+                                        if (
+                                            schema.schema !==
+                                            localSchema.specification?.state
+                                                .local.schema
+                                        ) {
+                                            setStateSchema(
+                                                schema.schema,
+                                                'local',
+                                            );
+                                        }
+                                    }}
+                                    theme={theme}
+                                    height={200}
+                                />
+                            </div>
+                            <div
+                                style={{
+                                    width: '50%',
+                                    display: 'inline-block',
+                                }}
+                            >
+                                <h4 style={{ marginBottom: '16px' }}>
+                                    Local Initial State
+                                </h4>
+                                <EditorInitialState
+                                    height={200}
+                                    value={
+                                        localSchema.specification?.state.local
+                                            .initialValue
+                                    }
+                                    validator={
+                                        localSchema.schemaState?.validator
+                                    }
+                                    onCreate={value => {
+                                        localSchema.setInitialValue(
+                                            JSON.parse(value),
+                                        );
+                                    }}
+                                    theme={theme}
+                                />
+                            </div>
+                        </div>
+
+                        {globalSchema.specification.modules.map(m => (
                             <div key={m.id}>
                                 <TextInput
                                     key={m.id + '#name'}
