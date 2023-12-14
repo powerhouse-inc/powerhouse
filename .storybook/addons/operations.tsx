@@ -8,47 +8,57 @@ const PANEL_ID = `${ADDON_ID}/panel`;
 
 const OperationsPanel = (
     { operations }: { operations: Document.Document['operations'] }, // TODO export
-) => (
-    <table
-        style={{
-            width: '100%',
-            textAlign: 'left',
-        }}
-    >
-        <thead>
-            <tr>
-                <th>Type</th>
-                <th>Input</th>
-                <th>Index</th>
-                <th>Timestamp</th>
-                <th>Hash</th>
-            </tr>
-        </thead>
-        <tbody>
-            {operations.map(op => (
-                <tr key={op.index}>
-                    <td>{op.type}</td>
-                    <td>
-                        <pre
-                            style={{
-                                margin: '0 10px',
-                                padding: 0,
-                                maxHeight: 200,
-                                overflow: 'auto',
-                                background: 'rgba(100,100,100,0.2)',
-                            }}
-                        >
-                            {JSON.stringify(op.input, null, 2)}
-                        </pre>
-                    </td>
-                    <td>{op.index}</td>
-                    <td>{new Date(op.timestamp).toISOString()}</td>
-                    <td>{op.hash}</td>
+) => {
+    const operationsByTime = operations.global
+        .concat(operations.local)
+        .sort(
+            (op1, op2) =>
+                new Date(op1.timestamp).getTime() -
+                new Date(op2.timestamp).getTime(),
+        );
+    return (
+        <table
+            style={{
+                width: '100%',
+                textAlign: 'left',
+            }}
+        >
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Input</th>
+                    <th>Index</th>
+                    <th>Timestamp</th>
+                    <th>Hash</th>
+                    <th>Scope</th>
                 </tr>
-            ))}
-        </tbody>
-    </table>
-);
+            </thead>
+            <tbody>
+                {operationsByTime.map(op => (
+                    <tr key={op.index}>
+                        <td>{op.type}</td>
+                        <td>
+                            <pre
+                                style={{
+                                    margin: '0 10px',
+                                    padding: 0,
+                                    maxHeight: 200,
+                                    overflow: 'auto',
+                                    background: 'rgba(100,100,100,0.2)',
+                                }}
+                            >
+                                {JSON.stringify(op.input, null, 2)}
+                            </pre>
+                        </td>
+                        <td>{op.index}</td>
+                        <td>{new Date(op.timestamp).toISOString()}</td>
+                        <td>{op.hash}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
 
 addons.register(ADDON_ID, api => {
     const channel = api.getChannel();
