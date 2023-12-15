@@ -1,3 +1,10 @@
+# [1.0.0-alpha.41](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.40...v1.0.0-alpha.41) (2023-12-15)
+
+
+### Features
+
+* added support for item options in FileItem and FolderItem ([b6e0d8d](https://github.com/powerhouse-inc/design-system/commit/b6e0d8de0aad9a050cd594a8ed966aadea89536a))
+
 # [1.0.0-alpha.40](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.39...v1.0.0-alpha.40) (2023-12-12)
 
 
