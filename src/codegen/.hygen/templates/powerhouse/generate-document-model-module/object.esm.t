@@ -7,7 +7,8 @@ import {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
     <%= h.changeCase.pascal(action.name) %>Input,
 <% }); _%>
-    <%= h.changeCase.pascal(documentType) %>State
+    <%= h.changeCase.pascal(documentType) %>State,
+    <%= h.changeCase.pascal(documentType) %>LocalState
 } from '../types';
 import {
 <% actions.forEach(action => { _%>
@@ -17,7 +18,9 @@ import {
 import { <%= h.changeCase.pascal(documentType) %>Action } from '../actions';
 
 export default class <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module) %> extends BaseDocument<
-    <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action
+    <%= h.changeCase.pascal(documentType) %>State,
+    <%= h.changeCase.pascal(documentType) %>Action,
+    <%= h.changeCase.pascal(documentType) %>LocalState
 > {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
     public <%= h.changeCase.camel(action.name) %>(input: <%= h.changeCase.pascal(action.name) %>Input<%if(action.hasAttachment){ %>, attachments: AttachmentInput[] <% } %>) {

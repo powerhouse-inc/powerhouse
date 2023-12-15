@@ -22,7 +22,7 @@ const tsConfig = {
     },
     useIndexSignature: true,
     noSchemaStitching: true,
-    skipTypename: false,
+    skipTypename: true,
     // maybeValue: "T | null | undefined",
     inputMaybeValue: 'T | null | undefined',
 };

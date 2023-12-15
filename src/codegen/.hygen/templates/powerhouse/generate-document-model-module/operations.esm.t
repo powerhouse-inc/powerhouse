@@ -8,10 +8,10 @@ import {
     <%= h.changeCase.pascal(action.name) %>Action,
 <% }); _%>
 } from './actions';
-import { <%= h.changeCase.pascal(documentType) %>State } from '../types';
+import { <%= actions.map(action => h.changeCase.pascal(h.changeCase.pascal(documentType + '_' + action.state + '_State'))).filter((value, index, self) => self.indexOf(value) === index).join(', ') %> } from '../types';
 
 export interface <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations {
 <% actions.forEach(action => { _%>
-    <%= h.changeCase.camel(action.name) %>Operation: (state: <%= h.changeCase.pascal(documentType) %>State, action: <%= h.changeCase.pascal(action.name) %>Action, dispatch?: SignalDispatch) => void,
+    <%= h.changeCase.camel(action.name) %>Operation: (state: <%= h.changeCase.pascal(documentType + '_' + action.state + '_State') %>, action: <%= h.changeCase.pascal(action.name) %>Action, dispatch?: SignalDispatch) => void,
 <% }); _%>
 }

@@ -1,5 +1,5 @@
 #! /usr/bin/env node
-import { DocumentModelState, utils } from 'document-model/document-model';
+import { DocumentModelState, utils, z } from 'document-model/document-model';
 import {
     generateAll,
     generateEditor as _generateEditor,
@@ -10,22 +10,33 @@ import type { PowerhouseConfig } from '../utils';
 import fs from 'fs';
 import { join, resolve } from 'path';
 import { paramCase, pascalCase } from 'change-case';
+import { loadDocumentModel } from './utils';
 
-function generateGraphqlSchema(state: DocumentModelState) {
-    const spec = state.specifications[state.specifications.length - 1];
-    if (spec) {
-        const schemas = [
-            spec.state.schema,
-            ...spec.modules
-                .map(module => [
-                    `# ${module.name}`,
-                    ...module.operations.map(op => op.schema),
-                ])
-                .flat()
-                .filter(schema => schema && schema.length > 0),
-        ];
-        return schemas.join('\n\n');
-    } else return null;
+function generateGraphqlSchema(documentModel: DocumentModelState) {
+    const spec =
+        documentModel.specifications[documentModel.specifications.length - 1];
+
+    if (!spec) {
+        console.log(`No spec found for ${documentModel.id}`);
+        return;
+    }
+
+    const {
+        modules,
+        state: { global, local },
+    } = spec;
+    const schemas = [
+        global.schema,
+        local.schema,
+        ...modules
+            .map(module => [
+                `# ${module.name}`,
+                ...module.operations.map(op => op.schema),
+            ])
+            .flat()
+            .filter(schema => schema && schema.length > 0),
+    ];
+    return schemas.join('\n\n');
 }
 
 function getDocumentTypesMap(dir: string) {
@@ -58,18 +69,19 @@ export async function generate(config: PowerhouseConfig) {
 
 export async function generateFromFile(path: string, config: PowerhouseConfig) {
     // load document model spec from file
-    const documentModel = await utils.loadFromFile(path);
-    const name = paramCase(documentModel.state.name);
+    const documentModel = await loadDocumentModel(path);
+
+    const name = paramCase(documentModel.name);
 
     // create document model folder and spec as json
     fs.mkdirSync(join(config.documentModelsDir, name), { recursive: true });
     fs.writeFileSync(
         join(config.documentModelsDir, name, `${name}.json`),
-        JSON.stringify(documentModel.state, null, 4),
+        JSON.stringify(documentModel, null, 4),
     );
 
     // bundle graphql schemas together
-    const schemaStr = generateGraphqlSchema(documentModel.state);
+    const schemaStr = generateGraphqlSchema(documentModel);
     if (schemaStr) {
         fs.writeFileSync(
             join(config.documentModelsDir, name, `schema.graphql`),
@@ -79,7 +91,7 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
 
     await generateSchema(name, config.documentModelsDir, config);
     await generateDocumentModel(
-        documentModel.state,
+        documentModel,
         config.documentModelsDir,
         config,
     );

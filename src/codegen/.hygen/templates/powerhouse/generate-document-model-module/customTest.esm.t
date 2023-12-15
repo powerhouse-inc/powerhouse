@@ -28,10 +28,10 @@ describe('<%= h.changeCase.pascal(module) %> Operations', () => {
         const input = generateMock(z.<%= h.changeCase.pascal(action.name) %>InputSchema());
         const updatedDocument = reducer(document, creators.<%= h.changeCase.camel(action.name) %>(input));
 
-        expect(updatedDocument.operations).toHaveLength(1);
-        expect(updatedDocument.operations[0].type).toBe('<%= h.changeCase.constant(action.name) %>');
-        expect(updatedDocument.operations[0].input).toStrictEqual(input);
-        expect(updatedDocument.operations[0].index).toEqual(0);
+        expect(updatedDocument.operations.<%= action.scope %>).toHaveLength(1);
+        expect(updatedDocument.operations.<%= action.scope %>[0].type).toBe('<%= h.changeCase.constant(action.name) %>');
+        expect(updatedDocument.operations.<%= action.scope %>[0].input).toStrictEqual(input);
+        expect(updatedDocument.operations.<%= action.scope %>[0].index).toEqual(0);
     });
 
 <% }); _%> 

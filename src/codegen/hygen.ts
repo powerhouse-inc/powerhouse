@@ -3,6 +3,7 @@ import { DocumentModelState, utils } from 'document-model/document-model';
 import { Logger, runner } from 'hygen';
 import path from 'path';
 import fs from 'fs';
+import { loadDocumentModel } from './utils';
 
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, '.hygen', 'templates');
@@ -34,29 +35,6 @@ async function run(args: string[], { watch = false, format = false } = {}) {
     }
 
     return result;
-}
-
-async function loadDocumentModel(path: string): Promise<DocumentModelState> {
-    let documentModel: DocumentModelState;
-    try {
-        if (!path) {
-            throw new Error('Document model file not specified');
-        } else if (path.endsWith('.zip')) {
-            const file = await utils.loadFromFile(path);
-            documentModel = file.state;
-        } else if (path.endsWith('.json')) {
-            const data = fs.readFileSync(path, 'utf-8');
-            documentModel = JSON.parse(data);
-        } else {
-            throw new Error('File type not supported. Must be zip or json.');
-        }
-        return documentModel;
-    } catch (error) {
-        // @ts-ignore
-        throw error.code === 'MODULE_NOT_FOUND'
-            ? new Error(`Document model "${document}" not found.`)
-            : error;
-    }
 }
 
 export async function generateAll(

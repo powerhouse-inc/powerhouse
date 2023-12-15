@@ -7,9 +7,7 @@ unless_exists: true
 * - change it by adding new tests or modifying the existing ones
 */
 
-import utils from '../../gen/utils';
-
-const initialState = <%- initialStateValue %>;
+import utils, { initialGlobalState, initialLocalState } from '../../gen/utils';
 
 describe('<%= h.changeCase.title(documentType) %> Document Model', () => {
     it('should create a new <%= h.changeCase.title(documentType) %> document', () => {
@@ -21,6 +19,7 @@ describe('<%= h.changeCase.title(documentType) %> Document Model', () => {
 
     it('should create a new <%= h.changeCase.title(documentType) %> document with a valid initial state', () => {
         const document = utils.createDocument();
-        expect(document.state).toStrictEqual(initialState);
+        expect(document.state.global).toStrictEqual(initialGlobalState);
+        expect(document.state.local).toStrictEqual(initialLocalState);
     });
 });

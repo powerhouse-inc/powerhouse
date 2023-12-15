@@ -7,12 +7,18 @@ function documentModelToString(documentModel: DocumentModelState) {
             ...documentModel,
             specifications: documentModel.specifications.map(s => ({
                 ...s,
-                state: {
-                    ...s.state,
-                    // initial value has to be stringified twice
-                    // as it is expected to be a string
-                    initialValue: JSON.stringify(s.state.initialValue),
-                },
+                state: Object.keys(s.state).reduce((values, scope) => {
+                    const state = s.state[scope as keyof typeof s.state];
+                    return {
+                        ...values,
+                        [scope]: {
+                            ...state,
+                            // initial value has to be stringified twice
+                            // as it is expected to be a string
+                            initialValue: JSON.stringify(state.initialValue),
+                        },
+                    };
+                }, {}),
             })),
         },
         null,
@@ -45,7 +51,8 @@ export default {
                 ...m,
                 name: paramCase(m.name),
             })),
-            initialStateValue: latestSpec.state.initialValue,
+            initialGlobalState: latestSpec.state.global.initialValue,
+            initialLocalState: latestSpec.state.local.initialValue,
             fileExtension: documentModel.extension,
         };
     },

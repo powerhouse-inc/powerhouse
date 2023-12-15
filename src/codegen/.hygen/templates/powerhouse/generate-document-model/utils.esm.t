@@ -3,15 +3,16 @@ to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/utils.ts"
 force: true
 ---
 import { DocumentModelUtils, utils as base } from 'document-model/document';
-import { <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>State } from './types';
+import { <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState } from './types';
 import { reducer } from './reducer';
 
-const initialState: <%= h.changeCase.pascal(documentType) %>State = <%- initialStateValue %>;
+export const initialGlobalState: <%= h.changeCase.pascal(documentType) %>State = <%- initialGlobalState %>;
+export const initialLocalState: <%= h.changeCase.pascal(documentType) %>LocalState = <%- initialLocalState %>;
 
-const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> = {
+const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>LocalState> = {
     fileExtension: '<%- fileExtension %>',
     createState(state) {
-        return <%if(initialStateValue){ %> { ...initialState, ...state } <% } else { %> {} <% } %>;
+        return { global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },
     createExtendedState(extendedState) {
         return base.createExtendedState(

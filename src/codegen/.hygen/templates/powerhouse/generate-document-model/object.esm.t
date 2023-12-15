@@ -2,8 +2,8 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/object.ts"
 force: true
 ---
-import { BaseDocument, ExtendedState, applyMixins, SignalDispatch } from 'document-model/document';
-import { <%= h.changeCase.pascal(documentType) %>State } from './types';
+import { BaseDocument, ExtendedState, PartialState, applyMixins, SignalDispatch } from 'document-model/document';
+import { <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState } from './types';
 import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
 import { reducer } from './reducer';
 import utils from './utils';
@@ -20,10 +20,10 @@ interface <%= h.changeCase.pascal(documentType) %> extends
 <%= modules.map(m => '    ' + h.changeCase.pascal(documentType) + '_' + h.changeCase.pascal(m.name)).join(',\n') %> {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class <%= h.changeCase.pascal(documentType) %> extends BaseDocument<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action> {
+class <%= h.changeCase.pascal(documentType) %> extends BaseDocument<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>LocalState> {
     static fileExtension = '<%= extension %>';
 
-    constructor(initialState?: Partial<ExtendedState<Partial<<%= h.changeCase.pascal(documentType) %>State>>>, dispatch?: SignalDispatch) {
+    constructor(initialState?: Partial<ExtendedState<PartialState<<%= h.changeCase.pascal(documentType) %>State>, PartialState<<%= h.changeCase.pascal(documentType) %>LocalState>>>, dispatch?: SignalDispatch) {
         super(reducer, utils.createDocument(initialState), dispatch);
     }
 

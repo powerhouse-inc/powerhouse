@@ -1684,10 +1684,10 @@ dir-glob@^3.0.1:
   dependencies:
     path-type "^4.0.0"
 
-document-model@^1.0.13:
-  version "1.0.13"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.13.tgz#c76ae5c3966b42e1cc2cdce8e0e679d9c5dfc361"
-  integrity sha512-JlkcddHvDk6CwYOswbmHJcK1XvOufVziPxHog++DGF+KvpG4wglI/VNu/SwXJqFwVaF3tRxbZDetiP1hRcF22w==
+document-model@^1.0.17:
+  version "1.0.17"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.17.tgz#096fbb49a012c1f9f56f44acad442f8b1b41b006"
+  integrity sha512-CChQgK5uUSKk4YMegGJQ9XdXUkDMbtvadgAOyMyYwPfRDisnUFxY31PGkLFY/3BmuFHfsdXvlAIyP2IS77MyBw==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
