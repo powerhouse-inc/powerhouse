@@ -124,17 +124,21 @@ export function PruneActionInputSchema(): z.ZodObject<
     });
 }
 
+export const RedoActionInputSchema = z.number;
+
 export function RedoActionSchema(): z.ZodObject<Properties<RedoAction>> {
     return z.object({
-        input: z.number(),
+        input: RedoActionInputSchema(),
         type: RedoSchema,
         scope: z.literal('global'),
     });
 }
 
+export const SetNameActionInputSchema = z.string;
+
 export function SetNameActionSchema(): z.ZodObject<Properties<SetNameAction>> {
     return z.object({
-        input: z.string(),
+        input: SetNameActionInputSchema(),
         type: Set_NameSchema,
         scope: z.literal('global'),
     });
@@ -153,9 +157,11 @@ export function SetNameOperationSchema(): z.ZodObject<
     });
 }
 
+export const UndoActionInputSchema = z.number;
+
 export function UndoActionSchema(): z.ZodObject<Properties<UndoAction>> {
     return z.object({
-        input: z.number(),
+        input: UndoActionInputSchema(),
         type: UndoSchema,
         scope: z.literal('global'),
     });

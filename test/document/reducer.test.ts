@@ -1,4 +1,4 @@
-import { CreateChildDocumentInput, utils } from '../../src/document';
+import { Action, CreateChildDocumentInput, utils } from '../../src/document';
 import { setName } from '../../src/document/actions';
 import { SET_NAME } from '../../src/document/actions/types';
 import {
@@ -15,7 +15,11 @@ describe('Base reducer', () => {
 
     it('should update revision', async () => {
         const document = createDocument();
-        const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
+        const newDocument = emptyReducer(document, {
+            type: 'TEST',
+            input: {},
+            scope: 'global',
+        });
         expect(newDocument.revision).toBe(1);
     });
 
@@ -26,7 +30,11 @@ describe('Base reducer', () => {
             setTimeout(r, 100);
             jest.runOnlyPendingTimers();
         });
-        const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
+        const newDocument = emptyReducer(document, {
+            type: 'TEST',
+            input: {},
+            scope: 'global',
+        });
         expect(newDocument.lastModified > document.lastModified).toBe(true);
         jest.useRealTimers();
     });
@@ -34,7 +42,11 @@ describe('Base reducer', () => {
     it('should update global operations list', async () => {
         jest.useFakeTimers({ now: new Date('2023-01-01') });
         const document = createDocument();
-        const newDocument = emptyReducer(document, { type: 'TEST', input: {} });
+        const newDocument = emptyReducer(document, {
+            type: 'TEST',
+            input: {},
+            scope: 'global',
+        });
 
         expect(newDocument.operations.global).toStrictEqual([
             {
@@ -82,6 +94,7 @@ describe('Base reducer', () => {
             emptyReducer(document, {
                 type: 'SET_NAME',
                 input: 0 as unknown as string,
+                scope: 'global',
             }),
         ).toThrow();
     });
@@ -106,9 +119,10 @@ describe('Base reducer', () => {
             }
         });
 
-        const triggerAction = {
+        const triggerAction: Action = {
             type: 'CREATE_DOCUMENT',
             input: '',
+            scope: 'global',
         };
 
         reducer(document, triggerAction, action => {

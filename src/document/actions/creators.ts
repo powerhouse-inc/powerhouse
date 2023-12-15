@@ -19,7 +19,7 @@ export const setName = (name: string) =>
         'SET_NAME',
         name,
         undefined,
-        z.SetNameActionSchema,
+        z.SetNameActionInputSchema,
     );
 
 /**
@@ -29,7 +29,7 @@ export const setName = (name: string) =>
  * @category Actions
  */
 export const undo = (count = 1) =>
-    createAction<UndoAction>('UNDO', count, undefined, z.UndoActionSchema);
+    createAction<UndoAction>('UNDO', count, undefined, z.UndoActionInputSchema);
 
 /**
  * Cancels the last `count` {@link undo | UNDO} operations.
@@ -38,7 +38,7 @@ export const undo = (count = 1) =>
  * @category Actions
  */
 export const redo = (count = 1) =>
-    createAction<RedoAction>('REDO', count, undefined, z.RedoActionSchema);
+    createAction<RedoAction>('REDO', count, undefined, z.RedoActionInputSchema);
 
 /**
  * Joins multiple operations into a single {@link loadState | LOAD_STATE} operation.
@@ -56,7 +56,7 @@ export const prune = (start?: number | undefined, end?: number | undefined) =>
         'PRUNE',
         { start, end },
         undefined,
-        z.PruneActionSchema,
+        z.PruneActionInputSchema,
     );
 
 /**
@@ -77,5 +77,5 @@ export const loadState = <S, T>(
         'LOAD_STATE',
         { state, operations },
         undefined,
-        z.LoadStateActionSchema,
+        z.LoadStateActionInputSchema,
     );

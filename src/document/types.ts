@@ -15,21 +15,26 @@ export type { Immutable } from 'immer';
  *
  * @typeParam T - The name of the action type. A `string` type by default.
  */
-export type Action<T extends string = string, I = unknown> = {
+export type Action<
+    T extends string = string,
+    I = unknown,
+    S extends OperationScope = OperationScope,
+> = {
     /** The name of the action. */
     type: T;
     /** The payload of the action. */
     input: I;
+    /** The scope of the action, can either be 'global' or 'local' */
+    scope: S;
     /** The attachments included in the action. */
     attachments?: AttachmentInput[] | undefined;
-    /** The scope of the action, can either be 'global' or 'local'. Defaults to 'global' */
-    scope?: OperationScope;
 };
 
 export type ActionWithAttachment<
     T extends string = string,
     I = unknown,
-> = Action<T, I> & {
+    S extends OperationScope = OperationScope,
+> = Action<T, I, S> & {
     attachments: AttachmentInput[];
 };
 

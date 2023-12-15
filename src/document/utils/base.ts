@@ -41,7 +41,7 @@ export function createAction<A extends Action>(
     type: A['type'],
     input?: A['input'],
     attachments?: Action['attachments'],
-    validator?: () => { parse(v: unknown): A },
+    validator?: () => { parse(v: unknown): A['input'] },
     scope: OperationScope = 'global',
 ): A {
     if (!type) {
@@ -58,7 +58,11 @@ export function createAction<A extends Action>(
         action['attachments'] = attachments;
     }
 
-    validator?.().parse(action);
+    try {
+        validator?.().parse(action.input);
+    } catch (error) {
+        throw new Error(`Invalid action input: ${error}`);
+    }
 
     return action as A;
 }
