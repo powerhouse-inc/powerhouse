@@ -42,14 +42,17 @@ describe('Budget Statement reducer', () => {
         const document = createDocument({
             name: 'March',
             state: {
-                owner: {
-                    ref: 'makerdao/core-unit',
-                    id: 'SES-001',
-                    title: 'Sustainable Ecosystem Scaling',
+                global: {
+                    owner: {
+                        ref: 'makerdao/core-unit',
+                        id: 'SES-001',
+                        title: 'Sustainable Ecosystem Scaling',
+                    },
                 },
+                local: {},
             },
         });
-        expect(document.state.owner).toStrictEqual({
+        expect(document.state.global.owner).toStrictEqual({
             ref: 'makerdao/core-unit',
             id: 'SES-001',
             title: 'Sustainable Ecosystem Scaling',
@@ -74,12 +77,12 @@ describe('Budget Statement reducer', () => {
                 title: 'Sustainable Ecosystem Scaling',
             }),
         );
-        expect(newDocument.state.owner).toStrictEqual({
+        expect(newDocument.state.global.owner).toStrictEqual({
             ref: 'makerdao/core-unit',
             id: 'SES-001',
             title: 'Sustainable Ecosystem Scaling',
         });
-        expect(document.state.owner).toStrictEqual({
+        expect(document.state.global.owner).toStrictEqual({
             ref: null,
             id: null,
             title: null,
@@ -89,8 +92,8 @@ describe('Budget Statement reducer', () => {
     it('should set month', async () => {
         const document = createDocument();
         const newDocument = reducer(document, setMonth({ month: 'Feb' }));
-        expect(newDocument.state.month).toBe('Feb');
-        expect(document.state.month).toBe(null);
+        expect(newDocument.state.global.month).toBe('Feb');
+        expect(document.state.global.month).toBe(null);
     });
 
     it('should set quoteCurrency', async () => {
@@ -99,7 +102,7 @@ describe('Budget Statement reducer', () => {
             document,
             setQuoteCurrency({ quoteCurrency: 'DAI' }),
         );
-        expect(newDocument.state.quoteCurrency).toBe('DAI');
-        expect(document.state.quoteCurrency).toBe(null);
+        expect(newDocument.state.global.quoteCurrency).toBe('DAI');
+        expect(document.state.global.quoteCurrency).toBe(null);
     });
 });

@@ -1,30 +1,27 @@
-#############################################################################
-# State Type Definitions 
-#
 type ScopeComponent {
     content: String
 }
-
-type ArticleComponent {
+                    
+type  ArticleComponent {
     content: String
 }
-
-type SectionComponent {
+                    
+type  SectionComponent {
     content: String
 }
-
-type CoreComponent {
+                    
+type  CoreComponent {
     content: String
 }
-
+                    
 enum TypeSpecificationComponentCategory {
     Primary
     Supporting
     Immutable
     Accessory
 }
-
-type TypeSpecificationComponent {
+                    
+type  TypeSpecificationComponent {
     name: String
     overview: String
     category: TypeSpecificationComponentCategory
@@ -32,14 +29,14 @@ type TypeSpecificationComponent {
     typeAuthority: String
     additionalLogic: String
 }
-
+                    
 union ElementComponents = 
         ScopeComponent
     |   ArticleComponent
     |   SectionComponent
     |   CoreComponent
     |   TypeSpecificationComponent
-
+                    
 enum ScopeFrameworkElementType {
     Scope
     Article
@@ -47,8 +44,8 @@ enum ScopeFrameworkElementType {
     Core
     TypeSpecification
 }
-
-type ScopeFrameworkElement {
+                    
+type  ScopeFrameworkElement {
     id: ID!
     path: String!
     version: Int!
@@ -56,15 +53,15 @@ type ScopeFrameworkElement {
     type: ScopeFrameworkElementType
     components: ElementComponents
 }
-
-type ScopeFrameworkState {
+                    
+type  ScopeFrameworkState {
     rootPath: String!
     elements: [ScopeFrameworkElement!]!
 }
 
-#############################################################################
-# Operation Type Definitions 
-#
+type ScopeFrameworkLocalState
+
+# main
 
 type SetRootPathInput {
     newRootPath: String!
@@ -78,14 +75,14 @@ type AddElementInput {
     components: ElementComponents
 }
 
-type UpdateElementNameInput {
-    id: ID!
-    name: String
-}
-
 type UpdateElementTypeInput {
     id: ID!
     type: ScopeFrameworkElementType!
+}
+
+type UpdateElementNameInput {
+    id: ID!
+    name: String
 }
 
 type UpdateElementComponentsInput {
@@ -106,24 +103,3 @@ type MoveElementInput {
     id: ID!
     newParentId: ID!
 }
-
-type Mutation {
-    setRootPath(input: SetRootPathInput!): ScopeFrameworkState
-    addElement(input: AddElementInput!): ScopeFrameworkState
-    updateElementType(input: UpdateElementTypeInput!): ScopeFrameworkState
-    updateElementName(input: UpdateElementNameInput!): ScopeFrameworkState
-    updateElementComponents(input: UpdateElementComponentsInput!): ScopeFrameworkState
-    removeElement(input: RemoveElementInput!): ScopeFrameworkState
-    reorderElements(input: ReorderElementsInput!): ScopeFrameworkState
-    moveElement(input: MoveElementInput!): ScopeFrameworkState
-}
-
-union ScopeFrameworkInput = 
-        SetRootPathInput
-    |   AddElementInput
-    |   UpdateElementTypeInput
-    |   UpdateElementNameInput
-    |   UpdateElementComponentsInput
-    |   RemoveElementInput
-    |   ReorderElementsInput
-    |   MoveElementInput

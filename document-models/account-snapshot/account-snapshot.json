@@ -12,9 +12,16 @@
             "version": 1,
             "changeLog": [],
             "state": {
-                "schema": "type AccountSnapshotState {\n\tid: ID!\n    ownerId: ID\n    ownerType: String\n    period: String\n    start: String\n    end: String\n    actualsComparison: [ActualsComparison]\n    snapshotAccount: [SnapshotAccount]\n}\n\ntype ActualsComparison {\n    currency: String\n    month: String\n    reportedActuals: Float\n    netExpenses: ActualsComparisonNetExpenses\n}\n\ntype ActualsComparisonNetExpenses {\n    offChainIncluded: ActualsComparisonNetExpensesItem\n    onChainOnly: ActualsComparisonNetExpensesItem!\n}\n\ntype ActualsComparisonNetExpensesItem {\n    amount: Float\n    difference: Float\n}\n\ntype SnapshotAccount {\n    accountAddress: String\n    accountLabel: String\n    accountType: String\n    groupAccountId: ID\n    id: ID!\n    offChain: Boolean\n    upstreamAccountId: ID\n    snapshotAccountBalance: [SnapshotAccountBalance]\n    snapshotAccountTransaction: [SnapshotAccountTransaction]\n}\n\ntype SnapshotAccountBalance {\n    id: ID\n    includesOffChain: Boolean\n    inflow: Float\n    initialBalance: Float\n    newBalance: Float\n    outflow: Float\n    token: String\n}\n\ntype SnapshotAccountTransaction {\n    amount: Float\n    block: Int\n    counterParty: String\n    counterPartyName: String\n    id: ID!\n    timestamp: String\n    token: String\n    txHash: String\n    txLabel: String\n}",
-                "initialValue": "{\"id\":\"\",\"ownerId\":\"\",\"ownerType\":\"\",\"period\":\"\",\"start\":\"\",\"end\":\"\",\"actualsComparison\":[],\"snapshotAccount\":[]}",
-                "examples": []
+                "global": {
+                    "schema": "type AccountSnapshotState {\n\tid: ID!\n    ownerId: ID\n    ownerType: String\n    period: String\n    start: String\n    end: String\n    actualsComparison: [ActualsComparison]\n    snapshotAccount: [SnapshotAccount]\n}\n\ntype ActualsComparison {\n    currency: String\n    month: String\n    reportedActuals: Float\n    netExpenses: ActualsComparisonNetExpenses\n}\n\ntype ActualsComparisonNetExpenses {\n    offChainIncluded: ActualsComparisonNetExpensesItem\n    onChainOnly: ActualsComparisonNetExpensesItem!\n}\n\ntype ActualsComparisonNetExpensesItem {\n    amount: Float\n    difference: Float\n}\n\ntype SnapshotAccount {\n    accountAddress: String\n    accountLabel: String\n    accountType: String\n    groupAccountId: ID\n    id: ID!\n    offChain: Boolean\n    upstreamAccountId: ID\n    snapshotAccountBalance: [SnapshotAccountBalance]\n    snapshotAccountTransaction: [SnapshotAccountTransaction]\n}\n\ntype SnapshotAccountBalance {\n    id: ID\n    includesOffChain: Boolean\n    inflow: Float\n    initialBalance: Float\n    newBalance: Float\n    outflow: Float\n    token: String\n}\n\ntype SnapshotAccountTransaction {\n    amount: Float\n    block: Int\n    counterParty: String\n    counterPartyName: String\n    id: ID!\n    timestamp: String\n    token: String\n    txHash: String\n    txLabel: String\n}",
+                    "initialValue": "{\"id\":\"\",\"ownerId\":\"\",\"ownerType\":\"\",\"period\":\"\",\"start\":\"\",\"end\":\"\",\"actualsComparison\":[],\"snapshotAccount\":[]}",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "type AccountSnapshotLocalState",
+                    "initialValue": "{}",
+                    "examples": []
+                }
             },
             "modules": [
                 {

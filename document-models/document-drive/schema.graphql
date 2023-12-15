@@ -23,8 +23,8 @@ type DocumentDriveState {
     remoteUrl: String
 }
 
-type DocumentDriveLocalState {
-    sharingType: String!
+type DocumentDriveLocalState{
+    sharingType: String
     availableOffline: Boolean!
 }
 

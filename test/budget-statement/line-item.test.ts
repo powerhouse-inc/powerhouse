@@ -37,7 +37,7 @@ describe('Budget Statement line item reducer', () => {
                 headcountExpense: true,
             }),
         );
-        expect(newDocument.state.accounts[0].lineItems).toStrictEqual([
+        expect(newDocument.state.global.accounts[0].lineItems).toStrictEqual([
             {
                 category: {
                     ref: 'makerdao/budget-category',
@@ -58,7 +58,7 @@ describe('Budget Statement line item reducer', () => {
                 forecast: [],
             },
         ]);
-        expect(document.state.accounts[0].lineItems).toStrictEqual([]);
+        expect(document.state.global.accounts[0].lineItems).toStrictEqual([]);
     });
 
     it('should update line item', async () => {
@@ -106,32 +106,34 @@ describe('Budget Statement line item reducer', () => {
             }),
         );
 
-        expect(newDocument.state.accounts[0].lineItems[0]).toStrictEqual({
-            category: {
-                ref: 'makerdao/budget-category',
-                id: 'TravelAndEntertainment',
-                title: 'Travel & Entertainment',
-            },
-            group: {
-                ref: 'makerdao/project',
-                id: 'core-unit/SES/2023/005',
-                title: 'Core Unit Operational Support',
-                color: 'teal',
-            },
-            headcountExpense: false,
-            budgetCap: 1000,
-            actual: 100,
-            payment: null,
-            comment: null,
-            forecast: [
-                {
-                    month: '2023/02',
-                    value: 2000,
-                    budgetCap: 2000,
+        expect(newDocument.state.global.accounts[0].lineItems[0]).toStrictEqual(
+            {
+                category: {
+                    ref: 'makerdao/budget-category',
+                    id: 'TravelAndEntertainment',
+                    title: 'Travel & Entertainment',
                 },
-            ],
-        });
-        expect(document.state.accounts[0].lineItems[0]).toStrictEqual({
+                group: {
+                    ref: 'makerdao/project',
+                    id: 'core-unit/SES/2023/005',
+                    title: 'Core Unit Operational Support',
+                    color: 'teal',
+                },
+                headcountExpense: false,
+                budgetCap: 1000,
+                actual: 100,
+                payment: null,
+                comment: null,
+                forecast: [
+                    {
+                        month: '2023/02',
+                        value: 2000,
+                        budgetCap: 2000,
+                    },
+                ],
+            },
+        );
+        expect(document.state.global.accounts[0].lineItems[0]).toStrictEqual({
             category: {
                 ref: 'makerdao/budget-category',
                 id: 'TravelAndEntertainment',
@@ -187,8 +189,8 @@ describe('Budget Statement line item reducer', () => {
                 group: 'core-unit/SES/2023/005',
             }),
         );
-        expect(newDocument.state.accounts[0].lineItems.length).toBe(0);
-        expect(document.state.accounts[0].lineItems.length).toBe(1);
+        expect(newDocument.state.global.accounts[0].lineItems.length).toBe(0);
+        expect(document.state.global.accounts[0].lineItems.length).toBe(1);
     });
 
     it('should throw if adding duplicated line item', async () => {
@@ -243,54 +245,57 @@ describe('Budget Statement line item reducer', () => {
     it('should sort line items', () => {
         const document = createDocument({
             state: {
-                accounts: [
-                    createAccount({
-                        address:
-                            'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
-                        name: 'Grants Program',
-                        lineItems: [
-                            createLineItem({
-                                category: {
-                                    ref: '0',
-                                    id: '0',
-                                    title: '0',
-                                },
-                                group: {
-                                    ref: '0',
-                                    id: '0',
-                                    title: '0',
-                                    color: 'teal',
-                                },
-                            }),
-                            createLineItem({
-                                category: {
-                                    ref: '1',
-                                    id: '1',
-                                    title: '1',
-                                },
-                                group: {
-                                    ref: '1',
-                                    id: '1',
-                                    title: '1',
-                                    color: 'teal',
-                                },
-                            }),
-                            createLineItem({
-                                category: {
-                                    ref: '2',
-                                    id: '2',
-                                    title: '2',
-                                },
-                                group: {
-                                    ref: '2',
-                                    id: '2',
-                                    title: '2',
-                                    color: 'teal',
-                                },
-                            }),
-                        ],
-                    }),
-                ],
+                global: {
+                    accounts: [
+                        createAccount({
+                            address:
+                                'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+                            name: 'Grants Program',
+                            lineItems: [
+                                createLineItem({
+                                    category: {
+                                        ref: '0',
+                                        id: '0',
+                                        title: '0',
+                                    },
+                                    group: {
+                                        ref: '0',
+                                        id: '0',
+                                        title: '0',
+                                        color: 'teal',
+                                    },
+                                }),
+                                createLineItem({
+                                    category: {
+                                        ref: '1',
+                                        id: '1',
+                                        title: '1',
+                                    },
+                                    group: {
+                                        ref: '1',
+                                        id: '1',
+                                        title: '1',
+                                        color: 'teal',
+                                    },
+                                }),
+                                createLineItem({
+                                    category: {
+                                        ref: '2',
+                                        id: '2',
+                                        title: '2',
+                                    },
+                                    group: {
+                                        ref: '2',
+                                        id: '2',
+                                        title: '2',
+                                        color: 'teal',
+                                    },
+                                }),
+                            ],
+                        }),
+                    ],
+                },
+                local: {},
             },
         });
 
@@ -306,7 +311,7 @@ describe('Budget Statement line item reducer', () => {
         );
 
         expect(
-            newDocument.state.accounts[0].lineItems.map(l => ({
+            newDocument.state.global.accounts[0].lineItems.map(l => ({
                 group: l.group?.id,
                 category: l.category?.id,
             })),

@@ -1,5 +1,5 @@
 type AccountSnapshotState {
-    id: ID!
+	id: ID!
     ownerId: ID
     ownerType: String
     period: String
@@ -59,6 +59,8 @@ type SnapshotAccountTransaction {
     txHash: String
     txLabel: String
 }
+
+type AccountSnapshotLocalState
 
 # Snapshot
 

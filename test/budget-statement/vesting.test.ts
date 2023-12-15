@@ -12,7 +12,7 @@ const { createDocument } = utils;
 describe('Budget Statement Vesting reducer', () => {
     it('should start as empty array', async () => {
         const document = createDocument();
-        expect(document.state.vesting).toStrictEqual([]);
+        expect(document.state.global.vesting).toStrictEqual([]);
     });
 
     it('should add comment', async () => {
@@ -29,7 +29,7 @@ describe('Budget Statement Vesting reducer', () => {
                 vested: false,
             }),
         );
-        expect(newDocument.state.vesting).toStrictEqual([
+        expect(newDocument.state.global.vesting).toStrictEqual([
             {
                 amount: '100',
                 amountOld: '40',
@@ -40,7 +40,7 @@ describe('Budget Statement Vesting reducer', () => {
                 vested: false,
             },
         ]);
-        expect(document.state.vesting).toStrictEqual([]);
+        expect(document.state.global.vesting).toStrictEqual([]);
     });
 
     it('should update vesting', async () => {
@@ -61,7 +61,7 @@ describe('Budget Statement Vesting reducer', () => {
             document,
             updateVesting({ key: '123', amount: '300' }),
         );
-        expect(document.state.vesting[0]).toStrictEqual({
+        expect(document.state.global.vesting[0]).toStrictEqual({
             amount: '300',
             amountOld: '40',
             comment: 'New FTEs',
@@ -82,7 +82,7 @@ describe('Budget Statement Vesting reducer', () => {
         );
 
         document = reducer(document, deleteVesting({ vesting: '123' }));
-        expect(document.state.vesting.length).toBe(0);
+        expect(document.state.global.vesting.length).toBe(0);
     });
 
     it('should generate vesting key if undefined', async () => {
@@ -94,8 +94,8 @@ describe('Budget Statement Vesting reducer', () => {
                 date: '2023-03-16',
             }),
         );
-        expect(newDocument.state.vesting[0].key.length).toBe(28);
-        expect(newDocument.state.vesting[0].amount).toBe('');
+        expect(newDocument.state.global.vesting[0].key.length).toBe(28);
+        expect(newDocument.state.global.vesting[0].amount).toBe('');
     });
 
     it('should sort vestings by date', async () => {
@@ -119,9 +119,9 @@ describe('Budget Statement Vesting reducer', () => {
             }),
         );
 
-        expect(newDocument.state.vesting[0].date).toBe('2023-03-11');
-        expect(newDocument.state.vesting[1].date).toBe('2023-03-13');
-        expect(newDocument.state.vesting[2].date).toBe('2023-03-15');
+        expect(newDocument.state.global.vesting[0].date).toBe('2023-03-11');
+        expect(newDocument.state.global.vesting[1].date).toBe('2023-03-13');
+        expect(newDocument.state.global.vesting[2].date).toBe('2023-03-15');
     });
 
     it('should throw if vesting key already exists', async () => {
@@ -170,7 +170,7 @@ describe('Budget Statement Vesting reducer', () => {
             }),
         );
 
-        expect(document.state.vesting).toStrictEqual([
+        expect(document.state.global.vesting).toStrictEqual([
             {
                 amount: '200',
                 amountOld: '100',

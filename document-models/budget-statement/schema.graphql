@@ -1,12 +1,16 @@
-#import * from "./schema/account.graphql"
-#import * from "./schema/audit.graphql"
-#import * from "./schema/base.graphql"
-#import * from "./schema/comment.graphql"
-#import * from "./schema/line-item.graphql"
-#import * from "./schema/vesting.graphql"
-
 scalar DateTime
 scalar Attachment
+
+input LineItemInput {
+    group: LineItemGroup
+    headcountExpense: Boolean
+    category: LineItemCategory
+    budgetCap: Float
+    actual: Float
+    payment: Float
+    forecast: [LineItemForecast!]
+    comment: String
+}
 
 type LineItemGroup {
     ref: String!
@@ -116,45 +120,172 @@ type BudgetStatementState {
     comments: [Comment!]!
 }
 
-type Mutation {
-    addAccount(input: AddAccountInput!): BudgetStatementState
-    updateAccount(input: UpdateAccountInput!): BudgetStatementState
-    deleteAccount(input: DeleteAccountInput!): BudgetStatementState
-    addLineItem(input: AddLineItemInput!): BudgetStatementState
-    updateLineItem(input: UpdateLineItemInput!): BudgetStatementState
-    deleteLineItem(input: DeleteLineItemInput!): BudgetStatementState
-    addComment(input: AddCommentInput!): BudgetStatementState
-    updateComment(input: UpdateCommentInput!): BudgetStatementState
-    deleteComment(input: DeleteCommentInput!): BudgetStatementState
-    addVesting(input: AddVestingInput!): BudgetStatementState
-    updateVesting(input: UpdateVestingInput!): BudgetStatementState
-    deleteVesting(input: DeleteVestingInput!): BudgetStatementState
-    addAuditReport(input: AddAuditReportInput!): BudgetStatementState
-    deleteAuditReport(input: DeleteAuditReportInput!): BudgetStatementState
-    setOwner(input: SetOwnerInput!): BudgetStatementState
-    setMonth(input: SetMonthInput!): BudgetStatementState
-    setQuoteCurrency(input: SetQuoteCurrencyInput!): BudgetStatementState
-    setFtes(input: SetFtesInput!): BudgetStatementState
+type BudgetStatementLocalState
+
+# account
+
+input AddAccountInput {
+    address: String!
+    name: String
+    lineItems: [LineItemInput!]
 }
 
-union BudgetStatementInput =
-      AddAccountInput
-    | UpdateAccountInput
-    | DeleteAccountInput
-    | SortAccountsInput
-    | AddLineItemInput
-    | UpdateLineItemInput
-    | DeleteLineItemInput
-    | SortLineItemsInput
-    | AddCommentInput
-    | UpdateCommentInput
-    | DeleteCommentInput
-    | AddVestingInput
-    | UpdateVestingInput
-    | DeleteVestingInput
-    | AddAuditReportInput
-    | DeleteAuditReportInput
-    | SetOwnerInput
-    | SetMonthInput
-    | SetQuoteCurrencyInput
-    | SetFtesInput
+input UpdateAccountInput {
+    address: String!
+    name: String
+    lineItems: [LineItem!]
+}
+
+input DeleteAccountInput {
+    account: String!
+}
+
+input SortAccountsInput {
+    accounts: [String!]!
+}
+
+# line-item
+
+input AddLineItemInput {
+    accountId: ID!
+    group: LineItemGroup
+    headcountExpense: Boolean
+    category: LineItemCategory
+    budgetCap: Float
+    actual: Float
+    payment: Float
+    forecast: [LineItemForecast!]
+    comment: String
+}
+
+input LineItemUpdateInput {
+    group: String
+    category: String
+    headcountExpense: Boolean
+    budgetCap: Float
+    actual: Float
+    payment: Float
+    forecast: [LineItemForecast!]
+    comment: String
+}
+
+input UpdateLineItemInput {
+    accountId: ID!
+    group: String
+    category: String
+    headcountExpense: Boolean
+    budgetCap: Float
+    actual: Float
+    payment: Float
+    forecast: [LineItemForecast!]
+    comment: String
+}
+
+input DeleteLineItemInput {
+    accountId: ID!
+    group: String
+    category: String
+}
+
+input LineItemsSortInput {
+    group: String
+    category: String
+}
+
+input SortLineItemsInput {
+    accountId: ID!
+    lineItems: [LineItemsSortInput!]!
+}
+
+# base
+
+input SetOwnerInput {
+    ref: String
+    id: String
+    title: String
+}
+
+input SetMonthInput {
+    month: String!
+}
+
+input FtesForecastInput {
+    month: String!
+    value: Float!
+}
+
+input SetFtesInput {
+    value: Float!
+    forecast: [FtesForecastInput!]!
+}
+
+input SetQuoteCurrencyInput {
+    quoteCurrency: String!
+}
+
+# audit
+
+input AddAuditReportInput {
+    timestamp: DateTime
+    report: Attachment!
+    status: AuditReportStatus!
+}
+
+input DeleteAuditReportInput {
+    report: String!
+}
+
+# comment
+
+input CommentAuthorInput {
+    ref: String
+    id: String
+    username: String
+    roleLabel: String
+}
+
+input AddCommentInput {
+    key: String
+    author: CommentAuthorInput
+    comment: String!
+    timestamp: DateTime
+    status: BudgetStatus
+}
+
+input UpdateCommentInput {
+    key: String!
+    author: CommentAuthorInput
+    comment: String
+    timestamp: DateTime
+    status: BudgetStatus
+}
+
+input DeleteCommentInput {
+    comment: String!
+}
+
+# vesting
+
+input AddVestingInput {
+    key: String
+    date: String
+    amount: String
+    amountOld: String
+    comment: String
+    currency: String
+    vested: Boolean
+}
+
+input UpdateVestingInput {
+    key: String!
+    date: String
+    amount: String
+    amountOld: String
+    comment: String
+    currency: String
+    vested: Boolean
+}
+
+input DeleteVestingInput {
+    vesting: String!
+}

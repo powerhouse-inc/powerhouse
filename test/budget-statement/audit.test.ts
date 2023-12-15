@@ -31,7 +31,7 @@ describe('Budget Statement Audit Report reducer', () => {
 
     it('should start as empty array', async () => {
         const document = createDocument();
-        expect(document.state.auditReports).toStrictEqual([]);
+        expect(document.state.global.auditReports).toStrictEqual([]);
     });
 
     it('should add audit report', async () => {
@@ -48,12 +48,12 @@ describe('Budget Statement Audit Report reducer', () => {
                 [file],
             ),
         );
-        expect(newDocument.state.auditReports[0]).toStrictEqual({
+        expect(newDocument.state.global.auditReports[0]).toStrictEqual({
             report: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
-        expect(document.state.auditReports).toStrictEqual([]);
+        expect(document.state.global.auditReports).toStrictEqual([]);
     });
 
     it('should add attachment to file registry', async () => {
@@ -101,7 +101,7 @@ describe('Budget Statement Audit Report reducer', () => {
             document,
             deleteAuditReport({ report: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=' }),
         );
-        expect(document.state.auditReports).toStrictEqual([]);
+        expect(document.state.global.auditReports).toStrictEqual([]);
     });
 
     it('should set default timestamp on audit report', async () => {
@@ -121,7 +121,8 @@ describe('Budget Statement Audit Report reducer', () => {
             ),
         );
         expect(
-            newDocument.state.auditReports[0].timestamp >= date.toISOString(),
+            newDocument.state.global.auditReports[0].timestamp >=
+                date.toISOString(),
         ).toBe(true);
     });
 
@@ -140,7 +141,7 @@ describe('Budget Statement Audit Report reducer', () => {
                 [file],
             ),
         );
-        expect(document.state.auditReports[0].status).toBe('Approved');
+        expect(document.state.global.auditReports[0].status).toBe('Approved');
     });
 
     it('should add approved with comments audit report', async () => {
@@ -158,7 +159,7 @@ describe('Budget Statement Audit Report reducer', () => {
                 [file],
             ),
         );
-        expect(document.state.auditReports[0].status).toBe(
+        expect(document.state.global.auditReports[0].status).toBe(
             'ApprovedWithComments',
         );
     });
@@ -178,7 +179,9 @@ describe('Budget Statement Audit Report reducer', () => {
                 [file],
             ),
         );
-        expect(document.state.auditReports[0].status).toBe('NeedsAction');
+        expect(document.state.global.auditReports[0].status).toBe(
+            'NeedsAction',
+        );
     });
 
     it('should throw if duplicated audit report', async () => {
@@ -231,14 +234,14 @@ describe('Budget Statement Audit Report reducer', () => {
                 [file],
             ),
         );
-        expect(newDocument.state.auditReports[0]).toStrictEqual({
+        expect(newDocument.state.global.auditReports[0]).toStrictEqual({
             report: file.hash,
             status: 'Approved',
             timestamp: '2023-03-15T17:46:22.754Z',
         });
         expect(newDocument.attachments[file.hash].data).toEqual(file.data);
         expect(newDocument.attachments[file.hash].mimeType).toBe(file.mimeType);
-        expect(document.state.auditReports).toStrictEqual([]);
+        expect(document.state.global.auditReports).toStrictEqual([]);
         expect(document.attachments).toStrictEqual({});
     });
 
@@ -261,7 +264,7 @@ describe('Budget Statement Audit Report reducer', () => {
         const zip = new JSZip();
         await zip.loadAsync(file);
 
-        const report = document.state.auditReports[0].report;
+        const report = document.state.global.auditReports[0].report;
         const path = report.slice(''.length);
         const attachmentZip = zip.file(path);
 
@@ -275,14 +278,16 @@ describe('Budget Statement Audit Report reducer', () => {
     it('should load attachment from zip', async () => {
         const { hash, ...attachment } = await getLocalFile(tempFile);
         const document = await loadFromFile(`${tempDir}march.phbs.zip`);
-        expect(document.state.auditReports[0].status).toBe('NeedsAction');
+        expect(document.state.global.auditReports[0].status).toBe(
+            'NeedsAction',
+        );
         expect(
-            (document.operations[0] as Operation<AddAuditReportAction>).input
-                .report,
+            (document.operations.global[0] as Operation<AddAuditReportAction>)
+                .input.report,
         ).toBe(hash);
 
         expect(
-            document.attachments[document.state.auditReports[0].report],
+            document.attachments[document.state.global.auditReports[0].report],
         ).toStrictEqual(attachment);
     });
 });

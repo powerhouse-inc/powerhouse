@@ -7,7 +7,7 @@ import {
 const buildExampleDocument = (): ScopeFramework => {
     const framework = new ScopeFramework();
 
-    const scopeId = framework.state.elements[0].id;
+    const scopeId = framework.state.global.elements[0].id;
     framework.updateElementName({ id: scopeId, name: 'The Governance Scope' });
 
     framework.updateElementComponents({
@@ -106,15 +106,15 @@ describe('ScopeFramework Class', () => {
         expect(framework.documentType).toBe('makerdao/scope-framework');
         expect(framework.revision).toBe(0);
 
-        expect(framework.state.rootPath).toBe('A');
-        expect(framework.state.elements.length).toBe(1);
-        expect(framework.state.elements[0].id).toMatch(
+        expect(framework.state.global.rootPath).toBe('A');
+        expect(framework.state.global.elements.length).toBe(1);
+        expect(framework.state.global.elements[0].id).toMatch(
             /^[a-zA-Z0-9+\\/]{27}=$/,
         );
-        expect(framework.state.elements[0].name).toBe('Scope Name');
-        expect(framework.state.elements[0].path).toBe('A.1');
-        expect(framework.state.elements[0].type).toBe('Scope');
-        expect(framework.state.elements[0].version).toBe(1);
+        expect(framework.state.global.elements[0].name).toBe('Scope Name');
+        expect(framework.state.global.elements[0].path).toBe('A.1');
+        expect(framework.state.global.elements[0].type).toBe('Scope');
+        expect(framework.state.global.elements[0].version).toBe(1);
     });
 
     it('should apply main operations', () => {
@@ -124,8 +124,8 @@ describe('ScopeFramework Class', () => {
             newRootPath: 'B',
         });
 
-        expect(framework.state.rootPath).toBe('B');
-        framework.state.elements.forEach(e => {
+        expect(framework.state.global.rootPath).toBe('B');
+        framework.state.global.elements.forEach(e => {
             expect(e.path.slice(0, 2)).toBe('B.');
         });
 
@@ -138,10 +138,11 @@ describe('ScopeFramework Class', () => {
         });
 
         expect(
-            framework.state.elements.filter(e => e.path == 'B.1.3').length,
+            framework.state.global.elements.filter(e => e.path == 'B.1.3')
+                .length,
         ).toBe(1);
 
-        const elementId = framework.state.elements.filter(
+        const elementId = framework.state.global.elements.filter(
             e => e.path == 'B.1.3',
         )[0].id;
 
@@ -150,7 +151,7 @@ describe('ScopeFramework Class', () => {
             type: 'Section',
         });
 
-        framework.state.elements
+        framework.state.global.elements
             .filter(e => e.id == elementId)
             .forEach(e => {
                 expect(e.type).toBe('Section');
@@ -161,7 +162,7 @@ describe('ScopeFramework Class', () => {
             name: 'NEW NAME',
         });
 
-        framework.state.elements
+        framework.state.global.elements
             .filter(e => e.id == elementId)
             .forEach(e => {
                 expect(e.name).toBe('NEW NAME');
@@ -174,7 +175,7 @@ describe('ScopeFramework Class', () => {
             },
         });
 
-        framework.state.elements
+        framework.state.global.elements
             .filter(e => e.id == elementId)
             .forEach(e => {
                 expect((e.components as SectionComponent).content).toBe(
@@ -182,13 +183,14 @@ describe('ScopeFramework Class', () => {
                 );
             });
 
-        const removeId = framework.state.elements.filter(
+        const removeId = framework.state.global.elements.filter(
             e => e.path == 'B.1.2',
         )[0]?.id;
         framework.removeElement({ id: removeId });
         expect(
-            framework.state.elements.filter(e => e.path.startsWith('B.1.2'))
-                .length,
+            framework.state.global.elements.filter(e =>
+                e.path.startsWith('B.1.2'),
+            ).length,
         ).toBe(0);
     });
 });

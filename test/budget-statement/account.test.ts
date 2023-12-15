@@ -18,14 +18,14 @@ describe('Budget Statement account reducer', () => {
                 name: 'Grants Program',
             }),
         );
-        expect(newDocument.state.accounts).toStrictEqual([
+        expect(newDocument.state.global.accounts).toStrictEqual([
             {
                 address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
                 name: 'Grants Program',
                 lineItems: [],
             },
         ]);
-        expect(document.state.accounts).toStrictEqual([]);
+        expect(document.state.global.accounts).toStrictEqual([]);
     });
 
     it('should update account', async () => {
@@ -43,8 +43,8 @@ describe('Budget Statement account reducer', () => {
                 name: 'Incubation',
             }),
         );
-        expect(newDocument.state.accounts[0].name).toBe('Incubation');
-        expect(document.state.accounts[0].name).toBe('Grants Program');
+        expect(newDocument.state.global.accounts[0].name).toBe('Incubation');
+        expect(document.state.global.accounts[0].name).toBe('Grants Program');
     });
 
     it('should delete account', async () => {
@@ -62,8 +62,8 @@ describe('Budget Statement account reducer', () => {
                 account: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
             }),
         );
-        expect(newDocument.state.accounts.length).toBe(0);
-        expect(document.state.accounts.length).toBe(1);
+        expect(newDocument.state.global.accounts.length).toBe(0);
+        expect(document.state.global.accounts.length).toBe(1);
     });
 
     it('should throw exception if adding account with same address', () => {
@@ -89,20 +89,23 @@ describe('Budget Statement account reducer', () => {
     it('should sort accounts', () => {
         const document = utils.createDocument({
             state: {
-                accounts: [
-                    createAccount({
-                        address: 'eth:0x00',
-                        name: '0',
-                    }),
-                    createAccount({
-                        address: 'eth:0x01',
-                        name: '1',
-                    }),
-                    createAccount({
-                        address: 'eth:0x02',
-                        name: '2',
-                    }),
-                ],
+                global: {
+                    accounts: [
+                        createAccount({
+                            address: 'eth:0x00',
+                            name: '0',
+                        }),
+                        createAccount({
+                            address: 'eth:0x01',
+                            name: '1',
+                        }),
+                        createAccount({
+                            address: 'eth:0x02',
+                            name: '2',
+                        }),
+                    ],
+                },
+                local: {},
             },
         });
 
@@ -111,10 +114,8 @@ describe('Budget Statement account reducer', () => {
             sortAccounts({ accounts: ['eth:0x02', 'eth:0x00'] }),
         );
 
-        expect(newDocument.state.accounts.map(a => a.address)).toStrictEqual([
-            'eth:0x02',
-            'eth:0x00',
-            'eth:0x01',
-        ]);
+        expect(
+            newDocument.state.global.accounts.map(a => a.address),
+        ).toStrictEqual(['eth:0x02', 'eth:0x00', 'eth:0x01']);
     });
 });

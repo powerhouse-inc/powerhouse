@@ -12,9 +12,16 @@
             "version": 1,
             "changeLog": [],
             "state": {
-                "schema": "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    id: ID!\n    name: String!\n    nodes: [Node!]!\n    icon: String\n    remoteUrl: String\n}",
-                "initialValue": "{\"id\":\"\",\"name\":\"\",\"nodes\":[],\"icon\":null,\"remoteUrl\":null}",
-                "examples": []
+                "global": {
+                    "schema": "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    id: ID!\n    name: String!\n    nodes: [Node!]!\n    icon: String\n    remoteUrl: String\n}",
+                    "initialValue": "{\"id\":\"\",\"name\":\"\",\"nodes\":[],\"icon\":null,\"remoteUrl\":null}",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "type DocumentDriveLocalState{\n    sharingType: String\n    availableOffline: Boolean!\n}",
+                    "initialValue": "{ \"sharingType\": \"private\", \"availableOffline\": false}",
+                    "examples": []
+                }
             },
             "modules": [
                 {

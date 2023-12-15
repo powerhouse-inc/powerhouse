@@ -12,7 +12,7 @@ const { createDocument } = utils;
 describe('Budget Statement Comment reducer', () => {
     it('should start as empty array', async () => {
         const document = createDocument();
-        expect(document.state.comments).toStrictEqual([]);
+        expect(document.state.global.comments).toStrictEqual([]);
     });
 
     it('should add comment', async () => {
@@ -32,7 +32,7 @@ describe('Budget Statement Comment reducer', () => {
                 },
             }),
         );
-        expect(newDocument.state.comments[0]).toStrictEqual({
+        expect(newDocument.state.global.comments[0]).toStrictEqual({
             key: '123',
             comment: 'Test',
             status: 'Escalated',
@@ -44,7 +44,7 @@ describe('Budget Statement Comment reducer', () => {
                 roleLabel: 'Auditor',
             },
         });
-        expect(document.state.comments).toStrictEqual([]);
+        expect(document.state.global.comments).toStrictEqual([]);
     });
 
     it('should update comment', async () => {
@@ -70,7 +70,7 @@ describe('Budget Statement Comment reducer', () => {
             document,
             updateComment({ key: '123', comment: 'Test 2' }),
         );
-        expect(document.state.comments[0]).toStrictEqual({
+        expect(document.state.global.comments[0]).toStrictEqual({
             key: '123',
             comment: 'Test 2',
             status: 'Escalated',
@@ -103,7 +103,7 @@ describe('Budget Statement Comment reducer', () => {
         );
 
         document = reducer(document, deleteComment({ comment: '123' }));
-        expect(document.state.comments.length).toBe(0);
+        expect(document.state.global.comments.length).toBe(0);
     });
 
     it('should generate comment key and timestamp if undefined', async () => {
@@ -122,8 +122,8 @@ describe('Budget Statement Comment reducer', () => {
                 },
             }),
         );
-        expect(newDocument.state.comments[0].key.length).toBe(28);
-        expect(newDocument.state.comments[0].timestamp).toBe(
+        expect(newDocument.state.global.comments[0].key.length).toBe(28);
+        expect(newDocument.state.global.comments[0].timestamp).toBe(
             '2023-03-16T00:00:00.000Z',
         );
     });
@@ -152,9 +152,9 @@ describe('Budget Statement Comment reducer', () => {
             }),
         );
 
-        expect(newDocument.state.comments[0].comment).toBe('03/11');
-        expect(newDocument.state.comments[1].comment).toBe('03/13');
-        expect(newDocument.state.comments[2].comment).toBe('03/15');
+        expect(newDocument.state.global.comments[0].comment).toBe('03/11');
+        expect(newDocument.state.global.comments[1].comment).toBe('03/13');
+        expect(newDocument.state.global.comments[2].comment).toBe('03/15');
     });
 
     it('should throw if comment key already exists', async () => {
@@ -211,7 +211,7 @@ describe('Budget Statement Comment reducer', () => {
             }),
         );
 
-        expect(document.state.comments).toStrictEqual([
+        expect(document.state.global.comments).toStrictEqual([
             {
                 key: '123',
                 comment: 'Test',
