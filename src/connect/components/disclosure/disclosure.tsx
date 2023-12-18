@@ -25,7 +25,7 @@ export function Disclosure(props: DisclosureProps) {
             <div
                 className={twMerge(
                     'max-h-0 overflow-hidden transition-[max-height] duration-300 ease-in-out',
-                    isOpen && 'max-h-[100vh]',
+                    isOpen && 'max-h-screen',
                     className,
                 )}
             >

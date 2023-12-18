@@ -54,7 +54,7 @@ export const Select = forwardRef(function Select(
             <div
                 className={twMerge(
                     'max-h-0 overflow-hidden transition-[max-height] duration-300 ease-in-out',
-                    showItems && 'max-h-[100vh]',
+                    showItems && 'max-h-screen',
                 )}
             >
                 {itemsToShow.map(item => (

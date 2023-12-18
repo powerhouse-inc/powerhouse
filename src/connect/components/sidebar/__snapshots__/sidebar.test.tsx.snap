@@ -3,7 +3,7 @@
 exports[`Connect Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="group/sidebar group expanded flex h-full flex-col overflow-hidden transition-none duration-300 animate-in fade-in bg-neutral-1 shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]"
+    class="group/sidebar group expanded flex h-full flex-col overflow-hidden transition-none duration-300 animate-in fade-in bg-gray-50 shadow-sidebar"
     data-testid="sidebar"
     style="width: 304px;"
   >
@@ -14,19 +14,20 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
         class="flex-shrink-0 mb-4 flex justify-center gap-4 px-2 pt-11"
       >
         <input
-          class="flex-1 rounded-md border border-neutral-3 px-5 py-3 leading-none placeholder-shown:bg-transparent collapsed:hidden expanding:hidden"
+          class="flex-1 rounded-md border border-gray-100 px-5 py-3 leading-none text-gray-600 placeholder-shown:bg-transparent collapsed:hidden expanding:hidden"
           placeholder="Create new document"
         />
         <button
-          class="rounded-md border border-neutral-3 p-3 outline-none hover:bg-slate-50
-                collapsed:rotate-180 collapsed:border-[rgba(49,53,56,0.12)] collapsed:bg-neutral-3
-                collapsed:shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)] collapsed:hover:bg-slate-50
+          class="rounded-md border border-gray-100 p-3 outline-none hover:bg-slate-50
+                collapsed:rotate-180 collapsed:border-gray-100/10 collapsed:bg-gray-100
+                collapsed:shadow-sidebar collapsed:hover:bg-slate-50
                 expanding:hidden"
           data-rac=""
           type="button"
         >
           <svg
-            style="color: rgb(124, 135, 142); width: 16px; height: 16px;"
+            class="text-gray-600"
+            style="width: 16px; height: 16px;"
           >
             <use
               href="icons.svg#arrow-left"
@@ -42,7 +43,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       class="flex-shrink-0 border-t border-slate-700/10 p-4 collapsed:px-1 expanding:px-1"
     >
       <div
-        class="flex gap-2 rounded-sm px-3 py-[10px] collapsed:justify-center
+        class="flex gap-2 rounded-sm px-3 py-2.5 collapsed:justify-center
             collapsed:bg-transparent collapsed:px-1 collapsing:bg-transparent
             expanding:justify-center expanding:bg-transparent expanding:px-1
         "

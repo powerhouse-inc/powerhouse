@@ -56,7 +56,7 @@ export function SidebarPanel({
             </div>
             {hasScroll && (
                 <div
-                    className="pointer-events-none z-10 mt-[-50px] h-[50px] w-full"
+                    className="pointer-events-none z-10 -mt-12 h-12 w-full"
                     style={{
                         boxShadow: 'inset 0px -33px 32px -16px rgba(0,0,0,0.1)',
                     }}

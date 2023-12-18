@@ -21,7 +21,7 @@ export function DeleteDrive(props: DeleteDriveProps) {
 
     return (
         <div>
-            <p className="mb-2 rounded-[6px] bg-slate-50 p-4 text-center text-slate-200">
+            <p className="mb-2 rounded-md bg-slate-50 p-4 text-center text-slate-200">
                 Are you sure you want to delete this drive? All files and
                 subfolders within it will be removed. Do you want to proceed?
             </p>

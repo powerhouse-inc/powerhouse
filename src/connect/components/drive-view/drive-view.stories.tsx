@@ -132,7 +132,7 @@ const meta: Meta<typeof DriveView> = {
     decorators: [
         Story => (
             <ItemsContextProvider items={drives}>
-                <div className="w-[420px] bg-neutral-1 to-neutral-1 p-10">
+                <div className="w-[420px] bg-gray-50 p-10">
                     <Story />
                 </div>
             </ItemsContextProvider>

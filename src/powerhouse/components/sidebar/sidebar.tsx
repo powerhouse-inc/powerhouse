@@ -66,8 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 ['collapsed', 'expanded'].includes(state) &&
                     'animate-in fade-in',
                 state === 'collapsed' && 'bg-transparent shadow-none',
-                state === 'expanded' &&
-                    'bg-neutral-1 shadow-[0px_33px_32px_-16px_rgba(0,0,0,0.10),0px_0px_16px_4px_rgba(0,0,0,0.04)]',
+                state === 'expanded' && 'bg-gray-50 shadow-sidebar',
             )}
             style={{
                 width: ['collapsed', 'expanding'].includes(state)

@@ -21,7 +21,7 @@ export const Button = forwardRef(function Button(
     } = props;
 
     const sizeStyles = {
-        small: 'px-2 py-1.5 text-xs rounded-[6px] font-medium',
+        small: 'px-2 py-1.5 text-xs rounded-md font-medium',
         medium: 'px-6 py-3 text-base rounded-xl font-semibold tracking-wide',
     };
 

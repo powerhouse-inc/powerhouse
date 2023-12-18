@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Icon } from '..';
 import { TreeViewItem } from './tree-view-item';
-const folderCloseIcon = <Icon name="folder-close" color="#6C7275" />;
-const folderOpenIcon = <Icon name="folder-open" color="#6C7275" />;
+const folderCloseIcon = <Icon name="folder-close" className="text-gray-600" />;
+const folderOpenIcon = <Icon name="folder-open" className="text-gray-600" />;
 
 const meta: Meta<typeof TreeViewItem> = {
     title: 'Powerhouse/Components/TreeView/TreeViewItem',

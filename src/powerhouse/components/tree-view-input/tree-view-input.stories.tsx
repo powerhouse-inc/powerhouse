@@ -2,8 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { Icon } from '..';
 import { TreeViewInput } from './tree-view-input';
 
-const submitIcon = <Icon name="check" color="#6C7275" />;
-const cancelIcon = <Icon name="xmark" color="#6C7275" />;
+const submitIcon = <Icon name="check" className="text-gray-600" />;
+const cancelIcon = <Icon name="xmark" className="text-gray-600" />;
 
 const meta: Meta<typeof TreeViewInput> = {
     title: 'Powerhouse/Components/TreeView/TreeViewInput',

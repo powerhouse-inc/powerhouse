@@ -18,8 +18,8 @@ import {
 import { MouseEventHandler, useEffect, useRef, useState } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
 
-const submitIcon = <Icon name="check" color="#6C7275" />;
-const cancelIcon = <Icon name="xmark" color="#6C7275" />;
+const submitIcon = <Icon name="check" className="text-gray-600" />;
+const cancelIcon = <Icon name="xmark" className="text-gray-600" />;
 
 export type ConnectTreeViewItemProps = {
     item: TreeItem;
@@ -117,14 +117,14 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
 
     const dropdownMenuButton = (
         <button onClick={() => setIsDropdownMenuOpen(true)}>
-            <Icon name="vertical-dots" color="#6C7275" />
+            <Icon name="vertical-dots" className="text-gray-600" />
         </button>
     );
 
     const bottomIndicator = (
         <div
             {...dropDividerProps}
-            className="absolute bottom-[-2px] z-[1] flex h-1 w-full flex-row items-center"
+            className="absolute -bottom-0.5 z-10 flex h-1 w-full flex-row items-center"
         >
             <div
                 className={twJoin(
@@ -208,8 +208,12 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         switch (item.type) {
             case 'FOLDER':
                 return {
-                    icon: <Icon name="folder-close" color="#6C7275" />,
-                    expandedIcon: <Icon name="folder-open" color="#6C7275" />,
+                    icon: (
+                        <Icon name="folder-close" className="text-gray-600" />
+                    ),
+                    expandedIcon: (
+                        <Icon name="folder-open" className="text-gray-600" />
+                    ),
                 };
             case 'FILE':
                 return {};

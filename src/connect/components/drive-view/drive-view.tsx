@@ -86,12 +86,12 @@ export function DriveView(props: DriveViewProps) {
         <div
             className={twMerge(
                 'pb-2',
-                type === 'PUBLIC_DRIVE' && 'rounded-lg bg-bg to-bg',
+                type === 'PUBLIC_DRIVE' && 'rounded-lg bg-gray-100',
                 className,
             )}
             {...restProps}
         >
-            <div className="flex items-center justify-between border-y border-bg px-4 py-3">
+            <div className="flex items-center justify-between border-y border-gray-100 px-4 py-3">
                 <p className="text-sm font-medium leading-6 text-gray-500">
                     {name}
                 </p>
@@ -107,7 +107,7 @@ export function DriveView(props: DriveViewProps) {
                     </button>
                 </div>
             </div>
-            <div className="p-2">
+            <div className="p-2 text-gray-800">
                 <ConnectTreeView
                     allowedPaths={allowedDrives}
                     disableHighlightStyles={disableHighlightStyles}

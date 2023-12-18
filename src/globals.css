@@ -167,6 +167,8 @@
     --orange-700: hsl(var(--color-orange-700));
     --orange-800: hsl(var(--color-orange-800));
     --orange-900: hsl(var(--color-orange-900));
+    --shadow-sidebar: 0px 33px 32px -16px rgba(0, 0, 0, 0.1),
+        0px 0px 16px 4px rgba(0, 0, 0, 0.04);
 }
 
 html:has(dialog[open]) {

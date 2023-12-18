@@ -80,7 +80,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                             name="caret"
                             className={twMerge(
                                 open && 'rotate-90',
-                                'ease delay-50 pointer-events-none transition',
+                                'ease pointer-events-none transition delay-75',
                             )}
                         />
                     ) : (

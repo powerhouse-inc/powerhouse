@@ -49,6 +49,26 @@
             1, {
                 "callees": ["twMerge", "twJoin"]
             }
+        ],
+        "tailwindcss/enforces-negative-arbitrary-values": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ],
+        "tailwindcss/enforces-shorthand": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ],
+        "tailwindcss/no-contradicting-classname": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
+        ],
+        "tailwindcss/no-custom-classname": [
+            1, {
+                "callees": ["twMerge", "twJoin"]
+            }
         ]
     },
     "settings": {
