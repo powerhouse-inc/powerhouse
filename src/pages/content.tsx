@@ -192,7 +192,7 @@ const Content = () => {
                                     onFileDeleted={deleteNode}
                                 />
                             </div>
-                            <h3 className="mb-3 mt-4 text-xl font-bold">
+                            <h3 className="mb-3 mt-4 text-xl font-bold text-gray-600">
                                 New document
                             </h3>
                             <div className="flex w-full flex-wrap gap-4">
