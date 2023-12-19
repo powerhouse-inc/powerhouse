@@ -2,7 +2,6 @@ import { designSystemPreset } from '@powerhousedao/design-system';
 import type { Config } from 'tailwindcss';
 
 const config = {
-    mode: 'jit',
     content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
     presets: [designSystemPreset],
     theme: {
