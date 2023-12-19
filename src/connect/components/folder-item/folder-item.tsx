@@ -4,27 +4,64 @@ import {
     defaultDropdownMenuOptions,
 } from '@/connect';
 import { DivProps, Icon } from '@/powerhouse';
+import {
+    TreeViewInput,
+    TreeViewInputProps,
+} from '@/powerhouse/components/tree-view-input';
 import React, { useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
+
+const submitIcon = <Icon name="check" className="text-gray-600" />;
+const cancelIcon = <Icon name="xmark" className="text-gray-600" />;
 
 export interface FolderItemProps extends DivProps {
     title: string;
     itemOptions?: ConnectDropdownMenuProps['items'];
     onOptionsClick: ConnectDropdownMenuProps['onItemClick'];
+    mode?: 'write' | 'read';
+    onSubmitInput: TreeViewInputProps['onSubmitInput'];
+    onCancelInput: TreeViewInputProps['onCancelInput'];
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({
     title,
     itemOptions,
+    mode = 'read',
+    onSubmitInput,
+    onCancelInput,
     onOptionsClick,
     ...divProps
 }) => {
     const containerRef = useRef(null);
     const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
 
+    const isReadMode = mode === 'read';
+    const textStyles = isReadMode
+        ? 'text-gray-600 hover:text-gray-800'
+        : 'text-gray-800';
+
     const containerStyles = twMerge(
-        'group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800',
+        'group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2',
+        textStyles,
         divProps.className,
+    );
+
+    const content = isReadMode ? (
+        <>
+            <div className="ml-3 max-h-6 overflow-hidden whitespace-nowrap font-medium text-slate-200 group-hover:text-gray-800">
+                {title}
+            </div>
+            <div className="absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-gray-200" />
+        </>
+    ) : (
+        <TreeViewInput
+            className="ml-3 flex-1 font-medium"
+            defaultValue={title}
+            cancelIcon={cancelIcon}
+            submitIcon={submitIcon}
+            onCancelInput={onCancelInput}
+            onSubmitInput={onSubmitInput}
+        />
     );
 
     return (
@@ -34,23 +71,22 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                     <div className="p-1">
                         <Icon name="folder-close" size={24} />
                     </div>
-                    <div className="ml-3 max-h-6 overflow-hidden whitespace-nowrap font-medium text-slate-200 group-hover:text-gray-800">
-                        {title}
+                    {content}
+                </div>
+                {isReadMode && (
+                    <div
+                        onClick={e => {
+                            e.stopPropagation();
+                            setIsDropdownMenuOpen(true);
+                        }}
+                    >
+                        <Icon
+                            name="vertical-dots"
+                            className="hidden group-hover:inline-block"
+                            size={24}
+                        />
                     </div>
-                    <div className="absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-gray-200" />
-                </div>
-                <div
-                    onClick={e => {
-                        e.stopPropagation();
-                        setIsDropdownMenuOpen(true);
-                    }}
-                >
-                    <Icon
-                        name="vertical-dots"
-                        className="hidden group-hover:inline-block"
-                        size={24}
-                    />
-                </div>
+                )}
             </div>
             <ConnectDropdownMenu
                 isOpen={isDropdownMenuOpen}

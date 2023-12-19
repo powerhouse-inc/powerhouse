@@ -8,6 +8,7 @@ const meta: Meta<typeof FolderItem> = {
         onClick: { action: 'onClick' },
         onOptionsClick: { action: 'onOptionsClick' },
         title: { control: 'text' },
+        mode: { control: { type: 'select', options: ['read', 'write'] } },
     },
     decorators: [
         Story => (

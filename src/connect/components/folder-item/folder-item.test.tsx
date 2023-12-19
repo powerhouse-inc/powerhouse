@@ -2,12 +2,30 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { FolderItem } from './folder-item';
 
 describe('FolderItem Component', () => {
-    it('should match snapshot', () => {
+    it('should match read snapshot', () => {
         const { asFragment } = render(
             <FolderItem
+                mode="read"
                 title="Chronicle Labs"
                 onClick={() => {}}
                 onOptionsClick={() => {}}
+                onCancelInput={() => {}}
+                onSubmitInput={() => {}}
+            />,
+        );
+
+        expect(asFragment()).toMatchSnapshot();
+    });
+
+    it('should match write snapshot', () => {
+        const { asFragment } = render(
+            <FolderItem
+                mode="write"
+                title="Chronicle Labs"
+                onClick={() => {}}
+                onOptionsClick={() => {}}
+                onCancelInput={() => {}}
+                onSubmitInput={() => {}}
             />,
         );
 
@@ -22,6 +40,8 @@ describe('FolderItem Component', () => {
                 title="Chronicle Labs"
                 onClick={onClick}
                 onOptionsClick={() => {}}
+                onCancelInput={() => {}}
+                onSubmitInput={() => {}}
             />,
         );
 

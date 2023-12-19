@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`FolderItem Component > should match snapshot 1`] = `
+exports[`FolderItem Component > should match read snapshot 1`] = `
 <DocumentFragment>
   <div
     class="relative"
@@ -40,6 +40,85 @@ exports[`FolderItem Component > should match snapshot 1`] = `
             href="icons.svg#vertical-dots"
           />
         </svg>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`FolderItem Component > should match write snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="relative"
+  >
+    <div
+      class="group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-800"
+    >
+      <div
+        class="relative flex flex-1 flex-row items-center overflow-hidden"
+      >
+        <div
+          class="p-1"
+        >
+          <svg
+            style="width: 24px; height: 24px;"
+          >
+            <use
+              href="icons.svg#folder-close"
+            />
+          </svg>
+        </div>
+        <div
+          class="flex items-center ml-3 flex-1 font-medium"
+        >
+          <div
+            class="w-full"
+            data-rac=""
+          >
+            <input
+              class="w-full bg-inherit outline-none"
+              data-focus-visible="true"
+              data-focused="true"
+              data-rac=""
+              id="react-aria-:r2:"
+              title=""
+              type="text"
+              value="Chronicle Labs"
+            />
+          </div>
+          <div
+            class="flex items-center pr-2"
+          >
+            <button
+              class="outline-none"
+              data-rac=""
+              type="button"
+            >
+              <svg
+                class="text-gray-600"
+                style="width: 24px; height: 24px;"
+              >
+                <use
+                  href="icons.svg#xmark"
+                />
+              </svg>
+            </button>
+            <button
+              class="outline-none"
+              data-rac=""
+              type="button"
+            >
+              <svg
+                class="text-gray-600"
+                style="width: 24px; height: 24px;"
+              >
+                <use
+                  href="icons.svg#check"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
