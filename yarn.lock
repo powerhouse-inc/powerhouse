@@ -4404,22 +4404,20 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.20:
-  version "0.0.20"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.20.tgz#0fa4b6978d5ff593e71a025be5eb0688b25a55a5"
-  integrity sha512-A4b8xbkdhMl6ZePbZXLCzjGJYDYOJJDQjIwOR850Z7thRPFNsIHh5qEhwWUADlbTWzuE5Cs6D7+v3XgXrMbn9Q==
+document-drive@^0.0.22:
+  version "0.0.22"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.22.tgz#68b8af7994e93af27cc00877a333e6edf35a88c4"
+  integrity sha512-VGv3tFV8ynaSGgnqKEA0BPa97HY0tuRczsdaBCU2RBJtseMWnd75fVoKho9taX5xAK9vHrVzFT+LOQdvhSNpsA==
   dependencies:
     sanitize-filename "^1.6.3"
 
-document-model-libs@^1.1.24:
-  version "1.1.24"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.24.tgz#f936517d353bd2a073063769308d195dd619c033"
-  integrity sha512-VOJ89EXtoDKseJAcHKTF5R79IEJtdMRwlFwrwgnvJca+b4qze4KyOdeuG1dXgEa9G/MzYAa+jM+nFF0BCbdLbg==
+"document-model-libs@file:.yalc/document-model-libs":
+  version "1.1.25"
 
-document-model@^1.0.16:
-  version "1.0.16"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.16.tgz#fda005bb23b5891b159a670cf393a3afae59a1f4"
-  integrity sha512-Ep3E1ecth2AvKEZfCyOSc+0dz+sjdLOhAPiMrtqaWDQvMlxS31Hm0JkwXViqT6pwlWaKg2vzj3zP4UuoRx/Ptg==
+document-model@^1.0.18:
+  version "1.0.18"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.18.tgz#9b0fe34cd2d7bf9ecb9a93fbe1d8bebea79a80d9"
+  integrity sha512-JP8XMn9FYflFR85tBQ0hWsSRD2S6vnUw5MMGlshaIbBN+RYhwPWaGOWgM/LHkKdIco0nYKAhXJwJ6aTDzp6b9g==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
