@@ -76,6 +76,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
         type="button"
       >
         <svg
+          class="text-gray-600"
           style="width: 24px; height: 24px;"
         >
           <use

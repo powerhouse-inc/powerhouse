@@ -21,10 +21,7 @@ const config: StorybookConfig = {
         return {
             ...config,
             plugins: config.plugins?.filter(
-                plugin =>
-                    !['vite:dts', 'vite:lib-inject-css'].includes(
-                        (plugin as any)?.name,
-                    ),
+                plugin => !['vite:dts'].includes((plugin as any)?.name),
             ),
         };
     },

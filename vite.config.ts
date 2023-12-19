@@ -2,7 +2,6 @@ import react from '@vitejs/plugin-react';
 import path, { resolve } from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import { libInjectCss } from 'vite-plugin-lib-inject-css';
 import pkg from './package.json';
 
 export default defineConfig(() => {
@@ -14,7 +13,6 @@ export default defineConfig(() => {
         },
         plugins: [
             react(),
-            libInjectCss(),
             dts({
                 include: ['src/**'],
                 exclude: ['src/**/*.stories.*'],
@@ -26,7 +24,6 @@ export default defineConfig(() => {
             },
         },
         build: {
-            cssCodeSplit: true,
             sourcemap: true,
             rollupOptions: {
                 external: [
