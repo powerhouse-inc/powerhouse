@@ -52,7 +52,9 @@ export default () => {
                     </Button>
                 ))}
             </div>
-            <h2 className="h2">Open existing file</h2>
+            <h2 className="text-4xl font-bold tracking-wide">
+                Open existing file
+            </h2>
             <div
                 {...dropProps}
                 ref={ref}

@@ -5,17 +5,7 @@
 
 :root {
     --app-height: calc(100vh - 32px);
-}
-
-body {
-    margin: auto;
-    height: 100vh;
-}
-
-input,
-select {
-    background-color: transparent;
-    margin: 0 4px;
+    --search-bar-width: 642px;
 }
 
 ::-webkit-scrollbar {
@@ -30,16 +20,10 @@ select {
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-    background: hsl(var(--twc-slate-100));
+    background: hsl(var(--slate-100));
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--white));
-}
-
-@layer components {
-    .h2 {
-        @apply text-4xl font-bold tracking-[-1.6px];
-    }
 }

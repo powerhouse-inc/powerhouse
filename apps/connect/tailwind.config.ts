@@ -11,13 +11,7 @@ const config = {
                 'app-height': 'var(--app-height)',
             },
             maxWidth: {
-                'searchbar-width': '642px',
-            },
-            backgroundImage: {
-                selected:
-                    'linear-gradient(270deg, #323337 50%, rgba(80, 62, 110, 0.29) 100%)',
-                'selected-light':
-                    'linear-gradient(270deg, #fefefe 50%, rgba(255, 255, 255, 0.29) 100%)',
+                'search-bar-width': 'var(--search-bar-width)',
             },
             boxShadow: {
                 button: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
