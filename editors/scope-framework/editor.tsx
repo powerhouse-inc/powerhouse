@@ -1,5 +1,6 @@
 import {
     actions,
+    ScopeFrameworkLocalState,
     ExtendedScopeFrameworkState,
     ScopeFrameworkAction,
     ScopeFrameworkState,
@@ -17,7 +18,7 @@ import {
     TextInput,
 } from 'document-model-editors';
 
-export type IProps = EditorProps<ScopeFrameworkState, ScopeFrameworkAction>;
+export type IProps = EditorProps<ScopeFrameworkState, ScopeFrameworkAction, ScopeFrameworkLocalState>;
 
 export const randomId = () => {
     return Math.floor(Math.random() * Date.now()).toString(36);
@@ -25,8 +26,8 @@ export const randomId = () => {
 
 const getHighestPathWithPrefix = (prefix: string, paths: string[]) => {
     prefix += '.';
-    let result = 0,
-        pLength = prefix.length;
+    let result = 0;
+    const pLength = prefix.length;
 
     paths
         .filter(p => p.startsWith(prefix))
@@ -44,8 +45,8 @@ const getNextPath = (
     extendedState: ExtendedScopeFrameworkState,
     type: ScopeFrameworkElementType,
 ): string => {
-    const result = [extendedState.state.rootPath],
-        paths = extendedState.state.elements.map(e => e.path);
+    const result = [extendedState.state.global.rootPath],
+        paths = extendedState.state.global.elements.map(e => e.path);
 
     if (type == 'Scope') {
         result.push(getHighestPathWithPrefix(result[0], paths) + 1 + '');
@@ -74,10 +75,11 @@ const getNextPath = (
 
 function ScopeFrameworkEditor(props: IProps) {
     const { document, dispatch, editorContext } = props;
-    const { state } = document;
+    const { state: { global: state} } = document;
+
 
     useEffect(() => {
-        if (!document.operations.length) {
+        if (!Object.values(document.operations).concat().length) {
             dispatch(actions.setName('MakerDAO Atlas'));
         }
     }, []);

@@ -4,7 +4,7 @@ import { createDocumentStory } from 'document-model-editors';
 
 const { meta, CreateDocumentStory: JSONEditor } = createDocumentStory(
     Editor,
-    (...args) => baseReducer(...args, document => document),
+    (state, action, dispatch) => baseReducer(state, action, document => document, dispatch),
     utils.createExtendedState(),
 );
 

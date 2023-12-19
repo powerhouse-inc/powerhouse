@@ -1,4 +1,4 @@
-import { Action, EditorProps, actions } from 'document-model/document';
+import { Action, EditorProps, State, actions } from 'document-model/document';
 import { useEffect, useState } from 'react';
 import {
     DocumentEditor,
@@ -9,17 +9,17 @@ import {
 } from 'document-model-editors';
 import JSONEditor from '../common/json-editor';
 
-export type IProps = EditorProps<unknown, Action>;
+export type IProps = EditorProps<unknown, Action, unknown>;
 
 export default function Editor({ dispatch, document, editorContext }: IProps) {
-    const [state, setState] = useState(document.state as JSON);
+    const [state, setState] = useState(document.state.global);
 
     useEffect(() => {
-        setState(document.state as JSON);
+        setState(document.state.global);
     }, [document.state]);
 
     function handleSave() {
-        dispatch(actions.loadState({ state, name: document.name }, 0));
+        dispatch(actions.loadState({ state: { global: state, local: document.state.local }, name: document.name }, 0));
     }
 
     const handleSetDocumentName = (name: string) => {
@@ -65,7 +65,7 @@ export default function Editor({ dispatch, document, editorContext }: IProps) {
                     />
                 </div>
                 <JSONEditor
-                    value={state}
+                    value={state as JSON}
                     theme={editorContext.theme}
                     onChange={value => setState(value || {})}
                 />

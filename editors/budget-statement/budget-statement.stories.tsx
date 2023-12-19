@@ -45,7 +45,7 @@ const initialAccount = utils.createAccount({
 });
 
 const budgetStatementState = utils.createExtendedState({
-    state: { accounts: [initialAccount] },
+    state: { global: { accounts: [initialAccount] }, local: {} },
 });
 
 const { meta, CreateDocumentStory: BudgetStatement } = createDocumentStory(
