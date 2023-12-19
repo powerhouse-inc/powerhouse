@@ -236,5 +236,6 @@ export function useDrivesContainer() {
         onItemClick,
         onItemOptionsClick,
         onSubmitInput,
+        updateNodeName,
     };
 }

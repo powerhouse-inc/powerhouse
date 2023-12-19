@@ -184,7 +184,7 @@ const Content = () => {
                             <div className="mb-5">
                                 <FolderView
                                     drive={decodedDriveID}
-                                    folder={selectedFolder}
+                                    path={selectedPath || ''}
                                     onFolderSelected={onFolderSelectedHandler}
                                     onFileSelected={(drive, id) =>
                                         setSelectedFileNode({ drive, id })

@@ -1,14 +1,12 @@
 import {
     FileItem,
-    FolderItem,
     TreeItem,
     decodeID,
     defaultDropdownMenuOptions,
 } from '@powerhousedao/design-system';
-import { FileNode, FolderNode } from 'document-model-libs/document-drive';
 import { useTranslation } from 'react-i18next';
-import { useModal } from 'src/components/modal';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import { FolderItem } from 'src/components/folder-item';
+import { useFolderContent } from 'src/hooks/useFolderContent';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
 import { ContentSection } from './content';
 
@@ -18,45 +16,26 @@ const itemOptions = defaultDropdownMenuOptions.filter(
 
 interface IProps {
     drive: string;
-    folder?: TreeItem;
+    path: string;
     onFolderSelected: (itemId: string) => void;
     onFileSelected: (drive: string, id: string) => void;
     onFileDeleted: (drive: string, id: string) => void;
 }
 
 export const FolderView: React.FC<IProps> = ({
+    path,
     drive,
-    folder,
-    onFolderSelected,
-    onFileSelected,
     onFileDeleted,
+    onFileSelected,
+    onFolderSelected,
 }) => {
     const { t } = useTranslation();
-    const { showModal } = useModal();
+    const { folders, files } = useFolderContent(path);
     const getReadableItemPath = useGetReadableItemPath();
-    const { getChildren } = useDocumentDriveServer();
-    const folderId = folder ? decodeID(folder.id) : undefined;
-    const children = getChildren(
-        drive,
-        folderId !== drive ? folderId : undefined
-    );
-    const folders = children.filter(
-        node => node.kind === 'folder'
-    ) as FolderNode[];
+
     const decodedDriveID = decodeID(drive);
-    const files = children.filter(node => node.kind === 'file') as FileNode[];
 
-    const onFolderOptionsClick = (optionId: string, folderNode: FolderNode) => {
-        if (optionId === 'delete') {
-            showModal('deleteItem', {
-                driveId: decodedDriveID,
-                itemId: folderNode.id,
-                itemName: folderNode.name,
-            });
-        }
-    };
-
-    const onFileOptionsClick = (optionId: string, fileNode: FileNode) => {
+    const onFileOptionsClick = (optionId: string, fileNode: TreeItem) => {
         if (optionId === 'delete') {
             onFileDeleted(decodedDriveID, fileNode.id);
         }
@@ -72,13 +51,9 @@ export const FolderView: React.FC<IProps> = ({
                     folders.map(folder => (
                         <FolderItem
                             key={folder.id}
-                            title={folder.name}
-                            className="w-64"
-                            onClick={() => onFolderSelected(folder.id)}
-                            itemOptions={itemOptions}
-                            onOptionsClick={optionId =>
-                                onFolderOptionsClick(optionId, folder)
-                            }
+                            folder={folder}
+                            decodedDriveID={decodedDriveID}
+                            onFolderSelected={onFolderSelected}
                         />
                     ))
                 ) : (
@@ -92,7 +67,7 @@ export const FolderView: React.FC<IProps> = ({
                     files.map(file => (
                         <FileItem
                             key={file.id}
-                            title={file.name}
+                            title={file.label}
                             subTitle={getReadableItemPath(file.id)}
                             className="w-64"
                             itemOptions={itemOptions}
