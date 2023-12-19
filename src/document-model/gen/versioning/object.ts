@@ -5,7 +5,8 @@ import {
     UpdateChangeLogItemInput,
     DeleteChangeLogItemInput,
     ReorderChangeLogItemsInput,
-    DocumentModelState
+    DocumentModelState,
+    DocumentModelLocalState,
 } from '../types';
 import {
     addChangeLogItem,
@@ -17,26 +18,27 @@ import {
 import { DocumentModelAction } from '../actions';
 
 export default class DocumentModel_Versioning extends BaseDocument<
-    DocumentModelState, DocumentModelAction
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState
 > {
     public addChangeLogItem(input: AddChangeLogItemInput) {
         return this.dispatch(addChangeLogItem(input));
     }
-    
+
     public updateChangeLogItem(input: UpdateChangeLogItemInput) {
         return this.dispatch(updateChangeLogItem(input));
     }
-    
+
     public deleteChangeLogItem(input: DeleteChangeLogItemInput) {
         return this.dispatch(deleteChangeLogItem(input));
     }
-    
+
     public reorderChangeLogItems(input: ReorderChangeLogItemsInput) {
         return this.dispatch(reorderChangeLogItems(input));
     }
-    
+
     public releaseNewVersion() {
         return this.dispatch(releaseNewVersion());
     }
-    
 }

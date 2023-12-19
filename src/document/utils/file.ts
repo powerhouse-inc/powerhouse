@@ -1,6 +1,5 @@
 import JSZip from 'jszip';
 import mime from 'mime/lite';
-import { BaseAction } from '../actions/types';
 import type {
     Action,
     Attachment,
@@ -10,7 +9,6 @@ import type {
     DocumentHeader,
     DocumentOperations,
     ExtendedState,
-    Operation,
     Reducer,
 } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';

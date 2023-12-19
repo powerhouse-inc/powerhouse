@@ -6,7 +6,8 @@ import {
     SetModuleDescriptionInput,
     DeleteModuleInput,
     ReorderModulesInput,
-    DocumentModelState
+    DocumentModelState,
+    DocumentModelLocalState,
 } from '../types';
 import {
     addModule,
@@ -18,26 +19,27 @@ import {
 import { DocumentModelAction } from '../actions';
 
 export default class DocumentModel_Module extends BaseDocument<
-    DocumentModelState, DocumentModelAction
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState
 > {
     public addModule(input: AddModuleInput) {
         return this.dispatch(addModule(input));
     }
-    
+
     public setModuleName(input: SetModuleNameInput) {
         return this.dispatch(setModuleName(input));
     }
-    
+
     public setModuleDescription(input: SetModuleDescriptionInput) {
         return this.dispatch(setModuleDescription(input));
     }
-    
+
     public deleteModule(input: DeleteModuleInput) {
         return this.dispatch(deleteModule(input));
     }
-    
+
     public reorderModules(input: ReorderModulesInput) {
         return this.dispatch(reorderModules(input));
     }
-    
 }

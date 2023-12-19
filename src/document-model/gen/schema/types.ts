@@ -173,7 +173,7 @@ export type ScopeState = {
     local: State;
 };
 
-export type DocumentModelLocalState = Record<string, never>;
+export type DocumentModelLocalState = {};
 
 export type DocumentSpecification = {
     __typename?: 'DocumentSpecification';

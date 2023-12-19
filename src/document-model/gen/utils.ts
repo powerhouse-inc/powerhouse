@@ -1,8 +1,12 @@
 import { DocumentModelUtils, utils as base } from '../../document';
-import { DocumentModelAction, DocumentModelState } from './types';
+import {
+    DocumentModelAction,
+    DocumentModelLocalState,
+    DocumentModelState,
+} from './types';
 import { reducer } from './reducer';
 
-const initialState: DocumentModelState = {
+export const initialGlobalState: DocumentModelState = {
     id: '',
     name: '',
     extension: '',
@@ -32,10 +36,19 @@ const initialState: DocumentModelState = {
     ],
 };
 
-const utils: DocumentModelUtils<DocumentModelState, DocumentModelAction> = {
+export const initialLocalState: DocumentModelLocalState = {};
+
+const utils: DocumentModelUtils<
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState
+> = {
     fileExtension: 'phdm',
     createState(state) {
-        return { global: { ...initialState, ...state }, local: {} };
+        return {
+            global: { ...initialGlobalState, ...state?.global },
+            local: { ...initialLocalState, ...state?.local },
+        };
     },
     createExtendedState(extendedState) {
         return base.createExtendedState(

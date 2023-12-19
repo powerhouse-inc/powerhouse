@@ -1,5 +1,5 @@
-import { DocumentModelState } from './types';
-import { ExtendedState, SignalDispatch } from '../../document';
+import { DocumentModelLocalState, DocumentModelState } from './types';
+import { ExtendedState, PartialState, SignalDispatch } from '../../document';
 import { applyMixins, BaseDocument } from '../../document/object';
 import { DocumentModelAction } from './actions';
 import { reducer } from './reducer';
@@ -33,13 +33,17 @@ interface DocumentModel
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 class DocumentModel extends BaseDocument<
     DocumentModelState,
-    DocumentModelAction
+    DocumentModelAction,
+    DocumentModelLocalState
 > {
     static fileExtension = 'phdm';
 
     constructor(
         initialState?: Partial<
-            ExtendedState<Partial<DocumentModelState>, unknown>
+            ExtendedState<
+                PartialState<DocumentModelState>,
+                PartialState<DocumentModelLocalState>
+            >
         >,
         dispatch?: SignalDispatch,
     ) {

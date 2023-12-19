@@ -1,5 +1,5 @@
 import { ImmutableStateReducer } from '../../document/types';
-import { DocumentModelState, z } from './schema';
+import { DocumentModelLocalState, DocumentModelState, z } from './schema';
 import { DocumentModelAction } from './actions';
 
 import { reducer as HeaderReducer } from '../custom/reducers/header';
@@ -13,7 +13,8 @@ import { createReducer, isBaseAction } from '../../document/utils';
 
 const stateReducer: ImmutableStateReducer<
     DocumentModelState,
-    DocumentModelAction
+    DocumentModelAction,
+    DocumentModelLocalState
 > = (state, action) => {
     if (isBaseAction(action)) {
         return state;
@@ -294,6 +295,8 @@ const stateReducer: ImmutableStateReducer<
     }
 };
 
-export const reducer = createReducer<DocumentModelState, DocumentModelAction>(
-    stateReducer,
-);
+export const reducer = createReducer<
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState
+>(stateReducer);

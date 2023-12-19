@@ -11,7 +11,11 @@ import * as customUtils from './custom/utils';
 import { actions as DocumentModelActions, DocumentModel } from './gen';
 import { documentModel } from './gen/document-model';
 import { reducer } from './gen/reducer';
-import { DocumentModelAction, DocumentModelState } from './gen/types';
+import {
+    DocumentModelAction,
+    DocumentModelLocalState,
+    DocumentModelState,
+} from './gen/types';
 import genUtils from './gen/utils';
 
 const Document = DocumentModel;
@@ -21,7 +25,7 @@ const actions = { ...BaseActions, ...DocumentModelActions };
 export const module: _DocumentModel<
     DocumentModelState,
     DocumentModelAction,
-    unknown,
+    DocumentModelLocalState,
     DocumentModel
 > = {
     Document,

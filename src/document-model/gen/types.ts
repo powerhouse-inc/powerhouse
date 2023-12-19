@@ -1,5 +1,8 @@
 import type { Document, ExtendedState } from '../../document/types';
-import type { DocumentModelState } from './schema/types';
+import type {
+    DocumentModelState,
+    DocumentModelLocalState,
+} from './schema/types';
 import type { DocumentModelAction } from './actions';
 
 export { z } from './schema';
@@ -7,6 +10,7 @@ export type * from './schema/types';
 export type ExtendedDocumentModelState = ExtendedState<DocumentModelState>;
 export type DocumentModelDocument = Document<
     DocumentModelState,
-    DocumentModelAction
+    DocumentModelAction,
+    DocumentModelLocalState
 >;
-export { DocumentModelState, DocumentModelAction };
+export { DocumentModelState, DocumentModelAction, DocumentModelLocalState };

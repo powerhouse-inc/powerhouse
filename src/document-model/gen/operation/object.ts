@@ -11,7 +11,8 @@ import {
     DeleteOperationInput,
     ReorderModuleOperationsInput,
     DocumentModelState,
-    SetOperationScopeInput
+    SetOperationScopeInput,
+    DocumentModelLocalState,
 } from '../types';
 import {
     addOperation,
@@ -28,12 +29,14 @@ import {
 import { DocumentModelAction } from '../actions';
 
 export default class DocumentModel_Operation extends BaseDocument<
-    DocumentModelState, DocumentModelAction
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState
 > {
     public addOperation(input: AddOperationInput) {
         return this.dispatch(addOperation(input));
     }
-    
+
     public setOperationName(input: SetOperationNameInput) {
         return this.dispatch(setOperationName(input));
     }
@@ -41,33 +44,32 @@ export default class DocumentModel_Operation extends BaseDocument<
     public setOperationScope(input: SetOperationScopeInput) {
         return this.dispatch(setOperationScope(input));
     }
-    
+
     public setOperationSchema(input: SetOperationSchemaInput) {
         return this.dispatch(setOperationSchema(input));
     }
-    
+
     public setOperationDescription(input: SetOperationDescriptionInput) {
         return this.dispatch(setOperationDescription(input));
     }
-    
+
     public setOperationTemplate(input: SetOperationTemplateInput) {
         return this.dispatch(setOperationTemplate(input));
     }
-    
+
     public setOperationReducer(input: SetOperationReducerInput) {
         return this.dispatch(setOperationReducer(input));
     }
-    
+
     public moveOperation(input: MoveOperationInput) {
         return this.dispatch(moveOperation(input));
     }
-    
+
     public deleteOperation(input: DeleteOperationInput) {
         return this.dispatch(deleteOperation(input));
     }
-    
+
     public reorderModuleOperations(input: ReorderModuleOperationsInput) {
         return this.dispatch(reorderModuleOperations(input));
     }
-    
 }
