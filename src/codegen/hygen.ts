@@ -1,5 +1,4 @@
-import 'ts-node/register/transpile-only';
-import { DocumentModelState, utils } from 'document-model/document-model';
+import { DocumentModel } from 'document-model';
 import { Logger, runner } from 'hygen';
 import path from 'path';
 import fs from 'fs';
@@ -62,7 +61,7 @@ export async function generateAll(
 }
 
 export async function generateDocumentModel(
-    documentModel: DocumentModelState,
+    documentModel: DocumentModel.DocumentModelState,
     dir: string,
     { watch = false, format = false } = {},
 ) {
