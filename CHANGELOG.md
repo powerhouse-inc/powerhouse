@@ -5,6 +5,13 @@
 
 * added write mode to FolderItem Component ([b152e28](https://github.com/powerhouse-inc/design-system/commit/b152e286cc8185667981868296745bc22cb0f899))
 
+# [1.0.0-alpha.42](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.41...v1.0.0-alpha.42) (2023-12-20)
+
+
+### Features
+
+* added write mode to FolderItem Component ([b152e28](https://github.com/powerhouse-inc/design-system/commit/b152e286cc8185667981868296745bc22cb0f899))
+
 # [1.0.0-alpha.41](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.40...v1.0.0-alpha.41) (2023-12-15)
 
 
