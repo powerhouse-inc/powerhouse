@@ -13,7 +13,7 @@ export const ContentSection: React.FC<ContentSection> = ({
     return (
         <div {...divProps}>
             {title && (
-                <div className="mb-4 text-base font-semibold text-[#6C7275]">
+                <div className="mb-4 text-base font-semibold text-gray-600">
                     {title}
                 </div>
             )}

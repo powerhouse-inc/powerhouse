@@ -22,6 +22,10 @@
             "@/assets": ["assets"]
         }
     },
-    "include": ["src"],
+    "include": [
+        "src", 
+        "*.config.ts",
+        "*.config.js",
+    ],
     "files": ["custom.d.ts"]
 }
