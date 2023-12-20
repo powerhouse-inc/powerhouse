@@ -1,45 +1,6 @@
-import { SignalDispatch } from '../signal';
-import {
-    Action,
-    Document,
-    ExtendedState,
-    ImmutableStateReducer,
-    State,
-} from '../types';
-import { createDocument, createReducer } from '../utils';
+import { Action, Document, ImmutableStateReducer, State } from '../types';
+import { hashDocument, replayOperations } from '../utils/base';
 import { loadState } from './creators';
-import { BaseAction } from './types';
-
-// Runs the operations on the initial data using the
-// provided reducer, wrapped with the base reducer.
-// This produces and alternate version of the document
-// according to the provided actions.
-function replayOperations<T, A extends Action, L>(
-    initialState: ExtendedState<T, L>,
-    operations: {
-        global: (A | BaseAction)[];
-        local: A[];
-    },
-    reducer: ImmutableStateReducer<T, A, L>,
-    dispatch?: SignalDispatch,
-): Document<T, A, L> {
-    // builds a new document from the initial data
-    const document = createDocument<T, A, L>(initialState);
-
-    // wraps the provided custom reducer with the
-    // base document reducer
-    const wrappedReducer = createReducer(reducer);
-
-    // runs all the operations on the new document
-    // and returns the resulting state
-    return operations.global
-        .concat(operations.local)
-        .reduce(
-            (document, operation) =>
-                wrappedReducer(document, operation, dispatch),
-            document,
-        );
-}
 
 // updates the name of the document
 export function setNameOperation<T>(document: T, name: string): T {
@@ -143,14 +104,38 @@ export function pruneOperation<T, A extends Action, L>(
 
     const { name, state: newState } = newDocument;
 
+    // the new operation has the index of the first pruned operation
+    const loadStateIndex = actionsToKeepStart.length;
+
+    // if and operation is pruned then reuses the timestamp of the last operation
+    // if not then assigns the timestamp of the following unpruned operation
+    const loadStateTimestamp = actionsToKeepStart.length
+        ? actionsToKeepStart[actionsToKeepStart.length - 1].timestamp
+        : actionsToKeepEnd.length
+        ? actionsToKeepEnd[0].timestamp
+        : new Date().toISOString();
+
     // replaces pruned operations with LOAD_STATE
     return replayOperations(
         document.initialState,
         {
             global: [
                 ...actionsToKeepStart,
-                loadState({ name, state: newState }, actionsToPrune.length),
-                ...actionsToKeepEnd,
+                {
+                    ...loadState(
+                        { name, state: newState },
+                        actionsToPrune.length,
+                    ),
+                    timestamp: loadStateTimestamp,
+                    index: loadStateIndex,
+                    hash: hashDocument({ state: newState }, 'global'),
+                },
+                ...actionsToKeepEnd
+                    // updates the index for all the following operations
+                    .map((action, index) => ({
+                        ...action,
+                        index: loadStateIndex + index + 1,
+                    })),
             ],
             local: document.operations.local,
         },

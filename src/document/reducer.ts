@@ -59,7 +59,7 @@ function updateHeader<T extends Document>(document: T, action: Action): T {
 function updateOperations<T extends Document>(document: T, action: Action): T {
     // UNDO, REDO and PRUNE are meta operations
     // that alter the operations history themselves
-    if ([UNDO, REDO, PRUNE, PRUNE].includes(action.type)) {
+    if ([UNDO, REDO, PRUNE].includes(action.type)) {
         return document;
     }
 
@@ -69,35 +69,24 @@ function updateOperations<T extends Document>(document: T, action: Action): T {
         0,
         document.revision,
     );
-    const localOperations = document.operations.local.slice();
 
     // adds the operation to its scope operations
-    if (!action.scope || action.scope === 'global') {
-        globalOperations.push({
-            ...action,
-            index: globalOperations.length,
-            timestamp: new Date().toISOString(),
-            hash: '',
-            scope: 'global',
-        });
-    } else if (action.scope === 'local') {
-        localOperations.push({
-            ...action,
-            index: localOperations.length,
-            timestamp: new Date().toISOString(),
-            hash: '',
-            scope: 'local',
-        });
-    }
+    const scope = action.scope || 'global';
+    const operations =
+        scope === 'global' ? globalOperations : document.operations[scope];
+    operations.push({
+        ...action,
+        index: operations.length,
+        timestamp: new Date().toISOString(),
+        hash: '',
+        scope,
+    });
 
     // adds the action to the operations history with
     // the latest index and current timestamp
     return {
         ...document,
-        operations: {
-            global: globalOperations,
-            local: localOperations,
-        },
+        operations: { ...document.operations, [scope]: operations },
     };
 }
 
@@ -200,15 +189,17 @@ export function baseReducer<T, A extends Action, L>(
         }
     });
 
+    // updates the document history
     return produce(newDocument, draft => {
-        // updates the last operation with the hash of the resulting state
-        if (!action.scope || action.scope === 'global') {
-            draft.operations.global[draft.operations.global.length - 1].hash =
-                hashDocument(draft, 'global');
-        } else if (action.scope === 'local') {
-            draft.operations.local[draft.operations.local.length - 1].hash =
-                hashDocument(draft, 'local');
+        // meta operations are not added to the operations history
+        if ([UNDO, REDO, PRUNE].includes(action.type)) {
+            return draft;
         }
+
+        // updates the last operation with the hash of the resulting state
+        const scope = action.scope || 'global';
+        draft.operations[scope][draft.operations[scope].length - 1].hash =
+            hashDocument(draft, scope);
 
         // if the action has attachments then adds them to the document
         if (!isBaseAction(action) && action.attachments) {

@@ -12,6 +12,7 @@ import type {
     Reducer,
 } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
+import { replayDocument } from './base';
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
@@ -137,7 +138,7 @@ async function loadFromZip<S, A extends Action, L>(
     const initialState = JSON.parse(initialStateStr) as ExtendedState<S, L>;
 
     const headerZip = zip.file('header.json');
-    let header: DocumentHeader | null = null;
+    let header: DocumentHeader | undefined = undefined;
     if (headerZip) {
         header = JSON.parse(await headerZip.async('string'));
     }
@@ -150,33 +151,17 @@ async function loadFromZip<S, A extends Action, L>(
         await operationsZip.async('string'),
     ) as DocumentOperations<A>;
 
-    const document: Document<S, A, L> = {
-        ...initialState,
-        ...header,
+    let result = replayDocument(
         initialState,
-        operations: { global: [], local: [] },
-        attachments: { ...initialState.attachments },
-    };
-
-    let result = operations.global
-        .concat(operations.local)
-        .slice(0, header?.revision)
-        .reduce(
-            (document, operation) => reducer(document, operation),
-            document,
-        );
-
+        operations,
+        reducer,
+        undefined,
+        header,
+    );
     if (header) {
         result = {
             ...result,
             ...header,
-            operations: {
-                global: [
-                    ...result.operations.global,
-                    ...operations.global.slice(header.revision),
-                ],
-                local: result.operations.local,
-            },
         };
     }
     return result;

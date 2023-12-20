@@ -12,10 +12,13 @@ import {
     State,
     CreateState,
     PartialState,
+    DocumentOperations,
+    DocumentHeader,
 } from '../types';
 import { hash } from './node';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
 import { castImmutable, freeze } from 'immer';
+import { SignalDispatch } from '../signal';
 
 export function isBaseAction(action: Action): action is BaseAction {
     return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
@@ -145,14 +148,10 @@ export const createDocument = <S, A extends Action, L = unknown>(
 };
 
 export const hashDocument = (
-    document: Document,
+    document: Pick<Document, 'state'>,
     scope: OperationScope = 'global',
 ) => {
-    return hash(
-        JSONDeterministic(
-            scope === 'local' ? document.state.local : document.state.global,
-        ),
-    );
+    return hash(JSONDeterministic(document.state[scope]));
 };
 
 export const hashKey = (date?: Date, randomLimit = 1000) => {
@@ -162,4 +161,96 @@ export const hashKey = (date?: Date, randomLimit = 1000) => {
 
 export function readOnly<T>(value: T): Immutable<T> {
     return castImmutable(freeze(value, true));
+}
+
+// Flattens the operations from all scopes into
+// a single array and sorts them by timestamp
+export function sortOperations<A extends Action>(
+    operations: DocumentOperations<A>,
+) {
+    return Object.values(operations)
+        .flatMap(array => array)
+        .sort(
+            (a, b) =>
+                new Date(a.timestamp).getTime() -
+                new Date(b.timestamp).getTime(),
+        );
+}
+
+// Runs the operations on the initial data using the
+// provided reducer, wrapped with the document reducer.
+// This rebuilds the document according to the provided actions.
+export function replayOperations<T, A extends Action, L>(
+    initialState: ExtendedState<T, L>,
+    operations: DocumentOperations<A>,
+    reducer: ImmutableStateReducer<T, A, L>,
+    dispatch?: SignalDispatch,
+    header?: DocumentHeader,
+    documentReducer = baseReducer,
+): Document<T, A, L> {
+    // wraps the provided custom reducer with the
+    // base document reducer
+    const wrappedReducer = createReducer(reducer, documentReducer);
+
+    return replayDocument(
+        initialState,
+        operations,
+        wrappedReducer,
+        dispatch,
+        header,
+    );
+}
+
+// Runs the operations on the initial data using the
+// provided document reducer.
+// This rebuilds the document according to the provided actions.
+export function replayDocument<T, A extends Action, L>(
+    initialState: ExtendedState<T, L>,
+    operations: DocumentOperations<A>,
+    reducer: Reducer<T, A, L>,
+    dispatch?: SignalDispatch,
+    header?: DocumentHeader,
+): Document<T, A, L> {
+    // builds a new document from the initial data
+    const document = createDocument<T, A, L>(initialState);
+
+    // removes undone operations from global scope
+    const activeOperations = {
+        ...operations,
+        global: operations.global.slice(0, header?.revision),
+    };
+
+    // runs all the operations on the new document
+    // and returns the resulting state
+    const result = sortOperations(activeOperations).reduce(
+        (document, operation) => reducer(document, operation, dispatch),
+        document,
+    );
+
+    const resultOperations: DocumentOperations<A> = Object.keys(
+        result.operations,
+    ).reduce(
+        (acc, key) => {
+            const scope = key as keyof DocumentOperations<A>;
+            const undoneOperations =
+                scope === 'global' &&
+                header &&
+                header.revision < operations.global.length
+                    ? operations.global.slice(header?.revision)
+                    : [];
+            return {
+                ...acc,
+                [scope]: [
+                    ...result.operations[scope].map((operation, index) => ({
+                        ...operation,
+                        timestamp: operations[scope][index].timestamp,
+                    })),
+                    ...undoneOperations,
+                ],
+            };
+        },
+        { global: [], local: [] },
+    );
+
+    return { ...result, operations: resultOperations };
 }
