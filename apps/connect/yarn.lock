@@ -4411,8 +4411,10 @@ document-drive@^0.0.22:
   dependencies:
     sanitize-filename "^1.6.3"
 
-"document-model-libs@file:.yalc/document-model-libs":
-  version "1.1.25"
+document-model-libs@1.1.26:
+  version "1.1.26"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.26.tgz#eeb498c7c955baf0a3e01189f0701528e2e53e45"
+  integrity sha512-QMjUhiQVcRfLQjjfcHEmL6rFnhJCfuzdsLrfZo9y4J6zQH705OooN454+a8XK3ZhZoV8KJ8gAMux8RAL0tWrag==
 
 document-model@^1.0.18:
   version "1.0.18"
