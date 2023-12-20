@@ -65,7 +65,11 @@ export const useFileNodeDocument = (drive?: string, id?: string) => {
         if (drive && id) {
             const document = await _addOperation(drive, id, operation);
             // TODO check new remote document vs local document
-            setSelectedDocument(document);
+            setSelectedDocument(current => {
+                if (!current) {
+                    return document;
+                }
+            });
         }
     }
 
