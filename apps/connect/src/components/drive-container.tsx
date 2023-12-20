@@ -22,6 +22,7 @@ import {
     driveToBaseItems,
     useDrivesContainer,
 } from 'src/hooks/useDrivesContainer';
+import { useSelectedPath } from 'src/store';
 
 interface DriveContainerProps {
     disableHoverStyles?: boolean;
@@ -42,9 +43,10 @@ const DriveSections = [
 
 export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
-    const { setBaseItems } = useItemsContext();
+    const { setBaseItems, items } = useItemsContext();
     const actions = useItemActions();
     const filterPathContent = useFilterPathContent();
+    const [selectedPath, setSelectedPath] = useSelectedPath();
 
     const { documentDrives, addFile, copyOrMoveNode, addDrive } =
         useDocumentDriveServer();
@@ -56,12 +58,24 @@ export default function DriveContainer(props: DriveContainerProps) {
             documentDrives.reduce<Array<BaseTreeItem>>((acc, drive) => {
                 return [...acc, ...driveToBaseItems(drive)];
             }, []) ?? [];
+
         setBaseItems(baseItems);
     }
 
     useEffect(() => {
         updateBaseItems();
     }, [documentDrives]);
+
+    // Auto select first drive if there is no selected path
+    useEffect(() => {
+        if (!selectedPath && items.length > 0) {
+            const driveID = documentDrives[0].state.global.id;
+
+            setSelectedPath(encodeID(driveID));
+            actions.setSelectedItem(driveID);
+            actions.setExpandedItem(driveID, true);
+        }
+    }, [items, selectedPath]);
 
     const cancelInputHandler: DriveViewProps['onCancelInput'] = item => {
         if (item.action === 'UPDATE') {

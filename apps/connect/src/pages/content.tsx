@@ -47,8 +47,10 @@ const Content = () => {
     const [selectedFileNode, setSelectedFileNode] = useState<
         { drive: string; id: string } | undefined
     >(undefined);
-    const [selectedDocument, updateDocument, addOperation] =
-        useFileNodeDocument(decodedDriveID, selectedFileNode?.id);
+    const [selectedDocument, , addOperation] = useFileNodeDocument(
+        decodedDriveID,
+        selectedFileNode?.id
+    );
 
     // preload document editors
     useEffect(() => {
@@ -151,11 +153,10 @@ const Content = () => {
 
     return (
         <div className="flex h-full flex-col bg-[#F4F4F4] p-6">
-            {selectedDocument ? (
+            {selectedFileNode && selectedDocument ? (
                 <div className="flex-1 rounded-[20px] bg-[#FCFCFC] p-4">
                     <DocumentEditor
                         document={selectedDocument}
-                        onChange={updateDocument}
                         onClose={() => setSelectedFileNode(undefined)}
                         onExport={() => exportDocument(selectedDocument)}
                         onAddOperation={handleAddOperation}
