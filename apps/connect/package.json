@@ -78,7 +78,7 @@
         "vite-tsconfig-paths": "^4.2.0"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.41",
+        "@powerhousedao/design-system": "1.0.0-alpha.42",
         "document-drive": "^0.0.22",
         "document-model": "^1.0.18",
         "electron-is-dev": "^2.0.0",
