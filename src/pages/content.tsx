@@ -3,6 +3,7 @@ import {
     TreeItem,
     decodeID,
     getRootPath,
+    useGetItemById,
     useGetItemByPath,
     useItemActions,
     useItemsContext,
@@ -28,13 +29,14 @@ const Content = () => {
     const { items } = useItemsContext();
     const [selectedPath, setSelectedPath] = useSelectedPath();
     const getItemByPath = useGetItemByPath();
+    const getItemById = useGetItemById();
     const actions = useItemActions();
 
     const selectedFolder = getItemByPath(selectedPath || '');
     const driveID = getRootPath(selectedFolder?.path ?? '');
     const decodedDriveID = decodeID(driveID);
 
-    const { addFile, addDocument, deleteNode, documentDrives } =
+    const { addFile, addDocument, deleteNode, documentDrives, renameNode } =
         useDocumentDriveServer();
     const documentModels = useDocumentModels();
     const getDocumentModel = useGetDocumentModel();
@@ -151,6 +153,16 @@ const Content = () => {
         }
     };
 
+    const onDocumentChangeHandler = (document: Document) => {
+        const item = selectedFileNode?.id
+            ? getItemById(selectedFileNode.id)
+            : undefined;
+
+        if (document.name !== '' && item && item.label !== document.name) {
+            renameNode(decodedDriveID, item.id, document.name);
+        }
+    };
+
     return (
         <div className="flex h-full flex-col bg-gray-100 p-6">
             {selectedFileNode && selectedDocument ? (
@@ -158,6 +170,7 @@ const Content = () => {
                     <DocumentEditor
                         document={selectedDocument}
                         onClose={() => setSelectedFileNode(undefined)}
+                        onChange={onDocumentChangeHandler}
                         onExport={() => exportDocument(selectedDocument)}
                         onAddOperation={handleAddOperation}
                     />
