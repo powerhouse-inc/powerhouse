@@ -1,4 +1,4 @@
-import { Action, EditorProps, State, actions } from 'document-model/document';
+import { Action, EditorProps, actions } from 'document-model/document';
 import { useEffect, useState } from 'react';
 import {
     DocumentEditor,
@@ -13,13 +13,20 @@ export type IProps = EditorProps<unknown, Action, unknown>;
 
 export default function Editor({ dispatch, document, editorContext }: IProps) {
     const [state, setState] = useState(document.state.global);
-
     useEffect(() => {
         setState(document.state.global);
     }, [document.state]);
 
-    function handleSave() {
-        dispatch(actions.loadState({ state: { global: state, local: document.state.local }, name: document.name }, 0));
+    function handleSave(newState: JSON) {
+        dispatch(
+            actions.loadState(
+                {
+                    state: { global: newState, local: document.state.local },
+                    name: document.name,
+                },
+                0,
+            ),
+        );
     }
 
     const handleSetDocumentName = (name: string) => {
@@ -45,7 +52,10 @@ export default function Editor({ dispatch, document, editorContext }: IProps) {
                     </ToolbarButton>,
                 ]}
                 center={[
-                    <ToolbarButton key="save" onClick={handleSave}>
+                    <ToolbarButton
+                        key="save"
+                        onClick={() => handleSave(state as JSON)}
+                    >
                         Save
                     </ToolbarButton>,
                 ]}
@@ -67,6 +77,7 @@ export default function Editor({ dispatch, document, editorContext }: IProps) {
                 <JSONEditor
                     value={state as JSON}
                     theme={editorContext.theme}
+                    onBlur={value => handleSave(value)}
                     onChange={value => setState(value || {})}
                 />
             </EditorWorksheet>

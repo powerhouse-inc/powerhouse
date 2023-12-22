@@ -6,6 +6,7 @@ type IProps = Omit<EditorProps, 'value' | 'onChange' | 'theme'> & {
     value: JSON;
     onChange: (value: JSON) => void;
     theme: styles.ColorTheme;
+    onBlur?: (value: JSON) => void;
 };
 
 export function isJSONEqual(json: JSON, text: string) {
@@ -16,6 +17,7 @@ export default function JSONEditor({
     value,
     onChange,
     theme,
+    onBlur,
     ...props
 }: IProps) {
     const [text, setText] = useState(JSON.stringify(value, null, 4));
@@ -38,7 +40,7 @@ export default function JSONEditor({
 
     useEffect(() => {
         if (!isJSONEqual(value, text)) {
-            setText(JSON.stringify(value));
+            setText(JSON.stringify(value, null, 4));
         }
     }, [value]);
 
@@ -50,6 +52,11 @@ export default function JSONEditor({
             theme={`vs-${theme}`}
             onChange={value => setText(value ?? '')}
             {...props}
+            onMount={editor => {
+                editor.onDidBlurEditorText(() => {
+                    onBlur?.(JSON.parse(editor.getValue()));
+                });
+            }}
             options={{
                 lineNumbers: 'off',
                 minimap: { enabled: false },
