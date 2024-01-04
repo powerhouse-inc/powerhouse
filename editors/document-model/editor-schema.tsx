@@ -22,41 +22,58 @@ interface IProps extends SchemaEditorProps {
 
 const typeRegexp = /^type (\S*State)( })?/g;
 
+const normalizeSchema = (
+    schema: string | undefined,
+    scope: ScopeType,
+    documentName: string,
+): string => {
+    const scopeStateName = scope === 'local' ? 'Local' : '';
+    const scopeSchemaContent = scope === 'global' ? ' {\n\t\n}' : '';
+
+    if (!schema) {
+        // Set initial code value if empty
+        return `type ${pascalCase(
+            documentName,
+        )}${scopeStateName}State${scopeSchemaContent}`;
+    }
+
+    if (
+        !schema.includes(
+            `type ${pascalCase(documentName)}${scopeStateName}State {`,
+        )
+    ) {
+        // Update type name value if name changed
+        const newCodeValue = schema.replace(typeRegexp, (match, group1) => {
+            return match.replace(
+                group1,
+                `${pascalCase(documentName)}${scopeStateName}State`,
+            );
+        });
+
+        return newCodeValue;
+    }
+
+    return schema || '';
+};
+
 export default function EditorSchema({
     name,
     onGenerate,
     theme,
     scope,
+    value,
     ...props
 }: IProps) {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-    const [code, setCode] = useState(props.value || '');
-
-    const scopeStateName = scope === 'local' ? 'Local' : '';
-    const scopeSchemaContent = scope === 'global' ? ' {\n\t\n}' : '';
+    const [code, setCode] = useState(value || '');
 
     useEffect(() => {
-        if (!code) {
-            // Set initial code value if empty
-            setCode(
-                `type ${pascalCase(
-                    name,
-                )}${scopeStateName}State${scopeSchemaContent}`,
-            );
-        } else if (
-            !code.includes(`type ${pascalCase(name)}${scopeStateName}State {`)
-        ) {
-            // Update type name value if name changed
-            const newCodeValue = code.replace(typeRegexp, (match, group1) => {
-                return match.replace(
-                    group1,
-                    `${pascalCase(name)}${scopeStateName}State`,
-                );
-            });
+        const normalizedSchema = normalizeSchema(value, scope, name);
 
-            setCode(newCodeValue);
+        if (normalizedSchema !== code) {
+            setCode(normalizedSchema);
         }
-    }, [name]);
+    }, [value, name]);
 
     const [schema, setSchema] = useState<GraphQLSchema>();
     const [validationSchema, setValidationSchema] =
