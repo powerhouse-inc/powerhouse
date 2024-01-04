@@ -111,7 +111,7 @@ export const DocumentEditor: React.FC<IProps> = ({
             </div>
             <EditorComponent
                 editorContext={{ theme }}
-                document={document}
+                document={initialDocument}
                 dispatch={dispatch}
             />
         </div>
