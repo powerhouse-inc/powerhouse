@@ -20,6 +20,8 @@ interface IProps extends SchemaEditorProps {
     theme: styles.ColorTheme;
 }
 
+const typeRegexp = /^type (\S*State)( })?/g;
+
 export default function EditorSchema({
     name,
     onGenerate,
@@ -34,14 +36,25 @@ export default function EditorSchema({
     const scopeSchemaContent = scope === 'global' ? ' {\n\t\n}' : '';
 
     useEffect(() => {
-        if (
-            !code.includes(`type ${pascalCase(name)}${scopeStateName}State {`)
-        ) {
+        if (!code) {
+            // Set initial code value if empty
             setCode(
                 `type ${pascalCase(
                     name,
                 )}${scopeStateName}State${scopeSchemaContent}`,
             );
+        } else if (
+            !code.includes(`type ${pascalCase(name)}${scopeStateName}State {`)
+        ) {
+            // Update type name value if name changed
+            const newCodeValue = code.replace(typeRegexp, (match, group1) => {
+                return match.replace(
+                    group1,
+                    `${pascalCase(name)}${scopeStateName}State`,
+                );
+            });
+
+            setCode(newCodeValue);
         }
     }, [name]);
 

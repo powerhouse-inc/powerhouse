@@ -69,7 +69,6 @@ function Editor(props: IProps) {
 
     const setModelName = (name: string) => {
         dispatch(actions.setModelName({ name }));
-        dispatch(actions.setName(name));
     };
 
     const setAuthorName = (authorName: string) => {
