@@ -69,8 +69,9 @@ export const DocumentEditor: React.FC<IProps> = ({
     );
 
     function dispatch(action: BaseAction | Action) {
-        const operation = _dispatch(action);
-        onAddOperation(operation);
+        _dispatch(action, operation => {
+            onAddOperation(operation);
+        });
     }
 
     useEffect(() => {
@@ -111,7 +112,7 @@ export const DocumentEditor: React.FC<IProps> = ({
             </div>
             <EditorComponent
                 editorContext={{ theme }}
-                document={initialDocument}
+                document={document}
                 dispatch={dispatch}
             />
         </div>
