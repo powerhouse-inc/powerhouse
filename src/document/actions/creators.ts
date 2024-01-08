@@ -1,4 +1,4 @@
-import { ExtendedState, z } from '../types';
+import { ExtendedState, OperationScope, z } from '../types';
 import { createAction } from '../utils/base';
 import {
     LoadStateAction,
@@ -28,8 +28,14 @@ export const setName = (name: string) =>
  * @param count - Number of operations to cancel
  * @category Actions
  */
-export const undo = (count = 1) =>
-    createAction<UndoAction>('UNDO', count, undefined, z.UndoActionInputSchema);
+export const undo = (count = 1, scope: OperationScope = 'global') =>
+    createAction<UndoAction>(
+        'UNDO',
+        count,
+        undefined,
+        z.UndoActionInputSchema,
+        scope,
+    );
 
 /**
  * Cancels the last `count` {@link undo | UNDO} operations.
@@ -37,8 +43,14 @@ export const undo = (count = 1) =>
  * @param count - Number of UNDO operations to cancel
  * @category Actions
  */
-export const redo = (count = 1) =>
-    createAction<RedoAction>('REDO', count, undefined, z.RedoActionInputSchema);
+export const redo = (count = 1, scope: OperationScope = 'global') =>
+    createAction<RedoAction>(
+        'REDO',
+        count,
+        undefined,
+        z.RedoActionInputSchema,
+        scope,
+    );
 
 /**
  * Joins multiple operations into a single {@link loadState | LOAD_STATE} operation.
@@ -51,12 +63,17 @@ export const redo = (count = 1) =>
  * @param end - Index of the last operation to prune
  * @category Actions
  */
-export const prune = (start?: number | undefined, end?: number | undefined) =>
+export const prune = (
+    start?: number | undefined,
+    end?: number | undefined,
+    scope: OperationScope = 'global',
+) =>
     createAction<PruneAction>(
         'PRUNE',
         { start, end },
         undefined,
         z.PruneActionInputSchema,
+        scope,
     );
 
 /**

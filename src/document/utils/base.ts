@@ -108,7 +108,10 @@ export const createExtendedState = <S, L>(
     return {
         name: '',
         documentType: '',
-        revision: 0,
+        revision: {
+            global: 0,
+            local: 0,
+        },
         created: new Date().toISOString(),
         lastModified: new Date().toISOString(),
         attachments: {},
@@ -215,10 +218,13 @@ export function replayDocument<T, A extends Action, L>(
     const document = createDocument<T, A, L>(initialState);
 
     // removes undone operations from global scope
-    const activeOperations = {
-        ...operations,
-        global: operations.global.slice(0, header?.revision),
-    };
+    const activeOperations = Object.keys(operations).reduce((acc, curr) => {
+        const scope = curr as keyof DocumentOperations<A>;
+        return {
+            ...acc,
+            [scope]: operations[scope].slice(0, header?.revision[scope]),
+        };
+    }, {} as DocumentOperations<A>);
 
     // runs all the operations on the new document
     // and returns the resulting state
@@ -233,18 +239,20 @@ export function replayDocument<T, A extends Action, L>(
         (acc, key) => {
             const scope = key as keyof DocumentOperations<A>;
             const undoneOperations =
-                scope === 'global' &&
-                header &&
-                header.revision < operations.global.length
-                    ? operations.global.slice(header?.revision)
+                header && header.revision[scope] < operations[scope].length
+                    ? operations[scope].slice(header.revision[scope])
                     : [];
             return {
                 ...acc,
                 [scope]: [
-                    ...result.operations[scope].map((operation, index) => ({
-                        ...operation,
-                        timestamp: operations[scope][index].timestamp,
-                    })),
+                    ...result.operations[scope].map((operation, index) => {
+                        return {
+                            ...operation,
+                            timestamp:
+                                operations[scope][index]?.timestamp ??
+                                operation.timestamp,
+                        };
+                    }),
                     ...undoneOperations,
                 ],
             };

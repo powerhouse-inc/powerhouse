@@ -107,7 +107,7 @@ export type DocumentHeader = {
     /** The name of the document. */
     name: string;
     /** The number of operations applied to the document. */
-    revision: number;
+    revision: Required<Record<OperationScope, number>>;
     /** The type of the document model. */
     documentType: string;
     /** The timestamp of the creation date of the document. */
@@ -165,10 +165,9 @@ export type ExtendedState<
     attachments: FileRegistry;
 };
 
-export type DocumentOperations<A extends Action> = {
-    global: Operation<A | BaseAction>[];
-    local: Operation<A>[];
-};
+export type DocumentOperations<A extends Action> = Required<
+    Record<OperationScope, Operation<A | BaseAction>[]>
+>;
 
 /**
  * The base type of a document model.

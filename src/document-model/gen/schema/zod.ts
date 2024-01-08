@@ -52,6 +52,7 @@ import {
     UpdateOperationExampleInput,
     UpdateStateExampleInput,
 } from '.';
+import { OperationScope } from '../../../document';
 
 type Properties<T> = Required<{
     [K in keyof T]: z.ZodType<T[K], any, T[K]>;
@@ -121,7 +122,7 @@ export function AddOperationInputSchema(): z.ZodObject<
         reducer: z.string().nullish(),
         schema: z.string().nullish(),
         template: z.string().nullish(),
-        scope: z.literal('local').or(z.literal('global')).nullish(),
+        scope: OperationScopeSchema().nullish(),
     });
 }
 
@@ -200,6 +201,10 @@ export function DeleteStateExampleInputSchema(): z.ZodObject<
         scope: z.string(),
         id: z.string(),
     });
+}
+
+export function OperationScopeSchema(): z.ZodType<OperationScope> {
+    return z.literal('global').or(z.literal('local'));
 }
 
 export function DocumentModelInputSchema() {
@@ -304,7 +309,7 @@ export function OperationSchema(): z.ZodObject<Properties<Operation>> {
         reducer: z.string().nullable(),
         schema: z.string().nullable(),
         template: z.string().nullable(),
-        scope: z.literal('local').or(z.literal('global')),
+        scope: OperationScopeSchema(),
     });
 }
 
@@ -508,7 +513,7 @@ export function SetOperationScopeInputSchema(): z.ZodObject<
 > {
     return z.object({
         id: z.string(),
-        scope: z.literal('global').or(z.literal('local')),
+        scope: OperationScopeSchema(),
     });
 }
 

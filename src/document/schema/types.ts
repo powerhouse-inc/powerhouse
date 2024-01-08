@@ -1,3 +1,5 @@
+import { OperationScope } from "..";
+
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -59,7 +61,7 @@ export type Load_State =
 export type LoadStateAction = {
   input: LoadStateActionInput;
   type: Load_State | `${Load_State}`;
-  scope: "global";
+  scope: OperationScope;
 };
 
 export type LoadStateActionInput = {
@@ -120,7 +122,7 @@ export type Prune =
 export type PruneAction = {
   input: PruneActionInput;
   type: Prune | `${Prune}`;
-  scope: "global";
+  scope: OperationScope;
 };
 
 export type PruneActionInput = {
@@ -139,7 +141,7 @@ export type Redo =
 export type RedoAction = {
   input: Scalars['Int']['input'];
   type: Redo | `${Redo}`;
-  scope: "global";
+  scope: OperationScope;
 };
 
 export type Set_Name =
@@ -166,5 +168,5 @@ export type Undo =
 export type UndoAction = {
   input: Scalars['Int']['input'];
   type: Undo | `${Undo}`;
-  scope: "global";
+  scope: OperationScope;
 };

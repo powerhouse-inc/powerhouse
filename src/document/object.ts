@@ -6,6 +6,7 @@ import type {
     AttachmentRef,
     Document,
     ExtendedState,
+    OperationScope,
     Reducer,
 } from './types';
 import { loadFromFile, saveToFile, readOnly } from './utils';
@@ -125,10 +126,14 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
     }
 
     /**
-     * Gets the revision number of the document.
+     * Gets the global revision number of the document.
      */
     get revision() {
-        return this._document.revision;
+        return this._document.revision.global;
+    }
+
+    getRevision(scope: OperationScope) {
+        return this._document.revision[scope];
     }
 
     /**

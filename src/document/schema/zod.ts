@@ -18,6 +18,7 @@ import {
     Undo,
     UndoAction,
 } from '.';
+import { OperationScope } from '../types';
 
 type Properties<T> = Required<{
     [K in keyof T]: z.ZodType<T[K], any, T[K]>;
@@ -49,6 +50,10 @@ export function ActionSchema(): z.ZodObject<Properties<Action>> {
     });
 }
 
+export function OperationScopeSchema(): z.ZodType<OperationScope> {
+    return z.literal('global').or(z.literal('local'));
+}
+
 export function BaseActionSchema() {
     return z.union([
         LoadStateActionSchema(),
@@ -75,7 +80,7 @@ export function LoadStateActionSchema(): z.ZodObject<
     return z.object({
         input: z.lazy(() => LoadStateActionInputSchema()),
         type: Load_StateSchema,
-        scope: z.literal('global'),
+        scope: OperationScopeSchema(),
     });
 }
 
@@ -111,7 +116,7 @@ export function PruneActionSchema(): z.ZodObject<Properties<PruneAction>> {
     return z.object({
         input: z.lazy(() => PruneActionInputSchema()),
         type: PruneSchema,
-        scope: z.literal('global'),
+        scope: OperationScopeSchema(),
     });
 }
 
@@ -130,7 +135,7 @@ export function RedoActionSchema(): z.ZodObject<Properties<RedoAction>> {
     return z.object({
         input: RedoActionInputSchema(),
         type: RedoSchema,
-        scope: z.literal('global'),
+        scope: OperationScopeSchema(),
     });
 }
 
@@ -163,6 +168,6 @@ export function UndoActionSchema(): z.ZodObject<Properties<UndoAction>> {
     return z.object({
         input: UndoActionInputSchema(),
         type: UndoSchema,
-        scope: z.literal('global'),
+        scope: OperationScopeSchema(),
     });
 }

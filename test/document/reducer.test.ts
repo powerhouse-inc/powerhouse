@@ -20,7 +20,7 @@ describe('Base reducer', () => {
             input: {},
             scope: 'global',
         });
-        expect(newDocument.revision).toBe(1);
+        expect(newDocument.revision.global).toBe(1);
     });
 
     it('should update lastModified', async () => {

@@ -13,7 +13,7 @@ describe('REDO operation', () => {
         expect(mapOperations(document.operations.global)).toStrictEqual([
             { ...setName('TEST_1'), index: 0 },
         ]);
-        expect(document.revision).toBe(1);
+        expect(document.revision.global).toBe(1);
     });
 
     it('should remove multiple UNDO operations', () => {
@@ -29,7 +29,7 @@ describe('REDO operation', () => {
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
-        expect(document.revision).toBe(2);
+        expect(document.revision.global).toBe(2);
     });
 
     it('should remove UNDO operations up to count', () => {
@@ -44,7 +44,7 @@ describe('REDO operation', () => {
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
-        expect(document.revision).toBe(1);
+        expect(document.revision.global).toBe(1);
     });
 
     it('should support multiple redo operations', () => {
@@ -60,7 +60,7 @@ describe('REDO operation', () => {
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
-        expect(document.revision).toBe(2);
+        expect(document.revision.global).toBe(2);
     });
 
     it('should redo all UNDO operations up to count', () => {
@@ -75,7 +75,7 @@ describe('REDO operation', () => {
             { ...setName('TEST_1'), index: 0 },
             { ...setName('TEST_2'), index: 1 },
         ]);
-        expect(document.revision).toBe(2);
+        expect(document.revision.global).toBe(2);
     });
 
     it('should redo the latest UNDO operation', () => {
@@ -89,7 +89,7 @@ describe('REDO operation', () => {
             { ...setName('TEST_2'), index: 0 },
         ]);
         expect(document.name).toBe('TEST_2');
-        expect(document.revision).toBe(1);
+        expect(document.revision.global).toBe(1);
     });
 
     it("should throw error when last operation isn't UNDO", () => {

@@ -27,10 +27,11 @@ import { SignalDispatch } from './signal';
  * @returns The next revision number.
  */
 function getNextRevision(document: Document, action: Action): number {
+    const currentRevision = document.revision[action.scope];
     // UNDO, REDO and PRUNE alter the revision themselves
     return [UNDO, REDO, PRUNE].includes(action.type)
-        ? document.revision
-        : document.revision + 1;
+        ? currentRevision
+        : currentRevision + 1;
 }
 
 /**
@@ -44,7 +45,10 @@ function getNextRevision(document: Document, action: Action): number {
 function updateHeader<T extends Document>(document: T, action: Action): T {
     return {
         ...document,
-        revision: getNextRevision(document, action),
+        revision: {
+            ...document.revision,
+            [action.scope]: getNextRevision(document, action),
+        },
         lastModified: new Date().toISOString(),
     };
 }
@@ -63,17 +67,16 @@ function updateOperations<T extends Document>(document: T, action: Action): T {
         return document;
     }
 
+    const { scope } = action;
+
     // removes undone operations from history if there
     // is a new operation after an UNDO
-    const globalOperations = document.operations.global.slice(
+    const operations = document.operations[scope].slice(
         0,
-        document.revision,
+        document.revision[scope],
     );
 
     // adds the operation to its scope operations
-    const scope = action.scope || 'global';
-    const operations =
-        scope === 'global' ? globalOperations : document.operations[scope];
     operations.push({
         ...action,
         index: operations.length,
@@ -99,9 +102,7 @@ function updateOperations<T extends Document>(document: T, action: Action): T {
  */
 function updateDocument<T extends Document>(document: T, action: Action) {
     let newDocument = updateOperations(document, action);
-    if (!action.scope || action.scope === 'global') {
-        newDocument = updateHeader(newDocument, action);
-    }
+    newDocument = updateHeader(newDocument, action);
     return newDocument;
 }
 
@@ -125,16 +126,11 @@ function _baseReducer<T, A extends Action, L>(
         case SET_NAME:
             return setNameOperation(document, action.input);
         case UNDO:
-            return undoOperation(document, action.input, wrappedReducer);
+            return undoOperation(document, action, wrappedReducer);
         case REDO:
-            return redoOperation(document, action.input, wrappedReducer);
+            return redoOperation(document, action, wrappedReducer);
         case PRUNE:
-            return pruneOperation(
-                document,
-                action.input.start,
-                action.input.end,
-                wrappedReducer,
-            );
+            return pruneOperation(document, action, wrappedReducer);
         case LOAD_STATE:
             return loadStateOperation(document, action.input.state);
         default:

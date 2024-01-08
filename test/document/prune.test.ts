@@ -34,7 +34,7 @@ describe('PRUNE operation', () => {
 
         expect(newDocument.name).toBe('Document');
         expect(newDocument.state.global.count).toBe(4);
-        expect(newDocument.revision).toBe(2);
+        expect(newDocument.revision.global).toBe(2);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
             {
                 ...loadState(
@@ -73,7 +73,7 @@ describe('PRUNE operation', () => {
 
         expect(newDocument.name).toBe('Document');
         expect(newDocument.state.global.count).toBe(4);
-        expect(newDocument.revision).toBe(3);
+        expect(newDocument.revision.global).toBe(3);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
             { ...increment(), index: 0 },
             { ...setName('Document'), index: 1 },
@@ -113,7 +113,7 @@ describe('PRUNE operation', () => {
 
         expect(newDocument.name).toBe('Document');
         expect(newDocument.state.global.count).toBe(4);
-        expect(newDocument.revision).toBe(4);
+        expect(newDocument.revision.global).toBe(4);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
             { ...increment(), index: 0 },
             { ...setName('Document'), index: 1 },
@@ -155,7 +155,7 @@ describe('PRUNE operation', () => {
 
         expect(newDocument.name).toBe('');
         expect(newDocument.state.global.count).toBe(1);
-        expect(newDocument.revision).toBe(1);
+        expect(newDocument.revision.global).toBe(1);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
             { ...increment(), index: 0 },
             {
@@ -197,7 +197,7 @@ describe('PRUNE operation', () => {
 
         expect(newDocument.name).toBe('Document');
         expect(newDocument.state.global.count).toBe(4);
-        expect(newDocument.revision).toBe(2);
+        expect(newDocument.revision.global).toBe(2);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
             { ...increment(), index: 0 },
             {

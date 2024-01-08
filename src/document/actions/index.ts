@@ -1,4 +1,12 @@
-import { Action, Document, ImmutableStateReducer, State } from '../types';
+import {
+    Action,
+    Document,
+    ImmutableStateReducer,
+    PruneAction,
+    RedoAction,
+    State,
+    UndoAction,
+} from '../types';
 import { hashDocument, replayOperations } from '../utils/base';
 import { loadState } from './creators';
 
@@ -10,23 +18,26 @@ export function setNameOperation<T>(document: T, name: string): T {
 // undoes the last `count` operations
 export function undoOperation<T, A extends Action, L>(
     document: Document<T, A, L>,
-    count: number,
+    action: UndoAction,
     wrappedReducer: ImmutableStateReducer<T, A, L>,
 ): Document<T, A, L> {
+    const { scope, input: count } = action;
+    const revision = document.revision[action.scope];
+
     // undo can't be higher than the number of active operations
-    const undoCount = Math.min(count, document.revision);
+    const undoCount = Math.min(count, revision);
 
     // builds the global state from the initial data without the
     // undone operations
-    const globalOperations = document.operations.global.slice(
+    const operations = document.operations[scope].slice(
         0,
-        document.revision - undoCount,
+        revision - undoCount,
     );
     const newDocument = replayOperations(
         document.initialState,
         {
-            global: globalOperations,
-            local: document.operations.local,
+            ...document.operations,
+            [scope]: operations,
         },
         wrappedReducer,
     );
@@ -36,18 +47,23 @@ export function undoOperation<T, A extends Action, L>(
     return {
         ...newDocument,
         operations: document.operations,
-        revision: document.revision - undoCount,
+        revision: {
+            ...document.revision,
+            [scope]: document.revision[scope] - undoCount,
+        },
     };
 }
 
 // redoes the last `count` undone operations
 export function redoOperation<T, A extends Action, L>(
     document: Document<T, A, L>,
-    count: number,
+    action: RedoAction,
     wrappedReducer: ImmutableStateReducer<T, A, L>,
 ): Document<T, A, L> {
+    const { scope, input: count } = action;
     // the number of undone operations is retrieved from the revision number
-    const undoCount = document.operations.global.length - document.revision;
+    const undoCount =
+        document.operations[scope].length - document.revision[scope];
     if (!undoCount) {
         throw new Error('There is no UNDO operation to REDO');
     }
@@ -57,15 +73,15 @@ export function redoOperation<T, A extends Action, L>(
 
     // builds state from the initial date taking
     // into account the redone operations
-    const globalOperations = document.operations.global.slice(
+    const operations = document.operations[scope].slice(
         0,
-        document.revision + redoCount,
+        document.revision[scope] + redoCount,
     );
     const newDocument = replayOperations(
         document.initialState,
         {
-            global: globalOperations,
-            local: document.operations.local,
+            ...document.operations,
+            [scope]: operations,
         },
         wrappedReducer,
     );
@@ -75,29 +91,38 @@ export function redoOperation<T, A extends Action, L>(
     return {
         ...newDocument,
         operations: document.operations,
-        revision: document.revision + redoCount,
+        revision: {
+            ...document.revision,
+            [scope]: document.revision[scope] + redoCount,
+        },
     };
 }
 
 export function pruneOperation<T, A extends Action, L>(
     document: Document<T, A, L>,
-    start: number | null | undefined,
-    end: number | null | undefined,
+    action: PruneAction,
     wrappedReducer: ImmutableStateReducer<T, A, L>,
 ): Document<T, A, L> {
+    const { scope } = action;
+    const operations = document.operations[scope];
+
+    let {
+        input: { start, end },
+    } = action;
     start = start || 0;
-    end = end || document.operations.global.length;
-    const actionsToPrune = document.operations.global.slice(start, end);
-    const actionsToKeepStart = document.operations.global.slice(0, start);
-    const actionsToKeepEnd = document.operations.global.slice(end);
+    end = end || operations.length;
+
+    const actionsToPrune = operations.slice(start, end);
+    const actionsToKeepStart = operations.slice(0, start);
+    const actionsToKeepEnd = operations.slice(end);
 
     // runs all operations from the initial state to
     // the end of prune to get name and data
     const newDocument = replayOperations(
         document.initialState,
         {
-            global: actionsToKeepStart.concat(actionsToPrune),
-            local: document.operations.local,
+            ...document.operations,
+            [scope]: actionsToKeepStart.concat(actionsToPrune),
         },
         wrappedReducer,
     );
@@ -119,7 +144,8 @@ export function pruneOperation<T, A extends Action, L>(
     return replayOperations(
         document.initialState,
         {
-            global: [
+            ...document.operations,
+            [scope]: [
                 ...actionsToKeepStart,
                 {
                     ...loadState(
@@ -137,7 +163,6 @@ export function pruneOperation<T, A extends Action, L>(
                         index: loadStateIndex + index + 1,
                     })),
             ],
-            local: document.operations.local,
         },
         wrappedReducer,
     );
