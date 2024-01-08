@@ -16,7 +16,7 @@ export type <%= h.changeCase.pascal(actionType.name) %>Action = Action<%if(actio
 export type <%= h.changeCase.pascal(actionType.name) %>Action = Action<'<%= h.changeCase.constantCase(actionType.name) %>', never, '<%= actionType.scope %>'>;
 <% }); _%>
 
-export type <%= documentType %><%= h.changeCase.pascal(module) %>Action = 
+export type <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Action = 
 <% actions.forEach(actionType => { _%>
     | <%= h.changeCase.pascal(actionType.name) %>Action
 <% }); _%>;
