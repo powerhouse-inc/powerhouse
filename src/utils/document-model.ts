@@ -7,6 +7,11 @@ import type {
 } from 'document-model/document';
 import { useMemo, useReducer, useState } from 'react';
 
+export type DocumentDispatch<A> = (
+    action: A | BaseAction,
+    callback?: (operation: Operation) => void
+) => void;
+
 export function wrapReducer<State, A extends Action, LocalState>(
     reducer: Reducer<State, A, LocalState>,
     onError?: (error: unknown) => void
@@ -38,24 +43,25 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
     documentReducer: Reducer<State, A, LocalState>,
     initialState: Document<State, A, LocalState>,
     onError: (error: unknown) => void = console.error
-): readonly [
-    Document<State, A, LocalState>,
-    (action: A | BaseAction) => Operation
-] {
+): readonly [Document<State, A, LocalState>, DocumentDispatch<A>] {
     const [state, setState] = useState(initialState);
     const reducer: Reducer<State, A, LocalState> = useMemo(
         () => wrapReducer(documentReducer, onError),
         [documentReducer, onError]
     );
 
-    function dispatch(action: A | BaseAction) {
-        const newState = reducer(state, action);
-        const scope = action.scope ?? 'global';
-        const operations = newState.operations[scope];
-        const operation = operations[operations.length - 1];
-        setState(newState);
-        return operation;
-    }
+    const dispatch: DocumentDispatch<A> = (action, callback) => {
+        setState(_state => {
+            const newState = reducer(_state, action);
+            const scope = action.scope ?? 'global';
+            const operations = newState.operations[scope];
+            const operation = operations[operations.length - 1];
+
+            callback?.(operation);
+
+            return newState;
+        });
+    };
 
     return [state, dispatch] as const;
 }
