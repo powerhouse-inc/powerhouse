@@ -46,6 +46,13 @@ function Editor(props: IProps) {
         if (ops.length < 1) {
             dispatch(actions.setModelId({ id: '' }));
         }
+
+        const globalOps = document.operations.global;
+        const latestGlobalOp = globalOps[globalOps.length - 1];
+
+        if (latestGlobalOp && latestGlobalOp.type === 'SET_MODEL_NAME') {
+            dispatch(actions.setName(latestGlobalOp.input.name));
+        }
     }, [document.operations]);
 
     const setModelId = (id: string) => {
