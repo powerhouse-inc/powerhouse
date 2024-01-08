@@ -3,17 +3,20 @@ import { editor } from 'monaco-editor';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { styles } from 'document-model-editors';
+import { isJSONEqual } from '../common/json-editor';
 
 interface IProps extends EditorProps {
     validator?: () => z.AnyZodObject;
     onCreate: (create: string) => void;
     theme: styles.ColorTheme;
+    setInitialValue?: boolean;
 }
 
 export default function EditorInitialState({
     validator,
     onCreate,
     theme,
+    setInitialValue,
     ...props
 }: IProps) {
     const [code, setCode] = useState(props.value || '{}');
@@ -28,6 +31,15 @@ export default function EditorInitialState({
             onCreate(value);
         });
     }, [editorRef.current]);
+
+    useEffect(() => {
+        if (
+            setInitialValue &&
+            !isJSONEqual(JSON.parse(props.value || '{}'), code)
+        ) {
+            setCode(props.value || '{}');
+        }
+    }, [setInitialValue, props.value]);
 
     let errorMessage = '';
     let valid = false;

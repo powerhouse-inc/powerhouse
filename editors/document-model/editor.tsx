@@ -37,6 +37,9 @@ function Editor(props: IProps) {
 
     const { state } = document;
 
+    const latestOperation =
+        document.operations.global[document.operations.global.length - 1];
+
     useEffect(() => {
         const ops = [
             ...document.operations.global,
@@ -127,12 +130,14 @@ function Editor(props: IProps) {
         state,
         scope: 'global',
         setInitialState,
+        latestOperation,
     });
 
     const localSchema = useSchemaEditor({
         state,
         scope: 'local',
         setInitialState,
+        latestOperation,
     });
 
     return (
@@ -216,6 +221,7 @@ function Editor(props: IProps) {
                             schemaHandlers={globalSchema}
                             setStateSchema={setStateSchema}
                             name={document.state.global.name}
+                            latestOperation={latestOperation}
                         />
                         <EditorState
                             scope="local"
@@ -223,6 +229,7 @@ function Editor(props: IProps) {
                             schemaHandlers={localSchema}
                             setStateSchema={setStateSchema}
                             name={document.state.global.name}
+                            latestOperation={latestOperation}
                         />
                         {globalSchema.specification.modules.map(m => (
                             <div key={m.id}>
