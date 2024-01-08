@@ -69,8 +69,9 @@ export const DocumentEditor: React.FC<IProps> = ({
     );
 
     function dispatch(action: BaseAction | Action) {
-        const operation = _dispatch(action);
-        onAddOperation(operation);
+        _dispatch(action, operation => {
+            onAddOperation(operation);
+        });
     }
 
     useEffect(() => {
