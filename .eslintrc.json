@@ -1,7 +1,6 @@
 {
     "env": {
-        "browser": true,
-        "esnext": true
+        "browser": true
     },
     "extends": [
         "eslint:recommended",
@@ -21,7 +20,6 @@
     },
     "plugins": ["react", "@typescript-eslint"],
     "rules": {
-
         "react/prop-types": "off",
         "react/react-in-jsx-scope": "off",
         "@typescript-eslint/explicit-function-return-type": "off",
@@ -34,32 +32,6 @@
         "@typescript-eslint/consistent-type-definitions": "off",
         "@typescript-eslint/no-empty-function": "off",
         "@typescript-eslint/no-misused-promises": "off",
-        "tailwindcss/classnames-order": [
-            1, {
-                "callees": ["twMerge", "twJoin"]
-            }
-        ],
-        "tailwindcss/enforces-negative-arbitrary-values": [
-            1, {
-                "callees": ["twMerge", "twJoin"]
-            }
-        ],
-        "tailwindcss/enforces-shorthand": [
-            1, {
-                "callees": ["twMerge", "twJoin"]
-            }
-        ],
-        "tailwindcss/no-contradicting-classname": [
-            1, {
-                "callees": ["twMerge", "twJoin"]
-            }
-        ],
-        "tailwindcss/no-custom-classname": [
-            1, {
-                "callees": ["twMerge", "twJoin"]
-            }
-        ]
-    ,
         "@typescript-eslint/no-unused-vars": [
             1,
             {

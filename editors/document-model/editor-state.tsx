@@ -77,7 +77,7 @@ function EditorState(props: EditorStateProps) {
                     height={200}
                     setInitialValue={
                         latestOperation?.type === 'SET_INITIAL_STATE' &&
-                        latestOperation?.scope === scope
+                        latestOperation.scope === scope
                     }
                     value={specification?.state[scope].initialValue}
                     validator={schemaState?.validator}

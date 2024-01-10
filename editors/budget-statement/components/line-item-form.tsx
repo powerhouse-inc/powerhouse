@@ -68,13 +68,13 @@ const LineItemForm: React.FC<{
         const formJson = Object.fromEntries(formData.entries());
         addLineItem({
             accountId: formData.get('account')!.toString(),
-            budgetCap: parseFloat(formJson['budgetCap'].toString()),
-            actual: parseFloat(formJson['actual'].toString()),
-            payment: parseFloat(formJson['payment'].toString()),
+            budgetCap: parseFloat(formJson.budgetCap.toString()),
+            actual: parseFloat(formJson.actual.toString()),
+            payment: parseFloat(formJson.payment.toString()),
             category: categories.find(
-                c => c.id === formJson['category'].toString(),
+                c => c.id === formJson.category.toString(),
             )!,
-            group: groups.find(g => g.id === formJson['group'].toString())!,
+            group: groups.find(g => g.id === formJson.group.toString())!,
         });
     }
 
