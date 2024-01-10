@@ -52,10 +52,16 @@ export default function EditorOperation(props: IProps) {
                 schema={
                     schema ||
                     `input ${pascalCase(name || '')}Input {
-
+    # add your code here
 }`
                 }
-                onChange={schema => onUpdateSchema(id, schema)}
+                onSchemaChange={(schema, sdl) => onUpdateSchema(id, sdl)}
+                restrictions={[
+                    {
+                        range: [2, 1, 3, 1],
+                        allowMultiline: true,
+                    },
+                ]}
             />
             <div>
                 <label

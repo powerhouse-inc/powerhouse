@@ -1,16 +1,20 @@
 import { SchemaEditor, SchemaEditorProps } from '@theguild/editor';
 import { styles } from 'document-model-editors';
+import {
+    constrainedEditor,
+    ConstrainedEditorRestriction,
+} from 'constrained-editor-plugin';
 
 export interface IProps extends Omit<SchemaEditorProps, 'onChange'> {
     schema: string;
-    onChange: (schema: string) => void;
     theme: styles.ColorTheme;
+    restrictions?: ConstrainedEditorRestriction[];
 }
 
 const GraphQLEditor: React.FC<IProps> = ({
     schema,
-    onChange,
     theme,
+    restrictions,
     ...props
 }) => {
     return (
@@ -21,6 +25,15 @@ const GraphQLEditor: React.FC<IProps> = ({
             defaultValue={schema}
             line={2}
             {...props}
+            onMount={(editor, monaco) => {
+                if (!restrictions) return;
+
+                const constrainedInstance = constrainedEditor(monaco);
+                const model = editor.getModel();
+                constrainedInstance.initializeIn(editor);
+
+                constrainedInstance.addRestrictionsTo(model, restrictions);
+            }}
             options={{
                 lineNumbers: 'off',
                 lineNumbersMinChars: 0,
@@ -28,7 +41,6 @@ const GraphQLEditor: React.FC<IProps> = ({
                 automaticLayout: true,
                 ...props.options,
             }}
-            onChange={value => onChange(value ?? '')}
         />
     );
 };
