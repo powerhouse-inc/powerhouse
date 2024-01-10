@@ -1,8 +1,9 @@
-import { OperationScope } from 'document-model/document';
+import { OperationScope, Operation, BaseAction } from 'document-model/document';
 import { styles } from 'document-model-editors';
 import EditorSchema, { ScopeType } from './editor-schema';
 import EditorInitialState from './editor-initital-state';
 import { SchemaResult } from './useSchemaEditor';
+import { DocumentModelAction } from 'document-model/document-model';
 
 export interface EditorStateProps {
     name: string;
@@ -10,10 +11,18 @@ export interface EditorStateProps {
     scope: OperationScope;
     theme: styles.ColorTheme;
     setStateSchema: (schema: string, scope: ScopeType) => void;
+    latestOperation?: Operation<DocumentModelAction | BaseAction> | null;
 }
 
 function EditorState(props: EditorStateProps) {
-    const { name, theme, setStateSchema, scope, schemaHandlers } = props;
+    const {
+        name,
+        theme,
+        setStateSchema,
+        scope,
+        schemaHandlers,
+        latestOperation,
+    } = props;
 
     const { setInitialValue, setSchemaState, schemaState, specification } =
         schemaHandlers;
@@ -66,6 +75,10 @@ function EditorState(props: EditorStateProps) {
                 >{`${scopeName} Initial State`}</h4>
                 <EditorInitialState
                     height={200}
+                    setInitialValue={
+                        latestOperation?.type === 'SET_INITIAL_STATE' &&
+                        latestOperation?.scope === scope
+                    }
                     value={specification?.state[scope].initialValue}
                     validator={schemaState?.validator}
                     onCreate={value => {
