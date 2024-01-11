@@ -31,6 +31,7 @@ export const App: React.FC = () => {
 
 const Preloader = () => {
     for (const atom of Object.values(atoms)) {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
         useAtomValue(atom);
     }
     return null;

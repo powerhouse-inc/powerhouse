@@ -13,7 +13,7 @@ type IProps = DetailedHTMLProps<
     onCloseTab?: (tab: Tab) => void;
 };
 
-export default forwardRef((props: IProps, ref) => {
+export default forwardRef(function TabButton(props: IProps, ref) {
     const {
         as = 'button',
         className,

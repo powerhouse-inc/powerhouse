@@ -11,7 +11,6 @@ import {
 import {
     DocumentDriveDocument,
     Node,
-    SharingType,
 } from 'document-model-libs/document-drive';
 import path from 'path';
 import { useModal } from 'src/components/modal';
@@ -48,7 +47,7 @@ export function driveToBaseItems(
                 : remoteUrl
                 ? 'CLOUD_DRIVE'
                 : 'LOCAL_DRIVE',
-        sharingType: sharingType.toUpperCase() as TreeItemSharingType,
+        sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
         status: availableOffline ? 'AVAILABLE_OFFLINE' : 'AVAILABLE',
     };
 
@@ -175,7 +174,7 @@ export function useDrivesContainer() {
             case 'change-sharing-type':
                 setDriveSharingType(
                     decodeID(item.id),
-                    item.sharingType?.toLowerCase() as SharingType
+                    item.sharingType?.toLowerCase() as TreeItemSharingType
                 );
         }
     };

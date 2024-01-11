@@ -29,9 +29,12 @@ const Root = () => {
         return unsubscribeLogin;
     }, []);
 
-    const { dropProps, isDropTarget } = ROOT_FILE_DROP
-        ? useDropFile(ref)
-        : { dropProps: {}, isDropTarget: false };
+    let { dropProps, isDropTarget } = useDropFile(ref);
+
+    if (!ROOT_FILE_DROP) {
+        dropProps = {};
+        isDropTarget = false;
+    }
 
     return (
         <ItemsContextProvider>

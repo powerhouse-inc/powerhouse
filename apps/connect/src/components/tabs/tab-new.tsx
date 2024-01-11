@@ -6,7 +6,7 @@ import { preloadTabs, useTabs } from 'src/store';
 import { documentModelsAtom } from 'src/store/document-model';
 import Button from '../button';
 
-export default () => {
+export default function TabNew()  {
     const ref = useRef(null);
     const { selectedTab, updateTab, fromDocument } = useTabs();
     const { documentDrives, addFile, openFile } = useDocumentDriveServer();
@@ -14,11 +14,11 @@ export default () => {
     const documentModels = useAtomValue(documentModelsAtom);
 
     const handleOpenFile = useOpenFile(async (document, file) => {
-        const drive = documentDrives?.[0]; // TODO improve default drive selection
+        const drive = documentDrives[0]; // TODO improve default drive selection
         if (drive) {
-            const node = await addFile(file, drive.state.id, file.name);
+            const node = await addFile(file, drive.state.global.id, file.name);
             if (node) {
-                openFile(drive.state.id, node.id);
+                openFile(drive.state.global.id, node.id);
             }
         } else {
             updateTab(await fromDocument(document, selectedTab));
