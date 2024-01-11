@@ -164,7 +164,7 @@ export default function EditorSchema({
     return (
         <div>
             <Editor
-                theme={`vs-${props}`}
+                theme={`vs-${theme}`}
                 onSchemaChange={schema => setSchema(schema)}
                 width="100%"
                 height="60vh"
