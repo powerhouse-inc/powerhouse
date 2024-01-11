@@ -30,4 +30,4 @@ import App from './components/app';
 import './i18n';
 import './index.css';
 
-createRoot(document.getElementById('app') as HTMLElement).render(App);
+createRoot(document.getElementById('app')!).render(App);

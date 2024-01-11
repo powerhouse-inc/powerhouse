@@ -82,7 +82,7 @@ export function useDocumentDriveServer(
             if (!isDocumentDrive(newDrive.document)) {
                 throw new Error('Received document is not a Document Drive');
             }
-            return newDrive.document as DocumentDriveDocument;
+            return newDrive.document;
         } catch (error) {
             console.error(error);
             return drive;
