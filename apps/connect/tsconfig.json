@@ -26,6 +26,7 @@
         "src", 
         "*.config.ts",
         "*.config.js",
+        "reset.d.ts"
     ],
     "files": ["custom.d.ts"]
 }
