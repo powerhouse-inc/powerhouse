@@ -1,23 +1,39 @@
-import { OperationScope } from "..";
+import { OperationScope } from '..';
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
-export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+export type Exact<T extends { [key: string]: unknown }> = {
+  [K in keyof T]: T[K];
+};
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
+  [SubKey in K]?: Maybe<T[SubKey]>;
+};
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
+  [SubKey in K]: Maybe<T[SubKey]>;
+};
+export type MakeEmpty<
+  T extends { [key: string]: unknown },
+  K extends keyof T,
+> = { [_ in K]?: never };
+export type Incremental<T> =
+  | T
+  | {
+      [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never;
+    };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
-  ID: { input: string; output: string; }
-  String: { input: string; output: string; }
-  Boolean: { input: boolean; output: boolean; }
-  Int: { input: number; output: number; }
-  Float: { input: number; output: number; }
-  Address: { input: `${string}:0x${string}`; output: `${string}:0x${string}`; }
-  Attachment: { input: string; output: string; }
-  DateTime: { input: string; output: string; }
-  Unknown: { input: unknown; output: unknown; }
+  ID: { input: string; output: string };
+  String: { input: string; output: string };
+  Boolean: { input: boolean; output: boolean };
+  Int: { input: number; output: number };
+  Float: { input: number; output: number };
+  Address: {
+    input: `${string}:0x${string}`;
+    output: `${string}:0x${string}`;
+  };
+  Attachment: { input: string; output: string };
+  DateTime: { input: string; output: string };
+  Unknown: { input: unknown; output: unknown };
 };
 
 export type Action = IAction & {
@@ -25,7 +41,16 @@ export type Action = IAction & {
   type: Scalars['String']['output'];
 };
 
-export type BaseAction = LoadStateAction | PruneAction | RedoAction | SetNameAction | UndoAction;
+export type DefaultBaseActionProps = {
+  skip?: number;
+};
+
+export type BaseAction =
+  | LoadStateAction
+  | PruneAction
+  | RedoAction
+  | SetNameAction
+  | UndoAction;
 
 export type DocumentFile = {
   __typename?: 'DocumentFile';
@@ -55,10 +80,9 @@ export type IOperation = {
   type: Scalars['String']['output'];
 };
 
-export type Load_State =
-  | 'LOAD_STATE';
+export type Load_State = 'LOAD_STATE';
 
-export type LoadStateAction = {
+export type LoadStateAction = DefaultBaseActionProps & {
   input: LoadStateActionInput;
   type: Load_State | `${Load_State}`;
   scope: OperationScope;
@@ -83,26 +107,21 @@ export type Mutation = {
   undo: Maybe<IDocument>;
 };
 
-
 export type MutationLoadStateArgs = {
   input: LoadStateAction;
 };
-
 
 export type MutationPruneArgs = {
   input: PruneAction;
 };
 
-
 export type MutationRedoArgs = {
   input: RedoAction;
 };
 
-
 export type MutationSetNameArgs = {
   input: SetNameAction;
 };
-
 
 export type MutationUndoArgs = {
   input: UndoAction;
@@ -116,10 +135,9 @@ export type Operation = IOperation & {
   type: Scalars['String']['output'];
 };
 
-export type Prune =
-  | 'PRUNE';
+export type Prune = 'PRUNE';
 
-export type PruneAction = {
+export type PruneAction = DefaultBaseActionProps & {
   input: PruneActionInput;
   type: Prune | `${Prune}`;
   scope: OperationScope;
@@ -135,8 +153,7 @@ export type Query = {
   document: Maybe<IDocument>;
 };
 
-export type Redo =
-  | 'REDO';
+export type Redo = 'REDO';
 
 export type RedoAction = {
   input: Scalars['Int']['input'];
@@ -144,13 +161,12 @@ export type RedoAction = {
   scope: OperationScope;
 };
 
-export type Set_Name =
-  | 'SET_NAME';
+export type Set_Name = 'SET_NAME';
 
-export type SetNameAction = {
+export type SetNameAction = DefaultBaseActionProps & {
   input: Scalars['String']['input'];
   type: Set_Name | `${Set_Name}`;
-  scope: "global";
+  scope: 'global';
 };
 
 export type SetNameOperation = IOperation & {
@@ -162,10 +178,9 @@ export type SetNameOperation = IOperation & {
   type: Scalars['String']['output'];
 };
 
-export type Undo =
-  | 'UNDO';
+export type Undo = 'UNDO';
 
-export type UndoAction = {
+export type UndoAction = DefaultBaseActionProps & {
   input: Scalars['Int']['input'];
   type: Undo | `${Undo}`;
   scope: OperationScope;

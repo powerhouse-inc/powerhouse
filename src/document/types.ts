@@ -28,6 +28,8 @@ export type Action<
     scope: S;
     /** The attachments included in the action. */
     attachments?: AttachmentInput[] | undefined;
+    /** The number of operations to skip before this new action is applied */
+    skip?: number;
 };
 
 export type ActionWithAttachment<
@@ -98,6 +100,8 @@ export type Operation<A extends Action = Action> = A & {
     timestamp: string;
     /** Hash of the resulting document data after the operation */
     hash: string;
+    /** The number of operations skipped with this Operation */
+    skip: number;
 };
 
 /**

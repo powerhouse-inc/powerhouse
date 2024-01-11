@@ -46,6 +46,7 @@ export function createAction<A extends Action>(
     attachments?: Action['attachments'],
     validator?: () => { parse(v: unknown): A['input'] },
     scope: OperationScope = 'global',
+    skip: Action['skip'] = 0,
 ): A {
     if (!type) {
         throw new Error('Empty action type');
@@ -55,7 +56,7 @@ export function createAction<A extends Action>(
         throw new Error(`Invalid action type: ${type}`);
     }
 
-    const action: Action = { type, input, scope };
+    const action: Action = { type, input, scope, skip };
 
     if (attachments) {
         action.attachments = attachments;
