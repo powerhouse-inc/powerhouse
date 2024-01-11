@@ -42,6 +42,7 @@
         "@typescript-eslint/restrict-template-expressions": "warn",
         "@typescript-eslint/unbound-method": "warn",
         "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/no-extraneous-class": "warn",
         "@typescript-eslint/no-unused-vars": [
             1,
             { "ignoreRestSiblings": true }
