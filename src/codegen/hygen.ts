@@ -65,10 +65,6 @@ export async function generateDocumentModel(
     dir: string,
     { watch = false, format = false } = {},
 ) {
-    const latestSpec =
-        documentModel.specifications[documentModel.specifications.length - 1];
-    const hasLocalSchema = latestSpec.state.local.schema !== '';
-
     // Generate the singular files for the document model logic
     await run(
         [
@@ -78,14 +74,13 @@ export async function generateDocumentModel(
             JSON.stringify(documentModel),
             '--root-dir',
             dir,
-            '--has-local-schema',
-            hasLocalSchema.toString(),
         ],
         { watch, format },
     );
 
     // Generate the module-specific files for the document model logic
-
+    const latestSpec =
+        documentModel.specifications[documentModel.specifications.length - 1];
     for (const module of latestSpec.modules) {
         await run(
             [

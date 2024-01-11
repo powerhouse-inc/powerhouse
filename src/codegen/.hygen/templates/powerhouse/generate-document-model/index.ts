@@ -52,6 +52,7 @@ export default {
                 name: paramCase(m.name),
             })),
             fileExtension: documentModel.extension,
+            hasLocalSchema: latestSpec.state.local.schema !== '',
             ...getInitialStates(latestSpec.state),
         };
     },
