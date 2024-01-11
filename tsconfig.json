@@ -12,7 +12,7 @@
         "skipLibCheck": true,
         "emitDeclarationOnly": true,
         "jsx": "react-jsx",
-        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "lib": ["ESNext"],
     },
     "include": ["./index.ts", "**/*.ts", "**/*.tsx"],
     "exclude": ["dist/", "node_modules"]
