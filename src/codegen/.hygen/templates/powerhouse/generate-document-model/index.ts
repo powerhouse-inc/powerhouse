@@ -1,5 +1,5 @@
 import { paramCase } from 'change-case';
-import { DocumentModelState } from 'document-model/document-model';
+import { DocumentModelState, ScopeState } from 'document-model/document-model';
 
 function documentModelToString(documentModel: DocumentModelState) {
     return JSON.stringify(
@@ -51,9 +51,33 @@ export default {
                 ...m,
                 name: paramCase(m.name),
             })),
-            initialGlobalState: latestSpec.state.global.initialValue,
-            initialLocalState: latestSpec.state.local.initialValue,
             fileExtension: documentModel.extension,
+            hasLocalSchema: latestSpec.state.local.schema !== '',
+            ...getInitialStates(latestSpec.state),
         };
     },
 };
+
+function getInitialStates(scopeState: ScopeState) {
+    const { global, local } = scopeState;
+    const scopes = { global, local };
+
+    Object.entries(scopes).forEach(([scope, state]) => {
+        if (state.schema !== '' && state.initialValue === '') {
+            throw new Error(
+                `${
+                    scope.charAt(0).toLocaleUpperCase() + scope.slice(1)
+                } scope has a defined schema but is missing an initial value.`,
+            );
+        }
+    });
+
+    return {
+        initialGlobalState: handleEmptyState(global.initialValue),
+        initialLocalState: handleEmptyState(local.initialValue),
+    };
+}
+
+function handleEmptyState(state: string) {
+    return state === '' ? '{}' : state;
+}

@@ -1,7 +1,7 @@
 import { DocumentModel } from 'document-model';
+import fs from 'fs';
 import { Logger, runner } from 'hygen';
 import path from 'path';
-import fs from 'fs';
 import { loadDocumentModel } from './utils';
 
 const logger = new Logger(console.log.bind(console));
@@ -81,8 +81,7 @@ export async function generateDocumentModel(
     // Generate the module-specific files for the document model logic
     const latestSpec =
         documentModel.specifications[documentModel.specifications.length - 1];
-    const modules = latestSpec.modules.map(m => m.name);
-    for (let i = 0; i < modules.length; i++) {
+    for (const module of latestSpec.modules) {
         await run(
             [
                 'powerhouse',
@@ -92,7 +91,7 @@ export async function generateDocumentModel(
                 '--root-dir',
                 dir,
                 '--module',
-                modules[i],
+                module.name,
             ],
             { watch, format },
         );
