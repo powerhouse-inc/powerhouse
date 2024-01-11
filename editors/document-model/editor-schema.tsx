@@ -43,12 +43,15 @@ const normalizeSchema = (
         )
     ) {
         // Update type name value if name changed
-        const newCodeValue = schema.replace(typeRegexp, (match, group1) => {
-            return match.replace(
-                group1,
-                `${pascalCase(documentName)}${scopeStateName}State`,
-            );
-        });
+        const newCodeValue = schema.replace(
+            typeRegexp,
+            (match, group1: string) => {
+                return match.replace(
+                    group1,
+                    `${pascalCase(documentName)}${scopeStateName}State`,
+                );
+            },
+        );
 
         return newCodeValue;
     }
