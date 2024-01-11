@@ -57,10 +57,11 @@ export const countReducer = createReducer<
 });
 
 export const mapOperations = (operations: Operation[]) => {
-    return operations.map(({ input, type, index, scope }) => ({
+    return operations.map(({ input, type, index, scope, skip }) => ({
         input,
         type,
         index,
         scope,
+        skip,
     }));
 };
