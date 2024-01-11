@@ -13,10 +13,11 @@ export type DocumentDispatch<A> = (
 ) => void;
 
 export function wrapReducer<State, A extends Action, LocalState>(
-    reducer: Reducer<State, A, LocalState>,
+    reducer: Reducer<State, A, LocalState> | undefined,
     onError?: (error: unknown) => void
 ): Reducer<State, A, LocalState> {
     return (state, action) => {
+        if (!reducer) return state;
         try {
             return reducer(state, action);
         } catch (error) {
@@ -40,7 +41,7 @@ export function useDocumentReducer<State, A extends Action, LocalState>(
 }
 
 export function useDocumentDispatch<State, A extends Action, LocalState>(
-    documentReducer: Reducer<State, A, LocalState>,
+    documentReducer: Reducer<State, A, LocalState> | undefined,
     initialState: Document<State, A, LocalState>,
     onError: (error: unknown) => void = console.error
 ): readonly [Document<State, A, LocalState>, DocumentDispatch<A>] {

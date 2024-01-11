@@ -10,7 +10,7 @@ const documentDrivesAtom = atom(
 );
 
 // creates a derived atom that encapsulates the Map of Document Drives
-const readWriteDocumentDrivesAtom = (server: IDocumentDriveServer) =>
+const useReadWriteDocumentDrivesAtom = (server: IDocumentDriveServer) =>
     useMemo(
         () =>
             atom(
@@ -33,7 +33,7 @@ export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
 // server and a method to fetch the document drives
 export function useDocumentDrives(server: IDocumentDriveServer) {
     const [documentDrives, setDocumentDrives] = useAtom(
-        readWriteDocumentDrivesAtom(server)
+        useReadWriteDocumentDrivesAtom(server)
     );
 
     async function refreshDocumentDrives() {

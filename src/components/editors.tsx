@@ -43,28 +43,9 @@ export const DocumentEditor: React.FC<IProps> = ({
 }) => {
     const documentModel = useDocumentModel(initialDocument.documentType);
     const editor = useEditor(initialDocument.documentType);
-    if (!documentModel) {
-        return (
-            <h3>
-                Document of type {initialDocument.documentType} is not
-                supported.
-            </h3>
-        );
-    }
-
-    if (!editor) {
-        return (
-            <h3>
-                No editor available for document of type{' '}
-                {initialDocument.documentType}
-            </h3>
-        );
-    }
-
-    const EditorComponent = editor.Component;
     const theme = useAtomValue(themeAtom);
     const [document, _dispatch] = useDocumentDispatch(
-        documentModel.reducer,
+        documentModel?.reducer,
         initialDocument
     );
 
@@ -93,7 +74,27 @@ export const DocumentEditor: React.FC<IProps> = ({
     const canUndo = document && document.revision > 0;
     const canRedo =
         document && document.revision < document.operations.global.length;
-
+    
+        if (!documentModel) {
+            return (
+                <h3>
+                    Document of type {initialDocument.documentType} is not
+                    supported.
+                </h3>
+            );
+        }
+    
+        if (!editor) {
+            return (
+                <h3>
+                    No editor available for document of type{' '}
+                    {initialDocument.documentType}
+                </h3>
+            );
+        }
+    
+    const EditorComponent = editor.Component;
+    
     return (
         <div className="relative h-full">
             <div className="mb-4 flex justify-end gap-10">

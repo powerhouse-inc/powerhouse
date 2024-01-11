@@ -30,15 +30,20 @@ export const Tab = {
         const { type, id, name, document } = tab;
         return JSON.stringify({ type, id, name, document });
     },
-    async fromString(
+    fromString(
         value: string,
         getDocumentModel: (documentType: string) => DocumentModel | undefined,
-        getEditor: (documentType: string) => Editor | undefined
-    ): Promise<ITab> {
-        const object = JSON.parse(value);
+        getEditor: (documentType: string) => Editor | undefined,
+    ): ITab {
+        const object = JSON.parse(value) as {
+            type: TabType;
+            document: Document;
+            id: string;
+            name: string;
+        };
         const type = object.type as TabType;
         if (type === 'new') {
-            return createTab(object.id);
+            return createTab(type, object.id);
         }
 
         const documentModel = getDocumentModel(type);
@@ -52,15 +57,15 @@ export const Tab = {
             editor,
             object.document,
             object.id,
-            object.name
+            object.name,
         );
     },
-    async fromDocument<T extends Document>(
+    fromDocument<T extends Document>(
         document: T,
         getDocumentModel: (documentType: string) => DocumentModel | undefined,
         getEditor: (documentType: string) => Editor | undefined,
-        id?: string
-    ): Promise<ITab> {
+        id?: string,
+    ): ITab {
         const documentModel = getDocumentModel(document.documentType);
         const editor = getEditor(document.documentType);
         if (!documentModel || !editor) {
@@ -76,7 +81,7 @@ export function createTab<T = unknown, A extends Action = Action>(
     id?: string,
     name?: string,
     document?: Document,
-    content?: EditorComponent<T, A>
+    content?: EditorComponent<T, A>,
 ): ITab {
     return {
         type: type,
@@ -92,14 +97,14 @@ export function createDocumentTab<T = unknown, A extends Action = Action>(
     editor: Editor<T, A>,
     document?: Document<T, A | BaseAction>,
     id?: string,
-    name?: string
+    name?: string,
 ) {
     document = document ?? documentModel.utils.createDocument();
     return createTab(
         documentModel.documentModel.id as TabType,
         id,
         name ?? document.name,
-        document
+        document,
         // wrapEditor(documentModel, editor) TODO
     );
 }

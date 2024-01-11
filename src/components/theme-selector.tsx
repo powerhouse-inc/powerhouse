@@ -37,7 +37,7 @@ function ThemeButton({
     );
 }
 
-export default () => {
+export default function ThemeSelector() {
     const collapsed = useAtomValue(sidebarCollapsedAtom);
     const [theme, setTheme] = useAtom(themeAtom);
 
