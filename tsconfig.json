@@ -15,7 +15,9 @@
     },
     "include": [
         "src/**/*",
-        "node_modules/@types/wicg-file-system-access/index.d.ts"
+        "test/**/*",
+        "node_modules/@types/wicg-file-system-access/index.d.ts",
+        "*.config.ts"
     ],
     "exclude": ["src/document/utils/browser.ts"]
 }
