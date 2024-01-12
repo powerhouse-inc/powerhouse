@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) => {
         optimizeDeps: {
             disabled: false,
         },
-        plugins: [dts({ insertTypesEntry: true })],
+        plugins: [dts({ insertTypesEntry: true, exclude: ['**/*.stories.tsx'] })],
         define: {
             'process.env.NODE_ENV': JSON.stringify(mode),
             __vite_process_env_NODE_ENV: JSON.stringify(mode),
