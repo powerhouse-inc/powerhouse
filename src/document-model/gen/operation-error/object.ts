@@ -27,33 +27,34 @@ export default class DocumentModel_OperationError extends BaseDocument<
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public addOperationError(input: AddOperationErrorInput) {
-        return this.dispatch(addOperationError(input));
+    public addOperationError(input: AddOperationErrorInput, skip = 0) {
+        return this.dispatch(addOperationError(input, skip));
     }
 
-    public setOperationErrorCode(input: SetOperationErrorCodeInput) {
-        return this.dispatch(setOperationErrorCode(input));
+    public setOperationErrorCode(input: SetOperationErrorCodeInput, skip = 0) {
+        return this.dispatch(setOperationErrorCode(input, skip));
     }
 
-    public setOperationErrorName(input: SetOperationErrorNameInput) {
-        return this.dispatch(setOperationErrorName(input));
+    public setOperationErrorName(input: SetOperationErrorNameInput, skip = 0) {
+        return this.dispatch(setOperationErrorName(input, skip));
     }
 
     public setOperationErrorDescription(
         input: SetOperationErrorDescriptionInput,
+        skip = 0
     ) {
-        return this.dispatch(setOperationErrorDescription(input));
+        return this.dispatch(setOperationErrorDescription(input, skip));
     }
 
-    public setOperationErrorTemplate(input: SetOperationErrorTemplateInput) {
-        return this.dispatch(setOperationErrorTemplate(input));
+    public setOperationErrorTemplate(input: SetOperationErrorTemplateInput, skip = 0) {
+        return this.dispatch(setOperationErrorTemplate(input, skip));
     }
 
-    public deleteOperationError(input: DeleteOperationErrorInput) {
-        return this.dispatch(deleteOperationError(input));
+    public deleteOperationError(input: DeleteOperationErrorInput, skip = 0) {
+        return this.dispatch(deleteOperationError(input, skip));
     }
 
-    public reorderOperationErrors(input: ReorderOperationErrorsInput) {
-        return this.dispatch(reorderOperationErrors(input));
+    public reorderOperationErrors(input: ReorderOperationErrorsInput, skip = 0) {
+        return this.dispatch(reorderOperationErrors(input, skip));
     }
 }

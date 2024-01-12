@@ -35,6 +35,10 @@ export function isBaseAction(action: Action): action is BaseAction {
  *
  * @param type - The type of the action.
  * @param input - The input properties of the action.
+ * @param attachments - The attachments included in the action.
+ * @param validator - The validator to use for the input properties.
+ * @param scope - The scope of the action, can either be 'global' or 'local'.
+ * @param skip - The number of operations to skip before this new action is applied.
  *
  * @throws Error if the type is empty or not a string.
  *

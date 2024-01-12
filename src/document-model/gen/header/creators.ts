@@ -17,40 +17,64 @@ import {
     SetAuthorWebsiteAction,
 } from './actions';
 
-export const setModelName = (input: SetModelNameInput) =>
+export const setModelName = (input: SetModelNameInput, skip = 0) =>
     createAction<SetModelNameAction>(
         'SET_MODEL_NAME',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setModelId = (input: SetModelIdInput) =>
+export const setModelId = (input: SetModelIdInput, skip = 0) =>
     createAction<SetModelIdAction>(
         'SET_MODEL_ID',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setModelExtension = (input: SetModelExtensionInput) =>
+export const setModelExtension = (input: SetModelExtensionInput, skip = 0) =>
     createAction<SetModelExtensionAction>(
         'SET_MODEL_EXTENSION',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setModelDescription = (input: SetModelDescriptionInput) =>
+export const setModelDescription = (input: SetModelDescriptionInput, skip = 0) =>
     createAction<SetModelDescriptionAction>(
         'SET_MODEL_DESCRIPTION',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setAuthorName = (input: SetAuthorNameInput) =>
+export const setAuthorName = (input: SetAuthorNameInput, skip = 0) =>
     createAction<SetAuthorNameAction>(
         'SET_AUTHOR_NAME',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setAuthorWebsite = (input: SetAuthorWebsiteInput) =>
+export const setAuthorWebsite = (input: SetAuthorWebsiteInput, skip = 0) =>
     createAction<SetAuthorWebsiteAction>(
         'SET_AUTHOR_WEBSITE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
 

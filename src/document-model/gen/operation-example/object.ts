@@ -21,19 +21,19 @@ export default class DocumentModel_OperationExample extends BaseDocument<
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public addOperationExample(input: AddOperationExampleInput) {
-        return this.dispatch(addOperationExample(input));
+    public addOperationExample(input: AddOperationExampleInput, skip = 0) {
+        return this.dispatch(addOperationExample(input, skip));
     }
 
-    public updateOperationExample(input: UpdateOperationExampleInput) {
-        return this.dispatch(updateOperationExample(input));
+    public updateOperationExample(input: UpdateOperationExampleInput, skip = 0) {
+        return this.dispatch(updateOperationExample(input, skip));
     }
 
-    public deleteOperationExample(input: DeleteOperationExampleInput) {
-        return this.dispatch(deleteOperationExample(input));
+    public deleteOperationExample(input: DeleteOperationExampleInput, skip = 0) {
+        return this.dispatch(deleteOperationExample(input, skip));
     }
 
-    public reorderOperationExamples(input: ReorderOperationExamplesInput) {
-        return this.dispatch(reorderOperationExamples(input));
+    public reorderOperationExamples(input: ReorderOperationExamplesInput, skip = 0) {
+        return this.dispatch(reorderOperationExamples(input, skip));
     }
 }

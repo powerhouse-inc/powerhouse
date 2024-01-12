@@ -25,27 +25,27 @@ export default class DocumentModel_Header extends BaseDocument<
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public setModelName(input: SetModelNameInput) {
-        return this.dispatch(setModelName(input));
+    public setModelName(input: SetModelNameInput, skip = 0) {
+        return this.dispatch(setModelName(input, skip));
     }
 
-    public setModelId(input: SetModelIdInput) {
-        return this.dispatch(setModelId(input));
+    public setModelId(input: SetModelIdInput, skip = 0) {
+        return this.dispatch(setModelId(input, skip));
     }
 
-    public setModelExtension(input: SetModelExtensionInput) {
-        return this.dispatch(setModelExtension(input));
+    public setModelExtension(input: SetModelExtensionInput, skip = 0) {
+        return this.dispatch(setModelExtension(input, skip));
     }
 
-    public setModelDescription(input: SetModelDescriptionInput) {
-        return this.dispatch(setModelDescription(input));
+    public setModelDescription(input: SetModelDescriptionInput, skip = 0) {
+        return this.dispatch(setModelDescription(input, skip));
     }
 
-    public setAuthorName(input: SetAuthorNameInput) {
-        return this.dispatch(setAuthorName(input));
+    public setAuthorName(input: SetAuthorNameInput, skip = 0) {
+        return this.dispatch(setAuthorName(input, skip));
     }
 
-    public setAuthorWebsite(input: SetAuthorWebsiteInput) {
-        return this.dispatch(setAuthorWebsite(input));
+    public setAuthorWebsite(input: SetAuthorWebsiteInput, skip = 0) {
+        return this.dispatch(setAuthorWebsite(input, skip));
     }
 }

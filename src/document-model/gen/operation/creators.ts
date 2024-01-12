@@ -25,64 +25,104 @@ import {
     SetOperationScopeAction,
 } from './actions';
 
-export const addOperation = (input: AddOperationInput) =>
+export const addOperation = (input: AddOperationInput, skip = 0) =>
     createAction<AddOperationAction>(
         'ADD_OPERATION',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-    export const setOperationName = (input: SetOperationNameInput) =>
+    export const setOperationName = (input: SetOperationNameInput, skip = 0) =>
     createAction<SetOperationNameAction>(
         'SET_OPERATION_NAME',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-    export const setOperationScope = (input: SetOperationScopeInput) =>
+    export const setOperationScope = (input: SetOperationScopeInput, skip = 0) =>
     createAction<SetOperationScopeAction>(
         'SET_OPERATION_SCOPE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setOperationSchema = (input: SetOperationSchemaInput) =>
+export const setOperationSchema = (input: SetOperationSchemaInput, skip = 0) =>
     createAction<SetOperationSchemaAction>(
         'SET_OPERATION_SCHEMA',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setOperationDescription = (input: SetOperationDescriptionInput) =>
+export const setOperationDescription = (input: SetOperationDescriptionInput, skip = 0) =>
     createAction<SetOperationDescriptionAction>(
         'SET_OPERATION_DESCRIPTION',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setOperationTemplate = (input: SetOperationTemplateInput) =>
+export const setOperationTemplate = (input: SetOperationTemplateInput, skip = 0) =>
     createAction<SetOperationTemplateAction>(
         'SET_OPERATION_TEMPLATE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setOperationReducer = (input: SetOperationReducerInput) =>
+export const setOperationReducer = (input: SetOperationReducerInput, skip = 0) =>
     createAction<SetOperationReducerAction>(
         'SET_OPERATION_REDUCER',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const moveOperation = (input: MoveOperationInput) =>
+export const moveOperation = (input: MoveOperationInput, skip = 0) =>
     createAction<MoveOperationAction>(
         'MOVE_OPERATION',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const deleteOperation = (input: DeleteOperationInput) =>
+export const deleteOperation = (input: DeleteOperationInput, skip = 0) =>
     createAction<DeleteOperationAction>(
         'DELETE_OPERATION',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const reorderModuleOperations = (input: ReorderModuleOperationsInput) =>
+export const reorderModuleOperations = (input: ReorderModuleOperationsInput, skip = 0) =>
     createAction<ReorderModuleOperationsAction>(
         'REORDER_MODULE_OPERATIONS',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
 

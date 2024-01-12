@@ -13,28 +13,44 @@ import {
     ReorderOperationExamplesAction,
 } from './actions';
 
-export const addOperationExample = (input: AddOperationExampleInput) =>
+export const addOperationExample = (input: AddOperationExampleInput, skip = 0) =>
     createAction<AddOperationExampleAction>(
         'ADD_OPERATION_EXAMPLE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const updateOperationExample = (input: UpdateOperationExampleInput) =>
+export const updateOperationExample = (input: UpdateOperationExampleInput, skip = 0) =>
     createAction<UpdateOperationExampleAction>(
         'UPDATE_OPERATION_EXAMPLE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const deleteOperationExample = (input: DeleteOperationExampleInput) =>
+export const deleteOperationExample = (input: DeleteOperationExampleInput, skip = 0) =>
     createAction<DeleteOperationExampleAction>(
         'DELETE_OPERATION_EXAMPLE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const reorderOperationExamples = (input: ReorderOperationExamplesInput) =>
+export const reorderOperationExamples = (input: ReorderOperationExamplesInput, skip = 0) =>
     createAction<ReorderOperationExamplesAction>(
         'REORDER_OPERATION_EXAMPLES',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
 

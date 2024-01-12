@@ -19,46 +19,74 @@ import {
     ReorderOperationErrorsAction,
 } from './actions';
 
-export const addOperationError = (input: AddOperationErrorInput) =>
+export const addOperationError = (input: AddOperationErrorInput, skip = 0) =>
     createAction<AddOperationErrorAction>(
         'ADD_OPERATION_ERROR',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setOperationErrorCode = (input: SetOperationErrorCodeInput) =>
+export const setOperationErrorCode = (input: SetOperationErrorCodeInput, skip = 0) =>
     createAction<SetOperationErrorCodeAction>(
         'SET_OPERATION_ERROR_CODE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setOperationErrorName = (input: SetOperationErrorNameInput) =>
+export const setOperationErrorName = (input: SetOperationErrorNameInput, skip = 0) =>
     createAction<SetOperationErrorNameAction>(
         'SET_OPERATION_ERROR_NAME',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setOperationErrorDescription = (input: SetOperationErrorDescriptionInput) =>
+export const setOperationErrorDescription = (input: SetOperationErrorDescriptionInput, skip = 0) =>
     createAction<SetOperationErrorDescriptionAction>(
         'SET_OPERATION_ERROR_DESCRIPTION',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setOperationErrorTemplate = (input: SetOperationErrorTemplateInput) =>
+export const setOperationErrorTemplate = (input: SetOperationErrorTemplateInput, skip = 0) =>
     createAction<SetOperationErrorTemplateAction>(
         'SET_OPERATION_ERROR_TEMPLATE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const deleteOperationError = (input: DeleteOperationErrorInput) =>
+export const deleteOperationError = (input: DeleteOperationErrorInput, skip = 0) =>
     createAction<DeleteOperationErrorAction>(
         'DELETE_OPERATION_ERROR',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const reorderOperationErrors = (input: ReorderOperationErrorsInput) =>
+export const reorderOperationErrors = (input: ReorderOperationErrorsInput, skip = 0) =>
     createAction<ReorderOperationErrorsAction>(
         'REORDER_OPERATION_ERRORS',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
 

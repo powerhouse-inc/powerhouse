@@ -23,23 +23,23 @@ export default class DocumentModel_Module extends BaseDocument<
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public addModule(input: AddModuleInput) {
-        return this.dispatch(addModule(input));
+    public addModule(input: AddModuleInput, skip = 0) {
+        return this.dispatch(addModule(input, skip));
     }
 
-    public setModuleName(input: SetModuleNameInput) {
-        return this.dispatch(setModuleName(input));
+    public setModuleName(input: SetModuleNameInput, skip = 0) {
+        return this.dispatch(setModuleName(input, skip));
     }
 
-    public setModuleDescription(input: SetModuleDescriptionInput) {
-        return this.dispatch(setModuleDescription(input));
+    public setModuleDescription(input: SetModuleDescriptionInput, skip = 0) {
+        return this.dispatch(setModuleDescription(input, skip));
     }
 
-    public deleteModule(input: DeleteModuleInput) {
-        return this.dispatch(deleteModule(input));
+    public deleteModule(input: DeleteModuleInput, skip = 0) {
+        return this.dispatch(deleteModule(input, skip));
     }
 
-    public reorderModules(input: ReorderModulesInput) {
-        return this.dispatch(reorderModules(input));
+    public reorderModules(input: ReorderModulesInput, skip = 0) {
+        return this.dispatch(reorderModules(input, skip));
     }
 }

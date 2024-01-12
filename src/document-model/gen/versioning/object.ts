@@ -22,23 +22,23 @@ export default class DocumentModel_Versioning extends BaseDocument<
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public addChangeLogItem(input: AddChangeLogItemInput) {
-        return this.dispatch(addChangeLogItem(input));
+    public addChangeLogItem(input: AddChangeLogItemInput, skip = 0) {
+        return this.dispatch(addChangeLogItem(input, skip));
     }
 
-    public updateChangeLogItem(input: UpdateChangeLogItemInput) {
-        return this.dispatch(updateChangeLogItem(input));
+    public updateChangeLogItem(input: UpdateChangeLogItemInput, skip = 0) {
+        return this.dispatch(updateChangeLogItem(input, skip));
     }
 
-    public deleteChangeLogItem(input: DeleteChangeLogItemInput) {
-        return this.dispatch(deleteChangeLogItem(input));
+    public deleteChangeLogItem(input: DeleteChangeLogItemInput, skip = 0) {
+        return this.dispatch(deleteChangeLogItem(input, skip));
     }
 
-    public reorderChangeLogItems(input: ReorderChangeLogItemsInput) {
-        return this.dispatch(reorderChangeLogItems(input));
+    public reorderChangeLogItems(input: ReorderChangeLogItemsInput, skip = 0) {
+        return this.dispatch(reorderChangeLogItems(input, skip));
     }
 
-    public releaseNewVersion() {
-        return this.dispatch(releaseNewVersion());
+    public releaseNewVersion(skip = 0) {
+        return this.dispatch(releaseNewVersion(skip));
     }
 }

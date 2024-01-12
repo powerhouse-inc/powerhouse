@@ -17,40 +17,64 @@ import {
     ReorderStateExamplesAction,
 } from './actions';
 
-export const setStateSchema = (input: SetStateSchemaInput) =>
+export const setStateSchema = (input: SetStateSchemaInput, skip = 0) =>
     createAction<SetStateSchemaAction>(
         'SET_STATE_SCHEMA',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setInitialState = (input: SetInitialStateInput) =>
+export const setInitialState = (input: SetInitialStateInput, skip = 0) =>
     createAction<SetInitialStateAction>(
         'SET_INITIAL_STATE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const addStateExample = (input: AddStateExampleInput) =>
+export const addStateExample = (input: AddStateExampleInput, skip = 0) =>
     createAction<AddStateExampleAction>(
         'ADD_STATE_EXAMPLE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const updateStateExample = (input: UpdateStateExampleInput) =>
+export const updateStateExample = (input: UpdateStateExampleInput, skip = 0) =>
     createAction<UpdateStateExampleAction>(
         'UPDATE_STATE_EXAMPLE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const deleteStateExample = (input: DeleteStateExampleInput) =>
+export const deleteStateExample = (input: DeleteStateExampleInput, skip = 0) =>
     createAction<DeleteStateExampleAction>(
         'DELETE_STATE_EXAMPLE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const reorderStateExamples = (input: ReorderStateExamplesInput) =>
+export const reorderStateExamples = (input: ReorderStateExamplesInput, skip = 0) =>
     createAction<ReorderStateExamplesAction>(
         'REORDER_STATE_EXAMPLES',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
 

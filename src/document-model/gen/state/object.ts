@@ -25,27 +25,27 @@ export default class DocumentModel_State extends BaseDocument<
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public setStateSchema(input: SetStateSchemaInput) {
-        return this.dispatch(setStateSchema(input));
+    public setStateSchema(input: SetStateSchemaInput, skip = 0) {
+        return this.dispatch(setStateSchema(input, skip));
     }
 
-    public setInitialState(input: SetInitialStateInput) {
-        return this.dispatch(setInitialState(input));
+    public setInitialState(input: SetInitialStateInput, skip = 0) {
+        return this.dispatch(setInitialState(input, skip));
     }
 
-    public addStateExample(input: AddStateExampleInput) {
-        return this.dispatch(addStateExample(input));
+    public addStateExample(input: AddStateExampleInput, skip = 0) {
+        return this.dispatch(addStateExample(input, skip));
     }
 
-    public updateStateExample(input: UpdateStateExampleInput) {
-        return this.dispatch(updateStateExample(input));
+    public updateStateExample(input: UpdateStateExampleInput, skip = 0) {
+        return this.dispatch(updateStateExample(input, skip));
     }
 
-    public deleteStateExample(input: DeleteStateExampleInput) {
-        return this.dispatch(deleteStateExample(input));
+    public deleteStateExample(input: DeleteStateExampleInput, skip = 0) {
+        return this.dispatch(deleteStateExample(input, skip));
     }
 
-    public reorderStateExamples(input: ReorderStateExamplesInput) {
-        return this.dispatch(reorderStateExamples(input));
+    public reorderStateExamples(input: ReorderStateExamplesInput, skip = 0) {
+        return this.dispatch(reorderStateExamples(input, skip));
     }
 }

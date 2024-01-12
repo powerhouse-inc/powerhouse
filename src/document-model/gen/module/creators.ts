@@ -15,34 +15,54 @@ import {
     ReorderModulesAction,
 } from './actions';
 
-export const addModule = (input: AddModuleInput) =>
+export const addModule = (input: AddModuleInput, skip = 0) =>
     createAction<AddModuleAction>(
         'ADD_MODULE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setModuleName = (input: SetModuleNameInput) =>
+export const setModuleName = (input: SetModuleNameInput, skip = 0) =>
     createAction<SetModuleNameAction>(
         'SET_MODULE_NAME',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const setModuleDescription = (input: SetModuleDescriptionInput) =>
+export const setModuleDescription = (input: SetModuleDescriptionInput, skip = 0) =>
     createAction<SetModuleDescriptionAction>(
         'SET_MODULE_DESCRIPTION',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const deleteModule = (input: DeleteModuleInput) =>
+export const deleteModule = (input: DeleteModuleInput, skip = 0) =>
     createAction<DeleteModuleAction>(
         'DELETE_MODULE',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
-export const reorderModules = (input: ReorderModulesInput) =>
+export const reorderModules = (input: ReorderModulesInput, skip = 0) =>
     createAction<ReorderModulesAction>(
         'REORDER_MODULES',
-        {...input}
+        {...input},
+        undefined,
+        undefined,
+        undefined,
+        skip,
     );
 
 
