@@ -43,6 +43,8 @@
         "@typescript-eslint/consistent-indexed-object-style": "warn",
         "@typescript-eslint/prefer-for-of": "warn",
         "@typescript-eslint/no-duplicate-type-constituents": "warn",
+        "@typescript-eslint/prefer-reduce-type-parameter": "warn",
+        "@typescript-eslint/no-unnecessary-type-assertion": "warn",
         "@typescript-eslint/no-unused-vars": [
             1,
             { "ignoreRestSiblings": true }

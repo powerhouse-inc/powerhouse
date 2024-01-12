@@ -6,7 +6,7 @@ import { join } from 'path';
 export function writeFile(
     path: string,
     name: string,
-    data: Uint8Array
+    data: Uint8Array,
 ): Promise<string> {
     const filePath = join(path, name);
     fs.mkdirSync(path, { recursive: true });
@@ -31,14 +31,14 @@ export function readFile(path: string) {
 }
 
 export function fetchFile(
-    url: string
+    url: string,
 ): Promise<{ buffer: Buffer; mimeType?: string }> {
     return new Promise((resolve, reject) => {
         https
             .get(url, resp => {
                 const data: Uint8Array[] = [];
                 const mimeType = resp.headers['content-type'];
-                resp.on('data', chunk => {
+                resp.on('data', (chunk: Uint8Array) => {
                     data.push(chunk);
                 });
 

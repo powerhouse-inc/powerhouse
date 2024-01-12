@@ -9,7 +9,7 @@ import type {
     OperationScope,
     Reducer,
 } from './types';
-import { loadFromFile, saveToFile, readOnly } from './utils';
+import { loadFromFile, readOnly, saveToFile } from './utils';
 
 /**
  * This is an abstract class representing a document and provides methods
@@ -220,10 +220,13 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function applyMixins(derivedCtor: any, constructors: any[]) {
     constructors.forEach(baseCtor => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
             Object.defineProperty(
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 derivedCtor.prototype,
                 name,
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
                 Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
                     Object.create(null),
             );
