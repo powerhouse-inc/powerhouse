@@ -104,7 +104,7 @@ describe('ScopeFramework Class', () => {
 
         expect(framework.name).toBe('');
         expect(framework.documentType).toBe('makerdao/scope-framework');
-        expect(framework.revision).toBe(0);
+        expect(framework.revision.global).toBe(0);
 
         expect(framework.state.global.rootPath).toBe('A');
         expect(framework.state.global.elements.length).toBe(1);

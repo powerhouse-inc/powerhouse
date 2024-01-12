@@ -5496,10 +5496,10 @@ document-model@^1.0.17:
     mime "^3.0.0"
     zod "^3.22.2"
 
-document-model@^1.0.19:
-  version "1.0.19"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.19.tgz#064ffbbc3635cfd2257ff0d8cdea810df2285ce2"
-  integrity sha512-LchmMlJLtds2/E5BRHWZVxd5inFCcrYMmZpFFU1K51pS6FbTVqJpA/7EjmpIDQnFAyph2iVd2dSAXGv2ZepmvQ==
+document-model@^1.0.20:
+  version "1.0.20"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.20.tgz#9a4ef989e5c9e53cbaa04719c8ffcdba3fffdd15"
+  integrity sha512-bRJswH99+KDqVusnd1paYLooWCcwGRbtF6TV0flVebmy/T/23uI7eo39KsolT3x6fmgJI5OIjmPEDwPu8+ntEQ==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"

@@ -16,7 +16,7 @@ const { createDocument } = utils;
 describe('Budget Statement reducer', () => {
     it('should create initial state', async () => {
         const document = createDocument();
-        expect(document.revision).toBe(0);
+        expect(document.revision.global).toBe(0);
         expect(document.documentType).toBe('powerhouse/budget-statement');
         expect(document.state).toBeDefined();
     });
@@ -30,7 +30,8 @@ describe('Budget Statement reducer', () => {
     it('should update revision', async () => {
         const document = createDocument();
         const newDocument = reducer(document, actions.setName('SES Jan 2023'));
-        expect(newDocument.revision).toBe(1);
+        expect(newDocument.revision.global).toBe(1);
+        expect(newDocument.revision.local).toBe(0);
     });
 
     it('should init budget statement with correct type', async () => {
