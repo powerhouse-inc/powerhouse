@@ -3,3 +3,4 @@ docs/
 dist/
 node_modules/
 gen/
+browser.ts
