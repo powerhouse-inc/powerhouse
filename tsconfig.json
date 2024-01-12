@@ -17,7 +17,8 @@
         "src/**/*",
         "test/**/*",
         "node_modules/@types/wicg-file-system-access/index.d.ts",
-        "*.config.ts"
+        "*.config.ts",
+        "reset.d.ts"
     ],
     "exclude": ["src/document/utils/browser.ts"]
 }

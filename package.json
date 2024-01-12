@@ -52,6 +52,7 @@
     },
     "devDependencies": {
         "@rollup/plugin-node-resolve": "^15.2.1",
+        "@total-typescript/ts-reset": "^0.5.1",
         "@types/jest": "^29.5.11",
         "@types/mime": "^3.0.4",
         "@types/react": "^18.2.47",
