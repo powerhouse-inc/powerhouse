@@ -17,7 +17,7 @@ export const reducer: BudgetStatementAuditOperations = {
     addAuditReportOperation(state, action) {
         checkDuplicatedReport(state, action.input.report);
         if (
-            !action.attachments?.find(
+            !action.attachments.find(
                 attachment => attachment.hash === action.input.report
             )
         ) {

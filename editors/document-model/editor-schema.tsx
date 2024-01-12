@@ -1,11 +1,11 @@
+import { SchemaEditor as Editor, SchemaEditorProps } from '@theguild/editor';
+import { pascalCase } from 'change-case';
+import { styles } from 'document-model-editors';
 import { GraphQLSchema } from 'graphql';
 import { editor } from 'monaco-editor';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import codegen from '../common/codegen';
-import { SchemaEditor as Editor, SchemaEditorProps } from '@theguild/editor';
-import { pascalCase } from 'change-case';
-import { styles } from 'document-model-editors';
 
 export type ScopeType = 'global' | 'local';
 
@@ -43,12 +43,15 @@ const normalizeSchema = (
         )
     ) {
         // Update type name value if name changed
-        const newCodeValue = schema.replace(typeRegexp, (match, group1) => {
-            return match.replace(
-                group1,
-                `${pascalCase(documentName)}${scopeStateName}State`,
-            );
-        });
+        const newCodeValue = schema.replace(
+            typeRegexp,
+            (match, group1: string) => {
+                return match.replace(
+                    group1,
+                    `${pascalCase(documentName)}${scopeStateName}State`,
+                );
+            },
+        );
 
         return newCodeValue;
     }
@@ -136,8 +139,11 @@ export default function EditorSchema({
         codegen(code).then(result => {
             import(/* @vite-ignore */ result).then(validators => {
                 const schemaName = `${name}StateSchema`;
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
                 const validator = validators[schemaName];
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 setValidationSchema(validator);
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 onGenerate({ documentName: name, schema: code, validator });
             });
         });
@@ -161,7 +167,7 @@ export default function EditorSchema({
     return (
         <div>
             <Editor
-                theme={`vs-${props}`}
+                theme={`vs-${theme}`}
                 onSchemaChange={schema => setSchema(schema)}
                 width="100%"
                 height="60vh"

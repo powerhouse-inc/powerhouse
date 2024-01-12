@@ -97,7 +97,7 @@ function ScopeFrameworkEditor(props: IProps) {
         dispatch(
             actions.updateElementComponents({
                 id,
-                components: { content: components['content'] },
+                components: { content: components.content },
             }),
         );
 

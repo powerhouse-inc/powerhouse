@@ -39,8 +39,8 @@ export const useSchemaEditor = (props: UseSchemaEditorProps): SchemaResult => {
 
     const stateScope = state.global;
 
-    const specification = stateScope.specifications?.length
-        ? stateScope.specifications[stateScope.specifications?.length - 1]
+    const specification = stateScope.specifications.length
+        ? stateScope.specifications[stateScope.specifications.length - 1]
         : undefined;
 
     const specScope = specification?.state[scope];

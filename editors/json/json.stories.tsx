@@ -1,10 +1,19 @@
-import { baseReducer, utils } from 'document-model/document';
-import Editor from './editor';
 import { createDocumentStory } from 'document-model-editors';
+import {
+    SignalDispatch,
+    baseReducer,
+    utils,
+    type Document,
+} from 'document-model/document';
+import Editor from './editor';
 
 const { meta, CreateDocumentStory: JSONEditor } = createDocumentStory(
     Editor,
-    (state, action, dispatch) => baseReducer(state, action, document => document, dispatch),
+    (
+        state: Document<unknown, any>,
+        action: any,
+        dispatch: SignalDispatch | undefined,
+    ) => baseReducer(state, action, document => document, dispatch),
     utils.createExtendedState(),
 );
 

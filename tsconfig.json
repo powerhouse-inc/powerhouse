@@ -11,8 +11,9 @@
         "noImplicitAny": true,
         "skipLibCheck": true,
         "emitDeclarationOnly": true,
-        "jsx": "react-jsx"
+        "jsx": "react-jsx",
+        "lib": ["ESNext"],
     },
     "include": ["./index.ts", "**/*.ts", "**/*.tsx"],
-    "exclude": ["dist/", "**/*.test.ts", ".storybook/**/*.ts"]
+    "exclude": ["dist/", "node_modules"]
 }

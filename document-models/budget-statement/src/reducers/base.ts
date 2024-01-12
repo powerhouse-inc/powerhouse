@@ -19,7 +19,7 @@ export const reducer: BudgetStatementBaseOperations = {
     },
     setFtesOperation(state, action) {
         state.ftes = action.input;
-        state.ftes?.forecast.sort((f1, f2) => f1.month.localeCompare(f2.month));
+        state.ftes.forecast.sort((f1, f2) => f1.month.localeCompare(f2.month));
     },
     setQuoteCurrencyOperation(state, action) {
         state.quoteCurrency = action.input.quoteCurrency;

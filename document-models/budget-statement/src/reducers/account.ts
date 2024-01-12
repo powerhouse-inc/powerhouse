@@ -29,8 +29,8 @@ export const reducer: BudgetStatementAccountOperations = {
         const account = state.accounts[index];
         state.accounts[index] = {
             ...account,
-            lineItems: input?.lineItems ?? account.lineItems,
-            name: input?.name ?? account.name,
+            lineItems: input.lineItems ?? account.lineItems,
+            name: input.name ?? account.name,
         };
     },
     deleteAccountOperation(state, action) {
