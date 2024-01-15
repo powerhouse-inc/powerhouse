@@ -58,7 +58,7 @@ export function createAction<A extends Action>(
     const action: Action = { type, input, scope };
 
     if (attachments) {
-        action['attachments'] = attachments;
+        action.attachments = attachments;
     }
 
     try {

@@ -24,6 +24,7 @@ type Properties<T> = Required<{
     [K in keyof T]: z.ZodType<T[K], any, T[K]>;
 }>;
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 type definedNonNullAny = {};
 
 export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>

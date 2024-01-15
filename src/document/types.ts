@@ -67,13 +67,13 @@ export type ImmutableReducer<State, A extends Action, LocalState> = (
     state: Draft<Document<State, A, LocalState>>,
     action: A | BaseAction,
     dispatch?: SignalDispatch,
-) => Document<State, A, LocalState> | void;
+) => Document<State, A, LocalState> | undefined;
 
 export type ImmutableStateReducer<S, A extends Action, L = unknown> = (
     state: Draft<State<S, L>>,
     action: A,
     dispatch?: SignalDispatch,
-) => State<S, L> | void;
+) => State<S, L> | undefined;
 
 /**
  * Scope of an operation.
