@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { BudgetStatement } from '../../document-models/budget-statement';
-import { createAccount, utils } from '../../document-models/budget-statement';
+import { BudgetStatement } from '../..';
+import { createAccount, utils } from '../..';
 
 describe('Budget Statement Class', () => {
     afterAll(() => {
