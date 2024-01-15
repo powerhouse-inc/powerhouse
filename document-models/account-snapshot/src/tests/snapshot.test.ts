@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from '@acaldas/powerhouse';
+import { generateMock } from '@powerhousedao/codegen';
 
 import utils from '../../gen/utils';
 import { z } from '../../gen/schema';
@@ -124,14 +124,20 @@ describe('Account Snapshot Document Model', () => {
 
         it('should set document owner id', () => {
             const input = { ownerId: '123' };
-            const updatedDocument = reducer(document, creators.setOwnerId(input));
+            const updatedDocument = reducer(
+                document,
+                creators.setOwnerId(input),
+            );
 
             expect(updatedDocument.state.global.ownerId).toBe(input.ownerId);
         });
 
         it('should set document owner type', () => {
             const input = { ownerType: 'admin' };
-            const updatedDocument = reducer(document, creators.setOwnerType(input));
+            const updatedDocument = reducer(
+                document,
+                creators.setOwnerType(input),
+            );
 
             expect(updatedDocument.state.global.ownerType).toBe(
                 input.ownerType,
@@ -140,7 +146,10 @@ describe('Account Snapshot Document Model', () => {
 
         it('should set document period', () => {
             const input = { period: '2020-01' };
-            const updatedDocument = reducer(document, creators.setPeriod(input));
+            const updatedDocument = reducer(
+                document,
+                creators.setPeriod(input),
+            );
 
             expect(updatedDocument.state.global.period).toBe(input.period);
         });
