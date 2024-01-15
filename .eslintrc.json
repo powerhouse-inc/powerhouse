@@ -6,7 +6,10 @@
     },
     "extends": [
         "eslint:recommended",
-        "plugin:@typescript-eslint/recommended",
+        "plugin:react/recommended",
+        "plugin:react-hooks/recommended",
+        "plugin:@typescript-eslint/strict-type-checked",
+        "plugin:@typescript-eslint/stylistic-type-checked",
         "plugin:tailwindcss/recommended",
         "prettier"
     ],
@@ -17,8 +20,29 @@
         "tsconfigRootDir": ".",
         "project": true
     },
-    "plugins": ["@typescript-eslint"],
+    "plugins": ["react", "@typescript-eslint"],
     "rules": {
+        "react/prop-types": "off",
+        "react/react-in-jsx-scope": "off",
+        "@typescript-eslint/explicit-function-return-type": "off",
+        "@typescript-eslint/consistent-type-imports": "off",
+        "@typescript-eslint/array-type": "off",
+        "@typescript-eslint/prefer-function-type": "off",
+        "@typescript-eslint/strict-boolean-expressions": "off",
+        "@typescript-eslint/prefer-nullish-coalescing": "off",
+        "@typescript-eslint/no-confusing-void-expression": "off",
+        "@typescript-eslint/consistent-type-definitions": "off",
+        "@typescript-eslint/no-empty-function": "off",
+        "@typescript-eslint/no-misused-promises": "off",
+        "@typescript-eslint/no-non-null-assertion": "warn",
+        "@typescript-eslint/require-await": "warn",
+        "@typescript-eslint/no-unnecessary-condition": "warn",
+        "@typescript-eslint/no-base-to-string": "warn",
+        "@typescript-eslint/no-floating-promises": "warn",
+        "@typescript-eslint/restrict-template-expressions": "warn",
+        "@typescript-eslint/unbound-method": "warn",
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/no-extraneous-class": "warn",
         "@typescript-eslint/no-unused-vars": [
             1,
             { "ignoreRestSiblings": true }
@@ -54,5 +78,10 @@
                 "callees": ["twMerge", "twJoin"]
             }
         ]
+    },
+    "settings": {
+        "react": {
+            "version": "detect"
+        }
     }
 }

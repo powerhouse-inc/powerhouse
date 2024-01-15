@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
     BrowserWindow,
     Menu,
@@ -20,7 +21,7 @@ app.setName('Powerhouse Connect');
 
 app.commandLine.appendSwitch('enable-experimental-web-platform-features');
 
-async function handleFile(path: string, window?: Electron.BrowserWindow) {
+function handleFile(path: string, window?: Electron.BrowserWindow) {
     try {
         const content = fs
             .readFileSync(path, { encoding: 'binary' })
@@ -44,7 +45,7 @@ async function handleFile(path: string, window?: Electron.BrowserWindow) {
     }
 }
 
-async function handleFileSave(path?: string) {
+function handleFileSave(path?: string) {
     if (path) {
         app.addRecentDocument(path);
     }
@@ -159,8 +160,9 @@ const createWindow = async (options?: {
                 {
                     label: 'Open',
                     accelerator: 'CommandOrControl+O',
-                    click: async () => {
-                        const files = await dialog.showOpenDialogSync(
+                    click:
+                        () => {
+                        const files = dialog.showOpenDialogSync(
                             mainWindow,
                             {
                                 properties: ['openFile'],

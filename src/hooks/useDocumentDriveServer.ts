@@ -1,9 +1,8 @@
+import { SharingType } from '@powerhousedao/design-system';
 import { DriveInput, IDocumentDriveServer } from 'document-drive/server';
 import { isDocumentDrive } from 'document-drive/utils';
 import {
     DocumentDriveAction,
-    DocumentDriveDocument,
-    SharingType,
     actions,
     utils as documentDriveUtils,
     isFileNode,
@@ -37,7 +36,7 @@ export function useDocumentDriveServer(
     const [documentDrives, refreshDocumentDrives] = useDocumentDrives(server);
 
     async function openFile(drive: string, id: string) {
-        const document = await server?.getDocument(drive, id);
+        const document = await server.getDocument(drive, id);
         if (!document) {
             throw new Error(
                 `There was an error opening file with id ${id} on drive ${drive}`
@@ -82,7 +81,7 @@ export function useDocumentDriveServer(
             if (!isDocumentDrive(newDrive.document)) {
                 throw new Error('Received document is not a Document Drive');
             }
-            return newDrive.document as DocumentDriveDocument;
+            return newDrive.document;
         } catch (error) {
             console.error(error);
             return drive;
@@ -114,7 +113,7 @@ export function useDocumentDriveServer(
         }
 
         if (document) {
-            await server?.createDocument(drive.state.global.id, {
+            await server.createDocument(drive.state.global.id, {
                 id,
                 documentType,
                 document,

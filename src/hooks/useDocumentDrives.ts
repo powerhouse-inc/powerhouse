@@ -6,41 +6,35 @@ import { useMemo } from 'react';
 
 // map of DocumentDriveServer objects and their Document Drives
 const documentDrivesAtom = atom(
-    new Map<IDocumentDriveServer, DocumentDriveDocument[]>()
+    new Map<IDocumentDriveServer, DocumentDriveDocument[]>(),
 );
 
 // creates a derived atom that encapsulates the Map of Document Drives
-const readWriteDocumentDrivesAtom = (server: IDocumentDriveServer) =>
-    useMemo(
-        () =>
-            atom(
-                get => get(documentDrivesAtom).get(server) ?? [],
-                (_get, set, newDrives: DocumentDriveDocument[]) => {
-                    set(documentDrivesAtom, map =>
-                        new Map(map).set(server, newDrives)
-                    );
-                }
-            ),
-        [server]
+const readWriteDocumentDrivesAtom = (server: IDocumentDriveServer) => () =>
+    atom(
+        get => get(documentDrivesAtom).get(server) ?? [],
+        (_get, set, newDrives: DocumentDriveDocument[]) => {
+            set(documentDrivesAtom, map => new Map(map).set(server, newDrives));
+        },
     );
 
 // keeps track of document drives that have been initialized
 export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
-    atom(false)
+    atom(false),
 );
 
 // returns an array with the document drives of a
 // server and a method to fetch the document drives
 export function useDocumentDrives(server: IDocumentDriveServer) {
     const [documentDrives, setDocumentDrives] = useAtom(
-        readWriteDocumentDrivesAtom(server)
+        useMemo(readWriteDocumentDrivesAtom(server), [server]),
     );
 
     async function refreshDocumentDrives() {
         try {
             const driveIds = await server.getDrives();
             const drives = await Promise.all(
-                driveIds.map(id => server.getDrive(id))
+                driveIds.map(id => server.getDrive(id)),
             );
             setDocumentDrives(drives);
             return drives;
@@ -53,7 +47,7 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
     // if the server has not been initialized then
     // fetches the drives for the first time
     const [isInitialized, setIsInitialized] = useAtom(
-        documentDrivesInitializedMapAtomFamily(server)
+        documentDrivesInitializedMapAtomFamily(server),
     );
 
     if (!isInitialized) {
@@ -63,6 +57,6 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
 
     return useMemo(
         () => [documentDrives, refreshDocumentDrives] as const,
-        [documentDrives]
+        [documentDrives],
     );
 }
