@@ -13,21 +13,21 @@ import {
     DroppableCollectionState,
     TabListState,
 } from 'react-stately';
-import { Tab } from 'src/store/tabs';
+import { Tab as StoreTab } from 'src/store/tabs';
 import TabButton from './tab-button';
 
-export default function ({
+export default function Tab({
     item,
     state,
     dragState,
     dropState,
     onCloseTab,
 }: {
-    item: Node<Tab>;
-    state: TabListState<Tab>;
+    item: Node<StoreTab>;
+    state: TabListState<StoreTab>;
     dragState: DraggableCollectionState;
     dropState: DroppableCollectionState;
-    onCloseTab: (tab: Tab) => void;
+    onCloseTab: (tab: StoreTab) => void;
 }) {
     const ref = useRef<HTMLLIElement>(null);
     const { tabProps } = useTab({ key: item.key }, state, ref);
@@ -55,7 +55,7 @@ export default function ({
 
     ref.current?.addEventListener('contextmenu', () => {
         window.electronAPI?.showTabMenu(
-            item?.value ? Tab.serialize(item.value) : ''
+            item.value ? StoreTab.serialize(item.value) : ''
         );
     });
 

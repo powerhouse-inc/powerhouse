@@ -19,8 +19,7 @@ export const atomWithStorageCallback = <T>(
         },
         subscribe(key, callback) {
             if (
-                typeof window === 'undefined' ||
-                typeof window.addEventListener === 'undefined'
+                typeof window?.addEventListener === 'undefined'
             ) {
                 return () => null;
             }

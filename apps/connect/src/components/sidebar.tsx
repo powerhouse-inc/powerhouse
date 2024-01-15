@@ -5,7 +5,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { sidebarCollapsedAtom } from 'src/store';
 import DriveContainer from './drive-container';
 
-export default function () {
+export default function Sidebar() {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
     const [disableHoverStyles, setDisableHoverStyles] = useState(false);
     function toggleCollapse() {

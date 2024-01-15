@@ -11,7 +11,6 @@ import {
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
-import { SharingType } from 'document-model-libs/document-drive';
 import path from 'path';
 import { useEffect } from 'react';
 import {
@@ -169,7 +168,7 @@ export default function DriveContainer(props: DriveContainerProps) {
             },
             local: {
                 availableOffline: input.availableOffline,
-                sharingType: input.sharingType.toLowerCase() as SharingType,
+                sharingType: input.sharingType.toLowerCase(),
             },
         });
     };
@@ -179,6 +178,7 @@ export default function DriveContainer(props: DriveContainerProps) {
             {DriveSections.map(drive => (
                 <DriveView
                     {...drive}
+                    key={drive.name}
                     onItemClick={onItemClick}
                     onItemOptionsClick={onItemOptionsClick}
                     onSubmitInput={item => onSubmitInput(item)}

@@ -16,7 +16,7 @@ interface IProps {
     onUpdateTab: (tab: Tab) => void;
 }
 
-export default function ({ tabs, onNewTab, onCloseTab, onUpdateTab }: IProps) {
+export default function Tabs({ tabs, onNewTab, onCloseTab, onUpdateTab }: IProps) {
     const onReorder = (e: DroppableCollectionReorderEvent) => {
         if (e.target.dropPosition === 'before') {
             tabs.moveBefore(e.target.key, e.keys);
@@ -99,6 +99,7 @@ export default function ({ tabs, onNewTab, onCloseTab, onUpdateTab }: IProps) {
             onCloseTab={onCloseTab}
             onUpdateTab={onUpdateTab}
             onNewTab={() => onNewTab()}
+            // eslint-disable-next-line react/no-children-prop
             children={item => <Item>{item.name}</Item>}
         />
     );
