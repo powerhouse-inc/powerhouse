@@ -1,12 +1,12 @@
 import { Document } from 'document-model';
 import {
-    reducer,
-    actions,
-    utils,
-    DocumentDriveState,
     DocumentDriveAction,
     DocumentDriveLocalState,
-} from '../../document-models/document-drive';
+    DocumentDriveState,
+    actions,
+    reducer,
+    utils,
+} from '../..';
 
 describe('DocumentDrive Actions', () => {
     let documentDrive: Document.Document<
