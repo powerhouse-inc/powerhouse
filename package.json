@@ -1,6 +1,6 @@
 {
-    "name": "@acaldas/powerhouse",
-    "version": "1.0.14",
+    "name": "@powerhousedao/codegen",
+    "version": "0.0.1",
     "license": "AGPL-3.0-only",
     "private": false,
     "main": "dist/index.js",
@@ -22,29 +22,29 @@
     },
     "dependencies": {
         "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
-        "@anatine/zod-mock": "^3.13.2",
-        "@faker-js/faker": "^8.1.0",
+        "@anatine/zod-mock": "^3.13.3",
+        "@faker-js/faker": "^8.3.1",
         "@graphql-codegen/cli": "^5.0.0",
         "@graphql-codegen/typescript": "^4.0.1",
-        "@types/node": "^20.5.9",
+        "@types/node": "^20.11.2",
         "arg": "^5.0.2",
-        "change-case": "^4.1.2",
-        "document-model": "^1.0.17",
+        "change-case": "^5.4.2",
+        "document-model": "^1.0.20",
         "enquirer": "^2.4.1",
         "execa": "^8.0.1",
         "hygen": "^6.2.11",
-        "typescript": "^5.2.2"
+        "typescript": "^5.3.3"
     },
     "devDependencies": {
         "copyfiles": "^2.4.1",
-        "graphql": "^16.8.0",
-        "prettier": "^3.0.3",
-        "prettier-plugin-organize-imports": "^3.2.3",
-        "rimraf": "^5.0.1",
+        "graphql": "^16.8.1",
+        "prettier": "^3.2.2",
+        "prettier-plugin-organize-imports": "^3.2.4",
+        "rimraf": "^5.0.5",
         "ts-node": "^10.9.2"
     },
     "peerDependencies": {
-        "graphql": "^16.8.0"
+        "graphql": "^16.8.1"
     },
     "resolutions": {
         "string-width": "4.2.3",
