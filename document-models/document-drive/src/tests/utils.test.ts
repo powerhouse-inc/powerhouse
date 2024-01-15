@@ -2,7 +2,7 @@ import {
     utils,
     DocumentDriveState,
     CopyNodeInput,
-} from '../../document-models/document-drive';
+} from '../..';
 
 const baseNodes: DocumentDriveState['nodes'] = [
     {
