@@ -1,10 +1,5 @@
-import {
-    reducer,
-    actions,
-    utils,
-    DocumentDrive,
-} from '../../document-models/document-drive';
 import { Signal } from 'document-model/document';
+import { DocumentDrive, actions, reducer, utils } from '../..';
 
 describe('DocumentDrive Class', () => {
     it('should rename drive', () => {
