@@ -140,7 +140,7 @@ async function loadFromZip<S, A extends Action, L>(
     const headerZip = zip.file('header.json');
     let header: DocumentHeader | undefined = undefined;
     if (headerZip) {
-        header = JSON.parse(await headerZip.async('string'));
+        header = JSON.parse(await headerZip.async('string')) as DocumentHeader;
     }
 
     const operationsZip = zip.file('operations.json');

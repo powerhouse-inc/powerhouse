@@ -53,6 +53,7 @@ describe('Base reducer', () => {
                 type: 'TEST',
                 timestamp: new Date().toISOString(),
                 index: 0,
+                skip: 0,
                 input: {},
                 hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
                 scope: 'global',
@@ -75,6 +76,7 @@ describe('Base reducer', () => {
             type: SET_NAME,
             input: 'Document',
             scope: 'global',
+            skip: 0,
         });
     });
 
@@ -117,6 +119,8 @@ describe('Base reducer', () => {
                     },
                 });
             }
+
+            return _state;
         });
 
         const triggerAction: Action = {

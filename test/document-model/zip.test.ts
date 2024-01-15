@@ -38,6 +38,7 @@ describe('DocumentModel Class', () => {
             {
                 hash: 'xmstBdekoMQJQXwUZaOcv/Q/d9Q=',
                 index: 0,
+                skip: 0,
                 input: { id: 'powerhouse/test' },
                 scope: 'global',
                 type: 'SET_MODEL_ID',
@@ -66,6 +67,7 @@ describe('DocumentModel Class', () => {
             {
                 hash: 'xmstBdekoMQJQXwUZaOcv/Q/d9Q=',
                 index: 0,
+                skip: 0,
                 input: { id: 'powerhouse/test' },
                 scope: 'global',
                 type: 'SET_MODEL_ID',
