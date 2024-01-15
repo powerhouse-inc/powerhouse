@@ -5,18 +5,64 @@
 
 import { generateMock } from '@acaldas/powerhouse';
 
-import * as creators from '../../gen/line-item/creators';
+import { createLineItem, utils } from '../..';
+import * as creators from '../../gen/creators';
 import { reducer } from '../../gen/reducer';
 import { z } from '../../gen/schema';
-import { BudgetStatementDocument } from '../../gen/types';
-import utils from '../../gen/utils';
-import { createLineItem } from '../utils';
+
+const { createDocument } = utils;
+const { addLineItem, addAccount } = creators;
 
 describe('LineItem Operations', () => {
-    let document: BudgetStatementDocument;
-
-    beforeEach(() => {
-        document = utils.createDocument();
+    it('should add line item', () => {
+        let document = createDocument();
+        document = reducer(
+            document,
+            addAccount({
+                address: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+                name: 'Grants Program',
+            }),
+        );
+        const newDocument = reducer(
+            document,
+            addLineItem({
+                accountId: 'eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f',
+                category: {
+                    ref: 'makerdao/budget-category',
+                    id: 'TravelAndEntertainment',
+                    title: 'Travel & Entertainment',
+                },
+                group: {
+                    ref: 'makerdao/project',
+                    id: 'core-unit/SES/2023/005',
+                    title: 'Core Unit Operational Support',
+                    color: 'teal',
+                },
+                headcountExpense: true,
+            }),
+        );
+        expect(newDocument.state.global.accounts[0].lineItems).toStrictEqual([
+            {
+                category: {
+                    ref: 'makerdao/budget-category',
+                    id: 'TravelAndEntertainment',
+                    title: 'Travel & Entertainment',
+                },
+                group: {
+                    ref: 'makerdao/project',
+                    id: 'core-unit/SES/2023/005',
+                    title: 'Core Unit Operational Support',
+                    color: 'teal',
+                },
+                budgetCap: null,
+                payment: null,
+                actual: null,
+                comment: null,
+                headcountExpense: true,
+                forecast: [],
+            },
+        ]);
+        expect(document.state.global.accounts[0].lineItems).toStrictEqual([]);
     });
 
     it('should handle addLineItem operation', () => {
