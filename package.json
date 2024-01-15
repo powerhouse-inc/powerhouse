@@ -1,6 +1,6 @@
 {
-    "name": "@acaldas/powerhouse",
-    "version": "1.0.14",
+    "name": "@powerhousedao/codegen",
+    "version": "0.0.1",
     "license": "AGPL-3.0-only",
     "private": false,
     "main": "dist/index.js",
