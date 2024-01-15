@@ -5,11 +5,11 @@
 
 import { generateMock } from '@acaldas/powerhouse';
 
-import utils from '../../gen/utils';
-import { z } from '../../gen/schema';
-import { reducer } from '../../gen/reducer';
 import * as creators from '../../gen/main/creators';
+import { reducer } from '../../gen/reducer';
+import { z } from '../../gen/schema';
 import { ScopeFrameworkDocument } from '../../gen/types';
+import utils from '../../gen/utils';
 
 describe('Main Operations', () => {
     let document: ScopeFrameworkDocument;
@@ -30,6 +30,14 @@ describe('Main Operations', () => {
 
     it('should handle addElement operation', () => {
         const input = generateMock(z.AddElementInputSchema());
+        const document = utils.createDocument({
+            state: {
+                global: {
+                    rootPath: input.path,
+                },
+                local: {},
+            },
+        });
         const updatedDocument = reducer(document, creators.addElement(input));
 
         expect(updatedDocument.operations.global).toHaveLength(1);
