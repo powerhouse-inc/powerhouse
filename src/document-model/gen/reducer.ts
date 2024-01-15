@@ -11,7 +11,7 @@ import { reducer as OperationReducer } from '../custom/reducers/operation';
 import { reducer as StateReducer } from '../custom/reducers/state';
 import { createReducer, isBaseAction } from '../../document/utils';
 
-const stateReducer: ImmutableStateReducer<
+export const stateReducer: ImmutableStateReducer<
     DocumentModelState,
     DocumentModelAction,
     DocumentModelLocalState

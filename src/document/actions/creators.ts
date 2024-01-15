@@ -6,6 +6,7 @@ import {
     RedoAction,
     SetNameAction,
     UndoAction,
+    NOOPAction,
 } from './types';
 
 /**
@@ -102,3 +103,13 @@ export const loadState = <S, T>(
         undefined,
         z.LoadStateActionInputSchema,
     );
+
+
+export const noop = (scope: OperationScope = 'global', skip = 0) => createAction<NOOPAction>(
+    'NOOP',
+    {},
+    undefined,
+    undefined,
+    scope,
+    skip,
+);

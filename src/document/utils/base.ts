@@ -14,8 +14,12 @@ import {
     PartialState,
     DocumentOperations,
     DocumentHeader,
+    DocumentOperationsIgnoreMap,
+    Operation,
+    MappedOperation,
 } from '../types';
 import { hash } from './node';
+import { noop } from '../actions/creators';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
 import { castImmutable, freeze } from 'immer';
 import { SignalDispatch } from '../signal';
@@ -171,6 +175,56 @@ export function readOnly<T>(value: T): Immutable<T> {
     return castImmutable(freeze(value, true));
 }
 
+
+/**
+ * Maps skipped operations in an array of operations.
+ * Skipped operations are operations that are ignored during processing.
+ * @param operations - The array of operations to map.
+ * @returns An array of mapped operations with ignore flag indicating if the operation is skipped.
+ * @throws Error if the operation index is invalid and there are missing operations.
+ */
+export function mapSkippedOperations<A extends Action>(
+    operations: Operation<BaseAction | A>[],
+): MappedOperation<A>[] {
+    const ops = [...operations];
+
+    let skipped = 0;
+    let latestOpIndex = ops.length > 0
+        ? ops[ops.length - 1].index
+        : 0;
+
+    const scopeOpsWithIgnore = ops.reverse().map(operation => {
+        if (skipped > 0) {
+            const operationsDiff = latestOpIndex - operation.index;
+            skipped -= operationsDiff
+        }
+        
+
+
+        if (skipped < 0) {
+            throw new Error('Invalid operation index, missing operations');
+        }
+        
+        const mappedOp = {
+            ignore: skipped > 0,
+            operation,
+        };
+
+
+        if (operation.skip > 0) {
+            // here we add 1 to the skip number because we want to get the number of
+            // operations that we want to move the pointer back to get the latest valid operation
+            // operation.skip = 1 means that we want to move the pointer back 2 operations to get to the latest valid operation
+            skipped = skipped + (operation.skip + 1);
+        }
+
+        latestOpIndex = operation.index;
+        return mappedOp;
+    });
+
+    return scopeOpsWithIgnore.reverse();
+}
+
 // Flattens the operations from all scopes into
 // a single array and sorts them by timestamp
 export function sortOperations<A extends Action>(
@@ -183,6 +237,20 @@ export function sortOperations<A extends Action>(
                 new Date(a.timestamp).getTime() -
                 new Date(b.timestamp).getTime(),
         );
+}
+
+// Flattens the mapped operations (with ignore flag) from all scopes into
+// a single array and sorts them by timestamp
+export function sortMappedOperations<A extends Action>(
+    operations: DocumentOperationsIgnoreMap<A>,
+) {
+    return Object.values(operations)
+        .flatMap(array => array)
+        .sort(
+            (a, b) =>
+                new Date(a.operation.timestamp).getTime() -
+                new Date(b.operation.timestamp).getTime(),
+        ); 
 }
 
 // Runs the operations on the initial data using the
@@ -231,10 +299,26 @@ export function replayDocument<T, A extends Action, L>(
         };
     }, {} as DocumentOperations<A>);
 
-    // runs all the operations on the new document
+
+    const activeOperationsMap = Object.keys(activeOperations).reduce((acc, curr) => {
+        const scope = curr as keyof DocumentOperations<A>;
+        return {
+            ...acc,
+            [scope]: mapSkippedOperations(activeOperations[scope]),
+        };
+    }, {} as DocumentOperationsIgnoreMap<A>)
+
+    // runs all the operations not ignored on the new document
     // and returns the resulting state
-    const result = sortOperations(activeOperations).reduce(
-        (document, operation) => reducer(document, operation, dispatch),
+    const result = sortMappedOperations(activeOperationsMap).reduce(
+        (document, { ignore, operation }) => {
+            if (ignore) {
+                // ignored operations are replaced by NOOP operations
+                return reducer(document, noop(operation.scope, operation.skip), dispatch);
+            }
+
+            return reducer(document, operation, dispatch);
+        },
         document,
     );
 

@@ -50,7 +50,8 @@ export type BaseAction =
   | PruneAction
   | RedoAction
   | SetNameAction
-  | UndoAction;
+  | UndoAction
+  | NOOPAction;
 
 export type DocumentFile = {
   __typename?: 'DocumentFile';
@@ -183,5 +184,13 @@ export type Undo = 'UNDO';
 export type UndoAction = DefaultBaseActionProps & {
   input: Scalars['Int']['input'];
   type: Undo | `${Undo}`;
+  scope: OperationScope;
+};
+
+export type NOOP = 'NOOP';
+
+export type NOOPAction = DefaultBaseActionProps & {
+  input: Scalars['Unknown']['input'];
+  type: NOOP | `${NOOP}`;
   scope: OperationScope;
 };

@@ -83,7 +83,7 @@ function updateOperations<T extends Document>(document: T, action: Action): T {
         timestamp: new Date().toISOString(),
         hash: '',
         scope,
-        skip: action.skip ?? 0,
+        skip: action.skip || 0,
     });
 
     // adds the action to the operations history with

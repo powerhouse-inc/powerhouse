@@ -173,6 +173,15 @@ export type DocumentOperations<A extends Action> = Required<
     Record<OperationScope, Operation<A | BaseAction>[]>
 >;
 
+export type MappedOperation<A extends Action> = {
+    ignore: boolean;
+    operation: Operation<A | BaseAction>
+}
+
+export type DocumentOperationsIgnoreMap<A extends Action> = Required<
+    Record<OperationScope, MappedOperation<A>[]>
+>;
+
 /**
  * The base type of a document model.
  *

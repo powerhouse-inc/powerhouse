@@ -1,4 +1,4 @@
-import { Action, Operation } from '../src/document/types';
+import { Action, ImmutableStateReducer, Operation, OperationScope } from '../src/document/types';
 import { createAction, createReducer } from '../src/document/utils';
 
 // Empty reducer that supports base actions
@@ -25,8 +25,24 @@ export type CountState = { count: number };
 
 export type CountLocalState = { name: string };
 
-export const increment = () => createAction<IncrementAction>('INCREMENT');
-export const decrement = () => createAction<DecrementAction>('DECREMENT');
+export const increment = (skip = 0) => createAction<IncrementAction>(
+    'INCREMENT',
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    skip,
+);
+
+export const decrement = (skip = 0) => createAction<DecrementAction>(
+    'DECREMENT',
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    skip,
+);
+
 export const setLocalName = (name: string) =>
     createAction<SetLocalNameAction>(
         'SET_LOCAL_NAME',
@@ -36,11 +52,7 @@ export const setLocalName = (name: string) =>
         'local',
     );
 
-export const countReducer = createReducer<
-    CountState,
-    CountAction,
-    CountLocalState
->((state, action) => {
+export const baseCountReducer: ImmutableStateReducer<CountState, CountAction, CountLocalState> = (state, action) => {
     switch (action.type) {
         case 'INCREMENT':
             state.global.count += 1;
@@ -54,7 +66,13 @@ export const countReducer = createReducer<
         default:
             return state;
     }
-});
+}
+
+export const countReducer = createReducer<
+    CountState,
+    CountAction,
+    CountLocalState
+>(baseCountReducer);
 
 export const mapOperations = (operations: Operation[]) => {
     return operations.map(({ input, type, index, scope, skip }) => ({
@@ -65,3 +83,14 @@ export const mapOperations = (operations: Operation[]) => {
         skip,
     }));
 };
+
+
+export const createFakeOperation = (index = 0, skip = 0, scope: OperationScope = 'global') => ({
+    type: 'FAKE_OP',
+    input: `TEST_${index}`,
+    scope,
+    skip,
+    index,
+    timestamp: new Date().toISOString(),
+    hash: `${index}`,
+} as Operation);

@@ -1,5 +1,22 @@
-import { DocumentModel } from '../../src/document-model';
-// import { hashKey } from '../../src/document/utils';
+import {
+    reducer,
+    DocumentModel,
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState,
+    utils as documentModelUtils,
+} from '../../src/document-model';
+import { utils } from '../../src/document';
+import { createDocument } from '../../src/document/utils';
+import {
+    setAuthorName,
+    setAuthorWebsite,
+    setModelDescription,
+    setModelExtension,
+    setModelId,
+    setModelName,
+} from '../../src/document-model/gen/creators';
+import { stateReducer } from '../../src/document-model/gen/reducer';
 
 describe('DocumentModel Class', () => {
     describe('Skip header operations', () => {
@@ -226,6 +243,38 @@ describe('DocumentModel Class', () => {
             model.operations.global.forEach((op, index) => {
                 expect(op).toHaveProperty('skip', index + 1);
             });
+        });
+    });
+
+
+    describe('state replayOperations', () => {
+        it('skipped operations should be ignored when re-calculate document state', () => {
+           
+            const initialState = documentModelUtils.createExtendedState();
+            const document = createDocument<DocumentModelState, DocumentModelAction, DocumentModelLocalState>(initialState);
+
+            let newDocument = reducer(document, setModelDescription({ description: '<description>' }));
+            newDocument = reducer(newDocument, setModelName({ name: '<name>' }));
+            newDocument = reducer(newDocument, setModelExtension({ extension: 'phdm' }, 2));
+            newDocument = reducer(newDocument, setAuthorName({ authorName: '<authorName>' }));
+            newDocument = reducer(newDocument, setAuthorWebsite({ authorWebsite: '<authorWebsite>' }, 1));
+            newDocument = reducer(newDocument, setModelId({ id: '<id>' }));
+
+            const replayedDoc = utils.replayOperations(
+                initialState,
+                newDocument.operations,
+                stateReducer,
+            );
+
+            expect(replayedDoc.revision.global).toBe(6);
+            expect(replayedDoc.operations.global.length).toBe(6);
+            expect(replayedDoc.state.global).toMatchObject({
+                id: '<id>',
+                name: '',
+                extension: 'phdm',
+                description: '',
+                author: { name: '', website: '<authorWebsite>' }
+            })
         });
     });
 });
