@@ -10,6 +10,7 @@ import { z } from '../../gen/schema';
 import { reducer } from '../../gen/reducer';
 import * as creators from '../../gen/audit/creators';
 import { BudgetStatementDocument } from '../../gen/types';
+import { AttachmentInput } from 'document-model/document';
 
 
 describe('Audit Operations', () => {
@@ -21,7 +22,7 @@ describe('Audit Operations', () => {
 
     it('should handle addAuditReport operation', () => {
         const input = generateMock(z.AddAuditReportInputSchema());
-        const updatedDocument = reducer(document, creators.addAuditReport(input));
+        const updatedDocument = reducer(document, creators.addAuditReport(input, []));
 
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe('ADD_AUDIT_REPORT');

@@ -31,6 +31,14 @@ describe('Account Operations', () => {
 
     it('should handle updateAccount operation', () => {
         const input = generateMock(z.UpdateAccountInputSchema());
+        const document = utils.createDocument({
+            state: {
+                global: {
+                    // @ts-expect-error mock
+                    accounts: [input]
+                }
+            }
+        })
         const updatedDocument = reducer(document, creators.updateAccount(input));
 
         expect(updatedDocument.operations.global).toHaveLength(1);

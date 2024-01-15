@@ -1,16 +1,15 @@
 /**
-* This is a scaffold file meant for customization: 
-* - change it by adding new tests or modifying the existing ones
-*/
+ * This is a scaffold file meant for customization:
+ * - change it by adding new tests or modifying the existing ones
+ */
 
 import { generateMock } from '@acaldas/powerhouse';
 
-import utils from '../../gen/utils';
-import { z } from '../../gen/schema'; 
-import { reducer } from '../../gen/reducer';
 import * as creators from '../../gen/node/creators';
+import { reducer } from '../../gen/reducer';
+import { z } from '../../gen/schema';
 import { DocumentDriveDocument } from '../../gen/types';
-
+import utils from '../../gen/utils';
 
 describe('Node Operations', () => {
     let document: DocumentDriveDocument;
@@ -41,6 +40,14 @@ describe('Node Operations', () => {
 
     it('should handle deleteNode operation', () => {
         const input = generateMock(z.DeleteNodeInputSchema());
+        const document = utils.createDocument({
+            state: {
+                global: {
+                    // @ts-expect-error mock
+                    nodes: [input],
+                },
+            },
+        });
         const updatedDocument = reducer(document, creators.deleteNode(input));
 
         expect(updatedDocument.operations.global).toHaveLength(1);
@@ -71,6 +78,24 @@ describe('Node Operations', () => {
 
     it('should handle copyNode operation', () => {
         const input = generateMock(z.CopyNodeInputSchema());
+        const document = utils.createDocument({
+            state: {
+                global: {
+                    nodes: [
+                        // @ts-expect-error mock
+                        {
+                            id: input.srcId,
+                            name: 'Node 1',
+                        },
+                        // @ts-expect-error mock
+                        {
+                            id: input.targetId,
+                            name: 'Node 2',
+                        },
+                    ],
+                },
+            },
+        });
         const updatedDocument = reducer(document, creators.copyNode(input));
 
         expect(updatedDocument.operations.global).toHaveLength(1);
@@ -81,6 +106,24 @@ describe('Node Operations', () => {
 
     it('should handle moveNode operation', () => {
         const input = generateMock(z.MoveNodeInputSchema());
+        const document = utils.createDocument({
+            state: {
+                global: {
+                    nodes: [
+                        // @ts-expect-error mock
+                        {
+                            id: input.srcFolder,
+                            name: 'Node 1',
+                        },
+                        {
+                            // @ts-expect-error mock
+                            id: input.targetParentFolder,
+                            name: 'Node 2',
+                        },
+                    ],
+                },
+            },
+        });
         const updatedDocument = reducer(document, creators.moveNode(input));
 
         expect(updatedDocument.operations.global).toHaveLength(1);
@@ -88,5 +131,4 @@ describe('Node Operations', () => {
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
-
 });
