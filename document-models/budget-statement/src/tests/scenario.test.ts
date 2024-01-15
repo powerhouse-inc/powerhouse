@@ -9,9 +9,9 @@ import path from 'path';
 import {
     BudgetStatement,
     reducer,
-} from '../../document-models/budget-statement';
-import { BudgetStatementAction } from '../../document-models/budget-statement/gen';
-import utils from '../../document-models/budget-statement/gen/utils';
+} from '../..';
+import { BudgetStatementAction } from '../../gen';
+import utils from '../../gen/utils';
 
 const { createDocument } = utils;
 
@@ -72,7 +72,7 @@ describe('Budget Statement scenario 1 with object methods', () => {
 
         try {
             budgetStatement.dispatchTest(
-                JSON.parse(JSON.stringify(json.operation)),
+                JSON.parse(JSON.stringify(json.operation)) as BudgetStatementAction,
             );
             expect(budgetStatement.state).toStrictEqual(json.state);
         } catch (error) {
