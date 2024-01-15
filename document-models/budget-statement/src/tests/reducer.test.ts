@@ -1,14 +1,14 @@
 import {
     AddAccountInput,
     reducer,
-} from '../../document-models/budget-statement';
+} from '../..';
 import {
     addAccount,
     setMonth,
     setOwner,
     setQuoteCurrency,
-} from '../../document-models/budget-statement/gen/creators';
-import utils from '../../document-models/budget-statement/gen/utils';
+} from '../../gen/creators';
+import utils from '../../gen/utils';
 import { actions } from 'document-model/document';
 
 const { createDocument } = utils;

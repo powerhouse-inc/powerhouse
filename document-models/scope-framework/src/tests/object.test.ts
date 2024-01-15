@@ -2,7 +2,7 @@ import { utils } from 'document-model/document';
 import {
     ScopeFramework,
     SectionComponent,
-} from '../../document-models/scope-framework';
+} from '../..';
 
 const buildExampleDocument = (): ScopeFramework => {
     const framework = new ScopeFramework();

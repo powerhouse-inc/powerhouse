@@ -21,8 +21,8 @@ function isEqual(
     lineItem: LineItem
 ) {
     return (
-        lineItemInput.category === lineItem.category?.id &&
-        lineItemInput.group === lineItem.group?.id
+        lineItemInput.category === lineItem.category &&
+        lineItemInput.group === lineItem.group
     );
 }
 
