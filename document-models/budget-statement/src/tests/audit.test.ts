@@ -195,7 +195,7 @@ describe('Budget Statement Audit Report reducer', () => {
             ),
         );
 
-        await expect(() =>
+        expect(() =>
             reducer(
                 document,
                 creators.addAuditReport(
@@ -208,7 +208,7 @@ describe('Budget Statement Audit Report reducer', () => {
                     [file],
                 ),
             ),
-        ).rejects.toThrow();
+        ).toThrow();
     });
 
     it('should fetch attachment from URL', async () => {
