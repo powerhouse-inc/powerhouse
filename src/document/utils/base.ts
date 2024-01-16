@@ -193,7 +193,9 @@ export function mapSkippedOperations<A extends Action>(
         ? ops[ops.length - 1].index
         : 0;
 
-    const scopeOpsWithIgnore = ops.reverse().map(operation => {
+    const scopeOpsWithIgnore = [] as MappedOperation<A>[];
+
+    for (const operation of ops.reverse()) {
         if (skipped > 0) {
             const operationsDiff = latestOpIndex - operation.index;
             skipped -= operationsDiff
@@ -219,8 +221,8 @@ export function mapSkippedOperations<A extends Action>(
         }
 
         latestOpIndex = operation.index;
-        return mappedOp;
-    });
+        scopeOpsWithIgnore.push(mappedOp);
+    }
 
     return scopeOpsWithIgnore.reverse();
 }
