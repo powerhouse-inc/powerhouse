@@ -1,5 +1,5 @@
 import { Signal } from 'document-model/document';
-import { DocumentDrive, actions, reducer, utils } from '../..';
+import { DocumentDrive, DocumentDriveDocument, FileNode, actions, reducer, utils } from '../..';
 
 describe('DocumentDrive Class', () => {
     it('should rename drive', () => {
@@ -45,6 +45,79 @@ describe('DocumentDrive Class', () => {
         expect(documentDrive.state.global.nodes.length).toBe(0);
     });
 
+    it('should add file', () => {
+        const documentDrive = new DocumentDrive(undefined);
+        documentDrive.addFile({
+            id: '1',
+            documentType: 'test',
+            name: 'document',
+            scopes: ["global", "local"]
+        });
+
+        expect(documentDrive.state.global.nodes).toStrictEqual([{
+            id: '1',
+            kind: "file",
+            parentFolder: null,
+            documentType: 'test',
+            name: 'document',
+            scopes: ["global", "local"],
+            synchronizationUnits: [
+                {
+                    syncId: "1",
+                    scope: "global",
+                    branch: "main"
+                },
+                {
+                    syncId: "2",
+                    scope: "local",
+                    branch: "main"
+                },
+            ]
+        }]);
+    });
+
+    it('should handle unsafe integer', () => {
+        let drive = utils.createDocument();
+        drive = reducer(drive, actions.addFile({
+            id: '1',
+            documentType: 'test',
+            name: 'document',
+            scopes: ["global", "local"]
+        }));
+
+        drive = JSON.parse(JSON.stringify(drive)) as DocumentDriveDocument;
+        (drive.state.global.nodes[0] as FileNode).synchronizationUnits[0].syncId = Number.MAX_SAFE_INTEGER.toString();
+
+        drive = reducer({...drive}, actions.addFile({
+            id: '2',
+            documentType: 'test',
+            name: 'document',
+            scopes: ["global", "local"]
+        }));
+
+        expect(drive.state.global.nodes[1]).toStrictEqual({
+            id: '2',
+            kind: "file",
+            parentFolder: null,
+            documentType: 'test',
+            name: 'document',
+            scopes: ["global", "local"],
+            synchronizationUnits: [
+                {
+                    syncId: "9007199254740992",
+                    scope: "global",
+                    branch: "main"
+                },
+                {
+                    syncId: "9007199254740993",
+                    scope: "local",
+                    branch: "main"
+                },
+            ]
+        });
+    });
+
+
     it('should trigger create child document signal', () => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         function dispatch(_signal: Signal) {}
@@ -55,6 +128,7 @@ describe('DocumentDrive Class', () => {
             id: '1',
             documentType: 'test',
             name: 'document',
+            scopes: ["global", "local"]
         });
 
         expect(spy).toHaveBeenCalledOnce();

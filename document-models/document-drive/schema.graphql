@@ -16,6 +16,7 @@ type FileNode {
     name: String!
     kind: String!
     documentType: String!
+    scopes: [String!]!
     parentFolder: String
     synchronizationUnits: [SynchronizationUnit!]!
 }
@@ -42,6 +43,7 @@ input AddFileInput {
     name: String!
     documentType: String!
     parentFolder: ID
+    scopes: [String!]!
 }
 
 input AddFolderInput {
@@ -79,19 +81,6 @@ input MoveNodeInput {
     targetParentFolder: ID
 }
 
-input AddSynchronizationUnitInput {
-    file: ID!
-    syncId: ID!
-    scope: String!
-    branch: String!
-}
-
-input RemoveSynchronizationUnitInput {
-    file: ID!
-    syncId: ID!
-    scope: String!
-    branch: String!
-}
 
 # Drive
 

@@ -4,7 +4,7 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { FileNode, getDescendants, isFileNode } from '../..';
+import { FileNode, getDescendants, getLatestSyncId, isFileNode } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
 
 export const reducer: DocumentDriveNodeOperations = {
@@ -13,11 +13,19 @@ export const reducer: DocumentDriveNodeOperations = {
             throw new Error(`Node with id ${action.input.id} already exists!`);
         }
 
+        const latestSyncId =  BigInt(getLatestSyncId(state));
+        const synchronizationUnits = action.input.scopes.map((scope, index) =>  ({
+            syncId: (latestSyncId + BigInt(1 + index)).toString(),
+            scope,
+            branch: "main"
+        }))
+
         const fileNode: FileNode = {
             ...action.input,
             kind: 'file',
             parentFolder: action.input.parentFolder ?? null,
-            synchronizationUnits: []
+            scopes: action.input.scopes,
+            synchronizationUnits
         }
         state.nodes.push(fileNode);
 
@@ -132,32 +140,4 @@ export const reducer: DocumentDriveNodeOperations = {
             return node;
         });
     },
-    addSynchronizationUnitOperation(state, action) {
-        const { file, syncId, branch, scope } = action.input;
-        
-        const syncIdExists = state.nodes.find(node => isFileNode(node) && node.synchronizationUnits.find(unit => unit.syncId === syncId));
-        if (syncIdExists) {
-            throw new Error("Synchronization Id is not unique");
-        }
-
-        const node = state.nodes.find(node => node.id === file);
-        if (!node  || !isFileNode(node)) {
-            throw new Error("Node is not a file");
-        }
-
-        const unitExists = node.synchronizationUnits.find(unit => unit.scope === scope && unit.branch === branch)
-        if (unitExists) {
-            throw new Error(`There is a synchronization unit already defined with id: ${unitExists.syncId}`)
-        }
-        node.synchronizationUnits.push({syncId, branch, scope})
-    },
-    removeSynchronizationUnitOperation: function (state, action): void {
-        const { file, syncId, branch, scope } = action.input;
-        const node = state.nodes.find(node => node.id === file);
-
-        if (!node  || !isFileNode(node)) {
-            throw new Error("Node is not a file");
-        }
-        node.synchronizationUnits = node.synchronizationUnits.filter(unit => !(unit.syncId === syncId && unit.branch === branch && unit.scope === scope))
-    }
 };
