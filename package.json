@@ -1,6 +1,6 @@
 {
     "name": "document-model-libs",
-    "version": "1.1.29",
+    "version": "1.1.30",
     "license": "AGPL-3.0-only",
     "types": "dist/index.d.ts",
     "main": "dist/index.cjs",
@@ -56,11 +56,11 @@
         "test:watch": "vitest"
     },
     "devDependencies": {
-        "@powerhousedao/codegen": "0.0.3",
         "@emotion/react": "^11.11.1",
         "@emotion/styled": "^11.11.0",
         "@monaco-editor/react": "^4.5.2",
         "@mui/material": "^5.14.12",
+        "@powerhousedao/codegen": "0.0.3",
         "@storybook/addon-essentials": "^7.4.1",
         "@storybook/addon-interactions": "^7.4.1",
         "@storybook/addon-links": "^7.4.1",
