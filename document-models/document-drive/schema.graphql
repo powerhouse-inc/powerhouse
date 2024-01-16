@@ -5,12 +5,19 @@ type FolderNode {
     parentFolder: String
 }
 
+type SynchronizationUnit {
+    syncId: ID!
+    scope: String!
+    branch: String!
+}
+
 type FileNode {
     id: String!
     name: String!
     kind: String!
     documentType: String!
     parentFolder: String
+    synchronizationUnits: [SynchronizationUnit!]!
 }
 
 union Node = FolderNode | FileNode
@@ -70,6 +77,20 @@ input CopyNodeInput {
 input MoveNodeInput {
     srcFolder: ID!
     targetParentFolder: ID
+}
+
+input AddSynchronizationUnitInput {
+    file: ID!
+    syncId: ID!
+    scope: String!
+    branch: String!
+}
+
+input RemoveSynchronizationUnitInput {
+    file: ID!
+    syncId: ID!
+    scope: String!
+    branch: String!
 }
 
 # Drive

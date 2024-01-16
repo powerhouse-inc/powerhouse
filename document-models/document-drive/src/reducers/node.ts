@@ -13,11 +13,13 @@ export const reducer: DocumentDriveNodeOperations = {
             throw new Error(`Node with id ${action.input.id} already exists!`);
         }
 
-        state.nodes.push({
+        const fileNode: FileNode = {
             ...action.input,
             kind: 'file',
             parentFolder: action.input.parentFolder ?? null,
-        });
+            synchronizationUnits: []
+        }
+        state.nodes.push(fileNode);
 
         dispatch?.({
             type: 'CREATE_CHILD_DOCUMENT',
@@ -44,9 +46,8 @@ export const reducer: DocumentDriveNodeOperations = {
         }
         const descendants = getDescendants(node, state.nodes);
         state.nodes = state.nodes.filter(
-            node =>
-                node.id !== action.input.id &&
-                !descendants.find(descendant => descendant.id === node.id),
+            node => node.id !== action.input.id &&
+                !descendants.find(descendant => descendant.id === node.id)
         );
 
         [node, ...descendants]
@@ -61,34 +62,30 @@ export const reducer: DocumentDriveNodeOperations = {
             });
     },
     updateFileOperation(state, action) {
-        state.nodes = state.nodes.map(node =>
-            node.id === action.input.id
-                ? {
-                      ...node,
-                      ...{
-                          name: action.input.name ?? node.name,
-                          documentType:
-                              action.input.documentType ??
-                              (node as FileNode).documentType,
-                      },
-                  }
-                : node,
+        state.nodes = state.nodes.map(node => node.id === action.input.id
+            ? {
+                ...node,
+                ...{
+                    name: action.input.name ?? node.name,
+                    documentType: action.input.documentType ??
+                        (node as FileNode).documentType,
+                },
+            }
+            : node
         );
     },
     updateNodeOperation(state, action) {
-        state.nodes = state.nodes.map(node =>
-            node.id === action.input.id
-                ? {
-                      ...node,
-                      ...{
-                          name: action.input.name ?? node.name,
-                          parentFolder:
-                              action.input.parentFolder === null
-                                  ? null
-                                  : node.parentFolder,
-                      },
-                  }
-                : node,
+        state.nodes = state.nodes.map(node => node.id === action.input.id
+            ? {
+                ...node,
+                ...{
+                    name: action.input.name ?? node.name,
+                    parentFolder: action.input.parentFolder === null
+                        ? null
+                        : node.parentFolder,
+                },
+            }
+            : node
         );
     },
     copyNodeOperation(state, action, dispatch) {
@@ -117,7 +114,7 @@ export const reducer: DocumentDriveNodeOperations = {
     },
     moveNodeOperation(state, action) {
         const node = state.nodes.find(
-            node => node.id === action.input.srcFolder,
+            node => node.id === action.input.srcFolder
         );
 
         if (!node) {
@@ -135,4 +132,32 @@ export const reducer: DocumentDriveNodeOperations = {
             return node;
         });
     },
+    addSynchronizationUnitOperation(state, action) {
+        const { file, syncId, branch, scope } = action.input;
+        
+        const syncIdExists = state.nodes.find(node => isFileNode(node) && node.synchronizationUnits.find(unit => unit.syncId === syncId));
+        if (syncIdExists) {
+            throw new Error("Synchronization Id is not unique");
+        }
+
+        const node = state.nodes.find(node => node.id === file);
+        if (!node  || !isFileNode(node)) {
+            throw new Error("Node is not a file");
+        }
+
+        const unitExists = node.synchronizationUnits.find(unit => unit.scope === scope && unit.branch === branch)
+        if (unitExists) {
+            throw new Error(`There is a synchronization unit already defined with id: ${unitExists.syncId}`)
+        }
+        node.synchronizationUnits.push({syncId, branch, scope})
+    },
+    removeSynchronizationUnitOperation: function (state, action): void {
+        const { file, syncId, branch, scope } = action.input;
+        const node = state.nodes.find(node => node.id === file);
+
+        if (!node  || !isFileNode(node)) {
+            throw new Error("Node is not a file");
+        }
+        node.synchronizationUnits = node.synchronizationUnits.filter(unit => !(unit.syncId === syncId && unit.branch === branch && unit.scope === scope))
+    }
 };

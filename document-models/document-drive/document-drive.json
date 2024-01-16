@@ -13,7 +13,7 @@
             "changeLog": [],
             "state": {
                 "global": {
-                    "schema": "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    id: ID!\n    name: String!\n    nodes: [Node!]!\n    icon: String\n    remoteUrl: String\n}",
+                    "schema": "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype SynchronizationUnit {\n    syncId: ID!\n    scope: String!\n    branch: String!\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n    synchronizationUnits: [SynchronizationUnit!]!\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    id: ID!\n    name: String!\n    nodes: [Node!]!\n    icon: String\n    remoteUrl: String\n}",
                     "initialValue": "{\"id\":\"\",\"name\":\"\",\"nodes\":[],\"icon\":null,\"remoteUrl\":null}",
                     "examples": []
                 },
@@ -100,6 +100,28 @@
                             "name": "MOVE_NODE",
                             "description": "",
                             "schema": "input MoveNodeInput {\n    srcFolder: ID!\n    targetParentFolder: ID\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "VNyiD/sNGzk6k9A1Qe7s10dmrJxA=",
+                            "name": "ADD_SYNCHRONIZATION_UNIT",
+                            "description": "",
+                            "schema": "input AddSynchronizationUnitInput {\n    file: ID!\n    syncId: ID!\n    scope: String!\n    branch: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "VNyiD/sNGzk6k9A1Qe7s120dmrJxA=",
+                            "name": "REMOVE_SYNCHRONIZATION_UNIT",
+                            "description": "",
+                            "schema": "input RemoveSynchronizationUnitInput {\n    file: ID!\n    syncId: ID!\n    scope: String!\n    branch: String!\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
