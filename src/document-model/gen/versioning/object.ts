@@ -16,29 +16,30 @@ import {
     releaseNewVersion,
 } from './creators';
 import { DocumentModelAction } from '../actions';
+import { ReducerOptions } from '../../../document';
 
 export default class DocumentModel_Versioning extends BaseDocument<
     DocumentModelState,
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public addChangeLogItem(input: AddChangeLogItemInput, skip = 0) {
-        return this.dispatch(addChangeLogItem(input, skip));
+    public addChangeLogItem(input: AddChangeLogItemInput, options?: ReducerOptions) {
+        return this.dispatch(addChangeLogItem(input), options);
     }
 
-    public updateChangeLogItem(input: UpdateChangeLogItemInput, skip = 0) {
-        return this.dispatch(updateChangeLogItem(input, skip));
+    public updateChangeLogItem(input: UpdateChangeLogItemInput, options?: ReducerOptions) {
+        return this.dispatch(updateChangeLogItem(input), options);
     }
 
-    public deleteChangeLogItem(input: DeleteChangeLogItemInput, skip = 0) {
-        return this.dispatch(deleteChangeLogItem(input, skip));
+    public deleteChangeLogItem(input: DeleteChangeLogItemInput, options?: ReducerOptions) {
+        return this.dispatch(deleteChangeLogItem(input), options);
     }
 
-    public reorderChangeLogItems(input: ReorderChangeLogItemsInput, skip = 0) {
-        return this.dispatch(reorderChangeLogItems(input, skip));
+    public reorderChangeLogItems(input: ReorderChangeLogItemsInput, options?: ReducerOptions) {
+        return this.dispatch(reorderChangeLogItems(input), options);
     }
 
-    public releaseNewVersion(skip = 0) {
-        return this.dispatch(releaseNewVersion(skip));
+    public releaseNewVersion(options?: ReducerOptions) {
+        return this.dispatch(releaseNewVersion(), options);
     }
 }

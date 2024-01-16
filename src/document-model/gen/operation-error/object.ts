@@ -21,40 +21,41 @@ import {
     reorderOperationErrors,
 } from './creators';
 import { DocumentModelAction } from '../actions';
+import { ReducerOptions } from '../../../document';
 
 export default class DocumentModel_OperationError extends BaseDocument<
     DocumentModelState,
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public addOperationError(input: AddOperationErrorInput, skip = 0) {
-        return this.dispatch(addOperationError(input, skip));
+    public addOperationError(input: AddOperationErrorInput, options?: ReducerOptions) {
+        return this.dispatch(addOperationError(input), options);
     }
 
-    public setOperationErrorCode(input: SetOperationErrorCodeInput, skip = 0) {
-        return this.dispatch(setOperationErrorCode(input, skip));
+    public setOperationErrorCode(input: SetOperationErrorCodeInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationErrorCode(input), options);
     }
 
-    public setOperationErrorName(input: SetOperationErrorNameInput, skip = 0) {
-        return this.dispatch(setOperationErrorName(input, skip));
+    public setOperationErrorName(input: SetOperationErrorNameInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationErrorName(input), options);
     }
 
     public setOperationErrorDescription(
         input: SetOperationErrorDescriptionInput,
-        skip = 0
+        options?: ReducerOptions,
     ) {
-        return this.dispatch(setOperationErrorDescription(input, skip));
+        return this.dispatch(setOperationErrorDescription(input), options);
     }
 
-    public setOperationErrorTemplate(input: SetOperationErrorTemplateInput, skip = 0) {
-        return this.dispatch(setOperationErrorTemplate(input, skip));
+    public setOperationErrorTemplate(input: SetOperationErrorTemplateInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationErrorTemplate(input), options);
     }
 
-    public deleteOperationError(input: DeleteOperationErrorInput, skip = 0) {
-        return this.dispatch(deleteOperationError(input, skip));
+    public deleteOperationError(input: DeleteOperationErrorInput, options?: ReducerOptions) {
+        return this.dispatch(deleteOperationError(input), options);
     }
 
-    public reorderOperationErrors(input: ReorderOperationErrorsInput, skip = 0) {
-        return this.dispatch(reorderOperationErrors(input, skip));
+    public reorderOperationErrors(input: ReorderOperationErrorsInput, options?: ReducerOptions) {
+        return this.dispatch(reorderOperationErrors(input), options);
     }
 }

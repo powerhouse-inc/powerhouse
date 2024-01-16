@@ -15,14 +15,13 @@ import {
  * @param name - The name to be set in the document.
  * @category Actions
  */
-export const setName = (name: string, skip = 0) =>
+export const setName = (name: string) =>
     createAction<SetNameAction>(
         'SET_NAME',
         name,
         undefined,
         z.SetNameActionInputSchema,
         undefined,
-        skip,
     );
 
 /**
@@ -38,7 +37,6 @@ export const undo = (skip = 1, scope: OperationScope = 'global') =>
         undefined,
         z.UndoActionInputSchema,
         scope,
-        skip,
     );
 
 /**
@@ -47,14 +45,13 @@ export const undo = (skip = 1, scope: OperationScope = 'global') =>
  * @param count - Number of UNDO operations to cancel
  * @category Actions
  */
-export const redo = (count = 1, scope: OperationScope = 'global', skip = 0) =>
+export const redo = (count = 1, scope: OperationScope = 'global') =>
     createAction<RedoAction>(
         'REDO',
         count,
         undefined,
         z.RedoActionInputSchema,
         scope,
-        skip,
     );
 
 /**
@@ -72,7 +69,6 @@ export const prune = (
     start?: number | undefined,
     end?: number | undefined,
     scope: OperationScope = 'global',
-    skip = 0,
 ) =>
     createAction<PruneAction>(
         'PRUNE',
@@ -80,7 +76,6 @@ export const prune = (
         undefined,
         z.PruneActionInputSchema,
         scope,
-        skip,
     );
 
 /**
@@ -105,11 +100,10 @@ export const loadState = <S, T>(
     );
 
 
-export const noop = (scope: OperationScope = 'global', skip = 0) => createAction<NOOPAction>(
+export const noop = (scope: OperationScope = 'global') => createAction<NOOPAction>(
     'NOOP',
     {},
     undefined,
     undefined,
     scope,
-    skip,
 );

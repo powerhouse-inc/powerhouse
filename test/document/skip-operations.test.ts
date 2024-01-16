@@ -35,9 +35,9 @@ describe('skip operations', () => {
     
         it('should include skip param in base operations with provided value', () => {
             let document = createDocument();
-            document = emptyReducer(document, setName('TEST_1', 1));
-            document = emptyReducer(document, setName('TEST_2', 2));
-            document = emptyReducer(document, setName('TEST_3', 3));
+            document = emptyReducer(document, setName('TEST_1'), undefined, { skip: 1 });
+            document = emptyReducer(document, setName('TEST_2'), undefined, { skip: 2 });
+            document = emptyReducer(document, setName('TEST_3'), undefined, { skip: 3 });
      
     
             expect(document.revision.global).toBe(3);
@@ -205,9 +205,9 @@ describe('skip operations', () => {
                 initialState
             );
 
-            document = countReducer(document, increment());     // valid operation, skip 0
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment(1));    // valid operation, skip 1
+            document = countReducer(document, increment());                             // valid operation, skip 0
+            document = countReducer(document, increment());                             // skipped
+            document = countReducer(document, increment(), undefined, { skip: 1 });     // valid operation, skip 1
 
             const replayedDoc = utils.replayOperations(initialState, document.operations, baseCountReducer);
 
@@ -228,11 +228,11 @@ describe('skip operations', () => {
                 initialState
             );
 
-            document = countReducer(document, increment());     // valid operation, skip 0
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment(3));    // valid operation, skip 3
+            document = countReducer(document, increment());                             // valid operation, skip 0
+            document = countReducer(document, increment());                             // skipped
+            document = countReducer(document, increment());                             // skipped
+            document = countReducer(document, increment());                             // skipped
+            document = countReducer(document, increment(), undefined, { skip: 3 });     // valid operation, skip 3
 
             const replayedDoc = utils.replayOperations(initialState, document.operations, baseCountReducer);
 
@@ -255,12 +255,12 @@ describe('skip operations', () => {
                 initialState
             );
 
-            document = countReducer(document, increment());     // valid operation, skip 0
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment(1));    // valid operation, skip 1
-            document = countReducer(document, increment());     // valid operation, skip 0
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment(1));    // valid operation, skip 1
+            document = countReducer(document, increment());                         // valid operation, skip 0
+            document = countReducer(document, increment());                         // skipped
+            document = countReducer(document, increment(), undefined, { skip: 1 }); // valid operation, skip 1
+            document = countReducer(document, increment());                         // valid operation, skip 0
+            document = countReducer(document, increment());                         // skipped
+            document = countReducer(document, increment(), undefined, { skip: 1 }); // valid operation, skip 1
 
             const replayedDoc = utils.replayOperations(initialState, document.operations, baseCountReducer);
 
@@ -282,11 +282,11 @@ describe('skip operations', () => {
                 initialState
             );
 
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment());     // skipped
-            document = countReducer(document, increment(4));    // valid operation, skip 4
+            document = countReducer(document, increment());                         // skipped
+            document = countReducer(document, increment());                         // skipped
+            document = countReducer(document, increment());                         // skipped
+            document = countReducer(document, increment());                         // skipped
+            document = countReducer(document, increment(), undefined, { skip: 4 }); // valid operation, skip 4
 
             const replayedDoc = utils.replayOperations(initialState, document.operations, baseCountReducer);
 

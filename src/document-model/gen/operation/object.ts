@@ -27,49 +27,50 @@ import {
     setOperationScope,
 } from './creators';
 import { DocumentModelAction } from '../actions';
+import { ReducerOptions } from '../../../document';
 
 export default class DocumentModel_Operation extends BaseDocument<
     DocumentModelState,
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public addOperation(input: AddOperationInput, skip = 0) {
-        return this.dispatch(addOperation(input, skip));
+    public addOperation(input: AddOperationInput, options?: ReducerOptions) {
+        return this.dispatch(addOperation(input), options);
     }
 
-    public setOperationName(input: SetOperationNameInput, skip = 0) {
-        return this.dispatch(setOperationName(input, skip));
+    public setOperationName(input: SetOperationNameInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationName(input), options);
     }
 
-    public setOperationScope(input: SetOperationScopeInput, skip = 0) {
-        return this.dispatch(setOperationScope(input, skip));
+    public setOperationScope(input: SetOperationScopeInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationScope(input), options);
     }
 
-    public setOperationSchema(input: SetOperationSchemaInput, skip = 0) {
-        return this.dispatch(setOperationSchema(input, skip));
+    public setOperationSchema(input: SetOperationSchemaInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationSchema(input), options);
     }
 
-    public setOperationDescription(input: SetOperationDescriptionInput, skip = 0) {
-        return this.dispatch(setOperationDescription(input, skip));
+    public setOperationDescription(input: SetOperationDescriptionInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationDescription(input), options);
     }
 
-    public setOperationTemplate(input: SetOperationTemplateInput, skip = 0) {
-        return this.dispatch(setOperationTemplate(input, skip));
+    public setOperationTemplate(input: SetOperationTemplateInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationTemplate(input), options);
     }
 
-    public setOperationReducer(input: SetOperationReducerInput, skip = 0) {
-        return this.dispatch(setOperationReducer(input, skip));
+    public setOperationReducer(input: SetOperationReducerInput, options?: ReducerOptions) {
+        return this.dispatch(setOperationReducer(input), options);
     }
 
-    public moveOperation(input: MoveOperationInput, skip = 0) {
-        return this.dispatch(moveOperation(input, skip));
+    public moveOperation(input: MoveOperationInput, options?: ReducerOptions) {
+        return this.dispatch(moveOperation(input), options);
     }
 
-    public deleteOperation(input: DeleteOperationInput, skip = 0) {
-        return this.dispatch(deleteOperation(input, skip));
+    public deleteOperation(input: DeleteOperationInput, options?: ReducerOptions) {
+        return this.dispatch(deleteOperation(input), options);
     }
 
-    public reorderModuleOperations(input: ReorderModuleOperationsInput, skip = 0) {
-        return this.dispatch(reorderModuleOperations(input, skip));
+    public reorderModuleOperations(input: ReorderModuleOperationsInput, options?: ReducerOptions) {
+        return this.dispatch(reorderModuleOperations(input), options);
     }
 }

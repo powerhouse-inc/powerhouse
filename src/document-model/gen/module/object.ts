@@ -17,29 +17,30 @@ import {
     reorderModules,
 } from './creators';
 import { DocumentModelAction } from '../actions';
+import { ReducerOptions } from '../../../document';
 
 export default class DocumentModel_Module extends BaseDocument<
     DocumentModelState,
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public addModule(input: AddModuleInput, skip = 0) {
-        return this.dispatch(addModule(input, skip));
+    public addModule(input: AddModuleInput, options?: ReducerOptions) {
+        return this.dispatch(addModule(input), options);
     }
 
-    public setModuleName(input: SetModuleNameInput, skip = 0) {
-        return this.dispatch(setModuleName(input, skip));
+    public setModuleName(input: SetModuleNameInput, options?: ReducerOptions) {
+        return this.dispatch(setModuleName(input), options);
     }
 
-    public setModuleDescription(input: SetModuleDescriptionInput, skip = 0) {
-        return this.dispatch(setModuleDescription(input, skip));
+    public setModuleDescription(input: SetModuleDescriptionInput, options?: ReducerOptions) {
+        return this.dispatch(setModuleDescription(input), options);
     }
 
-    public deleteModule(input: DeleteModuleInput, skip = 0) {
-        return this.dispatch(deleteModule(input, skip));
+    public deleteModule(input: DeleteModuleInput, options?: ReducerOptions) {
+        return this.dispatch(deleteModule(input), options);
     }
 
-    public reorderModules(input: ReorderModulesInput, skip = 0) {
-        return this.dispatch(reorderModules(input, skip));
+    public reorderModules(input: ReorderModulesInput, options?: ReducerOptions) {
+        return this.dispatch(reorderModules(input), options);
     }
 }

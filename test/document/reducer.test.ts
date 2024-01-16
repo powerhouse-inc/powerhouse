@@ -76,7 +76,6 @@ describe('Base reducer', () => {
             type: SET_NAME,
             input: 'Document',
             scope: 'global',
-            skip: 0,
         });
     });
 

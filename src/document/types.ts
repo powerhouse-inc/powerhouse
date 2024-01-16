@@ -28,8 +28,6 @@ export type Action<
     scope: S;
     /** The attachments included in the action. */
     attachments?: AttachmentInput[] | undefined;
-    /** The number of operations to skip before this new action is applied */
-    skip?: number;
 };
 
 export type ActionWithAttachment<
@@ -38,6 +36,11 @@ export type ActionWithAttachment<
     S extends OperationScope = OperationScope,
 > = Action<T, I, S> & {
     attachments: AttachmentInput[];
+};
+
+export type ReducerOptions = {
+    /** The number of operations to skip before this new action is applied */    
+    skip?: number;
 };
 
 /**
@@ -51,6 +54,7 @@ export type Reducer<State, A extends Action, LocalState> = (
     state: Document<State, A, LocalState>,
     action: A | BaseAction,
     dispatch?: SignalDispatch,
+    options?: ReducerOptions,
 ) => Document<State, A, LocalState>;
 
 /**

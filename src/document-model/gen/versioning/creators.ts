@@ -14,53 +14,32 @@ import {
     ReleaseNewVersionAction,
 } from './actions';
 
-export const addChangeLogItem = (input: AddChangeLogItemInput, skip = 0) =>
+export const addChangeLogItem = (input: AddChangeLogItemInput) =>
     createAction<AddChangeLogItemAction>(
         'ADD_CHANGE_LOG_ITEM',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const updateChangeLogItem = (input: UpdateChangeLogItemInput, skip = 0) =>
+export const updateChangeLogItem = (input: UpdateChangeLogItemInput) =>
     createAction<UpdateChangeLogItemAction>(
         'UPDATE_CHANGE_LOG_ITEM',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const deleteChangeLogItem = (input: DeleteChangeLogItemInput, skip = 0) =>
+export const deleteChangeLogItem = (input: DeleteChangeLogItemInput) =>
     createAction<DeleteChangeLogItemAction>(
         'DELETE_CHANGE_LOG_ITEM',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const reorderChangeLogItems = (input: ReorderChangeLogItemsInput, skip = 0) =>
+export const reorderChangeLogItems = (input: ReorderChangeLogItemsInput) =>
     createAction<ReorderChangeLogItemsAction>(
         'REORDER_CHANGE_LOG_ITEMS',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
 
-export const releaseNewVersion = (skip = 0) =>
+export const releaseNewVersion = () =>
     createAction<ReleaseNewVersionAction>(
         'RELEASE_NEW_VERSION',
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );

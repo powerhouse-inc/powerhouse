@@ -25,23 +25,9 @@ export type CountState = { count: number };
 
 export type CountLocalState = { name: string };
 
-export const increment = (skip = 0) => createAction<IncrementAction>(
-    'INCREMENT',
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    skip,
-);
+export const increment = () => createAction<IncrementAction>('INCREMENT');
 
-export const decrement = (skip = 0) => createAction<DecrementAction>(
-    'DECREMENT',
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    skip,
-);
+export const decrement = () => createAction<DecrementAction>('DECREMENT');
 
 export const setLocalName = (name: string) =>
     createAction<SetLocalNameAction>(

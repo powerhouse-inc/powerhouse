@@ -20,7 +20,7 @@ describe('UNDO operation', () => {
         document = emptyReducer(document, undo(1));
 
         expect(mapOperations(document.operations.global)).toStrictEqual([
-            { ...setName('TEST_1'), index: 0 },
+            { ...setName('TEST_1'), index: 0, skip: 0 },
         ]);
         expect(document.name).toBe('');
         expect(document.revision.global).toBe(0);
@@ -34,8 +34,8 @@ describe('UNDO operation', () => {
 
         document = emptyReducer(document, undo(2));
         expect(mapOperations(document.operations.global)).toStrictEqual([
-            { ...setName('TEST_1'), index: 0 },
-            { ...setName('TEST_2'), index: 1 },
+            { ...setName('TEST_1'), index: 0, skip: 0 },
+            { ...setName('TEST_2'), index: 1, skip: 0 },
         ]);
         expect(document.revision.global).toBe(0);
     });
@@ -46,8 +46,8 @@ describe('UNDO operation', () => {
         document = emptyReducer(document, setName('TEST_2'));
         document = emptyReducer(document, undo(5));
         expect(mapOperations(document.operations.global)).toStrictEqual([
-            { ...setName('TEST_1'), index: 0 },
-            { ...setName('TEST_2'), index: 1 },
+            { ...setName('TEST_1'), index: 0, skip: 0 },
+            { ...setName('TEST_2'), index: 1, skip: 0 },
         ]);
         expect(document.name).toBe('');
         expect(document.revision.global).toBe(0);
@@ -59,7 +59,7 @@ describe('UNDO operation', () => {
         document = emptyReducer(document, undo(1));
         document = emptyReducer(document, setName('TEST_2'));
         expect(mapOperations(document.operations.global)).toStrictEqual([
-            { ...setName('TEST_2'), index: 0 },
+            { ...setName('TEST_2'), index: 0, skip: 0 },
         ]);
         expect(document.name).toBe('TEST_2');
         expect(document.revision.global).toBe(1);
@@ -72,7 +72,7 @@ describe('UNDO operation', () => {
         document = emptyReducer(document, setName('TEST_2'));
         document = emptyReducer(document, undo(1));
         expect(mapOperations(document.operations.global)).toStrictEqual([
-            { ...setName('TEST_2'), index: 0 },
+            { ...setName('TEST_2'), index: 0, skip: 0 },
         ]);
         expect(document.name).toBe('');
         expect(document.revision.global).toBe(0);

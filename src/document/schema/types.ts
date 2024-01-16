@@ -41,10 +41,6 @@ export type Action = IAction & {
   type: Scalars['String']['output'];
 };
 
-export type DefaultBaseActionProps = {
-  skip?: number;
-};
-
 export type BaseAction =
   | LoadStateAction
   | PruneAction
@@ -83,7 +79,7 @@ export type IOperation = {
 
 export type Load_State = 'LOAD_STATE';
 
-export type LoadStateAction = DefaultBaseActionProps & {
+export type LoadStateAction = {
   input: LoadStateActionInput;
   type: Load_State | `${Load_State}`;
   scope: OperationScope;
@@ -138,7 +134,7 @@ export type Operation = IOperation & {
 
 export type Prune = 'PRUNE';
 
-export type PruneAction = DefaultBaseActionProps & {
+export type PruneAction = {
   input: PruneActionInput;
   type: Prune | `${Prune}`;
   scope: OperationScope;
@@ -164,7 +160,7 @@ export type RedoAction = {
 
 export type Set_Name = 'SET_NAME';
 
-export type SetNameAction = DefaultBaseActionProps & {
+export type SetNameAction = {
   input: Scalars['String']['input'];
   type: Set_Name | `${Set_Name}`;
   scope: 'global';
@@ -181,7 +177,7 @@ export type SetNameOperation = IOperation & {
 
 export type Undo = 'UNDO';
 
-export type UndoAction = DefaultBaseActionProps & {
+export type UndoAction = {
   input: Scalars['Int']['input'];
   type: Undo | `${Undo}`;
   scope: OperationScope;
@@ -189,7 +185,7 @@ export type UndoAction = DefaultBaseActionProps & {
 
 export type NOOP = 'NOOP';
 
-export type NOOPAction = DefaultBaseActionProps & {
+export type NOOPAction = {
   input: Scalars['Unknown']['input'];
   type: NOOP | `${NOOP}`;
   scope: OperationScope;

@@ -17,64 +17,40 @@ import {
     ReorderStateExamplesAction,
 } from './actions';
 
-export const setStateSchema = (input: SetStateSchemaInput, skip = 0) =>
+export const setStateSchema = (input: SetStateSchemaInput) =>
     createAction<SetStateSchemaAction>(
         'SET_STATE_SCHEMA',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const setInitialState = (input: SetInitialStateInput, skip = 0) =>
+export const setInitialState = (input: SetInitialStateInput) =>
     createAction<SetInitialStateAction>(
         'SET_INITIAL_STATE',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const addStateExample = (input: AddStateExampleInput, skip = 0) =>
+export const addStateExample = (input: AddStateExampleInput) =>
     createAction<AddStateExampleAction>(
         'ADD_STATE_EXAMPLE',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const updateStateExample = (input: UpdateStateExampleInput, skip = 0) =>
+export const updateStateExample = (input: UpdateStateExampleInput) =>
     createAction<UpdateStateExampleAction>(
         'UPDATE_STATE_EXAMPLE',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const deleteStateExample = (input: DeleteStateExampleInput, skip = 0) =>
+export const deleteStateExample = (input: DeleteStateExampleInput) =>
     createAction<DeleteStateExampleAction>(
         'DELETE_STATE_EXAMPLE',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const reorderStateExamples = (input: ReorderStateExamplesInput, skip = 0) =>
+export const reorderStateExamples = (input: ReorderStateExamplesInput) =>
     createAction<ReorderStateExamplesAction>(
         'REORDER_STATE_EXAMPLES',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
 

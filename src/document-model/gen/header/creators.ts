@@ -17,64 +17,40 @@ import {
     SetAuthorWebsiteAction,
 } from './actions';
 
-export const setModelName = (input: SetModelNameInput, skip = 0) =>
+export const setModelName = (input: SetModelNameInput) =>
     createAction<SetModelNameAction>(
         'SET_MODEL_NAME',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const setModelId = (input: SetModelIdInput, skip = 0) =>
+export const setModelId = (input: SetModelIdInput) =>
     createAction<SetModelIdAction>(
         'SET_MODEL_ID',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const setModelExtension = (input: SetModelExtensionInput, skip = 0) =>
+export const setModelExtension = (input: SetModelExtensionInput) =>
     createAction<SetModelExtensionAction>(
         'SET_MODEL_EXTENSION',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const setModelDescription = (input: SetModelDescriptionInput, skip = 0) =>
+export const setModelDescription = (input: SetModelDescriptionInput) =>
     createAction<SetModelDescriptionAction>(
         'SET_MODEL_DESCRIPTION',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const setAuthorName = (input: SetAuthorNameInput, skip = 0) =>
+export const setAuthorName = (input: SetAuthorNameInput) =>
     createAction<SetAuthorNameAction>(
         'SET_AUTHOR_NAME',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
-export const setAuthorWebsite = (input: SetAuthorWebsiteInput, skip = 0) =>
+export const setAuthorWebsite = (input: SetAuthorWebsiteInput) =>
     createAction<SetAuthorWebsiteAction>(
         'SET_AUTHOR_WEBSITE',
         {...input},
-        undefined,
-        undefined,
-        undefined,
-        skip,
     );
 
 

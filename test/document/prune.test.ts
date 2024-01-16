@@ -45,8 +45,9 @@ describe('PRUNE operation', () => {
                     4,
                 ),
                 index: 0,
+                skip: 0,
             },
-            { ...increment(), index: 1 },
+            { ...increment(), index: 1, skip: 0 },
         ]);
         expect(newDocument.documentType).toBe('powerhouse/counter');
         expect(newDocument.initialState.state.global).toStrictEqual({
@@ -75,8 +76,8 @@ describe('PRUNE operation', () => {
         expect(newDocument.state.global.count).toBe(4);
         expect(newDocument.revision.global).toBe(3);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
-            { ...increment(), index: 0 },
-            { ...setName('Document'), index: 1 },
+            { ...increment(), index: 0, skip: 0 },
+            { ...setName('Document'), index: 1, skip: 0 },
             {
                 ...loadState(
                     {
@@ -86,6 +87,7 @@ describe('PRUNE operation', () => {
                     3,
                 ),
                 index: 2,
+                skip: 0,
             },
         ]);
         expect(newDocument.documentType).toBe('powerhouse/counter');
@@ -115,8 +117,8 @@ describe('PRUNE operation', () => {
         expect(newDocument.state.global.count).toBe(4);
         expect(newDocument.revision.global).toBe(4);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
-            { ...increment(), index: 0 },
-            { ...setName('Document'), index: 1 },
+            { ...increment(), index: 0, skip: 0 },
+            { ...setName('Document'), index: 1, skip: 0 },
             {
                 ...loadState(
                     {
@@ -126,8 +128,9 @@ describe('PRUNE operation', () => {
                     2,
                 ),
                 index: 2,
+                skip: 0
             },
-            { ...increment(), index: 3 },
+            { ...increment(), index: 3, skip: 0 },
         ]);
         expect(newDocument.documentType).toBe('powerhouse/counter');
         expect(newDocument.initialState.state.global).toStrictEqual({
@@ -157,7 +160,7 @@ describe('PRUNE operation', () => {
         expect(newDocument.state.global.count).toBe(1);
         expect(newDocument.revision.global).toBe(1);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
-            { ...increment(), index: 0 },
+            { ...increment(), index: 0, skip: 0 },
             {
                 ...loadState(
                     {
@@ -167,6 +170,7 @@ describe('PRUNE operation', () => {
                     4,
                 ),
                 index: 1,
+                skip: 0
             },
         ]);
         expect(newDocument.documentType).toBe('powerhouse/counter');
@@ -199,7 +203,7 @@ describe('PRUNE operation', () => {
         expect(newDocument.state.global.count).toBe(4);
         expect(newDocument.revision.global).toBe(2);
         expect(mapOperations(newDocument.operations.global)).toStrictEqual([
-            { ...increment(), index: 0 },
+            { ...increment(), index: 0, skip: 0 },
             {
                 ...loadState(
                     {
@@ -209,6 +213,7 @@ describe('PRUNE operation', () => {
                     4,
                 ),
                 index: 1,
+                skip: 0,
             },
         ]);
         expect(newDocument.documentType).toBe('powerhouse/counter');

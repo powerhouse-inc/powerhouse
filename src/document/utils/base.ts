@@ -54,7 +54,6 @@ export function createAction<A extends Action>(
     attachments?: Action['attachments'],
     validator?: () => { parse(v: unknown): A['input'] },
     scope: OperationScope = 'global',
-    skip: Action['skip'] = 0,
 ): A {
     if (!type) {
         throw new Error('Empty action type');
@@ -64,7 +63,7 @@ export function createAction<A extends Action>(
         throw new Error(`Invalid action type: ${type}`);
     }
 
-    const action: Action = { type, input, scope, skip };
+    const action: Action = { type, input, scope };
 
     if (attachments) {
         action.attachments = attachments;
@@ -105,8 +104,8 @@ export function createReducer<
     reducer: ImmutableStateReducer<S, A, L>,
     documentReducer = baseReducer,
 ): Reducer<S, A, L> {
-    return (document, action, dispatch) => {
-        return documentReducer(document, action, reducer, dispatch);
+    return (document, action, dispatch, options) => {
+        return documentReducer(document, action, reducer, dispatch, options);
     };
 }
 
@@ -316,7 +315,12 @@ export function replayDocument<T, A extends Action, L>(
         (document, { ignore, operation }) => {
             if (ignore) {
                 // ignored operations are replaced by NOOP operations
-                return reducer(document, noop(operation.scope, operation.skip), dispatch);
+                return reducer(
+                    document,
+                    noop(operation.scope),
+                    dispatch,
+                    { skip: operation.skip },
+                );
             }
 
             return reducer(document, operation, dispatch);
