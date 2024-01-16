@@ -5496,10 +5496,21 @@ document-model-editors@^1.0.1:
   resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-1.0.1.tgz#b56ba13fe14f459aa5b0814c324a80608524876d"
   integrity sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==
 
-document-model@^1.0.20, document-model@^1.0.21:
+document-model@^1.0.20:
   version "1.0.21"
   resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.21.tgz#b2f6c8acd0b70ca0ababfba5f97a42defc026028"
   integrity sha512-pIogMqceXfMNwAO3QzIoObhbFvqqVI5zoi3MI6BUQhi4QJRhX3arp1jKarjpp7vkQ9PuHe3pXR+0zovGmcbseA==
+  dependencies:
+    immer "^10.0.2"
+    json-stringify-deterministic "^1.0.10"
+    jszip "^3.10.1"
+    mime "^3.0.0"
+    zod "^3.22.2"
+
+document-model@^1.0.22:
+  version "1.0.22"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.22.tgz#560af4b15ea1c0ae24161739c580be859fe9115d"
+  integrity sha512-YIHusHYr13qUQAu9T6Fqze7Ta93o8On8OpxZHgv/XqxFtXPJsRryO8bLK/M2/rIv7fWhkvx0pinJeEiq4AF5fQ==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
