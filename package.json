@@ -56,7 +56,7 @@
         "test:watch": "vitest"
     },
     "devDependencies": {
-        "@acaldas/powerhouse": "^1.0.14",
+        "@powerhousedao/codegen": "0.0.3",
         "@emotion/react": "^11.11.1",
         "@emotion/styled": "^11.11.0",
         "@monaco-editor/react": "^4.5.2",

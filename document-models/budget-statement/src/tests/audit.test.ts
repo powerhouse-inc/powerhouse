@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from '@acaldas/powerhouse';
+import { generateMock } from '@powerhousedao/codegen';
 import { Operation, utils as baseUtils } from 'document-model/document';
 import fs from 'fs';
 import JSZip from 'jszip';

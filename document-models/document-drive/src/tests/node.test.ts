@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from '@acaldas/powerhouse';
+import { generateMock } from '@powerhousedao/codegen';
 
 import * as creators from '../../gen/node/creators';
 import { reducer } from '../../gen/reducer';

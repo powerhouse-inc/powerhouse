@@ -1,5 +1,5 @@
 import type { StorybookConfig } from '@storybook/react-vite';
-import { getConfig } from '@acaldas/powerhouse';
+import { getConfig } from '@powerhousedao/codegen';
 
 const { editorsDir } = getConfig();
 
