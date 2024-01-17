@@ -5507,10 +5507,10 @@ document-model@^1.0.20:
     mime "^3.0.0"
     zod "^3.22.2"
 
-document-model@^1.0.22:
-  version "1.0.22"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.22.tgz#560af4b15ea1c0ae24161739c580be859fe9115d"
-  integrity sha512-YIHusHYr13qUQAu9T6Fqze7Ta93o8On8OpxZHgv/XqxFtXPJsRryO8bLK/M2/rIv7fWhkvx0pinJeEiq4AF5fQ==
+document-model@^1.0.23:
+  version "1.0.23"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.23.tgz#96bd0d0e119bb8c731a473ddb1b215c22e922887"
+  integrity sha512-CbuqLSOlI3LxnDMrD1yVxX5Z0tZmQnrPpwxC03vSY4ooYY2zm6QnuKqJ3lCHkg4KNt/3r5sMmApKQlXeFDSgCw==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"

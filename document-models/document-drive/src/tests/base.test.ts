@@ -134,7 +134,21 @@ describe('DocumentDrive Class', () => {
         expect(spy).toHaveBeenCalledOnce();
         expect(spy.mock.lastCall!.shift()).toStrictEqual({
             type: 'CREATE_CHILD_DOCUMENT',
-            input: { id: '1', documentType: 'test' },
+            input: {
+                id: '1',
+                documentType: 'test',
+                synchronizationUnits: [
+                    {
+                        branch: 'main',
+                        scope: 'global',
+                        syncId: 1,
+                    },
+                    {
+                        branch: 'main',
+                        scope: 'local',
+                        syncId: 2,
+                    },
+              ], },
         });
     });
 

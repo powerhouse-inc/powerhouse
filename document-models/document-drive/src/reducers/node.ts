@@ -4,8 +4,10 @@
  * - delete the file and run the code generator again to have it reset
  */
 
+import { OperationScope } from 'document-model/document';
 import { FileNode, getDescendants, getLatestSyncId, isFileNode } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
+import { z } from 'document-model/document-model';
 
 export const reducer: DocumentDriveNodeOperations = {
     addFileOperation(state, action, dispatch) {
@@ -13,8 +15,14 @@ export const reducer: DocumentDriveNodeOperations = {
             throw new Error(`Node with id ${action.input.id} already exists!`);
         }
 
+        const invalidScope = action.input.scopes.find(scope => !z.OperationScopeSchema().safeParse(scope).success);
+        if (invalidScope) {
+            throw new Error(`${invalidScope} is not a valid scope`)
+        }
+        const scopes = action.input.scopes as OperationScope[];
+
         const latestSyncId =  BigInt(getLatestSyncId(state));
-        const synchronizationUnits = action.input.scopes.map((scope, index) =>  ({
+        const synchronizationUnits = scopes.map((scope, index) =>  ({
             syncId: (latestSyncId + BigInt(1 + index)).toString(),
             scope,
             branch: "main"
@@ -24,7 +32,7 @@ export const reducer: DocumentDriveNodeOperations = {
             ...action.input,
             kind: 'file',
             parentFolder: action.input.parentFolder ?? null,
-            scopes: action.input.scopes,
+            scopes,
             synchronizationUnits
         }
         state.nodes.push(fileNode);
@@ -34,6 +42,7 @@ export const reducer: DocumentDriveNodeOperations = {
             input: {
                 id: action.input.id,
                 documentType: action.input.documentType,
+                synchronizationUnits
             },
         });
     },
