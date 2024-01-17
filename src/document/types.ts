@@ -41,6 +41,8 @@ export type ActionWithAttachment<
 export type ReducerOptions = {
     /** The number of operations to skip before this new action is applied */    
     skip?: number;
+    /** When true the skip count is ignored and the action is applied regardless of the skip count */
+    ignoreSkipOperations?: boolean;
 };
 
 /**

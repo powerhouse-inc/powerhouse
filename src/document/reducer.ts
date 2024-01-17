@@ -16,7 +16,7 @@ import {
 } from './actions/types';
 import { z } from './schema';
 import { Action, Document, ImmutableStateReducer, ReducerOptions } from './types';
-import { isBaseAction, hashDocument } from './utils';
+import { isBaseAction, hashDocument, replayOperations } from './utils';
 import { SignalDispatch } from './signal';
 
 /**
@@ -159,6 +159,7 @@ export function baseReducer<T, A extends Action, L>(
 ) {
     const {
         skip = 0,
+        ignoreSkipOperations = false,
     } = options;
 
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
@@ -166,6 +167,21 @@ export function baseReducer<T, A extends Action, L>(
     let newDocument = document;
     if (isBaseAction(action)) {
         newDocument = _baseReducer(newDocument, action, customReducer);
+    }
+
+    // if the action has a skip value then skips the
+    // specified number of operations before applying
+    // the action
+    if (skip > 0 && !ignoreSkipOperations) {
+        newDocument = replayOperations(
+            newDocument.initialState,
+            newDocument.operations,
+            customReducer,
+            undefined,
+            undefined,
+            undefined,
+            { [action.scope]: skip }
+        );
     }
 
     // updates the document revision number, last modified date
