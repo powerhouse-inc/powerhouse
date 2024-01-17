@@ -1,14 +1,21 @@
-import { Document } from './types';
+import { Document, OperationScope } from './types';
 
 export interface ISignal<T extends string = string, I = unknown> {
     type: T;
     input: I;
 }
 
+export type SynchronizationUnit = {
+    syncId: string;
+    scope: OperationScope;
+    branch: string;
+};
+
 export type CreateChildDocumentInput = {
     id: string;
     documentType: string;
     document?: Document;
+    synchronizationUnits: SynchronizationUnit[];
 };
 
 export type CreateChildDocumentSignal = ISignal<
