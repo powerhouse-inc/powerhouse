@@ -18,31 +18,31 @@ import {
 export const addModule = (input: AddModuleInput) =>
     createAction<AddModuleAction>(
         'ADD_MODULE',
-        {...input}
+        {...input},
     );
 
 export const setModuleName = (input: SetModuleNameInput) =>
     createAction<SetModuleNameAction>(
         'SET_MODULE_NAME',
-        {...input}
+        {...input},
     );
 
 export const setModuleDescription = (input: SetModuleDescriptionInput) =>
     createAction<SetModuleDescriptionAction>(
         'SET_MODULE_DESCRIPTION',
-        {...input}
+        {...input},
     );
 
 export const deleteModule = (input: DeleteModuleInput) =>
     createAction<DeleteModuleAction>(
         'DELETE_MODULE',
-        {...input}
+        {...input},
     );
 
 export const reorderModules = (input: ReorderModulesInput) =>
     createAction<ReorderModulesAction>(
         'REORDER_MODULES',
-        {...input}
+        {...input},
     );
 
 

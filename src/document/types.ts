@@ -38,6 +38,11 @@ export type ActionWithAttachment<
     attachments: AttachmentInput[];
 };
 
+export type ReducerOptions = {
+    /** The number of operations to skip before this new action is applied */    
+    skip?: number;
+};
+
 /**
  * A pure function that takes an action and the previous state
  * of the document and returns the new state.
@@ -49,6 +54,7 @@ export type Reducer<State, A extends Action, LocalState> = (
     state: Document<State, A, LocalState>,
     action: A | BaseAction,
     dispatch?: SignalDispatch,
+    options?: ReducerOptions,
 ) => Document<State, A, LocalState>;
 
 /**
@@ -98,6 +104,8 @@ export type Operation<A extends Action = Action> = A & {
     timestamp: string;
     /** Hash of the resulting document data after the operation */
     hash: string;
+    /** The number of operations skipped with this Operation */
+    skip: number;
 };
 
 /**
@@ -167,6 +175,15 @@ export type ExtendedState<
 
 export type DocumentOperations<A extends Action> = Required<
     Record<OperationScope, Operation<A | BaseAction>[]>
+>;
+
+export type MappedOperation<A extends Action> = {
+    ignore: boolean;
+    operation: Operation<A | BaseAction>
+}
+
+export type DocumentOperationsIgnoreMap<A extends Action> = Required<
+    Record<OperationScope, MappedOperation<A>[]>
 >;
 
 /**

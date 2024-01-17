@@ -15,7 +15,7 @@ import {
     UNDO,
 } from './actions/types';
 import { z } from './schema';
-import { Action, Document, ImmutableStateReducer } from './types';
+import { Action, Document, ImmutableStateReducer, ReducerOptions } from './types';
 import { isBaseAction, hashDocument } from './utils';
 import { SignalDispatch } from './signal';
 
@@ -60,7 +60,7 @@ function updateHeader<T extends Document>(document: T, action: Action): T {
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateOperations<T extends Document>(document: T, action: Action): T {
+function updateOperations<T extends Document>(document: T, action: Action, skip = 0): T {
     // UNDO, REDO and PRUNE are meta operations
     // that alter the operations history themselves
     if ([UNDO, REDO, PRUNE].includes(action.type)) {
@@ -83,6 +83,7 @@ function updateOperations<T extends Document>(document: T, action: Action): T {
         timestamp: new Date().toISOString(),
         hash: '',
         scope,
+        skip,
     });
 
     // adds the action to the operations history with
@@ -100,8 +101,8 @@ function updateOperations<T extends Document>(document: T, action: Action): T {
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateDocument<T extends Document>(document: T, action: Action) {
-    let newDocument = updateOperations(document, action);
+function updateDocument<T extends Document>(document: T, action: Action, skip = 0) {
+    let newDocument = updateOperations(document, action, skip);
     newDocument = updateHeader(newDocument, action);
     return newDocument;
 }
@@ -154,7 +155,12 @@ export function baseReducer<T, A extends Action, L>(
     action: A | BaseAction,
     customReducer: ImmutableStateReducer<T, A, L>,
     dispatch?: SignalDispatch,
+    options: ReducerOptions = {},
 ) {
+    const {
+        skip = 0,
+    } = options;
+
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first
     let newDocument = document;
@@ -164,7 +170,7 @@ export function baseReducer<T, A extends Action, L>(
 
     // updates the document revision number, last modified date
     // and operation history
-    newDocument = updateDocument(newDocument, action);
+    newDocument = updateDocument(newDocument, action, skip);
 
     // wraps the custom reducer with Immer to avoid
     // mutation bugs and allow writing reducers with

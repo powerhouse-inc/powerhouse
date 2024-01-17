@@ -20,37 +20,37 @@ import {
 export const setModelName = (input: SetModelNameInput) =>
     createAction<SetModelNameAction>(
         'SET_MODEL_NAME',
-        {...input}
+        {...input},
     );
 
 export const setModelId = (input: SetModelIdInput) =>
     createAction<SetModelIdAction>(
         'SET_MODEL_ID',
-        {...input}
+        {...input},
     );
 
 export const setModelExtension = (input: SetModelExtensionInput) =>
     createAction<SetModelExtensionAction>(
         'SET_MODEL_EXTENSION',
-        {...input}
+        {...input},
     );
 
 export const setModelDescription = (input: SetModelDescriptionInput) =>
     createAction<SetModelDescriptionAction>(
         'SET_MODEL_DESCRIPTION',
-        {...input}
+        {...input},
     );
 
 export const setAuthorName = (input: SetAuthorNameInput) =>
     createAction<SetAuthorNameAction>(
         'SET_AUTHOR_NAME',
-        {...input}
+        {...input},
     );
 
 export const setAuthorWebsite = (input: SetAuthorWebsiteInput) =>
     createAction<SetAuthorWebsiteAction>(
         'SET_AUTHOR_WEBSITE',
-        {...input}
+        {...input},
     );
 
 

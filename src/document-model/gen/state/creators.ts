@@ -20,37 +20,37 @@ import {
 export const setStateSchema = (input: SetStateSchemaInput) =>
     createAction<SetStateSchemaAction>(
         'SET_STATE_SCHEMA',
-        {...input}
+        {...input},
     );
 
 export const setInitialState = (input: SetInitialStateInput) =>
     createAction<SetInitialStateAction>(
         'SET_INITIAL_STATE',
-        {...input}
+        {...input},
     );
 
 export const addStateExample = (input: AddStateExampleInput) =>
     createAction<AddStateExampleAction>(
         'ADD_STATE_EXAMPLE',
-        {...input}
+        {...input},
     );
 
 export const updateStateExample = (input: UpdateStateExampleInput) =>
     createAction<UpdateStateExampleAction>(
         'UPDATE_STATE_EXAMPLE',
-        {...input}
+        {...input},
     );
 
 export const deleteStateExample = (input: DeleteStateExampleInput) =>
     createAction<DeleteStateExampleAction>(
         'DELETE_STATE_EXAMPLE',
-        {...input}
+        {...input},
     );
 
 export const reorderStateExamples = (input: ReorderStateExamplesInput) =>
     createAction<ReorderStateExamplesAction>(
         'REORDER_STATE_EXAMPLES',
-        {...input}
+        {...input},
     );
 
 

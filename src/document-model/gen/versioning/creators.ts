@@ -17,27 +17,29 @@ import {
 export const addChangeLogItem = (input: AddChangeLogItemInput) =>
     createAction<AddChangeLogItemAction>(
         'ADD_CHANGE_LOG_ITEM',
-        {...input}
+        {...input},
     );
 
 export const updateChangeLogItem = (input: UpdateChangeLogItemInput) =>
     createAction<UpdateChangeLogItemAction>(
         'UPDATE_CHANGE_LOG_ITEM',
-        {...input}
+        {...input},
     );
 
 export const deleteChangeLogItem = (input: DeleteChangeLogItemInput) =>
     createAction<DeleteChangeLogItemAction>(
         'DELETE_CHANGE_LOG_ITEM',
-        {...input}
+        {...input},
     );
 
 export const reorderChangeLogItems = (input: ReorderChangeLogItemsInput) =>
     createAction<ReorderChangeLogItemsAction>(
         'REORDER_CHANGE_LOG_ITEMS',
-        {...input}
+        {...input},
     );
 
 
 export const releaseNewVersion = () =>
-    createAction<ReleaseNewVersionAction>('RELEASE_NEW_VERSION');
+    createAction<ReleaseNewVersionAction>(
+        'RELEASE_NEW_VERSION',
+    );

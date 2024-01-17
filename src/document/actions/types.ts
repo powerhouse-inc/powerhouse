@@ -12,5 +12,6 @@ export {
     RedoAction,
     SetNameAction,
     UndoAction,
+    NOOPAction,
 } from '../types';
 export type { BaseAction };

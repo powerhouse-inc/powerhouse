@@ -8,6 +8,7 @@ import type {
     ExtendedState,
     OperationScope,
     Reducer,
+    ReducerOptions,
 } from './types';
 import { loadFromFile, readOnly, saveToFile } from './utils';
 
@@ -42,11 +43,12 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
      * @param action - The action to dispatch.
      * @returns The Document instance.
      */
-    protected dispatch(action: A | BaseAction) {
+    protected dispatch(action: A | BaseAction, options?: ReducerOptions) {
         this._document = this._reducer(
             this._document,
             action,
             this._signalDispatch,
+            options,
         );
         return this;
     }

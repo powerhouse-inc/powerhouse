@@ -22,43 +22,43 @@ import {
 export const addOperationError = (input: AddOperationErrorInput) =>
     createAction<AddOperationErrorAction>(
         'ADD_OPERATION_ERROR',
-        {...input}
+        {...input},
     );
 
 export const setOperationErrorCode = (input: SetOperationErrorCodeInput) =>
     createAction<SetOperationErrorCodeAction>(
         'SET_OPERATION_ERROR_CODE',
-        {...input}
+        {...input},
     );
 
 export const setOperationErrorName = (input: SetOperationErrorNameInput) =>
     createAction<SetOperationErrorNameAction>(
         'SET_OPERATION_ERROR_NAME',
-        {...input}
+        {...input},
     );
 
 export const setOperationErrorDescription = (input: SetOperationErrorDescriptionInput) =>
     createAction<SetOperationErrorDescriptionAction>(
         'SET_OPERATION_ERROR_DESCRIPTION',
-        {...input}
+        {...input},
     );
 
 export const setOperationErrorTemplate = (input: SetOperationErrorTemplateInput) =>
     createAction<SetOperationErrorTemplateAction>(
         'SET_OPERATION_ERROR_TEMPLATE',
-        {...input}
+        {...input},
     );
 
 export const deleteOperationError = (input: DeleteOperationErrorInput) =>
     createAction<DeleteOperationErrorAction>(
         'DELETE_OPERATION_ERROR',
-        {...input}
+        {...input},
     );
 
 export const reorderOperationErrors = (input: ReorderOperationErrorsInput) =>
     createAction<ReorderOperationErrorsAction>(
         'REORDER_OPERATION_ERRORS',
-        {...input}
+        {...input},
     );
 
 

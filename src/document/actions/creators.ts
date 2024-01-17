@@ -6,6 +6,7 @@ import {
     RedoAction,
     SetNameAction,
     UndoAction,
+    NOOPAction,
 } from './types';
 
 /**
@@ -20,6 +21,7 @@ export const setName = (name: string) =>
         name,
         undefined,
         z.SetNameActionInputSchema,
+        undefined,
     );
 
 /**
@@ -28,10 +30,10 @@ export const setName = (name: string) =>
  * @param count - Number of operations to cancel
  * @category Actions
  */
-export const undo = (count = 1, scope: OperationScope = 'global') =>
+export const undo = (skip = 1, scope: OperationScope = 'global') =>
     createAction<UndoAction>(
         'UNDO',
-        count,
+        skip,
         undefined,
         z.UndoActionInputSchema,
         scope,
@@ -96,3 +98,12 @@ export const loadState = <S, T>(
         undefined,
         z.LoadStateActionInputSchema,
     );
+
+
+export const noop = (scope: OperationScope = 'global') => createAction<NOOPAction>(
+    'NOOP',
+    {},
+    undefined,
+    undefined,
+    scope,
+);

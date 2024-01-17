@@ -28,61 +28,61 @@ import {
 export const addOperation = (input: AddOperationInput) =>
     createAction<AddOperationAction>(
         'ADD_OPERATION',
-        {...input}
+        {...input},
     );
 
     export const setOperationName = (input: SetOperationNameInput) =>
     createAction<SetOperationNameAction>(
         'SET_OPERATION_NAME',
-        {...input}
+        {...input},
     );
 
     export const setOperationScope = (input: SetOperationScopeInput) =>
     createAction<SetOperationScopeAction>(
         'SET_OPERATION_SCOPE',
-        {...input}
+        {...input},
     );
 
 export const setOperationSchema = (input: SetOperationSchemaInput) =>
     createAction<SetOperationSchemaAction>(
         'SET_OPERATION_SCHEMA',
-        {...input}
+        {...input},
     );
 
 export const setOperationDescription = (input: SetOperationDescriptionInput) =>
     createAction<SetOperationDescriptionAction>(
         'SET_OPERATION_DESCRIPTION',
-        {...input}
+        {...input},
     );
 
 export const setOperationTemplate = (input: SetOperationTemplateInput) =>
     createAction<SetOperationTemplateAction>(
         'SET_OPERATION_TEMPLATE',
-        {...input}
+        {...input},
     );
 
 export const setOperationReducer = (input: SetOperationReducerInput) =>
     createAction<SetOperationReducerAction>(
         'SET_OPERATION_REDUCER',
-        {...input}
+        {...input},
     );
 
 export const moveOperation = (input: MoveOperationInput) =>
     createAction<MoveOperationAction>(
         'MOVE_OPERATION',
-        {...input}
+        {...input},
     );
 
 export const deleteOperation = (input: DeleteOperationInput) =>
     createAction<DeleteOperationAction>(
         'DELETE_OPERATION',
-        {...input}
+        {...input},
     );
 
 export const reorderModuleOperations = (input: ReorderModuleOperationsInput) =>
     createAction<ReorderModuleOperationsAction>(
         'REORDER_MODULE_OPERATIONS',
-        {...input}
+        {...input},
     );
 
 

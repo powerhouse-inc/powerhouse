@@ -19,33 +19,34 @@ import {
     setAuthorWebsite,
 } from './creators';
 import { DocumentModelAction } from '../actions';
+import { ReducerOptions } from '../../../document';
 
 export default class DocumentModel_Header extends BaseDocument<
     DocumentModelState,
     DocumentModelAction,
     DocumentModelLocalState
 > {
-    public setModelName(input: SetModelNameInput) {
-        return this.dispatch(setModelName(input));
+    public setModelName(input: SetModelNameInput, options?: ReducerOptions) {
+        return this.dispatch(setModelName(input), options);
     }
 
-    public setModelId(input: SetModelIdInput) {
-        return this.dispatch(setModelId(input));
+    public setModelId(input: SetModelIdInput, options?: ReducerOptions) {
+        return this.dispatch(setModelId(input), options);
     }
 
-    public setModelExtension(input: SetModelExtensionInput) {
-        return this.dispatch(setModelExtension(input));
+    public setModelExtension(input: SetModelExtensionInput, options?: ReducerOptions) {
+        return this.dispatch(setModelExtension(input), options);
     }
 
-    public setModelDescription(input: SetModelDescriptionInput) {
-        return this.dispatch(setModelDescription(input));
+    public setModelDescription(input: SetModelDescriptionInput, options?: ReducerOptions) {
+        return this.dispatch(setModelDescription(input), options);
     }
 
-    public setAuthorName(input: SetAuthorNameInput) {
-        return this.dispatch(setAuthorName(input));
+    public setAuthorName(input: SetAuthorNameInput, options?: ReducerOptions) {
+        return this.dispatch(setAuthorName(input), options);
     }
 
-    public setAuthorWebsite(input: SetAuthorWebsiteInput) {
-        return this.dispatch(setAuthorWebsite(input));
+    public setAuthorWebsite(input: SetAuthorWebsiteInput, options?: ReducerOptions) {
+        return this.dispatch(setAuthorWebsite(input), options);
     }
 }
