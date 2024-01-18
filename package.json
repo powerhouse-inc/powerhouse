@@ -11,8 +11,9 @@
     "module": "dist/node/index.js",
     "browser": "dist/browser/index.js",
     "scripts": {
-        "lint": "eslint --ext .js,.ts . && tsc --noemit --project tsconfig.spec.json",
-        "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
+        "check-types": "tsc",
+        "lint": "eslint . && yarn check-types",
+        "lint:fix": "eslint --fix . && yarn check-types",
         "build": "yarn build:browser && yarn build:node",
         "build:browser": "vite build --mode browser",
         "build:node": "vite build --mode node",
