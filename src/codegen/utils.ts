@@ -21,7 +21,7 @@ export async function loadDocumentModel(
         }
         return documentModel;
     } catch (error) {
-        // @ts-ignore
+        // @ts-expect-error
         throw error.code === 'MODULE_NOT_FOUND'
             ? new Error(`Document model not found.`)
             : error;

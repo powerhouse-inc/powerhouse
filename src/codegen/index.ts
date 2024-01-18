@@ -105,7 +105,7 @@ export async function generateEditor(
     const { documentModelsDir, format } = config;
     const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
 
-    let invalidType = documentTypes.find(
+    const invalidType = documentTypes.find(
         type => !Object.keys(docummentTypesMap).includes(type),
     );
     if (invalidType) {

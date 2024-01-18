@@ -18,7 +18,7 @@ const BOILERPLATE_REPO =
     'https://github.com/powerhouse-inc/document-model-boilerplate.git';
 
 function isUsingYarn() {
-    return (process.env.npm_config_user_agent || '').indexOf('yarn') === 0;
+    return (process.env.npm_config_user_agent || '').startsWith('yarn');
 }
 
 function buildPackageJson(appPath: string, projectName: string) {

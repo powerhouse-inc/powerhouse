@@ -34,7 +34,7 @@ export function getConfig() {
     let config: PowerhouseConfig = { ...DEFAULT_CONFIG };
     try {
         const configStr = readFileSync('./powerhouse.config.json', 'utf-8');
-        let userConfig: PowerhouseConfig = JSON.parse(configStr);
+        const userConfig: PowerhouseConfig = JSON.parse(configStr);
         config = { ...config, ...userConfig };
     } catch {}
     return config;
