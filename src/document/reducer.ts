@@ -1,6 +1,7 @@
 import { castDraft, produce } from 'immer';
 import {
     loadStateOperation,
+    noop,
     pruneOperation,
     redoOperation,
     setNameOperation,
@@ -13,8 +14,9 @@ import {
     REDO,
     SET_NAME,
     UNDO,
+    UndoAction,
 } from './actions/types';
-import { z } from './schema';
+import { UndoRedoAction, z } from './schema';
 import { Action, Document, ImmutableStateReducer, ReducerOptions } from './types';
 import { isBaseAction, isUndoRedo, hashDocument, replayOperations } from './utils';
 import { SignalDispatch } from './signal';
@@ -138,6 +140,90 @@ function _baseReducer<T, A extends Action, L>(
             return document;
     }
 }
+
+type UndoRedoProcessResult<T, A extends Action, L> = {
+    document: Document<T, A, L>,
+    action: A | BaseAction,
+    skip: number
+};
+
+/**
+ * Processes an UNDO or REDO action.
+ *
+ * @param document The current state of the document.
+ * @param action The action being applied to the document.
+ * @param skip The number of operations to skip before applying the action.
+ * @returns The updated document, calculated skip value and transformed action (if apply).
+ */
+export function processUndoRedo<T, A extends Action, L>(
+    document: Document<T, A, L>,
+    action: UndoRedoAction,
+    skip: number,
+): UndoRedoProcessResult<T, A, L> {
+    const scope = action.scope;
+    const defaultResult: UndoRedoProcessResult<T, A, L> = {
+        document,
+        action,
+        skip,
+    };
+
+    switch (action.type) {
+        case UNDO: {
+            return produce(defaultResult, draft => {
+                if (draft.document.operations[scope].length < 1) {
+                    throw new Error(`Cannot undo: no operations in history for scope "${scope}"`);
+                }
+
+                if (!draft.action.input || (draft.action as UndoAction).input < 1) {
+                    throw new Error(`Invalid UNDO action: input value must be greater than 0`);
+                }
+
+                if (draft.skip > 0) {
+                    throw new Error(`Cannot undo: skip value from reducer cannot be used with UNDO action`);
+                }
+
+                const [ lastOperation ] = draft.document.operations[scope].slice(-1);
+                const isLatestOpNOOP = lastOperation.type === 'NOOP' && lastOperation.skip > 0;
+
+                draft.skip += action.input;
+
+                if (isLatestOpNOOP) {
+                    draft.skip += lastOperation.skip;
+                    draft.document.operations[scope].pop();
+                }
+
+                if (draft.document.operations[scope].length < draft.skip) {
+                    throw new Error(`Cannot undo: you can't undo more operations than the ones in the scope history`);
+                }
+
+                const operationsLastIndex = draft.document.operations[scope].length - 1;
+                let skippedOpsLeft = (draft.action as UndoAction).input;
+                let index = isLatestOpNOOP ? operationsLastIndex - lastOperation.skip : operationsLastIndex;
+
+                while (skippedOpsLeft > 0 && index > 0) {
+                    const op = draft.document.operations[scope][index];
+
+                    if (op.type === 'NOOP' && op.skip > 0) {
+                        index = index - (op.skip + 1);
+                        draft.skip += op.skip + 1;
+                    } else {
+                        draft.document.clipboard.push({ ...op });
+                        skippedOpsLeft--;
+                        index--;
+                    }
+                }
+                
+                draft.action = noop(scope);
+            });
+        }
+            
+        case REDO:
+            return defaultResult;
+        default:
+            return defaultResult;
+    }
+}
+
 /**
  * Base document reducer that wraps a custom document reducer and handles
  * document-level actions such as undo, redo, prune, and set name.
@@ -152,33 +238,32 @@ function _baseReducer<T, A extends Action, L>(
  */
 export function baseReducer<T, A extends Action, L>(
     document: Document<T, A, L>,
-    action: A | BaseAction,
+    dispatchedAction: A | BaseAction,
     customReducer: ImmutableStateReducer<T, A, L>,
     dispatch?: SignalDispatch,
     options: ReducerOptions = {},
 ) {
     const {
-        skip = 0,
+        skip,
         ignoreSkipOperations = false,
     } = options;
 
+    let action = { ...dispatchedAction };
+    let skipValue = skip || 0;
     let newDocument = document;
+    let clipboard = [...document.clipboard];
 
     if (isUndoRedo(action)) {
-        // TODO: mutate action (UNDO => NOOP, skip n) or (REDO => latest operation in clipboard)
-        // TODO: add to clipboard skipped operations or remove re-applied operations
-        // TODO: get document without latest operation NOOP
+        const {
+            skip: calculatedSkip,
+            action: transformedAction,
+            document: processedDocument,
+        } = processUndoRedo(document, action, skipValue);
 
-        /**
-         * if UNDO:
-         * check if latest operation in the action's scope is NOOP
-         * if is NOOP then remove it from the operation scope history
-         * replace current action (UNDO) with NOOP with skip number = previous action skip (if was NOOP) + current skip value
-         * get skipped operations for the skip value calculated above
-         * add skipped operations to the clipboard
-         * 
-        */
-
+        action = transformedAction;
+        skipValue = calculatedSkip;
+        newDocument = processedDocument;
+        clipboard = [...newDocument.clipboard];
 
         /**
          * if REDO:
@@ -196,7 +281,7 @@ export function baseReducer<T, A extends Action, L>(
     // if the action has a skip value then skips the
     // specified number of operations before applying
     // the action
-    if (skip > 0 && !ignoreSkipOperations) {
+    if (skipValue > 0 && !ignoreSkipOperations) {
         newDocument = replayOperations(
             newDocument.initialState,
             newDocument.operations,
@@ -204,13 +289,13 @@ export function baseReducer<T, A extends Action, L>(
             undefined,
             undefined,
             undefined,
-            { [action.scope]: skip }
+            { [action.scope]: skipValue }
         );
     }
 
     // updates the document revision number, last modified date
     // and operation history
-    newDocument = updateDocument(newDocument, action, skip);
+    newDocument = updateDocument(newDocument, action, skipValue);
 
     // wraps the custom reducer with Immer to avoid
     // mutation bugs and allow writing reducers with
@@ -226,6 +311,7 @@ export function baseReducer<T, A extends Action, L>(
             // casts new state as draft to comply with typescript
             return castDraft<Document<T, A, L>>({
                 ...newDocument,
+                clipboard: [...clipboard],
                 state: returnedDraft,
             });
         }
