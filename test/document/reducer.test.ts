@@ -107,6 +107,7 @@ describe('Base reducer', () => {
         const id = utils.hashKey();
         const reducer = createReducer((_state, action, dispatch) => {
             if (action.type === 'CREATE_DOCUMENT') {
+                // @ts-expect-error TODO add synchronization units to fix type error
                 dispatch?.({
                     type: 'CREATE_CHILD_DOCUMENT',
                     input: {
