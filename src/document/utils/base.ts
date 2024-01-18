@@ -220,11 +220,14 @@ export function mapSkippedOperations<A extends Action>(
         };
 
 
-        if (operation.skip > 0) {
-            // here we add 1 to the skip number because we want to get the number of
-            // operations that we want to move the pointer back to get the latest valid operation
-            // operation.skip = 1 means that we want to move the pointer back 2 operations to get to the latest valid operation
-            skipped = skipped + (operation.skip + 1);
+        // here we add 1 to the skip number because we want to get the number of
+        // operations that we want to move the pointer back to get the latest valid operation
+        // operation.skip = 1 means that we want to move the pointer back 2 operations to get to the latest valid operation
+        const operationSkip = operation.skip > 0 ? (operation.skip + 1) : 0;
+
+        if (operationSkip > 0 && operationSkip > skipped) {
+            const skipDiff = operationSkip - skipped;
+            skipped = skipped + skipDiff;
         }
 
         latestOpIndex = operation.index;

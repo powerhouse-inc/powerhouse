@@ -147,7 +147,7 @@ describe('skip operations', () => {
             });
         });
 
-        it('should tag as "ignored" operation 1, 2, 3, and 4 when operation 5 -> (skip=2) and operation 3 -> (skip=1)', () => {
+        it('should tag as "ignored" operation 2, 3, and 4 when operation 5 -> (skip=2) and operation 3 -> (skip=1)', () => {
             const operations = [
                 createFakeOperation(1),
                 createFakeOperation(2),
@@ -156,10 +156,36 @@ describe('skip operations', () => {
                 createFakeOperation(5, 2),
             ];
 
-            const ignoredIndexes = [1, 2, 3, 4];
+            const ignoredIndexes = [2, 3, 4];
 
             const mappedOps = mapSkippedOperations(operations);
             expect(mappedOps.length).toBe(5);
+            mappedOps.forEach((mapOp) => {
+                let ignore = false;
+                if (ignoredIndexes.includes(mapOp.operation.index)) {
+                    ignore = true;
+                }
+    
+                expect(mapOp).toHaveProperty('ignore', ignore);
+            });
+        });
+
+        it('should tag as "ignored" operations 3, 4, 5, 6, and 7 when operation 6 -> (skip=1) and operation 8 -> (skip=5)', () => {
+            const operations = [
+                createFakeOperation(1),
+                createFakeOperation(2),
+                createFakeOperation(3),
+                createFakeOperation(4),
+                createFakeOperation(5),
+                createFakeOperation(6, 1),
+                createFakeOperation(7),
+                createFakeOperation(8, 5),
+            ];
+
+            const ignoredIndexes = [3, 4, 5, 6, 7];
+
+            const mappedOps = mapSkippedOperations(operations);
+            expect(mappedOps.length).toBe(8);
             mappedOps.forEach((mapOp) => {
                 let ignore = false;
                 if (ignoredIndexes.includes(mapOp.operation.index)) {
