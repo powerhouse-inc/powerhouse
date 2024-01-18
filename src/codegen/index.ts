@@ -56,7 +56,9 @@ function getDocumentTypesMap(dir: string) {
                 if (spec.id) {
                     documentTypesMap[spec.id] = pascalCase(name);
                 }
-            } catch {}
+            } catch {
+                console.error(`Failed to parse ${specPath}`);
+            }
         });
     return documentTypesMap;
 }

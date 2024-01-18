@@ -1,7 +1,7 @@
-import { prompt } from 'enquirer';
-import arg, { type Spec } from 'arg';
-import { readFileSync, writeFileSync } from 'node:fs';
 import { generateMock as zodGenerateMock } from '@anatine/zod-mock';
+import arg from 'arg';
+import { prompt } from 'enquirer';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 export type PowerhouseConfig = {
     documentModelsDir: string;
@@ -34,9 +34,11 @@ export function getConfig() {
     let config: PowerhouseConfig = { ...DEFAULT_CONFIG };
     try {
         const configStr = readFileSync('./powerhouse.config.json', 'utf-8');
-        const userConfig: PowerhouseConfig = JSON.parse(configStr);
+        const userConfig = JSON.parse(configStr) as PowerhouseConfig;
         config = { ...config, ...userConfig };
-    } catch {}
+    } catch {
+        console.warn('No powerhouse.config.json found, using defaults');
+    }
     return config;
 }
 
@@ -100,5 +102,5 @@ export async function promptDirectories(
 export type generateMockTypeFn = typeof zodGenerateMock;
 
 export const generateMock: generateMockTypeFn = (zodRef, options) => {
-    return zodGenerateMock(zodRef, options);
+    return zodGenerateMock(zodRef, options) as generateMockTypeFn;
 };

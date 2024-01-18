@@ -1,16 +1,16 @@
 #! /usr/bin/env node
 
+import { exec as _exec } from 'child_process';
+import { prompt } from 'enquirer';
+import fs from 'fs';
 import path from 'path';
 import util from 'util';
-import fs from 'fs';
-import { exec as _exec } from 'child_process';
 import {
-    promptDirectories,
     DEFAULT_CONFIG,
     configSpec,
     parseArgs,
+    promptDirectories,
 } from '../utils';
-import { prompt } from 'enquirer';
 
 const exec = util.promisify(_exec);
 
@@ -24,7 +24,7 @@ function isUsingYarn() {
 function buildPackageJson(appPath: string, projectName: string) {
     const packageJson = JSON.parse(
         fs.readFileSync(path.join(appPath, 'package.json'), 'utf-8'),
-    );
+    ) as Record<string, any>;
     const newPackage = {
         ...packageJson,
         name: projectName,
@@ -45,7 +45,9 @@ function buildPowerhouseConfig(
     editorsDir: string,
 ) {
     const filePath = path.join(appPath, 'powerhouse.config.json');
-    const packageJson = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    const packageJson = JSON.parse(
+        fs.readFileSync(filePath, 'utf-8'),
+    ) as Record<string, any>;
     const newPackage = {
         ...packageJson,
         documentModelsDir,
