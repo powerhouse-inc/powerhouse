@@ -208,6 +208,8 @@ export type Document<
         operations: DocumentOperations<A>;
         /** The initial state of the document, enabling replaying operations. */
         initialState: ExtendedState<GlobalState, LocalState>;
+        /** A list of undone operations */
+        clipboard: Operation<BaseAction | A>[];
     };
 
 /**

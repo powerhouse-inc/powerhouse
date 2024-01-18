@@ -3,6 +3,7 @@ import { baseReducer } from '../reducer';
 import {
     Action,
     BaseAction,
+    UndoRedoAction,
     Document,
     ExtendedState,
     ImmutableStateReducer,
@@ -23,6 +24,10 @@ import { noop } from '../actions/creators';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
 import { castImmutable, freeze } from 'immer';
 import { SignalDispatch } from '../signal';
+
+export function isUndoRedo(action: Action): action is UndoRedoAction {
+    return [UNDO, REDO].includes(action.type);
+}
 
 export function isBaseAction(action: Action): action is BaseAction {
     return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
@@ -155,6 +160,7 @@ export const createDocument = <S, A extends Action, L = unknown>(
         ...state,
         initialState: state,
         operations: { global: [], local: [] },
+        clipboard: [],
     };
 };
 

@@ -16,7 +16,7 @@ import {
 } from './actions/types';
 import { z } from './schema';
 import { Action, Document, ImmutableStateReducer, ReducerOptions } from './types';
-import { isBaseAction, hashDocument, replayOperations } from './utils';
+import { isBaseAction, isUndoRedo, hashDocument, replayOperations } from './utils';
 import { SignalDispatch } from './signal';
 
 /**
@@ -162,9 +162,33 @@ export function baseReducer<T, A extends Action, L>(
         ignoreSkipOperations = false,
     } = options;
 
+    let newDocument = document;
+
+    if (isUndoRedo(action)) {
+        // TODO: mutate action (UNDO => NOOP, skip n) or (REDO => latest operation in clipboard)
+        // TODO: add to clipboard skipped operations or remove re-applied operations
+        // TODO: get document without latest operation NOOP
+
+        /**
+         * if UNDO:
+         * check if latest operation in the action's scope is NOOP
+         * if is NOOP then remove it from the operation scope history
+         * replace current action (UNDO) with NOOP with skip number = previous action skip (if was NOOP) + current skip value
+         * get skipped operations for the skip value calculated above
+         * add skipped operations to the clipboard
+         * 
+        */
+
+
+        /**
+         * if REDO:
+         * check if there's an operation in the clipboard to REDO
+         * replace current action (REDO) with the operation in the clipboard
+        */
+    }
+
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first
-    let newDocument = document;
     if (isBaseAction(action)) {
         newDocument = _baseReducer(newDocument, action, customReducer);
     }

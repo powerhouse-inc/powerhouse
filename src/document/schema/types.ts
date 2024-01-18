@@ -49,6 +49,8 @@ export type BaseAction =
   | UndoAction
   | NOOPAction;
 
+export type UndoRedoAction = RedoAction | UndoAction;
+
 export type DocumentFile = {
   __typename?: 'DocumentFile';
   data: Scalars['String']['output'];
