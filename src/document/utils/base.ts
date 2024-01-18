@@ -174,7 +174,6 @@ export function readOnly<T>(value: T): Immutable<T> {
     return castImmutable(freeze(value, true));
 }
 
-
 /**
  * Maps skipped operations in an array of operations.
  * Skipped operations are operations that are ignored during processing.
@@ -188,29 +187,24 @@ export function mapSkippedOperations<A extends Action>(
     const ops = [...operations];
 
     let skipped = 0;
-    let latestOpIndex = ops.length > 0
-        ? ops[ops.length - 1].index
-        : 0;
+    let latestOpIndex = ops.length > 0 ? ops[ops.length - 1].index : 0;
 
     const scopeOpsWithIgnore = [] as MappedOperation<A>[];
 
     for (const operation of ops.reverse()) {
         if (skipped > 0) {
             const operationsDiff = latestOpIndex - operation.index;
-            skipped -= operationsDiff
+            skipped -= operationsDiff;
         }
-        
-
 
         if (skipped < 0) {
             throw new Error('Invalid operation index, missing operations');
         }
-        
+
         const mappedOp = {
             ignore: skipped > 0,
             operation,
         };
-
 
         if (operation.skip > 0) {
             // here we add 1 to the skip number because we want to get the number of
@@ -251,7 +245,7 @@ export function sortMappedOperations<A extends Action>(
             (a, b) =>
                 new Date(a.operation.timestamp).getTime() -
                 new Date(b.operation.timestamp).getTime(),
-        ); 
+        );
 }
 
 // Runs the operations on the initial data using the
@@ -300,14 +294,16 @@ export function replayDocument<T, A extends Action, L>(
         };
     }, {} as DocumentOperations<A>);
 
-
-    const activeOperationsMap = Object.keys(activeOperations).reduce((acc, curr) => {
-        const scope = curr as keyof DocumentOperations<A>;
-        return {
-            ...acc,
-            [scope]: mapSkippedOperations(activeOperations[scope]),
-        };
-    }, {} as DocumentOperationsIgnoreMap<A>)
+    const activeOperationsMap = Object.keys(activeOperations).reduce(
+        (acc, curr) => {
+            const scope = curr as keyof DocumentOperations<A>;
+            return {
+                ...acc,
+                [scope]: mapSkippedOperations(activeOperations[scope]),
+            };
+        },
+        {} as DocumentOperationsIgnoreMap<A>,
+    );
 
     // runs all the operations not ignored on the new document
     // and returns the resulting state
@@ -315,12 +311,9 @@ export function replayDocument<T, A extends Action, L>(
         (document, { ignore, operation }) => {
             if (ignore) {
                 // ignored operations are replaced by NOOP operations
-                return reducer(
-                    document,
-                    noop(operation.scope),
-                    dispatch,
-                    { skip: operation.skip },
-                );
+                return reducer(document, noop(operation.scope), dispatch, {
+                    skip: operation.skip,
+                });
             }
 
             return reducer(document, operation, dispatch);

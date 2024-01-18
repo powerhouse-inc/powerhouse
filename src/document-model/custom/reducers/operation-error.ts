@@ -141,7 +141,7 @@ export const reducer: DocumentModelOperationErrorOperations = {
                     action.input.operationId
                 ) {
                     latestSpec.modules[i].operations[j].errors.sort(
-                        errorSorter(action.input.order)
+                        errorSorter(action.input.order),
                     );
                 }
             }

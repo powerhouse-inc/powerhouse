@@ -99,11 +99,5 @@ export const loadState = <S, T>(
         z.LoadStateActionInputSchema,
     );
 
-
-export const noop = (scope: OperationScope = 'global') => createAction<NOOPAction>(
-    'NOOP',
-    {},
-    undefined,
-    undefined,
-    scope,
-);
+export const noop = (scope: OperationScope = 'global') =>
+    createAction<NOOPAction>('NOOP', {}, undefined, undefined, scope);

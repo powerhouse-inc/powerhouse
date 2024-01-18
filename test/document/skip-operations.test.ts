@@ -1,6 +1,10 @@
 import { utils } from '../../src/document';
 import { setName } from '../../src/document/actions';
-import { createDocument, createExtendedState, mapSkippedOperations } from '../../src/document/utils';
+import {
+    createDocument,
+    createExtendedState,
+    mapSkippedOperations,
+} from '../../src/document/utils';
 import {
     emptyReducer,
     mapOperations,
@@ -20,38 +24,41 @@ describe('skip operations', () => {
             document = emptyReducer(document, setName('TEST_1'));
             document = emptyReducer(document, setName('TEST_2'));
             document = emptyReducer(document, setName('TEST_3'));
-     
-    
+
             expect(document.revision.global).toBe(3);
-    
+
             const ops = mapOperations(document.operations.global);
-    
+
             expect(ops.length).toBe(3);
-    
+
             ops.forEach(op => {
                 expect(op).toHaveProperty('skip', 0);
             });
         });
-    
+
         it('should include skip param in base operations with provided value', () => {
             let document = createDocument();
-            document = emptyReducer(document, setName('TEST_1'), undefined, { skip: 1 });
-            document = emptyReducer(document, setName('TEST_2'), undefined, { skip: 2 });
-            document = emptyReducer(document, setName('TEST_3'), undefined, { skip: 3 });
-     
-    
+            document = emptyReducer(document, setName('TEST_1'), undefined, {
+                skip: 1,
+            });
+            document = emptyReducer(document, setName('TEST_2'), undefined, {
+                skip: 2,
+            });
+            document = emptyReducer(document, setName('TEST_3'), undefined, {
+                skip: 3,
+            });
+
             expect(document.revision.global).toBe(3);
-    
+
             const ops = mapOperations(document.operations.global);
-    
+
             expect(ops.length).toBe(3);
-    
+
             ops.forEach((op, index) => {
                 expect(op).toHaveProperty('skip', index + 1);
             });
         });
     });
-    
 
     describe('mapSkippedOperations', () => {
         it('should tag as "ignored" operation 2 when operation 3 -> (skip=1)', () => {
@@ -60,17 +67,17 @@ describe('skip operations', () => {
                 createFakeOperation(2),
                 createFakeOperation(3, 1),
             ];
-     
+
             const ignoredIndexes = [2];
-    
+
             const mappedOps = mapSkippedOperations(operations);
             expect(mappedOps.length).toBe(3);
-            mappedOps.forEach((mapOp) => {
+            mappedOps.forEach(mapOp => {
                 let ignore = false;
                 if (ignoredIndexes.includes(mapOp.operation.index)) {
                     ignore = true;
                 }
-    
+
                 expect(mapOp).toHaveProperty('ignore', ignore);
             });
         });
@@ -83,17 +90,17 @@ describe('skip operations', () => {
                 createFakeOperation(4),
                 createFakeOperation(5, 3),
             ];
-     
+
             const ignoredIndexes = [2, 3, 4];
-    
+
             const mappedOps = mapSkippedOperations(operations);
             expect(mappedOps.length).toBe(5);
-            mappedOps.forEach((mapOp) => {
+            mappedOps.forEach(mapOp => {
                 let ignore = false;
                 if (ignoredIndexes.includes(mapOp.operation.index)) {
                     ignore = true;
                 }
-    
+
                 expect(mapOp).toHaveProperty('ignore', ignore);
             });
         });
@@ -107,17 +114,17 @@ describe('skip operations', () => {
                 createFakeOperation(5),
                 createFakeOperation(6, 1),
             ];
-     
+
             const ignoredIndexes = [2, 5];
-    
+
             const mappedOps = mapSkippedOperations(operations);
             expect(mappedOps.length).toBe(6);
-            mappedOps.forEach((mapOp) => {
+            mappedOps.forEach(mapOp => {
                 let ignore = false;
                 if (ignoredIndexes.includes(mapOp.operation.index)) {
                     ignore = true;
                 }
-    
+
                 expect(mapOp).toHaveProperty('ignore', ignore);
             });
         });
@@ -132,17 +139,17 @@ describe('skip operations', () => {
                 createFakeOperation(6),
                 createFakeOperation(7, 6),
             ];
-     
+
             const ignoredIndexes = [1, 2, 3, 4, 5, 6];
-    
+
             const mappedOps = mapSkippedOperations(operations);
             expect(mappedOps.length).toBe(7);
-            mappedOps.forEach((mapOp) => {
+            mappedOps.forEach(mapOp => {
                 let ignore = false;
                 if (ignoredIndexes.includes(mapOp.operation.index)) {
                     ignore = true;
                 }
-    
+
                 expect(mapOp).toHaveProperty('ignore', ignore);
             });
         });
@@ -160,12 +167,12 @@ describe('skip operations', () => {
 
             const mappedOps = mapSkippedOperations(operations);
             expect(mappedOps.length).toBe(5);
-            mappedOps.forEach((mapOp) => {
+            mappedOps.forEach(mapOp => {
                 let ignore = false;
                 if (ignoredIndexes.includes(mapOp.operation.index)) {
                     ignore = true;
                 }
-    
+
                 expect(mapOp).toHaveProperty('ignore', ignore);
             });
         });
@@ -183,121 +190,197 @@ describe('skip operations', () => {
 
             const mappedOps = mapSkippedOperations(operations);
             expect(mappedOps.length).toBe(5);
-            mappedOps.forEach((mapOp) => {
+            mappedOps.forEach(mapOp => {
                 let ignore = false;
                 if (ignoredIndexes.includes(mapOp.operation.index)) {
                     ignore = true;
                 }
-    
+
                 expect(mapOp).toHaveProperty('ignore', ignore);
             });
-        })
+        });
     });
 
     describe('replayOperations', () => {
         it('should ignore operation 2, when operation 3 -> (skip=1)', () => {
-            const initialState = createExtendedState<CountState, CountLocalState>({
+            const initialState = createExtendedState<
+                CountState,
+                CountLocalState
+            >({
                 documentType: 'powerhouse/counter',
                 state: { global: { count: 0 }, local: {} },
             });
 
-            let document = createDocument<CountState, CountAction, CountLocalState>(
-                initialState
+            let document = createDocument<
+                CountState,
+                CountAction,
+                CountLocalState
+            >(initialState);
+
+            document = countReducer(document, increment()); // valid operation, skip 0
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment(), undefined, {
+                skip: 1,
+            }); // valid operation, skip 1
+
+            const replayedDoc = utils.replayOperations(
+                initialState,
+                document.operations,
+                baseCountReducer,
             );
 
-            document = countReducer(document, increment());                             // valid operation, skip 0
-            document = countReducer(document, increment());                             // skipped
-            document = countReducer(document, increment(), undefined, { skip: 1 });     // valid operation, skip 1
-
-            const replayedDoc = utils.replayOperations(initialState, document.operations, baseCountReducer);
-
             expect(replayedDoc.state.global.count).toBe(2);
-            
+
             expect(replayedDoc.revision.global).toBe(3);
             expect(replayedDoc.operations.global.length).toBe(3);
-            expect(replayedDoc.operations.global[1]).toHaveProperty('type', 'NOOP');
+            expect(replayedDoc.operations.global[1]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
         });
 
         it('should ignore operation 2, 3 and 4, when operation 5 -> (skip=3)', () => {
-            const initialState = createExtendedState<CountState, CountLocalState>({
+            const initialState = createExtendedState<
+                CountState,
+                CountLocalState
+            >({
                 documentType: 'powerhouse/counter',
                 state: { global: { count: 0 }, local: {} },
             });
 
-            let document = createDocument<CountState, CountAction, CountLocalState>(
-                initialState
+            let document = createDocument<
+                CountState,
+                CountAction,
+                CountLocalState
+            >(initialState);
+
+            document = countReducer(document, increment()); // valid operation, skip 0
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment(), undefined, {
+                skip: 3,
+            }); // valid operation, skip 3
+
+            const replayedDoc = utils.replayOperations(
+                initialState,
+                document.operations,
+                baseCountReducer,
             );
 
-            document = countReducer(document, increment());                             // valid operation, skip 0
-            document = countReducer(document, increment());                             // skipped
-            document = countReducer(document, increment());                             // skipped
-            document = countReducer(document, increment());                             // skipped
-            document = countReducer(document, increment(), undefined, { skip: 3 });     // valid operation, skip 3
-
-            const replayedDoc = utils.replayOperations(initialState, document.operations, baseCountReducer);
-
             expect(replayedDoc.state.global.count).toBe(2);
-            
+
             expect(replayedDoc.revision.global).toBe(5);
             expect(replayedDoc.operations.global.length).toBe(5);
-            expect(replayedDoc.operations.global[1]).toHaveProperty('type', 'NOOP');
-            expect(replayedDoc.operations.global[2]).toHaveProperty('type', 'NOOP');
-            expect(replayedDoc.operations.global[3]).toHaveProperty('type', 'NOOP');
+            expect(replayedDoc.operations.global[1]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
+            expect(replayedDoc.operations.global[2]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
+            expect(replayedDoc.operations.global[3]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
         });
 
         it('should ignore operation 2 and 5, when operation 3 -> (skip=1) and operation 6 -> (skip=1)', () => {
-            const initialState = createExtendedState<CountState, CountLocalState>({
+            const initialState = createExtendedState<
+                CountState,
+                CountLocalState
+            >({
                 documentType: 'powerhouse/counter',
                 state: { global: { count: 0 }, local: {} },
             });
 
-            let document = createDocument<CountState, CountAction, CountLocalState>(
-                initialState
+            let document = createDocument<
+                CountState,
+                CountAction,
+                CountLocalState
+            >(initialState);
+
+            document = countReducer(document, increment()); // valid operation, skip 0
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment(), undefined, {
+                skip: 1,
+            }); // valid operation, skip 1
+            document = countReducer(document, increment()); // valid operation, skip 0
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment(), undefined, {
+                skip: 1,
+            }); // valid operation, skip 1
+
+            const replayedDoc = utils.replayOperations(
+                initialState,
+                document.operations,
+                baseCountReducer,
             );
 
-            document = countReducer(document, increment());                         // valid operation, skip 0
-            document = countReducer(document, increment());                         // skipped
-            document = countReducer(document, increment(), undefined, { skip: 1 }); // valid operation, skip 1
-            document = countReducer(document, increment());                         // valid operation, skip 0
-            document = countReducer(document, increment());                         // skipped
-            document = countReducer(document, increment(), undefined, { skip: 1 }); // valid operation, skip 1
-
-            const replayedDoc = utils.replayOperations(initialState, document.operations, baseCountReducer);
-
             expect(replayedDoc.state.global.count).toBe(4);
-            
+
             expect(replayedDoc.revision.global).toBe(6);
             expect(replayedDoc.operations.global.length).toBe(6);
-            expect(replayedDoc.operations.global[1]).toHaveProperty('type', 'NOOP');
-            expect(replayedDoc.operations.global[4]).toHaveProperty('type', 'NOOP');
+            expect(replayedDoc.operations.global[1]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
+            expect(replayedDoc.operations.global[4]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
         });
 
         it('should ignore all the previous operations, when operation 5 -> (skip=4)', () => {
-            const initialState = createExtendedState<CountState, CountLocalState>({
+            const initialState = createExtendedState<
+                CountState,
+                CountLocalState
+            >({
                 documentType: 'powerhouse/counter',
                 state: { global: { count: 0 }, local: {} },
             });
 
-            let document = createDocument<CountState, CountAction, CountLocalState>(
-                initialState
+            let document = createDocument<
+                CountState,
+                CountAction,
+                CountLocalState
+            >(initialState);
+
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment()); // skipped
+            document = countReducer(document, increment(), undefined, {
+                skip: 4,
+            }); // valid operation, skip 4
+
+            const replayedDoc = utils.replayOperations(
+                initialState,
+                document.operations,
+                baseCountReducer,
             );
 
-            document = countReducer(document, increment());                         // skipped
-            document = countReducer(document, increment());                         // skipped
-            document = countReducer(document, increment());                         // skipped
-            document = countReducer(document, increment());                         // skipped
-            document = countReducer(document, increment(), undefined, { skip: 4 }); // valid operation, skip 4
-
-            const replayedDoc = utils.replayOperations(initialState, document.operations, baseCountReducer);
-
             expect(replayedDoc.state.global.count).toBe(1);
-            
+
             expect(replayedDoc.revision.global).toBe(5);
             expect(replayedDoc.operations.global.length).toBe(5);
-            expect(replayedDoc.operations.global[0]).toHaveProperty('type', 'NOOP');
-            expect(replayedDoc.operations.global[1]).toHaveProperty('type', 'NOOP');
-            expect(replayedDoc.operations.global[2]).toHaveProperty('type', 'NOOP');
-            expect(replayedDoc.operations.global[3]).toHaveProperty('type', 'NOOP');
+            expect(replayedDoc.operations.global[0]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
+            expect(replayedDoc.operations.global[1]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
+            expect(replayedDoc.operations.global[2]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
+            expect(replayedDoc.operations.global[3]).toHaveProperty(
+                'type',
+                'NOOP',
+            );
         });
     });
 });

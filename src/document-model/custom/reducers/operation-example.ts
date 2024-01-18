@@ -56,7 +56,7 @@ export const reducer: DocumentModelOperationExampleOperations = {
             for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
                 latestSpec.modules[i].operations[j].examples =
                     latestSpec.modules[i].operations[j].examples.filter(
-                        e => e.id != action.input.id
+                        e => e.id != action.input.id,
                     );
             }
         }
@@ -72,7 +72,7 @@ export const reducer: DocumentModelOperationExampleOperations = {
                     action.input.operationId
                 ) {
                     latestSpec.modules[i].operations[j].examples.sort(
-                        exampleSorter(action.input.order)
+                        exampleSorter(action.input.order),
                     );
                 }
             }

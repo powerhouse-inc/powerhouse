@@ -39,7 +39,7 @@ export type ActionWithAttachment<
 };
 
 export type ReducerOptions = {
-    /** The number of operations to skip before this new action is applied */    
+    /** The number of operations to skip before this new action is applied */
     skip?: number;
 };
 
@@ -179,8 +179,8 @@ export type DocumentOperations<A extends Action> = Required<
 
 export type MappedOperation<A extends Action> = {
     ignore: boolean;
-    operation: Operation<A | BaseAction>
-}
+    operation: Operation<A | BaseAction>;
+};
 
 export type DocumentOperationsIgnoreMap<A extends Action> = Required<
     Record<OperationScope, MappedOperation<A>[]>

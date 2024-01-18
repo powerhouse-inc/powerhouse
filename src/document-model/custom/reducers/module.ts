@@ -45,7 +45,7 @@ export const reducer: DocumentModelModuleOperations = {
         const latestSpec =
             state.specifications[state.specifications.length - 1];
         latestSpec.modules = latestSpec.modules.filter(
-            m => m.id != action.input.id
+            m => m.id != action.input.id,
         );
     },
 

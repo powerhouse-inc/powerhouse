@@ -15,7 +15,12 @@ import {
     UNDO,
 } from './actions/types';
 import { z } from './schema';
-import { Action, Document, ImmutableStateReducer, ReducerOptions } from './types';
+import {
+    Action,
+    Document,
+    ImmutableStateReducer,
+    ReducerOptions,
+} from './types';
 import { isBaseAction, hashDocument } from './utils';
 import { SignalDispatch } from './signal';
 
@@ -60,7 +65,11 @@ function updateHeader<T extends Document>(document: T, action: Action): T {
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateOperations<T extends Document>(document: T, action: Action, skip = 0): T {
+function updateOperations<T extends Document>(
+    document: T,
+    action: Action,
+    skip = 0,
+): T {
     // UNDO, REDO and PRUNE are meta operations
     // that alter the operations history themselves
     if ([UNDO, REDO, PRUNE].includes(action.type)) {
@@ -101,7 +110,11 @@ function updateOperations<T extends Document>(document: T, action: Action, skip 
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateDocument<T extends Document>(document: T, action: Action, skip = 0) {
+function updateDocument<T extends Document>(
+    document: T,
+    action: Action,
+    skip = 0,
+) {
     let newDocument = updateOperations(document, action, skip);
     newDocument = updateHeader(newDocument, action);
     return newDocument;
@@ -157,9 +170,7 @@ export function baseReducer<T, A extends Action, L>(
     dispatch?: SignalDispatch,
     options: ReducerOptions = {},
 ) {
-    const {
-        skip = 0,
-    } = options;
+    const { skip = 0 } = options;
 
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first

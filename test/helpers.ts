@@ -1,4 +1,9 @@
-import { Action, ImmutableStateReducer, Operation, OperationScope } from '../src/document/types';
+import {
+    Action,
+    ImmutableStateReducer,
+    Operation,
+    OperationScope,
+} from '../src/document/types';
 import { createAction, createReducer } from '../src/document/utils';
 // Empty reducer that supports base actions
 export const emptyReducer = createReducer(state => state);
@@ -37,7 +42,11 @@ export const setLocalName = (name: string) =>
         'local',
     );
 
-export const baseCountReducer: ImmutableStateReducer<CountState, CountAction, CountLocalState> = (state, action) => {
+export const baseCountReducer: ImmutableStateReducer<
+    CountState,
+    CountAction,
+    CountLocalState
+> = (state, action) => {
     switch (action.type) {
         case 'INCREMENT':
             state.global.count += 1;
@@ -51,7 +60,7 @@ export const baseCountReducer: ImmutableStateReducer<CountState, CountAction, Co
         default:
             return state;
     }
-}
+};
 
 export const countReducer = createReducer<
     CountState,
@@ -69,13 +78,17 @@ export const mapOperations = (operations: Operation[]) => {
     }));
 };
 
-
-export const createFakeOperation = (index = 0, skip = 0, scope: OperationScope = 'global') => ({
-    type: 'FAKE_OP',
-    input: `TEST_${index}`,
-    scope,
-    skip,
-    index,
-    timestamp: new Date().toISOString(),
-    hash: `${index}`,
-} as Operation);
+export const createFakeOperation = (
+    index = 0,
+    skip = 0,
+    scope: OperationScope = 'global',
+) =>
+    ({
+        type: 'FAKE_OP',
+        input: `TEST_${index}`,
+        scope,
+        skip,
+        index,
+        timestamp: new Date().toISOString(),
+        hash: `${index}`,
+    }) as Operation;

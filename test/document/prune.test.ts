@@ -128,7 +128,7 @@ describe('PRUNE operation', () => {
                     2,
                 ),
                 index: 2,
-                skip: 0
+                skip: 0,
             },
             { ...increment(), index: 3, skip: 0 },
         ]);
@@ -170,7 +170,7 @@ describe('PRUNE operation', () => {
                     4,
                 ),
                 index: 1,
-                skip: 0
+                skip: 0,
             },
         ]);
         expect(newDocument.documentType).toBe('powerhouse/counter');
