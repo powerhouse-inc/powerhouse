@@ -18,8 +18,8 @@
                     "examples": []
                 },
                 "local": {
-                    "schema": "type DocumentDriveLocalState{\n    sharingType: String\n    availableOffline: Boolean!\n}",
-                    "initialValue": "{ \"sharingType\": \"private\", \"availableOffline\": false}",
+                    "schema": "type ListenerFilter {\n    documentType: [String!]!\n    documentId: [ID!]\n    scope: [String!]\n    branch: [String!]\n}\n\nenum TransmitterType {\n    Internal,\n    SwitchboardPush,\n    PullResponder,\n    SecureConnect, \n    MatrixConnect,\n    RESTWebhook\n}\n\ntype ListenerCallInfo {\n    transmitterType: TransmitterType\n    name: String\n    data: String\n}\n\ntype Listener {\n    listenerId: ID!\n    label: String\n    block: Boolean!\n    system: Boolean!\n    filter: ListenerFilter!\n    callInfo: ListenerCallInfo\n}\n\ntype DocumentDriveLocalState{\n    sharingType: String\n    listeners: [Listener!]!\n    availableOffline: Boolean!\n}",
+                    "initialValue": "{ \"listeners\": [], \"sharingType\": \"private\", \"availableOffline\": false}",
                     "examples": []
                 }
             },
@@ -140,6 +140,28 @@
                             "name": "SET_AVAILABLE_OFFLINE",
                             "description": "",
                             "schema": "input SetAvailableOfflineInput {\n    availableOffline: Boolean!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "local"
+                        },
+                        {
+                            "id": "qGCiPGpTt/cyz3HzyrBn92z9dsU=",
+                            "name": "ADD_LISTENER",
+                            "description": "",
+                            "schema": "input AddListenerInput {\n    listener: Listener!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "local"
+                        },
+                        {
+                            "id": "qGCiPGpTt/cyz3HzyrBn92z10dsU=",
+                            "name": "REMOVE_LISTENER",
+                            "description": "",
+                            "schema": "input RemoveListenerInput {\n    listenerId: String!\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],

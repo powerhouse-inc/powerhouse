@@ -31,8 +31,40 @@ type DocumentDriveState {
     remoteUrl: String
 }
 
+type ListenerFilter {
+    documentType: [String!]!
+    documentId: [ID!]
+    scope: [String!]
+    branch: [String!]
+}
+
+enum TransmitterType {
+    Internal,
+    SwitchboardPush,
+    PullResponder,
+    SecureConnect, 
+    MatrixConnect,
+    RESTWebhook
+}
+
+type ListenerCallInfo {
+    transmitterType: TransmitterType
+    name: String
+    data: String
+}
+
+type Listener {
+    listenerId: ID!
+    label: String
+    block: Boolean!
+    system: Boolean!
+    filter: ListenerFilter!
+    callInfo: ListenerCallInfo
+}
+
 type DocumentDriveLocalState{
     sharingType: String
+    listeners: [Listener!]!
     availableOffline: Boolean!
 }
 
@@ -81,7 +113,6 @@ input MoveNodeInput {
     targetParentFolder: ID
 }
 
-
 # Drive
 
 input SetDriveNameInput {
@@ -94,4 +125,12 @@ input SetSharingTypeInput {
 
 input SetAvailableOfflineInput {
     availableOffline: Boolean!
+}
+
+input AddListenerInput {
+    listener: Listener!
+}
+
+input RemoveListenerInput {
+    listenerId: String!
 }

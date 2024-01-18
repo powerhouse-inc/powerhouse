@@ -16,4 +16,13 @@ export const reducer: DocumentDriveDriveOperations = {
     setAvailableOfflineOperation(state, action, dispatch) {
         state.availableOffline = action.input.availableOffline;
     },
+    addListenerOperation(state, action, dispatch) {
+        if (state.listeners.find(listener => listener.listenerId === action.input.listener.listenerId)) {
+            throw new Error(`A listener with Id: ${action.input.listener.listenerId} already exists`);
+        }
+        state.listeners.push(action.input.listener);
+    },
+    removeListenerOperation(state, action, dispatch) {
+        state.listeners = state.listeners.filter(listener => listener.listenerId === action.input.listenerId);
+    },
 }
