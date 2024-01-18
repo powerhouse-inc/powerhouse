@@ -3,7 +3,7 @@
         "module": "ESNext",
         "moduleResolution": "Bundler",
         "target": "esnext",
-        "types": ["node", "jest"],
+        "types": ["node", "vitest/globals"],
         "declaration": true,
         "outDir": "./dist",
         "esModuleInterop": true,

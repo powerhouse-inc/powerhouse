@@ -1,6 +1,5 @@
 import { Action, ImmutableStateReducer, Operation, OperationScope } from '../src/document/types';
 import { createAction, createReducer } from '../src/document/utils';
-
 // Empty reducer that supports base actions
 export const emptyReducer = createReducer(state => state);
 

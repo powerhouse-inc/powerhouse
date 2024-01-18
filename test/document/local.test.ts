@@ -11,7 +11,7 @@ import {
 
 describe('Local reducer', () => {
     beforeAll(() => {
-        jest.useFakeTimers().setSystemTime(new Date('2020-01-01'));
+        vi.useFakeTimers().setSystemTime(new Date('2020-01-01'));
     });
 
     it('should update local revision', async () => {
@@ -25,11 +25,11 @@ describe('Local reducer', () => {
     });
 
     it('should update lastModified', async () => {
-        jest.useFakeTimers();
+        vi.useFakeTimers();
         const document = createDocument();
         await new Promise(r => {
             setTimeout(r, 100);
-            jest.runOnlyPendingTimers();
+            vi.runOnlyPendingTimers();
         });
         const newDocument = emptyReducer(document, {
             type: 'TEST',
@@ -39,11 +39,11 @@ describe('Local reducer', () => {
         expect(new Date(document.lastModified).getTime()).toBeLessThan(
             new Date(newDocument.lastModified).getTime(),
         );
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 
     it('should not update global operations list', async () => {
-        jest.useFakeTimers({ now: new Date('2023-01-01') });
+        vi.useFakeTimers({ now: new Date('2023-01-01') });
         const document = createDocument();
         const newDocument = emptyReducer(document, {
             type: 'TEST',
@@ -66,7 +66,7 @@ describe('Local reducer', () => {
     });
 
     it('should update local operations list', async () => {
-        jest.useFakeTimers({ now: new Date('2023-01-01') });
+        vi.useFakeTimers({ now: new Date('2023-01-01') });
         const document = createDocument();
         const newDocument = emptyReducer(document, {
             type: 'TEST',
