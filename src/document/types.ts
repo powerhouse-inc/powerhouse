@@ -302,3 +302,9 @@ export type DocumentModelLib = {
     documentModels: DocumentModel[];
     editors: Editor[];
 };
+
+export type UndoRedoProcessResult<T, A extends Action, L> = {
+    document: Document<T, A, L>,
+    action: A | BaseAction,
+    skip: number
+};

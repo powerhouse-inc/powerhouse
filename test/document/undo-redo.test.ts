@@ -11,26 +11,26 @@ import {
 } from '../helpers';
 
 describe('UNDO/REDO', () => {
-    describe('processUndoRedo -> UNDO', () => {
-        let document: Document<CountState, CountAction, CountLocalState>;
+    let document: Document<CountState, CountAction, CountLocalState>;
 
-        beforeEach(() => {
-            const initialState = createExtendedState<CountState, CountLocalState>({
-                documentType: 'powerhouse/counter',
-                state: { global: { count: 0 }, local: {} },
-            });
-
-            document = createDocument<CountState, CountAction, CountLocalState>(
-                initialState
-            );
-
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
+    beforeEach(() => {
+        const initialState = createExtendedState<CountState, CountLocalState>({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: {} },
         });
 
+        document = createDocument<CountState, CountAction, CountLocalState>(
+            initialState
+        );
+
+        document = countReducer(document, increment());
+        document = countReducer(document, increment());
+        document = countReducer(document, increment());
+        document = countReducer(document, increment());
+        document = countReducer(document, increment());
+    });
+
+    describe('processUndoRedo -> UNDO', () => {
         it('should return a NOOP action when an UNDO action is dispatched', () => {
             const skip = 0;
             const undoAction = undo(1);
@@ -178,25 +178,6 @@ describe('UNDO/REDO', () => {
     });
 
     describe('processUndoRedo -> REDO', () => {
-        let document: Document<CountState, CountAction, CountLocalState>;
-
-        beforeEach(() => {
-            const initialState = createExtendedState<CountState, CountLocalState>({
-                documentType: 'powerhouse/counter',
-                state: { global: { count: 0 }, local: {} },
-            });
-
-            document = createDocument<CountState, CountAction, CountLocalState>(
-                initialState
-            );
-
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-        });
-
         it("should throw an error when there's no operation to redo in the clipboard", () => {
             const initialState = createExtendedState<CountState, CountLocalState>({
                 documentType: 'powerhouse/counter',
@@ -266,25 +247,6 @@ describe('UNDO/REDO', () => {
     });
 
     describe('UNDO', () => {
-        let document: Document<CountState, CountAction, CountLocalState>;
-
-        beforeEach(() => {
-            const initialState = createExtendedState<CountState, CountLocalState>({
-                documentType: 'powerhouse/counter',
-                state: { global: { count: 0 }, local: {} },
-            });
-
-            document = createDocument<CountState, CountAction, CountLocalState>(
-                initialState
-            );
-
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-        });
-
         it('should undo operations', () => {
             document = countReducer(document, undo(1));
 
@@ -411,25 +373,6 @@ describe('UNDO/REDO', () => {
     });
 
     describe('REDO', () => {
-        let document: Document<CountState, CountAction, CountLocalState>;
-
-        beforeEach(() => {
-            const initialState = createExtendedState<CountState, CountLocalState>({
-                documentType: 'powerhouse/counter',
-                state: { global: { count: 0 }, local: {} },
-            });
-
-            document = createDocument<CountState, CountAction, CountLocalState>(
-                initialState
-            );
-
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-        });
-
         it("should redo the latest operation", () => {
             document = countReducer(document, undo(2));
             document = countReducer(document, redo(1));

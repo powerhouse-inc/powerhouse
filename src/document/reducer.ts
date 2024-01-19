@@ -129,10 +129,6 @@ function _baseReducer<T, A extends Action, L>(
     switch (action.type) {
         case SET_NAME:
             return setNameOperation(document, action.input);
-        case UNDO:
-            return undoOperation(document, action, wrappedReducer);
-        case REDO:
-            return redoOperation(document, action, wrappedReducer);
         case PRUNE:
             return pruneOperation(document, action, wrappedReducer);
         case LOAD_STATE:
@@ -161,96 +157,13 @@ export function processUndoRedo<T, A extends Action, L>(
     action: UndoRedoAction,
     skip: number,
 ): UndoRedoProcessResult<T, A, L> {
-    const scope = action.scope;
-    const defaultResult: UndoRedoProcessResult<T, A, L> = {
-        document,
-        action,
-        skip,
-    };
-
     switch (action.type) {
-        case UNDO: {
-            return produce(defaultResult, draft => {
-                if (draft.document.operations[scope].length < 1) {
-                    throw new Error(`Cannot undo: no operations in history for scope "${scope}"`);
-                }
-
-                if (!draft.action.input || (draft.action as UndoAction).input < 1) {
-                    throw new Error(`Invalid UNDO action: input value must be greater than 0`);
-                }
-
-                if (draft.skip > 0) {
-                    throw new Error(`Cannot undo: skip value from reducer cannot be used with UNDO action`);
-                }
-
-                const [ lastOperation ] = draft.document.operations[scope].slice(-1);
-                const isLatestOpNOOP = lastOperation.type === 'NOOP' && lastOperation.skip > 0;
-
-                draft.skip += (draft.action as UndoAction).input;
-
-                if (isLatestOpNOOP) {
-                    draft.skip += lastOperation.skip;
-                    draft.document.operations[scope].pop();
-                }
-
-                if (draft.document.operations[scope].length < draft.skip) {
-                    throw new Error(`Cannot undo: you can't undo more operations than the ones in the scope history`);
-                }
-
-                const operationsLastIndex = draft.document.operations[scope].length - 1;
-                let skippedOpsLeft = (draft.action as UndoAction).input;
-                let index = isLatestOpNOOP ? operationsLastIndex - lastOperation.skip : operationsLastIndex;
-
-                while (skippedOpsLeft > 0 && index > 0) {
-                    const op = draft.document.operations[scope][index];
-
-                    if (op.type === 'NOOP' && op.skip > 0) {
-                        index = index - (op.skip + 1);
-                        draft.skip += op.skip + 1;
-                    } else {
-                        draft.document.clipboard.push({ ...op });
-                        skippedOpsLeft--;
-                        index--;
-                    }
-                }
-                
-                draft.action = noop(scope);
-            });
-        }
-            
+        case UNDO:
+            return undoOperation(document, action, skip);
         case REDO:
-            return produce(defaultResult, draft => {
-                if (draft.skip > 0) {
-                    throw new Error(`Cannot redo: skip value from reducer cannot be used with REDO action`);
-                }
-
-                if ((draft.action as RedoAction).input > 1) {
-                    throw new Error(`Cannot redo: you can only redo one operation at a time`);
-                }
-
-                if ((draft.action as RedoAction).input < 1) {
-                    throw new Error(`Invalid REDO action: invalid redo input value`);
-                }
-
-                if (draft.document.clipboard.length < 1) {
-                    throw new Error(`Cannot redo: no operations in the clipboard`);
-                }
-
-                const operationIndex = draft.document.clipboard.findLastIndex((op) => op.scope === scope);
-                if (operationIndex < 0) {
-                    throw new Error(`Cannot redo: no operations in clipboard for scope "${scope}"`);
-                }
-
-                const operation = draft.document.clipboard.splice(operationIndex, 1)[0];
-
-                draft.action = castDraft({
-                    type: operation.type,
-                    scope: operation.scope,
-                    input: operation.input,
-                } as A | BaseAction);
-            });
+            return redoOperation(document, action, skip);
         default:
-            return defaultResult;
+            return { document, action, skip };
     }
 }
 

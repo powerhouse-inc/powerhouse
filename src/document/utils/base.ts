@@ -339,7 +339,12 @@ export function replayDocument<T, A extends Action, L>(
                 );
             }
 
-            return reducer(document, operation, dispatch);
+            return reducer(
+                document,
+                operation,
+                dispatch,
+                { skip: operation.skip, ignoreSkipOperations: true },
+            );
         },
         document,
     );
