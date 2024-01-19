@@ -26,7 +26,7 @@ export const Default: Story = {
         const [, setArgs] = useArgs<typeof args>();
 
         return (
-            <div className="grid h-full w-full place-items-center">
+            <div className="grid size-full place-items-center">
                 <button
                     className="rounded-lg bg-red-500 p-4 text-white"
                     onClick={() => {

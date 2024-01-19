@@ -1,11 +1,16 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import {
+    ComponentPropsWithoutRef,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from 'react';
 import { useKeyboard } from 'react-aria';
 import { Button, Input, PressEvent, TextField } from 'react-aria-components';
 import ClickAwayListener from 'react-click-away-listener';
 import { twMerge } from 'tailwind-merge';
 
 export interface TreeViewInputProps
-    extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSubmit'> {
+    extends Omit<ComponentPropsWithoutRef<'input'>, 'onSubmit'> {
     cancelIcon?: React.JSX.Element;
     submitIcon?: React.JSX.Element;
     onCancelInput?: () => void;

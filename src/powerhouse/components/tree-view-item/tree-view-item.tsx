@@ -84,7 +84,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                             )}
                         />
                     ) : (
-                        <span className="inline-block h-6 w-6" />
+                        <span className="inline-block size-6" />
                     )}
                     {icon && (
                         <span className="pointer-events-none mr-2">

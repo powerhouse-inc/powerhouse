@@ -11,18 +11,7 @@
         "plugin:@typescript-eslint/stylistic-type-checked",
         "plugin:storybook/recommended",
         "plugin:tailwindcss/recommended",
-        "prettier"
-    ],
-    "overrides": [
-        {
-            "env": {
-                "node": true
-            },
-            "files": [".eslintrc.{js,cjs}"],
-            "parserOptions": {
-                "sourceType": "script"
-            }
-        }
+        "plugin:prettier/recommended"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
@@ -31,7 +20,7 @@
         "tsconfigRootDir": ".",
         "project": true
     },
-    "plugins": ["react", "jest-dom", "@typescript-eslint"],
+    "plugins": ["react", "@typescript-eslint"],
     "rules": {
         "react/prop-types": "off",
         "react/react-in-jsx-scope": "off",

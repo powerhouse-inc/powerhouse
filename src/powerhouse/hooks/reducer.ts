@@ -7,10 +7,10 @@ import {
 } from '@/powerhouse';
 import { useReducer } from 'react';
 
-export function wrapReducer<State, A extends Action>(
-    reducer: Reducer<State, A>,
+export function wrapReducer<State, A extends Action, LocalState>(
+    reducer: Reducer<State, A, LocalState>,
     onError?: (error: unknown) => void,
-): Reducer<State, A> {
+): Reducer<State, A, LocalState> {
     return (state, action) => {
         try {
             return reducer(state, action);
@@ -21,11 +21,11 @@ export function wrapReducer<State, A extends Action>(
     };
 }
 
-export function createUseDocumentReducer<State, A extends Action>(
-    reducer: Reducer<State, A>,
+export function createUseDocumentReducer<State, A extends Action, LocalState>(
+    reducer: Reducer<State, A, LocalState>,
     createDocument: (
         document?: Partial<ExtendedState<Partial<State>>>,
-    ) => Document<State, A>,
+    ) => Document<State, A, LocalState>,
 ) {
     return (
         document?: Partial<ExtendedState<Partial<State>>>,
@@ -33,11 +33,11 @@ export function createUseDocumentReducer<State, A extends Action>(
     ) => useDocumentReducer(reducer, createDocument(document), onError);
 }
 
-export function useDocumentReducer<State, A extends Action>(
-    reducer: Reducer<State, A>,
-    initialState: Document<State, A>,
+export function useDocumentReducer<State, A extends Action, LocalState>(
+    reducer: Reducer<State, A, LocalState>,
+    initialState: Document<State, A, LocalState>,
     onError?: (error: unknown) => void,
-): readonly [Document<State, A>, (action: A | BaseAction) => void] {
+): readonly [Document<State, A, LocalState>, (action: A | BaseAction) => void] {
     const [state, dispatch] = useReducer(
         wrapReducer(reducer, onError),
         initialState,
