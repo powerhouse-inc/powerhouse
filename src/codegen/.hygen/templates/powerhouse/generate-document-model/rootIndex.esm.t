@@ -31,7 +31,7 @@ export const module: DocumentModel<
     documentModel,
 };
 
-export { <%= h.changeCase.pascal(documentType) %>, Document, reducer, actions, utils, documentModel }
+export { <%= h.changeCase.pascal(documentType) %>, Document, reducer, actions, utils, documentModel };
 
 export * from './gen/types';
 export * from './src/utils';
