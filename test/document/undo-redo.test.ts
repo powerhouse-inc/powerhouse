@@ -1,4 +1,4 @@
-import { noop, undo } from '../../src/document/actions';
+import { noop, undo, redo } from '../../src/document/actions';
 import { createDocument, createExtendedState } from '../../src/document/utils';
 import { processUndoRedo } from '../../src/document/reducer';
 import { Document } from '../../src/document/types';
@@ -177,6 +177,94 @@ describe('UNDO/REDO', () => {
         });
     });
 
+    describe('processUndoRedo -> REDO', () => {
+        let document: Document<CountState, CountAction, CountLocalState>;
+
+        beforeEach(() => {
+            const initialState = createExtendedState<CountState, CountLocalState>({
+                documentType: 'powerhouse/counter',
+                state: { global: { count: 0 }, local: {} },
+            });
+
+            document = createDocument<CountState, CountAction, CountLocalState>(
+                initialState
+            );
+
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+        });
+
+        it("should throw an error when there's no operation to redo in the clipboard", () => {
+            const initialState = createExtendedState<CountState, CountLocalState>({
+                documentType: 'powerhouse/counter',
+                state: { global: { count: 0 }, local: {} },
+            });
+
+            document = createDocument<CountState, CountAction, CountLocalState>(
+                initialState
+            );
+
+            const skip = 0;
+            const redoAction = redo(1);
+            const throwErrorFunc = () => processUndoRedo(document, redoAction, skip);
+
+            expect(throwErrorFunc).toThrow('Cannot redo: no operations in the clipboard');
+        });
+
+        it("should throw an error if you try to redo more than 1 operation", () => {
+            const skip = 0;
+            const redoAction = redo(2);
+            const throwErrorFunc = () => processUndoRedo(document, redoAction, skip);
+
+            expect(throwErrorFunc).toThrow('Cannot redo: you can only redo one operation at a time');
+        });
+
+        it("should throw an error if you try to redo with an skip value", () => {
+            const skip = 1;
+            const redoAction = redo(1);
+            const throwErrorFunc = () => processUndoRedo(document, redoAction, skip);
+
+            expect(throwErrorFunc).toThrow('Cannot redo: skip value from reducer cannot be used with REDO action');
+        });
+
+        it("should throw an error if there's no operations for the scope in the clipboard", () => {
+            const skip = 0;
+            const redoAction = redo(1, 'local');
+
+            document = countReducer(document, undo(1));
+
+            const throwErrorFunc = () => processUndoRedo(document, redoAction, skip);
+            expect(throwErrorFunc).toThrow('Cannot redo: no operations in clipboard for scope "local"');
+        });
+
+        it("should transform REDO action into the latest valid action stored in the clipboard", () => {
+            const skip = 0;
+            const redoAction = redo(1);
+
+            document = countReducer(document, undo(1));
+            const result = processUndoRedo(document, redoAction, skip);
+
+            expect(result.action.type).toBe('INCREMENT');
+            expect(result.action.scope).toBe('global');
+            expect(result.action.input).toBe(undefined);
+        });
+
+        it("should remove the latest valid action from the clipboard", () => {
+            const skip = 0;
+            const redoAction = redo(1);
+
+            document = countReducer(document, undo(1));
+            expect(document.clipboard.length).toBe(1);
+
+            const result = processUndoRedo(document, redoAction, skip);
+
+            expect(result.document.clipboard.length).toBe(0);
+        });
+    });
+
     describe('UNDO', () => {
         let document: Document<CountState, CountAction, CountLocalState>;
 
@@ -277,19 +365,13 @@ describe('UNDO/REDO', () => {
             expect(document.revision.global).toBe(9);
             expect(document.state.global.count).toBe(1);
 
-            expect(document.clipboard.length).toBe(6);
+            expect(document.clipboard.length).toBe(3);
             expect(document.clipboard[0].type).toBe('INCREMENT');
-            expect(document.clipboard[0].index).toBe(4);
+            expect(document.clipboard[0].index).toBe(7);
             expect(document.clipboard[1].type).toBe('INCREMENT');
-            expect(document.clipboard[1].index).toBe(3);
+            expect(document.clipboard[1].index).toBe(6);
             expect(document.clipboard[2].type).toBe('INCREMENT');
-            expect(document.clipboard[2].index).toBe(2);
-            expect(document.clipboard[3].type).toBe('INCREMENT');
-            expect(document.clipboard[3].index).toBe(7);
-            expect(document.clipboard[4].type).toBe('INCREMENT');
-            expect(document.clipboard[4].index).toBe(6);
-            expect(document.clipboard[5].type).toBe('INCREMENT');
-            expect(document.clipboard[5].index).toBe(1);
+            expect(document.clipboard[2].index).toBe(1);
 
             expect(document.operations.global.length).toBe(9);
             document.operations.global.forEach((operation, index) => {
@@ -311,17 +393,11 @@ describe('UNDO/REDO', () => {
             expect(document.revision.global).toBe(10);
             expect(document.state.global.count).toBe(2);
 
-            expect(document.clipboard.length).toBe(5);
+            expect(document.clipboard.length).toBe(2);
             expect(document.clipboard[0].type).toBe('INCREMENT');
-            expect(document.clipboard[0].index).toBe(4);
+            expect(document.clipboard[0].index).toBe(8);
             expect(document.clipboard[1].type).toBe('INCREMENT');
-            expect(document.clipboard[1].index).toBe(6);
-            expect(document.clipboard[2].type).toBe('INCREMENT');
-            expect(document.clipboard[2].index).toBe(3);
-            expect(document.clipboard[3].type).toBe('INCREMENT');
-            expect(document.clipboard[3].index).toBe(8);
-            expect(document.clipboard[4].type).toBe('INCREMENT');
-            expect(document.clipboard[4].index).toBe(2);
+            expect(document.clipboard[1].index).toBe(2);
 
             expect(document.operations.global.length).toBe(10);
             document.operations.global.forEach((operation, index) => {
@@ -331,6 +407,87 @@ describe('UNDO/REDO', () => {
                     expect(operation.type).toBe('NOOP');
                 }
             });
+        });
+    });
+
+    describe('REDO', () => {
+        let document: Document<CountState, CountAction, CountLocalState>;
+
+        beforeEach(() => {
+            const initialState = createExtendedState<CountState, CountLocalState>({
+                documentType: 'powerhouse/counter',
+                state: { global: { count: 0 }, local: {} },
+            });
+
+            document = createDocument<CountState, CountAction, CountLocalState>(
+                initialState
+            );
+
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+        });
+
+        it("should redo the latest operation", () => {
+            document = countReducer(document, undo(2));
+            document = countReducer(document, redo(1));
+
+            expect(document.revision.global).toBe(7);
+            expect(document.state.global.count).toBe(4);
+            expect(document.operations.global.length).toBe(7);
+            expect(document.clipboard.length).toBe(1);
+            expect(document.operations.global[6]).toMatchObject({
+                type: 'INCREMENT',
+                index: 6,
+            });
+        });
+
+        it("should revert document state to the latest state before applying an undo", () => {
+            document = countReducer(document, undo(2));
+            document = countReducer(document, redo(1));
+            document = countReducer(document, redo(1));
+
+            expect(document.revision.global).toBe(8);
+            expect(document.state.global.count).toBe(5);
+            expect(document.operations.global.length).toBe(8);
+            expect(document.clipboard.length).toBe(0);
+            expect(document.operations.global[7]).toMatchObject({
+                type: 'INCREMENT',
+                index: 7,
+                skip: 0,
+            });
+            expect(document.operations.global[6]).toMatchObject({
+                type: 'INCREMENT',
+                index: 6,
+                skip: 0,
+            });
+            expect(document.operations.global[5]).toMatchObject({
+                type: 'NOOP',
+                index: 5,
+                skip: 2,
+            });
+            expect(document.operations.global[4]).toMatchObject({
+                type: 'NOOP',
+                index: 4,
+                skip: 0,
+            });
+            expect(document.operations.global[3]).toMatchObject({
+                type: 'NOOP',
+                index: 3,
+                skip: 0,
+            });
+        });
+
+        it("should clean clipboard after applying an action that's not UNDO/REDO", () => {
+            document = countReducer(document, undo(2));
+            document = countReducer(document, increment());
+
+            expect(document.revision.global).toBe(7);
+            expect(document.state.global.count).toBe(4);
+            expect(document.operations.global.length).toBe(7);
+            expect(document.clipboard.length).toBe(0);
         });
     });
 });

@@ -12,12 +12,13 @@ import {
     LOAD_STATE,
     PRUNE,
     REDO,
+    RedoAction,
     SET_NAME,
     UNDO,
     UndoAction,
 } from './actions/types';
 import { UndoRedoAction, z } from './schema';
-import { Action, Document, ImmutableStateReducer, ReducerOptions } from './types';
+import { Action, Document, ImmutableStateReducer, Operation, ReducerOptions } from './types';
 import { isBaseAction, isUndoRedo, hashDocument, replayOperations } from './utils';
 import { SignalDispatch } from './signal';
 
@@ -185,7 +186,7 @@ export function processUndoRedo<T, A extends Action, L>(
                 const [ lastOperation ] = draft.document.operations[scope].slice(-1);
                 const isLatestOpNOOP = lastOperation.type === 'NOOP' && lastOperation.skip > 0;
 
-                draft.skip += action.input;
+                draft.skip += (draft.action as UndoAction).input;
 
                 if (isLatestOpNOOP) {
                     draft.skip += lastOperation.skip;
@@ -218,7 +219,36 @@ export function processUndoRedo<T, A extends Action, L>(
         }
             
         case REDO:
-            return defaultResult;
+            return produce(defaultResult, draft => {
+                if (draft.skip > 0) {
+                    throw new Error(`Cannot redo: skip value from reducer cannot be used with REDO action`);
+                }
+
+                if ((draft.action as RedoAction).input > 1) {
+                    throw new Error(`Cannot redo: you can only redo one operation at a time`);
+                }
+
+                if ((draft.action as RedoAction).input < 1) {
+                    throw new Error(`Invalid REDO action: invalid redo input value`);
+                }
+
+                if (draft.document.clipboard.length < 1) {
+                    throw new Error(`Cannot redo: no operations in the clipboard`);
+                }
+
+                const operationIndex = draft.document.clipboard.findLastIndex((op) => op.scope === scope);
+                if (operationIndex < 0) {
+                    throw new Error(`Cannot redo: no operations in clipboard for scope "${scope}"`);
+                }
+
+                const operation = draft.document.clipboard.splice(operationIndex, 1)[0];
+
+                draft.action = castDraft({
+                    type: operation.type,
+                    scope: operation.scope,
+                    input: operation.input,
+                } as A | BaseAction);
+            });
         default:
             return defaultResult;
     }
@@ -264,12 +294,6 @@ export function baseReducer<T, A extends Action, L>(
         skipValue = calculatedSkip;
         newDocument = processedDocument;
         clipboard = [...newDocument.clipboard];
-
-        /**
-         * if REDO:
-         * check if there's an operation in the clipboard to REDO
-         * replace current action (REDO) with the operation in the clipboard
-        */
     }
 
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
@@ -304,6 +328,7 @@ export function baseReducer<T, A extends Action, L>(
         // the reducer runs on a immutable version of
         // provided state
         const returnedDraft = customReducer(draft.state, action as A, dispatch);
+        const clipboardValue = isUndoRedo(dispatchedAction) ? [...clipboard] : [];
 
         // if the reducer creates a new state object instead
         // of mutating the draft then returns the new state
@@ -311,9 +336,11 @@ export function baseReducer<T, A extends Action, L>(
             // casts new state as draft to comply with typescript
             return castDraft<Document<T, A, L>>({
                 ...newDocument,
-                clipboard: [...clipboard],
+                clipboard: [...clipboardValue],
                 state: returnedDraft,
             });
+        } else {
+            draft.clipboard = castDraft([...clipboardValue]);
         }
     });
 
