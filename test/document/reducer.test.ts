@@ -1,5 +1,5 @@
 import { Action, CreateChildDocumentInput, utils } from '../../src/document';
-import { setName } from '../../src/document/actions';
+import { setName } from '../../src/document/actions/creators';
 import { SET_NAME } from '../../src/document/actions/types';
 import {
     createAction,
