@@ -13,7 +13,7 @@ export async function loadDocumentModel(
             documentModel = file.state.global;
         } else if (path.endsWith('.json')) {
             const data = fs.readFileSync(path, 'utf-8');
-            const document = JSON.parse(data);
+            const document = JSON.parse(data) as DocumentModelState;
             // z.DocumentModelStateSchema().parse(document);
             documentModel = document;
         } else {
@@ -21,7 +21,7 @@ export async function loadDocumentModel(
         }
         return documentModel;
     } catch (error) {
-        // @ts-ignore
+        // @ts-expect-error
         throw error.code === 'MODULE_NOT_FOUND'
             ? new Error(`Document model not found.`)
             : error;

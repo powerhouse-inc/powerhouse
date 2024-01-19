@@ -56,7 +56,9 @@ function getDocumentTypesMap(dir: string) {
                 if (spec.id) {
                     documentTypesMap[spec.id] = pascalCase(name);
                 }
-            } catch {}
+            } catch {
+                console.error(`Failed to parse ${specPath}`);
+            }
         });
     return documentTypesMap;
 }
@@ -105,7 +107,7 @@ export async function generateEditor(
     const { documentModelsDir, format } = config;
     const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
 
-    let invalidType = documentTypes.find(
+    const invalidType = documentTypes.find(
         type => !Object.keys(docummentTypesMap).includes(type),
     );
     if (invalidType) {

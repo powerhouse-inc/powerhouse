@@ -18,5 +18,5 @@
         "experimentalDecorators": true,
         "declaration": true
     },
-    "include": ["src/**/*.ts", "src/**/.hygen/**/*.ts"]
+    "include": ["src/**/*.ts", "src/**/.hygen/**/*.ts", "reset.d.ts"]
 }

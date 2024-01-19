@@ -13,10 +13,12 @@ async function run(args: string[], { watch = false, format = false } = {}) {
         cwd: process.cwd(),
         logger,
         createPrompter: () => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return require('enquirer');
         },
         exec: (action, body) => {
             const opts = body && body.length > 0 ? { input: body } : {};
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
             return require('execa').shell(action, opts);
         },
         debug: !!process.env.DEBUG,
@@ -24,8 +26,10 @@ async function run(args: string[], { watch = false, format = false } = {}) {
     if (format) {
         const execa = await import('execa');
         result.actions
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
             .filter(action => ['added', 'inject'].includes(action.status))
             .forEach(action => {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                 execa.$`prettier --ignore-path --write ${action.subject.replace(
                     '.',
                     process.cwd(),
