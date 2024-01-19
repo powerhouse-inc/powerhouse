@@ -3,9 +3,9 @@ to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/index.ts"
 force: true
 ---
 /**
-* This is a scaffold file meant for customization.
-* Delete the file and run the code generator again to have it reset
-*/
+ * This is a scaffold file meant for customization.
+ * Delete the file and run the code generator again to have it reset
+ */
 
 import { actions as BaseActions, DocumentModel } from 'document-model/document';
 import { actions as <%= h.changeCase.pascal(documentType) %>Actions, <%= h.changeCase.pascal(documentType) %> } from './gen';
@@ -28,17 +28,10 @@ export const module: DocumentModel<
     reducer,
     actions,
     utils,
-    documentModel
+    documentModel,
 };
 
-export {
-    <%= h.changeCase.pascal(documentType) %>,
-    Document,
-    reducer,
-    actions,
-    utils,
-    documentModel
-}
+export { <%= h.changeCase.pascal(documentType) %>, Document, reducer, actions, utils, documentModel }
 
 export * from './gen/types';
 export * from './src/utils';
