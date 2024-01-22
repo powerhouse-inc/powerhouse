@@ -7,7 +7,7 @@ unless_exists: true
 * - change it by adding new tests or modifying the existing ones
 */
 
-import { generateMock } from '@acaldas/powerhouse';
+import { generateMock } from '@powerhousedao/codegen';
 
 import utils from '../../gen/utils';
 import { z } from '../../gen/schema'; 
