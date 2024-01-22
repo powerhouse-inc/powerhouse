@@ -1,3 +1,10 @@
+# [1.0.0-alpha.43](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.42...v1.0.0-alpha.43) (2024-01-22)
+
+
+### Features
+
+* add dependabot config ([#141](https://github.com/powerhouse-inc/design-system/issues/141)) ([e2d5b86](https://github.com/powerhouse-inc/design-system/commit/e2d5b86c28955292e5c9986c1fb60229fb112046))
+
 # [1.0.0-alpha.42](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.41...v1.0.0-alpha.42) (2023-12-20)
 
 
