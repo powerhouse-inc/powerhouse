@@ -13,7 +13,7 @@ import { reducer } from './gen/reducer';
 import { documentModel } from './gen/document-model';
 import genUtils from './gen/utils';
 import * as customUtils from './src/utils';
-import { 
+import {
     <%= h.changeCase.pascal(documentType) %>State,
     <%= h.changeCase.pascal(documentType) %>Action,
     <%= h.changeCase.pascal(documentType) %>LocalState,
