@@ -13,7 +13,11 @@ import { reducer } from './gen/reducer';
 import { documentModel } from './gen/document-model';
 import genUtils from './gen/utils';
 import * as customUtils from './src/utils';
-import { <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action } from './gen/types';
+import { 
+    <%= h.changeCase.pascal(documentType) %>State,
+    <%= h.changeCase.pascal(documentType) %>Action,
+    <%= h.changeCase.pascal(documentType) %>LocalState,
+} from './gen/types';
 
 const Document = <%= h.changeCase.pascal(documentType) %>;
 const utils = { ...genUtils, ...customUtils };
@@ -22,7 +26,7 @@ const actions = { ...BaseActions, ...<%= h.changeCase.pascal(documentType) %>Act
 export const module: DocumentModel<
     <%= h.changeCase.pascal(documentType) %>State,
     <%= h.changeCase.pascal(documentType) %>Action,
-    <%= h.changeCase.pascal(documentType) %>
+    <%= h.changeCase.pascal(documentType) %>LocalState
 > = {
     Document,
     reducer,
