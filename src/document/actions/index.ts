@@ -17,13 +17,13 @@ export function setNameOperation<T>(document: T, name: string): T {
     return { ...document, name };
 }
 
-
 export function undoOperation<T, A extends Action, L>(
     document: Document<T, A, L>,
     action: UndoAction,
     skip: number,
 ): UndoRedoProcessResult<T, A, L> {
-    const scope = action.scope;
+    // const scope = action.scope;
+    const { scope, input } = action;
 
     const defaultResult: UndoRedoProcessResult<T, A, L> = {
         document,
@@ -33,21 +33,28 @@ export function undoOperation<T, A extends Action, L>(
 
     return produce(defaultResult, draft => {
         if (draft.document.operations[scope].length < 1) {
-            throw new Error(`Cannot undo: no operations in history for scope "${scope}"`);
+            throw new Error(
+                `Cannot undo: no operations in history for scope "${scope}"`,
+            );
         }
 
-        if (!draft.action.input || (draft.action as UndoAction).input < 1) {
-            throw new Error(`Invalid UNDO action: input value must be greater than 0`);
+        if (input < 1) {
+            throw new Error(
+                `Invalid UNDO action: input value must be greater than 0`,
+            );
         }
 
         if (draft.skip > 0) {
-            throw new Error(`Cannot undo: skip value from reducer cannot be used with UNDO action`);
+            throw new Error(
+                `Cannot undo: skip value from reducer cannot be used with UNDO action`,
+            );
         }
 
-        const [ lastOperation ] = draft.document.operations[scope].slice(-1);
-        const isLatestOpNOOP = lastOperation.type === 'NOOP' && lastOperation.skip > 0;
+        const [lastOperation] = draft.document.operations[scope].slice(-1);
+        const isLatestOpNOOP =
+            lastOperation.type === 'NOOP' && lastOperation.skip > 0;
 
-        draft.skip += (draft.action as UndoAction).input;
+        draft.skip += input;
 
         if (isLatestOpNOOP) {
             draft.skip += lastOperation.skip;
@@ -55,12 +62,16 @@ export function undoOperation<T, A extends Action, L>(
         }
 
         if (draft.document.operations[scope].length < draft.skip) {
-            throw new Error(`Cannot undo: you can't undo more operations than the ones in the scope history`);
+            throw new Error(
+                `Cannot undo: you can't undo more operations than the ones in the scope history`,
+            );
         }
 
         const operationsLastIndex = draft.document.operations[scope].length - 1;
-        let skippedOpsLeft = (draft.action as UndoAction).input;
-        let index = isLatestOpNOOP ? operationsLastIndex - lastOperation.skip : operationsLastIndex;
+        let skippedOpsLeft = input;
+        let index = isLatestOpNOOP
+            ? operationsLastIndex - lastOperation.skip
+            : operationsLastIndex;
 
         while (skippedOpsLeft > 0 && index >= 0) {
             const op = draft.document.operations[scope][index];
@@ -74,7 +85,7 @@ export function undoOperation<T, A extends Action, L>(
                 index--;
             }
         }
-        
+
         draft.action = noop(scope);
     });
 }
@@ -84,7 +95,7 @@ export function redoOperation<T, A extends Action, L>(
     action: RedoAction,
     skip: number,
 ): UndoRedoProcessResult<T, A, L> {
-    const scope = action.scope;
+    const { scope, input } = action;
 
     const defaultResult: UndoRedoProcessResult<T, A, L> = {
         document,
@@ -94,14 +105,18 @@ export function redoOperation<T, A extends Action, L>(
 
     return produce(defaultResult, draft => {
         if (draft.skip > 0) {
-            throw new Error(`Cannot redo: skip value from reducer cannot be used with REDO action`);
+            throw new Error(
+                `Cannot redo: skip value from reducer cannot be used with REDO action`,
+            );
         }
 
-        if ((draft.action as RedoAction).input > 1) {
-            throw new Error(`Cannot redo: you can only redo one operation at a time`);
+        if (input > 1) {
+            throw new Error(
+                `Cannot redo: you can only redo one operation at a time`,
+            );
         }
 
-        if ((draft.action as RedoAction).input < 1) {
+        if (input < 1) {
             throw new Error(`Invalid REDO action: invalid redo input value`);
         }
 
@@ -109,9 +124,13 @@ export function redoOperation<T, A extends Action, L>(
             throw new Error(`Cannot redo: no operations in the clipboard`);
         }
 
-        const operationIndex = draft.document.clipboard.findLastIndex((op) => op.scope === scope);
+        const operationIndex = draft.document.clipboard.findLastIndex(
+            op => op.scope === scope,
+        );
         if (operationIndex < 0) {
-            throw new Error(`Cannot redo: no operations in clipboard for scope "${scope}"`);
+            throw new Error(
+                `Cannot redo: no operations in clipboard for scope "${scope}"`,
+            );
         }
 
         const operation = draft.document.clipboard.splice(operationIndex, 1)[0];
@@ -163,8 +182,8 @@ export function pruneOperation<T, A extends Action, L>(
     const loadStateTimestamp = actionsToKeepStart.length
         ? actionsToKeepStart[actionsToKeepStart.length - 1].timestamp
         : actionsToKeepEnd.length
-        ? actionsToKeepEnd[0].timestamp
-        : new Date().toISOString();
+          ? actionsToKeepEnd[0].timestamp
+          : new Date().toISOString();
 
     // replaces pruned operations with LOAD_STATE
     return replayOperations(
