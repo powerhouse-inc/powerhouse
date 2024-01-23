@@ -2183,10 +2183,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model@^1.0.20:
-  version "1.0.20"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.20.tgz#9a4ef989e5c9e53cbaa04719c8ffcdba3fffdd15"
-  integrity sha512-bRJswH99+KDqVusnd1paYLooWCcwGRbtF6TV0flVebmy/T/23uI7eo39KsolT3x6fmgJI5OIjmPEDwPu8+ntEQ==
+document-model@^1.0.25:
+  version "1.0.25"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.25.tgz#10d218ad54dd98e004a01c83e523e98de3389293"
+  integrity sha512-3N8jjYO2pCJ51uAPM1Gue9WqOOuwVfhLOG7ax30JYvRqFLKdKjSQs1v9UIY42STgyqeuKidJVKUE8Non1/e3Ag==
   dependencies:
     immer "^10.0.2"
     json-stringify-deterministic "^1.0.10"
