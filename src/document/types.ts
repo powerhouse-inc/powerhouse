@@ -41,6 +41,8 @@ export type ActionWithAttachment<
 export type ReducerOptions = {
     /** The number of operations to skip before this new action is applied */    
     skip?: number;
+    /** When true the skip count is ignored and the action is applied regardless of the skip count */
+    ignoreSkipOperations?: boolean;
 };
 
 /**
@@ -206,6 +208,8 @@ export type Document<
         operations: DocumentOperations<A>;
         /** The initial state of the document, enabling replaying operations. */
         initialState: ExtendedState<GlobalState, LocalState>;
+        /** A list of undone operations */
+        clipboard: Operation<BaseAction | A>[];
     };
 
 /**
@@ -297,4 +301,10 @@ export type Editor<S = unknown, A extends Action = Action, L = unknown> = {
 export type DocumentModelLib = {
     documentModels: DocumentModel[];
     editors: Editor[];
+};
+
+export type UndoRedoProcessResult<T, A extends Action, L> = {
+    document: Document<T, A, L>,
+    action: A | BaseAction,
+    skip: number
 };

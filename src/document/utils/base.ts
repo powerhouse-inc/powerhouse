@@ -3,6 +3,7 @@ import { baseReducer } from '../reducer';
 import {
     Action,
     BaseAction,
+    UndoRedoAction,
     Document,
     ExtendedState,
     ImmutableStateReducer,
@@ -23,6 +24,10 @@ import { noop } from '../actions/creators';
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
 import { castImmutable, freeze } from 'immer';
 import { SignalDispatch } from '../signal';
+
+export function isUndoRedo(action: Action): action is UndoRedoAction {
+    return [UNDO, REDO].includes(action.type);
+}
 
 export function isBaseAction(action: Action): action is BaseAction {
     return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
@@ -155,6 +160,7 @@ export const createDocument = <S, A extends Action, L = unknown>(
         ...state,
         initialState: state,
         operations: { global: [], local: [] },
+        clipboard: [],
     };
 };
 
@@ -179,15 +185,17 @@ export function readOnly<T>(value: T): Immutable<T> {
  * Maps skipped operations in an array of operations.
  * Skipped operations are operations that are ignored during processing.
  * @param operations - The array of operations to map.
+ * @param skippedHeadOperations - The number of operations to skip at the head of the array of operations.
  * @returns An array of mapped operations with ignore flag indicating if the operation is skipped.
  * @throws Error if the operation index is invalid and there are missing operations.
  */
 export function mapSkippedOperations<A extends Action>(
     operations: Operation<BaseAction | A>[],
+    skippedHeadOperations?: number,
 ): MappedOperation<A>[] {
     const ops = [...operations];
 
-    let skipped = 0;
+    let skipped = skippedHeadOperations || 0;
     let latestOpIndex = ops.length > 0
         ? ops[ops.length - 1].index
         : 0;
@@ -212,11 +220,14 @@ export function mapSkippedOperations<A extends Action>(
         };
 
 
-        if (operation.skip > 0) {
-            // here we add 1 to the skip number because we want to get the number of
-            // operations that we want to move the pointer back to get the latest valid operation
-            // operation.skip = 1 means that we want to move the pointer back 2 operations to get to the latest valid operation
-            skipped = skipped + (operation.skip + 1);
+        // here we add 1 to the skip number because we want to get the number of
+        // operations that we want to move the pointer back to get the latest valid operation
+        // operation.skip = 1 means that we want to move the pointer back 2 operations to get to the latest valid operation
+        const operationSkip = operation.skip > 0 ? (operation.skip + 1) : 0;
+
+        if (operationSkip > 0 && operationSkip > skipped) {
+            const skipDiff = operationSkip - skipped;
+            skipped = skipped + skipDiff;
         }
 
         latestOpIndex = operation.index;
@@ -264,6 +275,7 @@ export function replayOperations<T, A extends Action, L>(
     dispatch?: SignalDispatch,
     header?: DocumentHeader,
     documentReducer = baseReducer,
+    skipHeaderOperations: SkipHeaderOperations = {},
 ): Document<T, A, L> {
     // wraps the provided custom reducer with the
     // base document reducer
@@ -275,8 +287,11 @@ export function replayOperations<T, A extends Action, L>(
         wrappedReducer,
         dispatch,
         header,
+        skipHeaderOperations,
     );
 }
+
+export type SkipHeaderOperations = Partial<Record<OperationScope, number>>;
 
 // Runs the operations on the initial data using the
 // provided document reducer.
@@ -287,6 +302,7 @@ export function replayDocument<T, A extends Action, L>(
     reducer: Reducer<T, A, L>,
     dispatch?: SignalDispatch,
     header?: DocumentHeader,
+    skipHeaderOperations: SkipHeaderOperations = {},
 ): Document<T, A, L> {
     // builds a new document from the initial data
     const document = createDocument<T, A, L>(initialState);
@@ -305,7 +321,7 @@ export function replayDocument<T, A extends Action, L>(
         const scope = curr as keyof DocumentOperations<A>;
         return {
             ...acc,
-            [scope]: mapSkippedOperations(activeOperations[scope]),
+            [scope]: mapSkippedOperations(activeOperations[scope], skipHeaderOperations[scope]),
         };
     }, {} as DocumentOperationsIgnoreMap<A>)
 
@@ -319,11 +335,16 @@ export function replayDocument<T, A extends Action, L>(
                     document,
                     noop(operation.scope),
                     dispatch,
-                    { skip: operation.skip },
+                    { skip: operation.skip, ignoreSkipOperations: true },
                 );
             }
 
-            return reducer(document, operation, dispatch);
+            return reducer(
+                document,
+                operation,
+                dispatch,
+                { skip: operation.skip, ignoreSkipOperations: true },
+            );
         },
         document,
     );

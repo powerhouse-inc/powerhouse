@@ -137,7 +137,7 @@ describe('Local reducer', () => {
 
         expect(newDocument.revision).toStrictEqual({ global: 0, local: 1 });
         newDocument = countReducer(newDocument, undo(1, 'local'));
-        expect(newDocument.revision).toStrictEqual({ global: 0, local: 0 });
+        expect(newDocument.revision).toStrictEqual({ global: 0, local: 2 });
         expect(newDocument.state).toStrictEqual({
             global: { count: 0 },
             local: { name: '' },
@@ -147,19 +147,37 @@ describe('Local reducer', () => {
             local: { name: '' },
         });
 
-        expect(newDocument.operations).toStrictEqual({
+        expect(newDocument.operations).toMatchObject({
             global: [],
             local: [
                 {
-                    hash: 'HbiD0GRM+ijPjZ/N3Kw+6WxMTNI=',
-                    type: 'SET_LOCAL_NAME',
-                    input: 'test',
+                    type: 'NOOP',
+                    input: {},
                     index: 0,
                     skip: 0,
                     scope: 'local',
-                    timestamp: new Date().toISOString(),
+                    
+                },
+                {
+                    type: 'NOOP',
+                    input: {},
+                    index: 1,
+                    skip: 1,
+                    scope: 'local',
+                    
                 },
             ],
+        });
+
+        expect(newDocument.clipboard.length).toBe(1);
+        expect(newDocument.clipboard[0]).toMatchObject({
+            hash: 'HbiD0GRM+ijPjZ/N3Kw+6WxMTNI=',
+            type: 'SET_LOCAL_NAME',
+            input: 'test',
+            index: 0,
+            skip: 0,
+            scope: 'local',
+            timestamp: new Date().toISOString(),
         });
     });
 
@@ -175,19 +193,36 @@ describe('Local reducer', () => {
         let newDocument = countReducer(document, setLocalName('test'));
         newDocument = countReducer(newDocument, undo(1, 'local'));
         newDocument = countReducer(newDocument, redo(1, 'local'));
-        expect(newDocument.revision).toStrictEqual({ global: 0, local: 1 });
+        expect(newDocument.revision).toStrictEqual({ global: 0, local: 3 });
         expect(newDocument.state).toStrictEqual({
             global: { count: 0 },
             local: { name: 'test' },
         });
-        expect(newDocument.operations).toStrictEqual({
+        expect(newDocument.clipboard.length).toBe(0);
+        expect(newDocument.operations).toMatchObject({
             global: [],
             local: [
+                {
+                    type: 'NOOP',
+                    input: {},
+                    index: 0,
+                    skip: 0,
+                    scope: 'local',
+                    
+                },
+                {
+                    type: 'NOOP',
+                    input: {},
+                    index: 1,
+                    skip: 1,
+                    scope: 'local',
+                    
+                },
                 {
                     hash: 'HbiD0GRM+ijPjZ/N3Kw+6WxMTNI=',
                     type: 'SET_LOCAL_NAME',
                     input: 'test',
-                    index: 0,
+                    index: 2,
                     skip: 0,
                     scope: 'local',
                     timestamp: new Date().toISOString(),
