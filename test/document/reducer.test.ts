@@ -1,5 +1,5 @@
 import { Action, CreateChildDocumentInput, utils } from '../../src/document';
-import { setName } from '../../src/document/actions';
+import { setName } from '../../src/document/actions/creators';
 import { SET_NAME } from '../../src/document/actions/types';
 import {
     createAction,
@@ -10,7 +10,7 @@ import { emptyReducer } from '../helpers';
 
 describe('Base reducer', () => {
     beforeAll(() => {
-        jest.useFakeTimers().setSystemTime(new Date('2020-01-01'));
+        vi.useFakeTimers().setSystemTime(new Date('2020-01-01'));
     });
 
     it('should update revision', async () => {
@@ -24,11 +24,11 @@ describe('Base reducer', () => {
     });
 
     it('should update lastModified', async () => {
-        jest.useFakeTimers();
+        vi.useFakeTimers();
         const document = createDocument();
         await new Promise(r => {
             setTimeout(r, 100);
-            jest.runOnlyPendingTimers();
+            vi.runOnlyPendingTimers();
         });
         const newDocument = emptyReducer(document, {
             type: 'TEST',
@@ -36,11 +36,11 @@ describe('Base reducer', () => {
             scope: 'global',
         });
         expect(newDocument.lastModified > document.lastModified).toBe(true);
-        jest.useRealTimers();
+        vi.useRealTimers();
     });
 
     it('should update global operations list', async () => {
-        jest.useFakeTimers({ now: new Date('2023-01-01') });
+        vi.useFakeTimers({ now: new Date('2023-01-01') });
         const document = createDocument();
         const newDocument = emptyReducer(document, {
             type: 'TEST',
@@ -107,6 +107,7 @@ describe('Base reducer', () => {
         const id = utils.hashKey();
         const reducer = createReducer((_state, action, dispatch) => {
             if (action.type === 'CREATE_DOCUMENT') {
+                // @ts-expect-error TODO add synchronization units to fix type error
                 dispatch?.({
                     type: 'CREATE_CHILD_DOCUMENT',
                     input: {

@@ -26,7 +26,7 @@ import {
     isUndoRedo,
     hashDocument,
     replayOperations,
-} from './utils';
+} from './utils/base';
 import { SignalDispatch } from './signal';
 
 /**

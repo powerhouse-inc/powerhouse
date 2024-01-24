@@ -2,7 +2,7 @@ import { Module } from '../../gen';
 import { DocumentModelModuleOperations } from '../../gen/module/operations';
 
 const moduleSorter = (order: string[]) => {
-    const mapping: { [key: string]: number } = {};
+    const mapping: Record<string, number> = {};
     order.forEach((key, index) => (mapping[key] = index));
     return (a: Module, b: Module) =>
         (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
@@ -45,7 +45,7 @@ export const reducer: DocumentModelModuleOperations = {
         const latestSpec =
             state.specifications[state.specifications.length - 1];
         latestSpec.modules = latestSpec.modules.filter(
-            m => m.id != action.input.id
+            m => m.id != action.input.id,
         );
     },
 

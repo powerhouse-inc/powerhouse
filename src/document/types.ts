@@ -39,7 +39,7 @@ export type ActionWithAttachment<
 };
 
 export type ReducerOptions = {
-    /** The number of operations to skip before this new action is applied */    
+    /** The number of operations to skip before this new action is applied */
     skip?: number;
     /** When true the skip count is ignored and the action is applied regardless of the skip count */
     ignoreSkipOperations?: boolean;
@@ -181,8 +181,8 @@ export type DocumentOperations<A extends Action> = Required<
 
 export type MappedOperation<A extends Action> = {
     ignore: boolean;
-    operation: Operation<A | BaseAction>
-}
+    operation: Operation<A | BaseAction>;
+};
 
 export type DocumentOperationsIgnoreMap<A extends Action> = Required<
     Record<OperationScope, MappedOperation<A>[]>
@@ -304,7 +304,7 @@ export type DocumentModelLib = {
 };
 
 export type UndoRedoProcessResult<T, A extends Action, L> = {
-    document: Document<T, A, L>,
-    action: A | BaseAction,
-    skip: number
+    document: Document<T, A, L>;
+    action: A | BaseAction;
+    skip: number;
 };

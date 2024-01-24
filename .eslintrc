@@ -8,7 +8,7 @@
         "eslint:recommended",
         "plugin:@typescript-eslint/strict-type-checked",
         "plugin:@typescript-eslint/stylistic-type-checked",
-        "prettier"
+        "plugin:prettier/recommended"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
@@ -43,8 +43,9 @@
         "@typescript-eslint/consistent-indexed-object-style": "warn",
         "@typescript-eslint/prefer-for-of": "warn",
         "@typescript-eslint/no-duplicate-type-constituents": "warn",
-        "@typescript-eslint/prefer-reduce-type-parameter": "warn",
         "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+        "@typescript-eslint/prefer-promise-reject-errors": "warn",
+        "@typescript-eslint/prefer-reduce-type-parameter": "off",
         "@typescript-eslint/no-unused-vars": [
             1,
             { "ignoreRestSiblings": true }

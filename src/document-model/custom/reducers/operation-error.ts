@@ -2,7 +2,7 @@ import { OperationError } from '../../gen';
 import { DocumentModelOperationErrorOperations } from '../../gen/operation-error/operations';
 
 const errorSorter = (order: string[]) => {
-    const mapping: { [key: string]: number } = {};
+    const mapping: Record<string, number> = {};
     order.forEach((key, index) => (mapping[key] = index));
     return (a: OperationError, b: OperationError) =>
         (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
@@ -141,7 +141,7 @@ export const reducer: DocumentModelOperationErrorOperations = {
                     action.input.operationId
                 ) {
                     latestSpec.modules[i].operations[j].errors.sort(
-                        errorSorter(action.input.order)
+                        errorSorter(action.input.order),
                     );
                 }
             }
