@@ -1,6 +1,6 @@
 {
     "name": "@powerhousedao/codegen",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "license": "AGPL-3.0-only",
     "private": false,
     "main": "dist/index.js",
@@ -33,7 +33,7 @@
         "@types/node": "^20.11.2",
         "arg": "^5.0.2",
         "change-case": "^4.1.2",
-        "document-model": "^1.0.20",
+        "document-model": "^1.0.25",
         "enquirer": "^2.4.1",
         "execa": "^8.0.1",
         "hygen": "^6.2.11",
