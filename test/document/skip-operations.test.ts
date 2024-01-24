@@ -1,5 +1,5 @@
 import { utils } from '../../src/document';
-import { setName } from '../../src/document/actions';
+import { setName } from '../../src/document/actions/creators';
 import {
     createDocument,
     createExtendedState,
