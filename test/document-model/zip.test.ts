@@ -56,25 +56,31 @@ describe('DocumentModel Class', () => {
         documentModel = reducer(documentModel, baseActions.undo());
         expect(documentModel.state.global.id).toBe('');
 
-        const timestamp = documentModel.operations.global[0].timestamp;
         await utils.saveToFile(documentModel, tempDir, 'test2');
 
         const loadedDocumentModel = await utils.loadFromFile(
             `${tempDir}/test2.phdm.zip`,
         );
         expect(loadedDocumentModel.state.global.id).toBe('');
-        expect(loadedDocumentModel.operations.global).toStrictEqual([
+        expect(loadedDocumentModel.operations.global).toMatchObject([
             {
-                hash: 'xmstBdekoMQJQXwUZaOcv/Q/d9Q=',
                 index: 0,
                 skip: 0,
-                input: { id: 'powerhouse/test' },
+                input: {},
                 scope: 'global',
-                type: 'SET_MODEL_ID',
-                timestamp,
+                type: 'NOOP',
+            },
+            {
+                index: 1,
+                skip: 1,
+                input: {},
+                scope: 'global',
+                type: 'NOOP',
             },
         ]);
 
-        expect(loadedDocumentModel).toStrictEqual(documentModel);
+        const expectedLoadedDocumentModel = { ...documentModel };
+        expectedLoadedDocumentModel.clipboard = [];
+        expect(loadedDocumentModel).toStrictEqual(expectedLoadedDocumentModel);
     });
 });

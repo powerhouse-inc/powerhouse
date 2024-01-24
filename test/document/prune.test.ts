@@ -154,25 +154,28 @@ describe('PRUNE operation', () => {
         newDocument = countReducer(newDocument, increment());
         newDocument = countReducer(newDocument, increment());
         newDocument = countReducer(newDocument, prune(1, 5));
-        newDocument = countReducer(newDocument, undo(1));
+        newDocument = countReducer(newDocument, undo(1));        
 
         expect(newDocument.name).toBe('');
         expect(newDocument.state.global.count).toBe(1);
-        expect(newDocument.revision.global).toBe(1);
-        expect(mapOperations(newDocument.operations.global)).toStrictEqual([
+        expect(newDocument.revision.global).toBe(3);
+        expect(mapOperations(newDocument.operations.global)).toMatchObject([
             { ...increment(), index: 0, skip: 0 },
-            {
-                ...loadState(
-                    {
-                        name: 'Document',
-                        state: { global: { count: 4 }, local: {} },
-                    },
-                    4,
-                ),
-                index: 1,
-                skip: 0,
-            },
+            { type: 'NOOP', input: {}, index: 1, skip: 0, scope: 'global' },
+            { type: 'NOOP', input: {}, index: 2, skip: 1, scope: 'global' },
         ]);
+        expect(newDocument.clipboard.length).toBe(1);
+        expect(newDocument.clipboard[0]).toMatchObject({
+            ...loadState(
+                {
+                    name: 'Document',
+                    state: { global: { count: 4 }, local: {} },
+                },
+                4,
+            ),
+            index: 1,
+            skip: 0
+        });
         expect(newDocument.documentType).toBe('powerhouse/counter');
         expect(newDocument.initialState.state.global).toStrictEqual({
             count: 0,
@@ -201,9 +204,11 @@ describe('PRUNE operation', () => {
 
         expect(newDocument.name).toBe('Document');
         expect(newDocument.state.global.count).toBe(4);
-        expect(newDocument.revision.global).toBe(2);
-        expect(mapOperations(newDocument.operations.global)).toStrictEqual([
+        expect(newDocument.revision.global).toBe(4);
+        expect(mapOperations(newDocument.operations.global)).toMatchObject([
             { ...increment(), index: 0, skip: 0 },
+            { type: 'NOOP', input: {}, index: 1, skip: 0, scope: 'global' },
+            { type: 'NOOP', input: {}, index: 2, skip: 1, scope: 'global' },
             {
                 ...loadState(
                     {
@@ -212,10 +217,11 @@ describe('PRUNE operation', () => {
                     },
                     4,
                 ),
-                index: 1,
+                index: 3,
                 skip: 0,
             },
         ]);
+        expect(newDocument.clipboard.length).toBe(0);
         expect(newDocument.documentType).toBe('powerhouse/counter');
         expect(newDocument.initialState.state.global).toStrictEqual({
             count: 0,

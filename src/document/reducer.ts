@@ -14,14 +14,19 @@ import {
     SET_NAME,
     UNDO,
 } from './actions/types';
-import { z } from './schema';
+import { UndoRedoAction, z } from './schema';
 import {
     Action,
     Document,
     ImmutableStateReducer,
     ReducerOptions,
 } from './types';
-import { isBaseAction, hashDocument } from './utils';
+import {
+    isBaseAction,
+    isUndoRedo,
+    hashDocument,
+    replayOperations,
+} from './utils';
 import { SignalDispatch } from './signal';
 
 /**
@@ -139,10 +144,6 @@ function _baseReducer<T, A extends Action, L>(
     switch (action.type) {
         case SET_NAME:
             return setNameOperation(document, action.input);
-        case UNDO:
-            return undoOperation(document, action, wrappedReducer);
-        case REDO:
-            return redoOperation(document, action, wrappedReducer);
         case PRUNE:
             return pruneOperation(document, action, wrappedReducer);
         case LOAD_STATE:
@@ -151,6 +152,36 @@ function _baseReducer<T, A extends Action, L>(
             return document;
     }
 }
+
+type UndoRedoProcessResult<T, A extends Action, L> = {
+    document: Document<T, A, L>;
+    action: A | BaseAction;
+    skip: number;
+};
+
+/**
+ * Processes an UNDO or REDO action.
+ *
+ * @param document The current state of the document.
+ * @param action The action being applied to the document.
+ * @param skip The number of operations to skip before applying the action.
+ * @returns The updated document, calculated skip value and transformed action (if apply).
+ */
+export function processUndoRedo<T, A extends Action, L>(
+    document: Document<T, A, L>,
+    action: UndoRedoAction,
+    skip: number,
+): UndoRedoProcessResult<T, A, L> {
+    switch (action.type) {
+        case UNDO:
+            return undoOperation(document, action, skip);
+        case REDO:
+            return redoOperation(document, action, skip);
+        default:
+            return { document, action, skip };
+    }
+}
+
 /**
  * Base document reducer that wraps a custom document reducer and handles
  * document-level actions such as undo, redo, prune, and set name.
@@ -170,18 +201,50 @@ export function baseReducer<T, A extends Action, L>(
     dispatch?: SignalDispatch,
     options: ReducerOptions = {},
 ) {
-    const { skip = 0 } = options;
+    const { skip, ignoreSkipOperations = false } = options;
+
+    let _action = { ...action };
+    let skipValue = skip || 0;
+    let newDocument = document;
+    let clipboard = [...document.clipboard];
+
+    if (isUndoRedo(_action)) {
+        const {
+            skip: calculatedSkip,
+            action: transformedAction,
+            document: processedDocument,
+        } = processUndoRedo(document, _action, skipValue);
+
+        _action = transformedAction;
+        skipValue = calculatedSkip;
+        newDocument = processedDocument;
+        clipboard = [...newDocument.clipboard];
+    }
 
     // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
     // then runs the base reducer first
-    let newDocument = document;
-    if (isBaseAction(action)) {
-        newDocument = _baseReducer(newDocument, action, customReducer);
+    if (isBaseAction(_action)) {
+        newDocument = _baseReducer(newDocument, _action, customReducer);
+    }
+
+    // if the action has a skip value then skips the
+    // specified number of operations before applying
+    // the action
+    if (skipValue > 0 && !ignoreSkipOperations) {
+        newDocument = replayOperations(
+            newDocument.initialState,
+            newDocument.operations,
+            customReducer,
+            undefined,
+            undefined,
+            undefined,
+            { [_action.scope]: skipValue },
+        );
     }
 
     // updates the document revision number, last modified date
     // and operation history
-    newDocument = updateDocument(newDocument, action, skip);
+    newDocument = updateDocument(newDocument, _action, skipValue);
 
     // wraps the custom reducer with Immer to avoid
     // mutation bugs and allow writing reducers with
@@ -189,7 +252,12 @@ export function baseReducer<T, A extends Action, L>(
     newDocument = produce(newDocument, draft => {
         // the reducer runs on a immutable version of
         // provided state
-        const returnedDraft = customReducer(draft.state, action as A, dispatch);
+        const returnedDraft = customReducer(
+            draft.state,
+            _action as A,
+            dispatch,
+        );
+        const clipboardValue = isUndoRedo(action) ? [...clipboard] : [];
 
         // if the reducer creates a new state object instead
         // of mutating the draft then returns the new state
@@ -197,26 +265,29 @@ export function baseReducer<T, A extends Action, L>(
             // casts new state as draft to comply with typescript
             return castDraft<Document<T, A, L>>({
                 ...newDocument,
+                clipboard: [...clipboardValue],
                 state: returnedDraft,
             });
+        } else {
+            draft.clipboard = castDraft([...clipboardValue]);
         }
     });
 
     // updates the document history
     return produce(newDocument, draft => {
         // meta operations are not added to the operations history
-        if ([UNDO, REDO, PRUNE].includes(action.type)) {
+        if ([UNDO, REDO, PRUNE].includes(_action.type)) {
             return draft;
         }
 
         // updates the last operation with the hash of the resulting state
-        const scope = action.scope || 'global';
+        const scope = _action.scope || 'global';
         draft.operations[scope][draft.operations[scope].length - 1].hash =
             hashDocument(draft, scope);
 
         // if the action has attachments then adds them to the document
-        if (!isBaseAction(action) && action.attachments) {
-            action.attachments.forEach(attachment => {
+        if (!isBaseAction(_action) && _action.attachments) {
+            _action.attachments.forEach(attachment => {
                 const { hash, ...file } = attachment;
                 draft.attachments[hash] = {
                     ...file,
