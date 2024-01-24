@@ -18,7 +18,11 @@ import {
     TextInput,
 } from 'document-model-editors';
 
-export type IProps = EditorProps<ScopeFrameworkState, ScopeFrameworkAction, ScopeFrameworkLocalState>;
+export type IProps = EditorProps<
+    ScopeFrameworkState,
+    ScopeFrameworkAction,
+    ScopeFrameworkLocalState
+>;
 
 export const randomId = () => {
     return Math.floor(Math.random() * Date.now()).toString(36);
@@ -75,8 +79,9 @@ const getNextPath = (
 
 function ScopeFrameworkEditor(props: IProps) {
     const { document, dispatch, editorContext } = props;
-    const { state: { global: state} } = document;
-
+    const {
+        state: { global: state },
+    } = document;
 
     useEffect(() => {
         if (!Object.values(document.operations).concat().length) {

@@ -18,11 +18,11 @@ export const reducer: BudgetStatementAuditOperations = {
         checkDuplicatedReport(state, action.input.report);
         if (
             !action.attachments.find(
-                attachment => attachment.hash === action.input.report
+                attachment => attachment.hash === action.input.report,
             )
         ) {
             throw new Error(
-                'Report was not included in the action attachments'
+                'Report was not included in the action attachments',
             );
         }
         state.auditReports.push({
@@ -32,7 +32,7 @@ export const reducer: BudgetStatementAuditOperations = {
     },
     deleteAuditReportOperation(state, action) {
         const index = state.auditReports.findIndex(
-            audit => audit.report === action.input.report
+            audit => audit.report === action.input.report,
         );
         if (index > -1) {
             state.auditReports.splice(index, 1);

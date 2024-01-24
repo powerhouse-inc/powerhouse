@@ -27,7 +27,7 @@ export default function JSONEditor({
             return;
         }
         try {
-            const state = JSON.parse(value);
+            const state = JSON.parse(value) as JSON;
             onChange(state);
         } catch {
             /* empty */
@@ -54,7 +54,7 @@ export default function JSONEditor({
             {...props}
             onMount={editor => {
                 editor.onDidBlurEditorText(() => {
-                    onBlur?.(JSON.parse(editor.getValue()));
+                    onBlur?.(JSON.parse(editor.getValue()) as JSON);
                 });
             }}
             options={{

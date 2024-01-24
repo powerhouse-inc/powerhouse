@@ -1,19 +1,28 @@
 {
     "compilerOptions": {
+        "target": "ESNext",
         "module": "ESNext",
         "moduleResolution": "Bundler",
         "types": ["node", "vitest/globals"],
-        "declaration": true,
+        "declaration": false,
         "outDir": "./dist",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "strict": true,
         "noImplicitAny": true,
         "skipLibCheck": true,
-        "emitDeclarationOnly": true,
         "jsx": "react-jsx",
-        "lib": ["ESNext"],
+        "lib": ["ESNext", "dom", "dom.iterable"],
     },
-    "include": ["./index.ts", "**/*.ts", "**/*.tsx"],
-    "exclude": ["dist/", "node_modules"]
+    "include": [
+        "./index.ts",
+        "**/*.ts",
+        "**/*.tsx",
+        "*.config.js",
+        "*.config.ts",
+    ],
+    "exclude": [
+        "dist/",
+        "node_modules",
+    ],
 }

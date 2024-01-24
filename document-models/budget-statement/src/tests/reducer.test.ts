@@ -1,7 +1,4 @@
-import {
-    AddAccountInput,
-    reducer,
-} from '../..';
+import { AddAccountInput, reducer } from '../..';
 import {
     addAccount,
     setMonth,

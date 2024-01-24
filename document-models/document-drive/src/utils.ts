@@ -1,4 +1,10 @@
-import { CopyNodeInput, DocumentDriveState, FileNode, FolderNode, Node } from '..';
+import {
+    CopyNodeInput,
+    DocumentDriveState,
+    FileNode,
+    FolderNode,
+    Node,
+} from '..';
 
 export function isFileNode(node: Node): node is FileNode {
     return node.kind === 'file';
@@ -102,7 +108,9 @@ export function getLatestSyncId(state: DocumentDriveState) {
         if (!isFileNode(node)) {
             return maxId;
         }
-        const unit = node.synchronizationUnits.find(unit => unit.syncId > maxId);
+        const unit = node.synchronizationUnits.find(
+            unit => unit.syncId > maxId,
+        );
         return unit ? unit.syncId : maxId;
-    }, "0")
+    }, '0');
 }

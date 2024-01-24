@@ -20,6 +20,7 @@ describe('Node Operations', () => {
 
     it('should handle addFile operation', () => {
         const input = generateMock(z.AddFileInputSchema());
+        input.scopes = ['global', 'local'];
         const updatedDocument = reducer(document, creators.addFile(input));
 
         expect(updatedDocument.operations.global).toHaveLength(1);

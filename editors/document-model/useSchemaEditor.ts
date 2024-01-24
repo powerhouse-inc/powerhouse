@@ -46,7 +46,7 @@ export const useSchemaEditor = (props: UseSchemaEditorProps): SchemaResult => {
     const specScope = specification?.state[scope];
 
     const [initialValue, setInitialValue] = useState<JSON>(
-        JSON.parse(specScope?.initialValue || '{}'),
+        JSON.parse(specScope?.initialValue || '{}') as JSON,
     );
 
     useEffect(() => {
@@ -63,7 +63,7 @@ export const useSchemaEditor = (props: UseSchemaEditorProps): SchemaResult => {
     useEffect(() => {
         const specValue = specScope?.initialValue || '{}';
         if (!isJSONEqual(initialValue, specValue)) {
-            setInitialValue(JSON.parse(specValue));
+            setInitialValue(JSON.parse(specValue) as JSON);
         }
     }, [specScope?.initialValue]);
 

@@ -6,6 +6,7 @@ import {
 } from 'document-model/document-model';
 
 export const module: EditorModule<DocumentModelState, DocumentModelAction> = {
+    // @ts-expect-error todo update type
     Component: Editor,
     documentTypes: ['powerhouse/document-model'],
 };

@@ -30,7 +30,7 @@ export const reducer: ScopeFrameworkMainOperations = {
 
         if (!action.input.newRootPath.match(rootPathPattern)) {
             throw new Error(
-                `Invalid root path format ${action.input.newRootPath}. Use one or more capital letters: 'A', 'D', 'AQ', ...`
+                `Invalid root path format ${action.input.newRootPath}. Use one or more capital letters: 'A', 'D', 'AQ', ...`,
             );
         }
 
@@ -58,8 +58,8 @@ export const reducer: ScopeFrameworkMainOperations = {
         if (rootSegment(newElement.path) != state.rootPath) {
             throw new Error(
                 `Cannot add element with root segment ${rootSegment(
-                    newElement.path
-                )} to document with root path ${state.rootPath}`
+                    newElement.path,
+                )} to document with root path ${state.rootPath}`,
             );
         }
 
@@ -74,7 +74,7 @@ export const reducer: ScopeFrameworkMainOperations = {
 
             if (!inserted && newElement.path == nextElement.path) {
                 throw new Error(
-                    `New element's path ${newElement.path} already exists.`
+                    `New element's path ${newElement.path} already exists.`,
                 );
             }
 
@@ -116,14 +116,14 @@ export const reducer: ScopeFrameworkMainOperations = {
         const element = state.elements.filter(e => e.id == action.input.id)[0];
         if (element) {
             state.elements = state.elements.filter(
-                e => !e.path.startsWith(element.path)
+                e => !e.path.startsWith(element.path),
             );
         }
     },
 
     reorderElementsOperation(state, action) {
         throw new Error(
-            'Reducer "reorderElementsOperation" not yet implemented'
+            'Reducer "reorderElementsOperation" not yet implemented',
         );
     },
 

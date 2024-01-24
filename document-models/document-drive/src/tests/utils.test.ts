@@ -1,8 +1,4 @@
-import {
-    utils,
-    DocumentDriveState,
-    CopyNodeInput,
-} from '../..';
+import { utils, DocumentDriveState, CopyNodeInput } from '../..';
 
 const baseNodes: DocumentDriveState['nodes'] = [
     {

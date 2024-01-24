@@ -18,7 +18,7 @@ function isEqual(
         | UpdateLineItemInput
         | DeleteLineItemInput
         | LineItemsSortInput,
-    lineItem: LineItem
+    lineItem: LineItem,
 ) {
     return (
         lineItemInput.category === lineItem.category &&
@@ -39,13 +39,13 @@ export const reducer: BudgetStatementLineItemOperations = {
             account.lineItems.find(
                 item =>
                     input.category?.id === item.category?.id &&
-                    input.group?.id === item.group?.id
+                    input.group?.id === item.group?.id,
             )
         ) {
             throw new Error(
                 `Line item with category '${
                     input.category?.id ?? 'null'
-                }' and group '${input.group?.id ?? 'null'}' already exists`
+                }' and group '${input.group?.id ?? 'null'}' already exists`,
             );
         }
 
@@ -59,7 +59,7 @@ export const reducer: BudgetStatementLineItemOperations = {
         }
 
         const index = account.lineItems.findIndex(lineItem =>
-            isEqual(lineItemInput, lineItem)
+            isEqual(lineItemInput, lineItem),
         );
         if (index === -1) {
             throw new Error('Line item not found');
@@ -84,7 +84,7 @@ export const reducer: BudgetStatementLineItemOperations = {
         }
 
         account.lineItems = account.lineItems.filter(
-            lineItem => !isEqual(lineItemDelete, lineItem)
+            lineItem => !isEqual(lineItemDelete, lineItem),
         );
     },
     sortLineItemsOperation(state, action) {

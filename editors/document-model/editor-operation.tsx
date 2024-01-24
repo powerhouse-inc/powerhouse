@@ -21,11 +21,13 @@ const scopes: OperationScope[] = ['global', 'local'];
 type SchemaAndRestrictionsType = {
     schema: string;
     restrictions?: ConstrainedEditorRestriction[];
-};    
+};
 
-
-const getSchemaAndRestrictions = (schema: IProps['schema'], name: IProps['name']): SchemaAndRestrictionsType => {
-    const inputDeclaration = `input ${pascalCase(name || '')}Input {`
+const getSchemaAndRestrictions = (
+    schema: IProps['schema'],
+    name: IProps['name'],
+): SchemaAndRestrictionsType => {
+    const inputDeclaration = `input ${pascalCase(name || '')}Input {`;
 
     if (!schema) {
         return {
@@ -44,7 +46,7 @@ const getSchemaAndRestrictions = (schema: IProps['schema'], name: IProps['name']
 }
 
 # add new types here
-`
+`,
         };
     }
 
@@ -52,8 +54,11 @@ const getSchemaAndRestrictions = (schema: IProps['schema'], name: IProps['name']
     const lines = schema.split('\n');
 
     // get the line where the input declaration is contained
-    const inputDeclarationLine = lines.find(line => line.includes(inputDeclaration));
-    const inputDeclarationStartIndex = lines.findIndex(line => line.includes(inputDeclaration)) + 1;
+    const inputDeclarationLine = lines.find(line =>
+        line.includes(inputDeclaration),
+    );
+    const inputDeclarationStartIndex =
+        lines.findIndex(line => line.includes(inputDeclaration)) + 1;
 
     // if the input declaration is not found, return the schema as is with no restrictions
     if (!inputDeclarationLine) {
@@ -64,14 +69,19 @@ const getSchemaAndRestrictions = (schema: IProps['schema'], name: IProps['name']
     }
 
     // get the position where the input declaration starts
-    const inputDeclarationStart = inputDeclarationLine.indexOf(inputDeclaration) + 1;
-
+    const inputDeclarationStart =
+        inputDeclarationLine.indexOf(inputDeclaration) + 1;
 
     return {
         schema,
         restrictions: [
             {
-                range: [1, 1, inputDeclarationStartIndex, inputDeclarationStart],
+                range: [
+                    1,
+                    1,
+                    inputDeclarationStartIndex,
+                    inputDeclarationStart,
+                ],
                 allowMultiline: true,
             },
             {
@@ -95,11 +105,11 @@ export default function EditorOperation(props: IProps) {
         onUpdateScope,
     } = props;
 
-    const {
-        schema: normalizedSchema,
-        restrictions,
-    } = getSchemaAndRestrictions(schema, name);
-    
+    const { schema: normalizedSchema, restrictions } = getSchemaAndRestrictions(
+        schema,
+        name,
+    );
+
     return (
         <div>
             <TextInput

@@ -6,7 +6,11 @@ import {
     ScopeFrameworkState,
 } from '../../document-models/scope-framework';
 
-export const module: EditorModule<ScopeFrameworkState, ScopeFrameworkAction, ScopeFrameworkLocalState> = {
+export const module: EditorModule<
+    ScopeFrameworkState,
+    ScopeFrameworkAction,
+    ScopeFrameworkLocalState
+> = {
     Component: Editor,
     documentTypes: ['makerdao/scope-framework'],
 };

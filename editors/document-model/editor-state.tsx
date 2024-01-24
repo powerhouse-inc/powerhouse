@@ -82,7 +82,7 @@ function EditorState(props: EditorStateProps) {
                     value={specification?.state[scope].initialValue}
                     validator={schemaState?.validator}
                     onCreate={value => {
-                        setInitialValue(JSON.parse(value));
+                        setInitialValue(JSON.parse(value) as JSON);
                     }}
                     theme={theme}
                 />

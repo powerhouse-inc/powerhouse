@@ -49,6 +49,7 @@ const budgetStatementState = utils.createExtendedState({
 });
 
 const { meta, CreateDocumentStory: BudgetStatement } = createDocumentStory(
+    // @ts-expect-error todo update type
     Editor,
     reducer,
     budgetStatementState,

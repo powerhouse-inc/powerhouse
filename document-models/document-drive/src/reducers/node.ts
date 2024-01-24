@@ -15,26 +15,28 @@ export const reducer: DocumentDriveNodeOperations = {
             throw new Error(`Node with id ${action.input.id} already exists!`);
         }
 
-        const invalidScope = action.input.scopes.find(scope => !z.OperationScopeSchema().safeParse(scope).success);
+        const invalidScope = action.input.scopes.find(
+            scope => !z.OperationScopeSchema().safeParse(scope).success,
+        );
         if (invalidScope) {
-            throw new Error(`${invalidScope} is not a valid scope`)
+            throw new Error(`${invalidScope} is not a valid scope`);
         }
         const scopes = action.input.scopes as OperationScope[];
 
-        const latestSyncId =  BigInt(getLatestSyncId(state));
-        const synchronizationUnits = scopes.map((scope, index) =>  ({
+        const latestSyncId = BigInt(getLatestSyncId(state));
+        const synchronizationUnits = scopes.map((scope, index) => ({
             syncId: (latestSyncId + BigInt(1 + index)).toString(),
             scope,
-            branch: "main"
-        }))
+            branch: 'main',
+        }));
 
         const fileNode: FileNode = {
             ...action.input,
             kind: 'file',
             parentFolder: action.input.parentFolder ?? null,
             scopes,
-            synchronizationUnits
-        }
+            synchronizationUnits,
+        };
         state.nodes.push(fileNode);
 
         dispatch?.({
@@ -42,7 +44,7 @@ export const reducer: DocumentDriveNodeOperations = {
             input: {
                 id: action.input.id,
                 documentType: action.input.documentType,
-                synchronizationUnits
+                synchronizationUnits,
             },
         });
     },
@@ -63,8 +65,9 @@ export const reducer: DocumentDriveNodeOperations = {
         }
         const descendants = getDescendants(node, state.nodes);
         state.nodes = state.nodes.filter(
-            node => node.id !== action.input.id &&
-                !descendants.find(descendant => descendant.id === node.id)
+            node =>
+                node.id !== action.input.id &&
+                !descendants.find(descendant => descendant.id === node.id),
         );
 
         [node, ...descendants]
@@ -79,30 +82,34 @@ export const reducer: DocumentDriveNodeOperations = {
             });
     },
     updateFileOperation(state, action) {
-        state.nodes = state.nodes.map(node => node.id === action.input.id
-            ? {
-                ...node,
-                ...{
-                    name: action.input.name ?? node.name,
-                    documentType: action.input.documentType ??
-                        (node as FileNode).documentType,
-                },
-            }
-            : node
+        state.nodes = state.nodes.map(node =>
+            node.id === action.input.id
+                ? {
+                      ...node,
+                      ...{
+                          name: action.input.name ?? node.name,
+                          documentType:
+                              action.input.documentType ??
+                              (node as FileNode).documentType,
+                      },
+                  }
+                : node,
         );
     },
     updateNodeOperation(state, action) {
-        state.nodes = state.nodes.map(node => node.id === action.input.id
-            ? {
-                ...node,
-                ...{
-                    name: action.input.name ?? node.name,
-                    parentFolder: action.input.parentFolder === null
-                        ? null
-                        : node.parentFolder,
-                },
-            }
-            : node
+        state.nodes = state.nodes.map(node =>
+            node.id === action.input.id
+                ? {
+                      ...node,
+                      ...{
+                          name: action.input.name ?? node.name,
+                          parentFolder:
+                              action.input.parentFolder === null
+                                  ? null
+                                  : node.parentFolder,
+                      },
+                  }
+                : node,
         );
     },
     copyNodeOperation(state, action, dispatch) {
@@ -131,7 +138,7 @@ export const reducer: DocumentDriveNodeOperations = {
     },
     moveNodeOperation(state, action) {
         const node = state.nodes.find(
-            node => node.id === action.input.srcFolder
+            node => node.id === action.input.srcFolder,
         );
 
         if (!node) {

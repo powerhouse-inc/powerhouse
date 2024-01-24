@@ -1,8 +1,5 @@
 import { utils } from 'document-model/document';
-import {
-    ScopeFramework,
-    SectionComponent,
-} from '../..';
+import { ScopeFramework, SectionComponent } from '../..';
 
 const buildExampleDocument = (): ScopeFramework => {
     const framework = new ScopeFramework();
@@ -104,7 +101,7 @@ describe('ScopeFramework Class', () => {
 
         expect(framework.name).toBe('');
         expect(framework.documentType).toBe('makerdao/scope-framework');
-        expect(framework.getRevision("global")).toBe(0);
+        expect(framework.getRevision('global')).toBe(0);
 
         expect(framework.state.global.rootPath).toBe('A');
         expect(framework.state.global.elements.length).toBe(1);

@@ -3,6 +3,7 @@ import Editor from './editor';
 import { createDocumentStory } from 'document-model-editors';
 
 const { meta, CreateDocumentStory: ScopeFramework } = createDocumentStory(
+    // @ts-expect-error todo update type
     Editor,
     reducer,
     utils.createExtendedState(),

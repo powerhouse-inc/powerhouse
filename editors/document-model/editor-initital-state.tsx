@@ -35,7 +35,7 @@ export default function EditorInitialState({
     useEffect(() => {
         if (
             setInitialValue &&
-            !isJSONEqual(JSON.parse(props.value || '{}'), code)
+            !isJSONEqual(JSON.parse(props.value || '{}') as JSON, code)
         ) {
             setCode(props.value || '{}');
         }

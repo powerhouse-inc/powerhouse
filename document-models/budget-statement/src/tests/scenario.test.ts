@@ -6,10 +6,7 @@
 import fs from 'fs';
 import { parse } from 'jsonc-parser';
 import path from 'path';
-import {
-    BudgetStatement,
-    reducer,
-} from '../..';
+import { BudgetStatement, reducer } from '../..';
 import { BudgetStatementAction } from '../../gen';
 import utils from '../../gen/utils';
 
@@ -65,11 +62,9 @@ describe.skip('Budget Statement scenario 1 with object methods', () => {
     // const budgetStatement = new BudgetStatementTest({
     //     state: initialStep.state,
     // });
-
     // tests each scenario step in sequence
     // it.each(steps.slice(1))('should verify $file', ({ json }) => {
     //     expect.assertions(1);
-
     //     try {
     //         budgetStatement.dispatchTest(
     //             JSON.parse(JSON.stringify(json.operation)) as BudgetStatementAction,

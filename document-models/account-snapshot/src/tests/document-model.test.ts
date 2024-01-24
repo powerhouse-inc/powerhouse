@@ -1,7 +1,7 @@
 /**
-* This is a scaffold file meant for customization: 
-* - change it by adding new tests or modifying the existing ones
-*/
+ * This is a scaffold file meant for customization:
+ * - change it by adding new tests or modifying the existing ones
+ */
 
 import utils, { initialGlobalState, initialLocalState } from '../../gen/utils';
 
