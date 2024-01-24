@@ -35,7 +35,7 @@ export const createZip = async (document: Document) => {
     );
     zip.file('operations.json', JSON.stringify(document.operations, null, 2));
 
-    const attachments = Object.keys(document.attachments) as AttachmentRef[];
+    const attachments = Object.keys(document.attachments);
     attachments.forEach(key => {
         const { data, ...attributes } = document.attachments[key];
         zip.file(key, data, {

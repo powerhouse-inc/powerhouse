@@ -156,7 +156,6 @@ describe('Local reducer', () => {
                     index: 0,
                     skip: 0,
                     scope: 'local',
-                    
                 },
                 {
                     type: 'NOOP',
@@ -164,7 +163,6 @@ describe('Local reducer', () => {
                     index: 1,
                     skip: 1,
                     scope: 'local',
-                    
                 },
             ],
         });
@@ -208,7 +206,6 @@ describe('Local reducer', () => {
                     index: 0,
                     skip: 0,
                     scope: 'local',
-                    
                 },
                 {
                     type: 'NOOP',
@@ -216,7 +213,6 @@ describe('Local reducer', () => {
                     index: 1,
                     skip: 1,
                     scope: 'local',
-                    
                 },
                 {
                     hash: 'HbiD0GRM+ijPjZ/N3Kw+6WxMTNI=',

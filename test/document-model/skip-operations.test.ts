@@ -41,12 +41,30 @@ describe('DocumentModel Class', () => {
             const model = new DocumentModel();
 
             model
-                .setModelId({ id: '<id>' }, { skip: 1, ignoreSkipOperations: true })
-                .setModelName({ name: '<name>' }, { skip: 2, ignoreSkipOperations: true })
-                .setModelDescription({ description: '<description>' }, { skip: 3, ignoreSkipOperations: true })
-                .setModelExtension({ extension: 'phdm' }, { skip: 4, ignoreSkipOperations: true })
-                .setAuthorName({ authorName: '<authorName>' }, { skip: 5, ignoreSkipOperations: true })
-                .setAuthorWebsite({ authorWebsite: '<authorWebsite>' }, { skip: 6, ignoreSkipOperations: true });
+                .setModelId(
+                    { id: '<id>' },
+                    { skip: 1, ignoreSkipOperations: true },
+                )
+                .setModelName(
+                    { name: '<name>' },
+                    { skip: 2, ignoreSkipOperations: true },
+                )
+                .setModelDescription(
+                    { description: '<description>' },
+                    { skip: 3, ignoreSkipOperations: true },
+                )
+                .setModelExtension(
+                    { extension: 'phdm' },
+                    { skip: 4, ignoreSkipOperations: true },
+                )
+                .setAuthorName(
+                    { authorName: '<authorName>' },
+                    { skip: 5, ignoreSkipOperations: true },
+                )
+                .setAuthorWebsite(
+                    { authorWebsite: '<authorWebsite>' },
+                    { skip: 6, ignoreSkipOperations: true },
+                );
 
             expect(model.revision).toBe(6);
             model.operations.global.forEach((op, index) => {
@@ -83,11 +101,30 @@ describe('DocumentModel Class', () => {
             const model = new DocumentModel();
 
             model
-                .addModule({ id: '<id>', name: '<name>', description: '<description>' }, { skip: 1, ignoreSkipOperations: true })
-                .setModelName({ name: '<name>' }, { skip: 2, ignoreSkipOperations: true })
-                .setModuleDescription({ id: '<id>', description: '<description>' }, { skip: 3, ignoreSkipOperations: true })
-                .reorderModules({ order: ['<id>']  }, { skip: 4, ignoreSkipOperations: true })
-                .deleteModule({ id: '<id>' }, { skip: 5, ignoreSkipOperations: true });
+                .addModule(
+                    {
+                        id: '<id>',
+                        name: '<name>',
+                        description: '<description>',
+                    },
+                    { skip: 1, ignoreSkipOperations: true },
+                )
+                .setModelName(
+                    { name: '<name>' },
+                    { skip: 2, ignoreSkipOperations: true },
+                )
+                .setModuleDescription(
+                    { id: '<id>', description: '<description>' },
+                    { skip: 3, ignoreSkipOperations: true },
+                )
+                .reorderModules(
+                    { order: ['<id>'] },
+                    { skip: 4, ignoreSkipOperations: true },
+                )
+                .deleteModule(
+                    { id: '<id>' },
+                    { skip: 5, ignoreSkipOperations: true },
+                );
 
             expect(model.revision).toBe(5);
             model.operations.global.forEach((op, index) => {
@@ -128,13 +165,34 @@ describe('DocumentModel Class', () => {
             const model = new DocumentModel();
 
             model
-                .addOperationError({ id: '<id>', operationId: '<operationId>' }, { skip: 1, ignoreSkipOperations: true })
-                .setOperationErrorCode({ id: '<id>', errorCode: '<errorCode>' }, { skip: 2, ignoreSkipOperations: true })
-                .setOperationErrorName({ id: '<id>', errorName: '<errorName>' }, { skip: 3, ignoreSkipOperations: true })
-                .setOperationErrorDescription({ id: '<id>', errorDescription: '<errorDescription>' }, { skip: 4, ignoreSkipOperations: true })
-                .setOperationErrorTemplate({ id: '<id>', errorTemplate: '<errorTemplate>' }, { skip: 5, ignoreSkipOperations: true })
-                .reorderOperationErrors({ operationId: '<operationId>', order: ['<id>'] }, { skip: 6, ignoreSkipOperations: true })
-                .deleteOperationError({ id: '<id>' }, { skip: 7, ignoreSkipOperations: true });
+                .addOperationError(
+                    { id: '<id>', operationId: '<operationId>' },
+                    { skip: 1, ignoreSkipOperations: true },
+                )
+                .setOperationErrorCode(
+                    { id: '<id>', errorCode: '<errorCode>' },
+                    { skip: 2, ignoreSkipOperations: true },
+                )
+                .setOperationErrorName(
+                    { id: '<id>', errorName: '<errorName>' },
+                    { skip: 3, ignoreSkipOperations: true },
+                )
+                .setOperationErrorDescription(
+                    { id: '<id>', errorDescription: '<errorDescription>' },
+                    { skip: 4, ignoreSkipOperations: true },
+                )
+                .setOperationErrorTemplate(
+                    { id: '<id>', errorTemplate: '<errorTemplate>' },
+                    { skip: 5, ignoreSkipOperations: true },
+                )
+                .reorderOperationErrors(
+                    { operationId: '<operationId>', order: ['<id>'] },
+                    { skip: 6, ignoreSkipOperations: true },
+                )
+                .deleteOperationError(
+                    { id: '<id>' },
+                    { skip: 7, ignoreSkipOperations: true },
+                );
 
             expect(model.revision).toBe(7);
             model.operations.global.forEach((op, index) => {
@@ -170,10 +228,26 @@ describe('DocumentModel Class', () => {
             const model = new DocumentModel();
 
             model
-                .addOperationExample({ id: '<id>', operationId: '<operationId>', example: '<example>' }, { skip: 1, ignoreSkipOperations: true })
-                .updateOperationExample({ id: '<id>', example: '<example>' }, { skip: 2, ignoreSkipOperations: true })
-                .reorderOperationExamples({ operationId: '<operationId>', order: ['<id>'] }, { skip: 3, ignoreSkipOperations: true })
-                .deleteOperationExample({ id: '<id>' }, { skip: 4, ignoreSkipOperations: true });
+                .addOperationExample(
+                    {
+                        id: '<id>',
+                        operationId: '<operationId>',
+                        example: '<example>',
+                    },
+                    { skip: 1, ignoreSkipOperations: true },
+                )
+                .updateOperationExample(
+                    { id: '<id>', example: '<example>' },
+                    { skip: 2, ignoreSkipOperations: true },
+                )
+                .reorderOperationExamples(
+                    { operationId: '<operationId>', order: ['<id>'] },
+                    { skip: 3, ignoreSkipOperations: true },
+                )
+                .deleteOperationExample(
+                    { id: '<id>' },
+                    { skip: 4, ignoreSkipOperations: true },
+                );
 
             expect(model.revision).toBe(4);
             model.operations.global.forEach((op, index) => {
@@ -221,17 +295,50 @@ describe('DocumentModel Class', () => {
             const model = new DocumentModel();
 
             model
-                .addOperation({ id: '<id>', name: '<name>', moduleId: '<moduleId>' }, { skip: 1, ignoreSkipOperations: true })
-                .setOperationName({ id: '<id>', name: '<name>' }, { skip: 2, ignoreSkipOperations: true })
-                .setOperationScope({ id: '<id>', scope: 'global' }, { skip: 3, ignoreSkipOperations: true })
-                .setOperationSchema({ id: '<id>', schema: '<schema>' }, { skip: 4, ignoreSkipOperations: true })
-                .setOperationDescription({ id: '<id>', description: '<description>' }, { skip: 5, ignoreSkipOperations: true })
-                .setOperationTemplate({ id: '<id>', template: '<template>' }, { skip: 6, ignoreSkipOperations: true })
-                .setOperationReducer({ id: '<id>', reducer: '<reducer>' }, { skip: 7, ignoreSkipOperations: true })
-                .moveOperation({ newModuleId: '<newModuleId>', operationId: '<operationId>' }, { skip: 8, ignoreSkipOperations: true })
-                .reorderModuleOperations({ moduleId: '<moduleId>', order: ['<id>'] }, { skip: 9, ignoreSkipOperations: true })
-                .deleteOperation({ id: '<id>' }, { skip: 10, ignoreSkipOperations: true });
-            
+                .addOperation(
+                    { id: '<id>', name: '<name>', moduleId: '<moduleId>' },
+                    { skip: 1, ignoreSkipOperations: true },
+                )
+                .setOperationName(
+                    { id: '<id>', name: '<name>' },
+                    { skip: 2, ignoreSkipOperations: true },
+                )
+                .setOperationScope(
+                    { id: '<id>', scope: 'global' },
+                    { skip: 3, ignoreSkipOperations: true },
+                )
+                .setOperationSchema(
+                    { id: '<id>', schema: '<schema>' },
+                    { skip: 4, ignoreSkipOperations: true },
+                )
+                .setOperationDescription(
+                    { id: '<id>', description: '<description>' },
+                    { skip: 5, ignoreSkipOperations: true },
+                )
+                .setOperationTemplate(
+                    { id: '<id>', template: '<template>' },
+                    { skip: 6, ignoreSkipOperations: true },
+                )
+                .setOperationReducer(
+                    { id: '<id>', reducer: '<reducer>' },
+                    { skip: 7, ignoreSkipOperations: true },
+                )
+                .moveOperation(
+                    {
+                        newModuleId: '<newModuleId>',
+                        operationId: '<operationId>',
+                    },
+                    { skip: 8, ignoreSkipOperations: true },
+                )
+                .reorderModuleOperations(
+                    { moduleId: '<moduleId>', order: ['<id>'] },
+                    { skip: 9, ignoreSkipOperations: true },
+                )
+                .deleteOperation(
+                    { id: '<id>' },
+                    { skip: 10, ignoreSkipOperations: true },
+                );
+
             expect(model.revision).toBe(10);
             model.operations.global.forEach((op, index) => {
                 expect(op).toHaveProperty('skip', index + 1);
@@ -272,12 +379,30 @@ describe('DocumentModel Class', () => {
             const model = new DocumentModel();
 
             model
-                .setStateSchema({ schema: '<schema>', scope: 'global' }, { skip: 1, ignoreSkipOperations: true })
-                .setInitialState({ initialValue: '<initialValue>', scope: 'global' }, { skip: 2, ignoreSkipOperations: true })
-                .addStateExample({ id: '<id>', example: '<example>', scope: 'global' }, { skip: 3, ignoreSkipOperations: true })
-                .updateStateExample({ id: '<id>', newExample: '<newExample>', scope: 'global' }, { skip: 4, ignoreSkipOperations: true })
-                .reorderStateExamples({ order: ['<id>'], scope: 'global' }, { skip: 5, ignoreSkipOperations: true })
-                .deleteStateExample({ id: '<id>', scope: 'global' }, { skip: 6, ignoreSkipOperations: true });
+                .setStateSchema(
+                    { schema: '<schema>', scope: 'global' },
+                    { skip: 1, ignoreSkipOperations: true },
+                )
+                .setInitialState(
+                    { initialValue: '<initialValue>', scope: 'global' },
+                    { skip: 2, ignoreSkipOperations: true },
+                )
+                .addStateExample(
+                    { id: '<id>', example: '<example>', scope: 'global' },
+                    { skip: 3, ignoreSkipOperations: true },
+                )
+                .updateStateExample(
+                    { id: '<id>', newExample: '<newExample>', scope: 'global' },
+                    { skip: 4, ignoreSkipOperations: true },
+                )
+                .reorderStateExamples(
+                    { order: ['<id>'], scope: 'global' },
+                    { skip: 5, ignoreSkipOperations: true },
+                )
+                .deleteStateExample(
+                    { id: '<id>', scope: 'global' },
+                    { skip: 6, ignoreSkipOperations: true },
+                );
 
             expect(model.revision).toBe(6);
             model.operations.global.forEach((op, index) => {

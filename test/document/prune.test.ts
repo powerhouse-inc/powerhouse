@@ -154,7 +154,7 @@ describe('PRUNE operation', () => {
         newDocument = countReducer(newDocument, increment());
         newDocument = countReducer(newDocument, increment());
         newDocument = countReducer(newDocument, prune(1, 5));
-        newDocument = countReducer(newDocument, undo(1));        
+        newDocument = countReducer(newDocument, undo(1));
 
         expect(newDocument.name).toBe('');
         expect(newDocument.state.global.count).toBe(1);
@@ -174,7 +174,7 @@ describe('PRUNE operation', () => {
                 4,
             ),
             index: 1,
-            skip: 0
+            skip: 0,
         });
         expect(newDocument.documentType).toBe('powerhouse/counter');
         expect(newDocument.initialState.state.global).toStrictEqual({

@@ -2,7 +2,7 @@ import { OperationScope } from '..';
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
-export type Exact<T extends { [key: string]: unknown }> = {
+export type Exact<T extends Record<string, unknown>> = {
     [K in keyof T]: T[K];
 };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
@@ -11,10 +11,9 @@ export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
     [SubKey in K]: Maybe<T[SubKey]>;
 };
-export type MakeEmpty<
-    T extends { [key: string]: unknown },
-    K extends keyof T,
-> = { [_ in K]?: never };
+export type MakeEmpty<T extends Record<string, unknown>, K extends keyof T> = {
+    [_ in K]?: never;
+};
 export type Incremental<T> =
     | T
     | {
@@ -85,7 +84,7 @@ export type Load_State = 'LOAD_STATE';
 
 export type LoadStateAction = {
     input: LoadStateActionInput;
-    type: Load_State | `${Load_State}`;
+    type: Load_State;
     scope: OperationScope;
 };
 
@@ -140,7 +139,7 @@ export type Prune = 'PRUNE';
 
 export type PruneAction = {
     input: PruneActionInput;
-    type: Prune | `${Prune}`;
+    type: Prune;
     scope: OperationScope;
 };
 
@@ -158,7 +157,7 @@ export type Redo = 'REDO';
 
 export type RedoAction = {
     input: Scalars['Int']['input'];
-    type: Redo | `${Redo}`;
+    type: Redo;
     scope: OperationScope;
 };
 
@@ -166,7 +165,7 @@ export type Set_Name = 'SET_NAME';
 
 export type SetNameAction = {
     input: Scalars['String']['input'];
-    type: Set_Name | `${Set_Name}`;
+    type: Set_Name;
     scope: 'global';
 };
 
@@ -183,7 +182,7 @@ export type Undo = 'UNDO';
 
 export type UndoAction = {
     input: Scalars['Int']['input'];
-    type: Undo | `${Undo}`;
+    type: Undo;
     scope: OperationScope;
 };
 
@@ -191,6 +190,6 @@ export type NOOP = 'NOOP';
 
 export type NOOPAction = {
     input: Scalars['Unknown']['input'];
-    type: NOOP | `${NOOP}`;
+    type: NOOP;
     scope: OperationScope;
 };

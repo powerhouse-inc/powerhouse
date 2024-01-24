@@ -2,7 +2,7 @@ import { CodeExample } from '../../gen';
 import { DocumentModelOperationExampleOperations } from '../../gen/operation-example/operations';
 
 const exampleSorter = (order: string[]) => {
-    const mapping: { [key: string]: number } = {};
+    const mapping: Record<string, number> = {};
     order.forEach((key, index) => (mapping[key] = index));
     return (a: CodeExample, b: CodeExample) =>
         (mapping[b.id] || 999999) - (mapping[a.id] || 999999);

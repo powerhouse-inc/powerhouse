@@ -2,7 +2,7 @@ import { Operation } from '../../gen';
 import { DocumentModelOperationOperations } from '../../gen/operation/operations';
 
 const operationSorter = (order: string[]) => {
-    const mapping: { [key: string]: number } = {};
+    const mapping: Record<string, number> = {};
     order.forEach((key, index) => (mapping[key] = index));
     return (a: Operation, b: Operation) =>
         (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
