@@ -3,9 +3,13 @@ export type IconName =
     | 'arrow-up'
     | 'available'
     | 'bar-chart'
+    | 'base-arrow-left'
+    | 'base-arrow-right'
     | 'brick-globe'
     | 'briefcase'
+    | 'calendar'
     | 'caret'
+    | 'caret-down'
     | 'check'
     | 'check-circle'
     | 'chevron-down'
@@ -34,4 +38,5 @@ export type IconName =
     | 'syncing'
     | 'trash'
     | 'vertical-dots'
-    | 'xmark';
+    | 'xmark'
+    | 'xmark-light';

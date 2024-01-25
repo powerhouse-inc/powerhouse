@@ -5,6 +5,7 @@ type ButtonProps = ComponentPropsWithRef<'button'> & {
     color?: 'light' | 'dark' | 'red' | 'blue';
     size?: 'small' | 'medium';
     icon?: React.JSX.Element;
+    iconPosition?: 'left' | 'right';
 };
 
 export const Button = forwardRef(function Button(
@@ -17,6 +18,7 @@ export const Button = forwardRef(function Button(
         className = '',
         children,
         icon,
+        iconPosition = 'left',
         ...delegatedProps
     } = props;
 
@@ -42,8 +44,9 @@ export const Button = forwardRef(function Button(
 
     return (
         <button ref={ref} className={finalClassName} {...delegatedProps}>
-            {icon}
+            {iconPosition === 'left' && icon}
             {children}
+            {iconPosition === 'right' && icon}
         </button>
     );
 });
