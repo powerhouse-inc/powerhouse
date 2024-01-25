@@ -161,8 +161,8 @@ export default function EditorSchema({
                 // TODO clear current schema?
             }
         });
-        return listener.dispose;
-    }, [name]);
+        return () => listener.dispose();
+    }, [name, editorRef.current]);
 
     return (
         <div>
