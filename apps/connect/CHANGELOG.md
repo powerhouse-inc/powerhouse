@@ -1,3 +1,23 @@
+# [1.0.0-alpha.3](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2024-01-26)
+
+
+### Bug Fixes
+
+* added callback support for  document dispatch ([a4f4c04](https://github.com/powerhouse-inc/document-model-electron/commit/a4f4c04ead0d2aca54983da2e79e9ff6e673da15))
+* apply auto lint fix ([dfa1ec0](https://github.com/powerhouse-inc/document-model-electron/commit/dfa1ec02caddba3e9b06e1a18855f47abf959eda))
+* lint errors ([ac490b4](https://github.com/powerhouse-inc/document-model-electron/commit/ac490b4cdf693d62d57a865b55952ca7b46bfe94))
+* only call useMemo in hook ([76a1505](https://github.com/powerhouse-inc/document-model-electron/commit/76a15059e825ec0e1d6215e450ec0339d7c33bbe))
+* suppress less important rules ([679af22](https://github.com/powerhouse-inc/document-model-electron/commit/679af2256b8e6a4739006048056d452ba7fbf988))
+* use selectedDocument as source of truth for document editor ([b5204e7](https://github.com/powerhouse-inc/document-model-electron/commit/b5204e7153028459ef3ace07e719736d971d577a))
+
+
+### Features
+
+* bump lint deps ([544fcea](https://github.com/powerhouse-inc/document-model-electron/commit/544fcea7cdcf450756b8deb913c47047a9161849))
+* install ts-reset ([228b082](https://github.com/powerhouse-inc/document-model-electron/commit/228b082e36b1e689b47d7ed923dfe3347e74ad7d))
+* rename document drive node when document model name is changed ([b9008f7](https://github.com/powerhouse-inc/document-model-electron/commit/b9008f7e08e340329e16c0743133a09d044cb1dd))
+* update lint config ([170b252](https://github.com/powerhouse-inc/document-model-electron/commit/170b252cd35fe786147f4e5306948eecf6a3990c))
+
 # [1.0.0-alpha.2](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2023-12-20)
 
 
