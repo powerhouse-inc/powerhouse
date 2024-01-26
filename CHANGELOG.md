@@ -1,3 +1,10 @@
+# [1.0.0-alpha.44](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.43...v1.0.0-alpha.44) (2024-01-26)
+
+
+### Features
+
+* add public drive accepts any url ([4d31acd](https://github.com/powerhouse-inc/design-system/commit/4d31acd3f50930404bcb5e93bffa9dde1880db99))
+
 # [1.0.0-alpha.43](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.42...v1.0.0-alpha.43) (2024-01-22)
 
 
