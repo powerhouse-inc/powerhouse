@@ -1,8 +1,4 @@
-import {
-    CreateDocumentInput,
-    DocumentDriveServer,
-    DriveInput,
-} from 'document-drive/server';
+import { DocumentDriveServer, DriveInput } from 'document-drive/server';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { DocumentDriveAction } from 'document-model-libs/document-drive';
 import {
@@ -17,68 +13,69 @@ import { join } from 'path';
 export default (
     documentModels: DocumentModel[],
     path: string,
-    ipcMain: IpcMain
+    ipcMain: IpcMain,
 ) => {
     const documentDrive = new DocumentDriveServer(
         documentModels,
-        new FilesystemStorage(join(path, 'Document Drives'))
+        new FilesystemStorage(join(path, 'Document Drives')),
     );
 
-    documentDrive.getDrives().then(drives => {
-        if (!drives.length) {
-            documentDrive.addDrive({
-                global: {
-                    id: utils.hashKey(),
-                    name: 'Powerhouse',
-                    icon: null,
-                    remoteUrl: 'FAKE_URL',
-                },
-                local: {
-                    availableOffline: false,
-                    sharingType: 'shared',
-                },
-            });
-        }
-    });
+    documentDrive
+        .initialize()
+        .then(() =>
+            documentDrive
+                .getDrives()
+                .then(drives => {
+                    if (!drives.length) {
+                        documentDrive
+                            .addDrive({
+                                global: {
+                                    id: utils.hashKey(),
+                                    name: 'My Local Drive',
+                                    icon: null,
+                                    remoteUrl: null,
+                                },
+                                local: {
+                                    availableOffline: false,
+                                    sharingType: 'private',
+                                    listeners: [],
+                                },
+                            })
+                            .catch(console.error);
+                    }
+                })
+                .catch(console.error),
+        )
+        .catch(console.error);
 
     ipcMain.handle('documentDrive:getDrives', () => documentDrive.getDrives());
     ipcMain.handle('documentDrive:getDrive', (_e, id: string) =>
-        documentDrive.getDrive(id)
+        documentDrive.getDrive(id),
     );
     ipcMain.handle('documentDrive:addDrive', (_e, input: DriveInput) =>
-        documentDrive.addDrive(input)
+        documentDrive.addDrive(input),
     );
     ipcMain.handle('documentDrive:deleteDrive', (_e, id: string) =>
-        documentDrive.deleteDrive(id)
+        documentDrive.deleteDrive(id),
     );
 
     ipcMain.handle('documentDrive:getDocuments', (_e, drive: string) =>
-        documentDrive.getDocuments(drive)
+        documentDrive.getDocuments(drive),
     );
     ipcMain.handle(
         'documentDrive:getDocument',
-        (_e, drive: string, id: string) => documentDrive.getDocument(drive, id)
-    );
-    ipcMain.handle(
-        'documentDrive:createDocument',
-        (_e, drive: string, input: CreateDocumentInput) =>
-            documentDrive.createDocument(drive, input)
-    );
-    ipcMain.handle(
-        'documentDrive:deleteDocument',
-        (_e, drive: string, id: string) =>
-            documentDrive.deleteDocument(drive, id)
+        (_e, drive: string, id: string) => documentDrive.getDocument(drive, id),
     );
     ipcMain.handle(
         'documentDrive:addOperation',
         (_e, drive: string, id: string, operation: Operation) =>
-            documentDrive.addOperation(drive, id, operation)
+            documentDrive.addOperation(drive, id, operation),
     );
 
     ipcMain.handle(
         'documentDrive:addOperations',
         (_e, drive: string, id: string, operations: Operation[]) =>
-            documentDrive.addOperations(drive, id, operations)
+            documentDrive.addOperations(drive, id, operations),
     );
 
     ipcMain.handle(
@@ -86,8 +83,8 @@ export default (
         (
             _e,
             drive: string,
-            operation: Operation<DocumentDriveAction | BaseAction>
-        ) => documentDrive.addDriveOperation(drive, operation)
+            operation: Operation<DocumentDriveAction | BaseAction>,
+        ) => documentDrive.addDriveOperation(drive, operation),
     );
 
     ipcMain.handle(
@@ -95,7 +92,7 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | BaseAction>[]
-        ) => documentDrive.addDriveOperations(drive, operations)
+            operations: Operation<DocumentDriveAction | BaseAction>[],
+        ) => documentDrive.addDriveOperations(drive, operations),
     );
 };

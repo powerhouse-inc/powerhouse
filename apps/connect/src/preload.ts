@@ -5,12 +5,7 @@ import {
     DocumentDriveAction,
     DocumentDriveDocument,
 } from 'document-model-libs/document-drive';
-import {
-    BaseAction,
-    CreateChildDocumentInput,
-    Document,
-    Operation,
-} from 'document-model/document';
+import { BaseAction, Document, Operation } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { Theme } from './store';
 
@@ -19,11 +14,11 @@ const electronApi = {
     fileSaved: (document: Document, path?: string) =>
         ipcRenderer.invoke('fileSaved', document, path),
     handleFileOpen: (
-        listener: (file: { name: string; content: string }) => void
+        listener: (file: { name: string; content: string }) => void,
     ) => {
         function callback(
             event: IpcRendererEvent,
-            file: { name: string; content: string }
+            file: { name: string; content: string },
         ) {
             listener(file);
         }
@@ -42,7 +37,7 @@ const electronApi = {
         ipcRenderer.invoke('showTabMenu', tab);
     },
     handleAddTab: (
-        listener: (event: IpcRendererEvent, tab: string) => void
+        listener: (event: IpcRendererEvent, tab: string) => void,
     ) => {
         ipcRenderer.on('addTab', listener);
         return () => {
@@ -50,7 +45,7 @@ const electronApi = {
         };
     },
     handleRemoveTab: (
-        listener: (event: IpcRendererEvent, tab: string) => void
+        listener: (event: IpcRendererEvent, tab: string) => void,
     ) => {
         ipcRenderer.on('removeTab', listener);
         return () => {
@@ -58,7 +53,7 @@ const electronApi = {
         };
     },
     handleLogin: (
-        listener: (event: IpcRendererEvent, address: string) => void
+        listener: (event: IpcRendererEvent, address: string) => void,
     ) => {
         ipcRenderer.on('login', listener);
         return () => {
@@ -76,7 +71,7 @@ const electronApi = {
         getDrive: (id: string) =>
             ipcRenderer.invoke(
                 'documentDrive:getDrive',
-                id
+                id,
             ) as Promise<DocumentDriveDocument>,
         addDrive: (drive: DriveInput) =>
             ipcRenderer.invoke('documentDrive:addDrive', drive),
@@ -86,41 +81,37 @@ const electronApi = {
             ipcRenderer.invoke('documentDrive:getDocuments', drive),
         getDocument: (drive: string, id: string) =>
             ipcRenderer.invoke('documentDrive:getDocument', drive, id),
-        createDocument: (drive: string, input: CreateChildDocumentInput) =>
-            ipcRenderer.invoke('documentDrive:createDocument', drive, input),
-        deleteDocument: (drive: string, id: string) =>
-            ipcRenderer.invoke('documentDrive:deleteDocument', drive, id),
         addOperation: (drive: string, id: string, operation: Operation) =>
             ipcRenderer.invoke(
                 'documentDrive:addOperation',
                 drive,
                 id,
-                operation
+                operation,
             ),
         addOperations: (drive: string, id: string, operations: Operation[]) =>
             ipcRenderer.invoke(
                 'documentDrive:addOperations',
                 drive,
                 id,
-                operations
+                operations,
             ),
         addDriveOperation: (
             drive: string,
-            operation: Operation<DocumentDriveAction | BaseAction>
+            operation: Operation<DocumentDriveAction | BaseAction>,
         ) =>
             ipcRenderer.invoke(
                 'documentDrive:addDriveOperation',
                 drive,
-                operation
+                operation,
             ),
         addDriveOperations: (
             drive: string,
-            operations: Operation<DocumentDriveAction | BaseAction>[]
+            operations: Operation<DocumentDriveAction | BaseAction>[],
         ) =>
             ipcRenderer.invoke(
                 'documentDrive:addDriveOperations',
                 drive,
-                operations
+                operations,
             ),
     } satisfies IDocumentDriveServer,
 };

@@ -29,7 +29,7 @@ interface DriveContainerProps {
 }
 
 function isPublicDriveInput(
-    input: AddDriveInput | AddPublicDriveInput
+    input: AddDriveInput | AddPublicDriveInput,
 ): input is AddPublicDriveInput {
     return input.sharingType === 'PUBLIC';
 }
@@ -99,7 +99,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     const onDropEventHandler: DriveViewProps['onDropEvent'] = async (
         item,
         target,
-        event
+        event,
     ) => {
         const driveID = getRootPath(target.path);
 
@@ -126,7 +126,7 @@ export default function DriveContainer(props: DriveContainerProps) {
                 treeItem =>
                     treeItem.label === item.data.label &&
                     treeItem.id !== item.data.id,
-                { path: targetPath }
+                { path: targetPath },
             );
 
             if (filterPath.length > 0) {
@@ -150,8 +150,8 @@ export default function DriveContainer(props: DriveContainerProps) {
                 decodeID(targetId),
                 event.dropOperation,
                 undefined,
-                sortOptions
-            );
+                sortOptions,
+            ).catch(console.error);
         } else if (item.kind === 'file') {
             const file = await item.getFile();
             addFile(file, decodedDriveID, undefined, targetId);
@@ -169,8 +169,29 @@ export default function DriveContainer(props: DriveContainerProps) {
             local: {
                 availableOffline: input.availableOffline,
                 sharingType: input.sharingType.toLowerCase(),
+                listeners: isPublicDriveInput(input)
+                    ? [
+                          {
+                              block: true,
+                              callInfo: {
+                                  data: input.url,
+                                  name: 'switchboard-push',
+                                  transmitterType: 'SwitchboardPush',
+                              },
+                              filter: {
+                                  branch: ['main'],
+                                  documentId: ['*'],
+                                  documentType: ['*'],
+                                  scope: ['global'],
+                              },
+                              label: 'Switchboard Sync',
+                              listenerId: '1',
+                              system: true,
+                          },
+                      ]
+                    : [],
             },
-        });
+        }).catch(console.error);
     };
 
     return (
