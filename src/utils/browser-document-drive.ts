@@ -5,22 +5,29 @@ import { documentModels } from 'src/store/document-model';
 
 export const BrowserDocumentDriveServer = new DocumentDriveServer(
     documentModels,
-    new BrowserStorage()
+    new BrowserStorage(),
 );
 
-BrowserDocumentDriveServer.getDrives().then(drives => {
-    if (!drives.length) {
-        BrowserDocumentDriveServer.addDrive({
-            global: {
-                id: utils.hashKey(),
-                name: 'Powerhouse',
-                icon: null,
-                remoteUrl: 'FAKE_URL',
-            },
-            local: {
-                availableOffline: false,
-                sharingType: 'shared',
-            },
-        });
-    }
-});
+BrowserDocumentDriveServer.initialize()
+    .then(() =>
+        BrowserDocumentDriveServer.getDrives()
+            .then(drives => {
+                if (!drives.length) {
+                    BrowserDocumentDriveServer.addDrive({
+                        global: {
+                            id: utils.hashKey(),
+                            name: 'My Local Device',
+                            icon: null,
+                            remoteUrl: null,
+                        },
+                        local: {
+                            availableOffline: false,
+                            sharingType: 'shared',
+                            listeners: [],
+                        },
+                    }).catch(console.error);
+                }
+            })
+            .catch(console.error),
+    )
+    .catch(console.error);
