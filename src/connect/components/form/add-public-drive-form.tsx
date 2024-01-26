@@ -136,7 +136,7 @@ export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
 }
 
 function mockGetPublicDrive(url: string) {
-    const isValidUrl = url.includes('https://connect.powerhouse.xyz');
+    const isValidUrl = true; //url.includes('https://connect.powerhouse.xyz');
 
     if (!isValidUrl)
         return Promise.resolve({
@@ -146,14 +146,10 @@ function mockGetPublicDrive(url: string) {
 
     return Promise.resolve({
         status: 200 as const,
-        driveName: url
-            .split('https://connect.powerhouse.xyz/')[1]
-            .split('-')
-            .join(' ')
-            .toLowerCase(),
-        id: Math.random().toString(),
+        driveName: 'Switchboard',
+        id: '1',
         sharingType: 'PUBLIC' as const,
         location: 'SWITCHBOARD' as const,
-        availableOffline: false,
+        availableOffline: true,
     });
 }
