@@ -1,4 +1,5 @@
 export type IconName =
+    | 'arrow-filled-right'
     | 'arrow-left'
     | 'arrow-up'
     | 'available'
