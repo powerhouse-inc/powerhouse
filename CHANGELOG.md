@@ -1,3 +1,10 @@
+# [1.0.0-alpha.46](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.45...v1.0.0-alpha.46) (2024-01-29)
+
+
+### Features
+
+* updated drive info request ([8d9f7ac](https://github.com/powerhouse-inc/design-system/commit/8d9f7ac436e77ed5a50c1d922d678883a3722b78))
+
 # [1.0.0-alpha.45](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.44...v1.0.0-alpha.45) (2024-01-29)
 
 
