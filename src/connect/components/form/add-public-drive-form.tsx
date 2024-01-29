@@ -9,6 +9,7 @@ import {
     LocationInfo,
 } from '@/connect';
 import { Button, Icon } from '@/powerhouse';
+import { requestPublicDrive } from 'document-drive/utils/graphql';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useDebounce } from 'usehooks-ts';
@@ -50,26 +51,25 @@ export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
     useEffect(() => {
         setHasConfirmedUrl(false);
         if (debouncedUrl === '') return;
-        mockFetchPublicDrive().catch(console.error);
+        fetchPublicDrive().catch(console.error);
 
-        async function mockFetchPublicDrive() {
-            const response = await mockGetPublicDrive(debouncedUrl);
-            const isUrlValid = response.status === 200;
-            if (isUrlValid) {
+        async function fetchPublicDrive() {
+            try {
+                const { id, name } = await requestPublicDrive(debouncedUrl);
                 setPublicDriveDetails({
-                    id: response.id,
-                    driveName: response.driveName,
-                    sharingType: response.sharingType,
-                    location: response.location,
-                    availableOffline: response.availableOffline,
+                    id,
+                    driveName: name,
+                    sharingType: 'PUBLIC',
+                    location: 'SWITCHBOARD',
+                    availableOffline: true,
                 });
-                setValue('availableOffline', response.availableOffline);
+                setValue('availableOffline', true);
                 setIsUrlValid(true);
                 setErrorMessage('');
-            } else {
+            } catch (error) {
                 setPublicDriveDetails(undefined);
                 setIsUrlValid(false);
-                setErrorMessage(response.statusText);
+                setErrorMessage((error as Error).message);
             }
         }
     }, [debouncedUrl, setValue]);
@@ -133,23 +133,4 @@ export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
             )}
         </form>
     );
-}
-
-function mockGetPublicDrive(url: string) {
-    const isValidUrl = true; //url.includes('https://connect.powerhouse.xyz');
-
-    if (!isValidUrl)
-        return Promise.resolve({
-            status: 404 as const,
-            statusText: 'Drive does not exist. Please check URL',
-        });
-
-    return Promise.resolve({
-        status: 200 as const,
-        driveName: 'Switchboard',
-        id: '1',
-        sharingType: 'PUBLIC' as const,
-        location: 'SWITCHBOARD' as const,
-        availableOffline: true,
-    });
 }
