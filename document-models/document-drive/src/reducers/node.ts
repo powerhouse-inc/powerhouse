@@ -4,7 +4,10 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { OperationScope } from 'document-model/document';
+import {
+    OperationScope,
+    CreateChildDocumentInput,
+} from 'document-model/document';
 import { FileNode, getDescendants, getLatestSyncId, isFileNode } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
 import { z } from 'document-model/document-model';
@@ -45,6 +48,8 @@ export const reducer: DocumentDriveNodeOperations = {
                 id: action.input.id,
                 documentType: action.input.documentType,
                 synchronizationUnits,
+                document: action.input
+                    .document as CreateChildDocumentInput['document'],
             },
         });
     },

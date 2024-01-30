@@ -1,3 +1,5 @@
+scalar Unknown
+
 type FolderNode {
     id: String!
     name: String!
@@ -39,11 +41,11 @@ type ListenerFilter {
 }
 
 enum TransmitterType {
-    Internal,
-    SwitchboardPush,
-    PullResponder,
-    SecureConnect, 
-    MatrixConnect,
+    Internal
+    SwitchboardPush
+    PullResponder
+    SecureConnect
+    MatrixConnect
     RESTWebhook
 }
 
@@ -62,7 +64,7 @@ type Listener {
     callInfo: ListenerCallInfo
 }
 
-type DocumentDriveLocalState{
+type DocumentDriveLocalState {
     sharingType: String
     listeners: [Listener!]!
     availableOffline: Boolean!
@@ -76,6 +78,7 @@ input AddFileInput {
     documentType: String!
     parentFolder: ID
     scopes: [String!]!
+    document: Unknown
 }
 
 input AddFolderInput {

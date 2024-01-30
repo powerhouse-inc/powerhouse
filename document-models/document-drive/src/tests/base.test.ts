@@ -152,6 +152,7 @@ describe('DocumentDrive Class', () => {
             type: 'CREATE_CHILD_DOCUMENT',
             input: {
                 id: '1',
+                document: undefined,
                 documentType: 'test',
                 synchronizationUnits: [
                     {
