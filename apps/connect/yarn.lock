@@ -1544,18 +1544,13 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@1.0.0-alpha.44":
-  version "1.0.0-alpha.44"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.44.tgz#4e7ef27a87a4689489ad7b380560007b68efc606"
-  integrity sha512-Ke41VHC6dFCdf5w52Z3uzW2nhtI5FLJiwjurzQCUKiR9CbtDp0TpPkAwni7P/NtDI6EvfqrkfG0lVNzLSIa+oA==
+"@powerhousedao/design-system@^1.0.0-alpha.46":
+  version "1.0.0-alpha.46"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.46.tgz#61212afb0d8cc2e7f2f3a87bb48761ed478e9c9f"
+  integrity sha512-hYxCBShMrexmj9aLfE4eKtcR8NxIG+vcBlgYXbpGET4r1XlG3GxruLkLpj5to7YGg7H8WAhAHC+BulhQy8B/YA==
   dependencies:
     "@radix-ui/react-dialog" "^1.0.5"
     react-hook-form "^7.49.3"
-
-"@prisma/client@5.7.1":
-  version "5.7.1"
-  resolved "https://registry.yarnpkg.com/@prisma/client/-/client-5.7.1.tgz#a124afd05663267f7255a639a81d28303684a063"
-  integrity sha512-TUSa4nUcC4nf/e7X3jyO1pEd6XcI/TLRCA0KjkA46RDIpxUaRsBYEOqITwXRW2c0bMFyKcCRXrH4f7h4q9oOlg==
 
 "@radix-ui/primitive@1.0.1":
   version "1.0.1"
@@ -4519,9 +4514,9 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@powerhouse-inc/document-drive#f139afc:
+document-drive@powerhouse-inc/document-drive#003e3d2:
   version "0.0.23"
-  resolved "https://codeload.github.com/powerhouse-inc/document-drive/tar.gz/f139afc2f5b0245de1866ea849221f6ab1ae27d2"
+  resolved "https://codeload.github.com/powerhouse-inc/document-drive/tar.gz/003e3d2f8a5ae0f542196112c91ee3c01bd875b6"
   dependencies:
     "@prisma/client" "5.7.1"
     graphql "^16.8.1"
