@@ -1,3 +1,10 @@
+# [1.0.0-alpha.47](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.46...v1.0.0-alpha.47) (2024-01-30)
+
+
+### Features
+
+* added create asset modal + RWA base input components ([e063398](https://github.com/powerhouse-inc/design-system/commit/e06339833ca46859d333986fe8133cb16112fedd))
+
 # [1.0.0-alpha.46](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.45...v1.0.0-alpha.46) (2024-01-29)
 
 
