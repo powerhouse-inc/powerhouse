@@ -81,7 +81,7 @@
     },
     "dependencies": {
         "@powerhousedao/design-system": "^1.0.0-alpha.46",
-        "document-drive": "powerhouse-inc/document-drive#003e3d2",
+        "document-drive": "powerhouse-inc/document-drive#35e2f7",
         "document-model": "^1.0.26",
         "electron-is-dev": "^2.0.0",
         "electron-squirrel-startup": "^1.0.0",

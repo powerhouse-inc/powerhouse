@@ -4514,11 +4514,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@powerhouse-inc/document-drive#003e3d2:
+document-drive@powerhouse-inc/document-drive#35e2f7:
   version "0.0.23"
-  resolved "https://codeload.github.com/powerhouse-inc/document-drive/tar.gz/003e3d2f8a5ae0f542196112c91ee3c01bd875b6"
+  resolved "https://codeload.github.com/powerhouse-inc/document-drive/tar.gz/35e2f7c9b788c498d3dc208d22887f3307dc7c6e"
   dependencies:
-    "@prisma/client" "5.7.1"
     graphql "^16.8.1"
     graphql-request "^6.1.0"
     sanitize-filename "^1.6.3"
