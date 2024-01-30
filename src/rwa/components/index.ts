@@ -3,4 +3,5 @@ export * from './create-asset-modal';
 export * from './date-picker';
 export * from './select';
 export * from './table';
+export * from './tabs';
 export * from './text-input';
