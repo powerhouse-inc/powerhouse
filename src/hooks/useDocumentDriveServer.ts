@@ -277,6 +277,7 @@ export function useDocumentDriveServer(
 
     async function addDrive(drive: DriveInput) {
         const id = drive.global.id || utils.hashKey();
+        drive = documentDriveUtils.createState(drive);
         await server.addDrive({
             global: { ...drive.global, id },
             local: drive.local,
