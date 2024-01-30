@@ -105,7 +105,7 @@ export function useDocumentDriveServer(
                 parentFolder,
                 documentType,
                 scopes: ['global'],
-                // TODO Add support for document as initial state
+                document,
             }),
         );
 
