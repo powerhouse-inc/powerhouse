@@ -6908,15 +6908,15 @@ document-drive@powerhouse-inc/document-drive#93301293:
     sanitize-filename "^1.6.3"
 
 document-model@^1.0.22:
-  version "1.0.22"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.22.tgz#560af4b15ea1c0ae24161739c580be859fe9115d"
-  integrity sha512-YIHusHYr13qUQAu9T6Fqze7Ta93o8On8OpxZHgv/XqxFtXPJsRryO8bLK/M2/rIv7fWhkvx0pinJeEiq4AF5fQ==
+  version "1.0.26"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.26.tgz#9ddc78d0098fab1c6461d5105cd68cd7bf52eb3a"
+  integrity sha512-G0TOrvpvaz40M6TNSOrRn6akMAHoIoIwUt2apDlgtB3r2nDaLoflkIBhONIPuFMJCnA665aH/oq9hxjjzmiNqw==
   dependencies:
-    immer "^10.0.2"
-    json-stringify-deterministic "^1.0.10"
+    immer "^10.0.3"
+    json-stringify-deterministic "^1.0.12"
     jszip "^3.10.1"
-    mime "^3.0.0"
-    zod "^3.22.2"
+    mime "^4.0.1"
+    zod "^3.22.4"
 
 dom-accessibility-api@^0.5.9:
   version "0.5.16"
@@ -8498,7 +8498,7 @@ immediate@~3.0.5:
   resolved "https://registry.yarnpkg.com/immediate/-/immediate-3.0.6.tgz#9db1dbd0faf8de6fbe0f5dd5e56bb606280de69b"
   integrity sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==
 
-immer@^10.0.2:
+immer@^10.0.3:
   version "10.0.3"
   resolved "https://registry.yarnpkg.com/immer/-/immer-10.0.3.tgz#a8de42065e964aa3edf6afc282dfc7f7f34ae3c9"
   integrity sha512-pwupu3eWfouuaowscykeckFmVTpqbzW+rXFCX8rQLkZzM9ftBmU/++Ra+o+L27mz03zJTlyV4UUr+fdKNffo4A==
@@ -9262,7 +9262,7 @@ json-stable-stringify-without-jsonify@^1.0.1:
   resolved "https://registry.yarnpkg.com/json-stable-stringify-without-jsonify/-/json-stable-stringify-without-jsonify-1.0.1.tgz#9db7b59496ad3f3cfef30a75142d2d930ad72651"
   integrity sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==
 
-json-stringify-deterministic@^1.0.10:
+json-stringify-deterministic@^1.0.12:
   version "1.0.12"
   resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.12.tgz#aaa3f907466ed01e3afd77b898d0a2b3b132820a"
   integrity sha512-q3PN0lbUdv0pmurkBNdJH3pfFvOTL/Zp0lquqpvcjfKzt6Y0j49EPHAmVHCAS4Ceq/Y+PejWTzyiVpoY71+D6g==
@@ -9954,6 +9954,11 @@ mime@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/mime/-/mime-3.0.0.tgz#b374550dca3a0c18443b0c950a6a58f1931cf7a7"
   integrity sha512-jSCU7/VB1loIWBZe14aEYHU/+1UMEHoaO7qxCOVJOw9GgH72VAWppxNcjU+x9a2k3GSIBXNKxXQFqRvvZ7vr3A==
+
+mime@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/mime/-/mime-4.0.1.tgz#ad7563d1bfe30253ad97dedfae2b1009d01b9470"
+  integrity sha512-5lZ5tyrIfliMXzFtkYyekWbtRXObT9OWa8IwQ5uxTBDHucNNwniRqo0yInflj+iYi5CBa6qxadGzGarDfuEOxA==
 
 mimic-fn@^2.1.0:
   version "2.1.0"
@@ -13694,7 +13699,7 @@ z-schema@~5.0.2:
   optionalDependencies:
     commander "^10.0.0"
 
-zod@^3.22.2:
+zod@^3.22.4:
   version "3.22.4"
   resolved "https://registry.yarnpkg.com/zod/-/zod-3.22.4.tgz#f31c3a9386f61b1f228af56faa9255e845cf3fff"
   integrity sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==
