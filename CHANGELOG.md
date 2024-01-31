@@ -1,3 +1,10 @@
+# [1.0.0-alpha.49](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.48...v1.0.0-alpha.49) (2024-01-31)
+
+
+### Features
+
+* added RWATabs component ([e79d4cf](https://github.com/powerhouse-inc/design-system/commit/e79d4cf81d5e7f6d8a7e3c236faccbf79bcacf0d))
+
 # [1.0.0-alpha.48](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.47...v1.0.0-alpha.48) (2024-01-30)
 
 
