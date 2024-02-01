@@ -1,6 +1,6 @@
 {
     "name": "document-model-libs",
-    "version": "1.1.37",
+    "version": "1.1.38",
     "license": "AGPL-3.0-only",
     "types": "dist/index.d.ts",
     "main": "dist/index.cjs",
@@ -46,16 +46,16 @@
         }
     },
     "scripts": {
-        "generate": "powerhouse generate",
+        "generate": "powerhouse generate && yarn eslint . --fix",
         "check-types": "tsc",
-        "lint": "yarn generate && yarn eslint . && yarn check-types",
-        "lint:fix": "yarn generate && yarn eslint . --fix",
-        "lint:quiet": "yarn generate && yarn eslint . --quiet",
-        "build": "yarn generate && vite build",
-        "storybook": "yarn generate && storybook dev -p 6006",
-        "build-storybook": "yarn generate && storybook build",
-        "test": "yarn generate && vitest run",
-        "test:watch": "yarn generate && vitest"
+        "lint": "powerhouse generate && yarn eslint . && yarn check-types",
+        "lint:fix": "powerhouse generate && yarn eslint . --fix",
+        "lint:quiet": "powerhouse generate && yarn eslint . --quiet",
+        "build": "powerhouse generate && vite build",
+        "storybook": "powerhouse generate && storybook dev -p 6006",
+        "build-storybook": "powerhouse generate && storybook build",
+        "test": "powerhouse generate && vitest run",
+        "test:watch": "powerhouse generate && vitest"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.4",
@@ -64,7 +64,7 @@
         "@emotion/styled": "^11.11.0",
         "@monaco-editor/react": "^4.6.0",
         "@mui/material": "^5.15.5",
-        "@powerhousedao/codegen": "0.0.9",
+        "@powerhousedao/codegen": "0.0.11",
         "@storybook/addon-essentials": "^7.6.10",
         "@storybook/addon-interactions": "^7.6.10",
         "@storybook/addon-links": "^7.6.10",

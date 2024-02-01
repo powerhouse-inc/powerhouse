@@ -2619,10 +2619,10 @@
   resolved "https://registry.yarnpkg.com/@popperjs/core/-/core-2.11.8.tgz#6b79032e760a0899cd4204710beede972a3a185f"
   integrity sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==
 
-"@powerhousedao/codegen@0.0.9":
-  version "0.0.9"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/codegen/-/codegen-0.0.9.tgz#2650f7af54880b2f43a92c4b4faddf50593189d2"
-  integrity sha512-I/f52+zU4RtGvdsJdPRtp4Zuyo1NvaVu9UmqEimKcpYYI/0l7xdsAFd5FcqnUQcmW5a1zC0Q973iNDzdBOfTXA==
+"@powerhousedao/codegen@0.0.11":
+  version "0.0.11"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/codegen/-/codegen-0.0.11.tgz#dbb8ec1a57f1ba9424fe46d83684cc4870320c9d"
+  integrity sha512-nAdM8Vcak5ViaWacH8meDTRvQWw4scOJl3B9hLoz9rt8/MllsqVz1iDi4thba66BYkLjc/hNo+NxbdFRJ+70Cg==
   dependencies:
     "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
     "@anatine/zod-mock" "^3.13.3"

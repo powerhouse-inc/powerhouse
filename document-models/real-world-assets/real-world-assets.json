@@ -1,0 +1,414 @@
+{
+    "id": "",
+    "name": "RealWorldAssets",
+    "extension": "",
+    "description": "",
+    "author": {
+        "name": "",
+        "website": ""
+    },
+    "specifications": [
+        {
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "global": {
+                    "schema": "type RealWorldAssetsState {\n    accounts: [Account!]!\n    principalLenderAccountId: ID! # Account.id (That relates to the Maker account)\n    spvs: [Spv!]!\n    feeTypes: [ServiceProvider!]!\n    fixedIncomeTypes: [FixedIncomeType!]!\n    portfolio: [Asset!]!\n    transactions: [GroupTransaction!]!\n}\n\nunion Asset = FixedIncome | Cash\n\ntype FixedIncome {\n    id: ID!\n    fixedIncomeTypeId: ID! # FixedIncomeType.id\n    name: String!\n    ISIN: String\n    CUSIP: String\n    spvId: ID! # Spv.id\n    coupon: Float\n    maturity: DateTime!\n    purchaseDate: DateTime! # Weighted average of underlying transactions\n    notional: Float! # Face value\n    purchaseProceeds: Float! # Total cash outflow spent on purchases\n    purchasePrice: Float! # purchaseProceeds / notional\n    totalDiscount: Float! # notional - purchaseProceeds\n    marketValue: Float!\n    currentValue(when: DateTime): Float # (Current Date - Purchase Date) / ((Maturity Date - Current Date) * Total Discount + Purchase Proceeds\n    annualizedYield: Float! # (Purchase Price / ( Notional - Purchase Price)) x (365 / Days to Maturity ) * 100\n    realizedSurplus: Float!\n    totalSurplus: Float!\n}\n\ntype Cash {\n    id: ID!\n    spvId: ID! # Spv.id\n    currency: String! # Will always be \"USD\" for version 1\n}\n\ntype FixedIncomeType {\n    id: ID!\n    name: String!\n}\n\ntype Spv {\n    id: ID!\n    name: String!\n}\n\ntype BaseTransaction {\n    id: ID!\n    assetId: ID! # Asset.id\n    amount: Float!\n    entryTime: DateTime!\n    tradeTime: DateTime\n    settlementTime: DateTime\n    txRef: String\n    accountId: ID # Account.id\n    counterPartyAccountId: ID # Account.id\n}\n\ntype Account {\n    id: ID!\n    reference: String! # e.g. bank account number or ETH address\n    label: String\n}\n\nunion GroupTransaction =\n    | PrincipalDrawGroupTransaction\n    | PrincipalReturnGroupTransaction\n    | AssetPurchaseGroupTransaction\n    | AssetSaleGroupTransaction\n    | InterestDrawGroupTransaction\n    | InterestReturnGroupTransaction\n    | FeesPaymentGroupTransaction\n\ntype PrincipalDrawGroupTransaction {\n    id: ID!\n    type: GroupTransactionType!\n    cashTransaction: BaseTransaction\n}\n\ntype PrincipalReturnGroupTransaction {\n    id: ID!\n    type: GroupTransactionType!\n    cashTransaction: BaseTransaction\n}\n\ntype AssetPurchaseGroupTransaction {\n    id: ID!\n    type: GroupTransactionType!\n    fixedIncomeTransaction: BaseTransaction\n}\n\ntype AssetSaleGroupTransaction {\n    id: ID!\n    type: GroupTransactionType!\n    fixedIncomeTransaction: BaseTransaction\n}\n\ntype InterestDrawGroupTransaction {\n    id: ID!\n    type: GroupTransactionType!\n    interestTransaction: BaseTransaction\n}\n\ntype InterestReturnGroupTransaction {\n    id: ID!\n    type: GroupTransactionType!\n    interestTransaction: BaseTransaction\n}\n\ntype FeesPaymentGroupTransaction {\n    id: ID!\n    type: GroupTransactionType!\n    feeTransactions: [BaseTransaction]\n}\n\nenum CashGroupTransactionType {\n    PrincipalDraw\n    PrincipalReturn\n}\n\nenum FixedIncomeGroupTransactionType {\n    AssetPurchase\n    AssetSale\n    InterestDraw # Payment from Borrower to Arranger (If there is a coupon)\n    InterestReturn # Payment from Arranger to Maker\n    FeesPayment\n}\n\nunion GroupTransactionType =\n    | CashGroupTransactionType\n    | FixedIncomeGroupTransactionType\n\ntype ServiceProvider {\n    id: ID!\n    name: String!\n    feeType: String!\n    accountId: ID! # Account.id\n}\n\ntype TransactionFee {\n    serviceProviderId: ID!\n    amount: Float!\n}\n\nscalar DateTime",
+                    "initialValue": "{\"accounts\":[],\"principalLenderAccountId\":\"initial-id\",\"spvs\":[],\"feeTypes\":[],\"fixedIncomeTypes\":[],\"portfolio\":[],\"transactions\":[]}",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                }
+            },
+            "modules": [
+                {
+                    "id": "Yl/ZEXfD4sPUOGFuwNkNSnw8jaI=",
+                    "name": "general",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "OSkSsemxe9jYh+/AGXsxUdEFnM4=",
+                            "name": "CREATE_SPV",
+                            "description": "",
+                            "schema": "input CreateSpvInput {\n    \tid: ID!\n  name: String!\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "DRF21J8LbR0FVeq5DvX+CnQaFZo=",
+                            "name": "EDIT_SPV",
+                            "description": "",
+                            "schema": "input EditSpvInput {\n    id: ID!\n    name: String\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "lKR/ln4O+KeVAht2JyK9KGszlsQ=",
+                            "name": "DELETE_SPV",
+                            "description": "",
+                            "schema": "input DeleteSpvInput {\n    id: ID!\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "Q9FxdKfya8ND+MFhh3p7dzhW6/4=",
+                            "name": "CREATE_SERVICE_PROVIDER",
+                            "description": "",
+                            "schema": "input CreateServiceProviderInput {\n    \tid: ID!\n\tname: String!\n\tfeeType: String!\n\taccountId: ID!\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "D2Zkwm89QJ8yeF1LOaNdlnh6mgk=",
+                            "name": "EDIT_SERVICE_PROVIDER",
+                            "description": "",
+                            "schema": "input EditServiceProviderInput {\n   \tid: ID!\n\tname: String\n\tfeeType: String\n\taccountId:ID\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "VNIpnLnET2frJhUbA+rlP9W2Zgw=",
+                            "name": "DELETE_SERVICE_PROVIDER",
+                            "description": "",
+                            "schema": "input DeleteServiceProviderInput {\n    id: ID!\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "YxZkL4RYFLjMp15BLCewmXiung4=",
+                            "name": "CREATE_ACCOUNT",
+                            "description": "",
+                            "schema": "input CreateAccountInput {\n    \tid: ID!\n\treference: String!\n\tlabel: String\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "SXWANm1SEXlrr9Mt+AUF8ZeJnv8=",
+                            "name": "EDIT_ACCOUNT",
+                            "description": "",
+                            "schema": "input EditAccountInput {\n    \tid: ID!\n\treference: String\n\tlabel: String\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "/bI2dshTNE+VO8yURiuofMaBSnk=",
+                            "name": "DELETE_ACCOUNT",
+                            "description": "",
+                            "schema": "input DeleteAccountInput {\n    \tid: ID!\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                },
+                {
+                    "id": "S6LkZyJzDgDLyvsPY3dg5omH4Kc=",
+                    "name": "portfolio",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "nKGLGOHqaxtn382PRYgMni6JKyo=",
+                            "name": "CREATE_FIXED_INCOME_ASSET",
+                            "description": "",
+                            "schema": "input CreateFixedIncomeAssetInput {\n    id: ID!\n    fixedIncomeTypeId: ID! # RwaFixedIncomeType.id\n  spvId: ID!  name: String!\n    maturity: DateTime!\n    ISIN: String\n    CUSIP: String\n    coupon: Float\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "SsPBD1U5nYqTCRFu4g0+grvif8o=",
+                            "name": "CREATE_CASH_ASSET",
+                            "description": "",
+                            "schema": "input CreateCashAssetInput {\n\t\tid: ID!\nspvId: ID! # Spv.id\n  currency: String! # Will always be \"USD\" for version 1\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "I2Cu0ePD1yWfsRBCKOVte4mI8JU=",
+                            "name": "EDIT_FIXED_INCOME_ASSET",
+                            "description": "",
+                            "schema": "input EditFixedIncomeAssetInput {\n    id: ID!\n    fixedIncomeTypeId: ID # RwaFixedIncomeType.id\n spvId: ID   name: String\n    ISIN: String\n    CUSIP: String\n    coupon: Float\n    maturity: DateTime\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "s01BdyXEkcBm32feRrFd0BTQ+aM=",
+                            "name": "EDIT_CASH_ASSET",
+                            "description": "",
+                            "schema": "input EditCashAssetInput {\n\tid: ID!\n\tspv: ID # Spv.id\n  currency: String # Will always be \"USD\" for version 1\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "WiIOGpzs1TowDkkCvEM/IttAoJ8=",
+                            "name": "DELETE_FIXED_INCOME_ASSET",
+                            "description": "",
+                            "schema": "input DeleteFixedIncomeAssetInput {\n    id: ID!\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "oOuY9WG2Fb/i+LcI8r20LGEzEJQ=",
+                            "name": "DELETE_CASH_ASSET",
+                            "description": "",
+                            "schema": "input DeleteCashAssetInput {\n    id: ID!\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                },
+                {
+                    "id": "aZsq8U7Vp3YLkmISdadGmXTVVNs=",
+                    "name": "transactions",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "+QHmjG00MgVWQ3ya25Oenjl4I=",
+                            "name": "CREATE_PRINCIPAL_DRAW_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputCreatePrincipalDrawGroupTransactionInput{id:ID!cashTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "bNd9W7EEWa8dO75FoNyLRCoBGDc=",
+                            "name": "CREATE_PRINCIPAL_RETURN_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputCreatePrincipalReturnGroupTransactionInput{id:ID!cashTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "xqOs2QUQhHZiJkUX9HxlJXTLWZw=",
+                            "name": "CREATE_ASSET_PURCHASE_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputCreateAssetPurchaseGroupTransactionInput{id:ID!fixedIncomeTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "Ok87e95hqbV+7+Ol6Fm2+jO7Jgg=",
+                            "name": "CREATE_ASSET_SALE_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputCreateAssetSaleGroupTransactionInput{id:ID!fixedIncomeTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "FbYJA27k6l0PscY5N3CKi0NQh4Q=",
+                            "name": "CREATE_INTEREST_DRAW_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputCreateInterestDrawGroupTransactionInput{id:ID!interestTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "BQ0OxupIiUef+pWw684G7kFhju4=",
+                            "name": "CREATE_INTEREST_RETURN_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputCreateInterestReturnGroupTransactionInput{id:ID!interestTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "7dfs6L4Uk5DwHyiP3CQM4IzK8Ss=",
+                            "name": "CREATE_FEES_PAYMENT_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputCreateFeesPaymentGroupTransactionInput{id:ID!feeTransactions:[BaseTransaction]}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "HOxXt7bh8ZMgXCCrHBe5Vafansg=",
+                            "name": "EDIT_GROUP_TRANSACTION_TYPE",
+                            "description": "",
+                            "schema": "inputEditGroupTransactionTypeInput{id:ID!type:GroupTransactionType!}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "zPGLfsnj+MbQFq3CQdgu36Bb4ic=",
+                            "name": "EDIT_PRINCIPAL_DRAW_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputEditPrincipalDrawGroupTransactionInput{id:ID!cashTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "d4gNEgtu2Ch7jvZjN+gSgf1CwGc=",
+                            "name": "EDIT_PRINCIPAL_RETURN_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputEditPrincipalReturnGroupTransactionInput{id:ID!cashTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "dT85OkXSP0EOVznic24JEy1WFbo=",
+                            "name": "EDIT_ASSET_PURCHASE_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputEditAssetPurchaseGroupTransactionInput{id:ID!fixedIncomeTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "v/PGx+w/oE+69vdmLpTO/oH/X9o=",
+                            "name": "EDIT_ASSET_SALE_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputEditAssetSaleGroupTransactionInput{id:ID!fixedIncomeTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "T3gWYNoqdT/tPrczgdpaCcQz5BI=",
+                            "name": "EDIT_INTEREST_DRAW_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputEditInterestDrawGroupTransactionInput{id:ID!interestTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "Wg49korUNLaDgD8nhiOYd88S+6g=",
+                            "name": "EDIT_INTEREST_RETURN_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputEditInterestReturnGroupTransactionInput{id:ID!interestTransaction:BaseTransaction}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "bR8EulBSPuKO8tkYHKoEwfkSgeA=",
+                            "name": "ADD_FEE_TRANSACTIONS_TO_FEES_PAYMENT_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputAddFeeTransactionsToFeesPaymentGroupTransactionInput{id:ID!feeTransactions:[BaseTransaction]}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "cSwLKUXYJg0OAlLXWxYGfZD6Fts=",
+                            "name": "EDIT_FEE_TRANSACTION",
+                            "description": "",
+                            "schema": "\ninput EditFeeTransactionInput {\n    feeTransactionId: ID!\n    id: ID!\n    assetId: ID! # Asset.id\n    amount: Float!\n    entryTime: DateTime!\n    tradeTime: DateTime\n    settlementTime: DateTime\n    txRef: String\n    accountId: ID # Account.id\n    counterPartyAccountId: ID # Account.id\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "NINQNICB1l4z33WB2ONypP63OQE=",
+                            "name": "REMOVE_FEE_TRANSACTION_FROM_FEES_PAYMENT_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "inputRemoveFeeTransactionFromFeesPaymentGroupTransactionInput{id:ID!feeTransactionId:ID!}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "sVzG0QHIjUwD4IffaZ+47riwIVM=",
+                            "name": "DELETE_GROUP_TRANSACTION",
+                            "description": "",
+                            "schema": "input DeleteGroupTransactionInput {\n    id: ID!\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

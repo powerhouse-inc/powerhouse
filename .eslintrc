@@ -41,6 +41,7 @@
         "@typescript-eslint/restrict-template-expressions": "warn",
         "@typescript-eslint/unbound-method": "warn",
         "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/prefer-reduce-type-parameter": "off",
         "@typescript-eslint/no-unused-vars": [
             1,
             {
