@@ -30,7 +30,7 @@ type DocumentDriveState {
     name: String!
     nodes: [Node!]!
     icon: String
-    remoteUrl: String
+    slug: String
 }
 
 type ListenerFilter {
