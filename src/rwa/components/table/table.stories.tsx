@@ -176,6 +176,7 @@ const TableDemo = (props: RWATableProps<Item>) => {
     };
 
     const sortedItems = useMemo(() => {
+        if (!items) return [];
         const order = sortDescriptor.direction === 'ascending' ? 'asc' : 'desc';
         return orderBy(items, [sortDescriptor.column as ItemKey], [order]);
     }, [sortDescriptor, items]);

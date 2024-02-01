@@ -20,8 +20,9 @@ export type RWAColumnHeader = {
 
 export interface RWATableProps<T extends object> extends DivProps {
     header: RWAColumnHeader[];
-    items: T[];
-    renderRow: (item: T, index: number) => JSX.Element;
+    items?: T[];
+    renderRow?: (item: T, index: number) => JSX.Element;
+    children?: React.ReactNode;
     tableProps?: TableProps;
     tableHeaderProps?: TableHeaderProps<RWAColumnHeader>;
     tableBodyProps?: TableBodyProps<T>;
@@ -30,6 +31,7 @@ export interface RWATableProps<T extends object> extends DivProps {
 
 export function RWATable<T extends object>(props: RWATableProps<T>) {
     const {
+        children,
         header,
         items,
         renderRow,
@@ -84,7 +86,10 @@ export function RWATable<T extends object>(props: RWATableProps<T>) {
                     )}
                 </TableHeader>
                 <TableBody {...tableBodyProps}>
-                    {items.map((item, index) => renderRow(item, index))}
+                    {children}
+                    {items &&
+                        renderRow &&
+                        items.map((item, index) => renderRow(item, index))}
                 </TableBody>
             </Table>
         </div>

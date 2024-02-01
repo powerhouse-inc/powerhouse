@@ -32,6 +32,7 @@ export type IconName =
     | 'plus'
     | 'plus-circle'
     | 'project'
+    | 'save'
     | 'search'
     | 'server'
     | 'settings'

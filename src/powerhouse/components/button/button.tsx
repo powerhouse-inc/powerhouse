@@ -1,7 +1,7 @@
 import { ComponentPropsWithRef, ForwardedRef, forwardRef } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
 
-type ButtonProps = ComponentPropsWithRef<'button'> & {
+export type ButtonProps = ComponentPropsWithRef<'button'> & {
     color?: 'light' | 'dark' | 'red' | 'blue';
     size?: 'small' | 'medium';
     icon?: React.JSX.Element;
