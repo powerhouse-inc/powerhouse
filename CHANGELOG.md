@@ -1,3 +1,10 @@
+# [1.0.0-alpha.50](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.49...v1.0.0-alpha.50) (2024-02-02)
+
+
+### Features
+
+* added RWA transaction detail component ([b87202c](https://github.com/powerhouse-inc/design-system/commit/b87202c36b003a9dd32f546c111f1d5b6399291f))
+
 # [1.0.0-alpha.49](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.48...v1.0.0-alpha.49) (2024-01-31)
 
 
