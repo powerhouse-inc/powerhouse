@@ -34,4 +34,21 @@ export const reducer: DocumentDriveDriveOperations = {
             listener => listener.listenerId === action.input.listenerId,
         );
     },
+    addTriggerOperation(state, action, dispatch) {
+        if (
+            state.triggers.find(
+                trigger => trigger.id === action.input.trigger.id,
+            )
+        ) {
+            throw new Error(
+                `A trigger with Id: ${action.input.trigger.id} already exists`,
+            );
+        }
+        state.triggers.push(action.input.trigger);
+    },
+    removeTriggerOperation(state, action, dispatch) {
+        state.triggers = state.triggers.filter(
+            trigger => trigger.id === action.input.triggerId,
+        );
+    },
 };

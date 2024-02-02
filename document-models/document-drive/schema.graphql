@@ -64,10 +64,29 @@ type Listener {
     callInfo: ListenerCallInfo
 }
 
+enum TriggerType {
+    PullResponder
+}
+
+type PullResponderTriggerData {
+    listenerId: ID!
+    url: String!
+    interval: String!
+}
+
+union TriggerData = PullResponderTriggerData
+
+type Trigger {
+    id: ID!
+    type: TriggerType!
+    data: TriggerData
+}
+
 type DocumentDriveLocalState {
     sharingType: String
-    listeners: [Listener!]!
     availableOffline: Boolean!
+    listeners: [Listener!]!
+    triggers: [Trigger!]!
 }
 
 # Node
@@ -136,4 +155,12 @@ input AddListenerInput {
 
 input RemoveListenerInput {
     listenerId: String!
+}
+
+input AddTriggerInput {
+    trigger: Trigger!
+}
+
+input RemoveTriggerInput {
+    triggerId: String!
 }

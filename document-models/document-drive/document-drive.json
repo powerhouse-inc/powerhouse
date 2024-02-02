@@ -18,8 +18,8 @@
                     "examples": []
                 },
                 "local": {
-                    "schema": "type ListenerFilter {\n    documentType: [String!]!\n    documentId: [ID!]\n    scope: [String!]\n    branch: [String!]\n}\n\nenum TransmitterType {\n    Internal,\n    SwitchboardPush,\n    PullResponder,\n    SecureConnect, \n    MatrixConnect,\n    RESTWebhook\n}\n\ntype ListenerCallInfo {\n    transmitterType: TransmitterType\n    name: String\n    data: String\n}\n\ntype Listener {\n    listenerId: ID!\n    label: String\n    block: Boolean!\n    system: Boolean!\n    filter: ListenerFilter!\n    callInfo: ListenerCallInfo\n}\n\ntype DocumentDriveLocalState{\n    sharingType: String\n    listeners: [Listener!]!\n    availableOffline: Boolean!\n}",
-                    "initialValue": "{ \"listeners\": [], \"sharingType\": \"private\", \"availableOffline\": false}",
+                    "schema": "type ListenerFilter {\n    documentType: [String!]!\n    documentId: [ID!]\n    scope: [String!]\n    branch: [String!]\n}\n\nenum TransmitterType {\n    Internal,\n    SwitchboardPush,\n    PullResponder,\n    SecureConnect, \n    MatrixConnect,\n    RESTWebhook\n}\n\ntype ListenerCallInfo {\n    transmitterType: TransmitterType\n    name: String\n    data: String\n}\n\ntype Listener {\n    listenerId: ID!\n    label: String\n    block: Boolean!\n    system: Boolean!\n    filter: ListenerFilter!\n    callInfo: ListenerCallInfo\n}\n\nenum TriggerType {\n    PullResponder\n}\n\ntype PullResponderTriggerData {\n    listenerId: ID!\n    url: String!\n    interval: String!\n}\n\nunion TriggerData = PullResponderTriggerData\n\ntype Trigger {\n    id: ID!\n    type: TriggerType!\n    data: TriggerData\n}\n\ntype DocumentDriveLocalState{\n    sharingType: String\n    listeners: [Listener!]!\n    triggers: [Trigger!]!\n    availableOffline: Boolean!\n}",
+                    "initialValue": "{ \"listeners\": [], \"triggers\": [], \"sharingType\": \"private\", \"availableOffline\": false}",
                     "examples": []
                 }
             },
@@ -162,6 +162,28 @@
                             "name": "REMOVE_LISTENER",
                             "description": "",
                             "schema": "input RemoveListenerInput {\n    listenerId: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "local"
+                        },
+                        {
+                            "id": "qGCiPGpTt/cyz3HzyrBn92z20dsU=",
+                            "name": "ADD_TRIGGER",
+                            "description": "",
+                            "schema": "input AddTriggerInput {\n    trigger: Trigger!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "local"
+                        },
+                        {
+                            "id": "qGCiPGpTt/cyz3HzyrBn92z30dsU=",
+                            "name": "REMOVE_TRIGGER",
+                            "description": "",
+                            "schema": "input RemoveTriggerInput {\n    triggerId: String!\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
