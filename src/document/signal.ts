@@ -35,6 +35,7 @@ export type DeleteChildDocumentSignal = ISignal<
 export type CopyChildDocumentInput = {
     id: string;
     newId: string;
+    synchronizationUnits: SynchronizationUnit[];
 };
 
 export type CopyChildDocumentSignal = ISignal<
