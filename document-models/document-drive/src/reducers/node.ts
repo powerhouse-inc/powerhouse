@@ -7,6 +7,7 @@
 import {
     OperationScope,
     CreateChildDocumentInput,
+    SynchronizationUnit,
 } from 'document-model/document';
 import { FileNode, getDescendants, getLatestSyncId, isFileNode } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
@@ -124,19 +125,35 @@ export const reducer: DocumentDriveNodeOperations = {
             throw new Error(`Node with id ${action.input.srcId} not found`);
         }
 
-        state.nodes.push({
+        const newNode = {
             ...node,
             id: action.input.targetId,
             name: action.input.targetName || node.name,
             parentFolder: action.input.targetParentFolder || null,
-        });
+        };
 
-        if (isFileNode(node)) {
+        const isFile = isFileNode(newNode);
+
+        if (isFile) {
+            const latestSyncId = BigInt(getLatestSyncId(state));
+            const synchronizationUnits = newNode.scopes.map((scope, index) => ({
+                syncId: (latestSyncId + BigInt(1 + index)).toString(),
+                scope: scope,
+                branch: 'main',
+            }));
+            newNode.synchronizationUnits = synchronizationUnits;
+        }
+
+        state.nodes.push(newNode);
+
+        if (isFile) {
             dispatch?.({
                 type: 'COPY_CHILD_DOCUMENT',
                 input: {
                     id: action.input.srcId,
                     newId: action.input.targetId,
+                    synchronizationUnits:
+                        newNode.synchronizationUnits as SynchronizationUnit[],
                 },
             });
         }

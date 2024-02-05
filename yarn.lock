@@ -5785,7 +5785,7 @@ document-model-editors@^1.0.1:
   resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-1.0.1.tgz#b56ba13fe14f459aa5b0814c324a80608524876d"
   integrity sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==
 
-document-model@^1.0.20, document-model@^1.0.24:
+document-model@^1.0.20:
   version "1.0.24"
   resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.24.tgz#51b190b511f841630fca5da5d96470811ac89d0e"
   integrity sha512-Kus5anpe/WCdqgXcF5G013CMucXLXI7eTZ6u6Uey2vKlJyHTJ29/ME2z7SILvTzTHeL8YwH2p31h9gG0x1F3hA==
@@ -5795,6 +5795,17 @@ document-model@^1.0.20, document-model@^1.0.24:
     jszip "^3.10.1"
     mime "^3.0.0"
     zod "^3.22.2"
+
+document-model@^1.0.27:
+  version "1.0.27"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.27.tgz#e1af0f86b9b92ea15785085ec023e390022ba03e"
+  integrity sha512-65K0idiFk1M81Ic7XTPaKkpNbJHeW8suIV7tl+JKh0C89wGut+R1aJVeuLOCDhya7XttUvTqumBwpAENWOpv5g==
+  dependencies:
+    immer "^10.0.3"
+    json-stringify-deterministic "^1.0.12"
+    jszip "^3.10.1"
+    mime "^4.0.1"
+    zod "^3.22.4"
 
 dom-accessibility-api@^0.5.9:
   version "0.5.16"
@@ -7295,7 +7306,7 @@ immediate@~3.0.5:
   resolved "https://registry.yarnpkg.com/immediate/-/immediate-3.0.6.tgz#9db1dbd0faf8de6fbe0f5dd5e56bb606280de69b"
   integrity sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==
 
-immer@^10.0.2:
+immer@^10.0.2, immer@^10.0.3:
   version "10.0.3"
   resolved "https://registry.yarnpkg.com/immer/-/immer-10.0.3.tgz#a8de42065e964aa3edf6afc282dfc7f7f34ae3c9"
   integrity sha512-pwupu3eWfouuaowscykeckFmVTpqbzW+rXFCX8rQLkZzM9ftBmU/++Ra+o+L27mz03zJTlyV4UUr+fdKNffo4A==
@@ -8010,7 +8021,7 @@ json-stable-stringify@^1.0.1:
     jsonify "^0.0.1"
     object-keys "^1.1.1"
 
-json-stringify-deterministic@^1.0.10:
+json-stringify-deterministic@^1.0.10, json-stringify-deterministic@^1.0.12:
   version "1.0.12"
   resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.12.tgz#aaa3f907466ed01e3afd77b898d0a2b3b132820a"
   integrity sha512-q3PN0lbUdv0pmurkBNdJH3pfFvOTL/Zp0lquqpvcjfKzt6Y0j49EPHAmVHCAS4Ceq/Y+PejWTzyiVpoY71+D6g==
@@ -8557,6 +8568,11 @@ mime@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/mime/-/mime-3.0.0.tgz#b374550dca3a0c18443b0c950a6a58f1931cf7a7"
   integrity sha512-jSCU7/VB1loIWBZe14aEYHU/+1UMEHoaO7qxCOVJOw9GgH72VAWppxNcjU+x9a2k3GSIBXNKxXQFqRvvZ7vr3A==
+
+mime@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/mime/-/mime-4.0.1.tgz#ad7563d1bfe30253ad97dedfae2b1009d01b9470"
+  integrity sha512-5lZ5tyrIfliMXzFtkYyekWbtRXObT9OWa8IwQ5uxTBDHucNNwniRqo0yInflj+iYi5CBa6qxadGzGarDfuEOxA==
 
 mimic-fn@^2.1.0:
   version "2.1.0"
