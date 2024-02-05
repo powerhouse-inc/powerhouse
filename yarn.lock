@@ -4433,6 +4433,11 @@
   resolved "https://registry.yarnpkg.com/@testing-library/user-event/-/user-event-14.5.2.tgz#db7257d727c891905947bd1c1a99da20e03c2ebd"
   integrity sha512-YAh82Wh4TIrxYLmfGcixwD18oIjyC1pFQC2Y01F2lzV2HTMiYrI0nze0FD0ocB//CKS/7jIUgae+adPqxK5yCQ==
 
+"@total-typescript/ts-reset@^0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@total-typescript/ts-reset/-/ts-reset-0.5.1.tgz#93b0535d00faa588518bcfb0db30182e63e4f7af"
+  integrity sha512-AqlrT8YA1o7Ff5wPfMOL0pvL+1X+sw60NN6CcOCqs658emD6RfiXhF7Gu9QcfKBH7ELY2nInLhKSCWVoNL70MQ==
+
 "@tufjs/canonical-json@2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@tufjs/canonical-json/-/canonical-json-2.0.0.tgz#a52f61a3d7374833fca945b2549bc30a2dd40d0a"
@@ -5793,6 +5798,11 @@ chalk@^4.0.0, chalk@^4.0.2, chalk@^4.1.0, chalk@^4.1.2:
   dependencies:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
+
+change-case@^5.4.2:
+  version "5.4.2"
+  resolved "https://registry.yarnpkg.com/change-case/-/change-case-5.4.2.tgz#0b3e4d9746fb16b83f3a8b68a9411bc4a8a61863"
+  integrity sha512-WB3UiTDpT+vrTilAWaJS4gaIH/jc1He4H9f6erQvraUYas90uWT0JOYFkG1imdNv710XJ6gJvqynrgOHc4ihDA==
 
 char-regex@^1.0.2:
   version "1.0.2"

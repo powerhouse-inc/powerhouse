@@ -6,7 +6,7 @@ export const RWATableCell: React.FC<CellProps> = props => (
     <Cell
         {...mergeClassNameProps(
             props,
-            'text-xs text-gray-900 font-medium px-3 py-2',
+            'text-xs text-gray-900 font-medium px-3 py-2 truncate',
         )}
     />
 );

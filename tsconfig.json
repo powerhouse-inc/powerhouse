@@ -12,9 +12,9 @@
         "emitDeclarationOnly": true,
         "jsx": "react-jsx",
         "paths": {
-            "@/*": ["./src/*"]
+            "@/*": ["./src/*"],
         },
-        "types": ["vite/client", "vitest/globals"]
+        "types": ["vite/client", "vitest/globals"],
     },
 
     "types": ["@testing-library/jest-dom"],
@@ -26,6 +26,7 @@
         "*.config.ts",
         "*.config.js",
         "scripts/**/*.ts",
+        "reset.d.ts",
     ],
-    "exclude": ["dist", "node_modules"]
+    "exclude": ["dist", "node_modules"],
 }
