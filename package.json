@@ -60,7 +60,7 @@
         "@vitejs/plugin-react": "^4.2.1",
         "autoprefixer": "^10.4.16",
         "cross-env": "^7.0.3",
-        "document-drive": "powerhouse-inc/document-drive#93301293",
+        "document-drive": "powerhouse-inc/document-drive#12d3656",
         "document-model": "^1.0.22",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^9.1.0",
