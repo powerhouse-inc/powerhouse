@@ -12,7 +12,7 @@ const meta: Meta<typeof RWAAssetDetails> = {
         },
         onCancel: { action: 'onCancel' },
         onEdit: { action: 'onEdit' },
-        onSubmit: { action: 'onSubmit' },
+        onSubmitForm: { action: 'onSubmit' },
         labels: { control: { type: 'object' } },
         asset: { control: { type: 'object' } },
         assetTypeOptions: { control: { type: 'object' } },

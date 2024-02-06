@@ -1,4 +1,4 @@
-import { Icon } from '@/powerhouse';
+import { DivProps, Icon, mergeClassNameProps } from '@/powerhouse';
 import { CalendarDate } from '@internationalized/date';
 import React from 'react';
 import { useForm } from 'react-hook-form';
@@ -50,11 +50,11 @@ export type RWAAssetDetail = {
     totalSurplus: string;
 };
 
-export interface RWAAssetDetailsProps {
+export interface RWAAssetDetailsProps extends DivProps {
     mode?: RWAComponentMode;
     onCancel: () => void;
     onEdit: () => void;
-    onSubmit: (data: RWAAssetDetailInputs) => void;
+    onSubmitForm: (data: RWAAssetDetailInputs) => void;
     labels?: typeof defaultLabels;
     asset: RWAAssetDetail;
     assetTypeOptions: RWATableSelectProps<RWAAssetDetailInputs>['options'];
@@ -66,11 +66,12 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
         asset,
         onEdit,
         onCancel,
-        onSubmit,
+        onSubmitForm,
         mode = 'view',
         assetTypeOptions,
         maturityOptions,
         labels = defaultLabels,
+        ...restProps
     } = props;
 
     const { handleSubmit, control } = useForm<RWAAssetDetailInputs>({
@@ -92,7 +93,7 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
         'py-1 px-3 [&>div:first-child]:py-0 [&>div:last-child]:py-0';
 
     return (
-        <div className="flex flex-col">
+        <div {...mergeClassNameProps(restProps, 'flex flex-col')}>
             <div className="flex h-12 items-center justify-between px-3">
                 <div className="font-semibold">{labels.title}</div>
                 <div>
@@ -105,7 +106,7 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                                 {labels.cancelEdits}
                             </RWAButton>
                             <RWAButton
-                                onClick={handleSubmit(onSubmit)}
+                                onClick={handleSubmit(onSubmitForm)}
                                 iconPosition="right"
                                 icon={<Icon name="save" size={16} />}
                             >
