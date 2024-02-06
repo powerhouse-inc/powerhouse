@@ -5,11 +5,14 @@ import { Control, useForm } from 'react-hook-form';
 import { RWAComponentMode } from '../../types';
 import { RWAButton } from '../button';
 import { RWAFeeInputs, RWAFeesTable, RWAFeesTableProps } from '../fees-table';
+import {
+    RWAFormRow,
+    RWATableDatePicker,
+    RWATableSelect,
+    RWATableSelectProps,
+    RWATableTextInput,
+} from '../table-inputs';
 import { RWATxDetailInputs } from './form';
-import { RWATxDatePicker } from './tx-date-picker';
-import { RWATXRow } from './tx-row';
-import { RWATxSelect, RWATxSelectProps } from './tx-select';
-import { RWATxTextInput } from './tx-text-input';
 
 const defaultLabels = {
     transaction: 'Transaction',
@@ -57,8 +60,8 @@ export interface RWATXDetailProps {
     onSubmit: (data: RWATxDetailInputs) => void;
     onCancel: () => void;
     tx: RWATransaction;
-    cusipIsinAssetNameOptions: RWATxSelectProps['options'];
-    assetTypeOptions: RWATxSelectProps['options'];
+    cusipIsinAssetNameOptions: RWATableSelectProps<RWATxDetailInputs>['options'];
+    assetTypeOptions: RWATableSelectProps<RWATxDetailInputs>['options'];
     labels?: {
         transaction?: string;
         editTransaction?: string;
@@ -129,11 +132,11 @@ export const RWATXDetail: React.FC<RWATXDetailProps> = props => {
                 )}
             </div>
             <div>
-                <RWATXRow
+                <RWAFormRow
                     label={labels.assetType}
                     hideLine={isEditMode}
                     value={
-                        <RWATxSelect
+                        <RWATableSelect
                             control={control}
                             name="assetTypeId"
                             disabled={!isEditMode}
@@ -141,22 +144,22 @@ export const RWATXDetail: React.FC<RWATXDetailProps> = props => {
                         />
                     }
                 />
-                <RWATXRow
+                <RWAFormRow
                     label={labels.timestamp}
                     hideLine={isEditMode}
                     value={
-                        <RWATxDatePicker
+                        <RWATableDatePicker
                             control={control}
                             name="timestamp"
                             disabled={!isEditMode}
                         />
                     }
                 />
-                <RWATXRow
+                <RWAFormRow
                     label={labels.cusipIsinAssetName}
                     hideLine={isEditMode}
                     value={
-                        <RWATxSelect
+                        <RWATableSelect
                             control={control}
                             disabled={!isEditMode}
                             name="cusipIsinAssetNameId"
@@ -164,26 +167,28 @@ export const RWATXDetail: React.FC<RWATXDetailProps> = props => {
                         />
                     }
                 />
-                <RWATXRow
+                <RWAFormRow
                     label={labels.transactionType}
                     hideLine={isEditMode}
                     value={
-                        <RWATxTextInput
+                        <RWATableTextInput
                             control={control}
                             name="transactionType"
+                            type="currency"
                             disabled={!isEditMode}
                         />
                     }
                 />
-                <RWATXRow
+                <RWAFormRow
                     label={labels.assetProceedsUSD}
                     hideLine={isEditMode}
                     value={
                         <div className="flex flex-col items-end">
                             <div>
-                                <RWATxTextInput
+                                <RWATableTextInput
                                     control={control}
                                     name="assetProceedsUSD"
+                                    type="currency"
                                     disabled={!isEditMode}
                                 />
                             </div>
@@ -197,7 +202,7 @@ export const RWATXDetail: React.FC<RWATXDetailProps> = props => {
                     }
                 />
                 <div className="bg-gray-50">
-                    <RWATXRow
+                    <RWAFormRow
                         hideLine
                         className="gap-x-16 [&>div:nth-child(1)]:min-w-0 [&>div:nth-child(2)]:min-w-0 [&>div:nth-child(2)]:flex-1"
                         label={labels.fees}
@@ -214,7 +219,7 @@ export const RWATXDetail: React.FC<RWATXDetailProps> = props => {
                 </div>
             </div>
             <div className="border-t border-gray-300 bg-gray-100">
-                <RWATXRow
+                <RWAFormRow
                     label={labels.cashBalanceChange}
                     value={tx.cashBalanceChange}
                     className="text-sm font-semibold"
