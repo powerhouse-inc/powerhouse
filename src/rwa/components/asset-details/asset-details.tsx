@@ -250,7 +250,6 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                     />
                 </div>
             </div>
-            <div>footer</div>
         </div>
     );
 };
