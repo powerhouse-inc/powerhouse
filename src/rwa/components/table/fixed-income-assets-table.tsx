@@ -1,7 +1,7 @@
 import { Icon } from '@/powerhouse';
 import { useRef } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { RWATable, RWATableCell, RWATableProps } from '.';
+import { RWATable, RWATableCell, RWATableProps, useSortTableItems } from '.';
 import { useColumnPriority } from './useColumnPriority';
 
 const fieldsPriority: (keyof FixedIncome)[] = [
@@ -66,9 +66,7 @@ export function FixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
         tableContainerRef,
     });
 
-    // const { sortDescriptor, onSortChange, sortedItems } = useSortTableItems(
-    //     items || [],
-    // );
+    const { sortedItems, sortHandler } = useSortTableItems(items || []);
 
     function renderRow(item: Partial<FixedIncome>, index: number) {
         return (
@@ -97,8 +95,9 @@ export function FixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
     return (
         <RWATable
             {...restProps}
+            onClickSort={sortHandler}
             ref={tableContainerRef}
-            items={items}
+            items={sortedItems}
             header={headerLabels}
             renderRow={renderRow}
         />

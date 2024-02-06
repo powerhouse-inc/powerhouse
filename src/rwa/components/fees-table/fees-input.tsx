@@ -7,12 +7,13 @@ export interface RWAFeesTextInputProps extends RWATextInputProps {
 
 export const RWAFeesTextInput: React.FC<RWAFeesTextInputProps> = ({
     disabled = false,
+    className,
     ...props
 }) => (
     <RWATextInput
         textFieldProps={{ isDisabled: disabled }}
         inputProps={{ className: 'block w-full' }}
-        className={twMerge('h-auto rounded-md bg-inherit p-3')}
+        className={twMerge('h-auto rounded-md bg-inherit p-3', className)}
         {...props}
     />
 );

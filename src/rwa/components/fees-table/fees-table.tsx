@@ -43,6 +43,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
     });
 
     const isEditMode = mode === 'edit';
+    const focusStyles = isEditMode ? 'focus-within:bg-gray-100' : '';
 
     return (
         <RWATable
@@ -63,7 +64,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
                         index % 2 !== 0 && 'bg-gray-50',
                     )}
                 >
-                    <RWATableCell className="w-[30%]">
+                    <RWATableCell className={twMerge('w-[30%]', focusStyles)}>
                         <Controller
                             name={`feesTable.${index}.serviceProvider`}
                             control={control}
@@ -71,6 +72,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
                                 field: { onBlur, onChange, value },
                             }) => (
                                 <RWAFeesTextInput
+                                    className=""
                                     onBlur={onBlur}
                                     onChange={onChange}
                                     value={value}
@@ -79,7 +81,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
                             )}
                         />
                     </RWATableCell>
-                    <RWATableCell className="w-[20%]">
+                    <RWATableCell className={twMerge('w-[20%]', focusStyles)}>
                         <Controller
                             name={`feesTable.${index}.feeType`}
                             control={control}
@@ -95,7 +97,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
                             )}
                         />
                     </RWATableCell>
-                    <RWATableCell className="w-[30%]">
+                    <RWATableCell className={twMerge('w-[30%]', focusStyles)}>
                         <Controller
                             name={`feesTable.${index}.accountID`}
                             control={control}
@@ -111,7 +113,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
                             )}
                         />
                     </RWATableCell>
-                    <RWATableCell className="w-[20%]">
+                    <RWATableCell className={twMerge('w-[20%]', focusStyles)}>
                         <Controller
                             name={`feesTable.${index}.fee`}
                             control={control}

@@ -1,6 +1,8 @@
 import { Icon } from '@/powerhouse';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
+import { orderBy } from 'natural-orderby';
+import { useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { RWATable, RWATableProps } from './table';
 import { RWATableCell } from './table-cell';
@@ -15,6 +17,8 @@ type Item = {
     notional: string;
 };
 
+type ItemKey = keyof Item;
+
 const meta: Meta<typeof RWATable<Item>> = {
     title: 'RWA/Components/RWATable',
     component: RWATable,
@@ -22,6 +26,7 @@ const meta: Meta<typeof RWATable<Item>> = {
         header: { control: 'object' },
         items: { control: 'object' },
         renderRow: { control: 'function' },
+        onClickSort: { control: 'action' },
     },
 };
 
@@ -31,13 +36,13 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
     args: {
         header: [
-            { id: 'index', label: '#' },
-            { id: 'relatedSpv', label: 'Related SPV' },
-            { id: 'assetId', label: 'Asset ID' },
-            { id: 'assetName', label: 'Asset Name' },
-            { id: 'coupon', label: 'Coupon' },
-            { id: 'maturity', label: 'Maturity' },
-            { id: 'notional', label: 'Notional' },
+            { id: 'index', label: '#', allowSorting: true },
+            { id: 'relatedSpv', label: 'Related SPV', allowSorting: true },
+            { id: 'assetId', label: 'Asset ID', allowSorting: true },
+            { id: 'assetName', label: 'Asset Name', allowSorting: true },
+            { id: 'coupon', label: 'Coupon', allowSorting: true },
+            { id: 'maturity', label: 'Maturity', allowSorting: true },
+            { id: 'notional', label: 'Notional', allowSorting: true },
             { id: 'moreDetails' },
         ],
         items: [
@@ -161,5 +166,20 @@ export const Primary: Story = {
 const TableDemo = (props: RWATableProps<Item>) => {
     const { items, ...restProps } = props;
 
-    return <RWATable {...restProps} items={items} />;
+    const [sortedItems, setSortedItems] = useState(items || []);
+
+    const onClickSort: RWATableProps<Item>['onClickSort'] = (
+        column,
+        direction,
+    ) => {
+        setSortedItems(orderBy(sortedItems, [column as ItemKey], [direction]));
+    };
+
+    return (
+        <RWATable
+            {...restProps}
+            onClickSort={onClickSort}
+            items={sortedItems}
+        />
+    );
 };

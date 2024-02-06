@@ -56,7 +56,6 @@ export function useColumnPriority<TItem extends Record<string, ReactNode>>(
         const moreDetails = hasMoreDetailsColumn
             ? {
                   id: 'moreDetails',
-                  props: { allowsSorting: false },
               }
             : undefined;
         const headerLabelsFromItems = fields
@@ -67,6 +66,7 @@ export function useColumnPriority<TItem extends Record<string, ReactNode>>(
             .map(field => ({
                 ...field,
                 label: capitalCase(field.label.toString()).replace('Id', 'ID'),
+                allowSorting: true,
             }));
 
         return [index, ...headerLabelsFromItems, moreDetails].filter(Boolean);
