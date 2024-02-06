@@ -1,9 +1,6 @@
 import { Icon } from '@/powerhouse';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
-import { orderBy } from 'natural-orderby';
-import { useMemo, useState } from 'react';
-import { Row, SortDescriptor } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 import { RWATable, RWATableProps } from './table';
 import { RWATableCell } from './table-cell';
@@ -17,8 +14,6 @@ type Item = {
     maturity: string;
     notional: string;
 };
-
-type ItemKey = keyof Item;
 
 const meta: Meta<typeof RWATable<Item>> = {
     title: 'RWA/Components/RWATable',
@@ -43,7 +38,7 @@ export const Primary: Story = {
             { id: 'coupon', label: 'Coupon' },
             { id: 'maturity', label: 'Maturity' },
             { id: 'notional', label: 'Notional' },
-            { id: 'moreDetails', props: { allowsSorting: false } },
+            { id: 'moreDetails' },
         ],
         items: [
             {
@@ -138,7 +133,7 @@ export const Primary: Story = {
             },
         ],
         renderRow: (item, index) => (
-            <Row
+            <tr
                 key={item.index}
                 className={twMerge(
                     '[&>td:not(:first-child)]:border-l [&>td:not(:first-child)]:border-gray-300',
@@ -157,7 +152,7 @@ export const Primary: Story = {
                         <Icon name="arrow-filled-right" size={12} />
                     </button>
                 </RWATableCell>
-            </Row>
+            </tr>
         ),
     },
     render: args => <TableDemo {...args} />,
@@ -165,27 +160,6 @@ export const Primary: Story = {
 
 const TableDemo = (props: RWATableProps<Item>) => {
     const { items, ...restProps } = props;
-    const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
-        column: 'index',
-        direction: 'ascending',
-    });
 
-    const onSortChange = (sortDescriptor: SortDescriptor) => {
-        setSortDescriptor(sortDescriptor);
-        action('onSortChange')(sortDescriptor);
-    };
-
-    const sortedItems = useMemo(() => {
-        if (!items) return [];
-        const order = sortDescriptor.direction === 'ascending' ? 'asc' : 'desc';
-        return orderBy(items, [sortDescriptor.column as ItemKey], [order]);
-    }, [sortDescriptor, items]);
-
-    return (
-        <RWATable
-            {...restProps}
-            items={sortedItems}
-            tableProps={{ sortDescriptor, onSortChange }}
-        />
-    );
+    return <RWATable {...restProps} items={items} />;
 };

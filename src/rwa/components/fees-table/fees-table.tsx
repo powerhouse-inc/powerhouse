@@ -1,4 +1,3 @@
-import { Key, Row } from 'react-aria-components';
 import { Control, Controller, useFieldArray } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
 import { RWAComponentMode } from '../../types';
@@ -6,7 +5,7 @@ import { RWATable, RWATableCell } from '../table';
 import { RWAFeesTextInput } from './fees-input';
 
 export type FeeeItem = {
-    id: Key;
+    id: string;
     serviceProvider: string;
     feeType: string;
     accountID: string;
@@ -47,14 +46,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
 
     return (
         <RWATable
-            className="w-full"
-            tableProps={{
-                className: 'w-full',
-            }}
-            tableHeaderProps={{
-                className:
-                    '[&>tr>th:not(:first-child)]:border-l [&>tr>th:not(:first-child)]:border-gray-300',
-            }}
+            className="w-full [&>tr>th:not(:first-child)]:border-l [&>tr>th:not(:first-child)]:border-gray-300"
             header={[
                 { id: 'serviceProvider', label: labels.serviceProvider },
                 { id: 'feeType', label: labels.feeType },
@@ -63,7 +55,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
             ]}
         >
             {fields.map((item, index) => (
-                <Row
+                <tr
                     key={item.id}
                     className={twMerge(
                         '[&>td:not(:first-child)]:border-l [&>td:not(:first-child)]:border-gray-300 [&>td]:p-0',
@@ -135,7 +127,7 @@ export const RWAFeesTable: React.FC<RWAFeesTableProps> = props => {
                             )}
                         />
                     </RWATableCell>
-                </Row>
+                </tr>
             ))}
         </RWATable>
     );

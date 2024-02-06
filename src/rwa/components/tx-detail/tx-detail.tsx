@@ -33,7 +33,7 @@ const defaultLabels = {
 };
 
 export type RWATransactionFee = {
-    id: string | number;
+    id: string;
     serviceProvider: string;
     feeType: string;
     accountID: string;

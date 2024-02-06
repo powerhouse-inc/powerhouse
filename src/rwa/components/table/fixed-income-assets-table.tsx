@@ -1,10 +1,8 @@
 import { Icon } from '@/powerhouse';
 import { useRef } from 'react';
-import { Row } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 import { RWATable, RWATableCell, RWATableProps } from '.';
 import { useColumnPriority } from './useColumnPriority';
-import { useSortTableItems } from './useSortTableItems';
 
 const fieldsPriority: (keyof FixedIncome)[] = [
     'id',
@@ -68,12 +66,12 @@ export function FixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
         tableContainerRef,
     });
 
-    const { sortDescriptor, onSortChange, sortedItems } =
-        useSortTableItems(items);
+    // const { sortDescriptor, onSortChange, sortedItems } =
+    //     useSortTableItems(items);
 
     function renderRow(item: Partial<FixedIncome>, index: number) {
         return (
-            <Row
+            <tr
                 key={item.id}
                 className={twMerge(
                     '[&>td:not(:first-child)]:border-l [&>td:not(:first-child)]:border-gray-300',
@@ -91,7 +89,7 @@ export function FixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
                         <Icon name="arrow-filled-right" size={12} />
                     </button>
                 </RWATableCell>
-            </Row>
+            </tr>
         );
     }
 
@@ -99,10 +97,9 @@ export function FixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
         <RWATable
             {...restProps}
             ref={tableContainerRef}
-            items={sortedItems}
+            items={items}
             header={headerLabels}
             renderRow={renderRow}
-            tableProps={{ sortDescriptor, onSortChange }}
         />
     );
 }
