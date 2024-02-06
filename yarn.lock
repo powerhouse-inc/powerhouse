@@ -6531,9 +6531,9 @@ document-drive@powerhouse-inc/document-drive#12d3656:
     sanitize-filename "^1.6.3"
 
 document-model@^1.0.22:
-  version "1.0.26"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.26.tgz#9ddc78d0098fab1c6461d5105cd68cd7bf52eb3a"
-  integrity sha512-G0TOrvpvaz40M6TNSOrRn6akMAHoIoIwUt2apDlgtB3r2nDaLoflkIBhONIPuFMJCnA665aH/oq9hxjjzmiNqw==
+  version "1.0.27"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.27.tgz#e1af0f86b9b92ea15785085ec023e390022ba03e"
+  integrity sha512-65K0idiFk1M81Ic7XTPaKkpNbJHeW8suIV7tl+JKh0C89wGut+R1aJVeuLOCDhya7XttUvTqumBwpAENWOpv5g==
   dependencies:
     immer "^10.0.3"
     json-stringify-deterministic "^1.0.12"
