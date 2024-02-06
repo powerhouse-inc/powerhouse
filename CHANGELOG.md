@@ -1,3 +1,11 @@
+# [1.0.0-alpha.51](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.50...v1.0.0-alpha.51) (2024-02-06)
+
+
+### Features
+
+* updated document drive dep ([78b8250](https://github.com/powerhouse-inc/design-system/commit/78b82507ba90bfe6d617b325bba74280e9f697f2))
+* use vanilla html table ([#177](https://github.com/powerhouse-inc/design-system/issues/177)) ([dd38bf6](https://github.com/powerhouse-inc/design-system/commit/dd38bf6e842d6a5f6d4e2699040865c22389484e))
+
 # [1.0.0-alpha.50](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.49...v1.0.0-alpha.50) (2024-02-02)
 
 
