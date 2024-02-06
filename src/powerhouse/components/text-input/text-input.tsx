@@ -9,7 +9,7 @@ import { twMerge } from 'tailwind-merge';
 
 export interface TextInputProps
     extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
-    inputProps?: InputProps;
+    inputProps?: InputProps & React.RefAttributes<HTMLInputElement>;
     endAdornment?: React.ReactNode;
     value?: TextFieldProps['value'];
     textFieldProps?: TextFieldProps;

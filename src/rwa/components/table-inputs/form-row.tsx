@@ -1,13 +1,13 @@
 import { DivProps, mergeClassNameProps } from '@/powerhouse';
 import React from 'react';
 
-export interface RWATXRowProps extends DivProps {
+export interface RWAFormRowProps extends DivProps {
     label?: React.ReactNode;
     value?: React.ReactNode;
     hideLine?: boolean;
 }
 
-export const RWATXRow: React.FC<RWATXRowProps> = ({
+export const RWAFormRow: React.FC<RWAFormRowProps> = ({
     label,
     value,
     hideLine = false,

@@ -66,8 +66,9 @@ export function FixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
         tableContainerRef,
     });
 
-    // const { sortDescriptor, onSortChange, sortedItems } =
-    //     useSortTableItems(items);
+    // const { sortDescriptor, onSortChange, sortedItems } = useSortTableItems(
+    //     items || [],
+    // );
 
     function renderRow(item: Partial<FixedIncome>, index: number) {
         return (
