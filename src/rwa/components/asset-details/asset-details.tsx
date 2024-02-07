@@ -1,7 +1,7 @@
 import { DivProps, Icon, mergeClassNameProps } from '@/powerhouse';
 import { CalendarDate } from '@internationalized/date';
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { UseFormReset, useForm } from 'react-hook-form';
 import { RWAComponentMode } from '../../types';
 import { RWAButton } from '../button';
 import {
@@ -31,6 +31,7 @@ const defaultLabels = {
     currentValue: 'Current Value',
     realisedSurplus: 'Realised Surplus',
     totalSurplus: 'Total Surplus',
+    saveNewAsset: 'Save New Asset',
 };
 
 export type RWAAssetDetail = {
@@ -51,30 +52,39 @@ export type RWAAssetDetail = {
 };
 
 export interface RWAAssetDetailsProps extends DivProps {
+    operation?: 'create' | 'edit';
     mode?: RWAComponentMode;
-    onCancel: () => void;
+    onClose?: () => void;
+    onCancel: (reset: UseFormReset<RWAAssetDetailInputs>) => void;
     onEdit: () => void;
-    onSubmitForm: (data: RWAAssetDetailInputs) => void;
+    onSubmitForm: (
+        data: RWAAssetDetailInputs,
+        resetForm: UseFormReset<RWAAssetDetailInputs>,
+    ) => void;
     labels?: typeof defaultLabels;
     asset: RWAAssetDetail;
     assetTypeOptions: RWATableSelectProps<RWAAssetDetailInputs>['options'];
     maturityOptions: RWATableSelectProps<RWAAssetDetailInputs>['options'];
+    hideNonEditableFields?: boolean;
 }
 
 export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
     const {
         asset,
         onEdit,
+        onClose,
         onCancel,
         onSubmitForm,
         mode = 'view',
+        operation = 'edit',
         assetTypeOptions,
         maturityOptions,
         labels = defaultLabels,
+        hideNonEditableFields = false,
         ...restProps
     } = props;
 
-    const { handleSubmit, control } = useForm<RWAAssetDetailInputs>({
+    const { handleSubmit, control, reset } = useForm<RWAAssetDetailInputs>({
         defaultValues: {
             id: asset.id,
             isin: asset.isin,
@@ -89,6 +99,8 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
     });
 
     const isEditMode = mode === 'edit';
+    const isCreateOperation = operation === 'create';
+
     const summaryRowStyles =
         'py-1 px-3 [&>div:first-child]:py-0 [&>div:last-child]:py-0';
 
@@ -100,18 +112,29 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                     {isEditMode ? (
                         <div className="flex gap-x-2">
                             <RWAButton
-                                onClick={onCancel}
+                                onClick={() => onCancel(reset)}
                                 className="text-gray-600"
                             >
                                 {labels.cancelEdits}
                             </RWAButton>
                             <RWAButton
-                                onClick={handleSubmit(onSubmitForm)}
+                                onClick={handleSubmit(data =>
+                                    onSubmitForm(data, reset),
+                                )}
                                 iconPosition="right"
                                 icon={<Icon name="save" size={16} />}
                             >
-                                {labels.saveEdits}
+                                {isCreateOperation
+                                    ? labels.saveNewAsset
+                                    : labels.saveEdits}
                             </RWAButton>
+                            {isCreateOperation && onClose && (
+                                <RWAButton
+                                    onClick={onClose}
+                                    iconPosition="right"
+                                    icon={<Icon name="collapse" size={16} />}
+                                />
+                            )}
                         </div>
                     ) : (
                         <RWAButton
@@ -228,28 +251,30 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                         </div>
                     }
                 />
-                <div className="bg-gray-100 pb-3">
-                    <RWAFormRow
-                        className={summaryRowStyles}
-                        label={labels.totalDiscount}
-                        value={asset.totalDiscount}
-                    />
-                    <RWAFormRow
-                        className={summaryRowStyles}
-                        label={labels.currentValue}
-                        value={asset.currentValue}
-                    />
-                    <RWAFormRow
-                        className={summaryRowStyles}
-                        label={labels.realisedSurplus}
-                        value={asset.realisedSurplus}
-                    />
-                    <RWAFormRow
-                        className={summaryRowStyles}
-                        label={labels.totalSurplus}
-                        value={asset.totalSurplus}
-                    />
-                </div>
+                {!hideNonEditableFields && (
+                    <div className="bg-gray-100 pb-3">
+                        <RWAFormRow
+                            className={summaryRowStyles}
+                            label={labels.totalDiscount}
+                            value={asset.totalDiscount}
+                        />
+                        <RWAFormRow
+                            className={summaryRowStyles}
+                            label={labels.currentValue}
+                            value={asset.currentValue}
+                        />
+                        <RWAFormRow
+                            className={summaryRowStyles}
+                            label={labels.realisedSurplus}
+                            value={asset.realisedSurplus}
+                        />
+                        <RWAFormRow
+                            className={summaryRowStyles}
+                            label={labels.totalSurplus}
+                            value={asset.totalSurplus}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

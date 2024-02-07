@@ -12,11 +12,17 @@ const meta: Meta<typeof RWAAssetDetails> = {
         },
         onCancel: { action: 'onCancel' },
         onEdit: { action: 'onEdit' },
+        onClose: { action: 'onClose' },
         onSubmitForm: { action: 'onSubmit' },
         labels: { control: { type: 'object' } },
         asset: { control: { type: 'object' } },
         assetTypeOptions: { control: { type: 'object' } },
         maturityOptions: { control: { type: 'object' } },
+        hideNonEditableFields: { control: 'boolean' },
+        operation: {
+            options: ['create', 'edit'],
+            control: { type: 'radio' },
+        },
     },
 };
 
@@ -25,6 +31,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Primary: Story = {
     args: {
+        operation: 'edit',
+        hideNonEditableFields: false,
         mode: 'view',
         asset: {
             id: '1',
@@ -68,6 +76,7 @@ export const Primary: Story = {
             currentValue: 'Current Value',
             realisedSurplus: 'Realised Surplus',
             totalSurplus: 'Total Surplus',
+            saveNewAsset: 'Save New Asset',
         },
     },
 };

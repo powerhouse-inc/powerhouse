@@ -112,6 +112,7 @@
         "@radix-ui/react-dialog": "^1.0.5",
         "@react-input/number-format": "^1.0.20",
         "change-case": "^5.4.2",
+        "currency.js": "^2.0.4",
         "react-hook-form": "^7.49.3"
     }
 }

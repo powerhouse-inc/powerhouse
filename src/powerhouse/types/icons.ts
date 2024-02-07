@@ -15,6 +15,7 @@ export type IconName =
     | 'check-circle'
     | 'chevron-down'
     | 'cloud-slash'
+    | 'collapse'
     | 'drive'
     | 'error'
     | 'files-earmark'

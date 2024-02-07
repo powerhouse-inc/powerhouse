@@ -1,3 +1,4 @@
+export * from './asset-details';
 export * from './button';
 export * from './create-asset-form';
 export * from './create-asset-modal';
