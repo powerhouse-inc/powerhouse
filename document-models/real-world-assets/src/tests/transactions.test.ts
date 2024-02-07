@@ -5,24 +5,25 @@
 
 import { generateMock } from '@powerhousedao/codegen';
 import { reducer } from '../../gen/reducer';
-import { GroupTransactionType, z } from '../../gen/schema';
+import { z } from '../../gen/schema';
 import * as creators from '../../gen/transactions/creators';
 import utils from '../../gen/utils';
 import {
-    AllowedTransaction,
-    AssetPurchase,
-    AssetSale,
-    InterestDraw,
-    InterestReturn,
-    PrincipalDraw,
-    PrincipalReturn,
-    allPossibleAllowedTransactions,
-    groupTransactionTypesToAllowedTransactions,
+    ASSET_PURCHASE,
+    ASSET_SALE,
+    INTEREST_DRAW,
+    INTEREST_RETURN,
+    PRINCIPAL_DRAW,
+    PRINCIPAL_RETURN,
 } from '../constants';
+import { makeEmptyGroupTransactionByType } from '../utils';
 const principalLenderAccount = generateMock(z.AccountSchema());
 const mockCounterParty = generateMock(z.AccountSchema());
 const mockCashAsset = generateMock(z.CashSchema());
 const mockFixedIncomeAsset = generateMock(z.FixedIncomeSchema());
+mockFixedIncomeAsset.maturity = new Date(
+    new Date().getTime() + 1000 * 60 * 60 * 24 * 365,
+).toISOString();
 const mockServiceProvider = generateMock(z.ServiceProviderSchema());
 mockServiceProvider.accountId = mockCounterParty.id;
 const mockCashTransaction = generateMock(z.BaseTransactionSchema());
@@ -38,26 +39,10 @@ const negativeMockCashTransaction = {
 };
 const mockFixedIncomeTransaction = generateMock(z.BaseTransactionSchema());
 mockFixedIncomeTransaction.assetId = mockFixedIncomeAsset.id;
+mockFixedIncomeTransaction;
 const mockInterestTransaction = generateMock(z.BaseTransactionSchema());
 mockInterestTransaction.assetId = mockFixedIncomeAsset.id;
 mockInterestTransaction.counterPartyAccountId = mockServiceProvider.accountId;
-
-function makeBlankGroupTransactionInput(
-    groupTransactionType: GroupTransactionType,
-) {
-    const input = generateMock(z.GroupTransactionSchema());
-    const transactionsType =
-        groupTransactionTypesToAllowedTransactions[groupTransactionType];
-    input.type = groupTransactionType;
-    allPossibleAllowedTransactions.forEach((tx: AllowedTransaction) => {
-        if (tx !== transactionsType) {
-            // @ts-expect-error mock
-            input[tx] = null;
-        }
-    });
-
-    return input;
-}
 
 describe('Transactions Operations', () => {
     const document = utils.createDocument({
@@ -75,7 +60,10 @@ describe('Transactions Operations', () => {
         },
     });
     test('createPrincipalDrawGroupTransactionOperation', () => {
-        const input = makeBlankGroupTransactionInput(PrincipalDraw);
+        const input = makeEmptyGroupTransactionByType(
+            PRINCIPAL_DRAW,
+            'principalDraw',
+        );
         // @ts-expect-error mock
         input.cashTransaction = positiveMockCashTransaction;
         const updatedDocument = reducer(
@@ -90,7 +78,10 @@ describe('Transactions Operations', () => {
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
     test('createPrincipalReturnGroupTransactionOperation', () => {
-        const input = makeBlankGroupTransactionInput(PrincipalReturn);
+        const input = makeEmptyGroupTransactionByType(
+            PRINCIPAL_RETURN,
+            'principalReturn',
+        );
         // @ts-expect-error mock
         input.cashTransaction = negativeMockCashTransaction;
         const updatedDocument = reducer(
@@ -105,7 +96,7 @@ describe('Transactions Operations', () => {
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
     test('createAssetSaleGroupTransactionOperation', () => {
-        const input = makeBlankGroupTransactionInput(AssetSale);
+        const input = makeEmptyGroupTransactionByType(ASSET_SALE, 'assetSale');
         // @ts-expect-error mock
         input.fixedIncomeTransaction = mockFixedIncomeTransaction;
         const updatedDocument = reducer(
@@ -120,7 +111,10 @@ describe('Transactions Operations', () => {
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
     test('createAssetPurchaseGroupTransactionOperation', () => {
-        const input = makeBlankGroupTransactionInput(AssetPurchase);
+        const input = makeEmptyGroupTransactionByType(
+            ASSET_PURCHASE,
+            'assetSale',
+        );
         // @ts-expect-error mock
         input.fixedIncomeTransaction = mockFixedIncomeTransaction;
         const updatedDocument = reducer(
@@ -135,7 +129,10 @@ describe('Transactions Operations', () => {
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
     test('createInterestDrawGroupTransactionOperation', () => {
-        const input = makeBlankGroupTransactionInput(InterestDraw);
+        const input = makeEmptyGroupTransactionByType(
+            INTEREST_DRAW,
+            'interestDraw',
+        );
         // @ts-expect-error mock
         input.interestTransaction = mockInterestTransaction;
         const updatedDocument = reducer(
@@ -150,7 +147,10 @@ describe('Transactions Operations', () => {
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
     test('createInterestReturnGroupTransactionOperation', () => {
-        const input = makeBlankGroupTransactionInput(InterestReturn);
+        const input = makeEmptyGroupTransactionByType(
+            INTEREST_RETURN,
+            'interestReturn',
+        );
         // @ts-expect-error mock
         input.interestTransaction = mockInterestTransaction;
         const updatedDocument = reducer(
@@ -165,9 +165,14 @@ describe('Transactions Operations', () => {
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
     it('should handle deleteGroupTransaction operation', () => {
-        const existingGroupTransaction =
-            makeBlankGroupTransactionInput(PrincipalDraw);
-        const input = makeBlankGroupTransactionInput(PrincipalDraw);
+        const existingGroupTransaction = makeEmptyGroupTransactionByType(
+            PRINCIPAL_DRAW,
+            'principalDraw',
+        );
+        const input = makeEmptyGroupTransactionByType(
+            PRINCIPAL_DRAW,
+            'principalDraw',
+        );
         input.id = existingGroupTransaction.id;
         const initialDocument = utils.createDocument({
             ...document,

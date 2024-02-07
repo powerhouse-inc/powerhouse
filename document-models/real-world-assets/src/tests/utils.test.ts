@@ -14,6 +14,12 @@ import {
     ServiceProvider,
 } from '../..';
 import {
+    calculateAnnualizedYield,
+    calculateNotional,
+    calculatePurchasePrice,
+    calculatePurchaseProceeds,
+    calculateTotalDiscount,
+    computeWeightedAveragePurchaseDate,
     validateBaseTransaction,
     validateCashTransaction,
     validateFeeTransaction,
@@ -259,9 +265,10 @@ describe('validateBaseTransaction', () => {
 
 describe('validateHasCorrectTransactions', () => {
     // Test cases for PrincipalDraw
-    it('should allow cashTransaction for PrincipalDraw', () => {
+    it('should allow cashTransaction and feeTransactions for PrincipalDraw', () => {
         const input = {
             cashTransaction: {},
+            feeTransactions: [{}],
         } as PrincipalDrawGroupTransaction;
         expect(() =>
             validateHasCorrectTransactions('PrincipalDraw', input),
@@ -272,7 +279,6 @@ describe('validateHasCorrectTransactions', () => {
         const transactionTypes = [
             'fixedIncomeTransaction',
             'interestTransaction',
-            'feeTransactions',
         ];
         transactionTypes.forEach(tx => {
             const input = {
@@ -285,9 +291,10 @@ describe('validateHasCorrectTransactions', () => {
     });
 
     // Test cases for PrincipalReturn
-    it('should allow cashTransaction for PrincipalReturn', () => {
+    it('should allow cashTransaction and feeTransactions for PrincipalReturn', () => {
         const input = {
             cashTransaction: {},
+            feeTransactions: [{}],
         } as PrincipalReturnGroupTransaction;
         expect(() =>
             validateHasCorrectTransactions('PrincipalReturn', input),
@@ -298,7 +305,6 @@ describe('validateHasCorrectTransactions', () => {
         const transactionTypes = [
             'fixedIncomeTransaction',
             'interestTransaction',
-            'feeTransactions',
         ];
         transactionTypes.forEach(tx => {
             const input = {
@@ -311,9 +317,11 @@ describe('validateHasCorrectTransactions', () => {
     });
 
     // Test cases for AssetPurchase
-    it('should allow fixedIncomeTransaction for AssetPurchase', () => {
+    it('should allow fixedIncomeTransaction, cashTransaction and feeTransactions for AssetPurchase', () => {
         const input = {
             fixedIncomeTransaction: {},
+            cashTransaction: {},
+            feeTransactions: [{}],
         } as AssetPurchaseGroupTransaction;
         expect(() =>
             validateHasCorrectTransactions('AssetPurchase', input),
@@ -321,11 +329,7 @@ describe('validateHasCorrectTransactions', () => {
     });
 
     it('should not allow other transactions for AssetPurchase', () => {
-        const transactionTypes = [
-            'cashTransaction',
-            'interestTransaction',
-            'feeTransactions',
-        ];
+        const transactionTypes = ['interestTransaction'];
         transactionTypes.forEach(tx => {
             const input = {
                 [tx]: {},
@@ -337,9 +341,11 @@ describe('validateHasCorrectTransactions', () => {
     });
 
     // Test cases for AssetSale
-    it('should allow fixedIncomeTransaction for AssetSale', () => {
+    it('should allow fixedIncomeTransaction, cashTransaction and feeTransactions for AssetSale', () => {
         const input = {
             fixedIncomeTransaction: {},
+            cashTransaction: {},
+            feeTransactions: [{}],
         } as AssetSaleGroupTransaction;
         expect(() =>
             validateHasCorrectTransactions('AssetSale', input),
@@ -347,11 +353,7 @@ describe('validateHasCorrectTransactions', () => {
     });
 
     it('should not allow other transactions for AssetSale', () => {
-        const transactionTypes = [
-            'cashTransaction',
-            'interestTransaction',
-            'feeTransactions',
-        ];
+        const transactionTypes = ['interestTransaction'];
         transactionTypes.forEach(tx => {
             const input = {
                 [tx]: {},
@@ -773,5 +775,289 @@ describe('validateFixedIncomeAsset', () => {
         expect(() => validateFixedIncomeAsset(state, asset)).toThrow(
             'Maturity must be a valid date',
         );
+    });
+});
+
+describe('computeWeightedAveragePurchaseDate', () => {
+    it('should correctly compute the weighted average purchase date', () => {
+        const transactions: BaseTransaction[] = [
+            // @ts-expect-error mock
+            { amount: 49133118.05, entryTime: '2023-07-10' },
+            // @ts-expect-error mock
+            { amount: 24590375, entryTime: '2023-07-14' },
+        ];
+
+        const result = computeWeightedAveragePurchaseDate(transactions);
+        const expectedDate = new Date('2023-07-11');
+
+        expect(result).toEqual(expectedDate.toISOString());
+    });
+
+    it('should return the same date when there is only one transaction', () => {
+        const transactions: BaseTransaction[] = [
+            // @ts-expect-error mock
+            { entryTime: '2022-01-01', amount: 10 },
+        ];
+
+        const result = computeWeightedAveragePurchaseDate(transactions);
+        const expectedDate = new Date('2022-01-01');
+
+        expect(result).toEqual(expectedDate.toISOString());
+    });
+
+    it('should throw an error when the sum of quantity is zero', () => {
+        const transactions: BaseTransaction[] = [
+            // @ts-expect-error mock
+            { entryTime: '2022-01-01', amount: 0 },
+            // @ts-expect-error mock
+            { entryTime: '2022-02-01', amount: 0 },
+        ];
+
+        expect(() => computeWeightedAveragePurchaseDate(transactions)).toThrow(
+            'Sum of amount cannot be zero.',
+        );
+    });
+
+    it('should handle transactions with negative amounts', () => {
+        const transactions: BaseTransaction[] = [
+            // @ts-expect-error mock
+            { entryTime: '2023-01-01', amount: 20000 },
+            // @ts-expect-error mock
+            { entryTime: '2023-02-15', amount: 30000 },
+            // @ts-expect-error mock
+            { entryTime: '2023-03-10', amount: -10000 },
+        ];
+
+        const result = computeWeightedAveragePurchaseDate(transactions);
+        const expectedDate = new Date('2023-01-18');
+
+        expect(result).toEqual(expectedDate.toISOString());
+    });
+});
+
+describe('calculateNotional', () => {
+    it('should correctly calculate the notional for multiple transactions', () => {
+        const transactions: BaseTransaction[] = [
+            // @ts-expect-error mock
+            { entryTime: '2022-01-01', amount: 10 },
+            // @ts-expect-error mock
+            { entryTime: '2022-02-01', amount: 20 },
+            // @ts-expect-error mock
+            { entryTime: '2022-03-01', amount: 30 },
+        ];
+
+        const result = calculateNotional(transactions);
+        const expectedNotional = 60;
+
+        expect(result).toEqual(expectedNotional);
+    });
+
+    it('should return zero when there are no transactions', () => {
+        const transactions: BaseTransaction[] = [];
+
+        const result = calculateNotional(transactions);
+        const expectedNotional = 0;
+
+        expect(result).toEqual(expectedNotional);
+    });
+
+    it('should handle transactions with negative amounts', () => {
+        const transactions: BaseTransaction[] = [
+            // @ts-expect-error mock
+            { entryTime: '2022-01-01', amount: 10 },
+            // @ts-expect-error mock
+            { entryTime: '2022-02-01', amount: -20 },
+            // @ts-expect-error mock
+            { entryTime: '2022-03-01', amount: 30 },
+        ];
+
+        const result = calculateNotional(transactions);
+        const expectedNotional = 20;
+
+        expect(result).toEqual(expectedNotional);
+    });
+});
+
+describe('calculatePurchaseProceeds', () => {
+    it('should correctly calculate the purchase proceeds for multiple transactions', () => {
+        const transactions: BaseTransaction[] = [
+            // @ts-expect-error mock
+            { entryTime: '2022-01-01', amount: 10 },
+            // @ts-expect-error mock
+            { entryTime: '2022-02-01', amount: 20 },
+            // @ts-expect-error mock
+            { entryTime: '2022-03-01', amount: 30 },
+        ];
+
+        const result = calculatePurchaseProceeds(transactions);
+        const expectedProceeds = 60;
+
+        expect(result).toEqual(expectedProceeds);
+    });
+
+    it('should return zero when there are no transactions', () => {
+        const transactions: BaseTransaction[] = [];
+
+        const result = calculatePurchaseProceeds(transactions);
+        const expectedProceeds = 0;
+
+        expect(result).toEqual(expectedProceeds);
+    });
+
+    it('should handle transactions with negative amounts', () => {
+        const transactions: BaseTransaction[] = [
+            // @ts-expect-error mock
+            { entryTime: '2022-01-01', amount: 10 },
+            // @ts-expect-error mock
+            { entryTime: '2022-02-01', amount: -20 },
+            // @ts-expect-error mock
+            { entryTime: '2022-03-01', amount: 30 },
+        ];
+
+        const result = calculatePurchaseProceeds(transactions);
+        const expectedProceeds = 20;
+
+        expect(result).toEqual(expectedProceeds);
+    });
+});
+
+describe('calculatePurchasePrice', () => {
+    it('should correctly calculate the purchase price for non-zero notional', () => {
+        const purchaseProceeds = 100;
+        const notional = 20;
+
+        const result = calculatePurchasePrice(purchaseProceeds, notional);
+        const expectedPrice = 5;
+
+        expect(result).toEqual(expectedPrice);
+    });
+
+    it('should return zero when notional is zero', () => {
+        const purchaseProceeds = 100;
+        const notional = 0;
+
+        const result = calculatePurchasePrice(purchaseProceeds, notional);
+        const expectedPrice = 0;
+
+        expect(result).toEqual(expectedPrice);
+    });
+
+    it('should handle negative purchase proceeds', () => {
+        const purchaseProceeds = -100;
+        const notional = 20;
+
+        const result = calculatePurchasePrice(purchaseProceeds, notional);
+        const expectedPrice = -5;
+
+        expect(result).toEqual(expectedPrice);
+    });
+
+    it('should handle negative notional', () => {
+        const purchaseProceeds = 100;
+        const notional = -20;
+
+        const result = calculatePurchasePrice(purchaseProceeds, notional);
+        const expectedPrice = -5;
+
+        expect(result).toEqual(expectedPrice);
+    });
+});
+
+describe('calculateTotalDiscount', () => {
+    it('should correctly calculate the total discount for non-zero notional and purchase proceeds', () => {
+        const notional = 100;
+        const purchaseProceeds = 80;
+
+        const result = calculateTotalDiscount(notional, purchaseProceeds);
+        const expectedDiscount = 20;
+
+        expect(result).toEqual(expectedDiscount);
+    });
+
+    it('should return notional when purchase proceeds is zero', () => {
+        const notional = 100;
+        const purchaseProceeds = 0;
+
+        const result = calculateTotalDiscount(notional, purchaseProceeds);
+        const expectedDiscount = 100;
+
+        expect(result).toEqual(expectedDiscount);
+    });
+
+    it('should return zero when notional and purchase proceeds are equal', () => {
+        const notional = 100;
+        const purchaseProceeds = 100;
+
+        const result = calculateTotalDiscount(notional, purchaseProceeds);
+        const expectedDiscount = 0;
+
+        expect(result).toEqual(expectedDiscount);
+    });
+
+    it('should handle negative notional and purchase proceeds', () => {
+        const notional = -100;
+        const purchaseProceeds = -80;
+
+        const result = calculateTotalDiscount(notional, purchaseProceeds);
+        const expectedDiscount = -20;
+
+        expect(result).toEqual(expectedDiscount);
+    });
+});
+
+describe('calculateAnnualizedYield', () => {
+    it('should correctly calculate the annualized yield for valid inputs', () => {
+        const purchasePrice = 100;
+        const notional = 200;
+        const maturity = new Date(
+            new Date().getTime() + 1000 * 60 * 60 * 24 * 365,
+        ).toISOString();
+        const result = calculateAnnualizedYield(
+            purchasePrice,
+            notional,
+            maturity,
+        );
+        const expectedYield = 100; // Expected yield is 100%
+
+        expect(Math.round(result)).toEqual(expectedYield);
+    });
+
+    it('should throw an error when maturity date is in the past', () => {
+        const purchasePrice = 100;
+        const notional = 200;
+        const maturity = new Date(
+            new Date().getTime() - 1000 * 60 * 60 * 24 * 365,
+        ).toISOString();
+
+        expect(() =>
+            calculateAnnualizedYield(purchasePrice, notional, maturity),
+        ).toThrow('Maturity date must be in the future.');
+    });
+
+    it('should throw an error when notional is equal to purchase price', () => {
+        const purchasePrice = 100;
+        const notional = 100;
+        const maturity = new Date(
+            new Date().getTime() + 1000 * 60 * 60 * 24 * 365,
+        ).toISOString();
+
+        expect(() =>
+            calculateAnnualizedYield(purchasePrice, notional, maturity),
+        ).toThrow('Notional must be greater than purchase price.');
+    });
+
+    it('should handle edge case where maturity date is today', () => {
+        const purchasePrice = 100;
+        const notional = 200;
+        const maturity = new Date().toISOString();
+
+        const result = calculateAnnualizedYield(
+            purchasePrice,
+            notional,
+            maturity,
+        );
+        const expectedYield = 0; // Expected yield is 0%
+
+        expect(result).toBeCloseTo(expectedYield, 2); // 2 decimal places
     });
 });

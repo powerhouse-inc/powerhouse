@@ -78,24 +78,30 @@ type PrincipalDrawGroupTransaction {
     id: ID!
     type: GroupTransactionType!
     cashTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 type PrincipalReturnGroupTransaction {
     id: ID!
     type: GroupTransactionType!
     cashTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 type AssetPurchaseGroupTransaction {
     id: ID!
     type: GroupTransactionType!
+    cashTransaction: BaseTransaction
     fixedIncomeTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 type AssetSaleGroupTransaction {
     id: ID!
     type: GroupTransactionType!
+    cashTransaction: BaseTransaction
     fixedIncomeTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 type InterestDrawGroupTransaction {
@@ -215,6 +221,18 @@ input EditFixedIncomeAssetInput {
     CUSIP: String
     coupon: Float
     maturity: DateTime
+    purchaseDate: DateTime # Weighted average of underlying transactions
+    notional: Float # Face value sum of the underlying transactions
+    purchasePrice: Float # purchaseProceeds / notional
+    purchaseProceeds: Float # Total cash outflow spent on purchases
+    totalDiscount: Float # notional - purchaseProceeds
+    marketValue: Float #
+    annualizedYield: Float # (Purchase Price / ( Notional - Purchase Price)) x (365 / Days to Maturity ) * 100
+    realizedSurplus: Float
+    totalSurplus: Float
+    ISIN: String
+    CUSIP: String
+    coupon: Float
 }
 
 input DeleteFixedIncomeAssetInput {
@@ -246,21 +264,27 @@ input DeleteAccountInput {
 input CreatePrincipalDrawGroupTransactionInput {
     id: ID!
     cashTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 input CreatePrincipalReturnGroupTransactionInput {
     id: ID!
     cashTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 input CreateAssetPurchaseGroupTransactionInput {
     id: ID!
+    cashTransaction: BaseTransaction
     fixedIncomeTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 input CreateAssetSaleGroupTransactionInput {
     id: ID!
+    cashTransaction: BaseTransaction
     fixedIncomeTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 input CreateInterestDrawGroupTransactionInput {
@@ -287,21 +311,27 @@ input EditGroupTransactionTypeInput {
 input EditPrincipalDrawGroupTransactionInput {
     id: ID!
     cashTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 input EditPrincipalReturnGroupTransactionInput {
     id: ID!
     cashTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 input EditAssetPurchaseGroupTransactionInput {
     id: ID!
+    cashTransaction: BaseTransaction
     fixedIncomeTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 input EditAssetSaleGroupTransactionInput {
     id: ID!
+    cashTransaction: BaseTransaction
     fixedIncomeTransaction: BaseTransaction
+    feeTransactions: [BaseTransaction]
 }
 
 input EditInterestDrawGroupTransactionInput {
@@ -314,8 +344,8 @@ input EditInterestReturnGroupTransactionInput {
     interestTransaction: BaseTransaction
 }
 
-# add a fee transaction to a fees payment group transaction's list of fee payments
-input AddFeeTransactionsToFeesPaymentGroupTransactionInput {
+# add a fee transaction to a group transaction's list of fee payments
+input AddFeeTransactionsToGroupTransactionInput {
     id: ID!
     feeTransactions: [BaseTransaction]
 }
@@ -335,7 +365,7 @@ input EditFeeTransactionInput {
 }
 
 # remove a fee transaction from a fees payment group transaction's list of fee payments
-input RemoveFeeTransactionFromFeesPaymentGroupTransactionInput {
+input RemoveFeeTransactionFromGroupTransactionInput {
     id: ID!
     feeTransactionId: ID!
 }
