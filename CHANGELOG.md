@@ -1,3 +1,19 @@
+# [1.0.0-alpha.52](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.51...v1.0.0-alpha.52) (2024-02-07)
+
+
+### Bug Fixes
+
+* extend RWATableRowProps from ComponentPropsWithoutRef instead of ComponentPropsWithRef ([b458e3d](https://github.com/powerhouse-inc/design-system/commit/b458e3d78337efed1e49b70ca799df31328a9a14))
+* remove footer from asset details ([0f1087e](https://github.com/powerhouse-inc/design-system/commit/0f1087e845bd3ea55bf84600718f950a8b2fec06))
+
+
+### Features
+
+* added RWAAssetDetails components + table inputs components ([a5c9293](https://github.com/powerhouse-inc/design-system/commit/a5c929366cb8e2e17237deccd47ac8680f74740a))
+* added RWATableRow with support for expand/collapse content ([7dde240](https://github.com/powerhouse-inc/design-system/commit/7dde240ada3f078e239632ee7f88ae8f705d7785))
+* added table footer ([63a7318](https://github.com/powerhouse-inc/design-system/commit/63a73185bbf69b6634a8965b34598df8adc7bb32))
+* enabled sort items ([97608f9](https://github.com/powerhouse-inc/design-system/commit/97608f9ca2e4d5398a28f7d222f9371c5868275f))
+
 # [1.0.0-alpha.51](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.50...v1.0.0-alpha.51) (2024-02-06)
 
 
