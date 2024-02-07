@@ -1,8 +1,8 @@
 import { mergeClassNameProps } from '@/powerhouse';
-import { ComponentPropsWithRef } from 'react';
+import { ComponentPropsWithoutRef, ComponentPropsWithRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
-export interface RWATableRowProps extends ComponentPropsWithRef<'tr'> {
+export interface RWATableRowProps extends ComponentPropsWithoutRef<'tr'> {
     children: React.ReactNode;
     isExpanded?: boolean;
     accordionContent: React.ReactNode;
