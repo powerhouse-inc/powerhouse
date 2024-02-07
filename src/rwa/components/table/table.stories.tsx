@@ -28,6 +28,7 @@ const meta: Meta<typeof RWATable<Item>> = {
         items: { control: 'object' },
         renderRow: { control: 'function' },
         onClickSort: { control: 'action' },
+        footer: { control: 'object' },
     },
 };
 
@@ -270,6 +271,7 @@ export const Primary: Story = {
                 </RWATableCell>
             </tr>
         ),
+        footer: <div className="p-2 text-center">Table footer</div>,
     },
     render: args => <TableDemo {...args} />,
 };
