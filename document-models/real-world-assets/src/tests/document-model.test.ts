@@ -10,7 +10,7 @@ describe(' Portfolio Document Model', () => {
         const document = utils.createDocument();
 
         expect(document).toBeDefined();
-        expect(document.documentType).toBe('');
+        expect(document.documentType).toBe('powerhouse/real-world-assets');
     });
 
     it('should create a new  Portfolio document with a valid initial state', () => {

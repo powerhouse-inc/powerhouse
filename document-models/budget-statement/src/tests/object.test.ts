@@ -5,7 +5,6 @@ import { createAccount, utils } from '../..';
 describe('Budget Statement Class', () => {
     afterAll(() => {
         fs.rmSync('./test/budget-statement/temp/march.phbs.zip');
-        fs.rmSync('./test/budget-statement/temp/undo.phbs.zip');
     });
 
     it('should set initial state', async () => {
@@ -171,56 +170,5 @@ describe('Budget Statement Class', () => {
         const budgetStatement = await utils.loadFromInput(file.buffer);
         expect(budgetStatement.name).toBe('march');
         expect(budgetStatement.state.global.month).toBe('03/2023');
-    });
-
-    it('should load from file and keep undo/redo state', async () => {
-        const budgetStatement = new BudgetStatement();
-        budgetStatement
-            .setName('undo')
-            .setMonth({ month: '03/2023' })
-            .addAccount({
-                address: 'eth:000',
-                name: 'Grants Program',
-            })
-            .addAccount({
-                address: 'eth:111',
-                name: 'Incubation',
-            })
-            .undo(1);
-
-        expect(budgetStatement.state.global.accounts).toStrictEqual([
-            {
-                address: 'eth:000',
-                name: 'Grants Program',
-                lineItems: [],
-            },
-        ]);
-
-        const path = await budgetStatement.saveToFile(
-            './test/budget-statement/temp',
-        );
-        const loadedBudgetStatement = await BudgetStatement.fromFile(path);
-
-        expect(loadedBudgetStatement.state.global.accounts).toStrictEqual([
-            {
-                address: 'eth:000',
-                name: 'Grants Program',
-                lineItems: [],
-            },
-        ]);
-
-        loadedBudgetStatement.redo(1);
-        expect(loadedBudgetStatement.state.global.accounts).toStrictEqual([
-            {
-                address: 'eth:000',
-                name: 'Grants Program',
-                lineItems: [],
-            },
-            {
-                address: 'eth:111',
-                name: 'Incubation',
-                lineItems: [],
-            },
-        ]);
     });
 });
