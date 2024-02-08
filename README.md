@@ -5,7 +5,7 @@ This repository contains base and scoped (project) components, utilities, and ho
 ### How to run this project:
 
 -   Clone this repo: `git clone https://github.com/powerhouse-inc/design-system.git`
--   Install the dependencies: `yarn install`
+-   Install dependencies: `yarn install`
 -   Run Storybook: `yarn storybook`
 
 ### Project structure:
