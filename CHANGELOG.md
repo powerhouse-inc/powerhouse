@@ -1,3 +1,10 @@
+# [1.0.0-alpha.55](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.54...v1.0.0-alpha.55) (2024-02-08)
+
+
+### Features
+
+* update inputs to match schema ([#185](https://github.com/powerhouse-inc/design-system/issues/185)) ([ae3a3b8](https://github.com/powerhouse-inc/design-system/commit/ae3a3b815624dfe3272b9d6af1070a28be17aee7))
+
 # [1.0.0-alpha.54](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.53...v1.0.0-alpha.54) (2024-02-08)
 
 
