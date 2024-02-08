@@ -1,14 +1,18 @@
 import { DivProps, Icon, mergeClassNameProps } from '@/powerhouse';
-import { CalendarDate } from '@internationalized/date';
+import { parseDate } from '@internationalized/date';
 import React from 'react';
 import { UseFormReset, useForm } from 'react-hook-form';
-import { RWAComponentMode } from '../../types';
+import {
+    FixedIncomeAsset,
+    FixedIncomeType,
+    RWAComponentMode,
+    SPV,
+} from '../../types';
 import { RWAButton } from '../button';
 import {
     RWAFormRow,
     RWATableDatePicker,
     RWATableSelect,
-    RWATableSelectProps,
     RWATableTextInput,
 } from '../table-inputs';
 import { RWAAssetDetailInputs } from './form';
@@ -16,44 +20,30 @@ import { RWAAssetDetailInputs } from './form';
 const defaultLabels = {
     title: 'Asset Details',
     editAsset: 'Edit Asset',
+    saveNewAsset: 'Save New Asset',
     saveEdits: 'Save Edits',
     cancelEdits: 'Cancel',
-    purchaseTimestamp: 'Purchase Timestamp',
-    assetType: 'Asset Type',
-    maturityDate: 'Maturity Date',
-    cusip: 'CUSIP',
-    isin: 'ISIN',
-    assetName: 'Asset Name',
+    fixedIncomeType: 'Asset Type',
+    spv: 'SPV',
+    maturity: 'Maturity Date',
+    name: 'Asset Name',
+    CUSIP: 'CUSIP',
+    ISIN: 'ISIN',
+    coupon: 'Coupon',
     notional: 'Notional',
-    purchaseProceeds: 'Purchase Proceeds $USD',
-    unitPrice: 'Unit Price',
+    purchaseDate: 'Purchase Date',
+    purchasePrice: 'Purchase Price',
+    purchaseProceeds: 'Purchase Proceeds',
     totalDiscount: 'Total Discount',
-    currentValue: 'Current Value',
-    realisedSurplus: 'Realised Surplus',
-    totalSurplus: 'Total Surplus',
-    saveNewAsset: 'Save New Asset',
-};
-
-export type RWAAssetDetail = {
-    id: string;
-    purchaseTimestamp: CalendarDate;
-    assetTypeId: string;
-    maturityDate: string;
-    cusip: string;
-    isin: string;
-    assetName: string;
-    notional: string;
-    purchaseProceeds: string;
-    unitPrice: string;
-    totalDiscount: string;
-    currentValue: string;
-    realisedSurplus: string;
-    totalSurplus: string;
+    annualizedYield: 'Annualized Yield',
 };
 
 export interface RWAAssetDetailsProps extends DivProps {
+    asset: FixedIncomeAsset;
     operation?: 'create' | 'edit';
     mode?: RWAComponentMode;
+    fixedIncomeTypes: FixedIncomeType[];
+    spvs: SPV[];
     onClose?: () => void;
     onCancel: (reset: UseFormReset<RWAAssetDetailInputs>) => void;
     onEdit: () => void;
@@ -62,47 +52,43 @@ export interface RWAAssetDetailsProps extends DivProps {
         resetForm: UseFormReset<RWAAssetDetailInputs>,
     ) => void;
     labels?: typeof defaultLabels;
-    asset: RWAAssetDetail;
-    assetTypeOptions: RWATableSelectProps<RWAAssetDetailInputs>['options'];
-    maturityOptions: RWATableSelectProps<RWAAssetDetailInputs>['options'];
     hideNonEditableFields?: boolean;
 }
 
 export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
     const {
         asset,
+        fixedIncomeTypes,
+        spvs,
         onEdit,
         onClose,
         onCancel,
         onSubmitForm,
         mode = 'view',
         operation = 'edit',
-        assetTypeOptions,
-        maturityOptions,
         labels = defaultLabels,
-        hideNonEditableFields = false,
         ...restProps
     } = props;
 
+    const fixedIncomeType = fixedIncomeTypes.find(
+        ({ id }) => id === asset.fixedIncomeTypeId,
+    );
+    const spv = spvs.find(({ id }) => id === asset.spvId);
+
     const { handleSubmit, control, reset } = useForm<RWAAssetDetailInputs>({
         defaultValues: {
-            id: asset.id,
-            isin: asset.isin,
-            cuisp: asset.cusip,
-            notional: asset.notional,
-            assetName: asset.assetName,
-            assetTypeId: asset.assetTypeId,
-            maturityId: asset.maturityDate,
-            purchaseTimestamp: asset.purchaseTimestamp,
-            purchaseProceedsUSD: asset.purchaseProceeds,
+            fixedIncomeType: fixedIncomeType ?? fixedIncomeTypes[0],
+            spv: spv ?? spvs[0],
+            name: asset.name,
+            maturity: parseDate(asset.maturity),
+            ISIN: asset.ISIN,
+            CUSIP: asset.CUSIP,
+            coupon: asset.coupon,
         },
     });
 
     const isEditMode = mode === 'edit';
     const isCreateOperation = operation === 'create';
-
-    const summaryRowStyles =
-        'py-1 px-3 [&>div:first-child]:py-0 [&>div:last-child]:py-0';
 
     return (
         <div {...mergeClassNameProps(restProps, 'flex flex-col')}>
@@ -149,71 +135,60 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
             </div>
             <div>
                 <RWAFormRow
-                    label={labels.purchaseTimestamp}
+                    label={labels.maturity}
                     hideLine={isEditMode}
                     value={
                         <RWATableDatePicker
                             control={control}
-                            name="purchaseTimestamp"
+                            name="maturity"
                             disabled={!isEditMode}
                         />
                     }
                 />
                 <RWAFormRow
-                    label={labels.assetType}
+                    label={labels.fixedIncomeType}
                     hideLine={isEditMode}
                     value={
                         <RWATableSelect
                             control={control}
-                            name="assetTypeId"
+                            name="fixedIncomeType"
                             disabled={!isEditMode}
-                            options={assetTypeOptions}
+                            options={fixedIncomeTypes.map(t => ({
+                                ...t,
+                                label: t.name,
+                            }))}
                         />
                     }
                 />
                 <RWAFormRow
-                    label={labels.maturityDate}
-                    hideLine={isEditMode}
-                    value={
-                        <RWATableSelect
-                            control={control}
-                            name="maturityId"
-                            disabled={!isEditMode}
-                            options={maturityOptions}
-                        />
-                    }
-                />
-                <RWAFormRow
-                    label={labels.cusip}
+                    label={labels.CUSIP}
                     hideLine={isEditMode}
                     value={
                         <RWATableTextInput
                             control={control}
-                            type="currency"
-                            name="cuisp"
+                            name="CUSIP"
                             disabled={!isEditMode}
                         />
                     }
                 />
                 <RWAFormRow
-                    label={labels.isin}
+                    label={labels.ISIN}
                     hideLine={isEditMode}
                     value={
                         <RWATableTextInput
                             control={control}
-                            name="isin"
-                            type="currency"
+                            name="ISIN"
                             disabled={!isEditMode}
                         />
                     }
                 />
                 <RWAFormRow
-                    label={labels.assetName}
+                    label={labels.name}
                     hideLine={isEditMode}
                     value={
                         <RWATableTextInput
                             control={control}
-                            name="assetName"
+                            name="name"
                             disabled={!isEditMode}
                         />
                     }
@@ -221,60 +196,23 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                 <RWAFormRow
                     label={labels.notional}
                     hideLine={isEditMode}
-                    value={
-                        <RWATableTextInput
-                            control={control}
-                            name="notional"
-                            disabled={!isEditMode}
-                        />
-                    }
+                    value={asset.notional}
+                />
+                <RWAFormRow
+                    label={labels.purchaseDate}
+                    hideLine={isEditMode}
+                    value={asset.purchaseDate}
+                />
+                <RWAFormRow
+                    label={labels.purchasePrice}
+                    hideLine={isEditMode}
+                    value={asset.purchasePrice}
                 />
                 <RWAFormRow
                     label={labels.purchaseProceeds}
                     hideLine={isEditMode}
-                    value={
-                        <div className="flex flex-col items-end">
-                            <div>
-                                <RWATableTextInput
-                                    control={control}
-                                    name="purchaseProceedsUSD"
-                                    type="currency"
-                                    disabled={!isEditMode}
-                                />
-                            </div>
-                            <div className="mt-[10px] flex">
-                                <div className="mr-8 text-gray-600">
-                                    {labels.unitPrice}
-                                </div>
-                                <div>{asset.unitPrice}</div>
-                            </div>
-                        </div>
-                    }
+                    value={asset.purchaseProceeds}
                 />
-                {!hideNonEditableFields && (
-                    <div className="bg-gray-100 pb-3">
-                        <RWAFormRow
-                            className={summaryRowStyles}
-                            label={labels.totalDiscount}
-                            value={asset.totalDiscount}
-                        />
-                        <RWAFormRow
-                            className={summaryRowStyles}
-                            label={labels.currentValue}
-                            value={asset.currentValue}
-                        />
-                        <RWAFormRow
-                            className={summaryRowStyles}
-                            label={labels.realisedSurplus}
-                            value={asset.realisedSurplus}
-                        />
-                        <RWAFormRow
-                            className={summaryRowStyles}
-                            label={labels.totalSurplus}
-                            value={asset.totalSurplus}
-                        />
-                    </div>
-                )}
             </div>
         </div>
     );

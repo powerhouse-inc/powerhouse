@@ -1,5 +1,5 @@
-import { CalendarDate } from '@internationalized/date';
 import type { Meta, StoryObj } from '@storybook/react';
+import { addDays } from 'date-fns';
 import { RWAAssetDetails } from './asset-details';
 
 const meta: Meta<typeof RWAAssetDetails> = {
@@ -16,8 +16,7 @@ const meta: Meta<typeof RWAAssetDetails> = {
         onSubmitForm: { action: 'onSubmit' },
         labels: { control: { type: 'object' } },
         asset: { control: { type: 'object' } },
-        assetTypeOptions: { control: { type: 'object' } },
-        maturityOptions: { control: { type: 'object' } },
+        fixedIncomeTypes: { control: { type: 'object' } },
         hideNonEditableFields: { control: 'boolean' },
         operation: {
             options: ['create', 'edit'],
@@ -32,51 +31,22 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
     args: {
         operation: 'edit',
-        hideNonEditableFields: false,
         mode: 'view',
         asset: {
             id: '1',
-            purchaseTimestamp: new CalendarDate(2024, 1, 12),
-            assetTypeId: '91279GF8',
-            maturityDate: 'purchase',
-            cusip: '$1,000,000.00',
-            isin: '$1,000,000.00',
-            assetName: '-',
-            notional: '-',
-            purchaseProceeds: '$1,000,000.00',
-            totalDiscount: '200,000',
-            currentValue: '1,656,073.70',
-            realisedSurplus: '0',
-            totalSurplus: '1,656,073.70',
-            unitPrice: '99.64%',
-        },
-        assetTypeOptions: [
-            { id: '91279GF8', label: 'T-Bill 91279GF8' },
-            { id: '91279GF9', label: 'T-Bill 91279GF9' },
-        ],
-        maturityOptions: [
-            { id: 'purchase', label: 'Purchase' },
-            { id: 'mature', label: 'Mature' },
-        ],
-        labels: {
-            title: 'Asset Details',
-            editAsset: 'Edit Asset',
-            saveEdits: 'Save Edits',
-            cancelEdits: 'Cancel',
-            purchaseTimestamp: 'Purchase Timestamp',
-            assetType: 'Asset Type',
-            maturityDate: 'Maturity Date',
-            cusip: 'CUSIP',
-            isin: 'ISIN',
-            assetName: 'Asset Name',
-            notional: 'Notional',
-            purchaseProceeds: 'Purchase Proceeds $USD',
-            unitPrice: 'Unit Price',
-            totalDiscount: 'Total Discount',
-            currentValue: 'Current Value',
-            realisedSurplus: 'Realised Surplus',
-            totalSurplus: 'Total Surplus',
-            saveNewAsset: 'Save New Asset',
+            name: 'Test Asset',
+            fixedIncomeTypeId: '1',
+            spvId: '1',
+            maturity: addDays(new Date(), 30).toDateString(),
+            ISIN: '123456789',
+            CUSIP: '987654321',
+            coupon: 5,
+            notional: 1000000,
+            purchaseDate: addDays(new Date(), -30).toDateString(),
+            purchasePrice: 1000000,
+            purchaseProceeds: 1000000,
+            totalDiscount: 1000000,
+            annualizedYield: 1000000,
         },
     },
 };

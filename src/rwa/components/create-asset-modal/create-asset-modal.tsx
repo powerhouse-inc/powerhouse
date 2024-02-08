@@ -1,28 +1,22 @@
 import { Button, Icon, Modal } from '@/powerhouse';
+import { FixedIncomeType, SPV } from '@/rwa';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-    RWACreateAssetForm,
-    RWACreateAssetFormProps,
-    RWACreateAssetInputs,
-} from '../create-asset-form';
+import { RWACreateAssetForm, RWACreateAssetInputs } from '../create-asset-form';
 
 const icon = <Icon name="plus" size={16} />;
 
 export interface RWACreateAssetModalProps {
     onSubmit?: (inputs: RWACreateAssetInputs) => void;
-    labels?: {
-        button?: string;
-        cancel?: string;
-        createAsset?: string;
-        form?: RWACreateAssetFormProps['labels'];
-    };
+    fixedIncomeTypes: FixedIncomeType[];
+    spvs: SPV[];
+    labels: Record<string, string>;
 }
 
 export const RWACreateAssetModal: React.FC<
     RWACreateAssetModalProps
 > = props => {
-    const { labels, onSubmit } = props;
+    const { fixedIncomeTypes, spvs, labels, onSubmit } = props;
 
     const [open, setOpen] = useState(false);
     const { handleSubmit, control } = useForm<RWACreateAssetInputs>();
@@ -44,7 +38,7 @@ export const RWACreateAssetModal: React.FC<
                 iconPosition="right"
                 className="bg-gray-50 px-3 text-sm text-gray-900 hover:bg-gray-50 hover:text-gray-700"
             >
-                {labels?.button || 'Create Asset'}
+                {labels.button || 'Create Asset'}
             </Button>
             <Modal
                 open={open}
@@ -64,7 +58,9 @@ export const RWACreateAssetModal: React.FC<
                     <div className="p-6">
                         <RWACreateAssetForm
                             control={control}
-                            labels={labels?.form}
+                            fixedIncomeTypes={fixedIncomeTypes}
+                            spvs={spvs}
+                            labels={labels}
                         />
                     </div>
                     <div className="flex justify-end bg-gray-100 p-3">
@@ -73,13 +69,13 @@ export const RWACreateAssetModal: React.FC<
                                 onClick={closeModal}
                                 className="bg-gray-100 text-gray-600 hover:bg-gray-300"
                             >
-                                {labels?.cancel || 'Cancel'}
+                                {labels.cancel || 'Cancel'}
                             </Button>
                             <Button
                                 onClick={handleOnSubmit}
                                 className="px-6 py-1 text-base"
                             >
-                                {labels?.createAsset || 'Create Asset'}
+                                {labels.createAsset || 'Create Asset'}
                             </Button>
                         </div>
                     </div>

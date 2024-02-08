@@ -1,5 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { mockFixedIncomeAssetsTableData } from './fixed-income-assets-mock-table-data';
+import {
+    mockFixedIncomeAssetsTableData,
+    mockFixedIncomeTypes,
+    mockSpvs,
+} from './fixed-income-assets-mock-table-data';
 import {
     RWAFixedIncomeAssetsTable,
     columnCountByTableWidth,
@@ -15,8 +19,6 @@ const meta: Meta<typeof RWAFixedIncomeAssetsTable> = {
         onClickDetails: { action: 'onClickDetails' },
         onEditItem: { action: 'onEditItem' },
         onSubmitEdit: { action: 'onSubmitEdit' },
-        expandedRowId: { control: 'text' },
-        editRowId: { control: 'text' },
     },
 };
 
@@ -26,14 +28,8 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
     args: {
         items: mockFixedIncomeAssetsTableData,
-        assetTypeOptions: [
-            { id: '91279GF8', label: 'T-Bill 91279GF8' },
-            { id: '91279GF9', label: 'T-Bill 91279GF9' },
-        ],
-        maturityOptions: [
-            { id: 'purchase', label: 'Purchase' },
-            { id: 'mature', label: 'Mature' },
-        ],
+        fixedIncomeTypes: mockFixedIncomeTypes,
+        spvs: mockSpvs,
     },
     render: args => (
         <div className="flex flex-col gap-4">

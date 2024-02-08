@@ -1,4 +1,5 @@
-import { CalendarDate } from '@internationalized/date';
+import { FixedIncomeType, SPV } from '@/rwa';
+import { parseDate } from '@internationalized/date';
 import React from 'react';
 import { Control, Controller, SubmitHandler } from 'react-hook-form';
 import { RWADatePicker } from '../date-picker';
@@ -6,16 +7,13 @@ import { RWASelect } from '../select';
 import { RWATextInput } from '../text-input';
 
 export type RWACreateAssetInputs = {
-    assetType: string;
-    assetName: string;
-    maturity: CalendarDate;
-    cusip: string;
-    notional: string;
-    purchaseProceeds: string;
-    totalDiscount: string;
-    currentValue: string;
-    realisedSurplus: string;
-    totalSurplus: string;
+    name: string;
+    fixedIncomeTypeId: string;
+    spvId: string;
+    maturity: string;
+    ISIN?: string;
+    CUSIP?: string;
+    coupon?: number;
 };
 
 export type RWACreateAssetFormSubmitHandler =
@@ -23,40 +21,51 @@ export type RWACreateAssetFormSubmitHandler =
 
 export interface RWACreateAssetFormProps {
     control: Control<RWACreateAssetInputs>;
-    labels?: {
-        assetType?: string;
-        assetName?: string;
-        maturity?: string;
-        cusip?: string;
-        notional?: string;
-        purchaseProceeds?: string;
-        totalDiscount?: string;
-        currentValue?: string;
-        realisedSurplus?: string;
-        totalSurplus?: string;
-    };
+    fixedIncomeTypes: FixedIncomeType[];
+    spvs: SPV[];
+    labels: Record<string, string>;
 }
 
 export const RWACreateAssetForm: React.FC<RWACreateAssetFormProps> = props => {
-    const { labels = {}, control } = props;
+    const { labels, control, fixedIncomeTypes, spvs } = props;
+
+    const fixedIncomeTypeOptions = fixedIncomeTypes.map(type => ({
+        id: type.id,
+        label: type.name,
+    }));
+
+    const spvOptions = spvs.map(spv => ({ id: spv.id, label: spv.name }));
 
     return (
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <div>
                 <Controller
                     control={control}
-                    name="assetType"
+                    name="fixedIncomeTypeId"
                     render={({ field: { onChange, value, onBlur } }) => (
                         <RWASelect
                             onBlur={onBlur}
                             selectedKey={value}
                             onSelectionChange={onChange}
-                            label={labels.assetType || 'Asset Type'}
+                            label={labels.fixedIncomeTypeId}
                             buttonProps={{ className: 'w-full' }}
-                            options={[
-                                { id: '1', label: 'Asset type 1' },
-                                { id: '2', label: 'Asset type 2' },
-                            ]}
+                            options={fixedIncomeTypeOptions}
+                        />
+                    )}
+                />
+            </div>
+            <div>
+                <Controller
+                    control={control}
+                    name="spvId"
+                    render={({ field: { onChange, value, onBlur } }) => (
+                        <RWASelect
+                            onBlur={onBlur}
+                            selectedKey={value}
+                            onSelectionChange={onChange}
+                            label={labels.spvId}
+                            buttonProps={{ className: 'w-full' }}
+                            options={spvOptions}
                         />
                     )}
                 />
@@ -65,13 +74,13 @@ export const RWACreateAssetForm: React.FC<RWACreateAssetFormProps> = props => {
             <div>
                 <Controller
                     control={control}
-                    name="assetName"
+                    name="name"
                     render={({ field: { onChange, value, onBlur } }) => (
                         <RWATextInput
                             value={value}
                             onBlur={onBlur}
                             onChange={onChange}
-                            label={labels.assetName || 'Asset Name'}
+                            label={labels.name}
                             inputProps={{ placeholder: '-' }}
                         />
                     )}
@@ -83,7 +92,7 @@ export const RWACreateAssetForm: React.FC<RWACreateAssetFormProps> = props => {
                     name="maturity"
                     render={({ field: { onChange, value, onBlur } }) => (
                         <RWADatePicker
-                            value={value}
+                            value={parseDate(value)}
                             onBlur={onBlur}
                             onChange={onChange}
                             label={labels.maturity || 'Maturity'}
@@ -94,29 +103,13 @@ export const RWACreateAssetForm: React.FC<RWACreateAssetFormProps> = props => {
             <div>
                 <Controller
                     control={control}
-                    name="cusip"
+                    name="CUSIP"
                     render={({ field: { onChange, value, onBlur } }) => (
                         <RWATextInput
                             value={value}
                             onBlur={onBlur}
                             onChange={onChange}
-                            label={labels.cusip || 'CUSIP'}
-                            inputProps={{ placeholder: '-' }}
-                        />
-                    )}
-                />
-            </div>
-            <div />
-            <div>
-                <Controller
-                    control={control}
-                    name="notional"
-                    render={({ field: { onChange, value, onBlur } }) => (
-                        <RWATextInput
-                            value={value}
-                            onBlur={onBlur}
-                            onChange={onChange}
-                            label={labels.notional || 'Notional'}
+                            label={labels.CUSIP}
                             inputProps={{ placeholder: '-' }}
                         />
                     )}
@@ -125,16 +118,13 @@ export const RWACreateAssetForm: React.FC<RWACreateAssetFormProps> = props => {
             <div>
                 <Controller
                     control={control}
-                    name="purchaseProceeds"
+                    name="ISIN"
                     render={({ field: { onChange, value, onBlur } }) => (
                         <RWATextInput
                             value={value}
                             onBlur={onBlur}
                             onChange={onChange}
-                            label={
-                                labels.purchaseProceeds ||
-                                'Purchase Proceeds $USD'
-                            }
+                            label={labels.ISIN}
                             inputProps={{ placeholder: '-' }}
                         />
                     )}
@@ -143,63 +133,13 @@ export const RWACreateAssetForm: React.FC<RWACreateAssetFormProps> = props => {
             <div>
                 <Controller
                     control={control}
-                    name="totalDiscount"
+                    name="coupon"
                     render={({ field: { onChange, value, onBlur } }) => (
                         <RWATextInput
-                            value={value}
+                            value={value?.toString() ?? ''}
                             onBlur={onBlur}
                             onChange={onChange}
-                            label={
-                                labels.totalDiscount || 'Total Discount $USD'
-                            }
-                            inputProps={{ placeholder: '-' }}
-                        />
-                    )}
-                />
-            </div>
-            <div>
-                <Controller
-                    control={control}
-                    name="currentValue"
-                    render={({ field: { onChange, value, onBlur } }) => (
-                        <RWATextInput
-                            value={value}
-                            onBlur={onBlur}
-                            onChange={onChange}
-                            label={labels.currentValue || 'Current Value $USD'}
-                            inputProps={{ placeholder: '-' }}
-                        />
-                    )}
-                />
-            </div>
-            <div>
-                <Controller
-                    control={control}
-                    name="realisedSurplus"
-                    render={({ field: { onChange, value, onBlur } }) => (
-                        <RWATextInput
-                            value={value}
-                            onBlur={onBlur}
-                            onChange={onChange}
-                            label={
-                                labels.realisedSurplus ||
-                                'Realised Surplus $USD'
-                            }
-                            inputProps={{ placeholder: '-' }}
-                        />
-                    )}
-                />
-            </div>
-            <div>
-                <Controller
-                    control={control}
-                    name="totalSurplus"
-                    render={({ field: { onChange, value, onBlur } }) => (
-                        <RWATextInput
-                            value={value}
-                            onBlur={onBlur}
-                            onChange={onChange}
-                            label={labels.totalSurplus || 'Total Surplus $USD'}
+                            label={labels.coupon}
                             inputProps={{ placeholder: '-' }}
                         />
                     )}

@@ -1,26 +1,21 @@
 import { Icon } from '@/powerhouse';
-import { CalendarDate } from '@internationalized/date';
+import { FixedIncomeAsset } from '@/rwa';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
 import { orderBy } from 'natural-orderby';
 import { useState } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { RWAAssetDetail, RWAAssetDetails } from '../asset-details';
+import { RWAAssetDetails } from '../asset-details';
 import { RWATableRow } from './expandable-row';
+import {
+    mockFixedIncomeAssetsTableData,
+    mockFixedIncomeTypes,
+    mockSpvs,
+} from './fixed-income-assets-mock-table-data';
 import { RWATable, RWATableProps } from './table';
 import { RWATableCell } from './table-cell';
 
-type Item = RWAAssetDetail & {
-    relatedSpv: string;
-    assetId: string;
-    coupon: string;
-    maturity: string;
-    notional: string;
-};
-
-type ItemKey = keyof Item;
-
-const meta: Meta<typeof RWATable<Item>> = {
+const meta: Meta<typeof RWATable<FixedIncomeAsset>> = {
     title: 'RWA/Components/RWATable',
     component: RWATable,
     argTypes: {
@@ -47,208 +42,7 @@ export const Primary: Story = {
             { id: 'notional', label: 'Notional', allowSorting: true },
             { id: 'moreDetails' },
         ],
-        items: [
-            {
-                relatedSpv: 'SPV 1',
-                assetId: 'Asset 1',
-                assetName: 'Asset 1',
-                coupon: '1.00',
-                maturity: '1/1/2021',
-                notional: '1.00',
-                id: '1',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 2',
-                assetId: 'Asset 2',
-                assetName: 'Asset 2',
-                coupon: '2.00',
-                maturity: '2/2/2022',
-                notional: '2.00',
-                id: '2',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 3',
-                assetId: 'Asset 3',
-                assetName: 'Asset 3',
-                coupon: '3.00',
-                maturity: '3/3/2023',
-                notional: '3.00',
-                id: '3',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 4',
-                assetId: 'Asset 4',
-                assetName: 'Asset 4',
-                coupon: '4.00',
-                maturity: '4/4/2024',
-                notional: '4.00',
-                id: '4',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 5',
-                assetId: 'Asset 5',
-                assetName: 'Asset 5',
-                coupon: '5.00',
-                maturity: '5/5/2025',
-                notional: '5.00',
-                id: '5',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 6',
-                assetId: 'Asset 6',
-                assetName: 'Asset 6',
-                coupon: '6.00',
-                maturity: '6/6/2026',
-                notional: '6.00',
-                id: '6',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 7',
-                assetId: 'Asset 7',
-                assetName: 'Asset 7',
-                coupon: '7.00',
-                maturity: '7/7/2027',
-                notional: '7.00',
-                id: '7',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 8',
-                assetId: 'Asset 8',
-                assetName: 'Asset 8',
-                coupon: '8.00',
-                maturity: '8/8/2028',
-                notional: '8.00',
-                id: '8',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 9',
-                assetId: 'Asset 9',
-                assetName: 'Asset 9',
-                coupon: '9.00',
-                maturity: '9/9/2029',
-                notional: '9.00',
-                id: '9',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-            {
-                relatedSpv: 'SPV 10',
-                assetId: 'Asset 10',
-                assetName: 'Asset 10',
-                coupon: '10.00',
-                maturity: '10/10/2030',
-                notional: '10.00',
-                id: '10',
-                purchaseTimestamp: new CalendarDate(2024, 1, 12),
-                assetTypeId: '91279GF8',
-                maturityDate: 'purchase',
-                cusip: '$1,000,000.00',
-                isin: '$1,000,000.00',
-                purchaseProceeds: '$1,000,000.00',
-                totalDiscount: '200,000',
-                currentValue: '1,656,073.70',
-                realisedSurplus: '0',
-                totalSurplus: '1,656,073.70',
-                unitPrice: '99.64%',
-            },
-        ],
+        items: mockFixedIncomeAssetsTableData,
         renderRow: (item, index) => (
             <tr
                 key={item.id}
@@ -258,9 +52,6 @@ export const Primary: Story = {
                 )}
             >
                 <RWATableCell>{item.id}</RWATableCell>
-                <RWATableCell>{item.relatedSpv}</RWATableCell>
-                <RWATableCell>{item.assetId}</RWATableCell>
-                <RWATableCell>{item.assetName}</RWATableCell>
                 <RWATableCell>{item.coupon}</RWATableCell>
                 <RWATableCell>{item.maturity}</RWATableCell>
                 <RWATableCell>{item.notional}</RWATableCell>
@@ -276,7 +67,7 @@ export const Primary: Story = {
     render: args => <TableDemo {...args} />,
 };
 
-const TableDemo = (props: RWATableProps<Item>) => {
+const TableDemo = (props: RWATableProps<FixedIncomeAsset>) => {
     const { items, ...restProps } = props;
 
     const [sortedItems, setSortedItems] = useState(items || []);
@@ -287,15 +78,24 @@ const TableDemo = (props: RWATableProps<Item>) => {
         setExpandedRow(id === expandedRow ? null : id);
     };
 
-    const onClickSort: RWATableProps<Item>['onClickSort'] = (
+    const onClickSort: RWATableProps<FixedIncomeAsset>['onClickSort'] = (
         column,
         direction,
     ) => {
         console.log('onClickSort', column, direction);
-        setSortedItems(orderBy(sortedItems, [column as ItemKey], [direction]));
+        setSortedItems(
+            orderBy(
+                sortedItems,
+                [column as keyof FixedIncomeAsset],
+                [direction],
+            ),
+        );
     };
 
-    const renderRow: RWATableProps<Item>['renderRow'] = (item, index) => {
+    const renderRow: RWATableProps<FixedIncomeAsset>['renderRow'] = (
+        item,
+        index,
+    ) => {
         return (
             <RWATableRow
                 isExpanded={expandedRow === item.id}
@@ -303,9 +103,9 @@ const TableDemo = (props: RWATableProps<Item>) => {
                 accordionContent={
                     <RWAAssetDetails
                         asset={item}
+                        fixedIncomeTypes={mockFixedIncomeTypes}
+                        spvs={mockSpvs}
                         className="border-y border-gray-300"
-                        assetTypeOptions={assetTypeOptions}
-                        maturityOptions={maturityOptions}
                         mode={editRow === item.id ? 'edit' : 'view'}
                         onCancel={() => setEditRow(null)}
                         onEdit={() => setEditRow(item.id)}
@@ -324,9 +124,6 @@ const TableDemo = (props: RWATableProps<Item>) => {
                     )}
                 >
                     <RWATableCell>{item.id}</RWATableCell>
-                    <RWATableCell>{item.relatedSpv}</RWATableCell>
-                    <RWATableCell>{item.assetId}</RWATableCell>
-                    <RWATableCell>{item.assetName}</RWATableCell>
                     <RWATableCell>{item.coupon}</RWATableCell>
                     <RWATableCell>{item.maturity}</RWATableCell>
                     <RWATableCell>{item.notional}</RWATableCell>
@@ -356,20 +153,10 @@ const TableDemo = (props: RWATableProps<Item>) => {
     return (
         <RWATable
             {...restProps}
-            className={twMerge(expandedRow && 'max-h-[680px]')}
+            className={twMerge(expandedRow && 'max-h-max')}
             onClickSort={onClickSort}
             items={sortedItems}
             renderRow={renderRow}
         />
     );
 };
-
-const assetTypeOptions = [
-    { id: '91279GF8', label: 'T-Bill 91279GF8' },
-    { id: '91279GF9', label: 'T-Bill 91279GF9' },
-];
-
-const maturityOptions = [
-    { id: 'purchase', label: 'Purchase' },
-    { id: 'mature', label: 'Mature' },
-];

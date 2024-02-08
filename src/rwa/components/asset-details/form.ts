@@ -1,13 +1,12 @@
+import { FixedIncomeType, SPV } from '@/rwa';
 import { CalendarDate } from '@internationalized/date';
 
 export type RWAAssetDetailInputs = {
-    id: string;
-    assetTypeId: string;
-    purchaseTimestamp: CalendarDate;
-    maturityId: string;
-    cuisp: string;
-    isin: string;
-    assetName: string;
-    notional: string;
-    purchaseProceedsUSD: string;
+    fixedIncomeType: FixedIncomeType;
+    spv: SPV;
+    maturity: CalendarDate;
+    name: string;
+    ISIN?: string;
+    CUSIP?: string;
+    coupon?: number;
 };
