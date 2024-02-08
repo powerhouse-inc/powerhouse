@@ -1,3 +1,10 @@
+# [1.0.0-alpha.53](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.52...v1.0.0-alpha.53) (2024-02-08)
+
+
+### Features
+
+* added asset details to fixed-income-assets-table ([bee2322](https://github.com/powerhouse-inc/design-system/commit/bee2322b02ad87879c805f18c38b3a5606da3a34))
+
 # [1.0.0-alpha.52](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.51...v1.0.0-alpha.52) (2024-02-07)
 
 
