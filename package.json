@@ -61,7 +61,7 @@
         "autoprefixer": "^10.4.16",
         "cross-env": "^7.0.3",
         "document-drive": "powerhouse-inc/document-drive#12d3656",
-        "document-model": "^1.0.22",
+        "document-model": "^1.0.28",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-import": "^2.29.1",
