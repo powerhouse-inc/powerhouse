@@ -2619,10 +2619,10 @@
   resolved "https://registry.yarnpkg.com/@popperjs/core/-/core-2.11.8.tgz#6b79032e760a0899cd4204710beede972a3a185f"
   integrity sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==
 
-"@powerhousedao/codegen@0.0.11":
-  version "0.0.11"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/codegen/-/codegen-0.0.11.tgz#dbb8ec1a57f1ba9424fe46d83684cc4870320c9d"
-  integrity sha512-nAdM8Vcak5ViaWacH8meDTRvQWw4scOJl3B9hLoz9rt8/MllsqVz1iDi4thba66BYkLjc/hNo+NxbdFRJ+70Cg==
+"@powerhousedao/codegen@0.0.12":
+  version "0.0.12"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/codegen/-/codegen-0.0.12.tgz#afd357f1a711f0941aa6910ffb145779e246aeb4"
+  integrity sha512-Opd9e7qY6fQeV4CeMPn3IQkewnsnOBmxZbLBy6pjbw8CU3A+DZ3JfUy8XSo4sFXhgnamnavXTdVNtU8rMCkLMw==
   dependencies:
     "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
     "@anatine/zod-mock" "^3.13.3"
@@ -2632,7 +2632,7 @@
     "@types/node" "^20.11.2"
     arg "^5.0.2"
     change-case "^4.1.2"
-    document-model "^1.0.20"
+    document-model "^1.0.25"
     enquirer "^2.4.1"
     execa "^8.0.1"
     hygen "^6.2.11"
@@ -5785,16 +5785,16 @@ document-model-editors@^1.0.1:
   resolved "https://registry.yarnpkg.com/document-model-editors/-/document-model-editors-1.0.1.tgz#b56ba13fe14f459aa5b0814c324a80608524876d"
   integrity sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==
 
-document-model@^1.0.20:
-  version "1.0.24"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.24.tgz#51b190b511f841630fca5da5d96470811ac89d0e"
-  integrity sha512-Kus5anpe/WCdqgXcF5G013CMucXLXI7eTZ6u6Uey2vKlJyHTJ29/ME2z7SILvTzTHeL8YwH2p31h9gG0x1F3hA==
+document-model@^1.0.25:
+  version "1.0.28"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.28.tgz#0d129a4a1610667fc43a5df2cc73d91c5e813c00"
+  integrity sha512-bigF2MbWB594IJALqHYn5l7lx5WJntinHYPAMnN5UoVP1/BmEnmixGpLnTe9V5679IsFv4QPP402KXE7BiRm8g==
   dependencies:
-    immer "^10.0.2"
-    json-stringify-deterministic "^1.0.10"
+    immer "^10.0.3"
+    json-stringify-deterministic "1.0.10"
     jszip "^3.10.1"
-    mime "^3.0.0"
-    zod "^3.22.2"
+    mime "^4.0.1"
+    zod "^3.22.4"
 
 document-model@^1.0.27:
   version "1.0.27"
@@ -7306,7 +7306,7 @@ immediate@~3.0.5:
   resolved "https://registry.yarnpkg.com/immediate/-/immediate-3.0.6.tgz#9db1dbd0faf8de6fbe0f5dd5e56bb606280de69b"
   integrity sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==
 
-immer@^10.0.2, immer@^10.0.3:
+immer@^10.0.3:
   version "10.0.3"
   resolved "https://registry.yarnpkg.com/immer/-/immer-10.0.3.tgz#a8de42065e964aa3edf6afc282dfc7f7f34ae3c9"
   integrity sha512-pwupu3eWfouuaowscykeckFmVTpqbzW+rXFCX8rQLkZzM9ftBmU/++Ra+o+L27mz03zJTlyV4UUr+fdKNffo4A==
@@ -8021,7 +8021,12 @@ json-stable-stringify@^1.0.1:
     jsonify "^0.0.1"
     object-keys "^1.1.1"
 
-json-stringify-deterministic@^1.0.10, json-stringify-deterministic@^1.0.12:
+json-stringify-deterministic@1.0.10:
+  version "1.0.10"
+  resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.10.tgz#d56660b6e9c12f47dee4340ec2ce26745fa6ee64"
+  integrity sha512-hBLYMyCnoYh0rQ2ZyEegbLaFAS5KqOZ6HZ5fgq6lGWhtNRKw2JUp/hkfjQS1bjYZlHW9AjvXBWCJe9OwcugRNw==
+
+json-stringify-deterministic@^1.0.12:
   version "1.0.12"
   resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.12.tgz#aaa3f907466ed01e3afd77b898d0a2b3b132820a"
   integrity sha512-q3PN0lbUdv0pmurkBNdJH3pfFvOTL/Zp0lquqpvcjfKzt6Y0j49EPHAmVHCAS4Ceq/Y+PejWTzyiVpoY71+D6g==
@@ -8563,11 +8568,6 @@ mime@^2.0.3:
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/mime/-/mime-2.6.0.tgz#a2a682a95cd4d0cb1d6257e28f83da7e35800367"
   integrity sha512-USPkMeET31rOMiarsBNIHZKLGgvKc/LrjofAnBlOttf5ajRvqiRA8QsenbcooctK6d6Ts6aqZXBA+XbkKthiQg==
-
-mime@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/mime/-/mime-3.0.0.tgz#b374550dca3a0c18443b0c950a6a58f1931cf7a7"
-  integrity sha512-jSCU7/VB1loIWBZe14aEYHU/+1UMEHoaO7qxCOVJOw9GgH72VAWppxNcjU+x9a2k3GSIBXNKxXQFqRvvZ7vr3A==
 
 mime@^4.0.1:
   version "4.0.1"
@@ -11543,7 +11543,7 @@ z-schema@~5.0.2:
   optionalDependencies:
     commander "^10.0.0"
 
-zod@^3.22.2, zod@^3.22.4:
+zod@^3.22.4:
   version "3.22.4"
   resolved "https://registry.yarnpkg.com/zod/-/zod-3.22.4.tgz#f31c3a9386f61b1f228af56faa9255e845cf3fff"
   integrity sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==
