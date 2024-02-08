@@ -189,6 +189,16 @@ input DeleteServiceProviderInput {
 
 # portfolio
 
+input CreateFixedIncomeTypeInput {
+    id: ID!
+    name: String!
+}
+
+input EditFixedIncomeTypeInput {
+    id: ID!
+    name: String
+}
+
 input CreateFixedIncomeAssetInput {
     id: ID!
     fixedIncomeTypeId: ID! # RwaFixedIncomeType.id

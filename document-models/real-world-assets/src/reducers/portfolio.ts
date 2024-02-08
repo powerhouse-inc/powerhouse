@@ -8,6 +8,37 @@ import { Asset, isFixedIncomeAsset, validateFixedIncomeAsset } from '../..';
 import { RealWorldAssetsPortfolioOperations } from '../../gen/portfolio/operations';
 
 export const reducer: RealWorldAssetsPortfolioOperations = {
+    createFixedIncomeTypeOperation(state, action, dispatch) {
+        if (!action.input.id) {
+            throw new Error(`Fixed income type must have an id`);
+        }
+        if (!action.input.name) {
+            throw new Error(`Fixed income type must have a name`);
+        }
+        if (state.fixedIncomeTypes.find(type => type.id === action.input.id)) {
+            throw new Error(`Type with id ${action.input.id} already exists!`);
+        }
+        state.fixedIncomeTypes.push(action.input);
+    },
+    editFixedIncomeTypeOperation(state, action, dispatch) {
+        if (!action.input.id) {
+            throw new Error(`Fixed income type must have an id`);
+        }
+        const type = state.fixedIncomeTypes.find(
+            type => type.id === action.input.id,
+        );
+        if (!type) {
+            throw new Error(`Type with id ${action.input.id} does not exist!`);
+        }
+        state.fixedIncomeTypes = state.fixedIncomeTypes.map(type =>
+            type.id === action.input.id
+                ? {
+                      ...type,
+                      name: action.input.name ?? type.name,
+                  }
+                : type,
+        );
+    },
     createFixedIncomeAssetOperation(state, action, dispatch) {
         if (!action.input.id) {
             throw new Error(`Fixed income asset must have an id`);

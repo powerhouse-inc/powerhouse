@@ -136,6 +136,28 @@
                     "description": "",
                     "operations": [
                         {
+                            "id": "5HsCtlGGDGgoNqDtvcVycSuJ7nQ=",
+                            "name": "CREATE_FIXED_INCOME_TYPE",
+                            "description": "",
+                            "schema": "input CreateFixedIncomeTypeInput {\n    id: ID!\n    name: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "nKGLGOHqaxtn382PRYgMni6JKyo=",
+                            "name": "EDIT_FIXED_INCOME_TYPE",
+                            "description": "",
+                            "schema": "input EditFixedIncomeTypeInput {\n    id: ID!\n    name: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
                             "id": "nKGLGOHqaxtn382PRYgMni6JKyo=",
                             "name": "CREATE_FIXED_INCOME_ASSET",
                             "description": "",
