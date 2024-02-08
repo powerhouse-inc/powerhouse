@@ -1,3 +1,10 @@
+# [1.0.0-alpha.54](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.53...v1.0.0-alpha.54) (2024-02-08)
+
+
+### Features
+
+* updated readme ([23dfa5c](https://github.com/powerhouse-inc/design-system/commit/23dfa5c50a6943c17ca50256d293ee2053a6d769))
+
 # [1.0.0-alpha.53](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.52...v1.0.0-alpha.53) (2024-02-08)
 
 
