@@ -43,7 +43,7 @@ const Content = () => {
     const { onSubmitInput } = useDrivesContainer();
 
     const driveNodes = documentDrives.find(
-        drive => drive.state.global.id === decodedDriveID
+        drive => drive.state.global.id === decodedDriveID,
     )?.state.global.nodes;
 
     const [selectedFileNode, setSelectedFileNode] = useState<
@@ -51,7 +51,7 @@ const Content = () => {
     >(undefined);
     const [selectedDocument, , addOperation] = useFileNodeDocument(
         decodedDriveID,
-        selectedFileNode?.id
+        selectedFileNode?.id,
     );
 
     // preload document editors
@@ -70,7 +70,7 @@ const Content = () => {
                 file.name,
                 selectedFolder && selectedFolder.type === 'FOLDER'
                     ? decodeID(selectedFolder.id)
-                    : undefined
+                    : undefined,
             );
             if (!driveNodes) {
                 throw new Error(`Drive with id ${decodedDriveID} not found`);
@@ -104,7 +104,7 @@ const Content = () => {
             decodedDriveID,
             `New ${documentModel.documentModel.name}`,
             documentModel.documentModel.id,
-            parentFolder ? decodeID(parentFolder) : undefined
+            parentFolder ? decodeID(parentFolder) : undefined,
         );
 
         if (node) {
@@ -164,7 +164,7 @@ const Content = () => {
     };
 
     return (
-        <div className="flex h-full flex-col bg-gray-100 p-6">
+        <div className="flex h-full flex-col overflow-auto bg-gray-100 p-6">
             {selectedFileNode && selectedDocument ? (
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
                     <DocumentEditor
