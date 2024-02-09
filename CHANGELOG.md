@@ -1,3 +1,10 @@
+# [1.0.0-alpha.56](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.55...v1.0.0-alpha.56) (2024-02-09)
+
+
+### Features
+
+* fix sorting behavior and update input types ([#186](https://github.com/powerhouse-inc/design-system/issues/186)) ([8186757](https://github.com/powerhouse-inc/design-system/commit/818675732b300d239713317968131b895d606fdb))
+
 # [1.0.0-alpha.55](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.54...v1.0.0-alpha.55) (2024-02-08)
 
 
