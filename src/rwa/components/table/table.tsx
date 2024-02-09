@@ -1,11 +1,12 @@
 import { DivProps, Icon, mergeClassNameProps } from '@/powerhouse';
+import { Order } from 'natural-orderby';
 import React, { useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export type SortDirection = 'asc' | 'desc';
 
 export type RWAColumnHeader = {
-    id: React.Key;
+    id: string;
     label?: React.ReactNode;
     allowSorting?: boolean;
 };
@@ -15,7 +16,7 @@ export interface RWATableProps<T extends object> extends DivProps {
     items?: T[];
     renderRow?: (item: T, index: number) => JSX.Element;
     children?: React.ReactNode;
-    onClickSort?: (key: React.Key, direction: SortDirection) => void;
+    onClickSort?: (key: string, direction: SortDirection) => void;
     footer?: React.ReactNode;
 }
 
@@ -47,7 +48,7 @@ export const RWATable = fixedForwardRef(function RWATable<T extends object>(
     const [sortDirection, setSortDirection] = useState<SortDirection | null>(
         null,
     );
-    const [sortKey, setSortKey] = useState<React.Key | null>(null);
+    const [sortKey, setSortKey] = useState<string | null>(null);
 
     return (
         <div className="overflow-hidden rounded-lg border border-gray-300">
@@ -70,7 +71,7 @@ export const RWATable = fixedForwardRef(function RWATable<T extends object>(
                                     )}
                                     onClick={() => {
                                         if (!allowSorting) return;
-                                        let sortDir: SortDirection = 'asc';
+                                        let sortDir: Order = 'asc';
 
                                         if (
                                             sortKey === id &&

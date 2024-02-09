@@ -11,7 +11,7 @@ const meta: Meta<typeof RWAAssetDetails> = {
             control: { type: 'radio' },
         },
         onCancel: { action: 'onCancel' },
-        onEdit: { action: 'onEdit' },
+        selectItemToEdit: { action: 'onEdit' },
         onClose: { action: 'onClose' },
         onSubmitForm: { action: 'onSubmit' },
         labels: { control: { type: 'object' } },

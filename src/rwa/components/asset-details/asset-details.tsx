@@ -1,7 +1,7 @@
 import { DivProps, Icon, mergeClassNameProps } from '@/powerhouse';
 import { parseDate } from '@internationalized/date';
 import React from 'react';
-import { UseFormReset, useForm } from 'react-hook-form';
+import { SubmitHandler, UseFormReset, useForm } from 'react-hook-form';
 import {
     FixedIncomeAsset,
     FixedIncomeType,
@@ -46,11 +46,8 @@ export interface RWAAssetDetailsProps extends DivProps {
     spvs: SPV[];
     onClose?: () => void;
     onCancel: (reset: UseFormReset<RWAAssetDetailInputs>) => void;
-    onEdit: () => void;
-    onSubmitForm: (
-        data: RWAAssetDetailInputs,
-        resetForm: UseFormReset<RWAAssetDetailInputs>,
-    ) => void;
+    selectItemToEdit?: () => void;
+    onSubmitForm: (data: RWAAssetDetailInputs) => void;
     labels?: typeof defaultLabels;
     hideNonEditableFields?: boolean;
 }
@@ -60,7 +57,7 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
         asset,
         fixedIncomeTypes,
         spvs,
-        onEdit,
+        selectItemToEdit,
         onClose,
         onCancel,
         onSubmitForm,
@@ -70,22 +67,26 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
         ...restProps
     } = props;
 
-    const fixedIncomeType = fixedIncomeTypes.find(
+    const fixedIncomeTypeId = fixedIncomeTypes.find(
         ({ id }) => id === asset.fixedIncomeTypeId,
-    );
-    const spv = spvs.find(({ id }) => id === asset.spvId);
+    )?.id;
+    const spvId = spvs.find(({ id }) => id === asset.spvId)?.id;
 
     const { handleSubmit, control, reset } = useForm<RWAAssetDetailInputs>({
         defaultValues: {
-            fixedIncomeType: fixedIncomeType ?? fixedIncomeTypes[0],
-            spv: spv ?? spvs[0],
+            fixedIncomeTypeId: fixedIncomeTypeId ?? fixedIncomeTypes[0].id,
+            spvId: spvId ?? spvs[0].id,
             name: asset.name,
-            maturity: parseDate(asset.maturity),
+            maturity: parseDate(asset.maturity.split('T')[0]),
             ISIN: asset.ISIN,
             CUSIP: asset.CUSIP,
             coupon: asset.coupon,
         },
     });
+
+    const onSubmit: SubmitHandler<RWAAssetDetailInputs> = data => {
+        onSubmitForm(data);
+    };
 
     const isEditMode = mode === 'edit';
     const isCreateOperation = operation === 'create';
@@ -104,9 +105,7 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                                 {labels.cancelEdits}
                             </RWAButton>
                             <RWAButton
-                                onClick={handleSubmit(data =>
-                                    onSubmitForm(data, reset),
-                                )}
+                                onClick={handleSubmit(onSubmit)}
                                 iconPosition="right"
                                 icon={<Icon name="save" size={16} />}
                             >
@@ -124,7 +123,7 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                         </div>
                     ) : (
                         <RWAButton
-                            onClick={onEdit}
+                            onClick={selectItemToEdit}
                             iconPosition="right"
                             icon={<Icon name="pencil" size={16} />}
                         >
@@ -151,12 +150,38 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                     value={
                         <RWATableSelect
                             control={control}
-                            name="fixedIncomeType"
+                            name="fixedIncomeTypeId"
                             disabled={!isEditMode}
                             options={fixedIncomeTypes.map(t => ({
                                 ...t,
                                 label: t.name,
                             }))}
+                        />
+                    }
+                />
+                <RWAFormRow
+                    label={labels.spv}
+                    hideLine={isEditMode}
+                    value={
+                        <RWATableSelect
+                            control={control}
+                            name="spvId"
+                            disabled={!isEditMode}
+                            options={spvs.map(t => ({
+                                ...t,
+                                label: t.name,
+                            }))}
+                        />
+                    }
+                />
+                <RWAFormRow
+                    label={labels.name}
+                    hideLine={isEditMode}
+                    value={
+                        <RWATableTextInput
+                            control={control}
+                            name="name"
+                            disabled={!isEditMode}
                         />
                     }
                 />
@@ -182,37 +207,30 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                         />
                     }
                 />
-                <RWAFormRow
-                    label={labels.name}
-                    hideLine={isEditMode}
-                    value={
-                        <RWATableTextInput
-                            control={control}
-                            name="name"
-                            disabled={!isEditMode}
+                {!isCreateOperation && (
+                    <>
+                        <RWAFormRow
+                            label={labels.notional}
+                            hideLine={isEditMode}
+                            value={asset.notional}
                         />
-                    }
-                />
-                <RWAFormRow
-                    label={labels.notional}
-                    hideLine={isEditMode}
-                    value={asset.notional}
-                />
-                <RWAFormRow
-                    label={labels.purchaseDate}
-                    hideLine={isEditMode}
-                    value={asset.purchaseDate}
-                />
-                <RWAFormRow
-                    label={labels.purchasePrice}
-                    hideLine={isEditMode}
-                    value={asset.purchasePrice}
-                />
-                <RWAFormRow
-                    label={labels.purchaseProceeds}
-                    hideLine={isEditMode}
-                    value={asset.purchaseProceeds}
-                />
+                        <RWAFormRow
+                            label={labels.purchaseDate}
+                            hideLine={isEditMode}
+                            value={asset.purchaseDate}
+                        />
+                        <RWAFormRow
+                            label={labels.purchasePrice}
+                            hideLine={isEditMode}
+                            value={asset.purchasePrice}
+                        />
+                        <RWAFormRow
+                            label={labels.purchaseProceeds}
+                            hideLine={isEditMode}
+                            value={asset.purchaseProceeds}
+                        />
+                    </>
+                )}
             </div>
         </div>
     );

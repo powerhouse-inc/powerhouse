@@ -1,31 +1,12 @@
 import { Icon } from '@/powerhouse';
 import { FixedIncomeAsset, FixedIncomeType, SPV } from '@/rwa';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { RWATable, RWATableCell, RWATableProps, useSortTableItems } from '.';
-import { RWAAssetDetails, RWAAssetDetailsProps } from '../asset-details';
+import { RWAAssetDetails } from '../asset-details';
+import { RWAAssetDetailInputs } from '../asset-details/form';
 import { RWATableRow } from './expandable-row';
 import { useColumnPriority } from './useColumnPriority';
-
-const fieldsPriority: (keyof FixedIncomeAsset)[] = [
-    'id',
-    'name',
-    'maturity',
-    'notional',
-    'coupon',
-    'purchasePrice',
-    'purchaseDate',
-    'totalDiscount',
-    'purchaseProceeds',
-] as const;
-
-export const columnCountByTableWidth = {
-    1520: 12,
-    1394: 11,
-    1239: 10,
-    1112: 9,
-    984: 8,
-} as const;
 
 export type FixedIncomeAssetsTableProps = Omit<
     RWATableProps<FixedIncomeAsset>,
@@ -33,21 +14,33 @@ export type FixedIncomeAssetsTableProps = Omit<
 > & {
     fixedIncomeTypes: FixedIncomeType[];
     spvs: SPV[];
+    columnCountByTableWidth: Record<string, number>;
+    fieldsPriority: (keyof FixedIncomeAsset)[];
+    expandedRowId: string | undefined;
+    selectedAssetToEdit?: FixedIncomeAsset;
+    toggleExpandedRow: (id: string) => void;
     onClickDetails: (item: FixedIncomeAsset) => void;
-    onEditItem?: (item: FixedIncomeAsset) => void;
-    onCancelEdit?: RWAAssetDetailsProps['onCancel'];
-    onSubmitEdit?: RWAAssetDetailsProps['onSubmitForm'];
+    setSelectedAssetToEdit: (item: FixedIncomeAsset) => void;
+    onCancelEdit: () => void;
+    onSubmitForm: (data: RWAAssetDetailInputs) => void;
 };
 
 export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
-    const { items, fixedIncomeTypes, spvs, onClickDetails, ...restProps } =
-        props;
-    const [expandedRow, setExpandedRow] = useState<string | null>(null);
-    const [editRow, setEditRow] = useState<string | null>(null);
-
-    const toggleRow = (id: string) => {
-        setExpandedRow(id === expandedRow ? null : id);
-    };
+    const {
+        items,
+        fixedIncomeTypes,
+        spvs,
+        fieldsPriority,
+        columnCountByTableWidth,
+        expandedRowId,
+        selectedAssetToEdit,
+        toggleExpandedRow,
+        onClickDetails,
+        setSelectedAssetToEdit,
+        onCancelEdit,
+        onSubmitForm,
+        ...restProps
+    } = props;
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +55,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
     const renderRow = (item: FixedIncomeAsset, index: number) => {
         return (
             <RWATableRow
-                isExpanded={expandedRow === item.id}
+                isExpanded={expandedRowId === item.id}
                 tdProps={{ colSpan: 100 }}
                 key={item.id}
                 accordionContent={
@@ -71,13 +64,19 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
                         fixedIncomeTypes={fixedIncomeTypes}
                         spvs={spvs}
                         className="border-y border-gray-300"
-                        mode={editRow === item.id ? 'edit' : 'view'}
-                        onCancel={() => {
-                            setEditRow(null);
+                        mode={
+                            selectedAssetToEdit?.id === item.id
+                                ? 'edit'
+                                : 'view'
+                        }
+                        selectItemToEdit={() => {
+                            setSelectedAssetToEdit(item);
                         }}
-                        onEdit={() => setEditRow(item.id)}
-                        onSubmitForm={() => {
-                            setEditRow(null);
+                        onCancel={() => {
+                            onCancelEdit();
+                        }}
+                        onSubmitForm={data => {
+                            onSubmitForm(data);
                         }}
                     />
                 }
@@ -99,7 +98,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
                         <button
                             className="flex size-full items-center justify-center"
                             onClick={() => {
-                                toggleRow(item.id);
+                                toggleExpandedRow(item.id);
                                 onClickDetails(item);
                             }}
                         >
@@ -108,7 +107,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
                                 size={16}
                                 className={twMerge(
                                     'text-gray-600',
-                                    expandedRow === item.id && 'rotate-180',
+                                    expandedRowId === item.id && 'rotate-180',
                                 )}
                             />
                         </button>
@@ -121,7 +120,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
     return (
         <RWATable
             {...restProps}
-            className={twMerge(expandedRow && 'max-h-max')}
+            className={twMerge(expandedRowId && 'max-h-max')}
             onClickSort={sortHandler}
             ref={tableContainerRef}
             items={sortedItems}

@@ -108,7 +108,7 @@ const TableDemo = (props: RWATableProps<FixedIncomeAsset>) => {
                         className="border-y border-gray-300"
                         mode={editRow === item.id ? 'edit' : 'view'}
                         onCancel={() => setEditRow(null)}
-                        onEdit={() => setEditRow(item.id)}
+                        selectItemToEdit={() => setEditRow(item.id)}
                         onSubmitForm={data => {
                             action('onSubmitForm')(data);
                             setEditRow(null);

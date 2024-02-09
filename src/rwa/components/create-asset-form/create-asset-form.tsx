@@ -92,7 +92,7 @@ export const RWACreateAssetForm: React.FC<RWACreateAssetFormProps> = props => {
                     name="maturity"
                     render={({ field: { onChange, value, onBlur } }) => (
                         <RWADatePicker
-                            value={parseDate(value)}
+                            value={parseDate(value.split('T')[0])}
                             onBlur={onBlur}
                             onChange={onChange}
                             label={labels.maturity || 'Maturity'}
