@@ -36,27 +36,27 @@
         "@typescript-eslint/no-misused-promises": "off",
         "tailwindcss/classnames-order": [
             1, {
-                "callees": ["twMerge", "twJoin"]
+                "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ],
         "tailwindcss/enforces-negative-arbitrary-values": [
             1, {
-                "callees": ["twMerge", "twJoin"]
+                "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ],
         "tailwindcss/enforces-shorthand": [
             1, {
-                "callees": ["twMerge", "twJoin"]
+                "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ],
         "tailwindcss/no-contradicting-classname": [
             1, {
-                "callees": ["twMerge", "twJoin"]
+                "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ],
         "tailwindcss/no-custom-classname": [
             1, {
-                "callees": ["twMerge", "twJoin"]
+                "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ]
     },

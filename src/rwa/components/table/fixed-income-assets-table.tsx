@@ -59,26 +59,28 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
                 tdProps={{ colSpan: 100 }}
                 key={item.id}
                 accordionContent={
-                    <RWAAssetDetails
-                        asset={item}
-                        fixedIncomeTypes={fixedIncomeTypes}
-                        spvs={spvs}
-                        className="border-y border-gray-300"
-                        mode={
-                            selectedAssetToEdit?.id === item.id
-                                ? 'edit'
-                                : 'view'
-                        }
-                        selectItemToEdit={() => {
-                            setSelectedAssetToEdit(item);
-                        }}
-                        onCancel={() => {
-                            onCancelEdit();
-                        }}
-                        onSubmitForm={data => {
-                            onSubmitForm(data);
-                        }}
-                    />
+                    expandedRowId === item.id && (
+                        <RWAAssetDetails
+                            asset={item}
+                            fixedIncomeTypes={fixedIncomeTypes}
+                            spvs={spvs}
+                            className="border-y border-gray-300"
+                            mode={
+                                selectedAssetToEdit?.id === item.id
+                                    ? 'edit'
+                                    : 'view'
+                            }
+                            selectItemToEdit={() => {
+                                setSelectedAssetToEdit(item);
+                            }}
+                            onCancel={() => {
+                                onCancelEdit();
+                            }}
+                            onSubmitForm={data => {
+                                onSubmitForm(data);
+                            }}
+                        />
+                    )
                 }
             >
                 <tr

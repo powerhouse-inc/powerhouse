@@ -67,15 +67,15 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
         ...restProps
     } = props;
 
-    const fixedIncomeTypeId = fixedIncomeTypes.find(
+    const fixedIncomeType = fixedIncomeTypes.find(
         ({ id }) => id === asset.fixedIncomeTypeId,
-    )?.id;
-    const spvId = spvs.find(({ id }) => id === asset.spvId)?.id;
+    );
+    const spv = spvs.find(({ id }) => id === asset.spvId);
 
     const { handleSubmit, control, reset } = useForm<RWAAssetDetailInputs>({
         defaultValues: {
-            fixedIncomeTypeId: fixedIncomeTypeId ?? fixedIncomeTypes[0].id,
-            spvId: spvId ?? spvs[0].id,
+            fixedIncomeTypeId: fixedIncomeType?.id ?? fixedIncomeTypes[0].id,
+            spvId: spv?.id ?? spvs[0].id,
             name: asset.name,
             maturity: parseDate(asset.maturity.split('T')[0]),
             ISIN: asset.ISIN,
@@ -93,7 +93,7 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
 
     return (
         <div {...mergeClassNameProps(restProps, 'flex flex-col')}>
-            <div className="flex h-12 items-center justify-between px-3">
+            <div className="mt-4 flex h-12 items-center justify-between px-3">
                 <div className="font-semibold">{labels.title}</div>
                 <div>
                     {isEditMode ? (
@@ -134,6 +134,44 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
             </div>
             <div>
                 <RWAFormRow
+                    label="Asset ID"
+                    hideLine={isEditMode}
+                    value={asset.id}
+                />
+                <RWAFormRow
+                    label={labels.name}
+                    hideLine={isEditMode}
+                    value={
+                        <RWATableTextInput
+                            control={control}
+                            name="name"
+                            disabled={!isEditMode}
+                        />
+                    }
+                />
+                <RWAFormRow
+                    label={labels.CUSIP}
+                    hideLine={isEditMode}
+                    value={
+                        <RWATableTextInput
+                            control={control}
+                            name="CUSIP"
+                            disabled={!isEditMode}
+                        />
+                    }
+                />
+                <RWAFormRow
+                    label={labels.ISIN}
+                    hideLine={isEditMode}
+                    value={
+                        <RWATableTextInput
+                            control={control}
+                            name="ISIN"
+                            disabled={!isEditMode}
+                        />
+                    }
+                />
+                <RWAFormRow
                     label={labels.maturity}
                     hideLine={isEditMode}
                     value={
@@ -171,39 +209,6 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                                 ...t,
                                 label: t.name,
                             }))}
-                        />
-                    }
-                />
-                <RWAFormRow
-                    label={labels.name}
-                    hideLine={isEditMode}
-                    value={
-                        <RWATableTextInput
-                            control={control}
-                            name="name"
-                            disabled={!isEditMode}
-                        />
-                    }
-                />
-                <RWAFormRow
-                    label={labels.CUSIP}
-                    hideLine={isEditMode}
-                    value={
-                        <RWATableTextInput
-                            control={control}
-                            name="CUSIP"
-                            disabled={!isEditMode}
-                        />
-                    }
-                />
-                <RWAFormRow
-                    label={labels.ISIN}
-                    hideLine={isEditMode}
-                    value={
-                        <RWATableTextInput
-                            control={control}
-                            name="ISIN"
-                            disabled={!isEditMode}
                         />
                     }
                 />
