@@ -47,8 +47,13 @@ export default function DriveContainer(props: DriveContainerProps) {
     const filterPathContent = useFilterPathContent();
     const [selectedPath, setSelectedPath] = useSelectedPath();
 
-    const { documentDrives, addFile, copyOrMoveNode, addDrive } =
-        useDocumentDriveServer();
+    const {
+        documentDrives,
+        addFile,
+        copyOrMoveNode,
+        addDrive,
+        addRemoteDrive,
+    } = useDocumentDriveServer();
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
 
@@ -158,41 +163,75 @@ export default function DriveContainer(props: DriveContainerProps) {
         }
     };
 
-    const onCreateDriveHandler: DriveViewProps['onCreateDrive'] = input => {
-        addDrive({
-            global: {
-                id: isPublicDriveInput(input) ? input.id : '',
-                icon: null,
-                name: input.driveName,
-                remoteUrl: isPublicDriveInput(input) ? input.url : null,
-            },
-            local: {
-                availableOffline: input.availableOffline,
-                sharingType: input.sharingType.toLowerCase(),
-                listeners: isPublicDriveInput(input)
-                    ? [
-                          {
-                              block: true,
-                              callInfo: {
-                                  data: input.url,
-                                  name: 'switchboard-push',
-                                  transmitterType: 'SwitchboardPush',
-                              },
-                              filter: {
-                                  branch: ['main'],
-                                  documentId: ['*'],
-                                  documentType: ['*'],
-                                  scope: ['global'],
-                              },
-                              label: 'Switchboard Sync',
-                              listenerId: '1',
-                              system: true,
-                          },
-                      ]
-                    : [],
-            },
-        }).catch(console.error);
-    };
+    const onCreateDriveHandler: DriveViewProps['onCreateDrive'] =
+        async input => {
+            try {
+                if (isPublicDriveInput(input)) {
+                    await addRemoteDrive(input.url, {
+                        sharingType: input.sharingType,
+                        availableOffline: input.availableOffline,
+                        listeners: [
+                            {
+                                block: true,
+                                callInfo: {
+                                    data: input.url,
+                                    name: 'switchboard-push',
+                                    transmitterType: 'SwitchboardPush',
+                                },
+                                filter: {
+                                    branch: ['main'],
+                                    documentId: ['*'],
+                                    documentType: ['*'],
+                                    scope: ['global'],
+                                },
+                                label: 'Switchboard Sync',
+                                listenerId: '1',
+                                system: true,
+                            },
+                        ],
+                        triggers: [],
+                    });
+                } else {
+                    await addDrive({
+                        global: {
+                            id: isPublicDriveInput(input) ? input.id : '',
+                            icon: null,
+                            name: input.driveName,
+                            slug: null,
+                        },
+                        local: {
+                            availableOffline: input.availableOffline,
+                            sharingType: input.sharingType.toLowerCase(),
+                            listeners: isPublicDriveInput(input)
+                                ? [
+                                      {
+                                          block: true,
+                                          callInfo: {
+                                              data: input.url,
+                                              name: 'switchboard-push',
+                                              transmitterType:
+                                                  'SwitchboardPush',
+                                          },
+                                          filter: {
+                                              branch: ['main'],
+                                              documentId: ['*'],
+                                              documentType: ['*'],
+                                              scope: ['global'],
+                                          },
+                                          label: 'Switchboard Sync',
+                                          listenerId: '1',
+                                          system: true,
+                                      },
+                                  ]
+                                : [],
+                            triggers: [],
+                        },
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
 
     return (
         <>

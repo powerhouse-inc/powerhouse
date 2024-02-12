@@ -75,6 +75,8 @@ const electronApi = {
             ) as Promise<DocumentDriveDocument>,
         addDrive: (drive: DriveInput) =>
             ipcRenderer.invoke('documentDrive:addDrive', drive),
+        addRemoteDrive: (url, options) =>
+            ipcRenderer.invoke('documentDrive:addRemoteDrive', url, options),
         deleteDrive: (id: string) =>
             ipcRenderer.invoke('documentDrive:deleteDrive', id),
         getDocuments: (drive: string) =>
