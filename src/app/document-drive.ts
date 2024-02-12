@@ -1,4 +1,8 @@
-import { DocumentDriveServer, DriveInput } from 'document-drive/server';
+import {
+    DocumentDriveServer,
+    DriveInput,
+    RemoteDriveOptions,
+} from 'document-drive/server';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { DocumentDriveAction } from 'document-model-libs/document-drive';
 import {
@@ -33,12 +37,13 @@ export default (
                                     id: utils.hashKey(),
                                     name: 'My Local Drive',
                                     icon: null,
-                                    remoteUrl: null,
+                                    slug: null,
                                 },
                                 local: {
                                     availableOffline: false,
                                     sharingType: 'private',
                                     listeners: [],
+                                    triggers: [],
                                 },
                             })
                             .catch(console.error);
@@ -54,6 +59,11 @@ export default (
     );
     ipcMain.handle('documentDrive:addDrive', (_e, input: DriveInput) =>
         documentDrive.addDrive(input),
+    );
+    ipcMain.handle(
+        'documentDrive:addRemoteDrive',
+        (_e, url: string, options: RemoteDriveOptions) =>
+            documentDrive.addRemoteDrive(url, options),
     );
     ipcMain.handle('documentDrive:deleteDrive', (_e, id: string) =>
         documentDrive.deleteDrive(id),

@@ -54,7 +54,11 @@
         "@typescript-eslint/parser": "^6.18.1",
         "@vitejs/plugin-react": "^3.1.0",
         "autoprefixer": "^10.4.14",
+<<<<<<< HEAD
         "document-model-libs": "^1.1.43",
+=======
+        "document-model-libs": "^1.1.40",
+>>>>>>> fc53de2 (feat: updated document drive)
         "electron": "24.0.0",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^8.8.0",
@@ -80,7 +84,7 @@
         "vite-tsconfig-paths": "^4.2.0"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.53",
+        "@powerhousedao/design-system": "1.0.0-alpha.56",
         "document-drive": "powerhouse-inc/document-drive#35e2f7",
         "document-model": "^1.0.28",
         "electron-is-dev": "^2.0.0",

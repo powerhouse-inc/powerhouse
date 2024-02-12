@@ -32,20 +32,18 @@ export function getNodePath(node: Node, allNodes: Node[]): string {
 }
 
 export function driveToBaseItems(
-    drive: DocumentDriveDocument
+    drive: DocumentDriveDocument,
 ): Array<BaseTreeItem> {
     const driveID = encodeID(drive.state.global.id);
-    const { id, name, remoteUrl } = drive.state.global;
+    const { id, name } = drive.state.global;
     const { sharingType, availableOffline } = drive.state.local;
     const driveNode: BaseTreeItem = {
         id: id,
         label: name,
         path: driveID,
         type:
-            sharingType === 'public'
+            sharingType?.toLowerCase() === 'public'
                 ? 'PUBLIC_DRIVE'
-                : remoteUrl
-                ? 'CLOUD_DRIVE'
                 : 'LOCAL_DRIVE',
         sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
         status: availableOffline ? 'AVAILABLE_OFFLINE' : 'AVAILABLE',
@@ -57,7 +55,7 @@ export function driveToBaseItems(
             label: node.name,
             path: path.join(driveID, getNodePath(node, nodes)),
             type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
-        })
+        }),
     );
     return [driveNode, ...nodes];
 }
@@ -79,15 +77,15 @@ export function useDrivesContainer() {
     } = useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
-        const driveNodes = documentDrives?.find(
-            driveItem => driveItem.state.global.id === decodeID(driveID)
+        const driveNodes = documentDrives.find(
+            driveItem => driveItem.state.global.id === decodeID(driveID),
         )?.state.global.nodes;
 
         const parentFolder = item.path.split('/').slice(1).pop();
         const lastIndex = getLastIndexFromPath(
             [...(driveNodes || [])],
             'New Folder',
-            parentFolder ? decodeID(parentFolder) : undefined
+            parentFolder ? decodeID(parentFolder) : undefined,
         );
 
         const virtualPathName =
@@ -107,7 +105,7 @@ export function useDrivesContainer() {
     function addNewFolder(
         item: TreeItem,
         driveID: string,
-        onCancel?: () => void
+        onCancel?: () => void,
     ) {
         const basePathComponents = item.path.split('/').slice(1, -1);
         const basePath = basePathComponents.join('/');
@@ -120,7 +118,7 @@ export function useDrivesContainer() {
         addFolder(
             decodedDriveID,
             item.label,
-            parentFolder ? decodeID(parentFolder) : undefined
+            parentFolder ? decodeID(parentFolder) : undefined,
         );
     }
 
@@ -133,7 +131,7 @@ export function useDrivesContainer() {
 
     const onItemOptionsClick: DriveViewProps['onItemOptionsClick'] = (
         item,
-        option
+        option,
     ) => {
         const driveID = item.path.split('/')[0];
         switch (option) {
@@ -147,7 +145,7 @@ export function useDrivesContainer() {
             case 'delete':
                 if (
                     ['PUBLIC_DRIVE', 'LOCAL_DRIVE', 'CLOUD_DRIVE'].includes(
-                        item.type
+                        item.type,
                     )
                 ) {
                     deleteDrive(decodeID(item.id));
@@ -168,13 +166,13 @@ export function useDrivesContainer() {
             case 'change-availability':
                 setDriveAvailableOffline(
                     decodeID(item.id),
-                    item.status === 'AVAILABLE_OFFLINE'
+                    item.status === 'AVAILABLE_OFFLINE',
                 );
                 break;
             case 'change-sharing-type':
                 setDriveSharingType(
                     decodeID(item.id),
-                    item.sharingType?.toLowerCase() as TreeItemSharingType
+                    item.sharingType?.toLowerCase() as TreeItemSharingType,
                 );
         }
     };
@@ -216,7 +214,7 @@ export function useDrivesContainer() {
                 srcID,
                 decodeID(targetId),
                 operation,
-                item.label
+                item.label,
             );
             return;
         }

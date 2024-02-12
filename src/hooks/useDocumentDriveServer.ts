@@ -1,5 +1,9 @@
 import { SharingType } from '@powerhousedao/design-system';
-import { DriveInput, IDocumentDriveServer } from 'document-drive/server';
+import {
+    DriveInput,
+    IDocumentDriveServer,
+    RemoteDriveOptions,
+} from 'document-drive/server';
 import { isDocumentDrive } from 'document-drive/utils';
 import {
     DocumentDriveAction,
@@ -71,7 +75,7 @@ export function useDocumentDriveServer(
         try {
             const newDrive = await server.addDriveOperation(driveId, operation);
 
-            if (!newDrive.success) {
+            if (!newDrive.status !== 'SUCCESS') {
                 console.error(newDrive.error);
                 return newDrive.document;
             }
@@ -285,6 +289,11 @@ export function useDocumentDriveServer(
         await refreshDocumentDrives();
     }
 
+    async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
+        await server.addRemoteDrive(url, options);
+        await refreshDocumentDrives();
+    }
+
     async function deleteDrive(id: string) {
         if (!server) {
             throw new Error('Server is not defined');
@@ -345,6 +354,7 @@ export function useDocumentDriveServer(
             addOperation,
             getChildren,
             addDrive,
+            addRemoteDrive,
             deleteDrive,
             renameDrive,
             setDriveAvailableOffline,

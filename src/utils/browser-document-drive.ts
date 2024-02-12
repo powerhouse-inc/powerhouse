@@ -18,12 +18,13 @@ BrowserDocumentDriveServer.initialize()
                             id: utils.hashKey(),
                             name: 'My Local Device',
                             icon: null,
-                            remoteUrl: null,
+                            slug: null,
                         },
                         local: {
                             availableOffline: false,
                             sharingType: 'shared',
                             listeners: [],
+                            triggers: [],
                         },
                     }).catch(console.error);
                 }
