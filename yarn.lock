@@ -1544,13 +1544,22 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@^1.0.0-alpha.46":
-  version "1.0.0-alpha.46"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.46.tgz#61212afb0d8cc2e7f2f3a87bb48761ed478e9c9f"
-  integrity sha512-hYxCBShMrexmj9aLfE4eKtcR8NxIG+vcBlgYXbpGET4r1XlG3GxruLkLpj5to7YGg7H8WAhAHC+BulhQy8B/YA==
+"@powerhousedao/design-system@1.0.0-alpha.53":
+  version "1.0.0-alpha.53"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.53.tgz#8dfe53c5d562655c25f64418197814396417b39f"
+  integrity sha512-F2UIvgrtF3VJcTy0zB+AagoJ/ife7u3hkYOyCfb9DuqZJixzLuT+KDW8xlJK8aaQR+YLQ88LF4ZUoK8dLMWGJw==
   dependencies:
+    "@internationalized/date" "^3.5.1"
     "@radix-ui/react-dialog" "^1.0.5"
+    "@react-input/number-format" "^1.0.20"
+    change-case "^5.4.2"
+    currency.js "^2.0.4"
     react-hook-form "^7.49.3"
+
+"@prisma/client@5.7.1":
+  version "5.7.1"
+  resolved "https://registry.yarnpkg.com/@prisma/client/-/client-5.7.1.tgz#a124afd05663267f7255a639a81d28303684a063"
+  integrity sha512-TUSa4nUcC4nf/e7X3jyO1pEd6XcI/TLRCA0KjkA46RDIpxUaRsBYEOqITwXRW2c0bMFyKcCRXrH4f7h4q9oOlg==
 
 "@radix-ui/primitive@1.0.1":
   version "1.0.1"
@@ -2262,6 +2271,18 @@
     "@react-aria/utils" "^3.23.0"
     "@react-types/shared" "^3.22.0"
     "@swc/helpers" "^0.5.0"
+
+"@react-input/core@^1.0.5":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@react-input/core/-/core-1.0.6.tgz#0d9947e72b13a6ae23672d639ee755141248d6bd"
+  integrity sha512-iUIslCIwsMdoosPhaAU356YQFzCosR/wa4jZRcNB+VDhWmV7b6AvkBtoL1MRi/54S+DQmhNdp0ukT+Uw3Std5Q==
+
+"@react-input/number-format@^1.0.20":
+  version "1.0.20"
+  resolved "https://registry.yarnpkg.com/@react-input/number-format/-/number-format-1.0.20.tgz#1235889b74bdb66ef419bc542df3f937cccedc70"
+  integrity sha512-k+gzVCl1eQU20/b0yQVApLZHPgEHVmQpmL2pw5Xyqah8iDjOayztkOtdby9SOdX/e9DcaAegX8GaBKYOcs3UjA==
+  dependencies:
+    "@react-input/core" "^1.0.5"
 
 "@react-stately/calendar@^3.4.3":
   version "3.4.3"
@@ -3898,6 +3919,11 @@ chalk@^4.0.0, chalk@^4.1.0:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
 
+change-case@^5.4.2:
+  version "5.4.2"
+  resolved "https://registry.yarnpkg.com/change-case/-/change-case-5.4.2.tgz#0b3e4d9746fb16b83f3a8b68a9411bc4a8a61863"
+  integrity sha512-WB3UiTDpT+vrTilAWaJS4gaIH/jc1He4H9f6erQvraUYas90uWT0JOYFkG1imdNv710XJ6gJvqynrgOHc4ihDA==
+
 char-regex@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/char-regex/-/char-regex-1.0.2.tgz#d744358226217f981ed58f479b1d6bcc29545dcf"
@@ -4336,6 +4362,11 @@ csstype@^3.0.2:
   resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.1.3.tgz#d80ff294d114fb0e6ac500fbf85b60137d7eff81"
   integrity sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==
 
+currency.js@^2.0.4:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/currency.js/-/currency.js-2.0.4.tgz#a8a4d69be3b2e509bf67a560c78220bc04809cf1"
+  integrity sha512-6/OplJYgJ0RUlli74d93HJ/OsKVBi8lB1+Z6eJYS1YZzBuIp4qKKHpJ7ad+GvTlWmLR/hLJOWTykN5Nm8NJ7+w==
+
 dargs@^7.0.0:
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/dargs/-/dargs-7.0.0.tgz#04015c41de0bcb69ec84050f3d9be0caf8d6d5cc"
@@ -4518,22 +4549,23 @@ document-drive@powerhouse-inc/document-drive#35e2f7:
   version "0.0.23"
   resolved "https://codeload.github.com/powerhouse-inc/document-drive/tar.gz/35e2f7c9b788c498d3dc208d22887f3307dc7c6e"
   dependencies:
+    "@prisma/client" "5.7.1"
     graphql "^16.8.1"
     graphql-request "^6.1.0"
     sanitize-filename "^1.6.3"
 
-document-model-libs@^1.1.37:
-  version "1.1.37"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.37.tgz#0b46e7af8f00cc29ebfc7590393e6bb01553d728"
-  integrity sha512-03GyeWv+GXZUCubqJ3U66Z4PYN9GXCGFouynZQmEhUiH35wC036B0ay+eJfiahisgSMExyZOB5aYE5e9Wu0agA==
+document-model-libs@^1.1.43:
+  version "1.1.43"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.43.tgz#d12704c9faa700c27de38d6d47d577420d446676"
+  integrity sha512-bDZTeBc0XVFP1hQ1sfcRVPGMrMS8tnLTsumLyGg7VeBf/yGJBAqRrEl5NSMmWBr9lVkdUKCVpHHFCIadB8NjBQ==
 
-document-model@^1.0.26:
-  version "1.0.26"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.26.tgz#9ddc78d0098fab1c6461d5105cd68cd7bf52eb3a"
-  integrity sha512-G0TOrvpvaz40M6TNSOrRn6akMAHoIoIwUt2apDlgtB3r2nDaLoflkIBhONIPuFMJCnA665aH/oq9hxjjzmiNqw==
+document-model@^1.0.28:
+  version "1.0.28"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.28.tgz#0d129a4a1610667fc43a5df2cc73d91c5e813c00"
+  integrity sha512-bigF2MbWB594IJALqHYn5l7lx5WJntinHYPAMnN5UoVP1/BmEnmixGpLnTe9V5679IsFv4QPP402KXE7BiRm8g==
   dependencies:
     immer "^10.0.3"
-    json-stringify-deterministic "^1.0.12"
+    json-stringify-deterministic "1.0.10"
     jszip "^3.10.1"
     mime "^4.0.1"
     zod "^3.22.4"
@@ -6621,10 +6653,10 @@ json-stable-stringify-without-jsonify@^1.0.1:
   resolved "https://registry.yarnpkg.com/json-stable-stringify-without-jsonify/-/json-stable-stringify-without-jsonify-1.0.1.tgz#9db7b59496ad3f3cfef30a75142d2d930ad72651"
   integrity sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==
 
-json-stringify-deterministic@^1.0.12:
-  version "1.0.12"
-  resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.12.tgz#aaa3f907466ed01e3afd77b898d0a2b3b132820a"
-  integrity sha512-q3PN0lbUdv0pmurkBNdJH3pfFvOTL/Zp0lquqpvcjfKzt6Y0j49EPHAmVHCAS4Ceq/Y+PejWTzyiVpoY71+D6g==
+json-stringify-deterministic@1.0.10:
+  version "1.0.10"
+  resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.10.tgz#d56660b6e9c12f47dee4340ec2ce26745fa6ee64"
+  integrity sha512-hBLYMyCnoYh0rQ2ZyEegbLaFAS5KqOZ6HZ5fgq6lGWhtNRKw2JUp/hkfjQS1bjYZlHW9AjvXBWCJe9OwcugRNw==
 
 json-stringify-nice@^1.1.4:
   version "1.1.4"
