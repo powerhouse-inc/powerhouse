@@ -273,10 +273,6 @@ export function computeFixedIncomeAssetDerivedFields(
         notional,
         purchaseDate,
     );
-    const currentValue = 0;
-    const marketValue = 0;
-    const realizedSurplus = 0;
-    const totalSurplus = 0;
 
     return {
         notional,
@@ -285,10 +281,6 @@ export function computeFixedIncomeAssetDerivedFields(
         totalDiscount,
         purchaseDate,
         annualizedYield,
-        currentValue,
-        marketValue,
-        realizedSurplus,
-        totalSurplus,
     };
 }
 
@@ -327,30 +319,6 @@ export function validateFixedIncomeAssetDerivedFields(
         !numberValidator.safeParse(asset.annualizedYield).success
     ) {
         throw new Error(`Annualized yield must be a number`);
-    }
-    if (
-        asset.currentValue &&
-        !numberValidator.safeParse(asset.currentValue).success
-    ) {
-        throw new Error(`Current value must be a number`);
-    }
-    if (
-        asset.marketValue &&
-        !numberValidator.safeParse(asset.marketValue).success
-    ) {
-        throw new Error(`Market value must be a number`);
-    }
-    if (
-        asset.realizedSurplus &&
-        !numberValidator.safeParse(asset.realizedSurplus).success
-    ) {
-        throw new Error(`Realized surplus must be a number`);
-    }
-    if (
-        asset.totalSurplus &&
-        !numberValidator.safeParse(asset.totalSurplus).success
-    ) {
-        throw new Error(`Total surplus must be a number`);
     }
 }
 

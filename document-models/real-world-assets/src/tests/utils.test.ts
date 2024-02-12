@@ -61,14 +61,10 @@ const mockFixedIncome: FixedIncome = {
     purchasePrice: 0,
     purchaseProceeds: 0,
     totalDiscount: 0,
-    marketValue: 0,
     annualizedYield: 0,
-    realizedSurplus: 0,
-    totalSurplus: 0,
     ISIN: '',
     CUSIP: '',
     coupon: 0,
-    currentValue: 0,
 };
 
 describe('validateBaseTransaction', () => {

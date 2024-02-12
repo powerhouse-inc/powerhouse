@@ -4,6 +4,7 @@
  */
 
 import { generateMock } from '@powerhousedao/codegen';
+import { addDays } from 'date-fns';
 import { reducer } from '../../gen/reducer';
 import { z } from '../../gen/schema';
 import * as creators from '../../gen/transactions/creators';
@@ -21,9 +22,7 @@ const principalLenderAccount = generateMock(z.AccountSchema());
 const mockCounterParty = generateMock(z.AccountSchema());
 const mockCashAsset = generateMock(z.CashSchema());
 const mockFixedIncomeAsset = generateMock(z.FixedIncomeSchema());
-mockFixedIncomeAsset.maturity = new Date(
-    new Date().getTime() + 1000 * 60 * 60 * 24 * 365,
-).toISOString();
+mockFixedIncomeAsset.maturity = addDays(new Date(), 30).toDateString();
 const mockServiceProvider = generateMock(z.ServiceProviderSchema());
 mockServiceProvider.accountId = mockCounterParty.id;
 const mockCashTransaction = generateMock(z.BaseTransactionSchema());

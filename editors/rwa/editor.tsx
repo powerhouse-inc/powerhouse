@@ -1,16 +1,15 @@
-import { useState } from 'react';
-import { Key } from 'react-aria-components';
-import { EditorProps } from 'document-model/document';
-import {
-    RealWorldAssetsState,
-    RealWorldAssetsLocalState,
-    RealWorldAssetsAction,
-} from '../../document-models/real-world-assets';
-import { TabPanel } from 'react-aria-components';
 import { RWATabs } from '@powerhousedao/design-system';
+import { EditorProps } from 'document-model/document';
+import { useState } from 'react';
+import { Key, TabPanel } from 'react-aria-components';
+import {
+    RealWorldAssetsAction,
+    RealWorldAssetsLocalState,
+    RealWorldAssetsState,
+} from '../../document-models/real-world-assets';
+import { Attachments } from './attachments';
 import { Portfolio } from './portfolio';
 import { Transactions } from './transactions';
-import { Attachments } from './attachments';
 
 export type IProps = EditorProps<
     RealWorldAssetsState,
@@ -37,7 +36,7 @@ function Editor(props: IProps) {
             <div className="flex justify-center mt-3">
                 <div className="w-full rounded-md bg-slate-50 p-8">
                     <TabPanel id="portfolio">
-                        <Portfolio />
+                        <Portfolio {...props} />
                     </TabPanel>
                     <TabPanel id="transactions">
                         <Transactions />

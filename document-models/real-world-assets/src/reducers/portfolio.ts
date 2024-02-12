@@ -69,13 +69,9 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
             purchasePrice: 0,
             totalDiscount: 0,
             annualizedYield: 0,
-            currentValue: 0,
-            marketValue: 0,
             notional: 0,
             purchaseDate: '',
             purchaseProceeds: 0,
-            realizedSurplus: 0,
-            totalSurplus: 0,
         };
         state.portfolio.push(asset);
     },
