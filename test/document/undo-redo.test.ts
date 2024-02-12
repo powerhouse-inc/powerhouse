@@ -1,7 +1,7 @@
 import { noop, undo, redo } from '../../src/document/actions';
 import { createDocument, createExtendedState } from '../../src/document/utils';
 import { processUndoRedo } from '../../src/document/reducer';
-import { Document } from '../../src/document/types';
+import { Document, Operation } from '../../src/document/types';
 import {
     CountState,
     CountAction,
@@ -521,6 +521,76 @@ describe('UNDO/REDO', () => {
             expect(document.revision.global).toBe(7);
             expect(document.state.global.count).toBe(4);
             expect(document.operations.global.length).toBe(7);
+            expect(document.clipboard.length).toBe(0);
+        });
+    });
+
+    describe('NOOP operations', () => {
+        it('should apply NOOP operations', () => {
+            const op: Operation = {
+                input: undefined,
+                type: 'NOOP',
+                skip: 1,
+                index: 5,
+                scope: 'global',
+                hash: 'Ki38EB6gkUcnU3ceRsc88njPo3U=',
+                timestamp: new Date().toISOString(),
+            };
+
+            document = countReducer(document, op as CountAction, undefined);
+
+            expect(document.revision.global).toBe(6);
+            expect(document.state.global.count).toBe(4);
+            expect(document.operations.global.length).toBe(6);
+            expect(document.operations.global[5]).toMatchObject({
+                type: 'NOOP',
+                index: 5,
+                skip: 1,
+            });
+        });
+
+        it('should replace previous noop operation and update skip number when a new noop is dispatched after another one', () => {
+            const baseOperation: Operation = {
+                input: undefined,
+                type: 'NOOP',
+                skip: 0,
+                index: 5,
+                scope: 'global',
+                hash: 'Ki38EB6gkUcnU3ceRsc88njPo3U=',
+                timestamp: new Date().toISOString(),
+            };
+
+            const op1 = { ...baseOperation, skip: 1 } as CountAction;
+            const op2 = { ...baseOperation, skip: 2 } as CountAction;
+            const op3 = { ...baseOperation, skip: 3 } as CountAction;
+
+            document = countReducer(document, op1, undefined);
+            document = countReducer(document, op2, undefined);
+            document = countReducer(document, op3, undefined);
+
+            expect(document.revision.global).toBe(6);
+            expect(document.state.global.count).toBe(2);
+            expect(document.operations.global.length).toBe(6);
+            expect(document.operations.global[5]).toMatchObject({
+                type: 'NOOP',
+                index: 5,
+                skip: 3,
+            });
+        });
+
+        it('NOOP operation should not add skipped operation to the clipboard', () => {
+            const op: Operation = {
+                input: undefined,
+                type: 'NOOP',
+                skip: 1,
+                index: 5,
+                scope: 'global',
+                hash: 'Ki38EB6gkUcnU3ceRsc88njPo3U=',
+                timestamp: new Date().toISOString(),
+            };
+
+            document = countReducer(document, op as CountAction, undefined);
+
             expect(document.clipboard.length).toBe(0);
         });
     });

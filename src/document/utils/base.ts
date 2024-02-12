@@ -21,9 +21,25 @@ import {
 } from '../types';
 import { hash } from './node';
 import { noop } from '../actions/creators';
-import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from '../actions/types';
+import {
+    LOAD_STATE,
+    PRUNE,
+    REDO,
+    SET_NAME,
+    UNDO,
+    NOOP,
+} from '../actions/types';
 import { castImmutable, freeze } from 'immer';
 import { SignalDispatch } from '../signal';
+
+export function isNoopOperation(op: Partial<Operation>): boolean {
+    return (
+        op.type === NOOP &&
+        op.skip !== undefined &&
+        op.skip > 0 &&
+        op.hash !== undefined
+    );
+}
 
 export function isUndoRedo(action: Action): action is UndoRedoAction {
     return [UNDO, REDO].includes(action.type);
