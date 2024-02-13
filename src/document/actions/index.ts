@@ -3,6 +3,7 @@ import {
     Action,
     Document,
     ImmutableStateReducer,
+    Operation,
     PruneAction,
     RedoAction,
     State,
@@ -15,6 +16,38 @@ import { loadState, noop } from './creators';
 // updates the name of the document
 export function setNameOperation<T>(document: T, name: string): T {
     return { ...document, name };
+}
+
+export function noopOperation<T, A extends Action, L>(
+    document: Document<T, A, L>,
+    action: Partial<Operation>,
+    skip: number,
+) {
+    const defaultValues = {
+        skip,
+        document,
+    };
+
+    const { scope } = action;
+
+    if (!scope) return defaultValues;
+    if (action.skip === undefined) return defaultValues;
+
+    return produce(defaultValues, draft => {
+        const [lastOperation] = draft.document.operations[scope].slice(-1);
+
+        if (action.skip && action.skip > 0) {
+            draft.skip = action.skip;
+        }
+
+        if (
+            lastOperation.type === 'NOOP' &&
+            action.index === lastOperation.index &&
+            draft.skip > lastOperation.skip
+        ) {
+            draft.document.operations[scope].pop();
+        }
+    });
 }
 
 export function undoOperation<T, A extends Action, L>(

@@ -1,6 +1,7 @@
 import { castDraft, produce } from 'immer';
 import {
     loadStateOperation,
+    noopOperation,
     pruneOperation,
     redoOperation,
     setNameOperation,
@@ -26,6 +27,7 @@ import {
     isUndoRedo,
     hashDocument,
     replayOperations,
+    isNoopOperation,
 } from './utils/base';
 import { SignalDispatch } from './signal';
 
@@ -207,6 +209,16 @@ export function baseReducer<T, A extends Action, L>(
     let skipValue = skip || 0;
     let newDocument = document;
     let clipboard = [...document.clipboard];
+
+    // if noop with skip value, validate if latest operation is the same as the current one
+    // if current one has a greather skip value, then replace the latest operation with the current one (drop latest op)
+    if (isNoopOperation(_action)) {
+        const { document: processedDocument, skip: calculatedSkip } =
+            noopOperation(newDocument, _action, skipValue);
+
+        skipValue = calculatedSkip;
+        newDocument = processedDocument;
+    }
 
     if (isUndoRedo(_action)) {
         const {
