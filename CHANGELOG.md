@@ -1,3 +1,10 @@
+# [1.0.0-alpha.57](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.56...v1.0.0-alpha.57) (2024-02-13)
+
+
+### Features
+
+* remove id field from tables ([#189](https://github.com/powerhouse-inc/design-system/issues/189)) ([47312f8](https://github.com/powerhouse-inc/design-system/commit/47312f8b15ed7590951971eea8cd266d403b5862))
+
 # [1.0.0-alpha.56](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.55...v1.0.0-alpha.56) (2024-02-09)
 
 
