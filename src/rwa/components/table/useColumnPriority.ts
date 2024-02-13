@@ -59,6 +59,8 @@ export function useColumnPriority<TItem extends Record<string, ReactNode>>(
               }
             : undefined;
         const headerLabelsFromItems = fields
+            // the id field is for internal use and is not useful to the user
+            .filter(field => field !== 'id')
             .map(field => ({
                 id: field,
                 label: field,

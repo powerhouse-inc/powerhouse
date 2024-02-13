@@ -38,7 +38,6 @@ const columnCountByTableWidth = {
 };
 
 const fieldsPriority: (keyof FixedIncomeAsset)[] = [
-    'id',
     'name',
     'maturity',
     'notional',
