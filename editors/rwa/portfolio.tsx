@@ -19,7 +19,6 @@ import { mockFixedIncomeTypes, mockSpvs } from './assets-mock-data';
 import { IProps } from './editor';
 
 const fieldsPriority: (keyof FixedIncomeAsset)[] = [
-    'id',
     'name',
     'maturity',
     'notional',
