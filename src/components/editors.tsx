@@ -16,7 +16,7 @@ import Button from './button';
 export interface EditorProps<
     T = unknown,
     A extends Action = Action,
-    LocalState = unknown
+    LocalState = unknown,
 > {
     document: Document<T, A, LocalState>;
     onChange?: (document: Document<T, A, LocalState>) => void;
@@ -25,7 +25,7 @@ export interface EditorProps<
 export type EditorComponent<
     T = unknown,
     A extends Action = Action,
-    LocalState = unknown
+    LocalState = unknown,
 > = (props: EditorProps<T, A, LocalState>) => JSX.Element;
 
 export interface IProps extends EditorProps {
@@ -46,7 +46,7 @@ export const DocumentEditor: React.FC<IProps> = ({
     const theme = useAtomValue(themeAtom);
     const [document, _dispatch] = useDocumentDispatch(
         documentModel?.reducer,
-        initialDocument
+        initialDocument,
     );
 
     function dispatch(action: BaseAction | Action) {
@@ -71,30 +71,31 @@ export const DocumentEditor: React.FC<IProps> = ({
         dispatch(actions.redo());
     }
 
-    const canUndo = document && document.revision > 0;
-    const canRedo =
-        document && document.revision < document.operations.global.length;
-    
-        if (!documentModel) {
-            return (
-                <h3>
-                    Document of type {initialDocument.documentType} is not
-                    supported.
-                </h3>
-            );
-        }
-    
-        if (!editor) {
-            return (
-                <h3>
-                    No editor available for document of type{' '}
-                    {initialDocument.documentType}
-                </h3>
-            );
-        }
-    
+    const canUndo =
+        document &&
+        (document.revision.global > 0 || document.revision.local > 0);
+    const canRedo = document.clipboard.length > 0;
+
+    if (!documentModel) {
+        return (
+            <h3>
+                Document of type {initialDocument.documentType} is not
+                supported.
+            </h3>
+        );
+    }
+
+    if (!editor) {
+        return (
+            <h3>
+                No editor available for document of type{' '}
+                {initialDocument.documentType}
+            </h3>
+        );
+    }
+
     const EditorComponent = editor.Component;
-    
+
     return (
         <div className="relative h-full">
             <div className="mb-4 flex justify-end gap-10">
