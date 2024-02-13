@@ -73,19 +73,20 @@ export function useDocumentDriveServer(
         }
 
         try {
-            const newDrive = await server.addDriveOperation(driveId, operation);
+            const result = await server.addDriveOperation(driveId, operation);
 
-            if (!newDrive.status !== 'SUCCESS') {
-                console.error(newDrive.error);
-                return newDrive.document;
+            if (!result.status !== 'SUCCESS') {
+                console.error(result.error);
             }
 
-            await refreshDocumentDrives();
+            if (result.operations.length) {
+                await refreshDocumentDrives();
+            }
 
-            if (!newDrive.document || !isDocumentDrive(newDrive.document)) {
+            if (result.document && !isDocumentDrive(result.document)) {
                 throw new Error('Received document is not a Document Drive');
             }
-            return newDrive.document;
+            return result.document;
         } catch (error) {
             console.error(error);
             return drive;

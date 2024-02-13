@@ -4551,9 +4551,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@powerhouse-inc/document-drive#11548bc:
-  version "0.0.27"
-  resolved "https://codeload.github.com/powerhouse-inc/document-drive/tar.gz/11548bc9cb62a7cb9fce467c74a038c271b03efe"
+document-drive@^0.0.29:
+  version "0.0.29"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.29.tgz#ab00d60bbcf34f0b1c1d75cbecb172cc3d92994a"
+  integrity sha512-p1kss+TZpVoNgPeys13+sI3nOE030KxdqmmFgEH5UGzYYMQypCQvfsVmI8M5Sgokws84gBVAHX6QFRZaNQ2Sjg==
   dependencies:
     "@prisma/client" "5.7.1"
     graphql "^16.8.1"
