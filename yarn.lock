@@ -2183,16 +2183,16 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-model@^1.0.25:
-  version "1.0.25"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.25.tgz#10d218ad54dd98e004a01c83e523e98de3389293"
-  integrity sha512-3N8jjYO2pCJ51uAPM1Gue9WqOOuwVfhLOG7ax30JYvRqFLKdKjSQs1v9UIY42STgyqeuKidJVKUE8Non1/e3Ag==
+document-model@^1.0.29:
+  version "1.0.29"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.29.tgz#befdca50981511011d0fb194bbe0c313dd87cb88"
+  integrity sha512-CX3d3+aD6tbRD7y666k9UNMEGFKPTew44dgN5CBixEToAcOel3Ai9un24fiOFtiLCUYpJ8LAsxVOCWBeP+Jq5g==
   dependencies:
-    immer "^10.0.2"
-    json-stringify-deterministic "^1.0.10"
+    immer "^10.0.3"
+    json-stringify-deterministic "1.0.10"
     jszip "^3.10.1"
-    mime "^3.0.0"
-    zod "^3.22.2"
+    mime "^4.0.1"
+    zod "^3.22.4"
 
 dot-case@^2.1.0:
   version "2.1.1"
@@ -2907,10 +2907,10 @@ immediate@~3.0.5:
   resolved "https://registry.npmjs.org/immediate/-/immediate-3.0.6.tgz"
   integrity sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==
 
-immer@^10.0.2:
-  version "10.0.2"
-  resolved "https://registry.npmjs.org/immer/-/immer-10.0.2.tgz"
-  integrity sha512-Rx3CqeqQ19sxUtYV9CU911Vhy8/721wRFnJv3REVGWUmoAcIwzifTsdmJte/MV+0/XpM35LZdQMBGkRIoLPwQA==
+immer@^10.0.3:
+  version "10.0.3"
+  resolved "https://registry.yarnpkg.com/immer/-/immer-10.0.3.tgz#a8de42065e964aa3edf6afc282dfc7f7f34ae3c9"
+  integrity sha512-pwupu3eWfouuaowscykeckFmVTpqbzW+rXFCX8rQLkZzM9ftBmU/++Ra+o+L27mz03zJTlyV4UUr+fdKNffo4A==
 
 immutable@~3.7.6:
   version "3.7.6"
@@ -3245,9 +3245,9 @@ json-stable-stringify@^1.0.1:
   dependencies:
     jsonify "^0.0.1"
 
-json-stringify-deterministic@^1.0.10:
+json-stringify-deterministic@1.0.10:
   version "1.0.10"
-  resolved "https://registry.npmjs.org/json-stringify-deterministic/-/json-stringify-deterministic-1.0.10.tgz"
+  resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.10.tgz#d56660b6e9c12f47dee4340ec2ce26745fa6ee64"
   integrity sha512-hBLYMyCnoYh0rQ2ZyEegbLaFAS5KqOZ6HZ5fgq6lGWhtNRKw2JUp/hkfjQS1bjYZlHW9AjvXBWCJe9OwcugRNw==
 
 json-to-pretty-yaml@^1.2.2:
@@ -3586,10 +3586,10 @@ micromatch@4.0.5, micromatch@^4.0.4, micromatch@^4.0.5:
     braces "^3.0.2"
     picomatch "^2.3.1"
 
-mime@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.npmjs.org/mime/-/mime-3.0.0.tgz"
-  integrity sha512-jSCU7/VB1loIWBZe14aEYHU/+1UMEHoaO7qxCOVJOw9GgH72VAWppxNcjU+x9a2k3GSIBXNKxXQFqRvvZ7vr3A==
+mime@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/mime/-/mime-4.0.1.tgz#ad7563d1bfe30253ad97dedfae2b1009d01b9470"
+  integrity sha512-5lZ5tyrIfliMXzFtkYyekWbtRXObT9OWa8IwQ5uxTBDHucNNwniRqo0yInflj+iYi5CBa6qxadGzGarDfuEOxA==
 
 mimic-fn@^2.1.0:
   version "2.1.0"
@@ -5062,7 +5062,7 @@ yocto-queue@^0.1.0:
   resolved "https://registry.npmjs.org/yocto-queue/-/yocto-queue-0.1.0.tgz"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
 
-zod@^3.22.2:
-  version "3.22.2"
-  resolved "https://registry.npmjs.org/zod/-/zod-3.22.2.tgz"
-  integrity sha512-wvWkphh5WQsJbVk1tbx1l1Ly4yg+XecD+Mq280uBGt9wa5BKSWf4Mhp6GmrkPixhMxmabYY7RbzlwVP32pbGCg==
+zod@^3.22.4:
+  version "3.22.4"
+  resolved "https://registry.yarnpkg.com/zod/-/zod-3.22.4.tgz#f31c3a9386f61b1f228af56faa9255e845cf3fff"
+  integrity sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==
