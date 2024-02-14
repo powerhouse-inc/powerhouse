@@ -4,7 +4,7 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { Asset, isFixedIncomeAsset, validateFixedIncomeAsset } from '../..';
+import { Asset, FixedIncome, validateFixedIncomeAsset } from '../..';
 import { RealWorldAssetsPortfolioOperations } from '../../gen/portfolio/operations';
 
 export const reducer: RealWorldAssetsPortfolioOperations = {
@@ -58,7 +58,7 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
         if (!action.input.maturity) {
             throw new Error(`Fixed income asset must have a maturity`);
         }
-        validateFixedIncomeAsset(state, action.input as Asset);
+        validateFixedIncomeAsset(state, action.input as FixedIncome);
         const asset = {
             ...action.input,
             ISIN: action.input.ISIN ?? null,
@@ -104,16 +104,16 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
         const asset = state.portfolio.find(
             asset => asset.id === action.input.id,
         );
-        if (!isFixedIncomeAsset(asset)) {
+        if (!asset) {
             throw new Error(`Asset with id ${action.input.id} does not exist!`);
         }
-        validateFixedIncomeAsset(state, action.input as Asset);
+        validateFixedIncomeAsset(state, action.input as FixedIncome);
         state.portfolio = state.portfolio.map(asset =>
             asset.id === action.input.id
                 ? ({
                       ...asset,
                       ...action.input,
-                  } as Asset)
+                  } as FixedIncome)
                 : asset,
         );
     },

@@ -13,6 +13,7 @@ import { twMerge } from 'tailwind-merge';
 import {
     FixedIncome,
     actions,
+    getDifferences,
     isFixedIncomeAsset,
 } from '../../document-models/real-world-assets';
 import { mockFixedIncomeTypes, mockSpvs } from './assets-mock-data';
@@ -57,13 +58,9 @@ export const Portfolio = (props: IProps) => {
 
     const fixedIncomeTypes = document.state.global.fixedIncomeTypes;
 
-    const portfolio = document.state.global.portfolio
-        .filter((asset): asset is FixedIncome => isFixedIncomeAsset(asset))
-        .map(item => ({
-            ...item,
-            maturity: item.maturity.split('T')[0],
-            purchaseDate: item.purchaseDate.split('T')[0],
-        })) as FixedIncomeAsset[];
+    const portfolio = document.state.global.portfolio.filter(
+        (asset): asset is FixedIncome => isFixedIncomeAsset(asset),
+    ) as FixedIncomeAsset[];
 
     const toggleExpandedRow = useCallback((id: string) => {
         setExpandedRowId(curr => (id === curr ? undefined : id));
@@ -82,9 +79,19 @@ export const Portfolio = (props: IProps) => {
             data => {
                 if (!selectedAssetToEdit) return;
                 const asset = createAssetFromFormInputs(data);
+                const changedFields = getDifferences(
+                    selectedAssetToEdit,
+                    asset,
+                );
+
+                if (Object.values(changedFields).filter(Boolean).length === 0) {
+                    setSelectedAssetToEdit(undefined);
+                    return;
+                }
+
                 dispatch(
                     actions.editFixedIncomeAsset({
-                        ...asset,
+                        ...changedFields,
                         id: selectedAssetToEdit.id,
                     }),
                 );
