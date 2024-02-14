@@ -1544,7 +1544,7 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@^1.0.0-alpha.56":
+"@powerhousedao/design-system@1.0.0-alpha.56":
   version "1.0.0-alpha.56"
   resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.56.tgz#f1d80e44417ddac6f1c656602da9d1dde1d1197d"
   integrity sha512-p2MBe5d3+Inik5dkr8krhxfFz2hgWRT58vrrfT8WUY4/l3HPmRXins+EiyBJnSoTkh4NhloxeOiV7g5xgprZmA==
@@ -1556,11 +1556,6 @@
     currency.js "^2.0.4"
     date-fns "^3.3.1"
     react-hook-form "^7.49.3"
-
-"@prisma/client@5.7.1":
-  version "5.7.1"
-  resolved "https://registry.yarnpkg.com/@prisma/client/-/client-5.7.1.tgz#a124afd05663267f7255a639a81d28303684a063"
-  integrity sha512-TUSa4nUcC4nf/e7X3jyO1pEd6XcI/TLRCA0KjkA46RDIpxUaRsBYEOqITwXRW2c0bMFyKcCRXrH4f7h4q9oOlg==
 
 "@radix-ui/primitive@1.0.1":
   version "1.0.1"
@@ -4551,15 +4546,15 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.29:
-  version "0.0.29"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.29.tgz#ab00d60bbcf34f0b1c1d75cbecb172cc3d92994a"
-  integrity sha512-p1kss+TZpVoNgPeys13+sI3nOE030KxdqmmFgEH5UGzYYMQypCQvfsVmI8M5Sgokws84gBVAHX6QFRZaNQ2Sjg==
+document-drive@^0.0.30:
+  version "0.0.30"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.30.tgz#0cc5a959223ce85ffadae7668af698e7facda12a"
+  integrity sha512-BEkPjBLtYTkTyS4wqMDwaA5SF3Th0TQZGxZOX/9o9l8rV0BYTcmEqiVM4tjmMJpUnD7NNgivVwVFH8aD9gaCpA==
   dependencies:
-    "@prisma/client" "5.7.1"
     graphql "^16.8.1"
     graphql-request "^6.1.0"
     json-stringify-deterministic "^1.0.12"
+    nanoevents "^9.0.0"
     sanitize-filename "^1.6.3"
 
 document-model-libs@^1.1.43:
@@ -6666,6 +6661,11 @@ json-stringify-deterministic@1.0.10:
   resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.10.tgz#d56660b6e9c12f47dee4340ec2ce26745fa6ee64"
   integrity sha512-hBLYMyCnoYh0rQ2ZyEegbLaFAS5KqOZ6HZ5fgq6lGWhtNRKw2JUp/hkfjQS1bjYZlHW9AjvXBWCJe9OwcugRNw==
 
+json-stringify-deterministic@^1.0.12:
+  version "1.0.12"
+  resolved "https://registry.yarnpkg.com/json-stringify-deterministic/-/json-stringify-deterministic-1.0.12.tgz#aaa3f907466ed01e3afd77b898d0a2b3b132820a"
+  integrity sha512-q3PN0lbUdv0pmurkBNdJH3pfFvOTL/Zp0lquqpvcjfKzt6Y0j49EPHAmVHCAS4Ceq/Y+PejWTzyiVpoY71+D6g==
+
 json-stringify-nice@^1.1.4:
   version "1.1.4"
   resolved "https://registry.yarnpkg.com/json-stringify-nice/-/json-stringify-nice-1.1.4.tgz#2c937962b80181d3f317dd39aa323e14f5a60a67"
@@ -7562,6 +7562,11 @@ mz@^2.7.0:
     any-promise "^1.0.0"
     object-assign "^4.0.1"
     thenify-all "^1.0.0"
+
+nanoevents@^9.0.0:
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/nanoevents/-/nanoevents-9.0.0.tgz#c44fa7dde1615ac092023d5c881a3ee0b0a8c8fd"
+  integrity sha512-X8pU7IOpgKXVLPxYUI55ymXc8XuBE+uypfEyEFBtHkD1EX9KavYTVc+vXZHFyHKzA1TaZoVDqklLdQBBrxIuAw==
 
 nanoid@^3.3.7:
   version "3.3.7"
