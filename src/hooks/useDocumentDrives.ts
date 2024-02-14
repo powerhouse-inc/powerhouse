@@ -54,7 +54,7 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
         setIsInitialized(true);
         refreshDocumentDrives();
         server.on('syncStatus', () => refreshDocumentDrives());
-        server.on('strandUpdated', () => refreshDocumentDrives());
+        server.on('strandUpdate', () => refreshDocumentDrives());
     }
 
     return useMemo(

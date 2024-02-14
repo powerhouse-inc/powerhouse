@@ -1,6 +1,10 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
-import type { DriveInput, IDocumentDriveServer } from 'document-drive/server';
+import type {
+    DriveInput,
+    IDocumentDriveServer,
+    SyncStatus,
+} from 'document-drive/server';
 import {
     DocumentDriveAction,
     DocumentDriveDocument,
@@ -115,7 +119,21 @@ const electronApi = {
                 drive,
                 operations,
             ),
-    } satisfies IDocumentDriveServer,
+        getSyncStatus: drive =>
+            ipcRenderer.invoke('documentDrive:getSyncStatus', drive),
+        on: (event, cb) => {
+            function listener(_event: IpcRendererEvent, args: any[]) {
+                // @ts-expect-error - args spread
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                cb(...args);
+            }
+            ipcRenderer.on(`documentDrive:event:${event}`, listener);
+            return () =>
+                ipcRenderer.off(`documentDrive:event:${event}`, listener);
+        },
+    } satisfies Omit<IDocumentDriveServer, 'getSyncStatus'> & {
+        getSyncStatus: (drive: string) => Promise<SyncStatus>;
+    },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);
