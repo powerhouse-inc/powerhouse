@@ -10,7 +10,7 @@ export function useSortTableItems<TItem extends Record<string, ReactNode>>(
     items: TItem[],
 ) {
     const [sortedItems, setSortedItems] = useState<TItem[]>(items);
-    const [column, setColumn] = useState<Identifier<TItem>>('id');
+    const [column, setColumn] = useState<Identifier<TItem>>();
     const [direction, setDirection] = useState<Order>('asc');
 
     const sortHandler = useCallback(
@@ -22,6 +22,10 @@ export function useSortTableItems<TItem extends Record<string, ReactNode>>(
     );
 
     useEffect(() => {
+        if (!column) {
+            setSortedItems(items);
+            return;
+        }
         setSortedItems(orderBy(items, [column], [direction]));
     }, [column, direction, items, sortHandler]);
 
