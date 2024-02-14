@@ -95,7 +95,6 @@
         "react-router-dom": "^6.11.2",
         "react-stately": "^3.22.0",
         "tailwind-merge": "^1.14.0",
-        "usehooks-ts": "^2.14.0",
         "uuid": "^9.0.1"
     }
 }
