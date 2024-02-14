@@ -11,7 +11,7 @@ import {
     Operation,
     utils,
 } from 'document-model/document';
-import { IpcMain } from 'electron';
+import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
 
 export default (
@@ -51,6 +51,7 @@ export default (
                 })
                 .catch(console.error),
         )
+        .then(() => bindEvents(documentDrive))
         .catch(console.error);
 
     ipcMain.handle('documentDrive:getDrives', () => documentDrive.getDrives());
@@ -105,4 +106,29 @@ export default (
             operations: Operation<DocumentDriveAction | BaseAction>[],
         ) => documentDrive.addDriveOperations(drive, operations),
     );
+
+    ipcMain.handle('documentDrive:getSyncStatus', (_e, drive: string) =>
+        documentDrive.getSyncStatus(drive),
+    );
+
+    function bindEvents(drive: DocumentDriveServer) {
+        drive.on('strandUpdate', update => {
+            webContents
+                .getAllWebContents()
+                .forEach(wc =>
+                    wc.send('documentDrive:event:strandUpdate', update),
+                );
+        });
+
+        drive.on('syncStatus', (driveId, status, error) => {
+            webContents.getAllWebContents().forEach(wc => {
+                wc.send(
+                    'documentDrive:event:syncStatus',
+                    driveId,
+                    status,
+                    error,
+                );
+            });
+        });
+    }
 };

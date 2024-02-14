@@ -75,7 +75,7 @@ export function useDocumentDriveServer(
         try {
             const result = await server.addDriveOperation(driveId, operation);
 
-            if (!result.status !== 'SUCCESS') {
+            if (result.status !== 'SUCCESS') {
                 console.error(result.error);
             }
 
