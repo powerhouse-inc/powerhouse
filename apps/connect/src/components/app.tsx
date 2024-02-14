@@ -2,6 +2,7 @@ import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { RouterProvider, createHashRouter } from 'react-router-dom';
 import { ModalManager } from 'src/components/modal';
+import { FeatureFlagContextProvider } from 'src/context';
 import atoms from 'src/store';
 
 export const App: React.FC = () => {
@@ -40,11 +41,13 @@ const Preloader = () => {
 export default (
     <React.StrictMode>
         {/* TODO loading */}
-        <Suspense fallback={<></>}>
-            <Preloader />
-            <ModalManager>
-                <App />
-            </ModalManager>
-        </Suspense>
+        <FeatureFlagContextProvider>
+            <Suspense fallback={<></>}>
+                <Preloader />
+                <ModalManager>
+                    <App />
+                </ModalManager>
+            </Suspense>
+        </FeatureFlagContextProvider>
     </React.StrictMode>
 );

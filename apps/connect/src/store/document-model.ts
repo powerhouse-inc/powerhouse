@@ -2,6 +2,7 @@ import * as DocumentModels from 'document-model-libs/document-models';
 import { Action, DocumentModel } from 'document-model/document';
 import { module as DocumentModelLib } from 'document-model/document-model';
 import { atom, useAtomValue } from 'jotai';
+import { useFeatureFlag } from 'src/context';
 
 export const documentModels = [
     DocumentModelLib,
@@ -14,7 +15,7 @@ export const useDocumentModels = () => useAtomValue(documentModelsAtom);
 
 function getDocumentModel<S = unknown, A extends Action = Action>(
     documentType: string,
-    documentModels: DocumentModel[]
+    documentModels: DocumentModel[],
 ) {
     return documentModels.find(d => d.documentModel.id === documentType) as
         | DocumentModel<S, A>
@@ -22,7 +23,7 @@ function getDocumentModel<S = unknown, A extends Action = Action>(
 }
 
 export function useDocumentModel<S = unknown, A extends Action = Action>(
-    documentType: string
+    documentType: string,
 ) {
     const documentModels = useDocumentModels();
     return getDocumentModel<S, A>(documentType, documentModels);
@@ -32,4 +33,48 @@ export const useGetDocumentModel = () => {
     const documentModels = useDocumentModels();
     return (documentType: string) =>
         getDocumentModel(documentType, documentModels);
+};
+
+/**
+ * Returns an array of filtered document models based on the enabled and disabled editors (feature flag).
+ * If enabledEditors is set to '*', returns all document models.
+ * If disabledEditors is set to '*', returns an empty array.
+ * If disabledEditors is an array, filters out document models whose IDs are included in the disabledEditors array.
+ * If enabledEditors is an array, filters document models whose IDs are included in the enabledEditors array.
+ * @returns {Array<DocumentModel>} The filtered document models.
+ */
+export const useFilteredDocumentModels = () => {
+    const documentModels = useDocumentModels();
+    const { config } = useFeatureFlag();
+    const { enabledEditors, disabledEditors } = config.editors;
+
+    if (typeof enabledEditors === 'string' && enabledEditors === '*') {
+        return documentModels;
+    }
+
+    if (typeof disabledEditors === 'string' && disabledEditors === '*') {
+        return [];
+    }
+
+    if (disabledEditors) {
+        const disabledEditorsArray = Array.isArray(disabledEditors)
+            ? disabledEditors
+            : [disabledEditors];
+
+        return documentModels.filter(
+            d => !disabledEditorsArray.includes(d.documentModel.id),
+        );
+    }
+
+    if (enabledEditors) {
+        const enabledEditorsArray = Array.isArray(enabledEditors)
+            ? enabledEditors
+            : [enabledEditors];
+
+        return documentModels.filter(d =>
+            enabledEditorsArray.includes(d.documentModel.id),
+        );
+    }
+
+    return documentModels;
 };
