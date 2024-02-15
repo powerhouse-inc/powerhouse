@@ -21,6 +21,11 @@
             }
         }
     },
+    "files": {
+        "options": {
+            "switchboardLink": "Switchboard Link"
+        }
+    },
     "modals": {
         "deleteItem": {
             "header": "Delete “{{item}}” folder?",
