@@ -46,17 +46,17 @@
         }
     },
     "scripts": {
-        "generate": "powerhouse generate && yarn eslint . --fix",
+        "generate": "powerhouse generate && eslint . --fix",
         "check-types": "tsc",
-        "lint": "powerhouse generate && yarn eslint . && yarn check-types",
-        "lint:fix": "powerhouse generate && yarn eslint . --fix",
-        "lint:quiet": "powerhouse generate && yarn eslint . --quiet",
+        "lint": "powerhouse generate && eslint . && npm run check-types",
+        "lint:fix": "powerhouse generate && eslint . --fix",
+        "lint:quiet": "powerhouse generate && eslint . --quiet",
         "build": "powerhouse generate && vite build",
         "storybook": "powerhouse generate && storybook dev -p 6006",
         "build-storybook": "powerhouse generate && storybook build",
         "test": "powerhouse generate && vitest run",
         "test:watch": "powerhouse generate && vitest",
-        "prepare": "npm run prepare:scripts",
+        "prepublishOnly": "npm run prepare:scripts && npm run build",
         "prepare:scripts": "node scripts/index.js"
     },
     "devDependencies": {
@@ -66,7 +66,7 @@
         "@emotion/styled": "^11.11.0",
         "@monaco-editor/react": "^4.6.0",
         "@mui/material": "^5.15.5",
-        "@powerhousedao/codegen": "0.0.12",
+        "@powerhousedao/codegen": "0.0.13",
         "@powerhousedao/design-system": "1.0.0-alpha.56",
         "@storybook/addon-essentials": "^7.6.10",
         "@storybook/addon-interactions": "^7.6.10",
@@ -77,6 +77,7 @@
         "@storybook/testing-library": "^0.2.2",
         "@theguild/editor": "^1.3.6",
         "@total-typescript/ts-reset": "^0.5.1",
+        "@types/node": "^20.11.17",
         "@types/react": "^18.2.48",
         "@typescript-eslint/eslint-plugin": "^6.19.0",
         "@typescript-eslint/parser": "^6.19.0",
@@ -84,7 +85,7 @@
         "autoprefixer": "^10.4.16",
         "change-case": "^4.1.2",
         "constrained-editor-plugin": "^1.3.0",
-        "document-model": "^1.0.29",
+        "document-model": "^1.0.30",
         "document-model-editors": "^1.0.1",
         "dspot-powerhouse-components": "^1.1.0",
         "eslint": "^8.56.0",
@@ -113,13 +114,18 @@
         "zod": "^3.22.4"
     },
     "peerDependencies": {
-        "document-model": "^1.0.29",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"
     },
     "dependencies": {
+        "document-model": "^1.0.30",
+        "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
+        "@graphql-codegen/core": "^4.0.2",
+        "@graphql-codegen/typescript": "^4.0.4",
         "@internationalized/date": "^3.5.1",
         "date-fns": "^3.3.1",
+        "jsonc-parser": "^3.2.1",
+        "jszip": "^3.10.1",
         "react-aria-components": "1.0.1",
         "tailwind-merge": "^2.2.1"
     }

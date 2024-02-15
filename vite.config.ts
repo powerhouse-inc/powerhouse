@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite';
-import { resolve } from 'path';
-import dts from 'vite-plugin-dts';
 import { getConfig } from '@powerhousedao/codegen';
 import { readdirSync } from 'node:fs';
+import { resolve } from 'path';
+import { defineConfig } from 'vite';
+import dts from 'vite-plugin-dts';
 import { InlineConfig } from 'vitest';
 
 const { documentModelsDir, editorsDir } = getConfig();
@@ -21,13 +21,7 @@ readdirSync(documentModelsDir, { withFileTypes: true })
     });
 
 export default defineConfig(({ mode }) => {
-    const external = [
-        'document-model',
-        'document-model/document',
-        'react',
-        'react/jsx-runtime',
-        'react-dom',
-    ];
+    const external = ['react', 'react/jsx-runtime', 'react-dom'];
 
     const test: InlineConfig = {
         globals: true,
