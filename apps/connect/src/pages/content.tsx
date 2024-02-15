@@ -19,7 +19,7 @@ import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { preloadTabs, useFileNodeDocument, useSelectedPath } from 'src/store';
 import {
-    useDocumentModels,
+    useFilteredDocumentModels,
     useGetDocumentModel,
 } from 'src/store/document-model';
 import { exportFile } from 'src/utils';
@@ -38,7 +38,7 @@ const Content = () => {
 
     const { addFile, addDocument, deleteNode, documentDrives, renameNode } =
         useDocumentDriveServer();
-    const documentModels = useDocumentModels();
+    const documentModels = useFilteredDocumentModels();
     const getDocumentModel = useGetDocumentModel();
     const { onSubmitInput } = useDrivesContainer();
 
