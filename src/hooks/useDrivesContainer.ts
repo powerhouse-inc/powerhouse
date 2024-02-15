@@ -31,6 +31,17 @@ export function getNodePath(node: Node, allNodes: Node[]): string {
     return path.join(getNodePath(parentNode, allNodes), encodeID(node.id));
 }
 
+function getBaseItemType(sharingType: string): BaseTreeItem['type'] {
+    switch (sharingType.toLowerCase()) {
+        case 'public':
+            return 'PUBLIC_DRIVE';
+        case 'shared':
+            return 'CLOUD_DRIVE';
+        default:
+            return 'LOCAL_DRIVE';
+    }
+}
+
 export function driveToBaseItems(
     drive: DocumentDriveDocument,
 ): Array<BaseTreeItem> {
@@ -41,10 +52,7 @@ export function driveToBaseItems(
         id: id,
         label: name,
         path: driveID,
-        type:
-            sharingType?.toLowerCase() === 'public'
-                ? 'PUBLIC_DRIVE'
-                : 'LOCAL_DRIVE',
+        type: getBaseItemType(sharingType || ''),
         sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
         status: availableOffline ? 'AVAILABLE_OFFLINE' : 'AVAILABLE',
     };
