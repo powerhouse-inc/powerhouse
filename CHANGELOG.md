@@ -1,3 +1,10 @@
+# [1.0.0-alpha.59](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.58...v1.0.0-alpha.59) (2024-02-15)
+
+
+### Features
+
+* use public drive form for adding cloud drives ([a6e4191](https://github.com/powerhouse-inc/design-system/commit/a6e4191ec6810e2c63185abeb618950ca9bd8593))
+
 # [1.0.0-alpha.58](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.57...v1.0.0-alpha.58) (2024-02-15)
 
 
