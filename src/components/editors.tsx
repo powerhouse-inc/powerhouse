@@ -7,6 +7,7 @@ import {
 } from 'document-model/document';
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
+import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
 import { themeAtom } from 'src/store';
 import { useDocumentModel } from 'src/store/document-model';
 import { useEditor } from 'src/store/editor';
@@ -75,6 +76,8 @@ export const DocumentEditor: React.FC<IProps> = ({
         document &&
         (document.revision.global > 0 || document.revision.local > 0);
     const canRedo = document.clipboard.length > 0;
+
+    useUndoRedoShortcuts({ undo, redo, canUndo, canRedo });
 
     if (!documentModel) {
         return (
