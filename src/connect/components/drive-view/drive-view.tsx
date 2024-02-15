@@ -123,15 +123,14 @@ export function DriveView(props: DriveViewProps) {
                     allowedTypes={allowedTypes}
                 />
             </div>
-            {(props.type === 'CLOUD_DRIVE' || props.type === 'LOCAL_DRIVE') && (
+            {props.type === 'LOCAL_DRIVE' && (
                 <CreateDriveModal
                     modalProps={{
                         open: showAddModal,
                         onOpenChange: setShowAddModal,
                     }}
                     formProps={{
-                        location:
-                            props.type === 'CLOUD_DRIVE' ? 'CLOUD' : 'LOCAL',
+                        location: 'LOCAL',
                         onSubmit: data => {
                             onCreateDrive?.(data);
                             setShowAddModal(false);
@@ -140,13 +139,16 @@ export function DriveView(props: DriveViewProps) {
                     }}
                 />
             )}
-            {props.type === 'PUBLIC_DRIVE' && (
+            {(props.type === 'PUBLIC_DRIVE' ||
+                props.type === 'CLOUD_DRIVE') && (
                 <AddPublicDriveModal
                     modalProps={{
                         open: showAddModal,
                         onOpenChange: setShowAddModal,
                     }}
                     formProps={{
+                        sharingType:
+                            props.type === 'PUBLIC_DRIVE' ? 'PUBLIC' : 'SHARED',
                         onSubmit: data => {
                             onCreateDrive?.(data);
                             setShowAddModal(false);

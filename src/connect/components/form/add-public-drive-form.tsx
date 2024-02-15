@@ -17,7 +17,7 @@ import { useDebounce } from 'usehooks-ts';
 interface PublicDriveDetails extends AddDriveInput {
     id: string;
     driveName: string;
-    sharingType: 'PUBLIC';
+    sharingType: 'PUBLIC' | 'SHARED';
     location: 'SWITCHBOARD';
     availableOffline: boolean;
 }
@@ -29,11 +29,13 @@ type Inputs = {
 export type AddPublicDriveInput = PublicDriveDetails & { url: string };
 
 type AddPublicDriveFormProps = {
+    sharingType?: 'PUBLIC' | 'SHARED';
     onSubmit: (data: AddPublicDriveInput) => void;
     onCancel: () => void;
 };
 
 export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
+    const { sharingType = 'PUBLIC' } = props;
     const [url, setUrl] = useState('');
     const [publicDriveDetails, setPublicDriveDetails] =
         useState<PublicDriveDetails>();
@@ -59,7 +61,7 @@ export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
                 setPublicDriveDetails({
                     id,
                     driveName: name,
-                    sharingType: 'PUBLIC',
+                    sharingType,
                     location: 'SWITCHBOARD',
                     availableOffline: true,
                 });
