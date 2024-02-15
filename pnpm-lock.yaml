@@ -128,8 +128,8 @@ devDependencies:
     specifier: ^1.1.48
     version: 1.1.48(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)
   electron:
-    specifier: 24.0.0
-    version: 24.0.0
+    specifier: 28.2.3
+    version: 28.2.3
   eslint:
     specifier: ^8.56.0
     version: 8.56.0
@@ -6611,8 +6611,8 @@ packages:
     dev: true
     optional: true
 
-  /electron@24.0.0:
-    resolution: {integrity: sha512-QmL8L53fQ+xOAp8m2mSGNewhDvJqQttCxrcesf0cqndKQDsIq4QvR35wGJqHg7MyPQKcBErLhZj9QvRheO5qnA==}
+  /electron@28.2.3:
+    resolution: {integrity: sha512-he9nGphZo03ejDjYBXpmFVw0KBKogXvR2tYxE4dyYvnfw42uaFIBFrwGeenvqoEOfheJfcI0u4rFG6h3QxDwnA==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
     requiresBuild: true
