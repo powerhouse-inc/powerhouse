@@ -111,7 +111,7 @@ const getQuery = (documentId: string, documentType: string) => {
         query = budgetStatement;
     }
 
-    if (documentType === 'powerhouse/real-world-assets') {
+    if (documentType === 'makerdao/rwa-portfolio') {
         query = rwaQuery;
     }
 
