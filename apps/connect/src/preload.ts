@@ -65,9 +65,7 @@ const electronApi = {
         };
     },
     user: async () => (await ipcRenderer.invoke('user')) as string | undefined,
-    openURL: (url: string) => {
-        ipcRenderer.invoke('openURL', url);
-    },
+    openURL: (url: string) => ipcRenderer.invoke('openURL', url),
     setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
     documentDrive: {
         getDrives: () =>
