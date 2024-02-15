@@ -11,9 +11,11 @@ import {
 } from 'document-model-libs/document-drive';
 import { BaseAction, Document, Operation } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
+import { platformInfo } from './app/detect-platform';
 import { Theme } from './store';
 
 const electronApi = {
+    platformInfo,
     ready: () => ipcRenderer.send('ready'),
     fileSaved: (document: Document, path?: string) =>
         ipcRenderer.invoke('fileSaved', document, path),
