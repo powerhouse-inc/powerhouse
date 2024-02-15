@@ -10,7 +10,7 @@ describe(' Portfolio Document Model', () => {
         const document = utils.createDocument();
 
         expect(document).toBeDefined();
-        expect(document.documentType).toBe('powerhouse/real-world-assets');
+        expect(document.documentType).toBe('makerdao/rwa-portfolio');
     });
 
     it('should create a new  Portfolio document with a valid initial state', () => {

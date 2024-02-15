@@ -12,7 +12,7 @@ export const module: EditorModule<
     RealWorldAssetsLocalState
 > = {
     Component: Editor,
-    documentTypes: ['powerhouse/real-world-assets'],
+    documentTypes: ['makerdao/rwa-portfolio'],
 };
 
 export default module;
