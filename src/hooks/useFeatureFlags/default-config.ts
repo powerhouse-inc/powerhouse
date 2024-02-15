@@ -9,7 +9,7 @@ export interface FeatureFlag {
 
 const defaultConfig: FeatureFlag = {
     editors: {
-        enabledEditors: ['powerhouse/real-world-assets'],
+        enabledEditors: ['makerdao/rwa-portfolio'],
         disabledEditors: undefined,
     },
 };
