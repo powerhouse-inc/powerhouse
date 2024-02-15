@@ -12,9 +12,9 @@
     "browser": "dist/browser/index.js",
     "scripts": {
         "check-types": "tsc",
-        "lint": "eslint . && yarn check-types",
-        "lint:fix": "eslint --fix . && yarn check-types",
-        "build": "yarn build:browser && yarn build:node",
+        "lint": "eslint . && npm run check-types",
+        "lint:fix": "eslint --fix . && npm run check-types",
+        "build": "npm run build:browser && npm run build:node",
         "build:browser": "vite build --mode browser",
         "build:node": "vite build --mode node",
         "test": "vitest run"
@@ -81,7 +81,7 @@
     },
     "dependencies": {
         "immer": "^10.0.3",
-        "json-stringify-deterministic": "1.0.10",
+        "json-stringify-deterministic": "1.0.12",
         "jszip": "^3.10.1",
         "mime": "^4.0.1",
         "zod": "^3.22.4"

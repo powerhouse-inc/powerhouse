@@ -9,8 +9,8 @@ dependencies:
     specifier: ^10.0.3
     version: 10.0.3
   json-stringify-deterministic:
-    specifier: 1.0.10
-    version: 1.0.10
+    specifier: 1.0.12
+    version: 1.0.12
   jszip:
     specifier: ^3.10.1
     version: 3.10.1
@@ -4038,8 +4038,8 @@ packages:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
     dev: true
 
-  /json-stringify-deterministic@1.0.10:
-    resolution: {integrity: sha512-hBLYMyCnoYh0rQ2ZyEegbLaFAS5KqOZ6HZ5fgq6lGWhtNRKw2JUp/hkfjQS1bjYZlHW9AjvXBWCJe9OwcugRNw==}
+  /json-stringify-deterministic@1.0.12:
+    resolution: {integrity: sha512-q3PN0lbUdv0pmurkBNdJH3pfFvOTL/Zp0lquqpvcjfKzt6Y0j49EPHAmVHCAS4Ceq/Y+PejWTzyiVpoY71+D6g==}
     engines: {node: '>= 4'}
     dev: false
 
