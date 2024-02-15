@@ -52,7 +52,7 @@ function handleFileSave(path?: string) {
 }
 
 ipcMain.handle('fileSaved', (e, document: Document, path?: string) =>
-    handleFileSave(path)
+    handleFileSave(path),
 );
 
 ipcMain.handle('openURL', (e, url) => shell.openExternal(url));
@@ -124,6 +124,7 @@ const createWindow = async (options?: {
         minHeight: 350,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: true,
         },
     });
 
@@ -160,21 +161,17 @@ const createWindow = async (options?: {
                 {
                     label: 'Open',
                     accelerator: 'CommandOrControl+O',
-                    click:
-                        () => {
-                        const files = dialog.showOpenDialogSync(
-                            mainWindow,
-                            {
-                                properties: ['openFile'],
-                            }
-                        );
+                    click: () => {
+                        const files = dialog.showOpenDialogSync(mainWindow, {
+                            properties: ['openFile'],
+                        });
                         if (files) {
                             files.map(file => app.addRecentDocument(file));
                             handleFile(
                                 files[0],
                                 mainWindow.isDestroyed()
                                     ? undefined
-                                    : mainWindow
+                                    : mainWindow,
                             );
                         }
                     },
@@ -280,8 +277,8 @@ const createWindow = async (options?: {
         await mainWindow.loadFile(
             path.join(
                 __dirname,
-                `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`
-            )
+                `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
+            ),
         );
     }
 
