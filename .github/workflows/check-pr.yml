@@ -19,7 +19,6 @@ jobs:
               with:
                   version: 20
                   run_install: true
-                  cache: true
 
             - name: Lint
               run: pnpm run lint
@@ -38,7 +37,6 @@ jobs:
               with:
                   version: 20
                   run_install: true
-                  cache: true
 
             - name: Test
               run: pnpm run test
@@ -55,7 +53,6 @@ jobs:
               with:
                   version: 20
                   run_install: true
-                  cache: true
 
             - name: Build
               run: pnpm run build
