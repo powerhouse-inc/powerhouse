@@ -1,3 +1,10 @@
+# [1.0.0-alpha.58](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.57...v1.0.0-alpha.58) (2024-02-15)
+
+
+### Features
+
+* bump all to latest ([#197](https://github.com/powerhouse-inc/design-system/issues/197)) ([9e40519](https://github.com/powerhouse-inc/design-system/commit/9e405192943b3c9b146ef8fc4864b5b7ec748694))
+
 # [1.0.0-alpha.57](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.56...v1.0.0-alpha.57) (2024-02-13)
 
 
