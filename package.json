@@ -1,6 +1,6 @@
 {
     "name": "document-model-libs",
-    "version": "1.1.46",
+    "version": "1.1.47",
     "license": "AGPL-3.0-only",
     "types": "dist/index.d.ts",
     "main": "dist/index.cjs",
@@ -118,12 +118,12 @@
         "react-dom": "^18.2.0"
     },
     "dependencies": {
-        "document-model": "^1.0.30",
         "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
         "@graphql-codegen/core": "^4.0.2",
         "@graphql-codegen/typescript": "^4.0.4",
         "@internationalized/date": "^3.5.1",
         "date-fns": "^3.3.1",
+        "document-model": "^1.0.30",
         "jsonc-parser": "^3.2.1",
         "jszip": "^3.10.1",
         "react-aria-components": "1.0.1",
