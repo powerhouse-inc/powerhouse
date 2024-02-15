@@ -22,16 +22,16 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 20
-                  cache: 'yarn'
+                  cache: 'pnpm'
 
             - name: Install dependencies
-              run: yarn --frozen-lockfile
+              run: pnpm install --frozen-lockfile
 
             - name: Lint
-              run: yarn lint
+              run: pnpm run lint
 
             - name: Check types
-              run: yarn check-types
+              run: pnpm run check-types
 
     test:
         name: Test
@@ -47,13 +47,13 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 20
-                  cache: 'yarn'
+                  cache: 'pnpm'
 
             - name: Install dependencies
-              run: yarn --frozen-lockfile
+              run: pnpm install --frozen-lockfile
 
             - name: Test
-              run: yarn test
+              run: pnpm run test
 
     build:
         name: Build
@@ -70,10 +70,10 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 20
-                  cache: 'yarn'
+                  cache: 'pnpm'
 
             - name: Install dependencies
-              run: yarn --frozen-lockfile
+              run: pnpm install --frozen-lockfile
 
             - name: Build
-              run: yarn build
+              run: pnpm run build
