@@ -1,4 +1,4 @@
-import { DivProps, mergeClassNameProps } from '@/powerhouse';
+import { DivProps, Icon, mergeClassNameProps } from '@/powerhouse';
 import React from 'react';
 import {
     Key,
@@ -11,6 +11,10 @@ import {
     TabsProps,
 } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
+
+const defaultLabels: RWATabsProps['labels'] = {
+    export: 'Export',
+};
 
 const getTabStyles = (tabProps: TabRenderProps) => {
     const { isSelected, isDisabled } = tabProps;
@@ -34,25 +38,76 @@ export interface RWATabsProps extends TabsProps {
     tabListContainerProps?: DivProps;
     tabListProps?: TabListProps<RWATabItem>;
     tabProps?: TabProps;
+    onUndo: () => void;
+    onRedo: () => void;
+    onExport: () => void;
+    onClose: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
+    labels?: {
+        export: string;
+    };
 }
 
 export const RWATabs: React.FC<RWATabsProps> = props => {
     const {
         tabs,
         children,
+        labels = defaultLabels,
         tabListContainerProps = {},
         tabListProps = {},
         tabProps = {},
+        onRedo,
+        onUndo,
+        canRedo,
+        canUndo,
+        onExport,
+        onClose,
         ...tabsProps
     } = props;
 
     const { className: tabPropsClassName, ...restTabProps } = tabProps;
 
+    const buttonClass =
+        'w-8 h-8 tab-shadow rounded-lg flex justify-center items-center';
+
     return (
         <Tabs {...tabsProps}>
             <div
-                {...mergeClassNameProps(tabListContainerProps, 'flex flex-col')}
+                {...mergeClassNameProps(
+                    tabListContainerProps,
+                    'flex items-center justify-between',
+                )}
             >
+                <div className="flex w-40 gap-x-2">
+                    <button
+                        className={buttonClass}
+                        onClick={onUndo}
+                        disabled={!canUndo}
+                    >
+                        <Icon
+                            name="redo-arrow"
+                            size={24}
+                            className={twMerge(
+                                'scale-x-[-1]',
+                                canUndo ? 'active:opacity-50' : 'text-gray-500',
+                            )}
+                        />
+                    </button>
+                    <button
+                        className={buttonClass}
+                        onClick={onRedo}
+                        disabled={!canRedo}
+                    >
+                        <Icon
+                            name="redo-arrow"
+                            size={24}
+                            className={twMerge(
+                                canRedo ? 'active:opacity-50' : 'text-gray-500',
+                            )}
+                        />
+                    </button>
+                </div>
                 <TabList
                     {...mergeClassNameProps(
                         tabListProps,
@@ -79,6 +134,20 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
                         </Tab>
                     ))}
                 </TabList>
+                <div className="flex w-40 justify-end gap-x-2">
+                    <button
+                        className="flex h-8 items-center gap-x-2 rounded border border-gray-200 px-3 text-sm font-semibold text-gray-900 active:opacity-50"
+                        onClick={onExport}
+                    >
+                        {labels.export} <Icon name="save" size={16} />
+                    </button>
+                    <button
+                        className="flex size-8 items-center justify-center rounded border border-gray-200 active:opacity-50"
+                        onClick={onClose}
+                    >
+                        <Icon name="xmark" />
+                    </button>
+                </div>
             </div>
             {children}
         </Tabs>

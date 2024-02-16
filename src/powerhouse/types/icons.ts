@@ -33,6 +33,7 @@ export type IconName =
     | 'plus'
     | 'plus-circle'
     | 'project'
+    | 'redo-arrow'
     | 'save'
     | 'search'
     | 'server'
