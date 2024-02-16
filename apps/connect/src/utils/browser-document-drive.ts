@@ -22,7 +22,7 @@ BrowserDocumentDriveServer.initialize()
                         },
                         local: {
                             availableOffline: false,
-                            sharingType: 'shared',
+                            sharingType: 'private',
                             listeners: [],
                             triggers: [],
                         },
