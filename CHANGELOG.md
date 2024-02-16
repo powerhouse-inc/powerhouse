@@ -1,3 +1,10 @@
+# [1.0.0-alpha.61](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.60...v1.0.0-alpha.61) (2024-02-16)
+
+
+### Features
+
+* added rwa editor controls for undo/redo export and close ([7a4f4d2](https://github.com/powerhouse-inc/design-system/commit/7a4f4d222a88ff4ec3d46f2f6bd67d337f71be0c))
+
 # [1.0.0-alpha.60](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.59...v1.0.0-alpha.60) (2024-02-16)
 
 
