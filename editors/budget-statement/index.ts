@@ -1,4 +1,4 @@
-import { Editor as EditorModule } from 'document-model/document';
+import { ExtendedEditor } from '../types';
 import Editor from './editor';
 import {
     BudgetStatementAction,
@@ -6,13 +6,17 @@ import {
     BudgetStatementState,
 } from '../../document-models/budget-statement';
 
-export const module: EditorModule<
+export const module: ExtendedEditor<
     BudgetStatementState,
     BudgetStatementAction,
     BudgetStatementLocalState
 > = {
     Component: Editor,
     documentTypes: ['powerhouse/budget-statement'],
+    config: {
+        id: 'budget-statement-editor',
+        disableExternalControls: false,
+    },
 };
 
 export default module;

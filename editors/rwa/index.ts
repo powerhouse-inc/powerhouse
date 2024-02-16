@@ -1,18 +1,23 @@
-import { Editor as EditorModule } from 'document-model/document';
-import Editor from './editor';
+import Editor, { CustomEditorProps } from './editor';
 import {
     RealWorldAssetsState,
     RealWorldAssetsLocalState,
     RealWorldAssetsAction,
 } from '../../document-models/real-world-assets';
+import { ExtendedEditor } from '../types';
 
-export const module: EditorModule<
+export const module: ExtendedEditor<
     RealWorldAssetsState,
     RealWorldAssetsAction,
-    RealWorldAssetsLocalState
+    RealWorldAssetsLocalState,
+    CustomEditorProps
 > = {
     Component: Editor,
     documentTypes: ['makerdao/rwa-portfolio'],
+    config: {
+        id: 'rwa-editor',
+        disableExternalControls: true,
+    },
 };
 
 export default module;
