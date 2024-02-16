@@ -6,11 +6,11 @@ settings:
 
 dependencies:
   '@powerhousedao/design-system':
-    specifier: 1.0.0-alpha.59
-    version: 1.0.0-alpha.59(@types/react-dom@18.2.19)(@types/react@18.2.55)(react-aria-components@1.1.0)(react-aria@3.32.0)(react-dom@18.2.0)(react@18.2.0)
+    specifier: 1.0.0-alpha.61
+    version: 1.0.0-alpha.61(@types/react-dom@18.2.19)(@types/react@18.2.55)(react-aria-components@1.1.0)(react-aria@3.32.0)(react-dom@18.2.0)(react@18.2.0)
   document-drive:
     specifier: ^0.0.30
-    version: 0.0.30(@prisma/client@5.8.1)(document-model-libs@1.1.48)(document-model@1.0.30)(localforage@1.10.0)(sequelize@6.37.0)(sqlite3@5.1.7)
+    version: 0.0.30(@prisma/client@5.8.1)(document-model-libs@1.1.51)(document-model@1.0.30)(localforage@1.10.0)(sequelize@6.37.0)(sqlite3@5.1.7)
   document-model:
     specifier: ^1.0.30
     version: 1.0.30
@@ -128,8 +128,8 @@ devDependencies:
     specifier: ^10.4.14
     version: 10.4.17(postcss@8.4.35)
   document-model-libs:
-    specifier: ^1.1.48
-    version: 1.1.48(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)
+    specifier: ^1.1.51
+    version: 1.1.51(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)
   electron:
     specifier: 28.2.3
     version: 28.2.3
@@ -2504,8 +2504,8 @@ packages:
       config-chain: 1.1.13
     dev: true
 
-  /@powerhousedao/design-system@1.0.0-alpha.59(@types/react-dom@18.2.19)(@types/react@18.2.55)(react-aria-components@1.1.0)(react-aria@3.32.0)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-occeiOiGDCfyTDo5kgNfC1Tu8LFt6qTiN6ZFbbeImRX15E1sElKqH8jFCFiZESGWsjWRgVdj1JZxVuzfDPpl4A==}
+  /@powerhousedao/design-system@1.0.0-alpha.61(@types/react-dom@18.2.19)(@types/react@18.2.55)(react-aria-components@1.1.0)(react-aria@3.32.0)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-RQMbZSZdQFQyLO2wHSgwQ5KbKCOmEAow21xisRuffRz/ijZISQEaQmOXad0M7AZslD29Xjt4Y3dAbSeDXwdw2A==}
     peerDependencies:
       react: ^18.2.0
       react-aria: ^3.32.0
@@ -6015,7 +6015,7 @@ packages:
       esutils: 2.0.3
     dev: true
 
-  /document-drive@0.0.30(@prisma/client@5.8.1)(document-model-libs@1.1.48)(document-model@1.0.30)(localforage@1.10.0)(sequelize@6.37.0)(sqlite3@5.1.7):
+  /document-drive@0.0.30(@prisma/client@5.8.1)(document-model-libs@1.1.51)(document-model@1.0.30)(localforage@1.10.0)(sequelize@6.37.0)(sqlite3@5.1.7):
     resolution: {integrity: sha512-BEkPjBLtYTkTyS4wqMDwaA5SF3Th0TQZGxZOX/9o9l8rV0BYTcmEqiVM4tjmMJpUnD7NNgivVwVFH8aD9gaCpA==}
     peerDependencies:
       '@prisma/client': 5.8.1
@@ -6027,7 +6027,7 @@ packages:
     dependencies:
       '@prisma/client': 5.8.1
       document-model: 1.0.30
-      document-model-libs: 1.1.48(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)
+      document-model-libs: 1.1.51(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)
       graphql: 16.8.1
       graphql-request: 6.1.0(graphql@16.8.1)
       json-stringify-deterministic: 1.0.12
@@ -6040,8 +6040,8 @@ packages:
       - encoding
     dev: false
 
-  /document-model-libs@1.1.48(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-8JG9z+mwxrpRKOCa5Vng7OlIZNRMna3ooTKMHnpCohVkdbNOXjdZjoTnJne0zfJzuOpDvFSaOUXSB5HWrvHrNA==}
+  /document-model-libs@1.1.51(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-58SYxLfSklaImunLD/kcfXLpKrlNz1yIbIHYtBFto2SQmAhEoBpr8d1bMDbqX03Q7HrPHzRf0qnUfwlS5y22wA==}
     peerDependencies:
       react: ^18.2.0
       react-dom: ^18.2.0
