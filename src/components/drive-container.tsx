@@ -28,10 +28,10 @@ interface DriveContainerProps {
     setDisableHoverStyles?: (value: boolean) => void;
 }
 
-function isPublicDriveInput(
+function isRemoteDriveInput(
     input: AddDriveInput | AddPublicDriveInput,
 ): input is AddPublicDriveInput {
-    return input.sharingType === 'PUBLIC';
+    return Object.keys(input).includes('url');
 }
 
 const DriveSections = [
@@ -166,7 +166,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     const onCreateDriveHandler: DriveViewProps['onCreateDrive'] =
         async input => {
             try {
-                if (isPublicDriveInput(input)) {
+                if (isRemoteDriveInput(input)) {
                     await addRemoteDrive(input.url, {
                         sharingType: input.sharingType,
                         availableOffline: input.availableOffline,
@@ -195,7 +195,7 @@ export default function DriveContainer(props: DriveContainerProps) {
                 } else {
                     await addDrive({
                         global: {
-                            id: isPublicDriveInput(input) ? input.id : '',
+                            id: isRemoteDriveInput(input) ? input.id : '',
                             icon: null,
                             name: input.driveName,
                             slug: null,
@@ -203,7 +203,7 @@ export default function DriveContainer(props: DriveContainerProps) {
                         local: {
                             availableOffline: input.availableOffline,
                             sharingType: input.sharingType.toLowerCase(),
-                            listeners: isPublicDriveInput(input)
+                            listeners: isRemoteDriveInput(input)
                                 ? [
                                       {
                                           block: true,
