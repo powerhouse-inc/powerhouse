@@ -1,56 +1,52 @@
 import { join } from './join';
 
 const rwaQuery = `... on RealWorldAssets {
-    state {
-      accounts {
+  state {
+    accounts {
+      id
+      reference
+      label
+    }
+    principalLenderAccountId
+    spvs {
+      id
+      name
+    }
+    feeTypes {
+      id
+      name
+      feeType
+      accountId
+    }
+    fixedIncomeTypes {
+      id
+      name
+    }
+    portfolio {
+      ... on FixedIncome {
         id
-        reference
-        label
-      }
-      principalLenderAccountId
-      spvs {
-        id
+        fixedIncomeTypeId
         name
+        spvId
+        maturity
+        purchaseDate
+        notional
+        purchasePrice
+        purchaseProceeds
+        totalDiscount
+        annualizedYield
+        ISIN
+        CUSIP
+        coupon
       }
-      feeTypes {
+      ... on Cash {
         id
-        name
-        feeType
-        accountId
-      }
-      fixedIncomeTypes {
-        id
-        name
-      }
-      portfolio {
-        ... on FixedIncome {
-          id
-          fixedIncomeTypeId
-          name
-          spvId
-          maturity
-          purchaseDate
-          notional
-          purchasePrice
-          purchaseProceeds
-          totalDiscount
-          marketValue
-          annualizedYield
-          realizedSurplus
-          totalSurplus
-          ISIN
-          CUSIP
-          coupon
-          currentValue
-        }
-        ... on Cash {
-          id
-          spvId
-          currency
-        }
+        spvId
+        currency
       }
     }
-  }`;
+  }
+}`;
 
 const accountSnapshot = `... on AccountSnapshot {
     state {
