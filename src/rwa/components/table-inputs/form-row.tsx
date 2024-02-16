@@ -24,7 +24,7 @@ export const RWAFormRow: React.FC<RWAFormRowProps> = ({
             <div className="h-px flex-1 border-b border-dashed border-gray-400" />
         )}
         <div className="ml-2 flex min-w-[25%] justify-end py-2 text-gray-900">
-            {value}
+            {value ? value : '--'}
         </div>
     </div>
 );

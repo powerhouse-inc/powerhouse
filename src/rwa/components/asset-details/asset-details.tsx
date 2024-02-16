@@ -92,7 +92,7 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
     const isCreateOperation = operation === 'create';
 
     return (
-        <div {...mergeClassNameProps(restProps, 'flex flex-col')}>
+        <div {...mergeClassNameProps(restProps, 'flex flex-col bg-white')}>
             <div className="mt-4 flex h-12 items-center justify-between px-3">
                 <div className="font-semibold">{labels.title}</div>
                 <div>

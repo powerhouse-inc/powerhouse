@@ -1,7 +1,8 @@
 import { Icon } from '@/powerhouse';
 import { FixedIncomeAsset, FixedIncomeType, SPV } from '@/rwa';
+import { addDays } from 'date-fns';
 import { useRef } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { twJoin, twMerge } from 'tailwind-merge';
 import { RWATable, RWATableCell, RWATableProps, useSortTableItems } from '.';
 import { RWAAssetDetails } from '../asset-details';
 import { RWAAssetDetailInputs } from '../asset-details/form';
@@ -19,11 +20,14 @@ export type FixedIncomeAssetsTableProps = Omit<
     fieldsPriority: (keyof FixedIncomeAsset)[];
     expandedRowId: string | undefined;
     selectedAssetToEdit?: FixedIncomeAsset;
+    showNewAssetForm: boolean;
     toggleExpandedRow: (id: string) => void;
     onClickDetails: (item: FixedIncomeAsset) => void;
     setSelectedAssetToEdit: (item: FixedIncomeAsset) => void;
     onCancelEdit: () => void;
-    onSubmitForm: (data: RWAAssetDetailInputs) => void;
+    onSubmitCreate: (data: RWAAssetDetailInputs) => void;
+    onSubmitEdit: (data: RWAAssetDetailInputs) => void;
+    setShowNewAssetForm: (show: boolean) => void;
 };
 
 export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
@@ -35,11 +39,14 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
         columnCountByTableWidth,
         expandedRowId,
         selectedAssetToEdit,
+        showNewAssetForm,
         toggleExpandedRow,
         onClickDetails,
         setSelectedAssetToEdit,
         onCancelEdit,
-        onSubmitForm,
+        onSubmitCreate,
+        onSubmitEdit,
+        setShowNewAssetForm,
         ...restProps
     } = props;
 
@@ -78,7 +85,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
                                 onCancelEdit();
                             }}
                             onSubmitForm={data => {
-                                onSubmitForm(data);
+                                onSubmitEdit(data);
                             }}
                         />
                     )
@@ -88,13 +95,13 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
                     key={item.id}
                     className={twMerge(
                         '[&>td:not(:first-child)]:border-l [&>td:not(:first-child)]:border-gray-300',
-                        index % 2 !== 0 && 'bg-gray-50',
+                        index % 2 !== 0 ? 'bg-gray-50' : 'bg-white',
                     )}
                 >
                     <RWATableCell>{index + 1}</RWATableCell>
                     {fields.map(field => (
                         <RWATableCell key={field}>
-                            {maybeStripTime(item[field]) ?? '-'}
+                            {maybeStripTime(item[field]) ?? '--'}
                         </RWATableCell>
                     ))}
                     <RWATableCell>
@@ -121,14 +128,56 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
     };
 
     return (
-        <RWATable
-            {...restProps}
-            className={twMerge(expandedRowId && 'max-h-max')}
-            onClickSort={sortHandler}
-            ref={tableContainerRef}
-            items={sortedItems}
-            header={headerLabels}
-            renderRow={renderRow}
-        />
+        <>
+            <RWATable
+                {...restProps}
+                className={twJoin(
+                    'rounded-b-none',
+                    expandedRowId && 'max-h-max',
+                )}
+                onClickSort={sortHandler}
+                ref={tableContainerRef}
+                items={sortedItems}
+                header={headerLabels}
+                renderRow={renderRow}
+            />
+            <button
+                onClick={() => setShowNewAssetForm(true)}
+                className="flex h-[42px] w-full items-center justify-center gap-x-2 rounded-b-lg border-x border-b border-gray-300 bg-white text-sm font-semibold text-gray-900"
+            >
+                <span>Create Asset</span>
+                <Icon name="plus" size={14} />
+            </button>
+            {showNewAssetForm && (
+                <div className="mt-4 rounded-md border border-gray-300 bg-white">
+                    <RWAAssetDetails
+                        asset={{
+                            id: '',
+                            name: '',
+                            fixedIncomeTypeId: fixedIncomeTypes[0].id,
+                            spvId: spvs[0].id,
+                            maturity: addDays(new Date(), 30)
+                                .toISOString()
+                                .split('T')[0],
+                            notional: 0,
+                            coupon: 0,
+                            purchasePrice: 0,
+                            purchaseDate: '',
+                            totalDiscount: 0,
+                            purchaseProceeds: 0,
+                            annualizedYield: 0,
+                        }}
+                        mode="edit"
+                        operation="create"
+                        fixedIncomeTypes={fixedIncomeTypes}
+                        spvs={spvs}
+                        onClose={() => setShowNewAssetForm(false)}
+                        onCancel={() => setShowNewAssetForm(false)}
+                        onSubmitForm={onSubmitCreate}
+                        hideNonEditableFields
+                    />
+                </div>
+            )}
+        </>
     );
 }

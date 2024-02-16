@@ -1,4 +1,4 @@
-import { FixedIncomeAsset, RWAAssetDetails } from '@/rwa';
+import { FixedIncomeAsset } from '@/rwa';
 import type { Meta, StoryObj } from '@storybook/react';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
@@ -17,13 +17,6 @@ import { getColumnCount } from './useColumnPriority';
 const meta: Meta<typeof RWAFixedIncomeAssetsTable> = {
     title: 'RWA/Components/RWAFixedIncomeAssetsTable',
     component: RWAFixedIncomeAssetsTable,
-    argTypes: {
-        items: { control: 'object' },
-        onCancelEdit: { action: 'onCancelEdit' },
-        onClickDetails: { action: 'onClickDetails' },
-        setSelectedAssetToEdit: { action: 'setSelectedAssetToEdit' },
-        onSubmitForm: { action: 'onSubmitForm' },
-    },
 };
 
 export default meta;
@@ -97,14 +90,14 @@ export const Primary: Story = {
                 setSelectedAssetToEdit(undefined);
             }, []);
 
-        const onSubmitEdit: FixedIncomeAssetsTableProps['onSubmitForm'] =
+        const onSubmitEdit: FixedIncomeAssetsTableProps['onSubmitEdit'] =
             useCallback(data => {
                 const asset = createAssetFromFormInputs(data);
                 console.log({ asset, data });
                 setSelectedAssetToEdit(undefined);
             }, []);
 
-        const onSubmitCreate: FixedIncomeAssetsTableProps['onSubmitForm'] =
+        const onSubmitCreate: FixedIncomeAssetsTableProps['onSubmitCreate'] =
             useCallback(data => {
                 const asset = createAssetFromFormInputs(data);
                 console.log({ asset, data });
@@ -115,48 +108,20 @@ export const Primary: Story = {
             ...args,
             expandedRowId,
             selectedAssetToEdit,
+            showNewAssetForm,
+            setShowNewAssetForm,
             toggleExpandedRow,
             onClickDetails,
             setSelectedAssetToEdit,
             onCancelEdit,
-            onSubmitForm: selectedAssetToEdit ? onSubmitEdit : onSubmitCreate,
+            onSubmitCreate,
+            onSubmitEdit,
         };
         return (
             <div className="flex flex-col gap-4">
                 <div className="w-screen">
                     <p>parent element width: 100%</p>
                     <RWAFixedIncomeAssetsTable {...argsWithHandlers} />
-                    {showNewAssetForm && (
-                        <div className="mt-4 rounded-md border border-gray-300 bg-white">
-                            <RWAAssetDetails
-                                asset={{
-                                    id: '',
-                                    name: '',
-                                    fixedIncomeTypeId:
-                                        mockFixedIncomeTypes[0].id,
-                                    spvId: mockSpvs[0].id,
-                                    maturity: new Date()
-                                        .toISOString()
-                                        .split('T')[0],
-                                    notional: 0,
-                                    coupon: 0,
-                                    purchasePrice: 0,
-                                    purchaseDate: '',
-                                    totalDiscount: 0,
-                                    purchaseProceeds: 0,
-                                    annualizedYield: 0,
-                                }}
-                                mode="edit"
-                                operation="create"
-                                fixedIncomeTypes={mockFixedIncomeTypes}
-                                spvs={mockSpvs}
-                                onClose={() => setShowNewAssetForm(false)}
-                                onCancel={() => setShowNewAssetForm(false)}
-                                onSubmitForm={onSubmitCreate}
-                                hideNonEditableFields
-                            />
-                        </div>
-                    )}
                 </div>
                 {Object.keys(columnCountByTableWidth)
                     .map(Number)
