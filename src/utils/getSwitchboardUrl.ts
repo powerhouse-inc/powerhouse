@@ -134,7 +134,7 @@ export const getSwitchboardUrl = (
     documentId: string,
 ) => {
     const query = getQuery(documentId, documentType);
-    const url = join(baseUrl, 'graphql/explorer', driveId) + `?query=${query}`;
+    const url = join(baseUrl, 'explorer', driveId) + `?query=${query}`;
 
     return url.toString();
 };
