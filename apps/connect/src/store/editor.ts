@@ -1,13 +1,13 @@
+import { ExtendedEditor } from 'document-model-libs';
 import * as Editors from 'document-model-libs/editors';
-import { Editor } from 'document-model/document';
 import { atom, useAtomValue } from 'jotai';
 
-const editors = [...Object.values(Editors)] as Editor[];
+const editors = [...Object.values(Editors)] as ExtendedEditor[];
 
 export const editorsAtom = atom(editors);
 export const useEditors = () => useAtomValue(editorsAtom);
 
-const getEditor = (documentType: string, editors: Editor[]) =>
+const getEditor = (documentType: string, editors: ExtendedEditor[]) =>
     editors.find(e => e.documentTypes.includes(documentType)) ||
     editors.find(e => e.documentTypes.includes('*'));
 

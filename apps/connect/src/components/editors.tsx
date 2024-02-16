@@ -98,27 +98,32 @@ export const DocumentEditor: React.FC<IProps> = ({
     }
 
     const EditorComponent = editor.Component;
+    const { disableExternalControls } = editor.config || {};
 
     return (
         <div className="relative h-full">
-            <div className="mb-4 flex justify-end gap-10">
-                <Button onClick={onExport}>Export</Button>
-                <div className="flex gap-4">
-                    <Button onClick={undo} disabled={!canUndo}>
-                        Undo
-                    </Button>
-                    <Button onClick={redo} disabled={!canRedo}>
-                        Redo
-                    </Button>
+            {!disableExternalControls && (
+                <div className="mb-4 flex justify-end gap-10">
+                    <Button onClick={onExport}>Export</Button>
+                    <div className="flex gap-4">
+                        <Button onClick={undo} disabled={!canUndo}>
+                            Undo
+                        </Button>
+                        <Button onClick={redo} disabled={!canRedo}>
+                            Redo
+                        </Button>
+                    </div>
+                    <div className="flex gap-4">
+                        <Button onClick={onClose}>Close</Button>
+                    </div>
                 </div>
-                <div className="flex gap-4">
-                    <Button onClick={onClose}>Close</Button>
-                </div>
-            </div>
+            )}
             <EditorComponent
                 editorContext={{ theme }}
                 document={document}
                 dispatch={dispatch}
+                onClose={onClose}
+                onExport={onExport}
             />
         </div>
     );
