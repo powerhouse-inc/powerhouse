@@ -1,3 +1,10 @@
+# [1.0.0-alpha.60](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.59...v1.0.0-alpha.60) (2024-02-16)
+
+
+### Features
+
+* update add asset icon ([#205](https://github.com/powerhouse-inc/design-system/issues/205)) ([a09ade2](https://github.com/powerhouse-inc/design-system/commit/a09ade20bcbc96fd77b8c4e665ce7da157500e9d))
+
 # [1.0.0-alpha.59](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.58...v1.0.0-alpha.59) (2024-02-15)
 
 
