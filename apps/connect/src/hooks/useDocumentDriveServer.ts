@@ -3,6 +3,8 @@ import {
     DriveInput,
     IDocumentDriveServer,
     RemoteDriveOptions,
+    StrandUpdate,
+    SyncStatus,
 } from 'document-drive/server';
 import { isDocumentDrive } from 'document-drive/utils';
 import {
@@ -341,6 +343,16 @@ export function useDocumentDriveServer(
         );
     }
 
+    function onStrandUpdate(cb: (update: StrandUpdate) => void) {
+        return server.on('strandUpdate', cb);
+    }
+
+    function onSyncStatus(
+        cb: (driveId: string, status: SyncStatus, error?: Error) => void,
+    ) {
+        return server.on('syncStatus', cb);
+    }
+
     return useMemo(
         () => ({
             documentDrives,
@@ -360,6 +372,8 @@ export function useDocumentDriveServer(
             renameDrive,
             setDriveAvailableOffline,
             setDriveSharingType,
+            onStrandUpdate,
+            onSyncStatus,
         }),
         [documentDrives],
     );
