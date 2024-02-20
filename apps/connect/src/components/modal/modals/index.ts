@@ -1,9 +1,11 @@
+import { CreateDocumentModal } from './CreateDocumentModal';
 import { DeleteItemModal } from './DeleteItemModal';
 import { UpgradeDriveModal } from './UpgradeDriveModal';
 
 export const modals = {
     deleteItem: DeleteItemModal,
     upgradeDrive: UpgradeDriveModal,
+    createDocument: CreateDocumentModal,
 } as const;
 
 export type Modals = typeof modals;
