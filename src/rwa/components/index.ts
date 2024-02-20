@@ -1,7 +1,5 @@
 export * from './asset-details';
 export * from './button';
-export * from './create-asset-form';
-export * from './create-asset-modal';
 export * from './date-picker';
 export * from './fees-table';
 export * from './select';
