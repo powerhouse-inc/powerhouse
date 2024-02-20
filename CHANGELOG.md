@@ -1,3 +1,10 @@
+# [1.0.0-alpha.64](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.63...v1.0.0-alpha.64) (2024-02-20)
+
+
+### Features
+
+* added rename modal + support for write mode file-item ([5e101eb](https://github.com/powerhouse-inc/design-system/commit/5e101eb68c151f14b2cb6731151787900d9ecc3d))
+
 # [1.0.0-alpha.63](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.62...v1.0.0-alpha.63) (2024-02-20)
 
 
