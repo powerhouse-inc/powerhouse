@@ -354,12 +354,11 @@ export function useDocumentDriveServer(
     ): Promise<SyncStatus | undefined> {
         if (getIsLocalDrive(type)) return;
         try {
-            server.getSyncStatus(driveId);
+            return server.getSyncStatus(driveId);
         } catch (error) {
             console.error(error);
             return ERROR;
         }
-        return ERROR;
     }
 
     function onStrandUpdate(cb: (update: StrandUpdate) => void) {
