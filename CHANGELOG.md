@@ -1,3 +1,10 @@
+# [1.0.0-alpha.62](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.61...v1.0.0-alpha.62) (2024-02-20)
+
+
+### Features
+
+* update sync icons for new sync algorithm ([#212](https://github.com/powerhouse-inc/design-system/issues/212)) ([d050cef](https://github.com/powerhouse-inc/design-system/commit/d050ceff3a696e8f7a71e6a130a99dcbb613bf48))
+
 # [1.0.0-alpha.61](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.60...v1.0.0-alpha.61) (2024-02-16)
 
 
