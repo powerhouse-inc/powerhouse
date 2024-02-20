@@ -21,7 +21,7 @@ export const useSelectedPath = () => {
                 : undefined;
 
         const drive = documentDrives.find(
-            drive => drive.state.global.id === driveId
+            drive => drive.state.global.id === driveId,
         );
         const file = drive?.state.global.nodes.find(node => node.id === nodeId);
         // if drive was deleted then removes selected path
@@ -38,7 +38,11 @@ export const useSelectedPath = () => {
 };
 
 export const useFileNodeDocument = (drive?: string, id?: string) => {
-    const { openFile, addOperation: _addOperation } = useDocumentDriveServer();
+    const {
+        openFile,
+        addOperation: _addOperation,
+        onStrandUpdate,
+    } = useDocumentDriveServer();
     const [selectedDocument, setSelectedDocument] = useState<
         Document | undefined
     >();
@@ -54,12 +58,24 @@ export const useFileNodeDocument = (drive?: string, id?: string) => {
     }
 
     useEffect(() => {
+        let handler: (() => void) | undefined = undefined;
         if (drive && id) {
+            handler = onStrandUpdate(strand => {
+                if (strand.driveId === drive && strand.documentId === id) {
+                    fetchDocument(drive, id);
+                }
+            });
             fetchDocument(drive, id);
         } else {
             setSelectedDocument(undefined);
         }
+
+        return () => {
+            handler?.();
+        };
     }, [drive, id]);
+
+    useEffect(() => {}, [drive, id]);
 
     async function addOperation(operation: Operation) {
         if (drive && id) {

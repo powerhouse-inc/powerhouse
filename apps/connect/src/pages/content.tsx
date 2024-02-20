@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
+import { useModal } from 'src/components/modal';
 import { SearchBar } from 'src/components/search-bar';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
@@ -35,8 +36,9 @@ const Content = () => {
     const selectedFolder = getItemByPath(selectedPath || '');
     const driveID = getRootPath(selectedFolder?.path ?? '');
     const decodedDriveID = decodeID(driveID);
+    const { showModal } = useModal();
 
-    const { addFile, addDocument, deleteNode, documentDrives, renameNode } =
+    const { addFile, deleteNode, documentDrives, renameNode } =
         useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
     const getDocumentModel = useGetDocumentModel();
@@ -92,30 +94,14 @@ const Content = () => {
         addOperation(operation);
     }
 
-    async function createDocument(documentModel: DocumentModel) {
-        if (!driveID || !selectedFolder) {
-            throw new Error('No drive selected');
-        }
-
-        // remove first segment of path
-        const parentFolder = selectedFolder.path.split('/').slice(1).pop();
-
-        const node = await addDocument(
-            decodedDriveID,
-            `New ${documentModel.documentModel.name}`,
-            documentModel.documentModel.id,
-            parentFolder ? decodeID(parentFolder) : undefined,
-        );
-
-        if (node) {
-            if (!driveNodes) {
-                throw new Error(`Drive with id ${decodedDriveID} not found`);
-            }
-            setSelectedFileNode({
-                drive: decodedDriveID,
-                id: node.id,
-            });
-        }
+    function createDocument(documentModel: DocumentModel) {
+        showModal('createDocument', {
+            documentModel,
+            selectedFolder,
+            driveID: decodedDriveID,
+            driveNodes,
+            setSelectedFileNode,
+        });
     }
 
     async function exportDocument(document: Document) {
