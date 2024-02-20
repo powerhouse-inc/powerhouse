@@ -8,6 +8,7 @@ import {
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
+import { FileNode } from 'document-model-libs/document-drive';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
 import { useEffect, useState } from 'react';
@@ -16,8 +17,11 @@ import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
 import { useModal } from 'src/components/modal';
 import { SearchBar } from 'src/components/search-bar';
+import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
+import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
 import { preloadTabs, useFileNodeDocument, useSelectedPath } from 'src/store';
 import {
     useFilteredDocumentModels,
@@ -37,6 +41,9 @@ const Content = () => {
     const driveID = getRootPath(selectedFolder?.path ?? '');
     const decodedDriveID = decodeID(driveID);
     const { showModal } = useModal();
+    const getDocumentById = useGetDocumentById();
+    const { isRemoteDrive } = useDocumentDriveById(decodedDriveID);
+    const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);
 
     const { addFile, deleteNode, documentDrives, renameNode } =
         useDocumentDriveServer();
@@ -149,6 +156,15 @@ const Content = () => {
         }
     };
 
+    const onOpenSwitchboardLink = async () => {
+        const doc = getDocumentById(
+            decodedDriveID,
+            selectedFileNode?.id || '',
+        ) as FileNode | undefined;
+
+        await openSwitchboardLink(doc);
+    };
+
     return (
         <div className="flex h-full flex-col overflow-auto bg-gray-100 p-6">
             {selectedFileNode && selectedDocument ? (
@@ -159,6 +175,7 @@ const Content = () => {
                         onChange={onDocumentChangeHandler}
                         onExport={() => exportDocument(selectedDocument)}
                         onAddOperation={handleAddOperation}
+                        {...(isRemoteDrive && { onOpenSwitchboardLink })}
                     />
                 </div>
             ) : (
