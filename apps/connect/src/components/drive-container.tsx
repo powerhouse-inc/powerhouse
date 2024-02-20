@@ -17,10 +17,7 @@ import {
     SortOptions,
     useDocumentDriveServer,
 } from 'src/hooks/useDocumentDriveServer';
-import {
-    driveToBaseItems,
-    useDrivesContainer,
-} from 'src/hooks/useDrivesContainer';
+import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useSelectedPath } from 'src/store';
 
 interface DriveContainerProps {
@@ -54,20 +51,24 @@ export default function DriveContainer(props: DriveContainerProps) {
         addDrive,
         addRemoteDrive,
     } = useDocumentDriveServer();
-    const { onItemOptionsClick, onItemClick, onSubmitInput } =
+    const { onItemOptionsClick, onItemClick, onSubmitInput, driveToBaseItems } =
         useDrivesContainer();
 
-    function updateBaseItems() {
-        const baseItems: Array<BaseTreeItem> =
-            documentDrives.reduce<Array<BaseTreeItem>>((acc, drive) => {
-                return [...acc, ...driveToBaseItems(drive)];
-            }, []) ?? [];
-
-        setBaseItems(baseItems);
-    }
-
     useEffect(() => {
-        updateBaseItems();
+        updateBaseItems().catch(console.error);
+
+        async function updateBaseItems() {
+            const baseItems: Array<BaseTreeItem> =
+                documentDrives.length > 0
+                    ? (
+                          await Promise.all(
+                              documentDrives.map(driveToBaseItems),
+                          )
+                      ).flat()
+                    : [];
+
+            setBaseItems(baseItems);
+        }
     }, [documentDrives]);
 
     // Auto select first drive if there is no selected path
@@ -145,6 +146,8 @@ export default function DriveContainer(props: DriveContainerProps) {
                         event.dropOperation === 'copy'
                             ? 'UPDATE_AND_COPY'
                             : 'UPDATE_AND_MOVE',
+                    sharingType: item.data.sharingType,
+                    availableOffline: item.data.availableOffline,
                 });
                 return;
             }
