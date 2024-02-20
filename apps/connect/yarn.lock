@@ -2057,10 +2057,10 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@1.0.0-alpha.64":
-  version "1.0.0-alpha.64"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.64.tgz#42d924a4b5f1d50ca92ebbb0af77c26eb49b6c5f"
-  integrity sha512-aQr98xy9Xj8hQRQVlb48KdvRWe9xuBd/IJJLzXJVAHPQi4fosA4DQLFC+NvzUt5d+vWB0cnHwywfXwjbLjFCqQ==
+"@powerhousedao/design-system@1.0.0-alpha.65":
+  version "1.0.0-alpha.65"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.65.tgz#3f8ef0f5d8e4e9a41fd71fc7b4ceef8c2c6054e5"
+  integrity sha512-Besb4najtPQ7FgFyuOKEAmuL9Jb7GGQpzFOO1RC0+OBY4rASNtPhfH/bQk6mKN4FsTPB69wZD6y4ewtlCvjKcQ==
   dependencies:
     "@internationalized/date" "^3.5.1"
     "@radix-ui/react-dialog" "^1.0.5"
@@ -5269,10 +5269,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@^0.0.30:
-  version "0.0.30"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-0.0.30.tgz#0cc5a959223ce85ffadae7668af698e7facda12a"
-  integrity sha512-BEkPjBLtYTkTyS4wqMDwaA5SF3Th0TQZGxZOX/9o9l8rV0BYTcmEqiVM4tjmMJpUnD7NNgivVwVFH8aD9gaCpA==
+document-drive@1.0.0-alpha.3:
+  version "1.0.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-1.0.0-alpha.3.tgz#035066a37ec9f217eb135788de4b1c83b9b50c75"
+  integrity sha512-y7JqumZ8uAceocSLDAkCESgeVart0sbbJpGYQr9rs+EcnvFl0hXX4bfNOnuVe9Ns51GV2+qrq0vHKLt1mh50jQ==
   dependencies:
     graphql "^16.8.1"
     graphql-request "^6.1.0"
