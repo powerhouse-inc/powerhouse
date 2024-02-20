@@ -1,8 +1,14 @@
-import { SharingType } from '@powerhousedao/design-system';
+import {
+    DriveType,
+    ERROR,
+    SharingType,
+    getIsLocalDrive,
+} from '@powerhousedao/design-system';
 import {
     DriveInput,
     IDocumentDriveServer,
     RemoteDriveOptions,
+    SyncStatus,
 } from 'document-drive/server';
 import { isDocumentDrive } from 'document-drive/utils';
 import {
@@ -341,6 +347,20 @@ export function useDocumentDriveServer(
         );
     }
 
+    async function getSyncStatus(
+        driveId: string,
+        type: DriveType,
+    ): Promise<SyncStatus | undefined> {
+        if (getIsLocalDrive(type)) return;
+        try {
+            server.getSyncStatus(driveId);
+        } catch (error) {
+            console.error(error);
+            return ERROR;
+        }
+        return ERROR;
+    }
+
     return useMemo(
         () => ({
             documentDrives,
@@ -360,6 +380,7 @@ export function useDocumentDriveServer(
             renameDrive,
             setDriveAvailableOffline,
             setDriveSharingType,
+            getSyncStatus,
         }),
         [documentDrives],
     );

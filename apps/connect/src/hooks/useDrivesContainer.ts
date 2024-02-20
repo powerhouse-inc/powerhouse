@@ -1,17 +1,13 @@
 import {
     BaseTreeItem,
     CLOUD_DRIVE,
-    DriveType,
     DriveViewProps,
-    ERROR,
     LOCAL_DRIVE,
     PUBLIC_DRIVE,
-    SyncStatus,
     TreeItem,
     SharingType as TreeItemSharingType,
     decodeID,
     encodeID,
-    getIsLocalDrive,
     getRootPath,
     useItemActions,
 } from '@powerhousedao/design-system';
@@ -49,50 +45,6 @@ function getDriveBaseItemType(sharingType: string) {
     }
 }
 
-async function getSyncStatus(
-    driveId: string,
-    type: DriveType,
-): Promise<SyncStatus | undefined> {
-    if (getIsLocalDrive(type)) return;
-    try {
-        (await window.electronAPI?.documentDrive.getSyncStatus(
-            driveId,
-        )) as SyncStatus;
-    } catch (error) {
-        console.error(error);
-        return ERROR;
-    }
-    return ERROR;
-}
-
-export async function driveToBaseItems(drive: DocumentDriveDocument) {
-    const driveID = encodeID(drive.state.global.id);
-    const { id, name } = drive.state.global;
-    const { sharingType, availableOffline } = drive.state.local;
-    const driveBaseItemType = getDriveBaseItemType(sharingType || '');
-    const driveNode: BaseTreeItem = {
-        id: id,
-        label: name,
-        path: driveID,
-        type: driveBaseItemType,
-        sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
-        availableOffline,
-        syncStatus: await getSyncStatus(driveID, driveBaseItemType),
-    };
-
-    const nodes: Array<BaseTreeItem> = drive.state.global.nodes.map(
-        (node, _i, nodes) => ({
-            id: node.id,
-            label: node.name,
-            path: path.join(driveID, getNodePath(node, nodes)),
-            type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
-            sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
-            availableOffline,
-        }),
-    );
-    return [driveNode, ...nodes];
-}
-
 export function useDrivesContainer() {
     const actions = useItemActions();
     const { showModal } = useModal();
@@ -107,6 +59,7 @@ export function useDrivesContainer() {
         setDriveSharingType,
         documentDrives,
         copyOrMoveNode,
+        getSyncStatus,
     } = useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
@@ -264,10 +217,39 @@ export function useDrivesContainer() {
         updateNodeName(item, driveID);
     };
 
+    async function driveToBaseItems(drive: DocumentDriveDocument) {
+        const driveID = encodeID(drive.state.global.id);
+        const { id, name } = drive.state.global;
+        const { sharingType, availableOffline } = drive.state.local;
+        const driveBaseItemType = getDriveBaseItemType(sharingType || '');
+        const driveNode: BaseTreeItem = {
+            id: id,
+            label: name,
+            path: driveID,
+            type: driveBaseItemType,
+            sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
+            availableOffline,
+            syncStatus: await getSyncStatus(driveID, driveBaseItemType),
+        };
+
+        const nodes: Array<BaseTreeItem> = drive.state.global.nodes.map(
+            (node, _i, nodes) => ({
+                id: node.id,
+                label: node.name,
+                path: path.join(driveID, getNodePath(node, nodes)),
+                type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
+                sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
+                availableOffline,
+            }),
+        );
+        return [driveNode, ...nodes];
+    }
+
     return {
         onItemClick,
         onItemOptionsClick,
         onSubmitInput,
         updateNodeName,
+        driveToBaseItems,
     };
 }
