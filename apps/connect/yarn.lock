@@ -2057,10 +2057,10 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@1.0.0-alpha.61":
-  version "1.0.0-alpha.61"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.61.tgz#08695dd379280f220936a8154c7010c571ce6094"
-  integrity sha512-RQMbZSZdQFQyLO2wHSgwQ5KbKCOmEAow21xisRuffRz/ijZISQEaQmOXad0M7AZslD29Xjt4Y3dAbSeDXwdw2A==
+"@powerhousedao/design-system@1.0.0-alpha.62":
+  version "1.0.0-alpha.62"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.62.tgz#359bc7638d73ce1797018c759cb9a0f5d5d21779"
+  integrity sha512-41A9SlEu0yVzX8FiLURsXr+5oF5kkKUvBnchPzThe5lK2A3g++A/4R6mf1Zj1s+lw92ecT4WzQ6ZCQ9qZOSuMw==
   dependencies:
     "@internationalized/date" "^3.5.1"
     "@radix-ui/react-dialog" "^1.0.5"
@@ -5441,9 +5441,9 @@ electron-store@^8.1.0:
     type-fest "^2.17.0"
 
 electron-to-chromium@^1.4.668:
-  version "1.4.675"
-  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.675.tgz#9e612a5339e3c9f884982478a8aaf2da3ab6ec7d"
-  integrity sha512-+1u3F/XPNIdUwv8i1lDxHAxCvNNU0QIqgb1Ycn+Jnng8ITzWSvUqixRSM7NOazJuwhf65IV17f/VbKj8DmL26A==
+  version "1.4.676"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.676.tgz#95179dd62f43926c636ca06c555a1da8754073ff"
+  integrity sha512-uHt4FB8SeYdhcOsj2ix/C39S7sPSNFJpzShjxGOm1KdF4MHyGqGi389+T5cErsodsijojXilYaHIKKqJfqh7uQ==
 
 electron-winstaller@^5.0.0:
   version "5.2.2"

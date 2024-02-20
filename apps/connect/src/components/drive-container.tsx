@@ -57,17 +57,21 @@ export default function DriveContainer(props: DriveContainerProps) {
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
 
-    function updateBaseItems() {
-        const baseItems: Array<BaseTreeItem> =
-            documentDrives.reduce<Array<BaseTreeItem>>((acc, drive) => {
-                return [...acc, ...driveToBaseItems(drive)];
-            }, []) ?? [];
-
-        setBaseItems(baseItems);
-    }
-
     useEffect(() => {
-        updateBaseItems();
+        updateBaseItems().catch(console.error);
+
+        async function updateBaseItems() {
+            const baseItems: Array<BaseTreeItem> =
+                documentDrives.length > 0
+                    ? (
+                          await Promise.all(
+                              documentDrives.map(driveToBaseItems),
+                          )
+                      ).flat()
+                    : [];
+
+            setBaseItems(baseItems);
+        }
     }, [documentDrives]);
 
     // Auto select first drive if there is no selected path
@@ -145,6 +149,8 @@ export default function DriveContainer(props: DriveContainerProps) {
                         event.dropOperation === 'copy'
                             ? 'UPDATE_AND_COPY'
                             : 'UPDATE_AND_MOVE',
+                    sharingType: item.data.sharingType,
+                    availableOffline: item.data.availableOffline,
                 });
                 return;
             }
