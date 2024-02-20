@@ -3,7 +3,8 @@
         "cancel": "Cancel",
         "delete": "Delete",
         "continue": "Continue",
-        "empty": "Empty"
+        "empty": "Empty",
+        "create": "Create"
     },
     "searchbar": {
         "placeholder": "Search Powerhouse",
@@ -34,6 +35,10 @@
         "upgradeDrive": {
             "header": "Upgrade to cloud drive",
             "body": "You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
+        },
+        "createDocument": {
+            "header": "Create a new document",
+            "placeholder": "Document name"
         }
     }
 }
