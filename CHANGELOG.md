@@ -1,3 +1,15 @@
+# [1.0.0-alpha.63](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.62...v1.0.0-alpha.63) (2024-02-20)
+
+
+### Bug Fixes
+
+* deal with Date objects on maybeStripTime util ([ff6d6f6](https://github.com/powerhouse-inc/design-system/commit/ff6d6f64cf1c151d38f97e2b67a51339437078ed))
+
+
+### Features
+
+* strict check for ISO date ([cded40d](https://github.com/powerhouse-inc/design-system/commit/cded40d13267605642f239bdc7f52f52bc16ba6e))
+
 # [1.0.0-alpha.62](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.61...v1.0.0-alpha.62) (2024-02-20)
 
 
