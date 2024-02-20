@@ -111,7 +111,7 @@ const getQuery = (documentId: string, documentType: string) => {
         query = rwaQuery;
     }
 
-    return encodeURI(`query {
+    return encodeURIComponent(`query {
         document(id:"${documentId}") {
             name
             documentType
