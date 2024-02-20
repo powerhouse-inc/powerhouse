@@ -17,10 +17,7 @@ import {
     SortOptions,
     useDocumentDriveServer,
 } from 'src/hooks/useDocumentDriveServer';
-import {
-    driveToBaseItems,
-    useDrivesContainer,
-} from 'src/hooks/useDrivesContainer';
+import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useSelectedPath } from 'src/store';
 
 interface DriveContainerProps {
@@ -54,7 +51,7 @@ export default function DriveContainer(props: DriveContainerProps) {
         addDrive,
         addRemoteDrive,
     } = useDocumentDriveServer();
-    const { onItemOptionsClick, onItemClick, onSubmitInput } =
+    const { onItemOptionsClick, onItemClick, onSubmitInput, driveToBaseItems } =
         useDrivesContainer();
 
     useEffect(() => {
