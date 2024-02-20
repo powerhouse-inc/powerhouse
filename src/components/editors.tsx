@@ -33,6 +33,7 @@ export interface IProps extends EditorProps {
     onClose: () => void;
     onExport: () => void;
     onAddOperation: (operation: Operation) => void;
+    onOpenSwitchboardLink?: () => Promise<void>;
 }
 
 export const DocumentEditor: React.FC<IProps> = ({
@@ -41,6 +42,7 @@ export const DocumentEditor: React.FC<IProps> = ({
     onClose,
     onExport,
     onAddOperation,
+    onOpenSwitchboardLink,
 }) => {
     const documentModel = useDocumentModel(initialDocument.documentType);
     const editor = useEditor(initialDocument.documentType);
@@ -124,6 +126,7 @@ export const DocumentEditor: React.FC<IProps> = ({
                 dispatch={dispatch}
                 onClose={onClose}
                 onExport={onExport}
+                onSwitchboardLinkClick={onOpenSwitchboardLink}
             />
         </div>
     );

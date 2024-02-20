@@ -13,8 +13,7 @@ import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
-import { getSwitchboardUrl } from 'src/utils/getSwitchboardUrl';
-import { openUrl } from 'src/utils/openUrl';
+import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
 
 const allowedItemOptions = ['delete', 'rename'];
 
@@ -42,7 +41,8 @@ export const FileItem: React.FC<IProps> = ({
     const { updateNodeName } = useDrivesContainer();
 
     const decodedDriveID = decodeID(drive);
-    const { isRemoteDrive, remoteUrl } = useDocumentDriveById(decodedDriveID);
+    const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);
+    const { isRemoteDrive } = useDocumentDriveById(decodedDriveID);
 
     const onFileOptionsClick = async (optionId: string, fileNode: TreeItem) => {
         if (optionId === 'delete') {
@@ -54,23 +54,11 @@ export const FileItem: React.FC<IProps> = ({
         }
 
         if (optionId === 'switchboard-link') {
-            if (!remoteUrl) return;
-            const url = new URL(remoteUrl);
-            const baseUrl = url.origin;
             const document = getDocumentById(decodedDriveID, fileNode.id) as
                 | FileNode
                 | undefined;
 
-            if (document) {
-                const url = getSwitchboardUrl(
-                    baseUrl,
-                    decodedDriveID,
-                    document.documentType,
-                    document.id,
-                );
-
-                await openUrl(url);
-            }
+            await openSwitchboardLink(document);
         }
     };
 
