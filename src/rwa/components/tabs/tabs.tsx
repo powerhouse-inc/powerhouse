@@ -42,6 +42,7 @@ export interface RWATabsProps extends TabsProps {
     onRedo: () => void;
     onExport: () => void;
     onClose: () => void;
+    onSwitchboardLinkClick?: () => void;
     canUndo: boolean;
     canRedo: boolean;
     labels?: {
@@ -63,6 +64,7 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
         canUndo,
         onExport,
         onClose,
+        onSwitchboardLinkClick,
         ...tabsProps
     } = props;
 
@@ -79,7 +81,7 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
                     'flex items-center justify-between',
                 )}
             >
-                <div className="flex w-40 gap-x-2">
+                <div className="flex w-48 gap-x-2">
                     <button
                         className={buttonClass}
                         onClick={onUndo}
@@ -134,7 +136,15 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
                         </Tab>
                     ))}
                 </TabList>
-                <div className="flex w-40 justify-end gap-x-2">
+                <div className="flex w-48 justify-end gap-x-2">
+                    {onSwitchboardLinkClick && (
+                        <button
+                            className="flex h-8 items-center gap-x-2 rounded border border-gray-200 px-3 text-sm font-semibold text-gray-900 active:opacity-50"
+                            onClick={onSwitchboardLinkClick}
+                        >
+                            <Icon name="drive" size={16} />
+                        </button>
+                    )}
                     <button
                         className="flex h-8 items-center gap-x-2 rounded border border-gray-200 px-3 text-sm font-semibold text-gray-900 active:opacity-50"
                         onClick={onExport}

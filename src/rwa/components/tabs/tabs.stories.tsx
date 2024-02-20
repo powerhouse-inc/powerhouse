@@ -20,6 +20,7 @@ const meta: Meta<typeof RWATabs> = {
         canRedo: { control: { type: 'boolean' } },
         onExport: { control: { type: 'action' } },
         onClose: { control: { type: 'action' } },
+        onSwitchboardLinkClick: { control: { type: 'action' } },
     },
 };
 
