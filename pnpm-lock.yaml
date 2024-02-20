@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@powerhousedao/design-system':
-    specifier: 1.0.0-alpha.61
-    version: 1.0.0-alpha.61(@types/react-dom@18.2.19)(@types/react@18.2.55)(react-aria-components@1.1.0)(react-aria@3.32.0)(react-dom@18.2.0)(react@18.2.0)
+    specifier: 1.0.0-alpha.64
+    version: 1.0.0-alpha.64(@types/react-dom@18.2.19)(@types/react@18.2.55)(react-aria-components@1.1.0)(react-aria@3.32.0)(react-dom@18.2.0)(react@18.2.0)
   document-drive:
     specifier: ^0.0.30
     version: 0.0.30(@prisma/client@5.8.1)(document-model-libs@1.1.51)(document-model@1.0.30)(localforage@1.10.0)(sequelize@6.37.0)(sqlite3@5.1.7)
@@ -2504,8 +2504,8 @@ packages:
       config-chain: 1.1.13
     dev: true
 
-  /@powerhousedao/design-system@1.0.0-alpha.61(@types/react-dom@18.2.19)(@types/react@18.2.55)(react-aria-components@1.1.0)(react-aria@3.32.0)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-RQMbZSZdQFQyLO2wHSgwQ5KbKCOmEAow21xisRuffRz/ijZISQEaQmOXad0M7AZslD29Xjt4Y3dAbSeDXwdw2A==}
+  /@powerhousedao/design-system@1.0.0-alpha.64(@types/react-dom@18.2.19)(@types/react@18.2.55)(react-aria-components@1.1.0)(react-aria@3.32.0)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-aQr98xy9Xj8hQRQVlb48KdvRWe9xuBd/IJJLzXJVAHPQi4fosA4DQLFC+NvzUt5d+vWB0cnHwywfXwjbLjFCqQ==}
     peerDependencies:
       react: ^18.2.0
       react-aria: ^3.32.0
