@@ -1,6 +1,9 @@
 import {
     BaseTreeItem,
+    CLOUD_DRIVE,
     DriveViewProps,
+    LOCAL_DRIVE,
+    PUBLIC_DRIVE,
     TreeItem,
     SharingType as TreeItemSharingType,
     decodeID,
@@ -31,41 +34,15 @@ export function getNodePath(node: Node, allNodes: Node[]): string {
     return path.join(getNodePath(parentNode, allNodes), encodeID(node.id));
 }
 
-function getBaseItemType(sharingType: string): BaseTreeItem['type'] {
+function getDriveBaseItemType(sharingType: string) {
     switch (sharingType.toLowerCase()) {
         case 'public':
-            return 'PUBLIC_DRIVE';
+            return PUBLIC_DRIVE;
         case 'shared':
-            return 'CLOUD_DRIVE';
+            return CLOUD_DRIVE;
         default:
-            return 'LOCAL_DRIVE';
+            return LOCAL_DRIVE;
     }
-}
-
-export function driveToBaseItems(
-    drive: DocumentDriveDocument,
-): Array<BaseTreeItem> {
-    const driveID = encodeID(drive.state.global.id);
-    const { id, name } = drive.state.global;
-    const { sharingType, availableOffline } = drive.state.local;
-    const driveNode: BaseTreeItem = {
-        id: id,
-        label: name,
-        path: driveID,
-        type: getBaseItemType(sharingType || ''),
-        sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
-        status: availableOffline ? 'AVAILABLE_OFFLINE' : 'AVAILABLE',
-    };
-
-    const nodes: Array<BaseTreeItem> = drive.state.global.nodes.map(
-        (node, _i, nodes) => ({
-            id: node.id,
-            label: node.name,
-            path: path.join(driveID, getNodePath(node, nodes)),
-            type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
-        }),
-    );
-    return [driveNode, ...nodes];
 }
 
 export function useDrivesContainer() {
@@ -82,6 +59,7 @@ export function useDrivesContainer() {
         setDriveSharingType,
         documentDrives,
         copyOrMoveNode,
+        getSyncStatus,
     } = useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
@@ -107,6 +85,8 @@ export function useDrivesContainer() {
             path: path.join(item.path, virtualPathName),
             type: 'FOLDER',
             action: 'NEW',
+            sharingType: item.sharingType,
+            availableOffline: item.availableOffline,
         });
     }
 
@@ -174,7 +154,7 @@ export function useDrivesContainer() {
             case 'change-availability':
                 setDriveAvailableOffline(
                     decodeID(item.id),
-                    item.status === 'AVAILABLE_OFFLINE',
+                    item.availableOffline,
                 );
                 break;
             case 'change-sharing-type':
@@ -237,10 +217,39 @@ export function useDrivesContainer() {
         updateNodeName(item, driveID);
     };
 
+    async function driveToBaseItems(drive: DocumentDriveDocument) {
+        const driveID = encodeID(drive.state.global.id);
+        const { id, name } = drive.state.global;
+        const { sharingType, availableOffline } = drive.state.local;
+        const driveBaseItemType = getDriveBaseItemType(sharingType || '');
+        const driveNode: BaseTreeItem = {
+            id: id,
+            label: name,
+            path: driveID,
+            type: driveBaseItemType,
+            sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
+            availableOffline,
+            syncStatus: await getSyncStatus(driveID, driveBaseItemType),
+        };
+
+        const nodes: Array<BaseTreeItem> = drive.state.global.nodes.map(
+            (node, _i, nodes) => ({
+                id: node.id,
+                label: node.name,
+                path: path.join(driveID, getNodePath(node, nodes)),
+                type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
+                sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
+                availableOffline,
+            }),
+        );
+        return [driveNode, ...nodes];
+    }
+
     return {
         onItemClick,
         onItemOptionsClick,
         onSubmitInput,
         updateNodeName,
+        driveToBaseItems,
     };
 }
