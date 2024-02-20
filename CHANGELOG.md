@@ -1,3 +1,10 @@
+# [1.0.0-alpha.65](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.64...v1.0.0-alpha.65) (2024-02-20)
+
+
+### Features
+
+* add chromatic ([#211](https://github.com/powerhouse-inc/design-system/issues/211)) ([99eee4f](https://github.com/powerhouse-inc/design-system/commit/99eee4f9097d149b0bc94fe3c21a7bfe88169d88))
+
 # [1.0.0-alpha.64](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.63...v1.0.0-alpha.64) (2024-02-20)
 
 
