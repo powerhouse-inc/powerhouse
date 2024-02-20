@@ -38,12 +38,12 @@ export const TextInput: React.FC<TextInputProps> = props => {
             <TextField
                 value={value}
                 onChange={onChange}
-                {...mergeClassNameProps(textFieldProps, 'flex flex-1 min-w-0')}
+                {...mergeClassNameProps(textFieldProps, 'flex min-w-0 flex-1')}
             >
                 <Input
                     {...mergeClassNameProps(
                         inputProps,
-                        'flex flex-1 outline-none bg-inherit min-w-0',
+                        'flex min-w-0 flex-1 bg-inherit outline-none',
                     )}
                 />
             </TextField>

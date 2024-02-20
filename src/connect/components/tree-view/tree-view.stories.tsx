@@ -1,5 +1,6 @@
 import {
     ItemsContextProvider,
+    SUCCESS,
     generateMockDriveData,
     useItemActions,
     useItemsContext,
@@ -14,6 +15,8 @@ const treeItems = generateMockDriveData({
     type: 'LOCAL_DRIVE',
     expanded: false,
     isSelected: false,
+    availableOffline: false,
+    syncStatus: SUCCESS,
 });
 
 const meta: Meta<typeof ConnectTreeView> = {
@@ -82,6 +85,10 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
                     label: 'New Folder',
                     type: 'FOLDER',
                     action: 'NEW',
+                    expanded: false,
+                    isSelected: false,
+                    availableOffline: false,
+                    syncStatus: SUCCESS,
                 });
             }
         };

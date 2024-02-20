@@ -3,7 +3,7 @@
 exports[`ConnectSearchBar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="flex flex-row text-slate-200 bg-gray-50 px-4 h-[52px] items-center rounded-xl border border-gray-200"
+    class="flex flex-row h-[52px] items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-slate-200"
   >
     <svg
       class="mr-3"
@@ -14,12 +14,12 @@ exports[`ConnectSearchBar Component > should match snapshot 1`] = `
       />
     </svg>
     <div
-      class="flex flex-1 min-w-0"
+      class="flex min-w-0 flex-1"
       data-rac=""
     >
       <input
         aria-label="search input"
-        class="flex flex-1 outline-none bg-inherit min-w-0 text-sm"
+        class="flex min-w-0 flex-1 bg-inherit outline-none text-sm"
         data-rac=""
         id="react-aria-:r0:"
         placeholder="Search Files"

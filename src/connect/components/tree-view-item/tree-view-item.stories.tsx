@@ -1,3 +1,4 @@
+import { SUCCESS } from '@/connect';
 import type { Meta, StoryObj } from '@storybook/react';
 import { ConnectTreeViewItem } from '.';
 
@@ -33,9 +34,10 @@ export const TreeViewItem: Story = {
             path: 'drive/folder1',
             label: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua',
             type: 'FOLDER',
-            status: 'SYNCING',
             expanded: false,
             isSelected: false,
+            availableOffline: false,
+            syncStatus: SUCCESS,
         },
     },
 };

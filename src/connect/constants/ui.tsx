@@ -1,4 +1,31 @@
 import { Icon } from '@/powerhouse';
+export const PUBLIC_DRIVE = 'PUBLIC_DRIVE';
+export const LOCAL_DRIVE = 'LOCAL_DRIVE';
+export const CLOUD_DRIVE = 'CLOUD_DRIVE';
+export const FOLDER = 'FOLDER';
+export const FILE = 'FILE';
+
+export const driveTypes = [PUBLIC_DRIVE, LOCAL_DRIVE, CLOUD_DRIVE] as const;
+
+export const treeItemTypes = [...driveTypes, FOLDER, FILE] as const;
+
+export const UPDATE = 'UPDATE';
+export const NEW = 'NEW';
+export const UPDATE_AND_MOVE = 'UPDATE_AND_MOVE';
+export const UPDATE_AND_COPY = 'UPDATE_AND_COPY';
+
+export const treeItemActions = [
+    UPDATE,
+    NEW,
+    UPDATE_AND_MOVE,
+    UPDATE_AND_COPY,
+] as const;
+
+export const LOCAL = 'LOCAL';
+export const CLOUD = 'CLOUD';
+export const SWITCHBOARD = 'SWITCHBOARD';
+
+export const driveLocations = [LOCAL, CLOUD, SWITCHBOARD] as const;
 
 export const defaultDropdownMenuOptions = [
     {
@@ -24,19 +51,25 @@ export const defaultDropdownMenuOptions = [
     },
 ] as const;
 
+export const PRIVATE = 'PRIVATE';
+export const SHARED = 'SHARED';
+export const PUBLIC = 'PUBLIC';
+
+export const sharingTypes = [PRIVATE, SHARED, PUBLIC] as const;
+
 export const sharingTypeOptions = [
     {
-        value: 'PRIVATE',
+        value: PRIVATE,
         icon: <Icon name="lock" />,
         description: 'Only available to you',
     },
     {
-        value: 'SHARED',
+        value: SHARED,
         icon: <Icon name="people" />,
         description: 'Only available to people in this drive',
     },
     {
-        value: 'PUBLIC',
+        value: PUBLIC,
         icon: <Icon name="globe" />,
         description: 'Available to everyone',
         disabled: true,
@@ -60,3 +93,17 @@ export const locationInfoByLocation = {
         icon: <Icon name="drive" />,
     },
 } as const;
+
+export const SYNCING = 'SYNCING';
+export const SUCCESS = 'SUCCESS';
+export const CONFLICT = 'CONFLICT';
+export const MISSING = 'MISSING';
+export const ERROR = 'ERROR';
+
+export const syncStatuses = [
+    SYNCING,
+    SUCCESS,
+    CONFLICT,
+    MISSING,
+    ERROR,
+] as const;

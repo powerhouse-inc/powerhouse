@@ -1,3 +1,4 @@
+import { SUCCESS } from '@/connect';
 import { ItemsContextProvider } from '@/connect/context/ItemsContext';
 import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
 import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
@@ -12,24 +13,32 @@ const drives = [
         label: 'MakerDAO Atlas',
         type: 'PUBLIC_DRIVE',
         expanded: true,
+        availableOffline: false,
+        syncStatus: SUCCESS,
     }),
     ...generateMockDriveData({
         path: 'cloud',
         label: 'Powerhouse Team Drive',
         type: 'CLOUD_DRIVE',
         expanded: false,
+        availableOffline: false,
+        syncStatus: SUCCESS,
     }),
     ...generateMockDriveData({
         path: 'cloud-2',
         label: 'Powerhouse Team Drive 2',
         type: 'CLOUD_DRIVE',
         expanded: true,
+        availableOffline: false,
+        syncStatus: SUCCESS,
     }),
     ...generateMockDriveData({
         path: 'local',
         label: 'Local Device',
         type: 'LOCAL_DRIVE',
         expanded: true,
+        availableOffline: false,
+        syncStatus: SUCCESS,
     }),
 ];
 

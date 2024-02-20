@@ -1,6 +1,7 @@
 import {
     BaseTreeItem,
     ItemsContextProvider,
+    SUCCESS,
     generateMockDriveData,
     randomId,
     useGetItemByPath,
@@ -17,6 +18,8 @@ const treeItems = generateMockDriveData({
     type: 'LOCAL_DRIVE',
     expanded: false,
     isSelected: false,
+    availableOffline: false,
+    syncStatus: SUCCESS,
 });
 
 const meta: Meta<typeof Breadcrumbs> = {
@@ -83,6 +86,8 @@ export const Default: Story = {
                 path: `${basepath}/${label}`,
                 label,
                 type: 'FOLDER',
+                availableOffline: false,
+                syncStatus: SUCCESS,
             };
 
             setBaseItems(prev => [...prev, newItem]);
@@ -102,6 +107,8 @@ export const Default: Story = {
                 label: option,
                 type: 'FOLDER',
                 action: 'NEW',
+                availableOffline: false,
+                syncStatus: SUCCESS,
             });
         };
 

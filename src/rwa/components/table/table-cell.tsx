@@ -5,7 +5,7 @@ export const RWATableCell: React.FC<ComponentPropsWithoutRef<'td'>> = props => (
     <td
         {...mergeClassNameProps(
             props,
-            'text-xs text-gray-900 font-medium px-3 py-2 truncate',
+            'truncate px-3 py-2 text-xs font-medium text-gray-900',
         )}
     />
 );

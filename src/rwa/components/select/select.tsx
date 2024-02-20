@@ -45,7 +45,7 @@ export const RWASelect: React.FC<RWASelectProps> = props => {
                 ref={buttonRef}
                 {...mergeClassNameProps(
                     buttonProps,
-                    'flex text-xs px-3 h-[42px] bg-gray-100 rounded-xl items-center gap-x-2 outline-none justify-between',
+                    'flex h-[42px] items-center justify-between gap-x-2 rounded-xl bg-gray-100 px-3 text-xs outline-none',
                 )}
             >
                 <SelectValue />
@@ -57,7 +57,7 @@ export const RWASelect: React.FC<RWASelectProps> = props => {
                 <ListBox
                     {...mergeClassNameProps(
                         listBoxProps,
-                        'py-3 outline-none modal-shadow rounded-xl text-xs bg-white',
+                        'modal-shadow rounded-xl bg-white py-3 text-xs outline-none',
                     )}
                 >
                     {options.map(option => (
@@ -66,7 +66,7 @@ export const RWASelect: React.FC<RWASelectProps> = props => {
                             id={option.id}
                             {...mergeClassNameProps(
                                 listBoxItemProps,
-                                'px-3 py-2 cursor-pointer hover:bg-gray-100 outline-none',
+                                'cursor-pointer px-3 py-2 outline-none hover:bg-gray-100',
                             )}
                         >
                             {option.label}

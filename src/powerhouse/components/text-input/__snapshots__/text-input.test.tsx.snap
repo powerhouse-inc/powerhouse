@@ -9,12 +9,12 @@ exports[`Modal Component > should match snapshot 1`] = `
       Start
     </div>
     <div
-      class="flex flex-1 min-w-0"
+      class="flex min-w-0 flex-1"
       data-rac=""
     >
       <input
         aria-label="test"
-        class="flex flex-1 outline-none bg-inherit min-w-0"
+        class="flex min-w-0 flex-1 bg-inherit outline-none"
         data-rac=""
         id="react-aria-:r0:"
         title=""

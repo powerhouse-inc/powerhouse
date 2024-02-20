@@ -11,7 +11,6 @@ export * from './modal';
 export * from './search-bar';
 export * from './select';
 export * from './sidebar';
-export * from './status-indicator';
 export * from './toggle';
 export * from './tree-view';
 export * from './tree-view-item';

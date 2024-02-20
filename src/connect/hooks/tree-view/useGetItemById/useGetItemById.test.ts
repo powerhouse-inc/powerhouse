@@ -22,9 +22,10 @@ describe('TreeView hooks', () => {
                 path: 'drive/folder1/folder1.2',
                 label: 'Folder 1.2',
                 type: 'FOLDER',
-                status: 'SYNCING',
+                syncStatus: 'SYNCING',
                 expanded: false,
                 isSelected: false,
+                availableOffline: true,
             });
         });
 

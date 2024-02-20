@@ -17,7 +17,7 @@ export const FilterItem: React.FC<FilterItemProps> = props => {
         <div
             {...mergeClassNameProps(
                 containerProps,
-                'flex flex-row h-full items-center gap-x-4 justify-between px-2',
+                'flex h-full flex-row items-center justify-between gap-x-4 px-2',
             )}
         >
             {item.icon}

@@ -1,37 +1,39 @@
-import { ConnectDropdownMenuItem, defaultDropdownMenuOptions } from '@/connect';
+import {
+    ConnectDropdownMenuItem,
+    defaultDropdownMenuOptions,
+    driveLocations,
+    driveTypes,
+    sharingTypes,
+    syncStatuses,
+    treeItemActions,
+    treeItemTypes,
+} from '@/connect';
 
-export type DriveType = 'PUBLIC_DRIVE' | 'LOCAL_DRIVE' | 'CLOUD_DRIVE';
+export type DriveTypes = typeof driveTypes;
+export type DriveType = DriveTypes[number];
 
-export type TreeItemType = ('FOLDER' | 'FILE') | DriveType;
+export type TreeItemTypes = typeof treeItemTypes;
 
-export type TreeItemAction =
-    | 'UPDATE'
-    | 'NEW'
-    | 'UPDATE_AND_MOVE'
-    | 'UPDATE_AND_COPY';
+export type TreeItemType = TreeItemTypes[number];
 
-export type TreeItemStatus =
-    | 'AVAILABLE'
-    | 'AVAILABLE_OFFLINE'
-    | 'SYNCING'
-    | 'OFFLINE';
+export type TreeItemActions = typeof treeItemActions;
 
-export type SyncStatus = 'NOT_SYNCED_YET' | 'SYNCING' | 'SYNCED';
+export type TreeItemAction = TreeItemActions[number];
 
-export type SharingType = 'PRIVATE' | 'SHARED' | 'PUBLIC';
-
-export type DriveLocation = 'LOCAL' | 'CLOUD' | 'SWITCHBOARD';
+export type SharingTypes = typeof sharingTypes;
+export type SharingType = SharingTypes[number];
+export type DriveLocations = typeof driveLocations;
+export type DriveLocation = DriveLocations[number];
 
 export type BaseTreeItem = {
     id: string;
     path: string;
     label: string;
     type: TreeItemType;
-    error?: Error;
-    status?: TreeItemStatus;
-    isConnected?: boolean;
-    options?: ConnectDropdownMenuItem[];
+    availableOffline: boolean;
     syncStatus?: SyncStatus;
+    error?: Error;
+    options?: ConnectDropdownMenuItem[];
     sharingType?: SharingType;
     expanded?: boolean;
 };
@@ -49,3 +51,7 @@ export type DriveTreeItem = TreeItem & {
 };
 
 export type DefaultOptionId = (typeof defaultDropdownMenuOptions)[number]['id'];
+
+export type SyncStatuses = typeof syncStatuses;
+
+export type SyncStatus = SyncStatuses[number];
