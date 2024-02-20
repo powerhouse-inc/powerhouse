@@ -1,3 +1,48 @@
+# [1.0.0-alpha.4](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2024-02-20)
+
+
+### Bug Fixes
+
+* fixed build error ([f280459](https://github.com/powerhouse-inc/document-model-electron/commit/f2804594d3f764477c06fc4183a2427df9e4c86b))
+* missing return ([f81d0e9](https://github.com/powerhouse-inc/document-model-electron/commit/f81d0e9a0a58c4079a6359d0dc45f90861d4acb4))
+* properly encode switchboard query ([4c5001f](https://github.com/powerhouse-inc/document-model-electron/commit/4c5001fb3aa34249bee0550331a314872b05c614))
+* removed unused css import ([6da080c](https://github.com/powerhouse-inc/document-model-electron/commit/6da080c53ea57352b997de941fc303f11a5d2a42))
+* switchboard endpoint ([2e570f3](https://github.com/powerhouse-inc/document-model-electron/commit/2e570f39bc355e4f387c0d371e8af81a0b92bb38))
+
+
+### Features
+
+* add pull trigger on cloud drives ([9f86849](https://github.com/powerhouse-inc/document-model-electron/commit/9f868495ced48b9b23a3d128469ce7ac20d32a57))
+* add react aria dep ([499dda0](https://github.com/powerhouse-inc/document-model-electron/commit/499dda05d52469c85f0dc31d1da5639dc926c9c4))
+* added feature flag setup + disable editors for demo ([7fa64f2](https://github.com/powerhouse-inc/document-model-electron/commit/7fa64f2634cea508ebfb8b20732a730dc8b0624b))
+* added support for document in addfile action ([0706ce2](https://github.com/powerhouse-inc/document-model-electron/commit/0706ce25a515024a37b61aec11c930601a0869e5))
+* added support for rename files + create file name modal ([8a76691](https://github.com/powerhouse-inc/document-model-electron/commit/8a76691426d671128c4cfbc98864a9a669e395f3))
+* added switchboard link to document files ([5f31b71](https://github.com/powerhouse-inc/document-model-electron/commit/5f31b710a6ae65f42aac65840da422134e48ee6c))
+* bump ([11fb69f](https://github.com/powerhouse-inc/document-model-electron/commit/11fb69f6f507d4240e72b1208982c814bce185a8))
+* bump design-system and document-model-lib deps ([7d90802](https://github.com/powerhouse-inc/document-model-electron/commit/7d9080289ce258cf9d299d13b4cf7e092fd51535))
+* enabled add cloud drive modal ([d54f579](https://github.com/powerhouse-inc/document-model-electron/commit/d54f579bd903e57cf193cdc11a727eed5526971d))
+* enabled editor controls ([f7aa503](https://github.com/powerhouse-inc/document-model-electron/commit/f7aa50343c0a124056811f1ce29ab0c8539263da))
+* enabled keyboard shortcut for undo/redo ([82fe517](https://github.com/powerhouse-inc/document-model-electron/commit/82fe517dbbf01006c6fbaae0b1c493c57eeeb422))
+* enabled rwa editor ([b7df486](https://github.com/powerhouse-inc/document-model-electron/commit/b7df486a82c0c044fab5dd434ecceba1a2c24dc1))
+* enabled undo/redo with new document structure ([f6af1e0](https://github.com/powerhouse-inc/document-model-electron/commit/f6af1e002121456e5e9cc4befe6c41ac4ddf8aa9))
+* fix rwa document name ([b3f39d1](https://github.com/powerhouse-inc/document-model-electron/commit/b3f39d16c09cb87295d53a7be249b4e2be3895ab))
+* fixed addDriveOperations ([4c33a1f](https://github.com/powerhouse-inc/document-model-electron/commit/4c33a1f891eeba1b9845768fbc0395cb01dd9e70))
+* handle sync events on node document drive ([3855ce4](https://github.com/powerhouse-inc/document-model-electron/commit/3855ce42a72865ed48e7729d25ec1481e462851d))
+* install vite ([aa66a01](https://github.com/powerhouse-inc/document-model-electron/commit/aa66a01bc96f33984e9d6828fdd93d374916c2c4))
+* move sync status invocation to hook ([dea3fa9](https://github.com/powerhouse-inc/document-model-electron/commit/dea3fa9f5fbcdf9cf355652bf32e2c434a366c13))
+* refresh UI when there are drive changes ([fca3c95](https://github.com/powerhouse-inc/document-model-electron/commit/fca3c9576679e1bdcb8cf017cad3e885cd245fdf))
+* regenerate lock ([0269b0b](https://github.com/powerhouse-inc/document-model-electron/commit/0269b0b47945bc6d53928ec975f3b0c4557706a9))
+* remove scrollbar styles ([a9a3080](https://github.com/powerhouse-inc/document-model-electron/commit/a9a30803d3bf1cf91a82cc9bac6133c9bb335691))
+* removed usehooks-ts dep ([05ca45e](https://github.com/powerhouse-inc/document-model-electron/commit/05ca45ef3227c50a7d44bfd7c8d8730a89d3c369))
+* replaced feature flags context by atomWithStorage ([071b7aa](https://github.com/powerhouse-inc/document-model-electron/commit/071b7aacb44792851b45946f41abecaaa99f5633))
+* update dependencies and increase pull interval to 3 seconds ([66d8aea](https://github.com/powerhouse-inc/document-model-electron/commit/66d8aea256ccc6f742347db03bf06901b777bc74))
+* update document-model lib to v1.0.29 ([9190869](https://github.com/powerhouse-inc/document-model-electron/commit/9190869ddea006ce0cad8c3fa264d83535e16950))
+* update editor when opened document is changed ([88e1cad](https://github.com/powerhouse-inc/document-model-electron/commit/88e1cad21d61cc9675f53a4a67e51e8712b22696))
+* update to use new sync icons ([e1cbf1d](https://github.com/powerhouse-inc/document-model-electron/commit/e1cbf1d22de3159c247b3356577f2fdc519a51c5))
+* updated document drive ([b0df564](https://github.com/powerhouse-inc/document-model-electron/commit/b0df564c0952c60b3202c392e9fb1a23e401bea8))
+* updated rwa query ([3709cfc](https://github.com/powerhouse-inc/document-model-electron/commit/3709cfc9543851fe77f8a930d1e0806d552069d6))
+* use yarn ([812fe5a](https://github.com/powerhouse-inc/document-model-electron/commit/812fe5af48fdea5cb5955f6b8336604722476b44))
+
 # [1.0.0-alpha.3](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2024-01-26)
 
 
