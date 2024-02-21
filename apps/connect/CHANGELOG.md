@@ -1,3 +1,14 @@
+# [1.0.0-alpha.5](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2024-02-21)
+
+
+### Features
+
+* added RWA doc name fix for demo ([05dfd07](https://github.com/powerhouse-inc/document-model-electron/commit/05dfd0781038523b86437ebe1164e20a848c65b2))
+* bump deps ([7d7206c](https://github.com/powerhouse-inc/document-model-electron/commit/7d7206c5ae9bc7c9e7d26713fc8ff4e7ef5f459d))
+* enabled switchboard link in RWA editor ([cece18e](https://github.com/powerhouse-inc/document-model-electron/commit/cece18e3cb900cbe2fe7d77c0c329a2c430e2539))
+* fix sync status ([9ff69fe](https://github.com/powerhouse-inc/document-model-electron/commit/9ff69fedf729b7e70b07bf121c9feed00c1ddc58))
+* updated document-model-libs and design-system ver ([d4ab8f8](https://github.com/powerhouse-inc/document-model-electron/commit/d4ab8f881d0e04d5bf68e0748205cf25fcce90e1))
+
 # [1.0.0-alpha.4](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2024-02-20)
 
 
