@@ -1,3 +1,10 @@
+# [1.0.0-alpha.67](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.66...v1.0.0-alpha.67) (2024-02-21)
+
+
+### Features
+
+* hide dropdown icon when is write ([#219](https://github.com/powerhouse-inc/design-system/issues/219)) ([f98b3bc](https://github.com/powerhouse-inc/design-system/commit/f98b3bcbf6be4b4e21a243e7b3d02b7fd8b8e276))
+
 # [1.0.0-alpha.66](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.65...v1.0.0-alpha.66) (2024-02-21)
 
 
