@@ -1,3 +1,10 @@
+# [1.0.0-alpha.66](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.65...v1.0.0-alpha.66) (2024-02-21)
+
+
+### Features
+
+* added switchboard link button to RWATabs ([e78bca0](https://github.com/powerhouse-inc/design-system/commit/e78bca055e33ab338ac3e1a83bf58fa489c5533e))
+
 # [1.0.0-alpha.65](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.64...v1.0.0-alpha.65) (2024-02-20)
 
 
