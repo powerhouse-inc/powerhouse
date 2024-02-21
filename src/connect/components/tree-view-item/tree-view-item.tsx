@@ -100,8 +100,9 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         };
     }, []);
 
+    const isWriteMode = props.mode === 'write';
     const isHighlighted = getIsHighlighted();
-    const showDropdownMenuButton = mouseIsWithinItemContainer;
+    const showDropdownMenuButton = mouseIsWithinItemContainer && !isWriteMode;
     const isDrive = getIsDrive(item.type);
     const isLocalDrive = getIsLocalDrive(item.type);
     const isCloudOrPublicDrive = isDrive && !isLocalDrive;
@@ -202,7 +203,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         if (isDropTarget) return true;
         if (disableHighlightStyles) return false;
         if (isDragging) return false;
-        if (props.mode === 'write') return true;
+        if (isWriteMode) return true;
         if (isDropdownMenuOpen) return true;
         return false;
     }
