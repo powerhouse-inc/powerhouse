@@ -30,6 +30,14 @@ import {
 import { exportFile } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 
+const getDocumentModelName = (name: string) => {
+    if (name === 'RealWorldAssets') {
+        return 'RWA Portfolio';
+    }
+
+    return name;
+};
+
 const Content = () => {
     const { items } = useItemsContext();
     const [selectedPath, setSelectedPath] = useSelectedPath();
@@ -222,7 +230,9 @@ const Content = () => {
                                         onClick={() => createDocument(doc)}
                                     >
                                         <span className="text-sm">
-                                            {doc.documentModel.name}
+                                            {getDocumentModelName(
+                                                doc.documentModel.name,
+                                            )}
                                         </span>
                                     </Button>
                                 ))}
