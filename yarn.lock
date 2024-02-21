@@ -5269,10 +5269,10 @@ doctrine@^3.0.0:
   dependencies:
     esutils "^2.0.2"
 
-document-drive@1.0.0-alpha.3:
-  version "1.0.0-alpha.3"
-  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-1.0.0-alpha.3.tgz#035066a37ec9f217eb135788de4b1c83b9b50c75"
-  integrity sha512-y7JqumZ8uAceocSLDAkCESgeVart0sbbJpGYQr9rs+EcnvFl0hXX4bfNOnuVe9Ns51GV2+qrq0vHKLt1mh50jQ==
+document-drive@^1.0.0-alpha.8:
+  version "1.0.0-alpha.8"
+  resolved "https://registry.yarnpkg.com/document-drive/-/document-drive-1.0.0-alpha.8.tgz#59aeb8c43059ca1451f3a5a262c003327c89e9f1"
+  integrity sha512-pMMa7Q4LKEvOZ6nmk6YlPF9J7Tk2w+zYq0zZgo6RcPfXi1ZlXNIM//yF3mOl2Dr4DiqcuqIfTBMVGIgpAoyKXg==
   dependencies:
     graphql "^16.8.1"
     graphql-request "^6.1.0"
