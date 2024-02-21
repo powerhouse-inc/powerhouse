@@ -5280,10 +5280,10 @@ document-drive@^1.0.0-alpha.9:
     nanoevents "^9.0.0"
     sanitize-filename "^1.6.3"
 
-document-model-libs@^1.1.51:
-  version "1.1.51"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.51.tgz#7b7869fa8d6bb08aa83469189b339cadd06c30f7"
-  integrity sha512-58SYxLfSklaImunLD/kcfXLpKrlNz1yIbIHYtBFto2SQmAhEoBpr8d1bMDbqX03Q7HrPHzRf0qnUfwlS5y22wA==
+document-model-libs@^1.1.52:
+  version "1.1.52"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.1.52.tgz#85859770fae18ef56b4287a7eebcc488415217e2"
+  integrity sha512-cZmFhk6tWY3NABqFQFtto6Woz3EIsJmA+voqNEhyuxAIsLRKzn2seLLPxy0DFUVttntumEsEfCgR8c92aOXK+g==
   dependencies:
     "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
     "@graphql-codegen/core" "^4.0.2"
