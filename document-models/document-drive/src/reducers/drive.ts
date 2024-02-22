@@ -48,7 +48,7 @@ export const reducer: DocumentDriveDriveOperations = {
     },
     removeTriggerOperation(state, action, dispatch) {
         state.triggers = state.triggers.filter(
-            trigger => trigger.id === action.input.triggerId,
+            trigger => trigger.id !== action.input.triggerId,
         );
     },
 };
