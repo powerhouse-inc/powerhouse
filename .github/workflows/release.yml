@@ -28,8 +28,6 @@ jobs:
               with:
                   version: latest-8
                   run_install: true
-            - name: Build
-              run: pnpm run build
             - name: Release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
