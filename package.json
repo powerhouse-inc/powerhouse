@@ -46,7 +46,7 @@
         }
     },
     "scripts": {
-        "generate": "powerhouse generate && eslint . --fix",
+        "generate": "powerhouse generate",
         "check-types": "tsc",
         "lint": "powerhouse generate && eslint . && npm run check-types",
         "lint:fix": "powerhouse generate && eslint . --fix",
@@ -57,7 +57,9 @@
         "test": "powerhouse generate && vitest run",
         "test:watch": "powerhouse generate && vitest",
         "prepublishOnly": "npm run prepare:scripts && npm run build",
-        "prepare:scripts": "node scripts/index.js"
+        "prepare:scripts": "node scripts/index.js",
+        "prepare": "husky install",
+        "release": "semantic-release"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.4",
@@ -68,6 +70,8 @@
         "@mui/material": "^5.15.5",
         "@powerhousedao/codegen": "0.0.13",
         "@powerhousedao/design-system": "1.0.0-alpha.66",
+        "@semantic-release/changelog": "^6.0.3",
+        "@semantic-release/git": "^10.0.1",
         "@storybook/addon-essentials": "^7.6.10",
         "@storybook/addon-interactions": "^7.6.10",
         "@storybook/addon-links": "^7.6.10",
@@ -104,6 +108,7 @@
         "react": "^18.2.0",
         "react-aria-components": "1.0.1",
         "react-dom": "^18.2.0",
+        "semantic-release": "^23.0.2",
         "storybook": "^7.6.10",
         "tailwind-merge": "^2.2.1",
         "tailwindcss": "^3.4.1",

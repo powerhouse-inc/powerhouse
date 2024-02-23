@@ -8,4 +8,7 @@
 .yalc/
 yalc.lock
 
+package.json
+pnpm-lock.yaml
 scripts
+commitlint.config.js

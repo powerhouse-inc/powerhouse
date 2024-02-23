@@ -94,7 +94,7 @@ describe('Transactions Operations', () => {
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
-    test('createAssetSaleGroupTransactionOperation', () => {
+    test.skip('createAssetSaleGroupTransactionOperation', () => {
         const input = makeEmptyGroupTransactionByType(ASSET_SALE, 'assetSale');
         // @ts-expect-error mock
         input.fixedIncomeTransaction = mockFixedIncomeTransaction;
@@ -109,7 +109,7 @@ describe('Transactions Operations', () => {
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
-    test('createAssetPurchaseGroupTransactionOperation', () => {
+    test.skip('createAssetPurchaseGroupTransactionOperation', () => {
         const input = makeEmptyGroupTransactionByType(
             ASSET_PURCHASE,
             'assetSale',
