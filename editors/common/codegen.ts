@@ -1,5 +1,3 @@
-// import process from "process";
-// window.process = process;
 import { codegen as generate } from '@graphql-codegen/core';
 import { parse } from 'graphql';
 import * as ts from 'typescript';

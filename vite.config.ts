@@ -32,6 +32,13 @@ export default defineConfig(({ mode }) => {
 
     return {
         test,
+        resolve: {
+            alias: {
+                module: './create-require.js',
+                path: 'path-browserify',
+                crypto: 'crypto-browserify',
+            },
+        },
         build: {
             outDir: `dist`,
             emptyOutDir: true,
@@ -43,16 +50,7 @@ export default defineConfig(({ mode }) => {
             },
             rollupOptions: {
                 external,
-                output: {
-                    exports: 'named',
-                },
             },
-            commonjsOptions: {
-                include: [],
-            },
-        },
-        optimizeDeps: {
-            disabled: false,
         },
         plugins: [
             dts({ insertTypesEntry: true, exclude: ['**/*.stories.tsx'] }),

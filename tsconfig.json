@@ -21,6 +21,8 @@
         "**/*.tsx",
         "*.config.js",
         "*.config.ts",
+        "postcss.config.cjs",
+        "create-require.js"
     ],
     "exclude": ["dist/", "node_modules"]
 }
