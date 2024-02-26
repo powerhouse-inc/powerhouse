@@ -79,7 +79,7 @@
         "test": "powerhouse generate && vitest run",
         "test:watch": "powerhouse generate && vitest",
         "prepublishOnly": "npm run prepare:scripts && npm run build",
-        "prepare:scripts": "node scripts/index.js",
+        "prepare:scripts": "node scripts/index.cjs",
         "chromatic": "npx chromatic --project-token chpt_7f618da80620e4d",
         "prepare": "husky install",
         "release": "semantic-release"
