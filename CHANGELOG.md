@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.3...v1.2.4) (2024-02-26)
+
+
+### Bug Fixes
+
+* file name in scripts ([7fdfb41](https://github.com/powerhouse-inc/document-model-libs/commit/7fdfb41f20ca03c2aa0fdf690f078a8dffe0b41d))
+
 ## [1.2.3](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.2...v1.2.3) (2024-02-26)
 
 
