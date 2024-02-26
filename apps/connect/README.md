@@ -20,7 +20,7 @@ Run browser version only:
 
 ```bash
 $ yarn start:web
-``
+```
 
 Create package for the current platform:
 
