@@ -137,6 +137,7 @@
         "react-dom": "^18.2.0",
         "semantic-release": "^23.0.2",
         "storybook": "^7.6.17",
+        "storybook-mock-date-decorator": "^1.0.1",
         "tailwind-merge": "^2.2.1",
         "tailwindcss": "^3.4.1",
         "typescript": "^5.3.3",

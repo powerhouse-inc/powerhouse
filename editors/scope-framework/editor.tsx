@@ -1,22 +1,22 @@
 import {
-    actions,
-    ScopeFrameworkLocalState,
-    ExtendedScopeFrameworkState,
-    ScopeFrameworkAction,
-    ScopeFrameworkState,
-    ScopeFrameworkElementType,
-} from '../../document-models/scope-framework';
-import { useEffect } from 'react';
-import AtlasElement from './components/atlasElement';
-import './style.css';
-import { EditorProps } from 'document-model/document';
-import {
     DocumentEditor,
     EditorToolbar,
-    ToolbarButton,
     EditorWorksheet,
     TextInput,
+    ToolbarButton,
 } from 'document-model-editors';
+import { EditorProps } from 'document-model/document';
+import { useEffect } from 'react';
+import {
+    ExtendedScopeFrameworkState,
+    ScopeFrameworkAction,
+    ScopeFrameworkElementType,
+    ScopeFrameworkLocalState,
+    ScopeFrameworkState,
+    actions,
+} from '../../document-models/scope-framework';
+import AtlasElement from './components/atlasElement';
+import './style.css';
 
 export type IProps = EditorProps<
     ScopeFrameworkState,
@@ -79,6 +79,7 @@ const getNextPath = (
 
 function ScopeFrameworkEditor(props: IProps) {
     const { document, dispatch, editorContext } = props;
+    console.log(document);
     const {
         state: { global: state },
     } = document;
