@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.2...v1.2.3) (2024-02-26)
+
+
+### Bug Fixes
+
+* rename files to cjs ([77f0961](https://github.com/powerhouse-inc/document-model-libs/commit/77f09610ee1dae902b72d6d616f4e8b3fa0f4017))
+
 ## [1.2.2](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.1...v1.2.2) (2024-02-26)
 
 
