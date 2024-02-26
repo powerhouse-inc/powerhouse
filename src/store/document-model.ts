@@ -48,31 +48,23 @@ export const useFilteredDocumentModels = () => {
     const { config } = useFeatureFlag();
     const { enabledEditors, disabledEditors } = config.editors;
 
-    if (typeof enabledEditors === 'string' && enabledEditors === '*') {
+    if (enabledEditors === '*') {
         return documentModels;
     }
 
-    if (typeof disabledEditors === 'string' && disabledEditors === '*') {
+    if (disabledEditors === '*') {
         return [];
     }
 
     if (disabledEditors) {
-        const disabledEditorsArray = Array.isArray(disabledEditors)
-            ? disabledEditors
-            : [disabledEditors];
-
         return documentModels.filter(
-            d => !disabledEditorsArray.includes(d.documentModel.id),
+            d => !disabledEditors.includes(d.documentModel.id),
         );
     }
 
     if (enabledEditors) {
-        const enabledEditorsArray = Array.isArray(enabledEditors)
-            ? enabledEditors
-            : [enabledEditors];
-
         return documentModels.filter(d =>
-            enabledEditorsArray.includes(d.documentModel.id),
+            enabledEditors.includes(d.documentModel.id),
         );
     }
 

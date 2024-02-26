@@ -20,7 +20,8 @@
         "baseUrl": ".",
         "paths": {
             "@/assets": ["assets"]
-        }
+        },
+        "types": ["vite/client"]
     },
     "include": [
         "src", 
