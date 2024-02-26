@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.4...v1.3.0) (2024-02-26)
+
+
+### Features
+
+* use mock date in stories ([#88](https://github.com/powerhouse-inc/document-model-libs/issues/88)) ([693babd](https://github.com/powerhouse-inc/document-model-libs/commit/693babd6812cd1ed991de01cced5a6cab1791a0a))
+
 ## [1.2.4](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.3...v1.2.4) (2024-02-26)
 
 
