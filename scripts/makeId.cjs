@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+const crypto = require('crypto');
 
 const hash = (data, algorithm = 'sha1') =>
     crypto.createHash(algorithm).update(data).digest('base64');
