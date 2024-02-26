@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.1...v1.2.2) (2024-02-26)
+
+
+### Bug Fixes
+
+* esm syntax in scripts ([30b1237](https://github.com/powerhouse-inc/document-model-libs/commit/30b1237f45724eee52b10e7bb407cb365b1fd8c2))
+
 ## [1.2.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.0...v1.2.1) (2024-02-26)
 
 
