@@ -66,6 +66,11 @@
         "require": "./dist/document-drive.cjs",
         "types": "./dist/document-drive.d.ts"
     },
+    "./real-world-assets": {
+        "import": "./dist/real-world-assets.js",
+        "require": "./dist/real-world-assets.cjs",
+        "types": "./dist/real-world-assets.d.ts"
+    },
     "scripts": {
         "generate": "powerhouse generate && eslint . --fix",
         "check-types": "tsc",
