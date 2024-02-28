@@ -24,7 +24,8 @@
         "types": ["vite/client"]
     },
     "include": [
-        "src", 
+        "src",
+        "e2e-tests",
         "*.config.ts",
         "*.config.js",
         "reset.d.ts"
