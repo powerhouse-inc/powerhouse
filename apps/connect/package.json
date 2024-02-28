@@ -28,7 +28,8 @@
         "build:web": "vite build -c vite.renderer.config.ts",
         "prepare": "husky install && npm run prepare:scripts",
         "release": "semantic-release",
-        "prepare:scripts": "node scripts/index.js"
+        "prepare:scripts": "node scripts/index.js",
+        "e2e": "playwright test"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.3",
@@ -41,6 +42,7 @@
         "@electron-forge/plugin-vite": "^6.1.1",
         "@electron-forge/publisher-electron-release-server": "^6.2.1",
         "@electron-forge/publisher-github": "^7.2.0",
+        "@playwright/test": "^1.41.2",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@semantic-release/github": "^9.2.4",
@@ -53,9 +55,11 @@
         "@typescript-eslint/eslint-plugin": "^6.18.1",
         "@typescript-eslint/parser": "^6.18.1",
         "@vitejs/plugin-react": "^3.1.0",
+        "asar": "^3.2.0",
         "autoprefixer": "^10.4.14",
         "document-model-libs": "^1.1.52",
         "electron": "28.2.3",
+        "electron-playwright-helpers": "^1.7.1",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^8.8.0",
         "eslint-plugin-react": "^7.33.2",
@@ -63,6 +67,8 @@
         "eslint-plugin-tailwindcss": "^3.13.1",
         "husky": "^8.0.3",
         "lint-staged": "^15.2.0",
+        "playwright": "^1.41.2",
+        "playwright-core": "^1.41.2",
         "postcss": "^8.4.33",
         "prettier": "^3.1.1",
         "prettier-plugin-organize-imports": "^3.2.4",
@@ -79,7 +85,8 @@
         "typescript": "^5.3.3",
         "vite": "^5.1.2",
         "vite-plugin-svgr": "^3.2.0",
-        "vite-tsconfig-paths": "^4.2.0"
+        "vite-tsconfig-paths": "^4.2.0",
+        "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
         "@powerhousedao/design-system": "1.0.0-alpha.67",
