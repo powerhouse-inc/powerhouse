@@ -107,6 +107,10 @@ export default (
         ) => documentDrive.addDriveOperations(drive, operations),
     );
 
+    ipcMain.handle('documentDrive:clearStorage', () =>
+        documentDrive.clearStorage(),
+    );
+
     ipcMain.handle('documentDrive:getSyncStatus', (_e, drive: string) =>
         documentDrive.getSyncStatus(drive),
     );
