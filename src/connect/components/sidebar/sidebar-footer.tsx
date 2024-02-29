@@ -5,12 +5,15 @@ import { SidebarUser, SidebarUserProps } from './sidebar-user';
 
 export interface ConnectSidebarFooterProps
     extends SidebarFooterProps,
-        SidebarUserProps {}
+        SidebarUserProps {
+    onClickSettings?: () => void;
+}
 
 export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     username,
     address,
     className,
+    onClickSettings,
     ...props
 }) => {
     return (
@@ -22,7 +25,10 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
             )}
         >
             <SidebarUser username={username} address={address} />
-            <Button className="flex w-full gap-3 px-5 py-3 collapsed:px-3 expanding:px-3">
+            <Button
+                className="flex w-full gap-3 px-5 py-3 collapsed:px-3 expanding:px-3"
+                onPress={onClickSettings}
+            >
                 <Icon name="settings" className="text-gray-600" />
                 <span className="text-sm font-semibold leading-6 text-gray-800 collapsed:hidden expanding:hidden">
                     Settings

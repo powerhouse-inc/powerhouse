@@ -20,6 +20,7 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
     onToggle,
     username,
     address,
+    onClickSettings,
     collapsed = false,
     maxWidth = '304px',
     minWidth = '58px',
@@ -36,7 +37,11 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
                 <ConnectSidebarHeader onToggle={onToggle} />
                 <div className="hidden expanded:block">{props.children}</div>
             </SidebarPanel>
-            <ConnectSidebarFooter username={username} address={address} />
+            <ConnectSidebarFooter
+                username={username}
+                address={address}
+                onClickSettings={onClickSettings}
+            />
         </Sidebar>
     );
 };
