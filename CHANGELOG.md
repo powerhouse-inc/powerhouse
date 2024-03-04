@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.3.0...v1.4.0) (2024-03-04)
+
+
+### Features
+
+* add real-word-assets export ([1b69471](https://github.com/powerhouse-inc/document-model-libs/commit/1b69471628c420176c421b32f72fed799cede52a))
+
 # [1.3.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.2.4...v1.3.0) (2024-02-26)
 
 
