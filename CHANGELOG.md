@@ -1,3 +1,10 @@
+# [1.0.0-alpha.68](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.67...v1.0.0-alpha.68) (2024-03-05)
+
+
+### Features
+
+* added handler for sidebar settings click ([b891659](https://github.com/powerhouse-inc/design-system/commit/b8916592d1c5e8a1ddd4be95166ddf35174350bd))
+
 # [1.0.0-alpha.67](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.66...v1.0.0-alpha.67) (2024-02-21)
 
 
