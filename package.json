@@ -122,6 +122,7 @@
     "change-case": "^5.4.3",
     "currency.js": "^2.0.4",
     "date-fns": "^3.3.1",
-    "react-hook-form": "^7.50.1"
+    "react-hook-form": "^7.50.1",
+    "react-multi-select-component": "^4.3.4"
   }
 }
