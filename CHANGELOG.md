@@ -1,3 +1,10 @@
+# [1.0.0-alpha.69](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.68...v1.0.0-alpha.69) (2024-03-05)
+
+
+### Features
+
+* added connect settings modal ([da94315](https://github.com/powerhouse-inc/design-system/commit/da943155443d83f0a33180d12ff963df0b463e74))
+
 # [1.0.0-alpha.68](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.67...v1.0.0-alpha.68) (2024-03-05)
 
 
