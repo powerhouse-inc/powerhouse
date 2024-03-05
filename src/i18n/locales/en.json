@@ -4,7 +4,8 @@
         "delete": "Delete",
         "continue": "Continue",
         "empty": "Empty",
-        "create": "Create"
+        "create": "Create",
+        "save": "Save"
     },
     "searchbar": {
         "placeholder": "Search Powerhouse",
@@ -39,6 +40,24 @@
         "createDocument": {
             "header": "Create a new document",
             "placeholder": "Document name"
+        },
+        "connectSettings": {
+            "title": "Settings",
+            "body": "These settings will apply to all drives.",
+            "clearStorage": {
+                "button": "Clear Storage",
+                "description": "Delete previous session data",
+                "confirmation": {
+                    "title": "Clear Storage",
+                    "body": "Are you sure you want to clear the storage? This will remove all previous session data.",
+                    "clearButton": "Clear Storage"
+                }
+            },
+            "enabledDocumentTypes": {
+                "title": "Document Modals",
+                "description": "Documents enabled",
+                "allSelected": "All documents are selected"
+            }
         }
     }
 }

@@ -1,6 +1,25 @@
-import { Button, Modal } from '@powerhousedao/design-system';
-import React from 'react';
+import {
+    ClearStorageSettingsRow,
+    SettingsModal as ConnectSettingsModal,
+    DocumentSelectSettingsRow,
+} from '@powerhousedao/design-system';
+import { DocumentModel } from 'document-model/document';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Option } from 'react-multi-select-component';
+import { useModal } from 'src/components/modal';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
+import {
+    useDocumentModels,
+    useFilteredDocumentModels,
+} from 'src/store/document-model';
+
+const mapDocumentModelsToOptions = (documentModels: DocumentModel[]) =>
+    documentModels.map(document => ({
+        label: document.documentModel.name,
+        value: document.documentModel.id,
+    }));
 
 export interface SettingsModalProps {
     open: boolean;
@@ -10,36 +29,78 @@ export interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = props => {
     const { open, onClose } = props;
     const { clearStorage } = useDocumentDriveServer();
+    const { t } = useTranslation();
+    const enabledDocuments = useFilteredDocumentModels();
+    const documentModels = useDocumentModels();
+    const { setConfig } = useFeatureFlag();
+    const { showModal } = useModal();
+    const [selectedDocuments, setSelectedDocuments] = useState<Option[]>(
+        mapDocumentModelsToOptions(enabledDocuments),
+    );
 
-    const onClearStorage = () => {
-        clearStorage().catch(console.error);
+    const onSaveHandler = () => {
+        setConfig({
+            editors: {
+                enabledEditors: selectedDocuments.map(
+                    doc => doc.value as string,
+                ),
+            },
+        });
+
         onClose();
     };
 
+    const onClearStorage = () => {
+        showModal('confirmationModal', {
+            title: t('modals.connectSettings.clearStorage.confirmation.title'),
+            body: t('modals.connectSettings.clearStorage.confirmation.body'),
+            cancelLabel: t('common.cancel'),
+            continueLabel: t(
+                'modals.connectSettings.clearStorage.confirmation.clearButton',
+            ),
+            onContinue: () => {
+                clearStorage().catch(console.error);
+                showModal('settingsModal', {});
+            },
+            onCancel: () => showModal('settingsModal', {}),
+        });
+    };
+
     return (
-        <Modal
+        <ConnectSettingsModal
             open={open}
-            contentProps={{
-                className: 'rounded-3xl',
-            }}
+            title={t('modals.connectSettings.title')}
+            body={t('modals.connectSettings.body')}
+            cancelLabel={t('common.cancel')}
+            saveLabel={t('common.save')}
+            onSave={onSaveHandler}
             onOpenChange={status => {
                 if (!status) return onClose();
             }}
         >
-            <div className="w-[400px] p-6 text-slate-300">
-                <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800">
-                    Settings
-                </div>
-                <div className="mt-8 flex items-center justify-between gap-3">
-                    <p>Clear storage:</p>
-                    <Button
-                        onClick={onClearStorage}
-                        className="min-h-[48px] min-w-[142px] rounded-xl bg-red-900 px-6 py-3 text-base font-semibold text-gray-50 outline-none transition-all hover:scale-105 active:opacity-75"
-                    >
-                        Clear
-                    </Button>
-                </div>
-            </div>
-        </Modal>
+            <DocumentSelectSettingsRow
+                selected={selectedDocuments}
+                onChange={selectedDocs => setSelectedDocuments(selectedDocs)}
+                options={mapDocumentModelsToOptions(documentModels)}
+                title={t('modals.connectSettings.enabledDocumentTypes.title')}
+                description={t(
+                    'modals.connectSettings.enabledDocumentTypes.description',
+                )}
+                selectProps={{
+                    overrideStrings: {
+                        allItemsAreSelected: t(
+                            'modals.connectSettings.enabledDocumentTypes.allSelected',
+                        ),
+                    },
+                }}
+            />
+            <ClearStorageSettingsRow
+                onClearStorage={onClearStorage}
+                buttonLabel={t('modals.connectSettings.clearStorage.button')}
+                description={t(
+                    'modals.connectSettings.clearStorage.description',
+                )}
+            />
+        </ConnectSettingsModal>
     );
 };
