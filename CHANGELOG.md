@@ -1,3 +1,11 @@
+# [1.5.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.4.0...v1.5.0) (2024-03-06)
+
+
+### Features
+
+* add real-word-assets export ([f974e96](https://github.com/powerhouse-inc/document-model-libs/commit/f974e9601f46a6bed3d34b5da1f701ecc8c29c54))
+* added missing rwa types export ([68117ae](https://github.com/powerhouse-inc/document-model-libs/commit/68117aecf6774ffd0607e35d41b1ba121b39a4e4))
+
 # [1.4.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.3.0...v1.4.0) (2024-03-04)
 
 ### Features
