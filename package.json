@@ -44,6 +44,11 @@
             "import": "./dist/document-drive.js",
             "require": "./dist/document-drive.cjs",
             "types": "./dist/document-drive.d.ts"
+        },
+        "./real-world-assets": {
+            "import": "./dist/real-world-assets.js",
+            "require": "./dist/real-world-assets.cjs",
+            "types": "./dist/real-world-assets.d.ts"
         }
     },
     "./budget-statement": {
