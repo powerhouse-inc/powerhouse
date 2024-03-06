@@ -10,12 +10,50 @@ import {
 } from 'electron';
 import fs from 'node:fs';
 import path, { basename } from 'path';
+import { ElectronKeyStorage } from './app/crypto';
 import initDocumentDrive from './app/document-drive';
 import store from './app/store';
 import { Theme } from './store';
 import { documentModels } from './store/document-model';
+import { ConnectCrypto } from './utils/crypto';
 
 const isMac = process.platform === 'darwin';
+
+async function initApp() {
+    // if on mac sets app icon
+    if (isMac) {
+        const appIcon = nativeImage.createFromPath('src/assets/icon.png');
+        app.dock.setIcon(appIcon);
+    }
+
+    // initializes connect key pair
+    try {
+        const keyStorage = new ElectronKeyStorage(store);
+        // store.delete('connectkeyPair');
+        const connectCrypto = new ConnectCrypto(keyStorage);
+        await connectCrypto.initialize();
+
+        ipcMain.handle('crypto:publicKey', () => connectCrypto.publicKey());
+
+        // initializes document drive server
+        await initDocumentDrive(
+            documentModels,
+            app.getPath('userData'),
+            ipcMain,
+        );
+
+        // creates window
+        await createWindow({
+            onReady() {
+                if (initFile) {
+                    handleFile(initFile);
+                }
+            },
+        });
+    } catch (error) {
+        console.error(error);
+    }
+}
 
 app.setName('Powerhouse Connect');
 
@@ -305,19 +343,7 @@ app.on('open-file', (_event, path) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
-    const appIcon = nativeImage.createFromPath('src/assets/icon.png');
-
-    if (isMac) {
-        app.dock.setIcon(appIcon);
-    }
-
-    createWindow({
-        onReady() {
-            if (initFile) {
-                handleFile(initFile);
-            }
-        },
-    });
+    return initApp();
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -336,8 +362,6 @@ app.on('activate', () => {
         createWindow();
     }
 });
-
-initDocumentDrive(documentModels, app.getPath('userData'), ipcMain);
 
 // keeps track of the logged in user
 let user: string;
