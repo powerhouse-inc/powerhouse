@@ -66,6 +66,12 @@ const electronApi = {
             ipcRenderer.off('login', listener);
         };
     },
+    crypto: {
+        publicKey: async () =>
+            (await ipcRenderer.invoke('crypto:publicKey')) as
+                | string
+                | undefined,
+    },
     user: async () => (await ipcRenderer.invoke('user')) as string | undefined,
     openURL: (url: string) => ipcRenderer.invoke('openURL', url),
     setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
