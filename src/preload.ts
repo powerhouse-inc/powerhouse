@@ -110,6 +110,7 @@ const electronApi = {
                 drive,
                 operation,
             ),
+        clearStorage: () => ipcRenderer.invoke('documentDrive:clearStorage'),
         addDriveOperations: (
             drive: string,
             operations: Operation<DocumentDriveAction | BaseAction>[],

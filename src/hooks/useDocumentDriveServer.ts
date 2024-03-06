@@ -371,6 +371,11 @@ export function useDocumentDriveServer(
         return server.on('syncStatus', cb);
     }
 
+    async function clearStorage() {
+        await server.clearStorage();
+        await refreshDocumentDrives();
+    }
+
     return useMemo(
         () => ({
             documentDrives,
@@ -393,6 +398,7 @@ export function useDocumentDriveServer(
             getSyncStatus,
             onStrandUpdate,
             onSyncStatus,
+            clearStorage,
         }),
         [documentDrives],
     );
