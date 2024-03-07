@@ -63,7 +63,7 @@ function getInitialStates(scopeState: ScopeState) {
     const scopes = { global, local };
 
     Object.entries(scopes).forEach(([scope, state]) => {
-        if (state.schema !== '' && state.initialValue === '') {
+        if (!isEmptyStateSchema(state.schema) && state.initialValue === '') {
             throw new Error(
                 `${
                     scope.charAt(0).toLocaleUpperCase() + scope.slice(1)
@@ -76,6 +76,10 @@ function getInitialStates(scopeState: ScopeState) {
         initialGlobalState: handleEmptyState(global.initialValue),
         initialLocalState: handleEmptyState(local.initialValue),
     };
+}
+
+function isEmptyStateSchema(schema: string) {
+    return schema === '' || !schema.includes('{');
 }
 
 function handleEmptyState(state: string) {
