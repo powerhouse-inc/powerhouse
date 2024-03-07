@@ -1,3 +1,4 @@
+import { ItemsContextProvider } from '@powerhousedao/design-system';
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { RouterProvider, createHashRouter } from 'react-router-dom';
@@ -43,9 +44,11 @@ export default (
 
         <Suspense fallback={<></>}>
             <Preloader />
-            <ModalManager>
-                <App />
-            </ModalManager>
+            <ItemsContextProvider>
+                <ModalManager>
+                    <App />
+                </ModalManager>
+            </ItemsContextProvider>
         </Suspense>
     </React.StrictMode>
 );

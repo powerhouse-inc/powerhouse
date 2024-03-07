@@ -1,7 +1,6 @@
 import {
     AddDriveInput,
     AddPublicDriveInput,
-    BaseTreeItem,
     DriveView,
     DriveViewProps,
     decodeID,
@@ -9,16 +8,13 @@ import {
     getRootPath,
     useFilterPathContent,
     useItemActions,
-    useItemsContext,
 } from '@powerhousedao/design-system';
 import path from 'path';
-import { useEffect } from 'react';
 import {
     SortOptions,
     useDocumentDriveServer,
 } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
-import { useSelectedPath } from 'src/store';
 
 interface DriveContainerProps {
     disableHoverStyles?: boolean;
@@ -39,48 +35,13 @@ const DriveSections = [
 
 export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
-    const { setBaseItems, items } = useItemsContext();
     const actions = useItemActions();
     const filterPathContent = useFilterPathContent();
-    const [selectedPath, setSelectedPath] = useSelectedPath();
 
-    const {
-        documentDrives,
-        addFile,
-        copyOrMoveNode,
-        addDrive,
-        addRemoteDrive,
-    } = useDocumentDriveServer();
-    const { onItemOptionsClick, onItemClick, onSubmitInput, driveToBaseItems } =
+    const { addFile, copyOrMoveNode, addDrive, addRemoteDrive } =
+        useDocumentDriveServer();
+    const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
-
-    useEffect(() => {
-        updateBaseItems().catch(console.error);
-
-        async function updateBaseItems() {
-            const baseItems: Array<BaseTreeItem> =
-                documentDrives.length > 0
-                    ? (
-                          await Promise.all(
-                              documentDrives.map(driveToBaseItems),
-                          )
-                      ).flat()
-                    : [];
-
-            setBaseItems(baseItems);
-        }
-    }, [documentDrives]);
-
-    // Auto select first drive if there is no selected path
-    useEffect(() => {
-        if (!selectedPath && items.length > 0) {
-            const driveID = documentDrives[0].state.global.id;
-
-            setSelectedPath(encodeID(driveID));
-            actions.setSelectedItem(driveID);
-            actions.setExpandedItem(driveID, true);
-        }
-    }, [items, selectedPath]);
 
     const cancelInputHandler: DriveViewProps['onCancelInput'] = item => {
         if (item.action === 'UPDATE') {
