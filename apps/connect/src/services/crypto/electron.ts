@@ -1,6 +1,6 @@
 import { safeStorage } from 'electron';
 import type ElectronStore from 'electron-store';
-import { JsonWebKeyPairStorage, JwkKeyPair } from 'src/utils/crypto';
+import type { JsonWebKeyPairStorage, JwkKeyPair } from './';
 
 export class ElectronKeyStorage implements JsonWebKeyPairStorage {
     #store: ElectronStore;

@@ -10,12 +10,12 @@ import {
 } from 'electron';
 import fs from 'node:fs';
 import path, { basename } from 'path';
-import { ElectronKeyStorage } from './app/crypto';
 import initDocumentDrive from './app/document-drive';
 import store from './app/store';
+import { ConnectCrypto } from './services/crypto';
+import { ElectronKeyStorage } from './services/crypto/electron';
 import { Theme } from './store';
 import { documentModels } from './store/document-model';
-import { ConnectCrypto } from './utils/crypto';
 
 const isMac = process.platform === 'darwin';
 
