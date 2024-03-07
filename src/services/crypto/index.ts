@@ -17,7 +17,12 @@ function arraybuffer2hex(ab: ArrayBufferLike) {
         .join('');
 }
 
-export class ConnectCrypto {
+export interface IConnectCrypto {
+    regenerateKeyPair(): Promise<void>;
+    publicKey(): Promise<string | undefined>;
+}
+
+export class ConnectCrypto implements IConnectCrypto {
     #subtleCrypto: Promise<SubtleCrypto>;
     #keyPair: CryptoKeyPair | undefined;
     #keyPairStorage: JsonWebKeyPairStorage;
@@ -65,6 +70,11 @@ export class ConnectCrypto {
         }
     }
 
+    async regenerateKeyPair() {
+        this.#keyPair = await this.#generateECDSAKeyPair();
+        await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
+    }
+
     async publicKey() {
         if (!this.#keyPair) {
             return undefined;
@@ -75,6 +85,7 @@ export class ConnectCrypto {
             'raw',
             this.#keyPair.publicKey,
         );
+
         return arraybuffer2hex(publicKey);
     }
 

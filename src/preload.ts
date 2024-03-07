@@ -12,7 +12,15 @@ import {
 import { BaseAction, Document, Operation } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { platformInfo } from './app/detect-platform';
+import type { IConnectCrypto } from './services/crypto';
 import { Theme } from './store';
+
+const connectCrypto: IConnectCrypto = {
+    regenerateKeyPair: (): Promise<void> =>
+        ipcRenderer.invoke('crypto:regenerateKeyPair') as Promise<void>,
+    publicKey: async () =>
+        ipcRenderer.invoke('crypto:publicKey') as Promise<string | undefined>,
+};
 
 const electronApi = {
     platformInfo,
@@ -65,12 +73,6 @@ const electronApi = {
         return () => {
             ipcRenderer.off('login', listener);
         };
-    },
-    crypto: {
-        publicKey: async () =>
-            (await ipcRenderer.invoke('crypto:publicKey')) as
-                | string
-                | undefined,
     },
     user: async () => (await ipcRenderer.invoke('user')) as string | undefined,
     openURL: (url: string) => ipcRenderer.invoke('openURL', url),
@@ -143,5 +145,6 @@ const electronApi = {
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);
+contextBridge.exposeInMainWorld('connectCrypto', connectCrypto);
 
 export type ElectronAPI = typeof electronApi;
