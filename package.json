@@ -77,7 +77,8 @@
         "types": "./dist/real-world-assets.d.ts"
     },
     "scripts": {
-        "generate": "powerhouse generate && eslint . --fix",
+        "generate": "powerhouse generate",
+        "postgenerate": " eslint . --fix",
         "check-types": "tsc",
         "lint": "powerhouse generate && eslint . && npm run check-types",
         "prelint": "powerhouse generate",
