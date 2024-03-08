@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.5.0...v1.5.1) (2024-03-08)
+
+
+### Bug Fixes
+
+* tailwind config ([#93](https://github.com/powerhouse-inc/document-model-libs/issues/93)) ([06766ac](https://github.com/powerhouse-inc/document-model-libs/commit/06766ac17b8d44bc520bfe38b710cf12ca904feb))
+
 # [1.5.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.4.0...v1.5.0) (2024-03-06)
 
 
