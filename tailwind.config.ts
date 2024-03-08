@@ -3,7 +3,7 @@ import type { Config } from 'tailwindcss';
 
 const config = {
     content: [
-        '.editors/**/*.{html,js,ts,tsx}',
+        './editors/**/*.{html,js,ts,tsx}',
         '.storybook/**/*.{html,js,ts,tsx}',
     ],
     presets: [designSystemPreset],
