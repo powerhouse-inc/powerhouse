@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import 'react-toastify/dist/ReactToastify.css';
 
 @tailwind base;
 @tailwind components;
@@ -173,6 +174,18 @@
     --orange-900: hsl(var(--color-orange-900));
     --shadow-sidebar: 0px 33px 32px -16px rgba(0, 0, 0, 0.1),
         0px 0px 16px 4px rgba(0, 0, 0, 0.04);
+
+    /* Toastify */
+    --toastify-toast-min-height: 48px;
+    --toastify-toast-bd-radius: 8px;
+    --toastify-text-color-light: #404446;
+
+    --toastify-color-progress-info: var(--gray-300);
+    --toastify-color-progress-success: var(--gray-300);
+    --toastify-color-progress-warning: var(--gray-300);
+    --toastify-color-progress-error: var(--gray-300);
+    --toastify-color-progress-light: var(--gray-300);
+    /* Toastify end */
 }
 
 html:has(dialog[open]) {
@@ -183,8 +196,28 @@ html:has(dialog[open]) {
     accent-color: var(--gray-900);
 }
 
+/* React Multi Select */
 .rmsc {
     --rmsc-main: var(--gray-300) !important;
     --rmsc-hover: var(--gray-100) !important;
     --rmsc-selected: var(--gray-300) !important;
 }
+/* React Multi Select end */
+
+/* Toastify */
+.Toastify__toast-body {
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.Toastify__toast {
+    box-shadow: 0px 8px 32px 0px rgba(0, 0, 0, 0.32);
+    padding: 12px 16px 12px 16px;
+}
+
+.Toastify__progress-bar--wrp {
+    height: 2px;
+}
+/* Toastify end */

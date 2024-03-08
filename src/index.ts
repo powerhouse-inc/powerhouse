@@ -1,3 +1,4 @@
+import 'react-toastify/dist/ReactToastify.css';
 import './globals.css';
 
 export * from './connect';
