@@ -19,6 +19,7 @@
         "tsconfigRootDir": ".",
         "project": true
     },
+    "ignorePatterns": ["/*.*"],
     "plugins": ["react", "@typescript-eslint"],
     "rules": {
         "react/prop-types": "off",
