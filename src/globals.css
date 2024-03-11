@@ -178,7 +178,7 @@
     /* Toastify */
     --toastify-toast-min-height: 48px;
     --toastify-toast-bd-radius: 8px;
-    --toastify-text-color-light: #404446;
+    --toastify-text-color-light: var(--gray-800);
 
     --toastify-color-progress-info: var(--gray-300);
     --toastify-color-progress-success: var(--gray-300);
