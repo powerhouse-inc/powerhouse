@@ -13,6 +13,7 @@ import type {
 } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 import { replayDocument } from './base';
+import { validateOperations } from './validation';
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
@@ -147,9 +148,16 @@ async function loadFromZip<S, A extends Action, L>(
     if (!operationsZip) {
         throw new Error('Operations history not found');
     }
+
     const operations = JSON.parse(
         await operationsZip.async('string'),
     ) as DocumentOperations<A>;
+
+    const operationsError = validateOperations(operations);
+    if (operationsError.length) {
+        const errorMessages = operationsError.map(err => err.message);
+        throw new Error(errorMessages.join('\n'));
+    }
 
     let result = replayDocument(
         initialState,
