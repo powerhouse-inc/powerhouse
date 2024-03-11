@@ -5315,6 +5315,17 @@ document-model@^1.0.30:
     mime "^4.0.1"
     zod "^3.22.4"
 
+document-model@^1.0.31:
+  version "1.0.31"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.31.tgz#eac886edfe7b7630829a01147c9fa4b5e09a8750"
+  integrity sha512-E2SB1iNcKJfNWPjSCDFLnEFnA4HmwUF7oWwnXdX58KvryPyqTjkShIKkvbpyKYzyx54fsQid013hYkvKRVBuqw==
+  dependencies:
+    immer "^10.0.3"
+    json-stringify-deterministic "1.0.12"
+    jszip "^3.10.1"
+    mime "^4.0.1"
+    zod "^3.22.4"
+
 dot-case@^3.0.4:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/dot-case/-/dot-case-3.0.4.tgz#9b2b670d00a431667a8a75ba29cd1b98809ce751"
