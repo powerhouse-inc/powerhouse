@@ -1,13 +1,15 @@
-import { noCase } from 'change-case';
 import { z } from 'zod';
 import {
     Asset,
     BaseTransaction,
     Cash,
+    EditBaseTransactionInput,
     FixedIncome,
     GroupTransactionType,
     InputMaybe,
     RealWorldAssetsState,
+    TransactionFee,
+    TransactionFeeInput,
 } from '..';
 import {
     ASSET_PURCHASE,
@@ -18,36 +20,11 @@ import {
     INTEREST_RETURN,
     PRINCIPAL_DRAW,
     PRINCIPAL_RETURN,
-    allPossibleAllowedTransactions,
-    groupTransactionTypesToAllowedTransactions,
 } from './constants';
 
 export const dateValidator = z.coerce.date();
 
 const numberValidator = z.number();
-
-export function validateHasCorrectTransactions(
-    groupTransactionType: GroupTransactionType,
-    transactionsInput: {
-        cashTransaction?: InputMaybe<BaseTransaction>;
-        fixedIncomeTransaction?: InputMaybe<BaseTransaction>;
-        interestTransaction?: InputMaybe<BaseTransaction>;
-        feeTransactions?: InputMaybe<InputMaybe<BaseTransaction>[]>;
-    },
-) {
-    const allowedTransactions =
-        groupTransactionTypesToAllowedTransactions[groupTransactionType];
-    const notAllowedTransactions = allPossibleAllowedTransactions.filter(
-        tx => !allowedTransactions.includes(tx),
-    );
-    notAllowedTransactions.forEach(tx => {
-        if (transactionsInput[tx]) {
-            throw new Error(
-                `Group transaction of type ${groupTransactionType} cannot have a ${noCase(tx)} transaction`,
-            );
-        }
-    });
-}
 
 export function isFixedIncomeAsset(
     asset: Asset | undefined | null,
@@ -61,64 +38,106 @@ export function isCashAsset(asset: Asset | undefined | null): asset is Cash {
     return 'currency' in asset;
 }
 
+export function validateTransactionFee(
+    state: RealWorldAssetsState,
+    fee: InputMaybe<TransactionFeeInput>,
+): asserts fee is TransactionFee {
+    if (!fee) {
+        throw new Error('Fee does not exist');
+    }
+    if (!fee.serviceProviderFeeTypeId) {
+        throw new Error(`Transaction fee must have a service provider`);
+    }
+    if (!fee.amount) {
+        throw new Error(`Transaction fee must have an amount`);
+    }
+
+    if (
+        fee.serviceProviderFeeTypeId &&
+        !state.serviceProviderFeeTypes.find(
+            serviceProvider =>
+                serviceProvider.id === fee.serviceProviderFeeTypeId,
+        )
+    ) {
+        throw new Error(
+            `Service provider with account id ${fee.serviceProviderFeeTypeId} does not exist!`,
+        );
+    }
+    if (!numberValidator.safeParse(fee.amount).success) {
+        throw new Error(`Fee amount must be a number`);
+    }
+}
+
+export function validateTransactionFees(
+    state: RealWorldAssetsState,
+    fees: InputMaybe<TransactionFeeInput[]>,
+): asserts fees is TransactionFee[] {
+    if (!Array.isArray(fees)) {
+        throw new Error(`Transaction fees must be an array`);
+    }
+    fees.forEach(fee => {
+        validateTransactionFee(state, fee);
+    });
+}
+
 export function validateBaseTransaction(
     state: RealWorldAssetsState,
-    input: InputMaybe<BaseTransaction>,
-) {
-    if (!input?.id) {
-        throw new Error(`Transaction must have an id`);
-    }
-    if (state.transactions.find(transaction => transaction.id === input.id)) {
-        throw new Error(`Transaction with id ${input.id} already exists!`);
-    }
-    if (!input.assetId) {
+    transaction: EditBaseTransactionInput,
+): asserts transaction is BaseTransaction {
+    if (!transaction.assetId) {
         throw new Error(`Transaction must have an asset`);
     }
-    if (!state.portfolio.find(asset => asset.id === input.assetId)) {
-        throw new Error(`Asset with id ${input.assetId} does not exist!`);
+    if (!state.portfolio.find(asset => asset.id === transaction.assetId)) {
+        throw new Error(`Asset with id ${transaction.assetId} does not exist!`);
     }
-    if (!input.amount) {
+    if (!transaction.amount) {
         throw new Error(`Transaction must have an amount`);
     }
-    if (!input.entryTime) {
+    if (!transaction.entryTime) {
         throw new Error(`Transaction must have an entry time`);
     }
 
-    if (!dateValidator.safeParse(input.entryTime).success) {
+    if (!dateValidator.safeParse(transaction.entryTime).success) {
         throw new Error(`Entry time must be a valid date`);
     }
-    if (input.tradeTime && !dateValidator.safeParse(input.tradeTime).success) {
+    if (
+        transaction.tradeTime &&
+        !dateValidator.safeParse(transaction.tradeTime).success
+    ) {
         throw new Error(`Trade time must be a valid date`);
     }
     if (
-        input.settlementTime &&
-        !dateValidator.safeParse(input.settlementTime).success
+        transaction.settlementTime &&
+        !dateValidator.safeParse(transaction.settlementTime).success
     ) {
         throw new Error(`Settlement time must be a valid date`);
     }
     if (
-        input.accountId &&
-        !state.accounts.find(a => a.id === input.accountId)
-    ) {
-        throw new Error(`Account with id ${input.accountId} does not exist!`);
-    }
-    if (
-        input.counterPartyAccountId &&
-        !state.accounts.find(a => a.id === input.counterPartyAccountId)
+        transaction.accountId &&
+        !state.accounts.find(a => a.id === transaction.accountId)
     ) {
         throw new Error(
-            `Counter party account with id ${input.counterPartyAccountId} does not exist!`,
+            `Account with id ${transaction.accountId} does not exist!`,
+        );
+    }
+    if (
+        transaction.counterPartyAccountId &&
+        !state.accounts.find(a => a.id === transaction.counterPartyAccountId)
+    ) {
+        throw new Error(
+            `Counter party account with id ${transaction.counterPartyAccountId} does not exist!`,
         );
     }
 }
 
 export function validateFixedIncomeTransaction(
     state: RealWorldAssetsState,
-    transaction: InputMaybe<BaseTransaction>,
-) {
+    transaction: EditBaseTransactionInput,
+): asserts transaction is BaseTransaction {
+    validateBaseTransaction(state, transaction);
     if (
         !isFixedIncomeAsset(
-            state.portfolio.find(a => a.id === transaction?.assetId),
+            state.portfolio.find(a => a.id === transaction.assetId),
         )
     ) {
         throw new Error(
@@ -129,9 +148,10 @@ export function validateFixedIncomeTransaction(
 
 export function validateCashTransaction(
     state: RealWorldAssetsState,
-    transaction: InputMaybe<BaseTransaction>,
-) {
-    if (transaction?.counterPartyAccountId !== state.principalLenderAccountId) {
+    transaction: EditBaseTransactionInput,
+): asserts transaction is BaseTransaction {
+    validateBaseTransaction(state, transaction);
+    if (transaction.counterPartyAccountId !== state.principalLenderAccountId) {
         throw new Error(
             `Cash transaction must have Maker principal lender as the counter party`,
         );
@@ -143,24 +163,25 @@ export function validateCashTransaction(
 
 export function validateInterestTransaction(
     state: RealWorldAssetsState,
-    transaction: InputMaybe<BaseTransaction>,
-) {
+    transaction: EditBaseTransactionInput,
+): asserts transaction is BaseTransaction {
+    validateBaseTransaction(state, transaction);
     if (
         !isFixedIncomeAsset(
-            state.portfolio.find(a => a.id === transaction?.assetId),
+            state.portfolio.find(a => a.id === transaction.assetId),
         )
     ) {
         throw new Error(
             `Interest transaction must have a fixed income asset as the asset`,
         );
     }
-    if (!transaction?.counterPartyAccountId) {
+    if (!transaction.counterPartyAccountId) {
         throw new Error(
             `Interest transaction must have a counter party account`,
         );
     }
     if (
-        !state.feeTypes.find(
+        !state.serviceProviderFeeTypes.find(
             a => a.accountId === transaction.counterPartyAccountId,
         )
     ) {
@@ -175,8 +196,8 @@ export function validateInterestTransaction(
 
 export function validateFeeTransactions(
     state: RealWorldAssetsState,
-    transactions: InputMaybe<InputMaybe<BaseTransaction>[]>,
-) {
+    transactions: EditBaseTransactionInput[],
+): asserts transactions is BaseTransaction[] {
     if (!Array.isArray(transactions)) {
         throw new Error(`Fee transactions must be an array`);
     }
@@ -187,22 +208,22 @@ export function validateFeeTransactions(
 
 export function validateFeeTransaction(
     state: RealWorldAssetsState,
-    transaction: InputMaybe<BaseTransaction>,
-) {
+    transaction: EditBaseTransactionInput,
+): asserts transaction is BaseTransaction {
     if (
         !isFixedIncomeAsset(
-            state.portfolio.find(a => a.id === transaction?.assetId),
+            state.portfolio.find(a => a.id === transaction.assetId),
         )
     ) {
         throw new Error(
             `Fee transaction must have a fixed income asset as the asset`,
         );
     }
-    if (!transaction?.counterPartyAccountId) {
+    if (!transaction.counterPartyAccountId) {
         throw new Error(`Fee transaction must have a counter party account`);
     }
     if (
-        !state.feeTypes.find(
+        !state.serviceProviderFeeTypes.find(
             a => a.accountId === transaction.counterPartyAccountId,
         )
     ) {
@@ -324,14 +345,20 @@ export function validateFixedIncomeAssetDerivedFields(
 export function makeEmptyGroupTransactionByType(
     type: GroupTransactionType,
     id: string,
+    entryTime: string = new Date().toISOString(),
 ) {
+    const cashBalanceChange = 0;
+    const fees = null;
     const cashTransaction = null;
     const fixedIncomeTransaction = null;
     const interestTransaction = null;
-    const feeTransactions = [] as BaseTransaction[];
+    const feeTransactions = null;
     const base = {
         type,
         id,
+        entryTime,
+        cashBalanceChange,
+        fees,
     };
     switch (type) {
         case PRINCIPAL_DRAW:
@@ -340,6 +367,8 @@ export function makeEmptyGroupTransactionByType(
                 ...base,
                 cashTransaction,
                 feeTransactions,
+                fixedIncomeTransaction: null,
+                interestTransaction: null,
             };
         }
         case ASSET_PURCHASE:
@@ -349,6 +378,7 @@ export function makeEmptyGroupTransactionByType(
                 cashTransaction,
                 fixedIncomeTransaction,
                 feeTransactions,
+                interestTransaction: null,
             };
         }
         case INTEREST_DRAW:
@@ -356,12 +386,18 @@ export function makeEmptyGroupTransactionByType(
             return {
                 ...base,
                 interestTransaction,
+                cashTransaction: null,
+                fixedIncomeTransaction: null,
+                feeTransactions: null,
             };
         }
         case FEES_PAYMENT: {
             return {
                 ...base,
                 feeTransactions,
+                cashTransaction: null,
+                fixedIncomeTransaction: null,
+                interestTransaction: null,
             };
         }
     }
@@ -462,12 +498,8 @@ export function calculateAnnualizedYield(
     const maturityDate = new Date(maturity);
     const daysUntilMaturity = daysUntil(maturityDate);
 
-    if (daysUntilMaturity === 0) {
+    if (daysUntilMaturity <= 0) {
         return 0;
-    }
-
-    if (daysUntilMaturity < 0) {
-        throw new Error('Maturity date must be in the future.');
     }
 
     const denominator = notional - purchasePrice;
@@ -506,9 +538,11 @@ export function daysUntil(date: Date) {
 }
 
 export function getDifferences<T extends object>(
-    obj1: T,
-    obj2: Partial<T>,
+    obj1: T | null,
+    obj2: Partial<T> | null,
 ): Partial<T> {
+    if (!obj1 || !obj2) return {};
+
     const differences: Partial<T> = {};
 
     function isObject(value: any): value is object {

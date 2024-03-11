@@ -19,38 +19,45 @@ import {
 } from '../constants';
 import { makeEmptyGroupTransactionByType } from '../utils';
 const principalLenderAccount = generateMock(z.AccountSchema());
+const mockAccount = generateMock(z.AccountSchema());
 const mockCounterParty = generateMock(z.AccountSchema());
 const mockCashAsset = generateMock(z.CashSchema());
 const mockFixedIncomeAsset = generateMock(z.FixedIncomeSchema());
 mockFixedIncomeAsset.maturity = addDays(new Date(), 30).toDateString();
-const mockServiceProvider = generateMock(z.ServiceProviderSchema());
+const mockServiceProvider = generateMock(z.ServiceProviderFeeTypeSchema());
 mockServiceProvider.accountId = mockCounterParty.id;
 const mockCashTransaction = generateMock(z.BaseTransactionSchema());
 mockCashTransaction.counterPartyAccountId = principalLenderAccount.id;
 mockCashTransaction.assetId = mockCashAsset.id;
 const positiveMockCashTransaction = {
     ...mockCashTransaction,
+    accountId: mockAccount.id,
     amount: 100,
 };
 const negativeMockCashTransaction = {
     ...mockCashTransaction,
+    accountId: mockAccount.id,
     amount: -100,
 };
 const mockFixedIncomeTransaction = generateMock(z.BaseTransactionSchema());
 mockFixedIncomeTransaction.assetId = mockFixedIncomeAsset.id;
-mockFixedIncomeTransaction;
 const mockInterestTransaction = generateMock(z.BaseTransactionSchema());
 mockInterestTransaction.assetId = mockFixedIncomeAsset.id;
 mockInterestTransaction.counterPartyAccountId = mockServiceProvider.accountId;
+mockInterestTransaction.accountId = mockAccount.id;
 
 describe('Transactions Operations', () => {
     const document = utils.createDocument({
         state: {
             global: {
-                accounts: [principalLenderAccount, mockCounterParty],
+                accounts: [
+                    principalLenderAccount,
+                    mockCounterParty,
+                    mockAccount,
+                ],
                 principalLenderAccountId: principalLenderAccount.id,
                 spvs: [],
-                feeTypes: [mockServiceProvider],
+                serviceProviderFeeTypes: [mockServiceProvider],
                 fixedIncomeTypes: [],
                 portfolio: [mockCashAsset, mockFixedIncomeAsset],
                 transactions: [],
@@ -67,11 +74,11 @@ describe('Transactions Operations', () => {
         input.cashTransaction = positiveMockCashTransaction;
         const updatedDocument = reducer(
             document,
-            creators.createPrincipalDrawGroupTransaction(input),
+            creators.createGroupTransaction(input),
         );
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'CREATE_PRINCIPAL_DRAW_GROUP_TRANSACTION',
+            'CREATE_GROUP_TRANSACTION',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
@@ -85,11 +92,11 @@ describe('Transactions Operations', () => {
         input.cashTransaction = negativeMockCashTransaction;
         const updatedDocument = reducer(
             document,
-            creators.createPrincipalReturnGroupTransaction(input),
+            creators.createGroupTransaction(input),
         );
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'CREATE_PRINCIPAL_RETURN_GROUP_TRANSACTION',
+            'CREATE_GROUP_TRANSACTION',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
@@ -100,11 +107,11 @@ describe('Transactions Operations', () => {
         input.fixedIncomeTransaction = mockFixedIncomeTransaction;
         const updatedDocument = reducer(
             document,
-            creators.createAssetSaleGroupTransaction(input),
+            creators.createGroupTransaction(input),
         );
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'CREATE_ASSET_SALE_GROUP_TRANSACTION',
+            'CREATE_GROUP_TRANSACTION',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
@@ -118,11 +125,11 @@ describe('Transactions Operations', () => {
         input.fixedIncomeTransaction = mockFixedIncomeTransaction;
         const updatedDocument = reducer(
             document,
-            creators.createAssetPurchaseGroupTransaction(input),
+            creators.createGroupTransaction(input),
         );
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'CREATE_ASSET_PURCHASE_GROUP_TRANSACTION',
+            'CREATE_GROUP_TRANSACTION',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
@@ -136,11 +143,11 @@ describe('Transactions Operations', () => {
         input.interestTransaction = mockInterestTransaction;
         const updatedDocument = reducer(
             document,
-            creators.createInterestDrawGroupTransaction(input),
+            creators.createGroupTransaction(input),
         );
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'CREATE_INTEREST_DRAW_GROUP_TRANSACTION',
+            'CREATE_GROUP_TRANSACTION',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
@@ -154,11 +161,11 @@ describe('Transactions Operations', () => {
         input.interestTransaction = mockInterestTransaction;
         const updatedDocument = reducer(
             document,
-            creators.createInterestReturnGroupTransaction(input),
+            creators.createGroupTransaction(input),
         );
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'CREATE_INTEREST_RETURN_GROUP_TRANSACTION',
+            'CREATE_GROUP_TRANSACTION',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);

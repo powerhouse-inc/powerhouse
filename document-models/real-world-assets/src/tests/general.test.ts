@@ -72,8 +72,8 @@ describe('General Operations', () => {
         );
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
-    it('should handle createServiceProvider operation', () => {
-        const input = generateMock(z.CreateServiceProviderInputSchema());
+    it('should handle createServiceProviderFeeType operation', () => {
+        const input = generateMock(z.CreateServiceProviderFeeTypeInputSchema());
         const existingAccount = generateMock(z.AccountSchema());
         input.accountId = existingAccount.id;
         const document = utils.createDocument({
@@ -86,26 +86,28 @@ describe('General Operations', () => {
         });
         const updatedDocument = reducer(
             document,
-            creators.createServiceProvider(input),
+            creators.createServiceProviderFeeType(input),
         );
 
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'CREATE_SERVICE_PROVIDER',
+            'CREATE_SERVICE_PROVIDER_FEE_TYPE',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
-    it('should handle editServiceProvider operation', () => {
-        const initialInput = generateMock(z.ServiceProviderSchema());
-        const newInput = generateMock(z.EditServiceProviderInputSchema());
+    it('should handle editServiceProviderFeeType operation', () => {
+        const initialInput = generateMock(z.ServiceProviderFeeTypeSchema());
+        const newInput = generateMock(
+            z.EditServiceProviderFeeTypeInputSchema(),
+        );
         newInput.id = initialInput.id;
         const existingAccount = generateMock(z.AccountSchema());
         newInput.accountId = existingAccount.id;
         const document = utils.createDocument({
             state: {
                 global: {
-                    feeTypes: [initialInput],
+                    serviceProviderFeeTypes: [initialInput],
                     accounts: [existingAccount],
                 },
                 local: {},
@@ -113,38 +115,42 @@ describe('General Operations', () => {
         });
         const updatedDocument = reducer(
             document,
-            creators.editServiceProvider(newInput),
+            creators.editServiceProviderFeeType(newInput),
         );
 
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'EDIT_SERVICE_PROVIDER',
+            'EDIT_SERVICE_PROVIDER_FEE_TYPE',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(
             newInput,
         );
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
-    it('should handle deleteServiceProvider operation', () => {
-        const initialInput = generateMock(z.CreateServiceProviderInputSchema());
-        const deleteInput = generateMock(z.DeleteServiceProviderInputSchema());
+    it('should handle deleteServiceProviderFeeType operation', () => {
+        const initialInput = generateMock(
+            z.CreateServiceProviderFeeTypeInputSchema(),
+        );
+        const deleteInput = generateMock(
+            z.DeleteServiceProviderFeeTypeInputSchema(),
+        );
         deleteInput.id = initialInput.id;
         const document = utils.createDocument({
             state: {
                 global: {
-                    feeTypes: [initialInput],
+                    serviceProviderFeeTypes: [initialInput],
                 },
                 local: {},
             },
         });
         const updatedDocument = reducer(
             document,
-            creators.deleteServiceProvider(deleteInput),
+            creators.deleteServiceProviderFeeType(deleteInput),
         );
 
         expect(updatedDocument.operations.global).toHaveLength(1);
         expect(updatedDocument.operations.global[0].type).toBe(
-            'DELETE_SERVICE_PROVIDER',
+            'DELETE_SERVICE_PROVIDER_FEE_TYPE',
         );
         expect(updatedDocument.operations.global[0].input).toStrictEqual(
             deleteInput,

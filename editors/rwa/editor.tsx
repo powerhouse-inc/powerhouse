@@ -59,7 +59,7 @@ function Editor(props: IProps) {
                         <Portfolio {...props} />
                     </TabPanel>
                     <TabPanel id="transactions">
-                        <Transactions />
+                        <Transactions {...props} />
                     </TabPanel>
                     <TabPanel id="attachments">
                         <Attachments />

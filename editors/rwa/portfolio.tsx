@@ -1,7 +1,7 @@
 import {
-    FixedIncomeAsset,
-    FixedIncomeAssetsTableProps,
-    RWAFixedIncomeAssetsTable,
+    FixedIncomesTableProps,
+    RWAFixedIncomesTable,
+    FixedIncome as UiFixedIncome,
 } from '@powerhousedao/design-system';
 import { RWAAssetDetailInputs } from '@powerhousedao/design-system/dist/rwa/components/asset-details/form';
 import { utils } from 'document-model/document';
@@ -15,7 +15,7 @@ import {
 } from '../../document-models/real-world-assets';
 import { IProps } from './editor';
 
-const fieldsPriority: (keyof FixedIncomeAsset)[] = [
+const fieldsPriority: (keyof FixedIncome)[] = [
     'name',
     'maturity',
     'notional',
@@ -45,7 +45,7 @@ function createAssetFromFormInputs(data: RWAAssetDetailInputs) {
 export const Portfolio = (props: IProps) => {
     const [expandedRowId, setExpandedRowId] = useState<string>();
     const [selectedAssetToEdit, setSelectedAssetToEdit] =
-        useState<FixedIncomeAsset>();
+        useState<UiFixedIncome>();
     const [showNewAssetForm, setShowNewAssetForm] = useState(false);
 
     const { dispatch, document } = props;
@@ -56,47 +56,43 @@ export const Portfolio = (props: IProps) => {
 
     const portfolio = document.state.global.portfolio.filter(
         (asset): asset is FixedIncome => isFixedIncomeAsset(asset),
-    ) as FixedIncomeAsset[];
+    );
 
     const toggleExpandedRow = useCallback((id: string) => {
         setExpandedRowId(curr => (id === curr ? undefined : id));
     }, []);
 
-    const onClickDetails: FixedIncomeAssetsTableProps['onClickDetails'] =
+    const onClickDetails: FixedIncomesTableProps['onClickDetails'] =
         useCallback(item => {}, []);
 
-    const onCancelEdit: FixedIncomeAssetsTableProps['onCancelEdit'] =
+    const onCancelEdit: FixedIncomesTableProps['onCancelEdit'] =
         useCallback(() => {
             setSelectedAssetToEdit(undefined);
         }, []);
 
-    const onSubmitEdit: FixedIncomeAssetsTableProps['onSubmitEdit'] =
-        useCallback(
-            data => {
-                if (!selectedAssetToEdit) return;
-                const asset = createAssetFromFormInputs(data);
-                const changedFields = getDifferences(
-                    selectedAssetToEdit,
-                    asset,
-                );
+    const onSubmitEdit: FixedIncomesTableProps['onSubmitEdit'] = useCallback(
+        data => {
+            if (!selectedAssetToEdit) return;
+            const asset = createAssetFromFormInputs(data);
+            const changedFields = getDifferences(selectedAssetToEdit, asset);
 
-                if (Object.values(changedFields).filter(Boolean).length === 0) {
-                    setSelectedAssetToEdit(undefined);
-                    return;
-                }
-
-                dispatch(
-                    actions.editFixedIncomeAsset({
-                        ...changedFields,
-                        id: selectedAssetToEdit.id,
-                    }),
-                );
+            if (Object.values(changedFields).filter(Boolean).length === 0) {
                 setSelectedAssetToEdit(undefined);
-            },
-            [dispatch, selectedAssetToEdit],
-        );
+                return;
+            }
 
-    const onSubmitCreate: FixedIncomeAssetsTableProps['onSubmitCreate'] =
+            dispatch(
+                actions.editFixedIncomeAsset({
+                    ...changedFields,
+                    id: selectedAssetToEdit.id,
+                }),
+            );
+            setSelectedAssetToEdit(undefined);
+        },
+        [dispatch, selectedAssetToEdit],
+    );
+
+    const onSubmitCreate: FixedIncomesTableProps['onSubmitCreate'] =
         useCallback(
             data => {
                 const asset = createAssetFromFormInputs(data);
@@ -118,15 +114,15 @@ export const Portfolio = (props: IProps) => {
                 Details on the distribution of assets among different financial
                 institutions or investment vehicles.
             </p>
-            <RWAFixedIncomeAssetsTable
+            <RWAFixedIncomesTable
                 className={twMerge(
                     'bg-white',
                     expandedRowId && 'max-h-[680px]',
                 )}
-                items={portfolio}
+                items={portfolio as UiFixedIncome[]}
                 fixedIncomeTypes={fixedIncomeTypes}
                 spvs={spvs}
-                fieldsPriority={fieldsPriority}
+                fieldsPriority={fieldsPriority as (keyof UiFixedIncome)[]}
                 columnCountByTableWidth={columnCountByTableWidth}
                 expandedRowId={expandedRowId}
                 selectedAssetToEdit={selectedAssetToEdit}

@@ -72,6 +72,7 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
             notional: 0,
             purchaseDate: '',
             purchaseProceeds: 0,
+            realizedSurplus: 0,
         };
         state.portfolio.push(asset);
     },
@@ -84,6 +85,9 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
         }
         if (!action.input.currency) {
             throw new Error(`Cash asset must have a currency`);
+        }
+        if (!action.input.balance) {
+            throw new Error(`Cash asset must have a balance`);
         }
         if (!state.spvs.find(spv => spv.id === action.input.spvId)) {
             throw new Error(`SPV with id ${action.input.id} does not exist!`);
