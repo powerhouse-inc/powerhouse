@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.5.1...v1.6.0) (2024-03-11)
+
+
+### Features
+
+* add transactions editor ([#94](https://github.com/powerhouse-inc/document-model-libs/issues/94)) ([f58006a](https://github.com/powerhouse-inc/document-model-libs/commit/f58006a0af91c1a525de5016c3cbec19c9080295))
+
 ## [1.5.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.5.0...v1.5.1) (2024-03-08)
 
 
