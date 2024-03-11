@@ -1,3 +1,10 @@
+# [1.0.0-alpha.70](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.69...v1.0.0-alpha.70) (2024-03-11)
+
+
+### Features
+
+* update tx inputs to match schema ([#223](https://github.com/powerhouse-inc/design-system/issues/223)) ([0cd075c](https://github.com/powerhouse-inc/design-system/commit/0cd075caba045b840e0650b41ce914c303669705))
+
 # [1.0.0-alpha.69](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.68...v1.0.0-alpha.69) (2024-03-05)
 
 
