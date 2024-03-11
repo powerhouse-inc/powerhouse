@@ -44,7 +44,7 @@ describe('Base utils', () => {
                 {
                     scope: 'global',
                     hash: '',
-                    index: 1,
+                    index: 0,
                     skip: 0,
                     timestamp: '',
                     type: 'TEST_ACTION',
@@ -53,7 +53,7 @@ describe('Base utils', () => {
                 {
                     scope: 'global',
                     hash: '',
-                    index: 1,
+                    index: 0,
                     skip: 0,
                     timestamp: '',
                     type: 'TEST_ACTION',
@@ -75,7 +75,7 @@ describe('Base utils', () => {
 
         expect(errors).toHaveLength(1);
         expect(errors[0].message).toStrictEqual(
-            'Invalid operation index 1 at position 2',
+            'Invalid operation index 0 at position 1',
         );
     });
 });

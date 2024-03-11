@@ -155,7 +155,8 @@ async function loadFromZip<S, A extends Action, L>(
 
     const operationsError = validateOperations(operations);
     if (operationsError.length) {
-        console.warn('Invalid operations', operationsError);
+        const errorMessages = operationsError.map(err => err.message);
+        throw new Error(errorMessages.join('\n'));
     }
 
     let result = replayDocument(
