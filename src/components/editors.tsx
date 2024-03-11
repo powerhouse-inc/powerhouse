@@ -54,11 +54,19 @@ export const DocumentEditor: React.FC<IProps> = ({
 
     function dispatch(action: BaseAction | Action) {
         _dispatch(action, operation => {
+            window.documentEditorDebugTools?.pushOperation(operation);
             onAddOperation(operation);
         });
     }
 
     useEffect(() => {
+        return () => {
+            window.documentEditorDebugTools?.clear();
+        };
+    }, []);
+
+    useEffect(() => {
+        window.documentEditorDebugTools?.setDocument(document);
         onChange?.(document);
     }, [document]);
 
