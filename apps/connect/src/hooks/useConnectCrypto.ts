@@ -10,19 +10,19 @@ const connectCrypto = (async () => {
     const { ConnectCrypto } = await import('src/services/crypto');
     const { BrowserKeyStorage } = await import('src/services/crypto/browser');
     const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
-    await connectCrypto.initialize();
+    await connectCrypto.did();
     return connectCrypto;
 })();
 
 export function useConnectCrypto(): IConnectCrypto {
     return {
-        async regenerateKeyPair() {
+        async regenerateDid() {
             const crypto = await connectCrypto;
-            return crypto.regenerateKeyPair();
+            return crypto.regenerateDid();
         },
-        async publicKey() {
+        async did() {
             const crypto = await connectCrypto;
-            return crypto.publicKey();
+            return crypto.did();
         },
     };
 }
