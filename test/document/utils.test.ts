@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { getLocalFile } from '../../src/document/utils';
+import { getLocalFile, validateOperations } from '../../src/document/utils';
 import { hash as hashBrowser } from '../../src/document/utils/browser';
 import { hash as hashNode } from '../../src/document/utils/node';
 
@@ -36,5 +36,46 @@ describe('Base utils', () => {
 
     it('should hash in browser and node', async () => {
         expect(hashNode('test')).toEqual(hashBrowser('test'));
+    });
+
+    it('should find invalid index oprations', () => {
+        const errors = validateOperations({
+            global: [
+                {
+                    scope: 'global',
+                    hash: '',
+                    index: 1,
+                    skip: 0,
+                    timestamp: '',
+                    type: 'TEST_ACTION',
+                    input: { id: 'test' },
+                },
+                {
+                    scope: 'global',
+                    hash: '',
+                    index: 1,
+                    skip: 0,
+                    timestamp: '',
+                    type: 'TEST_ACTION',
+                    input: { id: 'test' },
+                },
+            ],
+            local: [
+                {
+                    scope: 'local',
+                    hash: '',
+                    index: 0,
+                    skip: 0,
+                    timestamp: '',
+                    type: 'TEST_ACTION',
+                    input: { id: 'test' },
+                },
+            ],
+        });
+
+        expect(errors).toHaveLength(1);
+        expect(errors[0].message).toStrictEqual(
+            'Invalid operation index 1 at position 2',
+        );
     });
 });

@@ -308,3 +308,5 @@ export type UndoRedoProcessResult<T, A extends Action, L> = {
     action: A | BaseAction;
     skip: number;
 };
+
+export type ValidationError = { message: string; details: object };
