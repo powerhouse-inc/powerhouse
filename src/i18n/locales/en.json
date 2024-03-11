@@ -54,7 +54,7 @@
                 }
             },
             "enabledDocumentTypes": {
-                "title": "Document Modals",
+                "title": "Document Models",
                 "description": "Documents enabled",
                 "allSelected": "All documents are selected"
             }
