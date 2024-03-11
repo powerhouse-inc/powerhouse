@@ -1,9 +1,5 @@
+import { mockFixedIncomes, mockFixedIncomeTypes, mockSpvs } from '@/rwa/mocks';
 import type { Meta, StoryObj } from '@storybook/react';
-import {
-    mockFixedIncomeAssetsTableData,
-    mockFixedIncomeTypes,
-    mockSpvs,
-} from '../table/fixed-income-assets-mock-table-data';
 import { RWAAssetDetails } from './asset-details';
 
 const meta: Meta<typeof RWAAssetDetails> = {
@@ -38,6 +34,6 @@ export const Primary: Story = {
         mode: 'view',
         fixedIncomeTypes: mockFixedIncomeTypes,
         spvs: mockSpvs,
-        asset: mockFixedIncomeAssetsTableData[0],
+        asset: mockFixedIncomes[0],
     },
 };

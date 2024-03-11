@@ -8,17 +8,25 @@ export interface RWATableDatePickerProps<ControlInputs extends FieldValues>
     disabled?: boolean;
     control: Control<ControlInputs>;
     name: Path<ControlInputs>;
+    required?: boolean;
 }
 
 export function RWATableDatePicker<ControlInputs extends FieldValues>(
     props: RWATableDatePickerProps<ControlInputs>,
 ) {
-    const { name, control, disabled = false, ...restProps } = props;
+    const {
+        name,
+        control,
+        required = false,
+        disabled = false,
+        ...restProps
+    } = props;
 
     return (
         <Controller
             name={name}
             control={control}
+            rules={{ required }}
             render={({ field: { onChange, onBlur, value } }) => (
                 <RWADatePicker
                     value={value}

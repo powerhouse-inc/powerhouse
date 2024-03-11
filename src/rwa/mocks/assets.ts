@@ -1,4 +1,6 @@
-import { FixedIncomeAsset } from '@/rwa';
+import { FixedIncome } from '@/rwa';
+
+export const mockPrincipalLenderAccountId = 'principal-lender-id';
 
 export const mockFixedIncomeTypes = [
     { id: '1', name: 'T-Bill 91279GF8' },
@@ -12,7 +14,7 @@ export const mockSpvs = [
     { id: '3', name: 'SPV 3' },
 ];
 
-export const mockFixedIncomeAssetsTableData: FixedIncomeAsset[] = [
+export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '137418',
         fixedIncomeTypeId: '1',
@@ -172,5 +174,63 @@ export const mockFixedIncomeAssetsTableData: FixedIncomeAsset[] = [
         CUSIP: '273954713',
         coupon: 3.98,
         annualizedYield: 75182.14,
+    },
+];
+
+export const mockCashAsset = {
+    id: 'cash-asset-1',
+    spvId: mockSpvs[0].id,
+    currency: 'USD',
+};
+
+export const mockCashAssets = [mockCashAsset];
+
+export const mockAccounts = [
+    {
+        id: mockPrincipalLenderAccountId,
+        label: 'Principal Lender',
+        reference: '0x123',
+    },
+    {
+        id: 'account-2',
+        label: 'Account 2',
+        reference: '0x456',
+    },
+    {
+        id: 'account-3',
+        label: 'Account 3',
+        reference: '0x789',
+    },
+    {
+        id: 'account-4',
+        label: 'Account 4',
+        reference: '0xabc',
+    },
+];
+
+export const mockServiceProviderFeeTypes = [
+    {
+        id: '1',
+        feeType: 'Fee 1',
+        name: 'Service Provider 1',
+        accountId: mockAccounts[1].id,
+    },
+    {
+        id: '2',
+        feeType: 'Fee 1 other',
+        name: 'Service Provider 1',
+        accountId: mockAccounts[1].id,
+    },
+    {
+        id: '3',
+        feeType: 'Fee 2',
+        name: 'Service Provider 2',
+        accountId: mockAccounts[2].id,
+    },
+    {
+        id: '4',
+        feeType: 'Fee 3',
+        name: 'Service Provider 3',
+        accountId: mockAccounts[3].id,
     },
 ];

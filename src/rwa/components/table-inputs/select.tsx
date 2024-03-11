@@ -7,17 +7,25 @@ export interface RWATableSelectProps<ControlInputs extends FieldValues>
     disabled?: boolean;
     name: Path<ControlInputs>;
     control: Control<ControlInputs>;
+    required?: boolean;
 }
 
 export function RWATableSelect<ControlInputs extends FieldValues>(
     props: RWATableSelectProps<ControlInputs>,
 ) {
-    const { name, control, disabled = false, ...restProps } = props;
+    const {
+        name,
+        control,
+        required = false,
+        disabled = false,
+        ...restProps
+    } = props;
 
     return (
         <Controller
             name={name}
             control={control}
+            rules={{ required }}
             render={({ field: { onChange, onBlur, value } }) => (
                 <RWASelect
                     onBlur={onBlur}

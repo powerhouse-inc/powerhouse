@@ -1,5 +1,5 @@
 import { Icon } from '@/powerhouse';
-import { FixedIncomeAsset, FixedIncomeType, SPV } from '@/rwa';
+import { FixedIncome, FixedIncomeType, SPV } from '@/rwa';
 import { addDays } from 'date-fns';
 import { useRef } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
@@ -8,29 +8,29 @@ import { RWAAssetDetails } from '../asset-details';
 import { RWAAssetDetailInputs } from '../asset-details/form';
 import { RWATableRow } from './expandable-row';
 import { useColumnPriority } from './useColumnPriority';
-import { maybeStripTime } from './utils';
+import { handleDateInTable } from './utils';
 
-export type FixedIncomeAssetsTableProps = Omit<
-    RWATableProps<FixedIncomeAsset>,
+export type FixedIncomesTableProps = Omit<
+    RWATableProps<FixedIncome>,
     'header' | 'renderRow'
 > & {
     fixedIncomeTypes: FixedIncomeType[];
     spvs: SPV[];
     columnCountByTableWidth: Record<string, number>;
-    fieldsPriority: (keyof FixedIncomeAsset)[];
+    fieldsPriority: (keyof FixedIncome)[];
     expandedRowId: string | undefined;
-    selectedAssetToEdit?: FixedIncomeAsset;
+    selectedAssetToEdit?: FixedIncome;
     showNewAssetForm: boolean;
     toggleExpandedRow: (id: string) => void;
-    onClickDetails: (item: FixedIncomeAsset) => void;
-    setSelectedAssetToEdit: (item: FixedIncomeAsset) => void;
+    onClickDetails: (item: FixedIncome) => void;
+    setSelectedAssetToEdit: (item: FixedIncome) => void;
     onCancelEdit: () => void;
     onSubmitCreate: (data: RWAAssetDetailInputs) => void;
     onSubmitEdit: (data: RWAAssetDetailInputs) => void;
     setShowNewAssetForm: (show: boolean) => void;
 };
 
-export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
+export function RWAFixedIncomesTable(props: FixedIncomesTableProps) {
     const {
         items,
         fixedIncomeTypes,
@@ -52,7 +52,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
-    const { fields, headerLabels } = useColumnPriority<FixedIncomeAsset>({
+    const { fields, headerLabels } = useColumnPriority<FixedIncome>({
         columnCountByTableWidth,
         fieldsPriority,
         tableContainerRef,
@@ -60,7 +60,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
 
     const { sortedItems, sortHandler } = useSortTableItems(items || []);
 
-    const renderRow = (item: FixedIncomeAsset, index: number) => {
+    const renderRow = (item: FixedIncome, index: number) => {
         return (
             <RWATableRow
                 isExpanded={expandedRowId === item.id}
@@ -101,7 +101,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
                     <RWATableCell>{index + 1}</RWATableCell>
                     {fields.map(field => (
                         <RWATableCell key={field}>
-                            {maybeStripTime(item[field]) ?? '--'}
+                            {handleDateInTable(item[field]) ?? '--'}
                         </RWATableCell>
                     ))}
                     <RWATableCell>
@@ -143,7 +143,7 @@ export function RWAFixedIncomeAssetsTable(props: FixedIncomeAssetsTableProps) {
             />
             <button
                 onClick={() => setShowNewAssetForm(true)}
-                className="flex h-[42px] w-full items-center justify-center gap-x-2 rounded-b-lg border-x border-b border-gray-300 bg-white text-sm font-semibold text-gray-900"
+                className="flex h-11 w-full items-center justify-center gap-x-2 rounded-b-lg border-x border-b border-gray-300 bg-white text-sm font-semibold text-gray-900"
             >
                 <span>Create Asset</span>
                 <Icon name="plus" size={14} />

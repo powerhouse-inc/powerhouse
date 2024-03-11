@@ -9,6 +9,7 @@ export interface RWATableTextInputProps<ControlInputs extends FieldValues>
     name: Path<ControlInputs>;
     control: Control<ControlInputs>;
     type?: React.HTMLInputTypeAttribute | 'currency';
+    required?: boolean;
 }
 
 export function RWATableTextInput<ControlInputs extends FieldValues>(
@@ -18,6 +19,7 @@ export function RWATableTextInput<ControlInputs extends FieldValues>(
         name,
         control,
         type = 'text',
+        required = false,
         disabled = false,
         ...restProps
     } = props;
@@ -39,6 +41,7 @@ export function RWATableTextInput<ControlInputs extends FieldValues>(
         <Controller
             name={name}
             control={control}
+            rules={{ required }}
             render={({ field: { onChange, onBlur, value } }) => (
                 <RWATextInput
                     value={value}
@@ -50,7 +53,7 @@ export function RWATableTextInput<ControlInputs extends FieldValues>(
                         ...inputProps,
                     }}
                     className={twMerge(
-                        'h-[32px] rounded-md',
+                        'h-8 rounded-md',
                         disabled && 'bg-white p-0',
                     )}
                     {...restProps}

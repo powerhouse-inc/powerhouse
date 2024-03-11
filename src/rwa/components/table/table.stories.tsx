@@ -1,21 +1,37 @@
 import { Icon } from '@/powerhouse';
-import { FixedIncomeAsset } from '@/rwa';
 import { action } from '@storybook/addon-actions';
 import type { Meta, StoryObj } from '@storybook/react';
 import { orderBy } from 'natural-orderby';
 import { useState } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { RWAAssetDetails } from '../asset-details';
 import { RWATableRow } from './expandable-row';
-import {
-    mockFixedIncomeAssetsTableData,
-    mockFixedIncomeTypes,
-    mockSpvs,
-} from './fixed-income-assets-mock-table-data';
 import { RWATable, RWATableProps } from './table';
 import { RWATableCell } from './table-cell';
 
-const meta: Meta<typeof RWATable<FixedIncomeAsset>> = {
+const exampleItems = [
+    {
+        id: 'example-1',
+        exampleField1: 'Example 1-1',
+        exampleField2: 'Example 1-2',
+        exampleField3: 'Example 1-3',
+    },
+    {
+        id: 'example-2',
+        exampleField1: 'Example 2-1',
+        exampleField2: 'Example 2-2',
+        exampleField3: 'Example 2-3',
+    },
+    {
+        id: 'example-3',
+        exampleField1: 'Example 3-1',
+        exampleField2: 'Example 3-2',
+        exampleField3: 'Example 3-3',
+    },
+];
+
+type Item = (typeof exampleItems)[number];
+
+const meta: Meta<typeof RWATable<Item>> = {
     title: 'RWA/Components/RWATable',
     component: RWATable,
     argTypes: {
@@ -33,16 +49,24 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
     args: {
         header: [
-            { id: 'id', label: '#', allowSorting: true },
-            { id: 'relatedSpv', label: 'Related SPV', allowSorting: true },
-            { id: 'assetId', label: 'Asset ID', allowSorting: true },
-            { id: 'assetName', label: 'Asset Name', allowSorting: true },
-            { id: 'coupon', label: 'Coupon', allowSorting: true },
-            { id: 'maturity', label: 'Maturity', allowSorting: true },
-            { id: 'notional', label: 'Notional', allowSorting: true },
+            {
+                id: 'exampleField1',
+                label: 'Example Field 1',
+                allowSorting: true,
+            },
+            {
+                id: 'exampleField2',
+                label: 'Example Field 2',
+                allowSorting: true,
+            },
+            {
+                id: 'exampleField3',
+                label: 'Example Field 3',
+                allowSorting: true,
+            },
             { id: 'moreDetails' },
         ],
-        items: mockFixedIncomeAssetsTableData,
+        items: exampleItems,
         renderRow: (item, index) => (
             <tr
                 key={item.id}
@@ -51,10 +75,9 @@ export const Primary: Story = {
                     index % 2 !== 0 && 'bg-gray-50',
                 )}
             >
-                <RWATableCell>{item.id}</RWATableCell>
-                <RWATableCell>{item.coupon}</RWATableCell>
-                <RWATableCell>{item.maturity}</RWATableCell>
-                <RWATableCell>{item.notional}</RWATableCell>
+                <RWATableCell>{item.exampleField1}</RWATableCell>
+                <RWATableCell>{item.exampleField2}</RWATableCell>
+                <RWATableCell>{item.exampleField3}</RWATableCell>
                 <RWATableCell>
                     <button onClick={() => action('onClickDetails')(item)}>
                         <Icon name="arrow-filled-right" size={12} />
@@ -67,54 +90,32 @@ export const Primary: Story = {
     render: args => <TableDemo {...args} />,
 };
 
-const TableDemo = (props: RWATableProps<FixedIncomeAsset>) => {
+const TableDemo = (props: RWATableProps<Item>) => {
     const { items, ...restProps } = props;
 
     const [sortedItems, setSortedItems] = useState(items || []);
     const [expandedRow, setExpandedRow] = useState<string | null>(null);
-    const [editRow, setEditRow] = useState<string | null>(null);
 
     const toggleRow = (id: string) => {
         setExpandedRow(id === expandedRow ? null : id);
     };
 
-    const onClickSort: RWATableProps<FixedIncomeAsset>['onClickSort'] = (
+    const onClickSort: RWATableProps<Item>['onClickSort'] = (
         column,
         direction,
     ) => {
         console.log('onClickSort', column, direction);
         setSortedItems(
-            orderBy(
-                sortedItems,
-                [column as keyof FixedIncomeAsset],
-                [direction],
-            ),
+            orderBy(sortedItems, [column as keyof Item], [direction]),
         );
     };
 
-    const renderRow: RWATableProps<FixedIncomeAsset>['renderRow'] = (
-        item,
-        index,
-    ) => {
+    const renderRow: RWATableProps<Item>['renderRow'] = (item, index) => {
         return (
             <RWATableRow
                 isExpanded={expandedRow === item.id}
                 tdProps={{ colSpan: 8 }}
-                accordionContent={
-                    <RWAAssetDetails
-                        asset={item}
-                        fixedIncomeTypes={mockFixedIncomeTypes}
-                        spvs={mockSpvs}
-                        className="border-y border-gray-300"
-                        mode={editRow === item.id ? 'edit' : 'view'}
-                        onCancel={() => setEditRow(null)}
-                        selectItemToEdit={() => setEditRow(item.id)}
-                        onSubmitForm={data => {
-                            action('onSubmitForm')(data);
-                            setEditRow(null);
-                        }}
-                    />
-                }
+                accordionContent={<></>}
                 key={item.id}
             >
                 <tr
@@ -123,10 +124,9 @@ const TableDemo = (props: RWATableProps<FixedIncomeAsset>) => {
                         index % 2 !== 0 && 'bg-gray-50',
                     )}
                 >
-                    <RWATableCell>{item.id}</RWATableCell>
-                    <RWATableCell>{item.coupon}</RWATableCell>
-                    <RWATableCell>{item.maturity}</RWATableCell>
-                    <RWATableCell>{item.notional}</RWATableCell>
+                    <RWATableCell>{item.exampleField1}</RWATableCell>
+                    <RWATableCell>{item.exampleField2}</RWATableCell>
+                    <RWATableCell>{item.exampleField3}</RWATableCell>
                     <RWATableCell>
                         <button
                             onClick={() => {
