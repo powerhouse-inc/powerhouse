@@ -1,3 +1,15 @@
+# [1.0.0-alpha.71](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.70...v1.0.0-alpha.71) (2024-03-11)
+
+
+### Bug Fixes
+
+* use variable colors name ([b6de74b](https://github.com/powerhouse-inc/design-system/commit/b6de74b7b2acef1fc36985dc127319a69730ec3b))
+
+
+### Features
+
+* added connect toast ([5497ea7](https://github.com/powerhouse-inc/design-system/commit/5497ea7b0eff6b831ad924e34140ae54381310a8))
+
 # [1.0.0-alpha.70](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.69...v1.0.0-alpha.70) (2024-03-11)
 
 
