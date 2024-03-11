@@ -16,10 +16,9 @@ import type { IConnectCrypto } from './services/crypto';
 import { Theme } from './store';
 
 const connectCrypto: IConnectCrypto = {
-    regenerateKeyPair: (): Promise<void> =>
-        ipcRenderer.invoke('crypto:regenerateKeyPair') as Promise<void>,
-    publicKey: async () =>
-        ipcRenderer.invoke('crypto:publicKey') as Promise<string | undefined>,
+    regenerateDid: (): Promise<void> =>
+        ipcRenderer.invoke('crypto:regenerateDid') as Promise<void>,
+    did: () => ipcRenderer.invoke('crypto:did') as Promise<string>,
 };
 
 const electronApi = {

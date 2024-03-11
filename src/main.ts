@@ -26,14 +26,16 @@ async function initApp() {
         app.dock.setIcon(appIcon);
     }
 
-    // initializes connect key pair
     try {
+        // initializes connect key pair
         const keyStorage = new ElectronKeyStorage(store);
-        // store.delete('connectkeyPair');
         const connectCrypto = new ConnectCrypto(keyStorage);
-        await connectCrypto.initialize();
+        await connectCrypto.did();
 
-        ipcMain.handle('crypto:publicKey', () => connectCrypto.publicKey());
+        ipcMain.handle('crypto:did', () => connectCrypto.did());
+        ipcMain.handle('crypto:regenerateDid', () =>
+            connectCrypto.regenerateDid(),
+        );
 
         // initializes document drive server
         await initDocumentDrive(

@@ -5,47 +5,34 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
     static #STORE_NAME = 'keyPairs';
     static #KEY = 'keyPair';
 
-    #store: Promise<IDBObjectStore>;
-
+    #db: Promise<IDBDatabase>;
     constructor() {
-        const db = indexedDB.open(BrowserKeyStorage.#DB_NAME, 1);
-
-        db.onupgradeneeded = () => {
-            const database = db.result;
-            database.createObjectStore(BrowserKeyStorage.#STORE_NAME, {
-                keyPath: 'id',
-                autoIncrement: true,
-            });
-        };
-
-        this.#store = new Promise((resolve, reject) => {
-            db.onsuccess = () => {
-                try {
-                    const database = db.result;
-                    const transaction = database.transaction(
-                        BrowserKeyStorage.#STORE_NAME,
-                        'readwrite',
-                    );
-                    const store = transaction.objectStore(
-                        BrowserKeyStorage.#STORE_NAME,
-                    );
-                    resolve(store);
-                } catch (e) {
-                    reject(e as Error);
-                }
+        this.#db = new Promise((resolve, reject) => {
+            const req = indexedDB.open(BrowserKeyStorage.#DB_NAME, 1);
+            req.onupgradeneeded = () => {
+                req.result.createObjectStore(BrowserKeyStorage.#STORE_NAME, {
+                    keyPath: 'id',
+                    autoIncrement: true,
+                });
             };
-        });
-
-        this.#store.catch(e => {
-            throw e;
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error as Error);
         });
     }
 
-    async saveKeyPair(keyPair: JwkKeyPair) {
-        const request = (await this.#store).put(
-            keyPair,
-            BrowserKeyStorage.#KEY,
+    async #useStore(mode: IDBTransactionMode = 'readwrite') {
+        const database = await this.#db;
+        const transaction = database.transaction(
+            BrowserKeyStorage.#STORE_NAME,
+            mode,
         );
+        const store = transaction.objectStore(BrowserKeyStorage.#STORE_NAME);
+        return store;
+    }
+
+    async saveKeyPair(keyPair: JwkKeyPair) {
+        const store = await this.#useStore();
+        const request = store.put(keyPair, BrowserKeyStorage.#KEY);
         return new Promise<void>((resolve, reject) => {
             request.onsuccess = () => {
                 resolve();
@@ -57,7 +44,8 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
     }
 
     async loadKeyPair(): Promise<JwkKeyPair | undefined> {
-        const request = (await this.#store).get(BrowserKeyStorage.#KEY);
+        const store = await this.#useStore('readonly');
+        const request = store.get(BrowserKeyStorage.#KEY);
 
         return new Promise<JwkKeyPair | undefined>((resolve, reject) => {
             request.onsuccess = () => {

@@ -1,3 +1,9 @@
+import {
+    compressedKeyInHexfromRaw,
+    encodeDIDfromHexString,
+    rawKeyInHexfromUncompressed,
+} from 'did-key-creator';
+
 export type JwkKeyPair = {
     publicKey: JsonWebKey;
     privateKey: JsonWebKey;
@@ -8,24 +14,27 @@ export interface JsonWebKeyPairStorage {
     saveKeyPair(keyPair: JwkKeyPair): Promise<void>;
 }
 
-function arraybuffer2hex(ab: ArrayBufferLike) {
+function ab2hex(ab: ArrayBuffer) {
     return Array.prototype.map
-        .call(new Uint8Array(ab), x =>
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        .call(new Uint8Array(ab), (x: number) =>
             ('00' + x.toString(16)).slice(-2),
         )
         .join('');
 }
 
 export interface IConnectCrypto {
-    regenerateKeyPair(): Promise<void>;
-    publicKey(): Promise<string | undefined>;
+    did: () => Promise<string>;
+    regenerateDid(): Promise<void>;
 }
+
+type DID = `did:key:${string}`;
 
 export class ConnectCrypto implements IConnectCrypto {
     #subtleCrypto: Promise<SubtleCrypto>;
     #keyPair: CryptoKeyPair | undefined;
     #keyPairStorage: JsonWebKeyPairStorage;
+
+    #did: Promise<DID>;
 
     static algorithm: EcKeyAlgorithm = {
         name: 'ECDSA',
@@ -37,6 +46,8 @@ export class ConnectCrypto implements IConnectCrypto {
 
         // Initializes the subtleCrypto module according to the host environment
         this.#subtleCrypto = this.#initCrypto();
+
+        this.#did = this.#initialize();
     }
 
     #initCrypto() {
@@ -58,35 +69,46 @@ export class ConnectCrypto implements IConnectCrypto {
     }
 
     // loads the key pair from storage or generates a new one if none is stored
-    async initialize() {
+    async #initialize() {
         const loadedKeyPair = await this.#keyPairStorage.loadKeyPair();
         if (loadedKeyPair) {
             this.#keyPair = await this.#importKeyPair(loadedKeyPair);
-            console.log('Loaded key pair', await this.publicKey());
+            console.log('Found key pair');
         } else {
             this.#keyPair = await this.#generateECDSAKeyPair();
-            console.log('Created key pair', await this.publicKey());
+            console.log('Created key pair');
             await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
         }
+        const did = await this.#parseDid();
+        console.log('Connect DID:', did);
+        return did;
     }
 
-    async regenerateKeyPair() {
+    did() {
+        return this.#did;
+    }
+
+    async regenerateDid() {
         this.#keyPair = await this.#generateECDSAKeyPair();
         await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
     }
 
-    async publicKey() {
+    async #parseDid(): Promise<DID> {
         if (!this.#keyPair) {
-            return undefined;
+            throw new Error('No key pair available');
         }
 
         const subtleCrypto = await this.#subtleCrypto;
-        const publicKey = await subtleCrypto.exportKey(
+        const publicKeyRaw = await subtleCrypto.exportKey(
             'raw',
             this.#keyPair.publicKey,
         );
 
-        return arraybuffer2hex(publicKey);
+        const multicodecName = 'p256-pub';
+        const rawKey = rawKeyInHexfromUncompressed(ab2hex(publicKeyRaw));
+        const compressedKey = compressedKeyInHexfromRaw(rawKey);
+        const did = encodeDIDfromHexString(multicodecName, compressedKey);
+        return did as DID;
     }
 
     async #generateECDSAKeyPair() {
