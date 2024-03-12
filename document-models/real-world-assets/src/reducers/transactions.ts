@@ -151,7 +151,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             return {
                 ...existing,
                 ...updates,
-            };
+            } as BaseTransaction;
         }
         let cashTransaction = maybeMakeUpdatedBaseTransaction(
             action.input.cashTransaction,
@@ -192,18 +192,19 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             validateInterestTransaction(state, interestTransaction);
         }
 
-        const newGroupTransaction = {
-            ...transaction,
-            type,
-            entryTime,
-            cashBalanceChange,
-            cashTransaction,
-            fixedIncomeTransaction,
-            interestTransaction,
-        };
-
         state.transactions = state.transactions.map(t =>
-            t.id === action.input.id ? newGroupTransaction : t,
+            t.id === id
+                ? {
+                      ...t,
+                      id,
+                      type,
+                      entryTime,
+                      cashBalanceChange,
+                      cashTransaction,
+                      fixedIncomeTransaction,
+                      interestTransaction,
+                  }
+                : t,
         );
 
         const fixedIncomeAssetId = fixedIncomeTransaction?.assetId;

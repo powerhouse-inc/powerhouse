@@ -153,6 +153,89 @@ export const Transactions = (props: IProps) => {
             setSelectedGroupTransactionToEdit(undefined);
         }, []);
 
+    const handleFeeUpdates = useCallback(
+        (
+            feeInputs: Maybe<TransactionFee[]> | undefined,
+            selectedTransactionToEdit: UiGroupTransaction,
+        ) => {
+            if (!feeInputs || !selectedGroupTransactionToEdit) {
+                return;
+            }
+
+            const feeUpdates = feeInputs.map(fee => ({
+                ...fee,
+                id: fee.id ?? utils.hashKey(),
+                amount: Number(fee.amount),
+            }));
+
+            const existingFees = selectedTransactionToEdit.fees;
+
+            if (!existingFees?.length) {
+                dispatch(
+                    addFeesToGroupTransaction({
+                        id: selectedGroupTransactionToEdit.id,
+                        fees: feeUpdates,
+                    }),
+                );
+                return;
+            }
+            const feeDifferences = diff(existingFees, feeInputs);
+
+            const newFeesToCreate: TransactionFeeInput[] = [];
+            const feesToUpdate: TransactionFeeInput[] = [];
+            const feeIdsToRemove: string[] = [];
+
+            feeDifferences.forEach(difference => {
+                if (
+                    difference.type === 'CREATE' &&
+                    !existingFees.find(
+                        fee =>
+                            fee.id ===
+                            feeUpdates[difference.path[0] as number].id,
+                    )
+                ) {
+                    newFeesToCreate.push(
+                        feeUpdates[difference.path[0] as number],
+                    );
+                }
+                if (difference.type === 'REMOVE') {
+                    feeIdsToRemove.push(
+                        existingFees[difference.path[0] as number].id!,
+                    );
+                }
+                if (difference.type === 'CHANGE') {
+                    feesToUpdate.push(feeUpdates[difference.path[0] as number]);
+                }
+            });
+
+            if (newFeesToCreate.length) {
+                dispatch(
+                    addFeesToGroupTransaction({
+                        id: selectedGroupTransactionToEdit.id,
+                        fees: newFeesToCreate,
+                    }),
+                );
+            }
+            if (feesToUpdate.length) {
+                dispatch(
+                    editGroupTransactionFees({
+                        id: selectedGroupTransactionToEdit.id,
+                        fees: feesToUpdate,
+                    }),
+                );
+            }
+            if (feeIdsToRemove.length) {
+                dispatch(
+                    removeFeesFromGroupTransaction({
+                        id: selectedGroupTransactionToEdit.id,
+                        feeIds: feeIdsToRemove,
+                    }),
+                );
+            }
+        },
+        [dispatch, selectedGroupTransactionToEdit],
+    );
+
     const onSubmitEdit: GroupTransactionsTableProps['onSubmitEdit'] =
         useCallback(
             data => {
@@ -272,7 +355,10 @@ export const Transactions = (props: IProps) => {
 
                 handleFeeUpdates(data.fees, selectedGroupTransactionToEdit);
 
-                if (Object.keys(changedFields).length === 0) return;
+                if (Object.keys(changedFields).length === 0) {
+                    setSelectedGroupTransactionToEdit(undefined);
+                    return;
+                }
 
                 dispatch(
                     editGroupTransaction({
@@ -283,7 +369,7 @@ export const Transactions = (props: IProps) => {
 
                 setSelectedGroupTransactionToEdit(undefined);
             },
-            [dispatch, selectedGroupTransactionToEdit],
+            [dispatch, selectedGroupTransactionToEdit, handleFeeUpdates],
         );
 
     const onSubmitCreate: GroupTransactionsTableProps['onSubmitCreate'] =
@@ -297,83 +383,6 @@ export const Transactions = (props: IProps) => {
             },
             [createNewGroupTransactionFromFormInputs, dispatch],
         );
-
-    function handleFeeUpdates(
-        feeInputs: Maybe<TransactionFee[]> | undefined,
-        selectedTransactionToEdit: UiGroupTransaction,
-    ) {
-        if (!feeInputs || !selectedGroupTransactionToEdit) {
-            return;
-        }
-
-        const feeUpdates = feeInputs.map(fee => ({
-            ...fee,
-            id: fee.id ?? utils.hashKey(),
-            amount: Number(fee.amount),
-        }));
-
-        const existingFees = selectedTransactionToEdit.fees;
-
-        if (!existingFees?.length) {
-            dispatch(
-                addFeesToGroupTransaction({
-                    id: selectedGroupTransactionToEdit.id,
-                    fees: feeUpdates,
-                }),
-            );
-            return;
-        }
-        const feeDifferences = diff(existingFees, feeInputs);
-
-        const newFeesToCreate: TransactionFeeInput[] = [];
-        const feesToUpdate: TransactionFeeInput[] = [];
-        const feeIdsToRemove: string[] = [];
-
-        feeDifferences.forEach(difference => {
-            if (
-                difference.type === 'CREATE' &&
-                !existingFees.find(
-                    fee =>
-                        fee.id === feeUpdates[difference.path[0] as number].id,
-                )
-            ) {
-                newFeesToCreate.push(feeUpdates[difference.path[0] as number]);
-            }
-            if (difference.type === 'REMOVE') {
-                feeIdsToRemove.push(
-                    existingFees[difference.path[0] as number].id!,
-                );
-            }
-            if (difference.type === 'CHANGE') {
-                feesToUpdate.push(feeUpdates[difference.path[0] as number]);
-            }
-        });
-
-        if (newFeesToCreate.length) {
-            dispatch(
-                addFeesToGroupTransaction({
-                    id: selectedGroupTransactionToEdit.id,
-                    fees: newFeesToCreate,
-                }),
-            );
-        }
-        if (feesToUpdate.length) {
-            dispatch(
-                editGroupTransactionFees({
-                    id: selectedGroupTransactionToEdit.id,
-                    fees: feesToUpdate,
-                }),
-            );
-        }
-        if (feeIdsToRemove.length) {
-            dispatch(
-                removeFeesFromGroupTransaction({
-                    id: selectedGroupTransactionToEdit.id,
-                    feeIds: feeIdsToRemove,
-                }),
-            );
-        }
-    }
 
     return (
         <div>
