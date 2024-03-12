@@ -1,4 +1,7 @@
-import { ItemsContextProvider } from '@powerhousedao/design-system';
+import {
+    ItemsContextProvider,
+    ToastContainer,
+} from '@powerhousedao/design-system';
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { RouterProvider, createHashRouter } from 'react-router-dom';
@@ -45,6 +48,7 @@ export default (
         <Suspense fallback={<></>}>
             <Preloader />
             <ItemsContextProvider>
+                <ToastContainer position="bottom-right" />
                 <ModalManager>
                     <App />
                 </ModalManager>
