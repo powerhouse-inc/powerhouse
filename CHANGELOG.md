@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.6.0...v1.6.1) (2024-03-12)
+
+
+### Bug Fixes
+
+* pass object reference directly to avoid unexpected behavior ([#96](https://github.com/powerhouse-inc/document-model-libs/issues/96)) ([00aa306](https://github.com/powerhouse-inc/document-model-libs/commit/00aa306ba08b8d094aacb32602b6009b5f02163b))
+
 # [1.6.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.5.1...v1.6.0) (2024-03-11)
 
 
