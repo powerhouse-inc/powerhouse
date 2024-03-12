@@ -9,6 +9,7 @@ import {
     decodeID,
     encodeID,
     getRootPath,
+    toast,
     useItemActions,
 } from '@powerhousedao/design-system';
 import {
@@ -16,6 +17,7 @@ import {
     Node,
 } from 'document-model-libs/document-drive';
 import path from 'path';
+import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
 import { useSelectedPath } from 'src/store';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils';
@@ -49,6 +51,7 @@ export function useDrivesContainer() {
     const actions = useItemActions();
     const { showModal } = useModal();
     const [, setSelectedPath] = useSelectedPath();
+    const { t } = useTranslation();
 
     const {
         addFolder,
@@ -90,7 +93,7 @@ export function useDrivesContainer() {
         });
     }
 
-    function addNewFolder(
+    async function addNewFolder(
         item: TreeItem,
         driveID: string,
         onCancel?: () => void,
@@ -103,7 +106,7 @@ export function useDrivesContainer() {
         if (newPath === '.') return onCancel?.();
         const decodedDriveID = decodeID(driveID);
         const parentFolder = basePathComponents.pop();
-        addFolder(
+        await addFolder(
             decodedDriveID,
             item.label,
             parentFolder ? decodeID(parentFolder) : undefined,
@@ -117,7 +120,7 @@ export function useDrivesContainer() {
         }
     };
 
-    const onItemOptionsClick: DriveViewProps['onItemOptionsClick'] = (
+    const onItemOptionsClick: DriveViewProps['onItemOptionsClick'] = async (
         item,
         option,
     ) => {
@@ -136,29 +139,46 @@ export function useDrivesContainer() {
                         item.type,
                     )
                 ) {
-                    deleteDrive(decodeID(item.id));
+                    showModal('confirmationModal', {
+                        onCancel: closeModal => closeModal(),
+                        title: t('modals.deleteDrive.title', {
+                            label: item.label,
+                        }),
+                        body: t('modals.deleteDrive.body'),
+                        continueLabel: t('common.delete'),
+                        cancelLabel: t('common.cancel'),
+                        onContinue: async closeModal => {
+                            closeModal();
+                            await deleteDrive(decodeID(item.id));
+
+                            toast(t('notifications.deleteDriveSuccess'), {
+                                type: 'connect-deleted',
+                            });
+                        },
+                    });
                 } else {
                     showModal('deleteItem', {
                         itemId: decodeID(item.id),
                         itemName: item.label,
                         driveId: decodeID(driveID),
+                        type: item.type === 'FOLDER' ? 'folder' : 'file',
                     });
                 }
                 break;
             case 'delete-drive':
-                deleteDrive(decodeID(item.id));
+                await deleteDrive(decodeID(item.id));
                 break;
             case 'rename-drive':
-                renameDrive(decodeID(item.id), item.label);
+                await renameDrive(decodeID(item.id), item.label);
                 break;
             case 'change-availability':
-                setDriveAvailableOffline(
+                await setDriveAvailableOffline(
                     decodeID(item.id),
                     item.availableOffline,
                 );
                 break;
             case 'change-sharing-type':
-                setDriveSharingType(
+                await setDriveSharingType(
                     decodeID(item.id),
                     item.sharingType?.toLowerCase() as TreeItemSharingType,
                 );
@@ -167,7 +187,7 @@ export function useDrivesContainer() {
 
     async function updateNodeName(item: TreeItem, driveID: string) {
         const decodedDriveID = decodeID(driveID);
-        renameNode(decodedDriveID, item.id, item.label);
+        await renameNode(decodedDriveID, item.id, item.label);
     }
 
     const onSubmitInput = (item: TreeItem, onCancel?: () => void) => {

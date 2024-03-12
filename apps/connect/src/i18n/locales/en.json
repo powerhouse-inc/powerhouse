@@ -33,6 +33,10 @@
             "header": "Delete “{{item}}” folder?",
             "body": "Are you sure you want to delete this folder? All files and subfolders within it will be removed."
         },
+        "deleteDrive": {
+            "title": "Delete {{label}} drive?",
+            "body": "Are you sure you want to delete this drive? All files and subfolders within it will be removed. Do you want to proceed?"
+        },
         "upgradeDrive": {
             "header": "Upgrade to cloud drive",
             "body": "You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
@@ -59,5 +63,13 @@
                 "allSelected": "All documents are selected"
             }
         }
+    },
+    "notifications": {
+        "deleteDriveSuccess": "Drive successfully deleted",
+        "deleteFolderSuccess": "Folder deleted",
+        "fileDeleteSuccess": "File deleted",
+        "addDriveSuccess": "New drive successfully added",
+        "driveSyncSuccess": "Drive synced successfully",
+        "driveSyncError": "Conflict error detected in {{drive}}"
     }
 }
