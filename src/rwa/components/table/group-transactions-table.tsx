@@ -53,7 +53,7 @@ export function mapGroupTransactionToTableFields(
         'Entry time': transaction.entryTime,
         Asset: fixedIncome?.name,
         Quantity: transaction.fixedIncomeTransaction?.amount,
-        'Cash Amount': transaction.fixedIncomeTransaction?.amount,
+        'Cash Amount': transaction.cashTransaction?.amount,
         'Cash Balance Change': transaction.cashBalanceChange,
     };
 }
