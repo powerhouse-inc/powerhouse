@@ -1,3 +1,10 @@
+# [1.0.0-alpha.72](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.71...v1.0.0-alpha.72) (2024-03-13)
+
+
+### Features
+
+* fix wrong tx object ([#229](https://github.com/powerhouse-inc/design-system/issues/229)) ([3cf18e8](https://github.com/powerhouse-inc/design-system/commit/3cf18e80ea3b120cf5386111055b763726f5e79c))
+
 # [1.0.0-alpha.71](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.70...v1.0.0-alpha.71) (2024-03-11)
 
 
