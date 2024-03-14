@@ -1,3 +1,28 @@
+# [1.0.0-alpha.6](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2024-03-14)
+
+
+### Bug Fixes
+
+* settings modal typo ([6ef1286](https://github.com/powerhouse-inc/document-model-electron/commit/6ef12861fdda344c7c45f54657b6f56c67217162))
+
+
+### Features
+
+* added browser key storage ([6562881](https://github.com/powerhouse-inc/document-model-electron/commit/6562881b2eb603b59b55f1595a7f46b96dbbded6))
+* added clear storage setting ([922f5e1](https://github.com/powerhouse-inc/document-model-electron/commit/922f5e19ebd68e07440858c2f7308e3f6d1a2aae))
+* added e2e playwright setup ([2d37330](https://github.com/powerhouse-inc/document-model-electron/commit/2d37330f103456dc9d3e24cc4a74d3ed7abb20c8))
+* added editor debug tools ([6928bed](https://github.com/powerhouse-inc/document-model-electron/commit/6928bed61c46322bc341da7bed48dcde60454b9e))
+* added notification toast ([39ed0c2](https://github.com/powerhouse-inc/document-model-electron/commit/39ed0c2319c2a6e1c2044aff5cda1fd1dc51d24b))
+* added settings modal integration ([dfb9d28](https://github.com/powerhouse-inc/document-model-electron/commit/dfb9d287bb99dec4316c9eee5098816b6f498926))
+* bump libs ([62cd43d](https://github.com/powerhouse-inc/document-model-electron/commit/62cd43dd7f80cfd6202c251a9c1af1bad0978b67))
+* configure available editors with env variables ([00fad56](https://github.com/powerhouse-inc/document-model-electron/commit/00fad56259d24c1dc9fe3009ec5d4d8d9a51782a))
+* disable document drive editor by default ([a61249f](https://github.com/powerhouse-inc/document-model-electron/commit/a61249f43e50219b7b6aebc27f63b2d07a4735ec))
+* enable transactions editor ([28967c2](https://github.com/powerhouse-inc/document-model-electron/commit/28967c2c6a4465494f682e55e914bfdd719bc07b))
+* export did:key instead of public key ([a358371](https://github.com/powerhouse-inc/document-model-electron/commit/a3583718047f447f2f59a8153e3e2ac15a8cd732))
+* generate key pair on desktop ([ebc0204](https://github.com/powerhouse-inc/document-model-electron/commit/ebc020405e0b289aa4cfdf4935b2afcd53494a7f))
+* moved load initial data into a hook ([99c7417](https://github.com/powerhouse-inc/document-model-electron/commit/99c74175b899c9c1d3f7dbf27de174ebd053bdbf))
+* updated document-model lib ([9db149e](https://github.com/powerhouse-inc/document-model-electron/commit/9db149ecc91926c02f2fe8479ca08958b66977d3))
+
 # [1.0.0-alpha.5](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2024-02-21)
 
 
