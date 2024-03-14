@@ -2080,10 +2080,10 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@1.0.0-alpha.71":
-  version "1.0.0-alpha.71"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.71.tgz#1d009c8c471bf5e3e3e118a2b7f08fcc1a428914"
-  integrity sha512-R6MAauDAMfcvp4l/BSZUjNLgbK91yHGynTlqlP5nSnEizFVleLh1vM3W79cj2GhXu5nfuQILSn3fW4k7K7cvWA==
+"@powerhousedao/design-system@1.0.0-alpha.73":
+  version "1.0.0-alpha.73"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.73.tgz#c0facd44de7db7d19ab31f765056767ef08ea8fa"
+  integrity sha512-Q/pqn2lNsfvn1zSXT3/X3RU9ICH2Y+nsEh3TE7hy4P+2eTbSNMa1VHuPyQFTn7p3nhDZVfV5oi80/5BZBASdGw==
   dependencies:
     "@internationalized/date" "^3.5.1"
     "@radix-ui/react-dialog" "^1.0.5"
@@ -5030,6 +5030,13 @@ cookie@0.5.0:
   resolved "https://registry.yarnpkg.com/cookie/-/cookie-0.5.0.tgz#d1f5d71adec6558c58f389987c366aa47e994f8b"
   integrity sha512-YZ3GUyn/o8gfKJlnlX7g7xq4gyO6OSuhGPKaaGssGB2qgDUS0gPgtTvoyZLTt9Ab6dC4hfc9dV5arkvc/OCmrw==
 
+copy-anything@^3.0.5:
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/copy-anything/-/copy-anything-3.0.5.tgz#2d92dce8c498f790fa7ad16b01a1ae5a45b020a0"
+  integrity sha512-yCEafptTtb4bk7GLEQoM8KVJpxAfdBJYaXyzQEgQQQgYrZiDp8SJmGKlYza6CYjEDNstAdNdKA3UuoULlEbS6w==
+  dependencies:
+    is-what "^4.1.8"
+
 core-util-is@~1.0.0:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/core-util-is/-/core-util-is-1.0.3.tgz#a6042d3634c2b27e9328f837b965fac83808db85"
@@ -5340,15 +5347,16 @@ document-drive@1.0.0-alpha.17:
     nanoevents "^9.0.0"
     sanitize-filename "^1.6.3"
 
-document-model-libs@^1.6.1:
-  version "1.6.1"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.6.1.tgz#5517044f80fa7d4e1f498a3740d3808830d4287b"
-  integrity sha512-mFGlX4XqJJ23Dv1mBUq21cq6yPE760ba+ZUxatQ01skF9C1327jE2qW7SSFK+KUUwYh4xXWuW30q8adNBzuESA==
+document-model-libs@^1.8.0:
+  version "1.8.0"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.8.0.tgz#7bca33a233470c9587c41ed74d2a1df7cf58d46f"
+  integrity sha512-tz6MH8tyaNkVwqe6rHTIqE1m2CKYXyrKgScy2dXrIM5EDEG/V9BH4ee9I/mqCo9l4VO96C7ckG+7p0xk0xHmGg==
   dependencies:
     "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
     "@graphql-codegen/core" "^4.0.2"
     "@graphql-codegen/typescript" "^4.0.6"
     "@internationalized/date" "^3.5.1"
+    copy-anything "^3.0.5"
     date-fns "^3.3.1"
     deep-object-diff "^1.1.9"
     document-model "^1.0.30"
@@ -7450,6 +7458,11 @@ is-weakset@^2.0.3:
   dependencies:
     call-bind "^1.0.7"
     get-intrinsic "^1.2.4"
+
+is-what@^4.1.8:
+  version "4.1.16"
+  resolved "https://registry.yarnpkg.com/is-what/-/is-what-4.1.16.tgz#1ad860a19da8b4895ad5495da3182ce2acdd7a6f"
+  integrity sha512-ZhMwEosbFJkA0YhFnNDgTM4ZxDRsS6HqTo7qsZM08fehyRYIYa0yHu5R6mgo1n/8MgaPBXiPimPD77baVFYg+A==
 
 is-windows@^1.0.1:
   version "1.0.2"
