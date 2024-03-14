@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.6.1...v1.7.0) (2024-03-14)
+
+
+### Features
+
+* fix object references and temp hack for state delay bug ([#99](https://github.com/powerhouse-inc/document-model-libs/issues/99)) ([8a67580](https://github.com/powerhouse-inc/document-model-libs/commit/8a67580d4239e993127a2543205055986b910cac))
+
 ## [1.6.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.6.0...v1.6.1) (2024-03-12)
 
 
