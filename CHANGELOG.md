@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.7.0...v1.8.0) (2024-03-14)
+
+
+### Features
+
+* treat cash balance change as input ([#102](https://github.com/powerhouse-inc/document-model-libs/issues/102)) ([35ffe88](https://github.com/powerhouse-inc/document-model-libs/commit/35ffe886d928331a882bc86d9989d941dad882b4))
+
 # [1.7.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.6.1...v1.7.0) (2024-03-14)
 
 
