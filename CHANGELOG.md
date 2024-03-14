@@ -1,3 +1,10 @@
+# [1.0.0-alpha.73](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.72...v1.0.0-alpha.73) (2024-03-14)
+
+
+### Features
+
+* use cash balance change as input ([#233](https://github.com/powerhouse-inc/design-system/issues/233)) ([bc769d1](https://github.com/powerhouse-inc/design-system/commit/bc769d14ef8b5a665f2bf88c14b055fc6191c8a1))
+
 # [1.0.0-alpha.72](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.71...v1.0.0-alpha.72) (2024-03-13)
 
 
