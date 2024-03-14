@@ -265,14 +265,16 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             throw new Error('This transaction has no fees to update');
         }
 
-        transaction.fees = transaction.fees.map(fee => {
-            const feeToUpdate = action.input.fees!.find(f => f.id === fee.id);
-            if (!feeToUpdate) {
-                throw new Error(`Fee with id ${fee.id} does not exist`);
-            }
-            validateTransactionFee(state, feeToUpdate);
-            return { ...fee, ...feeToUpdate };
-        });
+        transaction.fees = transaction.fees
+            .map(fee => {
+                const feeToUpdate = action.input.fees!.find(
+                    f => f.id === fee.id,
+                );
+                if (!feeToUpdate) return;
+                validateTransactionFee(state, feeToUpdate);
+                return { ...fee, ...feeToUpdate };
+            })
+            .filter(Boolean);
 
         state.transactions = state.transactions.map(t =>
             t.id === id ? transaction : t,

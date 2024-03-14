@@ -2,7 +2,6 @@ import {
     CashAsset,
     Fields,
     GroupTransactionDetailInputs,
-    GroupTransactionType,
     GroupTransactionsTable,
     GroupTransactionsTableProps,
     TransactionFee,
@@ -84,28 +83,21 @@ export const Transactions = (props: IProps) => {
     const [showNewGroupTransactionForm, setShowNewGroupTransactionForm] =
         useState(false);
 
-    function calculateCashBalanceChange(
-        transactionType: GroupTransactionType | undefined,
-        cashAmount: number | undefined,
-        fees: Maybe<TransactionFee[]> | undefined,
-    ) {
-        if (!cashAmount || !transactionType) return 0;
-
-        const operation = transactionType === 'AssetPurchase' ? -1 : 1;
-
-        const totalFees = fees
-            ? fees.reduce((acc, fee) => acc + Number(fee.amount), 0)
-            : 0;
-
-        return Number(cashAmount) * operation - totalFees;
-    }
-
     const createNewGroupTransactionFromFormInputs = useCallback(
         (data: GroupTransactionDetailInputs) => {
-            const { cashAmount, fixedIncomeId, fixedIncomeAmount, type } = data;
+            const {
+                cashAmount,
+                fixedIncomeId,
+                fixedIncomeAmount,
+                type,
+                cashBalanceChange,
+            } = data;
 
             if (!type) throw new Error('Type is required');
             if (!data.entryTime) throw new Error('Entry time is required');
+            if (!cashBalanceChange) {
+                throw new Error('Cash balance change is required');
+            }
 
             const entryTime = new Date(data.entryTime).toISOString();
 
@@ -113,7 +105,6 @@ export const Transactions = (props: IProps) => {
                 data.fees?.map(fee => ({
                     ...fee,
                     id: utils.hashKey(),
-                    amount: Number(fee.amount),
                 })) ?? null;
 
             const cashTransaction = cashAmount
@@ -122,7 +113,7 @@ export const Transactions = (props: IProps) => {
                       assetId: cashAsset.id,
                       entryTime,
                       counterPartyAccountId: principalLenderAccountId,
-                      amount: Number(cashAmount),
+                      amount: cashAmount,
                       settlementTime: null,
                       tradeTime: null,
                       txRef: null,
@@ -140,7 +131,7 @@ export const Transactions = (props: IProps) => {
                     ? {
                           id: utils.hashKey(),
                           assetId: fixedIncomeId,
-                          amount: Number(fixedIncomeAmount),
+                          amount: fixedIncomeAmount,
                           entryTime,
                           counterPartyAccountId: null,
                           settlementTime: null,
@@ -148,12 +139,6 @@ export const Transactions = (props: IProps) => {
                           txRef: null,
                       }
                     : null;
-
-            const cashBalanceChange = calculateCashBalanceChange(
-                type,
-                cashAmount,
-                fees,
-            );
 
             const groupTransaction = {
                 id: utils.hashKey(),
@@ -280,20 +265,9 @@ export const Transactions = (props: IProps) => {
                     : undefined;
                 const newType = data.type;
                 const newFixedIncomeAssetId = data.fixedIncomeId;
-                const newFixedIncomeAssetAmount = data.fixedIncomeAmount
-                    ? Number(data.fixedIncomeAmount)
-                    : undefined;
-                const newCashAmount = data.cashAmount
-                    ? Number(data.cashAmount)
-                    : undefined;
-                const newCashBalanceChange =
-                    newType || newCashAmount || data.fees
-                        ? calculateCashBalanceChange(
-                              newType,
-                              newCashAmount,
-                              data.fees,
-                          )
-                        : undefined;
+                const newFixedIncomeAssetAmount = data.fixedIncomeAmount;
+                const newCashAmount = data.cashAmount;
+                const newCashBalanceChange = data.cashBalanceChange;
 
                 const existingCashTransaction =
                     selectedGroupTransactionToEdit.cashTransaction;
