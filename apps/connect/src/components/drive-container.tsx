@@ -6,10 +6,12 @@ import {
     decodeID,
     encodeID,
     getRootPath,
+    toast,
     useFilterPathContent,
     useItemActions,
 } from '@powerhousedao/design-system';
 import path from 'path';
+import { useTranslation } from 'react-i18next';
 import {
     SortOptions,
     useDocumentDriveServer,
@@ -37,6 +39,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
     const actions = useItemActions();
     const filterPathContent = useFilterPathContent();
+    const { t } = useTranslation();
 
     const { addFile, copyOrMoveNode, addDrive, addRemoteDrive } =
         useDocumentDriveServer();
@@ -193,6 +196,10 @@ export default function DriveContainer(props: DriveContainerProps) {
                         },
                     });
                 }
+
+                toast(t('notifications.addDriveSuccess'), {
+                    type: 'connect-success',
+                });
             } catch (e) {
                 console.error(e);
             }
