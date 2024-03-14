@@ -2,12 +2,14 @@ import {
     CashAsset,
     Fields,
     GroupTransactionDetailInputs,
+    GroupTransactionType,
     GroupTransactionsTable,
     GroupTransactionsTableProps,
     TransactionFee,
     FixedIncome as UiFixedIncome,
     GroupTransaction as UiGroupTransaction,
 } from '@powerhousedao/design-system';
+import { copy } from 'copy-anything';
 import { Maybe, utils } from 'document-model/document';
 import diff from 'microdiff';
 import { useCallback, useState } from 'react';
@@ -15,6 +17,7 @@ import {
     BaseTransaction,
     Cash,
     FixedIncome,
+    GroupTransaction,
     TransactionFeeInput,
     getDifferences,
     isCashAsset,
@@ -44,6 +47,10 @@ const fieldsPriority: (keyof Fields)[] = [
     'Cash Amount',
     'Cash Balance Change',
 ];
+
+function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export const Transactions = (props: IProps) => {
     const { dispatch, document } = props;
@@ -76,6 +83,22 @@ export const Transactions = (props: IProps) => {
         useState<UiGroupTransaction>();
     const [showNewGroupTransactionForm, setShowNewGroupTransactionForm] =
         useState(false);
+
+    function calculateCashBalanceChange(
+        transactionType: GroupTransactionType | undefined,
+        cashAmount: number | undefined,
+        fees: Maybe<TransactionFee[]> | undefined,
+    ) {
+        if (!cashAmount || !transactionType) return 0;
+
+        const operation = transactionType === 'AssetPurchase' ? -1 : 1;
+
+        const totalFees = fees
+            ? fees.reduce((acc, fee) => acc + Number(fee.amount), 0)
+            : 0;
+
+        return Number(cashAmount) * operation - totalFees;
+    }
 
     const createNewGroupTransactionFromFormInputs = useCallback(
         (data: GroupTransactionDetailInputs) => {
@@ -126,10 +149,17 @@ export const Transactions = (props: IProps) => {
                       }
                     : null;
 
+            const cashBalanceChange = calculateCashBalanceChange(
+                type,
+                cashAmount,
+                fees,
+            );
+
             const groupTransaction = {
                 id: utils.hashKey(),
                 type,
                 cashTransaction,
+                cashBalanceChange,
                 entryTime,
                 fees,
                 fixedIncomeTransaction,
@@ -154,11 +184,11 @@ export const Transactions = (props: IProps) => {
         }, []);
 
     const handleFeeUpdates = useCallback(
-        (
+        async (
             feeInputs: Maybe<TransactionFee[]> | undefined,
-            selectedTransactionToEdit: UiGroupTransaction,
+            transaction: GroupTransaction,
         ) => {
-            if (!feeInputs || !selectedGroupTransactionToEdit) {
+            if (!feeInputs) {
                 return;
             }
 
@@ -168,15 +198,16 @@ export const Transactions = (props: IProps) => {
                 amount: Number(fee.amount),
             }));
 
-            const existingFees = selectedTransactionToEdit.fees;
+            const existingFees = transaction.fees;
 
             if (!existingFees?.length) {
                 dispatch(
                     addFeesToGroupTransaction({
-                        id: selectedGroupTransactionToEdit.id,
+                        id: transaction.id,
                         fees: feeUpdates,
                     }),
                 );
+                await delay(100);
                 return;
             }
             const feeDifferences = diff(existingFees, feeInputs);
@@ -200,7 +231,7 @@ export const Transactions = (props: IProps) => {
                 }
                 if (difference.type === 'REMOVE') {
                     feeIdsToRemove.push(
-                        existingFees[difference.path[0] as number].id!,
+                        existingFees[difference.path[0] as number].id,
                     );
                 }
                 if (difference.type === 'CHANGE') {
@@ -211,34 +242,37 @@ export const Transactions = (props: IProps) => {
             if (newFeesToCreate.length) {
                 dispatch(
                     addFeesToGroupTransaction({
-                        id: selectedGroupTransactionToEdit.id,
+                        id: transaction.id,
                         fees: newFeesToCreate,
                     }),
                 );
+                await delay(100);
             }
             if (feesToUpdate.length) {
                 dispatch(
                     editGroupTransactionFees({
-                        id: selectedGroupTransactionToEdit.id,
+                        id: transaction.id,
                         fees: feesToUpdate,
                     }),
                 );
+                await delay(100);
             }
             if (feeIdsToRemove.length) {
                 dispatch(
                     removeFeesFromGroupTransaction({
-                        id: selectedGroupTransactionToEdit.id,
+                        id: transaction.id,
                         feeIds: feeIdsToRemove,
                     }),
                 );
+                await delay(100);
             }
         },
-        [dispatch, selectedGroupTransactionToEdit],
+        [dispatch],
     );
 
     const onSubmitEdit: GroupTransactionsTableProps['onSubmitEdit'] =
         useCallback(
-            data => {
+            async data => {
                 if (!selectedGroupTransactionToEdit) return;
 
                 const newEntryTime = data.entryTime
@@ -252,6 +286,14 @@ export const Transactions = (props: IProps) => {
                 const newCashAmount = data.cashAmount
                     ? Number(data.cashAmount)
                     : undefined;
+                const newCashBalanceChange =
+                    newType || newCashAmount || data.fees
+                        ? calculateCashBalanceChange(
+                              newType,
+                              newCashAmount,
+                              data.fees,
+                          )
+                        : undefined;
 
                 const existingCashTransaction =
                     selectedGroupTransactionToEdit.cashTransaction;
@@ -268,54 +310,34 @@ export const Transactions = (props: IProps) => {
                     );
                 }
 
-                let update = {
-                    ...selectedGroupTransactionToEdit,
-                };
+                const update = copy(selectedGroupTransactionToEdit);
 
                 if (newType) {
-                    update = {
-                        ...update,
-                        type: newType,
-                    };
+                    update.type = newType;
                 }
 
                 if (newEntryTime) {
-                    update = {
-                        ...update,
-                        entryTime: newEntryTime,
-                    };
+                    update.entryTime = newEntryTime;
                 }
 
                 // use direct comparison to avoid false positives on zero
                 if (newCashAmount !== undefined) {
-                    update = {
-                        ...update,
-                        cashTransaction: {
-                            ...existingCashTransaction,
-                            amount: newCashAmount,
-                        },
-                    };
+                    update.cashTransaction!.amount = newCashAmount;
                 }
 
                 if (newFixedIncomeAssetId) {
-                    update = {
-                        ...update,
-                        fixedIncomeTransaction: {
-                            ...existingFixedIncomeTransaction,
-                            assetId: newFixedIncomeAssetId,
-                        },
-                    };
+                    update.fixedIncomeTransaction!.assetId =
+                        newFixedIncomeAssetId;
                 }
 
                 // use direct comparison to avoid false positives on zero
                 if (newFixedIncomeAssetAmount !== undefined) {
-                    update = {
-                        ...update,
-                        fixedIncomeTransaction: {
-                            ...existingFixedIncomeTransaction,
-                            amount: newFixedIncomeAssetAmount,
-                        },
-                    };
+                    update.fixedIncomeTransaction!.amount =
+                        newFixedIncomeAssetAmount;
+                }
+
+                if (newCashBalanceChange !== undefined) {
+                    update.cashBalanceChange = newCashBalanceChange;
                 }
 
                 let changedFields = getDifferences(
@@ -353,19 +375,21 @@ export const Transactions = (props: IProps) => {
                     };
                 }
 
-                handleFeeUpdates(data.fees, selectedGroupTransactionToEdit);
-
-                if (Object.keys(changedFields).length === 0) {
-                    setSelectedGroupTransactionToEdit(undefined);
-                    return;
+                if (data.fees) {
+                    await handleFeeUpdates(
+                        data.fees,
+                        update as GroupTransaction,
+                    );
                 }
 
-                dispatch(
-                    editGroupTransaction({
-                        ...changedFields,
-                        id: selectedGroupTransactionToEdit.id,
-                    }),
-                );
+                if (Object.keys(changedFields).length !== 0) {
+                    dispatch(
+                        editGroupTransaction({
+                            ...changedFields,
+                            id: selectedGroupTransactionToEdit.id,
+                        }),
+                    );
+                }
 
                 setSelectedGroupTransactionToEdit(undefined);
             },

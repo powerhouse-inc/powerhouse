@@ -17,6 +17,9 @@ dependencies:
   '@internationalized/date':
     specifier: ^3.5.1
     version: 3.5.1
+  copy-anything:
+    specifier: ^3.0.5
+    version: 3.0.5
   date-fns:
     specifier: ^3.3.1
     version: 3.3.1
@@ -62,8 +65,8 @@ devDependencies:
     specifier: 0.0.13
     version: 0.0.13(graphql@16.8.1)(zod@3.22.4)
   '@powerhousedao/design-system':
-    specifier: 1.0.0-alpha.70
-    version: 1.0.0-alpha.70(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0)
+    specifier: 1.0.0-alpha.72
+    version: 1.0.0-alpha.72(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0)
   '@semantic-release/changelog':
     specifier: ^6.0.3
     version: 6.0.3(semantic-release@23.0.2)
@@ -3852,8 +3855,8 @@ packages:
       - zod
     dev: true
 
-  /@powerhousedao/design-system@1.0.0-alpha.70(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-XGliKmgr+pipUyvMT5W+Fa2JQDCjcPTs0euiaGjmE+TNv6MbdoyS6TO6raQVkr2g5a4ZrhDpjcEOxvYRTYzf5w==}
+  /@powerhousedao/design-system@1.0.0-alpha.72(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-KPSZKmdBMnMOi4zUrwKhthvDQrdUxU+7ywR9TNt7I16Fb6urOLzb6fMIJrTUpOvNo/eWVXQB38Uhwud60PXkxg==}
     peerDependencies:
       react: ^18.2.0
       react-aria: ^3.32.0
@@ -3872,6 +3875,7 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
       react-hook-form: 7.51.0(react@18.2.0)
       react-multi-select-component: 4.3.4(react-dom@18.2.0)(react@18.2.0)
+      react-toastify: 10.0.4(react-dom@18.2.0)(react@18.2.0)
     transitivePeerDependencies:
       - '@types/react'
       - '@types/react-dom'
@@ -6255,7 +6259,7 @@ packages:
       '@storybook/preview-api': 7.6.17
       '@storybook/theming': 7.6.17(react-dom@18.2.0)(react@18.2.0)
       '@storybook/types': 7.6.17
-      '@types/lodash': 4.14.202
+      '@types/lodash': 4.17.0
       color-convert: 2.0.1
       dequal: 2.0.3
       lodash: 4.17.21
@@ -7091,8 +7095,8 @@ packages:
     resolution: {integrity: sha512-b7bq23s4fgBB76n34m2b3RBf6M369B0Z9uRR8aHTMd8kZISRkmDEpPD8hhpYvDFzr3bJCPES96cm3Q6qRNDbQw==}
     dev: true
 
-  /@types/lodash@4.14.202:
-    resolution: {integrity: sha512-OvlIYQK9tNneDlS0VN54LLd5uiPCBOp7gS5Z0f1mjoJYBrtStzgmJBxONW3U6OZqdtNzZPmn9BS/7WI7BFFcFQ==}
+  /@types/lodash@4.17.0:
+    resolution: {integrity: sha512-t7dhREVv6dbNj0q17X12j7yDG4bD/DHYX7o5/DbDxobP0HnGPgpRz2Ej77aL7TZT3DSw13fqUTj8J4mMnqa7WA==}
     dev: true
 
   /@types/mdx@2.0.11:
@@ -8888,6 +8892,13 @@ packages:
     resolution: {integrity: sha512-YZ3GUyn/o8gfKJlnlX7g7xq4gyO6OSuhGPKaaGssGB2qgDUS0gPgtTvoyZLTt9Ab6dC4hfc9dV5arkvc/OCmrw==}
     engines: {node: '>= 0.6'}
     dev: true
+
+  /copy-anything@3.0.5:
+    resolution: {integrity: sha512-yCEafptTtb4bk7GLEQoM8KVJpxAfdBJYaXyzQEgQQQgYrZiDp8SJmGKlYza6CYjEDNstAdNdKA3UuoULlEbS6w==}
+    engines: {node: '>=12.13'}
+    dependencies:
+      is-what: 4.1.16
+    dev: false
 
   /core-js-compat@3.36.0:
     resolution: {integrity: sha512-iV9Pd/PsgjNWBXeq8XRtWVSgz2tKAfhfvBs7qxYty+RlRd+OCksaWmOnc4JKrTc1cToXL1N0s3l/vwlxPtdElw==}
@@ -11596,6 +11607,11 @@ packages:
       get-intrinsic: 1.2.4
     dev: true
 
+  /is-what@4.1.16:
+    resolution: {integrity: sha512-ZhMwEosbFJkA0YhFnNDgTM4ZxDRsS6HqTo7qsZM08fehyRYIYa0yHu5R6mgo1n/8MgaPBXiPimPD77baVFYg+A==}
+    engines: {node: '>=12.13'}
+    dev: false
+
   /is-windows@1.0.2:
     resolution: {integrity: sha512-eXK1UInq2bPmjyX6e3VHIzMLobc4J94i4AWn+Hpq3OU5KkrRC96OAcR3PRJ/pGu6m8TRnBHP9dkXQVsT/COVIA==}
     engines: {node: '>=0.10.0'}
@@ -14052,6 +14068,17 @@ packages:
       invariant: 2.2.4
       react: 18.2.0
       tslib: 2.6.2
+    dev: true
+
+  /react-toastify@10.0.4(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-etR3RgueY8pe88SA67wLm8rJmL1h+CLqUGHuAoNsseW35oTGJEri6eBTyaXnFKNQ80v/eO10hBYLgz036XRGgA==}
+    peerDependencies:
+      react: '>=16'
+      react-dom: '>=16'
+    dependencies:
+      clsx: 2.1.0
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
     dev: true
 
   /react-transition-group@4.4.5(react-dom@18.2.0)(react@18.2.0):

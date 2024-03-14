@@ -77,8 +77,7 @@
         "types": "./dist/real-world-assets.d.ts"
     },
     "scripts": {
-        "generate": "powerhouse generate",
-        "postgenerate": " eslint . --fix",
+        "generate": "powerhouse generate && eslint . --fix",
         "check-types": "tsc",
         "lint": "powerhouse generate && eslint . && npm run check-types",
         "lint-staged": "lint-staged",
@@ -103,7 +102,7 @@
         "@monaco-editor/react": "^4.6.0",
         "@mui/material": "^5.15.5",
         "@powerhousedao/codegen": "0.0.13",
-        "@powerhousedao/design-system": "1.0.0-alpha.70",
+        "@powerhousedao/design-system": "1.0.0-alpha.72",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@storybook/addon-essentials": "^7.6.17",
@@ -167,6 +166,7 @@
         "@graphql-codegen/core": "^4.0.2",
         "@graphql-codegen/typescript": "^4.0.6",
         "@internationalized/date": "^3.5.1",
+        "copy-anything": "^3.0.5",
         "date-fns": "^3.3.1",
         "deep-object-diff": "^1.1.9",
         "document-model": "^1.0.30",

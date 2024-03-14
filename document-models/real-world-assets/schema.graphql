@@ -249,6 +249,7 @@ input CreateGroupTransactionInput {
     type: GroupTransactionType!
     entryTime: DateTime!
     fees: [TransactionFeeInput!]
+    cashBalanceChange: Float!
     cashTransaction: CreateBaseTransactionInput
     fixedIncomeTransaction: CreateBaseTransactionInput
     feeTransactions: [CreateBaseTransactionInput!]
@@ -259,6 +260,7 @@ input EditGroupTransactionInput {
     id: ID!
     type: GroupTransactionType
     entryTime: DateTime
+    cashBalanceChange: Float
     cashTransaction: EditBaseTransactionInput
     fixedIncomeTransaction: EditBaseTransactionInput
     interestTransaction: EditBaseTransactionInput
