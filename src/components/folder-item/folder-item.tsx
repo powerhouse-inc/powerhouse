@@ -10,7 +10,7 @@ import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 const allowedItemOptions = ['delete', 'rename'];
 
 const itemOptions = defaultDropdownMenuOptions.filter(option =>
-    allowedItemOptions.includes(option.id)
+    allowedItemOptions.includes(option.id),
 );
 
 export interface FolderItemProps {
@@ -32,6 +32,7 @@ export const FolderItem: React.FC<FolderItemProps> = props => {
                 driveId: decodedDriveID,
                 itemId: folderNode.id,
                 itemName: folderNode.label,
+                type: 'folder',
             });
         }
 
