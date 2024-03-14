@@ -14,6 +14,7 @@ import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
+import { useModal } from '../modal';
 
 const allowedItemOptions = ['delete', 'rename'];
 
@@ -28,17 +29,13 @@ interface IProps {
     onFileDeleted: (drive: string, id: string) => void;
 }
 
-export const FileItem: React.FC<IProps> = ({
-    file,
-    drive,
-    onFileDeleted,
-    onFileSelected,
-}) => {
+export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
     const { t } = useTranslation();
     const [isWriteMode, setIsWriteMode] = useState(false);
     const getReadableItemPath = useGetReadableItemPath();
     const getDocumentById = useGetDocumentById();
     const { updateNodeName } = useDrivesContainer();
+    const { showModal } = useModal();
 
     const decodedDriveID = decodeID(drive);
     const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);
@@ -46,7 +43,12 @@ export const FileItem: React.FC<IProps> = ({
 
     const onFileOptionsClick = async (optionId: string, fileNode: TreeItem) => {
         if (optionId === 'delete') {
-            onFileDeleted(decodedDriveID, fileNode.id);
+            showModal('deleteItem', {
+                driveId: decodedDriveID,
+                itemId: fileNode.id,
+                itemName: file.label,
+                type: 'file',
+            });
         }
 
         if (optionId === 'rename') {

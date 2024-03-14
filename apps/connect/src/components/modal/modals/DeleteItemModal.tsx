@@ -34,13 +34,11 @@ export const DeleteItemModal: React.FC<DeleteItemModalProps> = props => {
         <ConnectDeleteItemModal
             open={open}
             onDelete={onDelete}
-            header={t('modals.deleteItem.header', { item: itemName })}
-            body={t('modals.deleteItem.body')}
+            onCancel={() => onClose()}
+            header={t(`modals.deleteItem.${type}.header`, { item: itemName })}
+            body={t(`modals.deleteItem.${type}.body`)}
             cancelLabel={t('common.cancel')}
             deleteLabel={t('common.delete')}
-            onOpenChange={status => {
-                if (!status) return onClose();
-            }}
         />
     );
 };
