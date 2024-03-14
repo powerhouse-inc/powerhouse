@@ -31,13 +31,14 @@ export type GroupTransactionDetailInputs = {
     fixedIncomeId: string | undefined;
     fixedIncomeAmount: number | undefined;
     fees: Maybe<TransactionFee[]> | undefined;
+    cashBalanceChange: number | undefined;
 };
 
 function calculateUnitPricePercent(
     cashAmount: number | undefined,
     fixedIncomeAmount: number | undefined,
 ) {
-    if (!cashAmount || !fixedIncomeAmount) return '--';
+    if (!cashAmount || !fixedIncomeAmount) return 0;
     return ((cashAmount / fixedIncomeAmount) * 100).toFixed(2);
 }
 
@@ -46,7 +47,7 @@ function calculateCashBalanceChange(
     cashAmount: number | undefined,
     fees: Maybe<TransactionFee[]> | undefined,
 ) {
-    if (!cashAmount || !transactionType) return '--';
+    if (!cashAmount || !transactionType) return 0;
 
     const operation = transactionType === 'AssetPurchase' ? -1 : 1;
 
@@ -130,10 +131,6 @@ export const GroupTransactionDetails: React.FC<
         name: 'fees', // Name of the field array in your form
     });
 
-    const onSubmit: SubmitHandler<GroupTransactionDetailInputs> = data => {
-        onSubmitForm(data);
-    };
-
     const isEditOperation = operation === 'edit';
     const isCreateOperation = operation === 'create';
     const isViewOnly = !isCreateOperation && !isEditOperation;
@@ -150,6 +147,19 @@ export const GroupTransactionDetails: React.FC<
         cashAmount,
         fees,
     );
+
+    const onSubmit: SubmitHandler<GroupTransactionDetailInputs> = data => {
+        onSubmitForm({
+            ...data,
+            cashAmount: Number(data.cashAmount),
+            fixedIncomeAmount: Number(data.fixedIncomeAmount),
+            fees: data.fees?.map(fee => ({
+                ...fee,
+                amount: Number(fee.amount),
+            })),
+            cashBalanceChange,
+        });
+    };
 
     return (
         <div
