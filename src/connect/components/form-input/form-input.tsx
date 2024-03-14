@@ -24,6 +24,7 @@ type FormInputProps = Omit<InputProps, 'className'> & {
     };
     errorOverride?: React.ReactNode;
     onError?: (error?: React.ReactNode) => void;
+    hideErrors?: boolean;
 };
 export const FormInput = forwardRef(function FormInput(
     props: FormInputProps,
@@ -35,6 +36,7 @@ export const FormInput = forwardRef(function FormInput(
         inputClassName,
         errorOverride,
         onError,
+        hideErrors = false,
         ...delegatedProps
     } = props;
 
@@ -132,6 +134,7 @@ export const FormInput = forwardRef(function FormInput(
                 className={twMerge(
                     'invisible min-h-[16px] text-xs text-red-900',
                     isError && 'visible',
+                    hideErrors && 'hidden',
                 )}
             >
                 {error}

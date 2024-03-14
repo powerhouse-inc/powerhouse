@@ -12,6 +12,7 @@ describe('Modal Component', () => {
                 deleteLabel="Delete"
                 header="Delete “Ecosystem Actors” folder?"
                 onDelete={() => {}}
+                onCancel={() => {}}
             />,
         );
 
@@ -36,6 +37,7 @@ describe('Modal Component', () => {
                 deleteLabel={deleteLabel}
                 header={headerText}
                 onDelete={() => {}}
+                onCancel={() => {}}
             />,
         );
 
@@ -57,13 +59,13 @@ describe('Modal Component', () => {
         render(
             <ConnectDeleteItemModal
                 open={true}
-                onOpenChange={onClose}
                 data-testid="delete-modal"
                 body="Are you sure you want to delete this folder? All files and subfolders within it will be removed."
                 cancelLabel={cancelLabel}
                 deleteLabel="Delete"
                 header="Delete “Ecosystem Actors” folder?"
                 onDelete={() => {}}
+                onCancel={onClose}
             />,
         );
 
@@ -85,6 +87,7 @@ describe('Modal Component', () => {
                 deleteLabel={deleteLabel}
                 header="Delete “Ecosystem Actors” folder?"
                 onDelete={onDelete}
+                onCancel={() => {}}
             />,
         );
 

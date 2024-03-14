@@ -13,23 +13,23 @@ exports[`Modal Component > should match snapshot 1`] = `
   tabindex="-1"
 >
   <div
-    class="w-[465px] px-8 py-12 text-slate-300"
+    class="p-6 text-slate-300 w-[450px]"
   >
     <div
-      class="text-center text-2xl font-semibold"
+      class="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800"
     >
       Delete “Ecosystem Actors” folder?
     </div>
     <div
-      class="mt-8 text-center text-xl"
+      class="my-6 rounded-md bg-slate-50 p-4 text-center text-slate-200"
     >
       Are you sure you want to delete this folder? All files and subfolders within it will be removed.
     </div>
     <div
-      class="mt-8 flex justify-center gap-3"
+      class="mt-8 flex justify-between gap-3"
     >
       <button
-        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-gray-600/75 text-slate-700"
+        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-slate-50 text-slate-800"
         data-focus-visible="true"
         data-focused="true"
         data-rac=""
@@ -38,7 +38,7 @@ exports[`Modal Component > should match snapshot 1`] = `
         Cancel
       </button>
       <button
-        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all bg-red-900 text-gray-50"
+        class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 text-gray-50 bg-red-900"
         data-rac=""
         type="button"
       >
