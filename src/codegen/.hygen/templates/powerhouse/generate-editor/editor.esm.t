@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= name %>/editor.tsx"
 unless_exists: true
 ---
 <% if(!documentTypes.length){ %>import { Action } from 'document-model/document';<% } %>
-import { EditorProps } from 'document-model-editors';
+import { EditorProps } from 'document-model-libs/utils';
 <% documentTypes.forEach(type => { _%>
 import { <%= documentTypesMap[type] %>State, <%= documentTypesMap[type] %>Action } from "../.<%= documentModelsDir %>/<%= h.changeCase.param(documentTypesMap[type]) %>";
 %><% }); _%>
