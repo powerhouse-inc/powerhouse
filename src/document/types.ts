@@ -287,10 +287,16 @@ export type EditorContext = {
     debug?: boolean;
 };
 
+export type ActionErrorCallback = (error: unknown) => void;
+
 export type EditorProps<S, A extends Action, L> = {
     document: Document<S, A, L>;
-    dispatch: (action: A | BaseAction) => void;
+    dispatch: (
+        action: A | BaseAction,
+        onErrorCallback?: ActionErrorCallback,
+    ) => void;
     editorContext: EditorContext;
+    error?: unknown;
 };
 
 export type Editor<S = unknown, A extends Action = Action, L = unknown> = {
