@@ -12,7 +12,7 @@ const rwaQuery = `... on RealWorldAssets {
       id
       name
     }
-    feeTypes {
+    serviceProviderFeeTypes {
       id
       name
       feeType
@@ -25,16 +25,7 @@ const rwaQuery = `... on RealWorldAssets {
     portfolio {
       ... on FixedIncome {
         id
-        fixedIncomeTypeId
-        name
         spvId
-        maturity
-        purchaseDate
-        notional
-        purchasePrice
-        purchaseProceeds
-        totalDiscount
-        annualizedYield
         ISIN
         CUSIP
         coupon
