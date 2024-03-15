@@ -1,15 +1,17 @@
 import type {
     Action,
+    ActionErrorCallback,
     BaseAction,
     Document,
     Operation,
     Reducer,
 } from 'document-model/document';
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export type DocumentDispatch<A> = (
     action: A | BaseAction,
     callback?: (operation: Operation) => void,
+    onErrorCallback?: ActionErrorCallback,
 ) => void;
 
 export function wrapReducer<State, A extends Action, LocalState>(
@@ -27,46 +29,50 @@ export function wrapReducer<State, A extends Action, LocalState>(
     };
 }
 
-export function useDocumentReducer<State, A extends Action, LocalState>(
-    reducer: Reducer<State, A, LocalState>,
-    initialState: Document<State, A, LocalState>,
-    onError: (error: unknown) => void = console.error,
-): readonly [Document<State, A, LocalState>, (action: A | BaseAction) => void] {
-    const [state, dispatch] = useReducer(
-        wrapReducer(reducer, onError),
-        initialState,
-    );
-
-    return [state, dispatch] as const;
-}
+type OnErrorHandler = (error: unknown) => void;
 
 export function useDocumentDispatch<State, A extends Action, LocalState>(
     documentReducer: Reducer<State, A, LocalState> | undefined,
     initialState: Document<State, A, LocalState>,
-    onError: (error: unknown) => void = console.error,
-): readonly [Document<State, A, LocalState>, DocumentDispatch<A>] {
+    onError: OnErrorHandler = console.error,
+): readonly [Document<State, A, LocalState>, DocumentDispatch<A>, unknown] {
     const [state, setState] = useState(initialState);
-    const reducer: Reducer<State, A, LocalState> = useMemo(
-        () => wrapReducer(documentReducer, onError),
-        [documentReducer, onError],
-    );
+    const [error, setError] = useState<unknown>();
+
+    const onErrorHandler: OnErrorHandler = error => {
+        setError(error);
+        onError(error);
+    };
 
     useEffect(() => {
         setState(initialState);
     }, [initialState]);
 
-    const dispatch: DocumentDispatch<A> = (action, callback) => {
+    const dispatch: DocumentDispatch<A> = (
+        action,
+        callback,
+        onErrorCallback?: ActionErrorCallback,
+    ) => {
+        setError(undefined);
         setState(_state => {
-            const newState = reducer(_state, action);
-            const scope = action.scope ?? 'global';
-            const operations = newState.operations[scope];
-            const operation = operations[operations.length - 1];
+            if (!documentReducer) return _state;
 
-            callback?.(operation);
+            try {
+                const newState = documentReducer(_state, action);
+                const scope = action.scope ?? 'global';
+                const operations = newState.operations[scope];
+                const operation = operations[operations.length - 1];
 
-            return newState;
+                callback?.(operation);
+
+                return newState;
+            } catch (error) {
+                onErrorHandler(error);
+                onErrorCallback?.(error);
+                return _state;
+            }
         });
     };
 
-    return [state, dispatch] as const;
+    return [state, dispatch, error] as const;
 }
