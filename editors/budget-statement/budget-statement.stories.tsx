@@ -1,5 +1,5 @@
 import Editor from './editor';
-import { createDocumentStory } from 'document-model-editors';
+import { createDocumentStory } from 'document-model-libs/utils';
 import { reducer, utils } from '../../document-models/budget-statement';
 
 const initialAccount = utils.createAccount({
@@ -49,7 +49,6 @@ const budgetStatementState = utils.createExtendedState({
 });
 
 const { meta, CreateDocumentStory: BudgetStatement } = createDocumentStory(
-    // @ts-expect-error todo update type
     Editor,
     reducer,
     budgetStatementState,

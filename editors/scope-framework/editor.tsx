@@ -4,7 +4,7 @@ import {
     EditorWorksheet,
     TextInput,
     ToolbarButton,
-} from 'document-model-editors';
+} from 'document-model-libs/utils';
 import { EditorProps } from 'document-model/document';
 import { useEffect } from 'react';
 import {

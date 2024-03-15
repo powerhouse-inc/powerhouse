@@ -2,7 +2,7 @@ import { Editor as CodeEditor, EditorProps } from '@monaco-editor/react';
 import { editor } from 'monaco-editor';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
-import { styles } from 'document-model-editors';
+import { styles } from 'document-model-libs/utils';
 import { isJSONEqual } from '../common/json-editor';
 
 interface IProps extends EditorProps {

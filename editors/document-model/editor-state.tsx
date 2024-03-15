@@ -1,5 +1,5 @@
 import { OperationScope, Operation, BaseAction } from 'document-model/document';
-import { styles } from 'document-model-editors';
+import { styles } from 'document-model-libs/utils';
 import EditorSchema, { ScopeType } from './editor-schema';
 import EditorInitialState from './editor-initital-state';
 import { SchemaResult } from './useSchemaEditor';

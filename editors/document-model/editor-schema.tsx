@@ -1,6 +1,6 @@
 import { SchemaEditor as Editor, SchemaEditorProps } from '@theguild/editor';
 import { pascalCase } from 'change-case';
-import { styles } from 'document-model-editors';
+import { styles } from 'document-model-libs/utils';
 import { GraphQLSchema } from 'graphql';
 import { editor } from 'monaco-editor';
 import { useEffect, useRef, useState } from 'react';

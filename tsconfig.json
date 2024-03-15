@@ -13,7 +13,11 @@
         "noImplicitAny": true,
         "skipLibCheck": true,
         "jsx": "react-jsx",
-        "lib": ["ESNext", "dom", "dom.iterable"]
+        "lib": ["ESNext", "dom", "dom.iterable"],
+        "paths": {
+            "document-model-libs/utils": ["./editors/utils"],
+            "document-model-libs/utils/*": ["./editors/utils/*"],
+        },
     },
     "include": [
         "./index.ts",
@@ -22,7 +26,7 @@
         "*.config.js",
         "*.config.ts",
         "postcss.config.cjs",
-        "create-require.js"
+        "create-require.js",
     ],
-    "exclude": ["dist/", "node_modules"]
+    "exclude": ["dist/", "node_modules"],
 }

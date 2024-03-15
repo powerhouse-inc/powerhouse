@@ -6,7 +6,7 @@ import {
     DocumentModelLocalState,
 } from 'document-model/document-model';
 import { CSSProperties, useEffect } from 'react';
-import { styles, TextInput } from 'document-model-editors';
+import { styles, TextInput } from 'document-model-libs/utils';
 import { ScopeType } from './editor-schema';
 import EditorOperation from './editor-operation';
 import { useSchemaEditor } from './useSchemaEditor';

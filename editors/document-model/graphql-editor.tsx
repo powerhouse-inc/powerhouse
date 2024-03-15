@@ -1,5 +1,5 @@
 import { SchemaEditor, SchemaEditorProps } from '@theguild/editor';
-import { styles } from 'document-model-editors';
+import { styles } from 'document-model-libs/utils';
 import {
     constrainedEditor,
     ConstrainedEditorRestriction,

@@ -1,4 +1,4 @@
-import { createDocumentStory } from 'document-model-editors';
+import { createDocumentStory } from 'document-model-libs/utils';
 import {
     SignalDispatch,
     baseReducer,
