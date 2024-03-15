@@ -1,3 +1,10 @@
+# [1.0.0-alpha.75](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.74...v1.0.0-alpha.75) (2024-03-15)
+
+
+### Features
+
+* added delete drive modal + update styles for delete item modal ([933fd3d](https://github.com/powerhouse-inc/design-system/commit/933fd3d754f588b5da69eaeb29ee525a75deaf5c))
+
 # [1.0.0-alpha.74](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.73...v1.0.0-alpha.74) (2024-03-15)
 
 
