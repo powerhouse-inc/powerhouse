@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= name %>/<%= name %>.stories.tsx"
 unless_exists: true
 ---
 import Editor from './editor';
-import { createDocumentStory } from 'document-model-editors';
+import { createDocumentStory } from 'document-model-libs/utils';
 <% if(!documentTypes.length){ %>import { baseReducer, utils } from 'document-model/document';<% } %>
 <% documentTypes.forEach(type => { _%>
 import * as <%= documentTypesMap[type] %>Module from "../.<%= documentModelsDir %>/<%= h.changeCase.param(documentTypesMap[type]) %>";
