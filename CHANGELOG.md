@@ -1,3 +1,10 @@
+# [1.0.0-alpha.74](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.73...v1.0.0-alpha.74) (2024-03-15)
+
+
+### Features
+
+* add error messages to input ([#236](https://github.com/powerhouse-inc/design-system/issues/236)) ([7d50477](https://github.com/powerhouse-inc/design-system/commit/7d5047748852f6b0dcb9f0a2638cb5583970fdb5))
+
 # [1.0.0-alpha.73](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.72...v1.0.0-alpha.73) (2024-03-14)
 
 
