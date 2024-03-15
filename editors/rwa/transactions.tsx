@@ -15,6 +15,7 @@ import { useCallback, useState } from 'react';
 import {
     BaseTransaction,
     Cash,
+    EditBaseTransactionInput,
     FixedIncome,
     GroupTransaction,
     TransactionFeeInput,
@@ -310,7 +311,7 @@ export const Transactions = (props: IProps) => {
                         newFixedIncomeAssetAmount;
                 }
 
-                if (newCashBalanceChange !== undefined) {
+                if (newCashBalanceChange) {
                     update.cashBalanceChange = newCashBalanceChange;
                 }
 
@@ -361,7 +362,7 @@ export const Transactions = (props: IProps) => {
                         editGroupTransaction({
                             ...changedFields,
                             id: selectedGroupTransactionToEdit.id,
-                        }),
+                        } as EditBaseTransactionInput),
                     );
                 }
 
