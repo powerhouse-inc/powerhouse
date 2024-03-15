@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.8.0...v1.9.0) (2024-03-15)
+
+
+### Features
+
+* bump design system ([#103](https://github.com/powerhouse-inc/document-model-libs/issues/103)) ([f88d715](https://github.com/powerhouse-inc/document-model-libs/commit/f88d715e08163645639975fd87901d8debdc59f6))
+
 # [1.8.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.7.0...v1.8.0) (2024-03-14)
 
 
