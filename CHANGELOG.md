@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.9.0...v1.10.0) (2024-03-15)
+
+
+### Features
+
+* added error handling support for Editor components and dispatch function ([#104](https://github.com/powerhouse-inc/document-model-libs/issues/104)) ([02d8f4e](https://github.com/powerhouse-inc/document-model-libs/commit/02d8f4e050889e1f6a9f583cf2442ec3e69d21ff))
+
 # [1.9.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.8.0...v1.9.0) (2024-03-15)
 
 
