@@ -1,4 +1,4 @@
-import { Maybe, Scalars } from 'document-model/document';
+import { InputMaybe, Maybe, Scalars } from 'document-model/document';
 import {
     groupTransactionTypeLabels,
     groupTransactionTypes,
@@ -54,7 +54,7 @@ export type GroupTransaction = {
 
 export type TransactionFee = {
     id?: Scalars['ID']['output'];
-    amount: Scalars['Float']['output'];
+    amount: InputMaybe<number>;
     serviceProviderFeeTypeId: Scalars['ID']['output'];
 };
 
@@ -67,15 +67,15 @@ export type CashAsset = {
 export type Asset = CashAsset | FixedIncome;
 
 export type BaseTransaction = {
-    id: string;
-    assetId: string;
-    amount: number;
-    entryTime?: string | null;
-    tradeTime?: string | null;
-    settlementTime?: string | null;
-    txRef?: string | null;
-    accountId?: string | null;
-    counterPartyAccountId?: string | null;
+    id: InputMaybe<string>;
+    assetId: InputMaybe<string>;
+    amount: InputMaybe<number>;
+    entryTime?: InputMaybe<string>;
+    tradeTime?: InputMaybe<string>;
+    settlementTime?: InputMaybe<string>;
+    txRef?: InputMaybe<string>;
+    accountId?: InputMaybe<string>;
+    counterPartyAccountId?: InputMaybe<string>;
 };
 
 export type ServiceProviderFeeType = {

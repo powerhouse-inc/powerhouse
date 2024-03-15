@@ -1,64 +1,49 @@
-import { useNumberFormat } from '@react-input/number-format';
-import { Control, Controller, FieldValues, Path } from 'react-hook-form';
+import { ComponentPropsWithRef, ForwardedRef, forwardRef } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { RWATextInput, RWATextInputProps } from '../text-input';
 
-export interface RWATableTextInputProps<ControlInputs extends FieldValues>
-    extends RWATextInputProps {
-    disabled?: boolean;
-    name: Path<ControlInputs>;
-    control: Control<ControlInputs>;
-    type?: React.HTMLInputTypeAttribute | 'currency';
-    required?: boolean;
-}
+type Props = ComponentPropsWithRef<'input'> & {
+    errorMessage?: string;
+    labelClassName?: string;
+    inputClassName?: string;
+    errorMessageClassName?: string;
+};
 
-export function RWATableTextInput<ControlInputs extends FieldValues>(
-    props: RWATableTextInputProps<ControlInputs>,
+export const RWATableTextInput = forwardRef(function RWATableTextInput(
+    props: Props,
+    ref: ForwardedRef<HTMLInputElement>,
 ) {
+    const invalid = props['aria-invalid'] === 'true';
     const {
-        name,
-        control,
-        type = 'text',
-        required = false,
-        disabled = false,
-        ...restProps
+        errorMessage,
+        labelClassName,
+        inputClassName,
+        errorMessageClassName,
+        ...inputProps
     } = props;
 
-    const inputProps: RWATextInputProps['inputProps'] = { type };
-
-    const currencyInputRef = useNumberFormat({
-        locales: 'en',
-        format: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 2,
-    });
-
-    if (type === 'currency') {
-        inputProps.ref = currencyInputRef;
-    }
-
     return (
-        <Controller
-            name={name}
-            control={control}
-            rules={{ required }}
-            render={({ field: { onChange, onBlur, value } }) => (
-                <RWATextInput
-                    value={value}
-                    onBlur={onBlur}
-                    onChange={onChange}
-                    textFieldProps={{ isDisabled: disabled }}
-                    inputProps={{
-                        className: 'text-right',
-                        ...inputProps,
-                    }}
+        <label className={labelClassName}>
+            <input
+                {...inputProps}
+                ref={ref}
+                className={twMerge(
+                    'size-full h-8 rounded-md border border-transparent bg-gray-100 p-3 text-right text-sm text-gray-800 placeholder:text-gray-500 disabled:bg-white disabled:pr-0',
+                    invalid &&
+                        'border-red-900 outline-red-900 placeholder:text-red-800',
+                    inputClassName,
+                )}
+            />
+            {invalid && !!errorMessage && (
+                <p
+                    role="alert"
                     className={twMerge(
-                        'h-8 rounded-md',
-                        disabled && 'bg-white p-0',
+                        'text-sm text-red-900',
+                        errorMessageClassName,
                     )}
-                    {...restProps}
-                />
+                >
+                    {errorMessage}
+                </p>
             )}
-        />
+        </label>
     );
-}
+});

@@ -3,8 +3,8 @@ import { ServiceProviderFeeType } from '@/rwa';
 import {
     Control,
     FieldArrayWithId,
+    FieldErrors,
     FieldValues,
-    Path,
     UseFieldArrayAppend,
     UseFieldArrayRemove,
     UseFormRegister,
@@ -22,6 +22,7 @@ type Props<ControlInputs extends FieldValues> = {
     watch: UseFormWatch<GroupTransactionDetailInputs>;
     append: UseFieldArrayAppend<GroupTransactionDetailInputs, 'fees'>;
     remove: UseFieldArrayRemove;
+    errors: FieldErrors<GroupTransactionDetailInputs>;
     isViewOnly: boolean;
 };
 
@@ -41,7 +42,7 @@ export function FeeTransactionsTable<ControlInputs extends FieldValues>(
         <>
             {props.feeInputs.length > 0 && (
                 <div className="bg-gray-50 px-6 pt-3">
-                    <table className="w-full">
+                    <table className="w-full border-separate border-spacing-x-4 border-spacing-y-1">
                         <thead className="mb-2">
                             <tr>
                                 {headings.map(heading => (
@@ -70,8 +71,8 @@ export function FeeTransactionsTable<ControlInputs extends FieldValues>(
 
                                 return (
                                     <tr key={feeInput.id}>
-                                        <td className="w-1/6 py-1"></td>
-                                        <td className="w-4/6 min-w-fit py-1 pr-4">
+                                        <td className=""></td>
+                                        <td className="">
                                             <ServiceProviderAndFeeTypeTableInput
                                                 selectedServiceProviderFeeType={
                                                     selectedServiceProviderFeeType
@@ -84,17 +85,29 @@ export function FeeTransactionsTable<ControlInputs extends FieldValues>(
                                                 control={props.control}
                                             />
                                         </td>
-                                        <td className="w-1/12 py-1 pr-4">
+                                        <td className="w-1/4">
                                             <RWATableTextInput
-                                                name={
-                                                    `fees.${index}.amount` as Path<ControlInputs>
+                                                {...props.register(
+                                                    `fees.${index}.amount`,
+                                                    {
+                                                        required: true,
+                                                        disabled:
+                                                            props.isViewOnly,
+                                                        valueAsNumber: true,
+                                                    },
+                                                )}
+                                                aria-invalid={
+                                                    props.errors.fees?.[index]
+                                                        ?.amount?.type ===
+                                                    'required'
+                                                        ? 'true'
+                                                        : 'false'
                                                 }
-                                                required
-                                                control={props.control}
-                                                disabled={props.isViewOnly}
+                                                type="number"
+                                                placeholder="E.g. 1000"
                                             />
                                         </td>
-                                        <td className="w-fit py-1">
+                                        <td className="">
                                             {!props.isViewOnly && (
                                                 <button
                                                     type="button"

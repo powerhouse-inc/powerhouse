@@ -28,12 +28,16 @@ export const Primary: Story = {
     render: function Wrapper(args) {
         const transaction = mockGroupTransactions[0];
 
-        const { control, register, watch } =
-            useForm<GroupTransactionDetailInputs>({
-                defaultValues: {
-                    fees: transaction.fees,
-                },
-            });
+        const {
+            control,
+            register,
+            watch,
+            formState: { errors },
+        } = useForm<GroupTransactionDetailInputs>({
+            defaultValues: {
+                fees: transaction.fees,
+            },
+        });
 
         const { fields, append, remove } = useFieldArray({
             control,
@@ -49,6 +53,7 @@ export const Primary: Story = {
                     watch={watch}
                     append={append}
                     remove={remove}
+                    errors={errors}
                 />
                 <button
                     onClick={() =>

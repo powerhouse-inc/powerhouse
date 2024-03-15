@@ -12,7 +12,7 @@ import {
     groupTransactionTypeLabels,
     groupTransactionTypes,
 } from '@/rwa/constants/transactions';
-import { Maybe } from 'document-model/document';
+import { InputMaybe } from 'document-model/document';
 import React from 'react';
 import {
     SubmitHandler,
@@ -25,37 +25,37 @@ import { RWAFormRow, RWATableSelect, RWATableTextInput } from '../table-inputs';
 import { FeeTransactionsTable } from '../table/fee-transactions-table';
 
 export type GroupTransactionDetailInputs = {
-    type: GroupTransactionType | undefined;
-    entryTime: string | undefined;
-    cashAmount: number | undefined;
-    fixedIncomeId: string | undefined;
-    fixedIncomeAmount: number | undefined;
-    fees: Maybe<TransactionFee[]> | undefined;
-    cashBalanceChange: number | undefined;
+    type: InputMaybe<GroupTransactionType>;
+    entryTime: InputMaybe<string>;
+    cashAmount: InputMaybe<number>;
+    fixedIncomeId: InputMaybe<string>;
+    fixedIncomeAmount: InputMaybe<number>;
+    fees: InputMaybe<TransactionFee[]>;
+    cashBalanceChange: InputMaybe<number>;
 };
 
 function calculateUnitPricePercent(
-    cashAmount: number | undefined,
-    fixedIncomeAmount: number | undefined,
+    cashAmount: InputMaybe<number>,
+    fixedIncomeAmount: InputMaybe<number>,
 ) {
     if (!cashAmount || !fixedIncomeAmount) return 0;
     return ((cashAmount / fixedIncomeAmount) * 100).toFixed(2);
 }
 
 function calculateCashBalanceChange(
-    transactionType: GroupTransactionType | undefined,
-    cashAmount: number | undefined,
-    fees: Maybe<TransactionFee[]> | undefined,
+    transactionType: InputMaybe<GroupTransactionType>,
+    cashAmount: InputMaybe<number>,
+    fees: InputMaybe<TransactionFee[]>,
 ) {
     if (!cashAmount || !transactionType) return 0;
 
     const operation = transactionType === 'AssetPurchase' ? -1 : 1;
 
-    const totalFees = fees
-        ? fees.reduce((acc, fee) => acc + Number(fee.amount), 0)
-        : 0;
+    const feeAmounts = fees?.map(fee => fee.amount).filter(Boolean) ?? [];
 
-    return Number(cashAmount) * operation - totalFees;
+    const totalFees = feeAmounts.reduce((acc, fee) => acc + fee, 0);
+
+    return cashAmount * operation - totalFees;
 }
 
 export interface GroupTransactionsDetailsProps extends DivProps {
@@ -112,19 +112,25 @@ export const GroupTransactionDetails: React.FC<
         ({ id }) => id === transaction?.fixedIncomeTransaction?.assetId,
     );
 
-    const { control, handleSubmit, reset, register, watch } =
-        useForm<GroupTransactionDetailInputs>({
-            defaultValues: {
-                type: transaction?.type,
-                entryTime: convertToDateTimeLocalFormat(
-                    transaction?.entryTime ?? new Date(),
-                ),
-                cashAmount: transaction?.cashTransaction?.amount,
-                fixedIncomeId: fixedIncome?.id,
-                fixedIncomeAmount: transaction?.fixedIncomeTransaction?.amount,
-                fees: transaction?.fees,
-            },
-        });
+    const {
+        control,
+        handleSubmit,
+        reset,
+        register,
+        watch,
+        formState: { errors },
+    } = useForm<GroupTransactionDetailInputs>({
+        defaultValues: {
+            type: transaction?.type,
+            entryTime: convertToDateTimeLocalFormat(
+                transaction?.entryTime ?? new Date(),
+            ),
+            cashAmount: transaction?.cashTransaction?.amount,
+            fixedIncomeId: fixedIncome?.id,
+            fixedIncomeAmount: transaction?.fixedIncomeTransaction?.amount,
+            fees: transaction?.fees,
+        },
+    });
 
     const { fields, append, remove } = useFieldArray({
         control,
@@ -151,12 +157,6 @@ export const GroupTransactionDetails: React.FC<
     const onSubmit: SubmitHandler<GroupTransactionDetailInputs> = data => {
         onSubmitForm({
             ...data,
-            cashAmount: Number(data.cashAmount),
-            fixedIncomeAmount: Number(data.fixedIncomeAmount),
-            fees: data.fees?.map(fee => ({
-                ...fee,
-                amount: Number(fee.amount),
-            })),
             cashBalanceChange,
         });
     };
@@ -246,10 +246,19 @@ export const GroupTransactionDetails: React.FC<
                     hideLine={!isViewOnly}
                     value={
                         <RWATableTextInput
-                            control={control}
-                            required
-                            name="fixedIncomeAmount"
-                            disabled={isViewOnly}
+                            {...register('fixedIncomeAmount', {
+                                required: 'Quantity is required',
+                                disabled: isViewOnly,
+                                valueAsNumber: true,
+                            })}
+                            aria-invalid={
+                                errors.fixedIncomeAmount?.type === 'required'
+                                    ? 'true'
+                                    : 'false'
+                            }
+                            errorMessage={errors.fixedIncomeAmount?.message}
+                            type="number"
+                            placeholder="E.g. 1000"
                         />
                     }
                 />
@@ -258,14 +267,23 @@ export const GroupTransactionDetails: React.FC<
                     hideLine={!isViewOnly}
                     value={
                         <RWATableTextInput
-                            control={control}
-                            required
-                            name="cashAmount"
-                            disabled={isViewOnly}
+                            {...register('cashAmount', {
+                                required: 'Asset proceeds is required',
+                                disabled: isViewOnly,
+                                valueAsNumber: true,
+                            })}
+                            aria-invalid={
+                                errors.cashAmount?.type === 'required'
+                                    ? 'true'
+                                    : 'false'
+                            }
+                            errorMessage={errors.cashAmount?.message}
+                            type="number"
+                            placeholder="E.g. 1000"
                         />
                     }
                 />
-                <div className="mb-2 ml-auto mr-6 w-fit text-xs">
+                <div className="my-2 ml-auto mr-6 w-fit text-xs">
                     <span className="mr-2 inline-block text-gray-600">
                         Unit Price
                     </span>{' '}
@@ -280,6 +298,7 @@ export const GroupTransactionDetails: React.FC<
                 watch={watch}
                 remove={remove}
                 append={append}
+                errors={errors}
                 isViewOnly={isViewOnly}
             />
             <div className="flex items-center justify-between border-t border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">

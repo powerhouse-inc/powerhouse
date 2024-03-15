@@ -174,7 +174,6 @@ export function RWAFixedIncomesTable(props: FixedIncomesTableProps) {
                         onClose={() => setShowNewAssetForm(false)}
                         onCancel={() => setShowNewAssetForm(false)}
                         onSubmitForm={onSubmitCreate}
-                        hideNonEditableFields
                     />
                 </div>
             )}

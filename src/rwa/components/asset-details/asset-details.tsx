@@ -1,7 +1,7 @@
 import { DivProps, Icon, mergeClassNameProps } from '@/powerhouse';
 import { parseDate } from '@internationalized/date';
 import React from 'react';
-import { SubmitHandler, UseFormReset, useForm } from 'react-hook-form';
+import { SubmitHandler, useForm } from 'react-hook-form';
 import {
     FixedIncome,
     FixedIncomeType,
@@ -45,7 +45,7 @@ export interface RWAAssetDetailsProps extends DivProps {
     fixedIncomeTypes: FixedIncomeType[];
     spvs: SPV[];
     onClose?: () => void;
-    onCancel: (reset: UseFormReset<RWAAssetDetailInputs>) => void;
+    onCancel: () => void;
     selectItemToEdit?: () => void;
     onSubmitForm: (data: RWAAssetDetailInputs) => void;
     labels?: typeof defaultLabels;
@@ -72,7 +72,13 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
     );
     const spv = spvs.find(({ id }) => id === asset.spvId);
 
-    const { handleSubmit, control, reset } = useForm<RWAAssetDetailInputs>({
+    const {
+        register,
+        handleSubmit,
+        control,
+        reset,
+        formState: { errors },
+    } = useForm<RWAAssetDetailInputs>({
         defaultValues: {
             fixedIncomeTypeId: fixedIncomeType?.id ?? fixedIncomeTypes[0].id,
             spvId: spv?.id ?? spvs[0].id,
@@ -85,8 +91,14 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
     });
 
     const onSubmit: SubmitHandler<RWAAssetDetailInputs> = data => {
+        if (Object.keys(errors).length !== 0) return;
         onSubmitForm(data);
     };
+
+    function handleCancel() {
+        reset();
+        onCancel();
+    }
 
     const isEditMode = mode === 'edit';
     const isCreateOperation = operation === 'create';
@@ -99,7 +111,7 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                     {isEditMode ? (
                         <div className="flex gap-x-2">
                             <RWAButton
-                                onClick={() => onCancel(reset)}
+                                onClick={handleCancel}
                                 className="text-gray-600"
                             >
                                 {labels.cancelEdits}
@@ -143,9 +155,17 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                     hideLine={isEditMode}
                     value={
                         <RWATableTextInput
-                            control={control}
-                            name="name"
-                            disabled={!isEditMode}
+                            {...register('name', {
+                                disabled: !isEditMode,
+                                required: 'Asset name is required',
+                            })}
+                            aria-invalid={
+                                errors.name?.type === 'required'
+                                    ? 'true'
+                                    : 'false'
+                            }
+                            errorMessage={errors.name?.message}
+                            placeholder="E.g. My Asset"
                         />
                     }
                 />
@@ -154,9 +174,8 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                     hideLine={isEditMode}
                     value={
                         <RWATableTextInput
-                            control={control}
-                            name="CUSIP"
-                            disabled={!isEditMode}
+                            {...register('CUSIP', { disabled: !isEditMode })}
+                            placeholder="E.g. 123456789"
                         />
                     }
                 />
@@ -165,9 +184,8 @@ export const RWAAssetDetails: React.FC<RWAAssetDetailsProps> = props => {
                     hideLine={isEditMode}
                     value={
                         <RWATableTextInput
-                            control={control}
-                            name="ISIN"
-                            disabled={!isEditMode}
+                            {...register('ISIN', { disabled: !isEditMode })}
+                            placeholder="E.g. 123456789012"
                         />
                     }
                 />

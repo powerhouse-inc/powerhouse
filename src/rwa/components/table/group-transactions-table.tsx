@@ -16,11 +16,11 @@ import { handleDateInTable } from './utils';
 
 export type Fields = {
     id: string;
-    'Entry time': string | undefined;
-    Asset: string | undefined;
-    Quantity: number | undefined;
-    'Cash Amount': number | undefined;
-    'Cash Balance Change': number | undefined;
+    'Entry time': string | undefined | null;
+    Asset: string | undefined | null;
+    Quantity: number | undefined | null;
+    'Cash Amount': number | undefined | null;
+    'Cash Balance Change': number | undefined | null;
 };
 
 export function mapGroupTransactionsToTableFields(
@@ -236,13 +236,13 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
                             cashTransaction: {
                                 id: '',
                                 assetId: cashAssets[0].id,
-                                amount: 0,
+                                amount: undefined,
                                 counterPartyAccountId: principalLenderAccountId,
                             },
                             fixedIncomeTransaction: {
                                 id: '',
                                 assetId: fixedIncomes[0].id,
-                                amount: 0,
+                                amount: null,
                             },
                         }}
                         fixedIncomes={fixedIncomes}
