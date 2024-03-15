@@ -5347,10 +5347,10 @@ document-drive@1.0.0-alpha.17:
     nanoevents "^9.0.0"
     sanitize-filename "^1.6.3"
 
-document-model-libs@^1.8.0:
-  version "1.8.0"
-  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.8.0.tgz#7bca33a233470c9587c41ed74d2a1df7cf58d46f"
-  integrity sha512-tz6MH8tyaNkVwqe6rHTIqE1m2CKYXyrKgScy2dXrIM5EDEG/V9BH4ee9I/mqCo9l4VO96C7ckG+7p0xk0xHmGg==
+document-model-libs@^1.10.0:
+  version "1.10.0"
+  resolved "https://registry.yarnpkg.com/document-model-libs/-/document-model-libs-1.10.0.tgz#b99eefd47d6165ead73507f77d852c6a4672e117"
+  integrity sha512-Co5tLo15xD+R8MxFYAu7c8En6fa1UCSLaYTOUAsmNx+qsJWy2l5VbjQb0gw1GrmKqr9A+QnNxixePjCIfINdlA==
   dependencies:
     "@acaldas/graphql-codegen-typescript-validation-schema" "^0.12.3"
     "@graphql-codegen/core" "^4.0.2"
@@ -5359,16 +5359,15 @@ document-model-libs@^1.8.0:
     copy-anything "^3.0.5"
     date-fns "^3.3.1"
     deep-object-diff "^1.1.9"
-    document-model "^1.0.30"
     jsonc-parser "^3.2.1"
     jszip "^3.10.1"
     react-aria-components "1.1.1"
     tailwind-merge "^2.2.1"
 
-document-model@^1.0.30, document-model@^1.0.31:
-  version "1.0.31"
-  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.31.tgz#eac886edfe7b7630829a01147c9fa4b5e09a8750"
-  integrity sha512-E2SB1iNcKJfNWPjSCDFLnEFnA4HmwUF7oWwnXdX58KvryPyqTjkShIKkvbpyKYzyx54fsQid013hYkvKRVBuqw==
+document-model@1.0.32:
+  version "1.0.32"
+  resolved "https://registry.yarnpkg.com/document-model/-/document-model-1.0.32.tgz#1bf4abf6cb9a4e904799d4a264c8d7bfd4bfe7f9"
+  integrity sha512-TLmOm6XGWtp5i8Idu3UDjy5n6vbG7Av2ETqM+8tlY6nA/zUWm6fKesciu9BHGL+kncHRWXcv8cprrYiuoWtmDg==
   dependencies:
     immer "^10.0.3"
     json-stringify-deterministic "1.0.12"
