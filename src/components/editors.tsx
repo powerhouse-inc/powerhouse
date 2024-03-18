@@ -9,9 +9,9 @@ import {
 import { useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
-import { themeAtom } from 'src/store';
 import { useDocumentModel } from 'src/store/document-model';
 import { useEditor } from 'src/store/editor';
+import { themeAtom } from 'src/store/theme';
 import { useDocumentDispatch } from 'src/utils/document-model';
 import Button from './button';
 

@@ -8,13 +8,21 @@ import {
     nativeImage,
     shell,
 } from 'electron';
+import isDev from 'electron-is-dev';
+import type ElectronStore from 'electron-store';
 import fs from 'node:fs';
 import path, { basename } from 'path';
+import { addDeeplink } from './app/deeplink';
 import initDocumentDrive from './app/document-drive';
 import store from './app/store';
 import { ConnectCrypto } from './services/crypto';
-import { ElectronKeyStorage } from './services/crypto/electron';
-import { Theme } from './store';
+import {
+    ElectronKeyStorage,
+    KeyStorageElectronStore,
+} from './services/crypto/electron';
+import type { User } from './services/renown/types';
+import { parsePkhDid } from './services/renown/utils';
+import { Theme, isTheme } from './store/';
 import { documentModels } from './store/document-model';
 
 const isMac = process.platform === 'darwin';
@@ -28,7 +36,9 @@ async function initApp() {
 
     try {
         // initializes connect key pair
-        const keyStorage = new ElectronKeyStorage(store);
+        const keyStorage = new ElectronKeyStorage(
+            store as unknown as ElectronStore<KeyStorageElectronStore>,
+        );
         const connectCrypto = new ConnectCrypto(keyStorage);
         await connectCrypto.did();
 
@@ -36,6 +46,11 @@ async function initApp() {
         ipcMain.handle('crypto:regenerateDid', () =>
             connectCrypto.regenerateDid(),
         );
+
+        // keeps track of the logged in user
+        ipcMain.handle('user', () => {
+            return store.get('user');
+        });
 
         // initializes document drive server
         await initDocumentDrive(
@@ -45,12 +60,38 @@ async function initApp() {
         );
 
         // creates window
-        await createWindow({
-            onReady() {
+        const browserWindow = await createWindow({
+            async onReady() {
                 if (initFile) {
-                    handleFile(initFile);
+                    await handleFile(initFile);
                 }
             },
+        });
+
+        // deeplink login
+        const appProtocol = isDev ? 'connect-dev' : 'connect';
+        addDeeplink(app, browserWindow, appProtocol, (_e, url) => {
+            // gets user address from url
+            const text = decodeURIComponent(url);
+            const did = text.slice(`${appProtocol}://`.length);
+            const result = parsePkhDid(did);
+
+            const user: User = {
+                did,
+                credential: undefined,
+                ...result,
+            };
+
+            store.set('user', user);
+
+            // notifies all windows
+            BrowserWindow.getAllWindows().forEach((window, index) => {
+                window.webContents.send('login', user);
+                // shows first window if not in view
+                if (index === 0) {
+                    window.show();
+                }
+            });
         });
     } catch (error) {
         console.error(error);
@@ -61,7 +102,7 @@ app.setName('Powerhouse Connect');
 
 app.commandLine.appendSwitch('enable-experimental-web-platform-features');
 
-function handleFile(path: string, window?: Electron.BrowserWindow) {
+async function handleFile(path: string, window?: Electron.BrowserWindow) {
     try {
         const content = fs
             .readFileSync(path, { encoding: 'binary' })
@@ -74,7 +115,7 @@ function handleFile(path: string, window?: Electron.BrowserWindow) {
         if (_window) {
             _window.webContents.send('openFile', file);
         } else {
-            createWindow({
+            await createWindow({
                 onReady(window) {
                     window.webContents.send('openFile', file);
                 },
@@ -103,8 +144,7 @@ ipcMain.handle('showTabMenu', (event, tab) => {
             label: 'Move to new window',
             click: async () => {
                 event.sender.send('removeTab', tab);
-
-                createWindow({
+                await createWindow({
                     onReady: window => {
                         window.webContents.send('addTab', tab);
                     },
@@ -127,10 +167,14 @@ function getThemeColors(theme: Theme) {
 }
 
 ipcMain.on('theme', (_, theme) => {
+    if (!isTheme(theme)) {
+        throw new Error(`Invalid theme: ${theme}`);
+    }
     store.set('theme', theme);
     const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
 
     BrowserWindow.getAllWindows().forEach(window => {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (window.setTitleBarOverlay) {
             window.setTitleBarOverlay({
                 color: titlebarColor,
@@ -193,21 +237,21 @@ const createWindow = async (options?: {
                 {
                     label: 'New Window',
                     accelerator: 'CommandOrControl+Shift+N',
-                    click: () => {
-                        createWindow();
+                    click: async () => {
+                        await createWindow();
                     },
                 },
                 { type: 'separator' },
                 {
                     label: 'Open',
                     accelerator: 'CommandOrControl+O',
-                    click: () => {
+                    click: async () => {
                         const files = dialog.showOpenDialogSync(mainWindow, {
                             properties: ['openFile'],
                         });
                         if (files) {
                             files.map(file => app.addRecentDocument(file));
-                            handleFile(
+                            await handleFile(
                                 files[0],
                                 mainWindow.isDestroyed()
                                     ? undefined
@@ -333,9 +377,9 @@ const createWindow = async (options?: {
 
 let initFile: string;
 
-app.on('open-file', (_event, path) => {
+app.on('open-file', async (_event, path) => {
     if (app.isReady()) {
-        handleFile(path);
+        await handleFile(path);
     } else {
         initFile = path;
     }
@@ -357,33 +401,10 @@ app.on('window-all-closed', () => {
     }
 });
 
-app.on('activate', () => {
+app.on('activate', async () => {
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
+        await createWindow();
     }
 });
-
-// keeps track of the logged in user
-let user: string;
-ipcMain.handle('user', () => user);
-
-// deeplink login
-
-// const appProtocol = isDev ? 'connect-dev' : 'connect';
-
-// addDeeplink(app, appProtocol, (event, url) => {
-//     // gets user address from url
-//     const address = url.slice(`${appProtocol}://`.length);
-//     user = address;
-
-//     // notifies all windows
-//     BrowserWindow.getAllWindows().forEach((window, index) => {
-//         window.webContents.send('login', address);
-//         // shows first window if not in view
-//         if (index === 0) {
-//             window.show();
-//         }
-//     });
-// });

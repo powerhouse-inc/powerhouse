@@ -10,7 +10,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
-import { useSelectedPath } from 'src/store';
+import { useSelectedPath } from 'src/store/document-drive';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();

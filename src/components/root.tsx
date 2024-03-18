@@ -1,12 +1,12 @@
 import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
-import { useSetAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useDropFile } from 'src/hooks';
 import { useLoadInitialData } from 'src/hooks/useLoadInitialData';
 import { isElectron, isMac } from 'src/hooks/utils';
-import { userAtom } from 'src/store';
+import { userAtom } from 'src/store/user';
 import Sidebar from './sidebar';
 
 const ROOT_FILE_DROP = false;
@@ -15,18 +15,22 @@ const Root = () => {
     useLoadInitialData();
     const ref = React.useRef(null);
 
-    const setUser = useSetAtom(userAtom);
+    const [user, setUser] = useAtom(userAtom);
 
     useEffect(() => {
         window.electronAPI?.ready();
 
-        window.electronAPI?.user().then(user => {
-            setUser(user);
-        });
+        window.electronAPI
+            ?.user()
+            .then(user => {
+                setUser(user);
+            })
+            .catch(console.error);
 
         const unsubscribeLogin = window.electronAPI?.handleLogin((_, user) => {
             setUser(user);
         });
+
         return unsubscribeLogin;
     }, []);
 

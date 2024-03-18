@@ -2,12 +2,18 @@ import { safeStorage } from 'electron';
 import type ElectronStore from 'electron-store';
 import type { JsonWebKeyPairStorage, JwkKeyPair } from './';
 
+const ELECTRON_KEY_STORAGE_STORE_KEY = 'electron-key-storage';
+
+export type KeyStorageElectronStore = {
+    [ELECTRON_KEY_STORAGE_STORE_KEY]: string;
+};
+
 export class ElectronKeyStorage implements JsonWebKeyPairStorage {
-    #store: ElectronStore;
+    #store: ElectronStore<KeyStorageElectronStore>;
 
-    static #STORE_KEY = 'connectkeyPair';
+    static #STORE_KEY = ELECTRON_KEY_STORAGE_STORE_KEY;
 
-    constructor(store: ElectronStore) {
+    constructor(store: ElectronStore<KeyStorageElectronStore>) {
         this.#store = store;
     }
 
@@ -25,9 +31,9 @@ export class ElectronKeyStorage implements JsonWebKeyPairStorage {
     }
 
     loadKeyPair(): Promise<JwkKeyPair | undefined> {
-        const encryptedKeyPair = this.#store.get(
+        const encryptedKeyPair: string = this.#store.get(
             ElectronKeyStorage.#STORE_KEY,
-        ) as string;
+        );
         if (!encryptedKeyPair) {
             return Promise.resolve(undefined);
         }
