@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.10.0...v1.11.0) (2024-03-18)
+
+
+### Features
+
+* format initial state on mount ([#98](https://github.com/powerhouse-inc/document-model-libs/issues/98)) ([4a657f3](https://github.com/powerhouse-inc/document-model-libs/commit/4a657f359cfdf2fa04f04fa8aecc81ad2eba973f))
+
 # [1.10.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.9.0...v1.10.0) (2024-03-15)
 
 
