@@ -30,12 +30,19 @@
     },
     "modals": {
         "deleteItem": {
-            "header": "Delete “{{item}}” folder?",
-            "body": "Are you sure you want to delete this folder? All files and subfolders within it will be removed."
+            "folder": {
+                "header": "Delete “{{item}}” folder?",
+                "body": "Are you sure you want to delete this folder? All files and subfolders within it will be removed."
+            },
+            "file": {
+                "header": "Delete “{{item}}” file?",
+                "body": "Are you sure you want to delete this file?"
+            }
         },
         "deleteDrive": {
-            "title": "Delete {{label}} drive?",
-            "body": "Are you sure you want to delete this drive? All files and subfolders within it will be removed. Do you want to proceed?"
+            "title": "Delete \"{{label}}\" drive?",
+            "body": "Are you sure you want to delete this drive? All files and subfolders within it will be removed. Do you want to proceed?",
+            "inputPlaceholder": "Enter drive name..."
         },
         "upgradeDrive": {
             "header": "Upgrade to cloud drive",

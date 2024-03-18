@@ -139,15 +139,10 @@ export function useDrivesContainer() {
                         item.type,
                     )
                 ) {
-                    showModal('confirmationModal', {
+                    showModal('deleteDriveModal', {
                         onCancel: closeModal => closeModal(),
-                        title: t('modals.deleteDrive.title', {
-                            label: item.label,
-                        }),
-                        body: t('modals.deleteDrive.body'),
-                        continueLabel: t('common.delete'),
-                        cancelLabel: t('common.cancel'),
-                        onContinue: async closeModal => {
+                        driveName: item.label,
+                        onDelete: async closeModal => {
                             closeModal();
                             await deleteDrive(decodeID(item.id));
 
