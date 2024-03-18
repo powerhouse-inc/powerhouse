@@ -65,9 +65,18 @@ export default function EditorInitialState({
                 onChange={value => setCode(value ?? '')}
                 {...props}
                 value={code}
-                onMount={(editor, monaco) => {
+                onMount={async (editor, monaco) => {
                     editorRef.current = editor;
                     props.onMount?.(editor, monaco);
+                    setTimeout(async () => {
+                        try {
+                            await editor
+                                .getAction('editor.action.formatDocument')
+                                ?.run();
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    }, 50);
                 }}
                 options={{
                     lineNumbers: 'off',
