@@ -2,11 +2,11 @@ import { useAtomValue } from 'jotai';
 import { useEffect, useRef } from 'react';
 import { useDropFile, useOpenFile } from 'src/hooks';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { preloadTabs, useTabs } from 'src/store';
 import { documentModelsAtom } from 'src/store/document-model';
+import { preloadTabs, useTabs } from 'src/store/tabs';
 import Button from '../button';
 
-export default function TabNew()  {
+export default function TabNew() {
     const ref = useRef(null);
     const { selectedTab, updateTab, fromDocument } = useTabs();
     const { documentDrives, addFile, openFile } = useDocumentDriveServer();
@@ -43,8 +43,8 @@ export default function TabNew()  {
                             updateTab(
                                 await fromDocument(
                                     doc.utils.createDocument(),
-                                    selectedTab
-                                )
+                                    selectedTab,
+                                ),
                             );
                         }}
                     >
@@ -69,4 +69,4 @@ export default function TabNew()  {
             </div>
         </div>
     );
-};
+}

@@ -1,15 +1,24 @@
 import { ConnectSidebar } from '@powerhousedao/design-system';
-import { useAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { sidebarCollapsedAtom } from 'src/store';
+import { userAtom } from 'src/store/user';
 import DriveContainer from './drive-container';
 import { useModal } from './modal';
+
+function shortAddress(address: string) {
+    return (
+        address.substring(0, 6) + '...' + address.substring(address.length - 6)
+    );
+}
 
 export default function Sidebar() {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
     const [disableHoverStyles, setDisableHoverStyles] = useState(false);
     const { showModal } = useModal();
+
+    const user = useAtomValue(userAtom);
 
     function toggleCollapse() {
         setCollapsed(value => !value);
@@ -25,7 +34,7 @@ export default function Sidebar() {
             onToggle={toggleCollapse}
             username="Willow.eth"
             onClickSettings={onClickSettings}
-            address="0x8343...3u432u32"
+            address={user?.address ? shortAddress(user.address) : '-'}
         >
             <ErrorBoundary
                 fallback={

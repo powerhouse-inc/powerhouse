@@ -19,7 +19,7 @@ import {
 import path from 'path';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
-import { useSelectedPath } from 'src/store';
+import { useSelectedPath } from 'src/store/document-drive';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 import { useDocumentDriveServer } from './useDocumentDriveServer';

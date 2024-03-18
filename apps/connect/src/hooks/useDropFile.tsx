@@ -2,8 +2,8 @@ import type { DropEvent } from '@react-types/shared';
 import { useCallback } from 'react';
 import { useDrop } from 'react-aria';
 import { useNavigate } from 'react-router-dom';
-import { useTabs } from 'src/store';
 import { useGetDocumentModel } from 'src/store/document-model';
+import { useTabs } from 'src/store/tabs';
 import { loadFile } from 'src/utils/file';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
@@ -26,13 +26,13 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
                 if (item.kind === 'file') {
                     const file = await item.getFile();
 
-                    const drive = documentDrives?.[0]; // TODO improve default drive selection
+                    const drive = documentDrives[0]; // TODO improve default drive selection
                     if (drive) {
                         const node = await addFile(
                             file,
                             drive.state.global.id,
                             file.name,
-                            undefined // TODO selectedFolder as parent folder
+                            undefined, // TODO selectedFolder as parent folder
                         );
 
                         if (node) {
@@ -52,14 +52,14 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
                         navigate('/');
                     } catch (error) {
                         console.log(
-                            `Dropped text not recognized as tab: ${error}`
+                            `Dropped text not recognized as tab: ${error}`,
                         );
                         console.log(item);
                     }
                 }
             }
         },
-        [addTab, selectedTab, getItem, updateTab, documentDrives]
+        [addTab, selectedTab, getItem, updateTab, documentDrives],
     );
 
     return useDrop({

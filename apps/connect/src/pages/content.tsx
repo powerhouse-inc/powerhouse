@@ -22,11 +22,12 @@ import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
-import { preloadTabs, useFileNodeDocument, useSelectedPath } from 'src/store';
+import { useFileNodeDocument, useSelectedPath } from 'src/store/document-drive';
 import {
     useFilteredDocumentModels,
     useGetDocumentModel,
 } from 'src/store/document-model';
+import { preloadTabs } from 'src/store/tabs';
 import { exportFile } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 

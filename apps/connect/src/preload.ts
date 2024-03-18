@@ -13,7 +13,8 @@ import { BaseAction, Document, Operation } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { platformInfo } from './app/detect-platform';
 import type { IConnectCrypto } from './services/crypto';
-import { Theme } from './store';
+import type { User } from './services/renown/types';
+import type { Theme } from './store';
 
 const connectCrypto: IConnectCrypto = {
     regenerateDid: (): Promise<void> =>
@@ -65,15 +66,13 @@ const electronApi = {
             ipcRenderer.off('removeTab', listener);
         };
     },
-    handleLogin: (
-        listener: (event: IpcRendererEvent, address: string) => void,
-    ) => {
+    handleLogin: (listener: (event: IpcRendererEvent, user: User) => void) => {
         ipcRenderer.on('login', listener);
         return () => {
             ipcRenderer.off('login', listener);
         };
     },
-    user: async () => (await ipcRenderer.invoke('user')) as string | undefined,
+    user: async () => ipcRenderer.invoke('user') as Promise<User | undefined>,
     openURL: (url: string) => ipcRenderer.invoke('openURL', url),
     setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
     documentDrive: {
