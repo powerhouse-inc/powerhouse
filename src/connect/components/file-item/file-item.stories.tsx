@@ -12,6 +12,7 @@ const meta: Meta<typeof FileItem> = {
         onCancelInput: { action: 'onCancelInput' },
         onSubmitInput: { action: 'onSubmitInput' },
         mode: { control: { type: 'select' }, options: ['read', 'write'] },
+        item: { control: { type: 'object' } },
         icon: {
             control: { type: 'select' },
             options: ['legal', 'global', 'profile', 'budget', 'template'],
@@ -37,5 +38,12 @@ export const Default: Story = {
         subTitle:
             'MakerDAO/Ecosystem Actors/Powerhouse/Chronicle Labs/Legal Contract 1',
         icon: 'profile',
+        item: {
+            id: '1',
+            label: 'Test Folder',
+            availableOffline: false,
+            path: '',
+            type: 'FILE',
+        },
     },
 };

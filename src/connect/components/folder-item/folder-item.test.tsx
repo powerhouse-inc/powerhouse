@@ -1,5 +1,14 @@
+import { TreeItem } from '@/connect';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { FolderItem } from './folder-item';
+
+const item: TreeItem = {
+    id: '1',
+    label: 'Test Folder',
+    availableOffline: false,
+    path: '',
+    type: 'FOLDER',
+};
 
 describe('FolderItem Component', () => {
     it('should match read snapshot', () => {
@@ -11,6 +20,7 @@ describe('FolderItem Component', () => {
                 onOptionsClick={() => {}}
                 onCancelInput={() => {}}
                 onSubmitInput={() => {}}
+                item={item}
             />,
         );
 
@@ -26,6 +36,7 @@ describe('FolderItem Component', () => {
                 onOptionsClick={() => {}}
                 onCancelInput={() => {}}
                 onSubmitInput={() => {}}
+                item={item}
             />,
         );
 
@@ -42,6 +53,7 @@ describe('FolderItem Component', () => {
                 onOptionsClick={() => {}}
                 onCancelInput={() => {}}
                 onSubmitInput={() => {}}
+                item={item}
             />,
         );
 

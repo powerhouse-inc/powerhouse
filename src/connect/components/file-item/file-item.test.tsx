@@ -1,5 +1,14 @@
+import { TreeItem } from '@/connect';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { FileItem } from './file-item';
+
+const item: TreeItem = {
+    id: '1',
+    label: 'Test Folder',
+    availableOffline: false,
+    path: '',
+    type: 'FILE',
+};
 
 describe('FileItem Component', () => {
     it('should match snapshot', () => {
@@ -10,6 +19,7 @@ describe('FileItem Component', () => {
                 icon="profile"
                 onClick={() => {}}
                 onOptionsClick={() => {}}
+                item={item}
             />,
         );
 
@@ -26,6 +36,7 @@ describe('FileItem Component', () => {
                 icon="profile"
                 onClick={onClick}
                 onOptionsClick={() => {}}
+                item={item}
             />,
         );
 

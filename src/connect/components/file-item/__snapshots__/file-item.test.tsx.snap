@@ -6,7 +6,9 @@ exports[`FileItem Component > should match snapshot 1`] = `
     class="relative"
   >
     <div
+      aria-describedby="react-aria-description-0"
       class="group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800"
+      draggable="true"
     >
       <div
         class="relative flex flex-1 flex-row items-center overflow-hidden"

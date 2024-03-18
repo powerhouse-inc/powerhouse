@@ -6,6 +6,7 @@ import TemplateImg from '@/assets/icons/template.png';
 import {
     ConnectDropdownMenu,
     ConnectDropdownMenuProps,
+    TreeItem,
     defaultDropdownMenuOptions,
 } from '@/connect';
 import {
@@ -13,6 +14,8 @@ import {
     Icon,
     TreeViewInput,
     TreeViewInputProps,
+    UseDraggableTargetProps,
+    useDraggableTarget,
 } from '@/powerhouse';
 import React, { useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
@@ -30,7 +33,8 @@ const iconMap = {
 
 export type FileItemIconType = keyof typeof iconMap;
 
-export interface FileItemProps extends DivProps {
+export interface FileItemProps
+    extends Omit<DivProps, 'onDragStart' | 'onDragEnd'> {
     title: string;
     subTitle?: string;
     mode?: 'write' | 'read';
@@ -40,6 +44,9 @@ export interface FileItemProps extends DivProps {
     onOptionsClick: ConnectDropdownMenuProps['onItemClick'];
     onSubmitInput?: TreeViewInputProps['onSubmitInput'];
     onCancelInput?: TreeViewInputProps['onCancelInput'];
+    item: TreeItem;
+    onDragStart?: UseDraggableTargetProps<TreeItem>['onDragStart'];
+    onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
 }
 
 export const FileItem: React.FC<FileItemProps> = ({
@@ -50,12 +57,21 @@ export const FileItem: React.FC<FileItemProps> = ({
     onOptionsClick,
     mode = 'read',
     icon = 'global',
+    item,
+    onDragEnd,
+    onDragStart,
     onCancelInput = () => {},
     onSubmitInput = () => {},
     ...divProps
 }) => {
     const containerRef = useRef(null);
     const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
+
+    const { dragProps } = useDraggableTarget({
+        data: item,
+        onDragEnd,
+        onDragStart,
+    });
 
     const isReadMode = mode === 'read';
 
@@ -94,7 +110,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
     return (
         <div className="relative" ref={containerRef}>
-            <div {...divProps} className={containerStyles}>
+            <div {...dragProps} {...divProps} className={containerStyles}>
                 <div className="relative flex flex-1 flex-row items-center overflow-hidden">
                     <div className="mr-1.5">{iconNode}</div>
                     <div

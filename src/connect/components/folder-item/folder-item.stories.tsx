@@ -9,6 +9,10 @@ const meta: Meta<typeof FolderItem> = {
         onOptionsClick: { action: 'onOptionsClick' },
         title: { control: 'text' },
         mode: { control: { type: 'select', options: ['read', 'write'] } },
+        onDragStart: { action: 'onDragStart' },
+        onDragEnd: { action: 'onDragEnd' },
+        onDropEvent: { action: 'onDropEvent' },
+        item: { control: { type: 'object' } },
     },
     decorators: [
         Story => (
@@ -26,5 +30,12 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
     args: {
         title: 'Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs',
+        item: {
+            id: '1',
+            label: 'Test Folder',
+            availableOffline: false,
+            path: '',
+            type: 'FOLDER',
+        },
     },
 };

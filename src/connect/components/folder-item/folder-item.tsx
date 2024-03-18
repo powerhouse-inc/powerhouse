@@ -1,9 +1,15 @@
 import {
     ConnectDropdownMenu,
     ConnectDropdownMenuProps,
+    TreeItem,
     defaultDropdownMenuOptions,
 } from '@/connect';
-import { DivProps, Icon } from '@/powerhouse';
+import {
+    DivProps,
+    Icon,
+    UseDraggableTargetProps,
+    useDraggableTarget,
+} from '@/powerhouse';
 import {
     TreeViewInput,
     TreeViewInputProps,
@@ -14,13 +20,20 @@ import { twMerge } from 'tailwind-merge';
 const submitIcon = <Icon name="check" className="text-gray-600" />;
 const cancelIcon = <Icon name="xmark" className="text-gray-600" />;
 
-export interface FolderItemProps extends DivProps {
+type FolderItem = object;
+
+export interface FolderItemProps
+    extends Omit<DivProps, 'onDragEnd' | 'onDragStart' | 'onDropEvent'> {
     title: string;
     itemOptions?: ConnectDropdownMenuProps['items'];
     onOptionsClick: ConnectDropdownMenuProps['onItemClick'];
     mode?: 'write' | 'read';
     onSubmitInput: TreeViewInputProps['onSubmitInput'];
     onCancelInput: TreeViewInputProps['onCancelInput'];
+    item: TreeItem;
+    onDragStart?: UseDraggableTargetProps<TreeItem>['onDragStart'];
+    onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
+    onDropEvent?: UseDraggableTargetProps<TreeItem>['onDropEvent'];
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({
@@ -30,10 +43,20 @@ export const FolderItem: React.FC<FolderItemProps> = ({
     onSubmitInput,
     onCancelInput,
     onOptionsClick,
+    item,
+    onDragEnd,
+    onDragStart,
+    onDropEvent,
     ...divProps
 }) => {
     const containerRef = useRef(null);
     const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
+    const { dropProps, dragProps, isDropTarget } = useDraggableTarget({
+        data: item,
+        onDragEnd,
+        onDragStart,
+        onDropEvent,
+    });
 
     const isReadMode = mode === 'read';
     const textStyles = isReadMode
@@ -44,6 +67,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
         'group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2',
         textStyles,
         divProps.className,
+        isDropTarget && 'bg-blue-100',
     );
 
     const content = isReadMode ? (
@@ -51,7 +75,12 @@ export const FolderItem: React.FC<FolderItemProps> = ({
             <div className="ml-3 max-h-6 overflow-hidden whitespace-nowrap font-medium text-slate-200 group-hover:text-gray-800">
                 {title}
             </div>
-            <div className="absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-gray-200" />
+            <div
+                className={twMerge(
+                    'absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-gray-200',
+                    isDropTarget && 'to-blue-100',
+                )}
+            />
         </>
     ) : (
         <TreeViewInput
@@ -66,7 +95,12 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 
     return (
         <div className="relative" ref={containerRef}>
-            <div {...divProps} className={containerStyles}>
+            <div
+                {...dropProps}
+                {...dragProps}
+                {...divProps}
+                className={containerStyles}
+            >
                 <div className="relative flex flex-1 flex-row items-center overflow-hidden">
                     <div className="p-1">
                         <Icon name="folder-close" size={24} />
