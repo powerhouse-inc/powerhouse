@@ -1,5 +1,6 @@
 import {
     Action,
+    ActionErrorCallback,
     BaseAction,
     Document,
     Operation,
@@ -47,16 +48,26 @@ export const DocumentEditor: React.FC<IProps> = ({
     const documentModel = useDocumentModel(initialDocument.documentType);
     const editor = useEditor(initialDocument.documentType);
     const theme = useAtomValue(themeAtom);
-    const [document, _dispatch] = useDocumentDispatch(
+    const [document, _dispatch, error] = useDocumentDispatch(
         documentModel?.reducer,
         initialDocument,
     );
 
-    function dispatch(action: BaseAction | Action) {
-        _dispatch(action, operation => {
-            window.documentEditorDebugTools?.pushOperation(operation);
-            onAddOperation(operation);
-        });
+    function dispatch(
+        action: BaseAction | Action,
+        onErrorCallback?: ActionErrorCallback,
+    ) {
+        _dispatch(
+            action,
+            operation => {
+                window.documentEditorDebugTools?.pushOperation(operation);
+
+                if (operation) {
+                    onAddOperation(operation);
+                }
+            },
+            onErrorCallback,
+        );
     }
 
     useEffect(() => {
@@ -129,6 +140,7 @@ export const DocumentEditor: React.FC<IProps> = ({
                 </div>
             )}
             <EditorComponent
+                error={error}
                 editorContext={{ theme }}
                 document={document}
                 dispatch={dispatch}
