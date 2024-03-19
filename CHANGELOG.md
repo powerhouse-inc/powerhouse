@@ -1,3 +1,10 @@
+# [1.0.0-alpha.76](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.75...v1.0.0-alpha.76) (2024-03-19)
+
+
+### Features
+
+* added drag and drop options to FileItem and FolderItem ([252ba73](https://github.com/powerhouse-inc/design-system/commit/252ba734122168faed5ba958fae4b1be37dff2e4))
+
 # [1.0.0-alpha.75](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.74...v1.0.0-alpha.75) (2024-03-15)
 
 
