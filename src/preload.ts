@@ -13,7 +13,7 @@ import { BaseAction, Document, Operation } from 'document-model/document';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { platformInfo } from './app/detect-platform';
 import type { IConnectCrypto } from './services/crypto';
-import type { User } from './services/renown/types';
+import type { IRenown, User } from './services/renown/types';
 import type { Theme } from './store';
 
 const connectCrypto: IConnectCrypto = {
@@ -22,9 +22,25 @@ const connectCrypto: IConnectCrypto = {
     did: () => ipcRenderer.invoke('crypto:did') as Promise<string>,
 };
 
+const renown: IRenown = {
+    user: () => ipcRenderer.invoke('renown:user') as Promise<User | undefined>,
+    login: (did: string) => ipcRenderer.invoke('renown:login', did),
+    logout: () => ipcRenderer.invoke('renown:logout'),
+    on: {
+        user: (listener: (user: User) => void) => {
+            function wrappedListener(e: unknown, user: User) {
+                listener(user);
+            }
+            ipcRenderer.on('renown:on:user', wrappedListener);
+            return () => ipcRenderer.off('renown:on:user', wrappedListener);
+        },
+    },
+};
+
 const electronApi = {
     platformInfo,
     ready: () => ipcRenderer.send('ready'),
+    protocol: () => ipcRenderer.invoke('protocol') as Promise<string>,
     fileSaved: (document: Document, path?: string) =>
         ipcRenderer.invoke('fileSaved', document, path),
     handleFileOpen: (
@@ -144,5 +160,6 @@ const electronApi = {
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);
 contextBridge.exposeInMainWorld('connectCrypto', connectCrypto);
+contextBridge.exposeInMainWorld('renown', renown);
 
 export type ElectronAPI = typeof electronApi;

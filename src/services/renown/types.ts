@@ -1,3 +1,4 @@
+import type { IStorage } from '../storage';
 import { CREDENTIAL_TYPES } from './constants';
 
 export type User = {
@@ -7,6 +8,19 @@ export type User = {
     did: string;
     credential: PowerhouseVerifiableCredential | undefined;
 };
+
+export type Unsubscribe = () => void;
+
+export interface IRenown {
+    user: () => Promise<User | undefined>;
+    login: (did: string) => Promise<User | undefined>;
+    logout: () => Promise<void>;
+    on: {
+        user: (cb: (user: User) => void) => Unsubscribe;
+    };
+}
+
+export type RenownStorage = IStorage<{ user: User | undefined }>;
 
 type IssuerType<T> = {
     id: string;

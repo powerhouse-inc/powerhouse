@@ -1,4 +1,5 @@
 import {
+    Button,
     ClearStorageSettingsRow,
     SettingsModal as ConnectSettingsModal,
     DocumentSelectSettingsRow,
@@ -10,10 +11,13 @@ import { Option } from 'react-multi-select-component';
 import { useModal } from 'src/components/modal';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
+import { useRenown } from 'src/hooks/useRenown';
 import {
     useDocumentModels,
     useFilteredDocumentModels,
 } from 'src/store/document-model';
+import { useUser } from 'src/store/user';
+import { Login } from '../../login';
 
 const mapDocumentModelsToOptions = (documentModels: DocumentModel[]) =>
     documentModels.map(document => ({
@@ -37,6 +41,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
     const [selectedDocuments, setSelectedDocuments] = useState<Option[]>(
         mapDocumentModelsToOptions(enabledDocuments),
     );
+    const user = useUser();
+    const renown = useRenown();
+    const [showLogin, setShowLogin] = useState(false);
 
     const onSaveHandler = () => {
         setConfig({
@@ -78,6 +85,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                 if (!status) return onClose();
             }}
         >
+            <div className="rounded border border-gray-400 p-4">
+                {user ? (
+                    <>
+                        <p>
+                            Logged in with address:{' '}
+                            <span className="text-sm">{user.address}</span>
+                        </p>
+                        <Button
+                            className="mt-2 w-full"
+                            onClick={() => renown?.logout()}
+                        >
+                            Logout
+                        </Button>
+                    </>
+                ) : (
+                    <Login />
+                )}
+            </div>
             <DocumentSelectSettingsRow
                 selected={selectedDocuments}
                 onChange={selectedDocs => setSelectedDocuments(selectedDocs)}

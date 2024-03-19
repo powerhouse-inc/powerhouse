@@ -10,10 +10,7 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
         this.#db = new Promise((resolve, reject) => {
             const req = indexedDB.open(BrowserKeyStorage.#DB_NAME, 1);
             req.onupgradeneeded = () => {
-                req.result.createObjectStore(BrowserKeyStorage.#STORE_NAME, {
-                    keyPath: 'id',
-                    autoIncrement: true,
-                });
+                req.result.createObjectStore(BrowserKeyStorage.#STORE_NAME);
             };
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error as Error);
@@ -32,7 +29,7 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
 
     async saveKeyPair(keyPair: JwkKeyPair) {
         const store = await this.#useStore();
-        const request = store.put(keyPair, BrowserKeyStorage.#KEY);
+        const request = store.put(keyPair);
         return new Promise<void>((resolve, reject) => {
             request.onsuccess = () => {
                 resolve();
@@ -45,11 +42,13 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
 
     async loadKeyPair(): Promise<JwkKeyPair | undefined> {
         const store = await this.#useStore('readonly');
-        const request = store.get(BrowserKeyStorage.#KEY);
+        const request = store.getAll();
 
         return new Promise<JwkKeyPair | undefined>((resolve, reject) => {
             request.onsuccess = () => {
-                const keyPair = request.result as JwkKeyPair;
+                const keyPair = request.result.length
+                    ? (request.result[0] as JwkKeyPair)
+                    : undefined;
                 resolve(keyPair);
             };
             request.onerror = () => {

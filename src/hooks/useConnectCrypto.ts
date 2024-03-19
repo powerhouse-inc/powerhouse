@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { IConnectCrypto } from 'src/services/crypto';
 
 // uses electron connect crypto if available,
@@ -15,14 +16,17 @@ const connectCrypto = (async () => {
 })();
 
 export function useConnectCrypto(): IConnectCrypto {
-    return {
-        async regenerateDid() {
-            const crypto = await connectCrypto;
-            return crypto.regenerateDid();
-        },
-        async did() {
-            const crypto = await connectCrypto;
-            return crypto.did();
-        },
-    };
+    return useMemo(
+        () => ({
+            async regenerateDid() {
+                const crypto = await connectCrypto;
+                return crypto.regenerateDid();
+            },
+            async did() {
+                const crypto = await connectCrypto;
+                return crypto.did();
+            },
+        }),
+        [],
+    );
 }

@@ -1,10 +1,11 @@
 import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
-import { useAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useDropFile } from 'src/hooks';
 import { useLoadInitialData } from 'src/hooks/useLoadInitialData';
+import { useRenown } from 'src/hooks/useRenown';
 import { isElectron, isMac } from 'src/hooks/utils';
 import { userAtom } from 'src/store/user';
 import Sidebar from './sidebar';
@@ -15,24 +16,25 @@ const Root = () => {
     useLoadInitialData();
     const ref = React.useRef(null);
 
-    const [user, setUser] = useAtom(userAtom);
+    const renown = useRenown();
+    const setUser = useSetAtom(userAtom);
 
     useEffect(() => {
         window.electronAPI?.ready();
 
-        window.electronAPI
+        renown
             ?.user()
             .then(user => {
                 setUser(user);
             })
             .catch(console.error);
 
-        const unsubscribeLogin = window.electronAPI?.handleLogin((_, user) => {
+        const unsubscribeLogin = renown?.on.user(user => {
             setUser(user);
         });
 
         return unsubscribeLogin;
-    }, []);
+    }, [renown, setUser]);
 
     let { dropProps, isDropTarget } = useDropFile(ref);
 
