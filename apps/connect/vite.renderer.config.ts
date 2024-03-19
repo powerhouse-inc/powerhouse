@@ -26,6 +26,7 @@ export default defineConfig({
             '@/assets': path.resolve(__dirname, './assets'),
             src: path.resolve(__dirname, './src'),
             path: 'rollup-plugin-node-polyfills/polyfills/path',
+            events: 'rollup-plugin-node-polyfills/polyfills/events',
         },
     },
 });

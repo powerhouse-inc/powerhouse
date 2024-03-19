@@ -1,7 +1,8 @@
 export const RENOWN_URL =
-    process.env.VITE_RENOWN_URL || 'http://localhost:3001';
+    (import.meta.env.VITE_RENOWN_URL as string) || 'http://localhost:3001';
 
-export const EIP712VC_CHAIN_ID = process.env.EIP712VC_CHAIN_ID || 11155111;
+export const EIP712VC_CHAIN_ID =
+    (import.meta.env.EIP712VC_CHAIN_ID as number) || 11155111;
 
 export const DOMAIN_TYPE = [
     { name: 'name', type: 'string' },

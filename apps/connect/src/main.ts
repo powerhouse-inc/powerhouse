@@ -20,8 +20,7 @@ import {
     ElectronKeyStorage,
     KeyStorageElectronStore,
 } from './services/crypto/electron';
-import type { User } from './services/renown/types';
-import { parsePkhDid } from './services/renown/utils';
+import { initRenownElectron } from './services/renown/electron';
 import { Theme, isTheme } from './store/';
 import { documentModels } from './store/document-model';
 
@@ -40,16 +39,37 @@ async function initApp() {
             store as unknown as ElectronStore<KeyStorageElectronStore>,
         );
         const connectCrypto = new ConnectCrypto(keyStorage);
-        await connectCrypto.did();
+        const connectId = await connectCrypto.did();
+        const renown = initRenownElectron(connectId);
 
         ipcMain.handle('crypto:did', () => connectCrypto.did());
-        ipcMain.handle('crypto:regenerateDid', () =>
-            connectCrypto.regenerateDid(),
-        );
+        ipcMain.handle('crypto:regenerateDid', async () => {
+            await connectCrypto.regenerateDid();
+            renown.connectId = await connectCrypto.did();
+        });
 
         // keeps track of the logged in user
-        ipcMain.handle('user', () => {
-            return store.get('user');
+        ipcMain.handle('renown:user', () => {
+            return renown.user;
+        });
+
+        ipcMain.handle('renown:login', (_e, did: string) => {
+            return renown.login(did);
+        });
+
+        ipcMain.handle('renown:logout', () => {
+            return renown.logout();
+        });
+
+        // notifies all windows
+        renown.on('user', user => {
+            BrowserWindow.getAllWindows().forEach((window, index) => {
+                window.webContents.send('renown:on:user', user);
+                // shows first window if not in view
+                if (index === 0) {
+                    window.show();
+                }
+            });
         });
 
         // initializes document drive server
@@ -70,29 +90,13 @@ async function initApp() {
 
         // deeplink login
         const appProtocol = isDev ? 'connect-dev' : 'connect';
-        addDeeplink(app, browserWindow, appProtocol, (_e, url) => {
+        addDeeplink(app, browserWindow, appProtocol, async (_e, url) => {
             // gets user address from url
             const text = decodeURIComponent(url);
             const did = text.slice(`${appProtocol}://`.length);
-            const result = parsePkhDid(did);
-
-            const user: User = {
-                did,
-                credential: undefined,
-                ...result,
-            };
-
-            store.set('user', user);
-
-            // notifies all windows
-            BrowserWindow.getAllWindows().forEach((window, index) => {
-                window.webContents.send('login', user);
-                // shows first window if not in view
-                if (index === 0) {
-                    window.show();
-                }
-            });
+            await renown.login(did);
         });
+        ipcMain.handle('protocol', () => appProtocol);
     } catch (error) {
         console.error(error);
     }
