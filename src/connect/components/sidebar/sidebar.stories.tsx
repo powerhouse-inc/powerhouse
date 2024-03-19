@@ -93,6 +93,7 @@ export const Sidebar: Story = {
         collapsed: false,
         username: 'Willow.eth',
         address: '0x8343...3u432u32',
+        avatarUrl: 'https://euc.li/sepolia/acaldas-powerhouse.eth',
         children: (
             <>
                 <DriveViewImpl

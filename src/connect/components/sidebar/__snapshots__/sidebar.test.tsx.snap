@@ -50,7 +50,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       >
         <img
           alt="Willow"
-          class="object-contain"
+          class="rounded-full object-contain"
           height="40"
           src="/src/assets/powerhouse-rounded.png"
           width="40"

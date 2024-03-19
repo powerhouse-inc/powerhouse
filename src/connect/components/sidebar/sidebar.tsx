@@ -20,6 +20,7 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
     onToggle,
     username,
     address,
+    avatarUrl,
     onClickSettings,
     collapsed = false,
     maxWidth = '304px',
@@ -40,6 +41,7 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
             <ConnectSidebarFooter
                 username={username}
                 address={address}
+                avatarUrl={avatarUrl}
                 onClickSettings={onClickSettings}
             />
         </Sidebar>

@@ -3,11 +3,13 @@ import ImgPowerhouse from '@/assets/powerhouse-rounded.png';
 export interface SidebarUserProps {
     username: string;
     address: string;
+    avatarUrl?: string;
 }
 
 export const SidebarUser: React.FC<SidebarUserProps> = ({
     username,
     address,
+    avatarUrl,
 }) => (
     <div
         className={`flex gap-2 rounded-sm px-3 py-2.5 collapsed:justify-center
@@ -16,11 +18,11 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
         `}
     >
         <img
-            src={ImgPowerhouse}
+            src={avatarUrl || ImgPowerhouse}
             alt={username}
             width={40}
             height={40}
-            className="object-contain"
+            className="rounded-full object-contain"
         />
         <div className="collapsed:hidden expanding:hidden">
             <p className="text-sm font-semibold text-gray-800">{username}</p>
