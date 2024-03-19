@@ -96,6 +96,7 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
             onSubmitInput={submitInputHandler}
             mode={isWriteMode ? 'write' : 'read'}
             onOptionsClick={optionId => onFileOptionsClick(optionId, file)}
+            item={file}
             onClick={() =>
                 !isWriteMode && onFileSelected(decodedDriveID, file.id)
             }

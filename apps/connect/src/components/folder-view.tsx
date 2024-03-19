@@ -1,8 +1,15 @@
-import { decodeID } from '@powerhousedao/design-system';
+import {
+    decodeID,
+    useDraggableTarget,
+    useGetItemByPath,
+} from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
 import { FileItem } from 'src/components/file-item';
 import { FolderItem } from 'src/components/folder-item';
+
 import { useFolderContent } from 'src/hooks/useFolderContent';
+import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
+import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
 
 interface IProps {
@@ -23,9 +30,25 @@ export const FolderView: React.FC<IProps> = ({
     const { t } = useTranslation();
     const { folders, files } = useFolderContent(path);
     const decodedDriveID = decodeID(drive);
+    const getItemByPath = useGetItemByPath();
+    const onDropEvent = useOnDropEvent();
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const item = getItemByPath(path)!;
+
+    const { dropProps, isDropTarget } = useDraggableTarget({
+        data: item,
+        onDropEvent,
+    });
 
     return (
-        <div>
+        <div
+            {...dropProps}
+            className={twMerge(
+                'rounded-md border-2 border-dashed border-transparent p-2',
+                isDropTarget && 'border-blue-100',
+            )}
+        >
             <ContentSection
                 title={t('folderView.sections.folders.title')}
                 className="mb-4"
