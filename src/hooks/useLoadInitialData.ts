@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useSelectedPath } from 'src/store/document-drive';
+import { useLoadDefaultDrive } from './useLoadDefaultDrive';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
@@ -21,6 +22,8 @@ export const useLoadInitialData = () => {
     const { driveToBaseItems } = useDrivesContainer();
     const drives = usePathContent();
     const prevDrivesState = useRef([...drives]);
+
+    useLoadDefaultDrive();
 
     useEffect(() => {
         drives.forEach(drive => {
