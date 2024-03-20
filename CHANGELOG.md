@@ -1,3 +1,10 @@
+# [1.0.0-alpha.79](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.78...v1.0.0-alpha.79) (2024-03-20)
+
+
+### Features
+
+* added support for user avatar on sidebar ([e2ee542](https://github.com/powerhouse-inc/design-system/commit/e2ee54287d0901d75e240e914ffda8bb376aeff5))
+
 # [1.0.0-alpha.78](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.77...v1.0.0-alpha.78) (2024-03-20)
 
 
