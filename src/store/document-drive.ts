@@ -1,7 +1,7 @@
 import { decodeID, getRootPath } from '@powerhousedao/design-system';
 import { Document, Operation } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 
 export const selectedPathAtom = atom<string | null>(null);
@@ -37,10 +37,30 @@ export const useSelectedPath = () => {
     return [selectedPath, setSelectedPath] as const;
 };
 
+function debounceOperations(
+    callback: (operations: Operation[]) => Promise<Document | undefined>,
+    timeout = 50,
+) {
+    let timer: number;
+    const operations: Operation[] = [];
+    return (operation: Operation) => {
+        if (timer) {
+            clearTimeout(timer);
+        }
+        operations.push(operation);
+        return new Promise<Document | undefined>((resolve, reject) => {
+            timer = setTimeout(() => {
+                callback(operations).then(resolve).catch(reject);
+            }, timeout) as unknown as number;
+        });
+    };
+}
+
 export const useFileNodeDocument = (drive?: string, id?: string) => {
     const {
         openFile,
         addOperation: _addOperation,
+        addOperations,
         onStrandUpdate,
     } = useDocumentDriveServer();
     const [selectedDocument, setSelectedDocument] = useState<
@@ -77,11 +97,13 @@ export const useFileNodeDocument = (drive?: string, id?: string) => {
 
     useEffect(() => {}, [drive, id]);
 
-    async function addOperation(operation: Operation) {
+    const addOperation = useMemo(() => {
         if (drive && id) {
-            return _addOperation(drive, id, operation); // TODO deal with sync error
+            return debounceOperations(operations =>
+                addOperations(drive, id, operations),
+            );
         }
-    }
+    }, [addOperations, drive, id]);
 
     return [selectedDocument, setSelectedDocument, addOperation] as const;
 };

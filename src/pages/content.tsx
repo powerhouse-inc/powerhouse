@@ -107,6 +107,9 @@ const Content = () => {
         if (!selectedDocument) {
             throw new Error('No document selected');
         }
+        if (!addOperation) {
+            throw new Error('No add operation function defined');
+        }
         return addOperation(operation);
     }
 
