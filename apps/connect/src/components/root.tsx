@@ -72,7 +72,7 @@ const Root = () => {
                     </div>
                     <div
                         ref={ref}
-                        className={`bg-current pointer-events-none fixed inset-0
+                        className={`pointer-events-none fixed inset-0
                             transition-opacity duration-150 ease-in-out
                             ${isDropTarget ? 'opacity-10' : 'opacity-0'}
                         `}

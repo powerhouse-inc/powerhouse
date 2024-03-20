@@ -2,6 +2,7 @@ import { ConnectSidebar } from '@powerhousedao/design-system';
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
+import { useENSInfo } from 'src/hooks/useEnsInfo';
 import { sidebarCollapsedAtom } from 'src/store';
 import { userAtom } from 'src/store/user';
 import DriveContainer from './drive-container';
@@ -19,6 +20,7 @@ export default function Sidebar() {
     const { showModal } = useModal();
 
     const user = useAtomValue(userAtom);
+    const ensInfo = useENSInfo(user?.address, user?.chainId);
 
     function toggleCollapse() {
         setCollapsed(value => !value);
@@ -32,7 +34,8 @@ export default function Sidebar() {
         <ConnectSidebar
             collapsed={collapsed}
             onToggle={toggleCollapse}
-            username="Willow.eth"
+            username={ensInfo?.name || ''}
+            avatarUrl={ensInfo?.avatarUrl || ''}
             onClickSettings={onClickSettings}
             address={user?.address ? shortAddress(user.address) : '-'}
         >
