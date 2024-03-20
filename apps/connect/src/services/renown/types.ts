@@ -2,7 +2,7 @@ import type { IStorage } from '../storage';
 import { CREDENTIAL_TYPES } from './constants';
 
 export type User = {
-    address: string;
+    address: `0x:${string}`;
     networkId: string;
     chainId: number;
     did: string;
