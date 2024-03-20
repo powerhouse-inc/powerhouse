@@ -3,20 +3,13 @@ import {
     AddPublicDriveInput,
     DriveView,
     DriveViewProps,
-    decodeID,
-    encodeID,
-    getRootPath,
     toast,
-    useFilterPathContent,
     useItemActions,
 } from '@powerhousedao/design-system';
-import path from 'path';
 import { useTranslation } from 'react-i18next';
-import {
-    SortOptions,
-    useDocumentDriveServer,
-} from 'src/hooks/useDocumentDriveServer';
+import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 
 interface DriveContainerProps {
     disableHoverStyles?: boolean;
@@ -38,13 +31,13 @@ const DriveSections = [
 export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
     const actions = useItemActions();
-    const filterPathContent = useFilterPathContent();
     const { t } = useTranslation();
 
-    const { addFile, copyOrMoveNode, addDrive, addRemoteDrive } =
-        useDocumentDriveServer();
+    const { addDrive, addRemoteDrive } = useDocumentDriveServer();
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
+
+    const onDropEvent = useOnDropEvent();
 
     const cancelInputHandler: DriveViewProps['onCancelInput'] = item => {
         if (item.action === 'UPDATE') {
@@ -65,70 +58,6 @@ export default function DriveContainer(props: DriveContainerProps) {
         droptarget => {
             actions.setExpandedItem(droptarget.id, true);
         };
-
-    const onDropEventHandler: DriveViewProps['onDropEvent'] = async (
-        item,
-        target,
-        event,
-    ) => {
-        const driveID = getRootPath(target.path);
-
-        const isDropAfter = !!item.dropAfterItem;
-        const sortOptions: SortOptions | undefined = isDropAfter
-            ? { afterNodePath: target.id }
-            : undefined;
-
-        const targetPath =
-            isDropAfter && !target.expanded
-                ? path.dirname(target.path)
-                : target.path;
-
-        let targetId = targetPath.split('/').pop() ?? '';
-
-        if (targetId === driveID || targetId == '.') {
-            targetId = '';
-        }
-
-        const decodedDriveID = decodeID(driveID);
-
-        if (item.kind === 'object') {
-            const filterPath = filterPathContent(
-                treeItem =>
-                    treeItem.label === item.data.label &&
-                    treeItem.id !== item.data.id,
-                { path: targetPath },
-            );
-
-            if (filterPath.length > 0) {
-                actions.setExpandedItem(target.id, true);
-                actions.newVirtualItem({
-                    id: `(from)${item.data.id}`,
-                    label: `${item.data.label} (2)`,
-                    path: path.join(targetPath, encodeID(item.data.id)),
-                    type: item.data.type,
-                    action:
-                        event.dropOperation === 'copy'
-                            ? 'UPDATE_AND_COPY'
-                            : 'UPDATE_AND_MOVE',
-                    sharingType: item.data.sharingType,
-                    availableOffline: item.data.availableOffline,
-                });
-                return;
-            }
-
-            copyOrMoveNode(
-                decodedDriveID,
-                item.data.id,
-                decodeID(targetId),
-                event.dropOperation,
-                undefined,
-                sortOptions,
-            ).catch(console.error);
-        } else if (item.kind === 'file') {
-            const file = await item.getFile();
-            addFile(file, decodedDriveID, undefined, targetId);
-        }
-    };
 
     const onCreateDriveHandler: DriveViewProps['onCreateDrive'] =
         async input => {
@@ -217,7 +146,7 @@ export default function DriveContainer(props: DriveContainerProps) {
                     onCancelInput={cancelInputHandler}
                     onDragStart={onDragStartHandler}
                     onDragEnd={onDragEndHandler}
-                    onDropEvent={onDropEventHandler}
+                    onDropEvent={onDropEvent}
                     onDropActivate={onDropActivateHandler}
                     onCreateDrive={onCreateDriveHandler}
                     disableHighlightStyles={disableHoverStyles}

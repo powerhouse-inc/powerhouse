@@ -2080,10 +2080,10 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@1.0.0-alpha.75":
-  version "1.0.0-alpha.75"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.75.tgz#404d030886944c524f82109d877ceb6f46077edf"
-  integrity sha512-lZ95bq333Z/6nRyj2kK4o+l+WMx+wJamy64gOLWAAHxVyxnM4VjsqwIS/YSAnKArQEe8DZwyHXwlZ4us4wyqaA==
+"@powerhousedao/design-system@1.0.0-alpha.76":
+  version "1.0.0-alpha.76"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.76.tgz#9bc4f868f1216b79ad94787b4746a015764cd94e"
+  integrity sha512-oyjCFiCLVPE3IFa48/hmM0QeZgNvCcPoFJvjudUqMtFU2do6uPiwkuj7g5WgHiVtKkPoBzl+VQGSTHxmPiQMAw==
   dependencies:
     "@internationalized/date" "^3.5.1"
     "@radix-ui/react-dialog" "^1.0.5"
