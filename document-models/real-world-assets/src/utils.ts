@@ -5,6 +5,7 @@ import {
     Cash,
     EditBaseTransactionInput,
     FixedIncome,
+    GroupTransaction,
     GroupTransactionType,
     InputMaybe,
     RealWorldAssetsState,
@@ -264,13 +265,29 @@ export function makeFixedIncomeAssetWithDerivedFields(
     state: RealWorldAssetsState,
     assetId: string,
 ) {
-    const baseTransactions = getFixedIncomeTransactionsForAsset(state, assetId);
+    const groupTransactions = getGroupTransactionsForAsset(state, assetId);
+    const assetPurchaseGroupTransactions =
+        getAssetPurchaseTransactionsFromFixedIncomeTransactions(
+            groupTransactions,
+        );
+    const assetSaleGroupTransactions =
+        getAssetSaleTransactionsFromFixedIncomeTransactions(groupTransactions);
+    const assetSaleFixedIncomeTransactions =
+        getFixedIncomeTransactionsFromGroupTransactions(
+            assetSaleGroupTransactions,
+        );
+    const assetPurchaseFixedIncomeTransactions =
+        getFixedIncomeTransactionsFromGroupTransactions(
+            assetPurchaseGroupTransactions,
+        );
     const asset = state.portfolio.find(a => a.id === assetId);
     if (!asset) {
         throw new Error(`Asset with id ${assetId} does not exist!`);
     }
-    const derivedFields =
-        computeFixedIncomeAssetDerivedFields(baseTransactions);
+    const derivedFields = computeFixedIncomeAssetDerivedFields(
+        assetPurchaseFixedIncomeTransactions,
+        assetSaleFixedIncomeTransactions,
+    );
     validateFixedIncomeAssetDerivedFields(derivedFields);
     const newAsset = {
         ...asset,
@@ -281,26 +298,41 @@ export function makeFixedIncomeAssetWithDerivedFields(
 }
 
 export function computeFixedIncomeAssetDerivedFields(
-    transactions: BaseTransaction[],
+    assetPurchaseFixedIncomeTransactions: BaseTransaction[],
+    assetSaleFixedIncomeTransactions: BaseTransaction[],
 ) {
-    const notional = calculateNotional(transactions);
-    const purchaseProceeds = calculatePurchaseProceeds(transactions);
+    const allFixedIncomeTransactions = [
+        ...assetPurchaseFixedIncomeTransactions,
+        ...assetSaleFixedIncomeTransactions,
+    ];
+    const notional = calculateNotional(
+        assetPurchaseFixedIncomeTransactions,
+        assetSaleFixedIncomeTransactions,
+    );
+    const purchaseProceeds = calculatePurchaseProceeds(
+        assetPurchaseFixedIncomeTransactions,
+    );
+    const salesProceeds = calculateSalesProceeds(
+        assetSaleFixedIncomeTransactions,
+    );
+    const realizedSurplus = calculateRealizedSurplus(
+        salesProceeds,
+        purchaseProceeds,
+    );
     const purchasePrice = calculatePurchasePrice(notional, purchaseProceeds);
     const totalDiscount = calculateTotalDiscount(notional, purchaseProceeds);
-    const purchaseDate = computeWeightedAveragePurchaseDate(transactions);
-    const annualizedYield = calculateAnnualizedYield(
-        purchasePrice,
-        notional,
-        purchaseDate,
+    const purchaseDate = computeWeightedAveragePurchaseDate(
+        allFixedIncomeTransactions,
     );
 
     return {
         notional,
         purchaseProceeds,
+        salesProceeds,
         purchasePrice,
         totalDiscount,
         purchaseDate,
-        annualizedYield,
+        realizedSurplus,
     };
 }
 
@@ -335,10 +367,16 @@ export function validateFixedIncomeAssetDerivedFields(
         throw new Error(`Total discount must be a number`);
     }
     if (
-        asset.annualizedYield &&
-        !numberValidator.safeParse(asset.annualizedYield).success
+        asset.salesProceeds &&
+        !numberValidator.safeParse(asset.salesProceeds).success
     ) {
         throw new Error(`Annualized yield must be a number`);
+    }
+    if (
+        asset.realizedSurplus &&
+        !numberValidator.safeParse(asset.realizedSurplus).success
+    ) {
+        throw new Error(`Realized surplus must be a number`);
     }
 }
 
@@ -421,22 +459,48 @@ function roundToNearestDay(date: Date) {
     return roundedDate;
 }
 
-export function getFixedIncomeTransactionsForAsset(
+export function getGroupTransactionsForAsset(
     state: RealWorldAssetsState,
     assetId: string,
 ) {
-    const baseTransactions: BaseTransaction[] = [];
+    const transactions: GroupTransaction[] = [];
 
     for (const transaction of state.transactions) {
         if (
             FIXED_INCOME_TRANSACTION in transaction &&
             transaction[FIXED_INCOME_TRANSACTION]?.assetId === assetId
         ) {
-            baseTransactions.push(transaction[FIXED_INCOME_TRANSACTION]);
+            transactions.push(transaction);
         }
     }
 
-    return baseTransactions;
+    return transactions;
+}
+
+export function getFixedIncomeTransactionsFromGroupTransactions(
+    transactions: GroupTransaction[],
+) {
+    return transactions
+        .filter(
+            transaction =>
+                transaction.type === ASSET_PURCHASE ||
+                transaction.type === ASSET_SALE,
+        )
+        .map(transaction => transaction.fixedIncomeTransaction!);
+}
+
+export function getAssetSaleTransactionsFromFixedIncomeTransactions(
+    transactions: GroupTransaction[],
+) {
+    return transactions.filter(transaction => transaction.type === ASSET_SALE);
+}
+
+export function getAssetPurchaseTransactionsFromFixedIncomeTransactions(
+    transactions: GroupTransaction[],
+) {
+    return transactions.filter(
+        transaction => transaction.type === ASSET_PURCHASE,
+    );
 }
 
 export function computeWeightedAveragePurchaseDate(
@@ -461,17 +525,52 @@ export function computeWeightedAveragePurchaseDate(
     return roundToNearestDay(averageDate).toISOString();
 }
 
-export function calculateNotional(transactions: BaseTransaction[]): number {
-    return transactions.reduce(
-        (sum, transaction) => sum + transaction.amount,
-        0,
+export function calculateNotional(
+    assetPurchaseFixedIncomeTransactions: BaseTransaction[],
+    assetSaleFixedIncomeTransactions: BaseTransaction[],
+) {
+    const sumOfAssetPurchaseFixedIncomeTransactions =
+        assetPurchaseFixedIncomeTransactions.reduce(
+            (sum, transaction) => sum + transaction.amount,
+            0,
+        );
+
+    const sumOfAssetSaleFixedIncomeTransactions =
+        assetSaleFixedIncomeTransactions.reduce(
+            (sum, transaction) => sum + transaction.amount,
+            0,
+        );
+
+    return (
+        sumOfAssetPurchaseFixedIncomeTransactions -
+        sumOfAssetSaleFixedIncomeTransactions
     );
 }
 
 export function calculatePurchaseProceeds(
-    transactions: BaseTransaction[],
-): number {
-    // Sum of all transactions, where purchase amounts are positive and sales are negative
+    assetPurchaseFixedIncomeTransactions: BaseTransaction[],
+) {
+    // total cost of purchases
+    return sumBaseTransactionAmounts(assetPurchaseFixedIncomeTransactions);
+}
+
+export function calculateSalesProceeds(
+    assetSaleFixedIncomeTransactions: BaseTransaction[],
+) {
+    // total proceeds from sales
+    return sumBaseTransactionAmounts(assetSaleFixedIncomeTransactions);
+}
+
+export function calculateRealizedSurplus(
+    salesProceeds: number,
+    purchaseProceeds: number,
+) {
+    // todo: when interest payment transactions are implemented, change to
+    // salesProceeds + interestPayments - purchaseProceeds
+    return salesProceeds - purchaseProceeds;
+}
+
+export function sumBaseTransactionAmounts(transactions: BaseTransaction[]) {
     return transactions.reduce((sum, { amount }) => sum + amount, 0);
 }
 
@@ -488,53 +587,6 @@ export function calculateTotalDiscount(
     purchaseProceeds: number,
 ) {
     return notional - purchaseProceeds;
-}
-
-export function calculateAnnualizedYield(
-    purchasePrice: number,
-    notional: number,
-    maturity: string,
-) {
-    const maturityDate = new Date(maturity);
-    const daysUntilMaturity = daysUntil(maturityDate);
-
-    if (daysUntilMaturity <= 0) {
-        return 0;
-    }
-
-    const denominator = notional - purchasePrice;
-
-    if (denominator === 0) {
-        throw new Error('Notional must be greater than purchase price.');
-    }
-
-    const annualizedYield =
-        (purchasePrice / denominator) * (365 / daysUntilMaturity) * 100;
-
-    return annualizedYield;
-}
-
-export function daysUntilWithTime(date: Date) {
-    const now = new Date();
-    const targetDate = new Date(date);
-
-    const diffInTime = targetDate.getTime() - now.getTime();
-    const diffInDays = Math.ceil(diffInTime / (1000 * 60 * 60 * 24));
-
-    return diffInDays;
-}
-
-export function daysUntil(date: Date) {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0); // Ignore time part of the current date
-
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0); // Ignore time part of the target date
-
-    const diffInTime = targetDate.getTime() - now.getTime();
-    const diffInDays = Math.ceil(diffInTime / (1000 * 60 * 60 * 24));
-
-    return diffInDays;
 }
 
 export function getDifferences<T extends object>(

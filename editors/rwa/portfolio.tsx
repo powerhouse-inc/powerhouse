@@ -15,25 +15,6 @@ import {
 } from '../../document-models/real-world-assets';
 import { IProps } from './editor';
 
-const fieldsPriority: (keyof FixedIncome)[] = [
-    'name',
-    'maturity',
-    'notional',
-    'coupon',
-    'purchasePrice',
-    'purchaseDate',
-    'totalDiscount',
-    'purchaseProceeds',
-] as const;
-
-export const columnCountByTableWidth = {
-    1520: 12,
-    1394: 11,
-    1239: 10,
-    1112: 9,
-    984: 8,
-} as const;
-
 function createAssetFromFormInputs(data: RWAAssetDetailInputs) {
     const maturity = data.maturity.toString() + 'T00:00:00.000Z';
     return {
@@ -122,8 +103,6 @@ export const Portfolio = (props: IProps) => {
                 items={portfolio as UiFixedIncome[]}
                 fixedIncomeTypes={fixedIncomeTypes}
                 spvs={spvs}
-                fieldsPriority={fieldsPriority as (keyof UiFixedIncome)[]}
-                columnCountByTableWidth={columnCountByTableWidth}
                 expandedRowId={expandedRowId}
                 selectedAssetToEdit={selectedAssetToEdit}
                 showNewAssetForm={showNewAssetForm}

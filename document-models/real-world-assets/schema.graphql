@@ -18,10 +18,10 @@ type FixedIncome {
     maturity: DateTime!
     purchaseDate: DateTime! # Weighted average of underlying transactions
     notional: Float! # Face value sum of the underlying transactions
-    purchasePrice: Float! # purchaseProceeds / notional
     purchaseProceeds: Float! # Total cash outflow spent on purchases
+    salesProceeds: Float! # 
+    purchasePrice: Float! # purchaseProceeds / notional
     totalDiscount: Float! # notional - purchaseProceeds
-    annualizedYield: Float! # (Purchase Price / ( Notional - Purchase Price)) x (365 / Days to Maturity ) * 100
     realizedSurplus: Float! # Sum(Asset Proceeds) + Purchase Proceeds
     ISIN: String
     CUSIP: String

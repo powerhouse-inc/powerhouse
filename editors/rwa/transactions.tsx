@@ -1,6 +1,5 @@
 import {
     CashAsset,
-    Fields,
     GroupTransactionDetailInputs,
     GroupTransactionsTable,
     GroupTransactionsTableProps,
@@ -31,22 +30,6 @@ import {
     removeFeesFromGroupTransaction,
 } from '../../document-models/real-world-assets/gen/creators';
 import { IProps } from './editor';
-
-const columnCountByTableWidth = {
-    1520: 12,
-    1394: 11,
-    1239: 10,
-    1112: 9,
-    984: 8,
-};
-
-const fieldsPriority: (keyof Fields)[] = [
-    'Entry time',
-    'Asset',
-    'Quantity',
-    'Cash Amount',
-    'Cash Balance Change',
-];
 
 function delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -390,8 +373,6 @@ export const Transactions = (props: IProps) => {
                 Details of this portfolios transactions
             </p>
             <GroupTransactionsTable
-                columnCountByTableWidth={columnCountByTableWidth}
-                fieldsPriority={fieldsPriority}
                 fixedIncomes={fixedIncomeAssets as UiFixedIncome[]}
                 cashAssets={cashAssets}
                 items={transactions}

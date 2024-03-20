@@ -1,5 +1,4 @@
 import { getConfig } from '@powerhousedao/codegen';
-import { withoutVitePlugins } from '@storybook/builder-vite';
 import type { StorybookConfig } from '@storybook/react-vite';
 import { InlineConfig, mergeConfig } from 'vite';
 

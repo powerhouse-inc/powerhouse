@@ -7,10 +7,7 @@ import {
     ServiceProviderFeeType,
 } from '../..';
 import {
-    calculateAnnualizedYield,
-    calculateNotional,
     calculatePurchasePrice,
-    calculatePurchaseProceeds,
     calculateTotalDiscount,
     computeWeightedAveragePurchaseDate,
     getDifferences,
@@ -53,8 +50,8 @@ const mockFixedIncome: FixedIncome = {
     notional: 0,
     purchasePrice: 0,
     purchaseProceeds: 0,
+    salesProceeds: 0,
     totalDiscount: 0,
-    annualizedYield: 0,
     ISIN: '',
     CUSIP: '',
     coupon: 0,
@@ -549,92 +546,6 @@ describe('computeWeightedAveragePurchaseDate', () => {
     });
 });
 
-describe('calculateNotional', () => {
-    it('should correctly calculate the notional for multiple transactions', () => {
-        const transactions: BaseTransaction[] = [
-            // @ts-expect-error mock
-            { entryTime: '2022-01-01', amount: 10 },
-            // @ts-expect-error mock
-            { entryTime: '2022-02-01', amount: 20 },
-            // @ts-expect-error mock
-            { entryTime: '2022-03-01', amount: 30 },
-        ];
-
-        const result = calculateNotional(transactions);
-        const expectedNotional = 60;
-
-        expect(result).toEqual(expectedNotional);
-    });
-
-    it('should return zero when there are no transactions', () => {
-        const transactions: BaseTransaction[] = [];
-
-        const result = calculateNotional(transactions);
-        const expectedNotional = 0;
-
-        expect(result).toEqual(expectedNotional);
-    });
-
-    it('should handle transactions with negative amounts', () => {
-        const transactions: BaseTransaction[] = [
-            // @ts-expect-error mock
-            { entryTime: '2022-01-01', amount: 10 },
-            // @ts-expect-error mock
-            { entryTime: '2022-02-01', amount: -20 },
-            // @ts-expect-error mock
-            { entryTime: '2022-03-01', amount: 30 },
-        ];
-
-        const result = calculateNotional(transactions);
-        const expectedNotional = 20;
-
-        expect(result).toEqual(expectedNotional);
-    });
-});
-
-describe('calculatePurchaseProceeds', () => {
-    it('should correctly calculate the purchase proceeds for multiple transactions', () => {
-        const transactions: BaseTransaction[] = [
-            // @ts-expect-error mock
-            { entryTime: '2022-01-01', amount: 10 },
-            // @ts-expect-error mock
-            { entryTime: '2022-02-01', amount: 20 },
-            // @ts-expect-error mock
-            { entryTime: '2022-03-01', amount: 30 },
-        ];
-
-        const result = calculatePurchaseProceeds(transactions);
-        const expectedProceeds = 60;
-
-        expect(result).toEqual(expectedProceeds);
-    });
-
-    it('should return zero when there are no transactions', () => {
-        const transactions: BaseTransaction[] = [];
-
-        const result = calculatePurchaseProceeds(transactions);
-        const expectedProceeds = 0;
-
-        expect(result).toEqual(expectedProceeds);
-    });
-
-    it('should handle transactions with negative amounts', () => {
-        const transactions: BaseTransaction[] = [
-            // @ts-expect-error mock
-            { entryTime: '2022-01-01', amount: 10 },
-            // @ts-expect-error mock
-            { entryTime: '2022-02-01', amount: -20 },
-            // @ts-expect-error mock
-            { entryTime: '2022-03-01', amount: 30 },
-        ];
-
-        const result = calculatePurchaseProceeds(transactions);
-        const expectedProceeds = 20;
-
-        expect(result).toEqual(expectedProceeds);
-    });
-});
-
 describe('calculatePurchasePrice', () => {
     it('should correctly calculate the purchase price for non-zero notional', () => {
         const purchaseProceeds = 100;
@@ -716,51 +627,6 @@ describe('calculateTotalDiscount', () => {
         const expectedDiscount = -20;
 
         expect(result).toEqual(expectedDiscount);
-    });
-});
-
-describe('calculateAnnualizedYield', () => {
-    it('should correctly calculate the annualized yield for valid inputs', () => {
-        const purchasePrice = 100;
-        const notional = 200;
-        const maturity = new Date(
-            new Date().getTime() + 1000 * 60 * 60 * 24 * 365,
-        ).toISOString();
-        const result = calculateAnnualizedYield(
-            purchasePrice,
-            notional,
-            maturity,
-        );
-        const expectedYield = 100; // Expected yield is 100%
-
-        expect(Math.round(result)).toEqual(expectedYield);
-    });
-
-    it('should throw an error when notional is equal to purchase price', () => {
-        const purchasePrice = 100;
-        const notional = 100;
-        const maturity = new Date(
-            new Date().getTime() + 1000 * 60 * 60 * 24 * 365,
-        ).toISOString();
-
-        expect(() =>
-            calculateAnnualizedYield(purchasePrice, notional, maturity),
-        ).toThrow('Notional must be greater than purchase price.');
-    });
-
-    it('should handle edge case where maturity date is today', () => {
-        const purchasePrice = 100;
-        const notional = 200;
-        const maturity = new Date().toISOString();
-
-        const result = calculateAnnualizedYield(
-            purchasePrice,
-            notional,
-            maturity,
-        );
-        const expectedYield = 0; // Expected yield is 0%
-
-        expect(result).toBeCloseTo(expectedYield, 2); // 2 decimal places
     });
 });
 

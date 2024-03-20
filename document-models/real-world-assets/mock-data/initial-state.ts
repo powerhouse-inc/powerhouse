@@ -81,7 +81,7 @@ export const initialState: RealWorldAssetsState = {
             ISIN: '771296973666',
             CUSIP: '225848609',
             coupon: 0,
-            annualizedYield: 0,
+            salesProceeds: 0,
             realizedSurplus: 0,
         },
         {
@@ -98,7 +98,7 @@ export const initialState: RealWorldAssetsState = {
             ISIN: '807597117063',
             CUSIP: '303442336',
             coupon: 3.41,
-            annualizedYield: 98073.04,
+            salesProceeds: 98073.04,
             realizedSurplus: 123456,
         },
         {
@@ -115,7 +115,7 @@ export const initialState: RealWorldAssetsState = {
             ISIN: '466394625668',
             CUSIP: '319580691',
             coupon: 3.35,
-            annualizedYield: 18994.69,
+            salesProceeds: 18994.69,
             realizedSurplus: 98765,
         },
     ],

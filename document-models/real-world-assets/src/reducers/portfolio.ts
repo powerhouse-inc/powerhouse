@@ -68,10 +68,10 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
             // and are set to 0 by default
             purchasePrice: 0,
             totalDiscount: 0,
-            annualizedYield: 0,
             notional: 0,
             purchaseDate: '',
             purchaseProceeds: 0,
+            salesProceeds: 0,
             realizedSurplus: 0,
         };
         state.portfolio.push(asset);
