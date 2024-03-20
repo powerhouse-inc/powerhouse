@@ -1,4 +1,5 @@
 import { formatDateForDisplay } from '@/rwa';
+import { FormattedNumber } from './formatted-number';
 
 export function isISODate(str: string) {
     if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(str)) return false;
@@ -6,10 +7,7 @@ export function isISODate(str: string) {
     return d instanceof Date && !isNaN(d.getTime()) && d.toISOString() === str;
 }
 
-export function handleDateInTable(
-    maybeDate: string | number | Date | null | undefined,
-) {
-    if (!maybeDate || typeof maybeDate === 'number') return maybeDate;
+export function handleDateInTable(maybeDate: string | Date) {
     const isDate = maybeDate instanceof Date || isISODate(maybeDate);
     if (isDate) {
         const dateStr =
@@ -17,4 +15,14 @@ export function handleDateInTable(
         return formatDateForDisplay(dateStr);
     }
     return maybeDate;
+}
+
+export function handleTableDatum(
+    datum: string | number | Date | null | undefined,
+) {
+    if (datum === null || datum === undefined) return '--';
+
+    if (typeof datum === 'number') return <FormattedNumber value={datum} />;
+
+    return handleDateInTable(datum);
 }

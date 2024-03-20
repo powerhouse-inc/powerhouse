@@ -1,7 +1,8 @@
 import { ComponentPropsWithRef, ForwardedRef, forwardRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
-type Props = ComponentPropsWithRef<'input'> & {
+type Props = Omit<ComponentPropsWithRef<'input'>, 'type'> & {
+    defaultValue?: string | number | null | undefined;
     errorMessage?: string;
     labelClassName?: string;
     inputClassName?: string;
@@ -25,6 +26,7 @@ export const RWATableTextInput = forwardRef(function RWATableTextInput(
         <label className={labelClassName}>
             <input
                 {...inputProps}
+                type="text"
                 ref={ref}
                 className={twMerge(
                     'size-full h-8 rounded-md border border-transparent bg-gray-100 p-3 text-right text-sm text-gray-800 placeholder:text-gray-500 disabled:bg-white disabled:pr-0',

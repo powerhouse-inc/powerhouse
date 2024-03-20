@@ -8,32 +8,19 @@ import {
 import { mockGroupTransactions } from '@/rwa/mocks/transactions';
 import type { Meta, StoryObj } from '@storybook/react';
 import { useCallback, useState } from 'react';
-import { Fields, GroupTransactionsTable } from './group-transactions-table';
+import {
+    GroupTransactionsTable,
+    groupTransactionsColumnCountByTableWidth,
+} from './group-transactions-table';
 import { getColumnCount } from './useColumnPriority';
 
 const meta: Meta<typeof GroupTransactionsTable> = {
-    title: 'RWA/Components/GroupTransactionsTable',
+    title: 'RWA/Components/Group Transactions Table',
     component: GroupTransactionsTable,
 };
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-const columnCountByTableWidth = {
-    1520: 12,
-    1394: 11,
-    1239: 10,
-    1112: 9,
-    984: 8,
-};
-
-const fieldsPriority: (keyof Fields)[] = [
-    'Entry time',
-    'Asset',
-    'Quantity',
-    'Cash Amount',
-    'Cash Balance Change',
-];
 
 export const Primary: Story = {
     args: {
@@ -42,8 +29,6 @@ export const Primary: Story = {
         cashAssets: mockCashAssets,
         serviceProviderFeeTypes: mockServiceProviderFeeTypes,
         principalLenderAccountId: mockPrincipalLenderAccountId,
-        fieldsPriority,
-        columnCountByTableWidth,
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -97,7 +82,7 @@ export const Primary: Story = {
                     <p>parent element width: 100%</p>
                     <GroupTransactionsTable {...argsWithHandlers} />
                 </div>
-                {Object.keys(columnCountByTableWidth)
+                {Object.keys(groupTransactionsColumnCountByTableWidth)
                     .map(Number)
                     .map(width => width + 50)
                     .map(width => (
@@ -105,7 +90,10 @@ export const Primary: Story = {
                             <p>parent element width: {width}px</p>
                             <p>
                                 column count:{' '}
-                                {getColumnCount(width, columnCountByTableWidth)}
+                                {getColumnCount(
+                                    width,
+                                    groupTransactionsColumnCountByTableWidth,
+                                )}
                             </p>
                             <GroupTransactionsTable {...argsWithHandlers} />
                         </div>

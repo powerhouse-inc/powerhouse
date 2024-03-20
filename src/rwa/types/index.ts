@@ -22,7 +22,8 @@ export type FixedIncome = {
     purchasePrice: number;
     purchaseProceeds: number;
     totalDiscount: number;
-    annualizedYield: number;
+    realizedSurplus: number;
+    salesProceeds: number;
 };
 
 export type FixedIncomeType = {

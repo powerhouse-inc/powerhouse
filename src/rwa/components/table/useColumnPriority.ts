@@ -1,4 +1,3 @@
-import { capitalCase } from 'change-case';
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 type Props<TItem extends Record<string, ReactNode>> = {
@@ -64,10 +63,6 @@ export function useColumnPriority<TItem extends Record<string, ReactNode>>(
             .map(field => ({
                 id: field,
                 label: field,
-            }))
-            .map(field => ({
-                ...field,
-                label: capitalCase(field.label.toString()).replace('Id', 'ID'),
                 allowSorting: true,
             }));
 

@@ -29,7 +29,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '771296973666',
         CUSIP: '225848609',
         coupon: 3.67,
-        annualizedYield: 25054.93,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '683189',
@@ -45,7 +46,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '807597117063',
         CUSIP: '303442336',
         coupon: 3.41,
-        annualizedYield: 98073.04,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '752165',
@@ -61,7 +63,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '466394625668',
         CUSIP: '319580691',
         coupon: 3.35,
-        annualizedYield: 18994.69,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '472706',
@@ -77,7 +80,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '899255020782',
         CUSIP: '081390248',
         coupon: 4.24,
-        annualizedYield: 29757.06,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '852793',
@@ -93,7 +97,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '289378983334',
         CUSIP: '611105546',
         coupon: 1.21,
-        annualizedYield: 21247.4,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '704871',
@@ -109,7 +114,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '581535993415',
         CUSIP: '638814162',
         coupon: 1.94,
-        annualizedYield: 36592.85,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '117828',
@@ -125,7 +131,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '957822646500',
         CUSIP: '420251643',
         coupon: 3.76,
-        annualizedYield: 50934.96,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '023427',
@@ -141,7 +148,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '681711139048',
         CUSIP: '662382150',
         coupon: 1.49,
-        annualizedYield: 23373.62,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '637391',
@@ -157,7 +165,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '920909997265',
         CUSIP: '013733367',
         coupon: 4.79,
-        annualizedYield: 58233.36,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
     {
         id: '269772',
@@ -173,7 +182,8 @@ export const mockFixedIncomes: FixedIncome[] = [
         ISIN: '325463008815',
         CUSIP: '273954713',
         coupon: 3.98,
-        annualizedYield: 75182.14,
+        realizedSurplus: 1234.567,
+        salesProceeds: 43254.123,
     },
 ];
 

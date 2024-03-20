@@ -5,13 +5,14 @@ import {
     FieldArrayWithId,
     FieldErrors,
     FieldValues,
+    Path,
     UseFieldArrayAppend,
     UseFieldArrayRemove,
     UseFormRegister,
     UseFormWatch,
 } from 'react-hook-form';
 import { GroupTransactionDetailInputs } from '..';
-import { RWATableTextInput } from '../table-inputs';
+import { RWANumberInput } from '../inputs/number-input';
 import { ServiceProviderAndFeeTypeTableInput } from './service-provider-fee-type-table-input';
 
 type Props<ControlInputs extends FieldValues> = {
@@ -29,7 +30,7 @@ type Props<ControlInputs extends FieldValues> = {
 export function FeeTransactionsTable<ControlInputs extends FieldValues>(
     props: Props<ControlInputs>,
 ) {
-    const headings = ['Fees', 'Service Provider', 'Fee USD', ''];
+    const headings = ['Fees', 'Service Provider', 'Amount', ''];
 
     const serviceProviderFeeTypeOptions = props.serviceProviderFeeTypes.map(
         spft => ({
@@ -86,16 +87,14 @@ export function FeeTransactionsTable<ControlInputs extends FieldValues>(
                                             />
                                         </td>
                                         <td className="w-1/4">
-                                            <RWATableTextInput
-                                                {...props.register(
-                                                    `fees.${index}.amount`,
-                                                    {
-                                                        required: true,
-                                                        disabled:
-                                                            props.isViewOnly,
-                                                        valueAsNumber: true,
-                                                    },
-                                                )}
+                                            <RWANumberInput
+                                                required
+                                                name={
+                                                    `fees.${index}.amount` as Path<ControlInputs>
+                                                }
+                                                control={props.control}
+                                                disabled={props.isViewOnly}
+                                                currency="USD"
                                                 aria-invalid={
                                                     props.errors.fees?.[index]
                                                         ?.amount?.type ===
@@ -103,8 +102,7 @@ export function FeeTransactionsTable<ControlInputs extends FieldValues>(
                                                         ? 'true'
                                                         : 'false'
                                                 }
-                                                type="number"
-                                                placeholder="E.g. 1000"
+                                                placeholder="E.g. $1,000.00"
                                             />
                                         </td>
                                         <td className="">
@@ -134,7 +132,7 @@ export function FeeTransactionsTable<ControlInputs extends FieldValues>(
                 <button
                     onClick={() =>
                         props.append({
-                            amount: 0,
+                            amount: undefined,
                             serviceProviderFeeTypeId:
                                 props.serviceProviderFeeTypes[0].id,
                         })

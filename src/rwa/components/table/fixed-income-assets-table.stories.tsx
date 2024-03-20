@@ -6,6 +6,7 @@ import { RWAAssetDetailInputs } from '../asset-details/form';
 
 import { mockFixedIncomes, mockFixedIncomeTypes, mockSpvs } from '@/rwa/mocks';
 import {
+    assetTableColumnCountByTableWidth,
     FixedIncomesTableProps,
     RWAFixedIncomesTable,
 } from './fixed-income-assets-table';
@@ -18,25 +19,6 @@ const meta: Meta<typeof RWAFixedIncomesTable> = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-const columnCountByTableWidth = {
-    1520: 12,
-    1394: 11,
-    1239: 10,
-    1112: 9,
-    984: 8,
-};
-
-const fieldsPriority: (keyof FixedIncome)[] = [
-    'name',
-    'maturity',
-    'notional',
-    'coupon',
-    'purchasePrice',
-    'purchaseDate',
-    'totalDiscount',
-    'purchaseProceeds',
-];
 
 function createAssetFromFormInputs(data: RWAAssetDetailInputs) {
     const id = utils.hashKey();
@@ -54,8 +36,6 @@ export const Primary: Story = {
         items: mockFixedIncomes,
         fixedIncomeTypes: mockFixedIncomeTypes,
         spvs: mockSpvs,
-        fieldsPriority,
-        columnCountByTableWidth,
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -74,9 +54,9 @@ export const Primary: Story = {
             useCallback(
                 item => {
                     setExpandedRowId(
-                        item.id === expandedRowId
+                        item?.id === expandedRowId
                             ? undefined
-                            : item.id || undefined,
+                            : item?.id || undefined,
                     );
                 },
                 [expandedRowId],
@@ -120,7 +100,7 @@ export const Primary: Story = {
                     <p>parent element width: 100%</p>
                     <RWAFixedIncomesTable {...argsWithHandlers} />
                 </div>
-                {Object.keys(columnCountByTableWidth)
+                {Object.keys(assetTableColumnCountByTableWidth)
                     .map(Number)
                     .map(width => width + 50)
                     .map(width => (
@@ -128,7 +108,10 @@ export const Primary: Story = {
                             <p>parent element width: {width}px</p>
                             <p>
                                 column count:{' '}
-                                {getColumnCount(width, columnCountByTableWidth)}
+                                {getColumnCount(
+                                    width,
+                                    assetTableColumnCountByTableWidth,
+                                )}
                             </p>
                             <RWAFixedIncomesTable {...argsWithHandlers} />
                         </div>

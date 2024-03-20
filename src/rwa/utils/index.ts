@@ -1,8 +1,4 @@
-import currency from 'currency.js';
 import { format } from 'date-fns';
-
-export const USDFormat = (value: number | string) =>
-    currency(value, { symbol: '$', precision: 2 }).format();
 
 /**
  * The html datetime local input requires this specific format

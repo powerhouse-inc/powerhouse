@@ -22,6 +22,12 @@
     },
     "plugins": ["react", "@typescript-eslint"],
     "rules": {
+        "@typescript-eslint/no-unused-vars": [
+            "error",
+            {
+              "ignoreRestSiblings": true
+            }
+          ],
         "react/prop-types": "off",
         "react/react-in-jsx-scope": "off",
         "@typescript-eslint/explicit-function-return-type": "off",
@@ -35,27 +41,32 @@
         "@typescript-eslint/no-empty-function": "off",
         "@typescript-eslint/no-misused-promises": "off",
         "tailwindcss/classnames-order": [
-            1, {
+            1,
+            {
                 "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ],
         "tailwindcss/enforces-negative-arbitrary-values": [
-            1, {
+            1,
+            {
                 "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ],
         "tailwindcss/enforces-shorthand": [
-            1, {
+            1,
+            {
                 "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ],
         "tailwindcss/no-contradicting-classname": [
-            1, {
+            1,
+            {
                 "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ],
         "tailwindcss/no-custom-classname": [
-            1, {
+            1,
+            {
                 "callees": ["twMerge", "twJoin", "mergeClassNameProps"]
             }
         ]

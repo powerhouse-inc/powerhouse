@@ -21,7 +21,8 @@ import {
     useForm,
 } from 'react-hook-form';
 import { RWAButton } from '../button';
-import { RWAFormRow, RWATableSelect, RWATableTextInput } from '../table-inputs';
+import { RWAFormRow, RWATableSelect } from '../inputs';
+import { RWANumberInput } from '../inputs/number-input';
 import { FeeTransactionsTable } from '../table/fee-transactions-table';
 
 export type GroupTransactionDetailInputs = {
@@ -245,41 +246,38 @@ export const GroupTransactionDetails: React.FC<
                     label="Quantity"
                     hideLine={!isViewOnly}
                     value={
-                        <RWATableTextInput
-                            {...register('fixedIncomeAmount', {
-                                required: 'Quantity is required',
-                                disabled: isViewOnly,
-                                valueAsNumber: true,
-                            })}
+                        <RWANumberInput
+                            name="fixedIncomeAmount"
+                            requiredErrorMessage="Quantity is required"
+                            disabled={isViewOnly}
+                            control={control}
                             aria-invalid={
                                 errors.fixedIncomeAmount?.type === 'required'
                                     ? 'true'
                                     : 'false'
                             }
                             errorMessage={errors.fixedIncomeAmount?.message}
-                            type="number"
-                            placeholder="E.g. 1000"
+                            placeholder="E.g. 1,000.00"
                         />
                     }
                 />
                 <RWAFormRow
-                    label="Asset Proceeds $USD"
+                    label="Asset Proceeds"
                     hideLine={!isViewOnly}
                     value={
-                        <RWATableTextInput
-                            {...register('cashAmount', {
-                                required: 'Asset proceeds is required',
-                                disabled: isViewOnly,
-                                valueAsNumber: true,
-                            })}
+                        <RWANumberInput
+                            name="cashAmount"
+                            requiredErrorMessage="Asset Proceeds is required"
+                            currency="USD"
+                            disabled={isViewOnly}
+                            control={control}
                             aria-invalid={
                                 errors.cashAmount?.type === 'required'
                                     ? 'true'
                                     : 'false'
                             }
                             errorMessage={errors.cashAmount?.message}
-                            type="number"
-                            placeholder="E.g. 1000"
+                            placeholder="E.g. $1,000.00"
                         />
                     }
                 />
