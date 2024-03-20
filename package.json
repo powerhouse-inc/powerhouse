@@ -89,7 +89,7 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.76",
+        "@powerhousedao/design-system": "^1.0.0-alpha.79",
         "did-key-creator": "^1.2.0",
         "document-drive": "1.0.0-alpha.17",
         "document-model": "^1.0.32",
@@ -107,6 +107,7 @@
         "react-router-dom": "^6.11.2",
         "react-stately": "^3.22.0",
         "tailwind-merge": "^1.14.0",
-        "uuid": "^9.0.1"
+        "uuid": "^9.0.1",
+        "viem": "^2.8.13"
     }
 }
