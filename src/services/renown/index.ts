@@ -16,6 +16,10 @@ export class Renown {
         this.#store = store as RenownStorage;
         this.#connectId = connectId;
         this.#baseUrl = baseUrl;
+
+        if (this.user) {
+            this.login(this.user.did).catch(() => void 0);
+        }
     }
 
     get user() {
@@ -35,7 +39,9 @@ export class Renown {
 
         // tries to login with new connectId
         if (user) {
-            this.login(user.did).catch(() => void 0);
+            this.login(user.did).catch(e => {
+                console.log('User no longer authenticated:', e);
+            });
         }
     }
 
