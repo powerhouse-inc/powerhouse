@@ -24,6 +24,7 @@ import { RWAButton } from '../button';
 import { RWAFormRow, RWATableSelect } from '../inputs';
 import { RWANumberInput } from '../inputs/number-input';
 import { FeeTransactionsTable } from '../table/fee-transactions-table';
+import { FormattedNumber } from '../table/formatted-number';
 
 export type GroupTransactionDetailInputs = {
     type: InputMaybe<GroupTransactionType>;
@@ -305,7 +306,7 @@ export const GroupTransactionDetails: React.FC<
                 </div>
                 <div className="h-px flex-1 border-b border-dashed border-gray-400" />
                 <div className="pl-8 text-sm text-gray-900">
-                    {cashBalanceChange}
+                    <FormattedNumber value={cashBalanceChange} />
                 </div>
             </div>
         </div>
