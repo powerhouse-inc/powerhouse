@@ -33,7 +33,7 @@ export type EditorComponent<
 export interface IProps extends EditorProps {
     onClose: () => void;
     onExport: () => void;
-    onAddOperation: (operation: Operation) => void;
+    onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
 }
 
@@ -61,10 +61,7 @@ export const DocumentEditor: React.FC<IProps> = ({
             action,
             operation => {
                 window.documentEditorDebugTools?.pushOperation(operation);
-
-                if (operation) {
-                    onAddOperation(operation);
-                }
+                onAddOperation(operation).catch(console.error);
             },
             onErrorCallback,
         );

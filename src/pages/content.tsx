@@ -107,7 +107,7 @@ const Content = () => {
         if (!selectedDocument) {
             throw new Error('No document selected');
         }
-        addOperation(operation);
+        return addOperation(operation);
     }
 
     function createDocument(documentModel: DocumentModel) {
@@ -120,8 +120,8 @@ const Content = () => {
         });
     }
 
-    async function exportDocument(document: Document) {
-        exportFile(document, getDocumentModel);
+    function exportDocument(document: Document) {
+        return exportFile(document, getDocumentModel);
     }
 
     const selectFolder = (item: TreeItem) => {
@@ -161,7 +161,7 @@ const Content = () => {
             : undefined;
 
         if (document.name !== '' && item && item.label !== document.name) {
-            renameNode(decodedDriveID, item.id, document.name);
+            return renameNode(decodedDriveID, item.id, document.name);
         }
     };
 
