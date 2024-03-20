@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.11.0...v1.12.0) (2024-03-20)
+
+
+### Features
+
+* implement teeps feedback ([#107](https://github.com/powerhouse-inc/document-model-libs/issues/107)) ([b04fa3d](https://github.com/powerhouse-inc/document-model-libs/commit/b04fa3ddfbc83a65235eb4fbd3a87920be23553f))
+
 # [1.11.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.10.0...v1.11.0) (2024-03-18)
 
 
