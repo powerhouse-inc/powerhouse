@@ -1,3 +1,10 @@
+# [1.0.0-alpha.78](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.77...v1.0.0-alpha.78) (2024-03-20)
+
+
+### Features
+
+* format cash balance change number ([eaf8dcc](https://github.com/powerhouse-inc/design-system/commit/eaf8dccc7774a60fb12f683468172fe21b13c543))
+
 # [1.0.0-alpha.77](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.76...v1.0.0-alpha.77) (2024-03-20)
 
 
