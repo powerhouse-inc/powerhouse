@@ -6,6 +6,7 @@ import {
 import React, { useState } from 'react';
 import { useModal } from 'src/components/modal';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 
 const allowedItemOptions = ['delete', 'rename'];
 
@@ -25,6 +26,7 @@ export const FolderItem: React.FC<FolderItemProps> = props => {
     const { showModal } = useModal();
     const { updateNodeName } = useDrivesContainer();
     const [isWriteMode, setIsWriteMode] = useState(false);
+    const onDropEvent = useOnDropEvent();
 
     const onFolderOptionsClick = (optionId: string, folderNode: TreeItem) => {
         if (optionId === 'delete') {
@@ -57,6 +59,8 @@ export const FolderItem: React.FC<FolderItemProps> = props => {
             mode={isWriteMode ? 'write' : 'read'}
             onClick={() => !isWriteMode && onFolderSelected(folder.id)}
             onOptionsClick={optionId => onFolderOptionsClick(optionId, folder)}
+            onDropEvent={onDropEvent}
+            item={folder}
         />
     );
 };
