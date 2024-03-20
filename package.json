@@ -56,36 +56,6 @@
       "types": "./dist/utils.d.ts"
     }
   },
-  "./budget-statement": {
-    "import": "./dist/budget-statement.js",
-    "require": "./dist/budget-statement.cjs",
-    "types": "./dist/budget-statement.d.ts"
-  },
-  "./scope-framework": {
-    "import": "./dist/scope-framework.js",
-    "require": "./dist/scope-framework.cjs",
-    "types": "./dist/scope-framework.d.ts"
-  },
-  "./account-snapshot": {
-    "import": "./dist/account-snapshot.js",
-    "require": "./dist/account-snapshot.cjs",
-    "types": "./dist/account-snapshot.d.ts"
-  },
-  "./document-drive": {
-    "import": "./dist/document-drive.js",
-    "require": "./dist/document-drive.cjs",
-    "types": "./dist/document-drive.d.ts"
-  },
-  "./real-world-assets": {
-    "import": "./dist/real-world-assets.js",
-    "require": "./dist/real-world-assets.cjs",
-    "types": "./dist/real-world-assets.d.ts"
-  },
-  "./utils": {
-    "import": "./dist/utils.js",
-    "require": "./dist/utils.cjs",
-    "types": "./dist/utils.d.ts"
-  },
   "scripts": {
     "generate": "powerhouse generate && eslint . --fix",
     "check-types": "tsc",
