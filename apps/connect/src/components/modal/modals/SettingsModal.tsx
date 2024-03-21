@@ -46,13 +46,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
     const [showLogin, setShowLogin] = useState(false);
 
     const onSaveHandler = () => {
-        setConfig({
+        setConfig(conf => ({
+            ...conf,
             editors: {
                 enabledEditors: selectedDocuments.map(
                     doc => doc.value as string,
                 ),
             },
-        });
+        }));
 
         onClose();
     };
