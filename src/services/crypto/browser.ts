@@ -29,7 +29,7 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
 
     async saveKeyPair(keyPair: JwkKeyPair) {
         const store = await this.#useStore();
-        const request = store.put(keyPair);
+        const request = store.put(keyPair, BrowserKeyStorage.#KEY);
         return new Promise<void>((resolve, reject) => {
             request.onsuccess = () => {
                 resolve();
