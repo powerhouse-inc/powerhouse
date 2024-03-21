@@ -1,5 +1,5 @@
-@import url('../node_modules/@powerhousedao/design-system/dist/style.css');
 @import url('../node_modules/document-model-libs/dist/style.css');
+@import url('../node_modules/@powerhousedao/design-system/dist/style.css');
 
 @tailwind components;
 @tailwind utilities;
