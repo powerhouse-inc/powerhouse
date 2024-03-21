@@ -2,16 +2,18 @@ import {
     Breadcrumbs,
     TreeItem,
     decodeID,
+    encodeID,
     getRootPath,
     useGetItemById,
     useGetItemByPath,
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
-import { FileNode } from 'document-model-libs/document-drive';
+import { FileNode, isFileNode } from 'document-model-libs/document-drive';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
@@ -37,6 +39,11 @@ const getDocumentModelName = (name: string) => {
     }
 
     return name;
+};
+
+type RouteParams = {
+    driveId?: string;
+    '*'?: string;
 };
 
 const Content = () => {
@@ -71,6 +78,51 @@ const Content = () => {
         decodedDriveID,
         selectedFileNode?.id,
     );
+
+    const params = useParams<RouteParams>();
+    useEffect(() => {
+        if (selectedPath || !params.driveId) {
+            return;
+        }
+
+        // retrieves the drive id from the url
+        const driveId = decodeURIComponent(params.driveId);
+        const drive = documentDrives.find(
+            drive =>
+                drive.state.global.slug === driveId ||
+                drive.state.global.id === driveId,
+        );
+        if (!drive) {
+            return;
+        }
+
+        // builds the path from the url checking if the nodes exist
+        const path = [encodeID(drive.state.global.id)];
+        if (params['*']) {
+            for (const nodeId of decodeURIComponent(params['*']).split('/')) {
+                const node = drive.state.global.nodes.find(
+                    node => node.name === nodeId || node.id === nodeId,
+                );
+                if (node) {
+                    // if the node is a file, then opens it instead of adding it to the path
+                    if (isFileNode(node)) {
+                        if (
+                            selectedFileNode?.drive !== drive.state.global.id ||
+                            selectedFileNode.id !== node.id
+                        ) {
+                            setSelectedFileNode({
+                                drive: drive.state.global.id,
+                                id: node.id,
+                            });
+                        }
+                        break;
+                    }
+                    path.push(node.id);
+                }
+            }
+        }
+        setSelectedPath(path.join('/'));
+    }, [params, documentDrives]);
 
     // preload document editors
     useEffect(() => {

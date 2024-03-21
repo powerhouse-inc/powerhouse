@@ -4,19 +4,19 @@ import {
 } from '@powerhousedao/design-system';
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
-import { RouterProvider, createHashRouter } from 'react-router-dom';
+import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { ModalManager } from 'src/components/modal';
 import atoms from 'src/store';
 
 export const App: React.FC = () => {
-    const router = createHashRouter([
+    const router = createBrowserRouter([
         {
             path: '/',
             lazy: () => import('./root'),
             loader: () => <></>, // TODO loading
             children: [
                 {
-                    path: '',
+                    path: 'd?/:driveId?/*?',
                     lazy: () => import('src/pages/content'),
                 },
                 {
