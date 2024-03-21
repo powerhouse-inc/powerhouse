@@ -1,4 +1,11 @@
-import { ERROR, MISSING, SUCCESS, SYNCING } from '@/connect';
+import {
+    ConnectDropdownMenuItem,
+    ERROR,
+    MISSING,
+    SUCCESS,
+    SYNCING,
+    defaultDropdownMenuOptions,
+} from '@/connect';
 import { useGetDriveParent } from '@/connect/hooks/tree-view/useGetDriveParent';
 import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
 import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
@@ -6,8 +13,13 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ItemsContextProvider } from '../../context/ItemsContext';
 import { DriveView, DriveViewProps } from './drive-view';
 
+const filteredDriveOptions = defaultDropdownMenuOptions.filter(
+    option => option.id !== 'delete',
+);
+
 const drives = [
     ...generateMockDriveData({
+        options: filteredDriveOptions as ConnectDropdownMenuItem[],
         path: 'public-only-connected',
         label: 'Public Only Connected',
         type: 'PUBLIC_DRIVE',
@@ -153,6 +165,7 @@ const meta: Meta<typeof DriveView> = {
         onDragEnd: { control: { type: 'action' } },
         onDropActivate: { control: { type: 'action' } },
         disableHighlightStyles: { control: { type: 'boolean' } },
+        disableAddDrives: { control: { type: 'boolean' } },
     },
 };
 
@@ -198,6 +211,7 @@ export const Local: Story = {
     args: {
         name: 'My Local Drives',
         type: 'LOCAL_DRIVE',
+        disableAddDrives: false,
     },
     render: args => <DriveViewImpl {...(args as DriveViewProps)} />,
 };

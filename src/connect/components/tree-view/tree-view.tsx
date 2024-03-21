@@ -46,6 +46,7 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     } = props;
 
     const items = usePathContent(filterPath, allowedPaths, allowedTypes);
+    const { defaultItemOptions: _, ...childrenProps } = props;
 
     return (
         <>
@@ -75,7 +76,7 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
                     >
                         {item.expanded && (
                             <ConnectTreeView
-                                {...props}
+                                {...childrenProps}
                                 level={level + 1}
                                 filterPath={item.path}
                             />

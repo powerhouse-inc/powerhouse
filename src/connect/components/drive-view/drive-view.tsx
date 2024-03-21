@@ -34,6 +34,7 @@ export interface DriveViewProps
     onDragStart?: ConnectTreeViewProps['onDragStart'];
     onDragEnd?: ConnectTreeViewProps['onDragEnd'];
     onCreateDrive?: (drive: AddDriveInput | AddPublicDriveInput) => void;
+    disableAddDrives?: boolean;
 }
 
 const filterDriveByType = (drive: DriveTreeItem, type: DriveType) => {
@@ -66,6 +67,7 @@ export function DriveView(props: DriveViewProps) {
         disableHighlightStyles,
         drivePath = '/',
         onCreateDrive,
+        disableAddDrives,
         ...restProps
     } = props;
     const [showAddModal, setShowAddModal] = useState(false);
@@ -97,8 +99,13 @@ export function DriveView(props: DriveViewProps) {
                 </p>
                 <div className="flex gap-1 text-gray-600">
                     <button
+                        disabled={disableAddDrives}
                         onClick={() => setShowAddModal(true)}
-                        className="transition hover:text-gray-800"
+                        className={twMerge(
+                            'transition hover:text-gray-800',
+                            disableAddDrives &&
+                                'cursor-not-allowed text-gray-400 hover:text-gray-400',
+                        )}
                     >
                         <Icon name="plus-circle" size={16} />
                     </button>
