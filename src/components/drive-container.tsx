@@ -1,14 +1,18 @@
 import {
     AddDriveInput,
     AddPublicDriveInput,
+    ConnectDropdownMenuItem,
     DriveView,
     DriveViewProps,
+    defaultDropdownMenuOptions,
     toast,
     useItemActions,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
+import { FeatureFlag } from 'src/hooks/useFeatureFlags/default-config';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 
 interface DriveContainerProps {
@@ -28,10 +32,49 @@ const DriveSections = [
     { key: 'local', name: 'My Local Drives', type: 'LOCAL_DRIVE' },
 ] as const;
 
+const getDrivesConfig = (
+    driveType: 'public' | 'cloud' | 'local',
+    config: FeatureFlag['drives'],
+) => {
+    if (driveType === 'public') {
+        return {
+            allowAdd: config.allowAddPublicDrives,
+            allowDelete: config.allowDeletePublicDrives,
+        };
+    }
+
+    if (driveType === 'cloud') {
+        return {
+            allowAdd: config.allowAddCloudDrives,
+            allowDelete: config.allowDeleteCloudDrives,
+        };
+    }
+
+    return {
+        allowAdd: config.allowAddLocalDrives,
+        allowDelete: config.allowDeleteLocalDrives,
+    };
+};
+
+const getDriveOptions = (
+    driveType: 'public' | 'cloud' | 'local',
+    config: FeatureFlag['drives'],
+) => {
+    const driveConfig = getDrivesConfig(driveType, config);
+
+    const options = driveConfig.allowDelete
+        ? defaultDropdownMenuOptions
+        : defaultDropdownMenuOptions.filter(option => option.id !== 'delete');
+
+    return options as ConnectDropdownMenuItem[];
+};
+
 export default function DriveContainer(props: DriveContainerProps) {
     const { disableHoverStyles = false, setDisableHoverStyles } = props;
     const actions = useItemActions();
     const { t } = useTranslation();
+    const { config } = useFeatureFlag();
+    const { drives: drivesConfig } = config;
 
     const { addDrive, addRemoteDrive } = useDocumentDriveServer();
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
@@ -140,6 +183,13 @@ export default function DriveContainer(props: DriveContainerProps) {
                 <DriveView
                     {...drive}
                     key={drive.name}
+                    disableAddDrives={
+                        !getDrivesConfig(drive.key, drivesConfig).allowAdd
+                    }
+                    defaultItemOptions={getDriveOptions(
+                        drive.key,
+                        drivesConfig,
+                    )}
                     onItemClick={onItemClick}
                     onItemOptionsClick={onItemOptionsClick}
                     onSubmitInput={item => onSubmitInput(item)}
