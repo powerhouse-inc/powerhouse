@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.13.0...v1.14.0) (2024-03-22)
+
+
+### Features
+
+* fix tailwind class conflicts ([#108](https://github.com/powerhouse-inc/document-model-libs/issues/108)) ([6fb84d6](https://github.com/powerhouse-inc/document-model-libs/commit/6fb84d63fc054737ffa6854954847810a6b44869))
+
 # [1.13.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.12.0...v1.13.0) (2024-03-20)
 
 
