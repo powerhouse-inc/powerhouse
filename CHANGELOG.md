@@ -1,3 +1,10 @@
+# [1.0.0-alpha.80](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.79...v1.0.0-alpha.80) (2024-03-22)
+
+
+### Features
+
+* allow disable add drives ([d7d3d22](https://github.com/powerhouse-inc/design-system/commit/d7d3d22ac380be018761772e4a2568418914487d))
+
 # [1.0.0-alpha.79](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.78...v1.0.0-alpha.79) (2024-03-20)
 
 
