@@ -2139,10 +2139,10 @@
     "@pnpm/network.ca-file" "^1.0.1"
     config-chain "^1.1.11"
 
-"@powerhousedao/design-system@^1.0.0-alpha.79":
-  version "1.0.0-alpha.79"
-  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.79.tgz#17561c24d29d6f9ab83c45c1cf89fe24faa2a473"
-  integrity sha512-1hbSod8UpMJzUrgZQ+WCBXYDOaCLSma/sMHsP3Qsd4ZSiHxS1h/FzmsNod9buyjGxMtNbr7kLRwguw8YFPR4rg==
+"@powerhousedao/design-system@1.0.0-alpha.80":
+  version "1.0.0-alpha.80"
+  resolved "https://registry.yarnpkg.com/@powerhousedao/design-system/-/design-system-1.0.0-alpha.80.tgz#0560a706408f068a8f7944bd9ec4d945bfa6f8b3"
+  integrity sha512-eOrV96SDoKdDoLQyW5D5IbXRn3KHWhPJCy5uthISINfjErJzlQyl7Nyxa+H7lN0XVNTpGw9bAXVSdnN6nIdt7Q==
   dependencies:
     "@internationalized/date" "^3.5.1"
     "@radix-ui/react-dialog" "^1.0.5"
