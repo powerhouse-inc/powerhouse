@@ -240,6 +240,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
             'rounded-lg py-3 transition-colors hover:bg-slate-50 peer-hover:bg-slate-50',
             backgroundClass,
             itemContainerClassName,
+            item.isSelected && 'bg-slate-50',
         );
 
         return {
