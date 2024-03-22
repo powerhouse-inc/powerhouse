@@ -90,6 +90,12 @@ const electronApi = {
     },
     user: async () => ipcRenderer.invoke('user') as Promise<User | undefined>,
     openURL: (url: string) => ipcRenderer.invoke('openURL', url),
+    handleURL: (listener: (event: IpcRendererEvent, url: string) => void) => {
+        ipcRenderer.on('handleURL', listener);
+        return () => {
+            ipcRenderer.off('handleURL', listener);
+        };
+    },
     setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
     documentDrive: {
         getDrives: () =>

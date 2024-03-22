@@ -16,9 +16,9 @@ BrowserDocumentDriveServer.initialize()
                     BrowserDocumentDriveServer.addDrive({
                         global: {
                             id: utils.hashKey(),
-                            name: 'My Local Device',
+                            name: 'My Local Drive',
                             icon: null,
-                            slug: null,
+                            slug: 'my-local-drive',
                         },
                         local: {
                             availableOffline: false,
