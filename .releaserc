@@ -1,6 +1,10 @@
 {
     "branches": [
-        "main"
+        "main",
+        {
+            "name": "doc-arb-ltip",
+            "prerelease": "arbitrum"
+        }
     ],
     "plugins": [
         "@semantic-release/commit-analyzer",

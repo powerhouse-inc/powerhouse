@@ -2,7 +2,7 @@ name: Release
 
 on:
     push:
-        branches: [main]
+        branches: [main, doc-arb-ltip]
     workflow_dispatch:
 
 env:
