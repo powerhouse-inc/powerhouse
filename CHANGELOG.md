@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.14.0...v1.15.0) (2024-03-22)
+
+
+### Features
+
+* enable arbitrum release branch ([#109](https://github.com/powerhouse-inc/document-model-libs/issues/109)) ([4cbfd9c](https://github.com/powerhouse-inc/document-model-libs/commit/4cbfd9c281f7ba28719f76b1123e666dc843ba9b))
+
 # [1.14.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.13.0...v1.14.0) (2024-03-22)
 
 
