@@ -119,7 +119,7 @@ export const DocumentEditor: React.FC<IProps> = ({
     const { disableExternalControls } = editor.config || {};
 
     return (
-        <div className="relative h-full">
+        <div className="relative h-full" id="document-editor-context">
             {!disableExternalControls && (
                 <div className="mb-4 flex justify-end gap-10">
                     <Button onClick={onExport}>Export</Button>
