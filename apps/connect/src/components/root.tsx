@@ -2,7 +2,7 @@ import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
 import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
 import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useDropFile } from 'src/hooks';
 import { useLoadInitialData } from 'src/hooks/useLoadInitialData';
 import { useRenown } from 'src/hooks/useRenown';
@@ -15,6 +15,7 @@ const ROOT_FILE_DROP = false;
 const Root = () => {
     useLoadInitialData();
     const ref = React.useRef(null);
+    const navigate = useNavigate();
 
     const renown = useRenown();
     const setUser = useSetAtom(userAtom);
@@ -35,6 +36,14 @@ const Root = () => {
 
         return unsubscribeLogin;
     }, [renown, setUser]);
+
+    useEffect(() => {
+        const unsubscribe = window.electronAPI?.handleURL((_e, url) => {
+            navigate(`/${url}`);
+        });
+
+        return unsubscribe;
+    }, [navigate]);
 
     let { dropProps, isDropTarget } = useDropFile(ref);
 

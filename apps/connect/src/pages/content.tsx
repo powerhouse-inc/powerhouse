@@ -80,17 +80,29 @@ const Content = () => {
     );
 
     const params = useParams<RouteParams>();
+    const [paramsShown, setParamsShown] = useState<RouteParams | undefined>(
+        undefined,
+    );
+
     useEffect(() => {
-        if (selectedPath || !params.driveId) {
+        setParamsShown(undefined);
+    }, [params]);
+
+    useEffect(() => {
+        if (
+            (paramsShown?.driveId === params.driveId &&
+                paramsShown?.['*'] === params['*']) ||
+            !params.driveId
+        ) {
             return;
         }
-
         // retrieves the drive id from the url
         const driveId = decodeURIComponent(params.driveId);
         const drive = documentDrives.find(
             drive =>
                 drive.state.global.slug === driveId ||
-                drive.state.global.id === driveId,
+                drive.state.global.id === driveId ||
+                drive.state.global.name === driveId,
         );
         if (!drive) {
             return;
@@ -117,12 +129,13 @@ const Content = () => {
                         }
                         break;
                     }
-                    path.push(node.id);
+                    path.push(encodeID(node.id));
                 }
             }
         }
         setSelectedPath(path.join('/'));
-    }, [params, documentDrives]);
+        setParamsShown(params);
+    }, [params, paramsShown, documentDrives]);
 
     // preload document editors
     useEffect(() => {
@@ -155,14 +168,14 @@ const Content = () => {
         });
     }, [selectedPath]);
 
-    function handleAddOperation(operation: Operation) {
+    async function handleAddOperation(operation: Operation) {
         if (!selectedDocument) {
             throw new Error('No document selected');
         }
         if (!addOperation) {
             throw new Error('No add operation function defined');
         }
-        return addOperation(operation);
+        await addOperation(operation);
     }
 
     function createDocument(documentModel: DocumentModel) {

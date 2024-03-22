@@ -37,7 +37,7 @@ export default (
                                     id: utils.hashKey(),
                                     name: 'My Local Drive',
                                     icon: null,
-                                    slug: null,
+                                    slug: 'my-local-drive',
                                 },
                                 local: {
                                     availableOffline: false,

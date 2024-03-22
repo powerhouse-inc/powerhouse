@@ -91,14 +91,46 @@ async function initApp() {
         // deeplink login
         const appProtocol = isDev ? 'connect-dev' : 'connect';
         addDeeplink(app, browserWindow, appProtocol, async (_e, url) => {
-            // gets user address from url
-            const text = decodeURIComponent(url);
-            const did = text.slice(`${appProtocol}://`.length);
-            await renown.login(did);
+            try {
+                const text = decodeURIComponent(url).slice(
+                    `${appProtocol}://`.length,
+                );
+
+                // gets route from url
+                const [route, ...rest] = text.split('/');
+                const content = rest.join('/');
+
+                switch (route) {
+                    case 'login':
+                        await renown.login(content);
+                        break;
+                    case 'open':
+                        await openUrl(content);
+                        break;
+                    default:
+                        throw new Error('Route not found');
+                }
+            } catch (error) {
+                console.error(`Url ${url} is not supported`, error);
+            }
         });
         ipcMain.handle('protocol', () => appProtocol);
     } catch (error) {
         console.error(error);
+    }
+}
+
+async function openUrl(url: string) {
+    const window =
+        BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows().pop();
+    if (window) {
+        window.webContents.send('handleURL', url);
+    } else {
+        await createWindow({
+            onReady(window) {
+                window.webContents.send('handleURL', url);
+            },
+        });
     }
 }
 
