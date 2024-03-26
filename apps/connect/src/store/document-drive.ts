@@ -57,12 +57,8 @@ function debounceOperations(
 }
 
 export const useFileNodeDocument = (drive?: string, id?: string) => {
-    const {
-        openFile,
-        addOperation: _addOperation,
-        addOperations,
-        onStrandUpdate,
-    } = useDocumentDriveServer();
+    const { openFile, addOperations, onStrandUpdate } =
+        useDocumentDriveServer();
     const [selectedDocument, setSelectedDocument] = useState<
         Document | undefined
     >();

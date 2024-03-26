@@ -74,10 +74,8 @@ const Content = () => {
     const [selectedFileNode, setSelectedFileNode] = useState<
         { drive: string; id: string } | undefined
     >(undefined);
-    const [selectedDocument, , addOperation] = useFileNodeDocument(
-        decodedDriveID,
-        selectedFileNode?.id,
-    );
+    const [selectedDocument, setSelectedDocument, addOperation] =
+        useFileNodeDocument(decodedDriveID, selectedFileNode?.id);
 
     const params = useParams<RouteParams>();
     const [paramsShown, setParamsShown] = useState<RouteParams | undefined>(
@@ -224,6 +222,7 @@ const Content = () => {
     };
 
     const onDocumentChangeHandler = (document: Document) => {
+        setSelectedDocument(document);
         const item = selectedFileNode?.id
             ? getItemById(selectedFileNode.id)
             : undefined;
