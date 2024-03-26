@@ -19,10 +19,10 @@ import {
 import path from 'path';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
-import { useSelectedPath } from 'src/store/document-drive';
 import { getLastIndexFromPath, sanitizePath } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
+import { useNavigateToItemId } from './useNavigateToItemId';
 
 export function getNodePath(node: Node, allNodes: Node[]): string {
     if (!node.parentFolder) {
@@ -50,8 +50,8 @@ function getDriveBaseItemType(sharingType: string) {
 export function useDrivesContainer() {
     const actions = useItemActions();
     const { showModal } = useModal();
-    const [, setSelectedPath] = useSelectedPath();
     const { t } = useTranslation();
+    const navigateToItemId = useNavigateToItemId();
 
     const {
         addFolder,
@@ -115,8 +115,8 @@ export function useDrivesContainer() {
 
     const onItemClick: DriveViewProps['onItemClick'] = (_event, item) => {
         if (item.type !== 'FILE') {
-            setSelectedPath(item.path);
             actions.toggleExpandedAndSelect(item.id);
+            navigateToItemId(item.id);
         }
     };
 

@@ -23,6 +23,7 @@ import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
+import { useNavigateToItemId } from 'src/hooks/useNavigateToItemId';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
 import { useFileNodeDocument, useSelectedPath } from 'src/store/document-drive';
 import {
@@ -66,6 +67,7 @@ const Content = () => {
     const documentModels = useFilteredDocumentModels();
     const getDocumentModel = useGetDocumentModel();
     const { onSubmitInput } = useDrivesContainer();
+    const navigateToItemId = useNavigateToItemId();
 
     const driveNodes = documentDrives.find(
         drive => drive.state.global.id === decodedDriveID,
@@ -193,7 +195,7 @@ const Content = () => {
     const selectFolder = (item: TreeItem) => {
         actions.setExpandedItem(item.id, true);
         actions.setSelectedItem(item.id);
-        setSelectedPath(item.path);
+        navigateToItemId(item.id);
     };
 
     const onFolderSelectedHandler = (itemId: string) => {
@@ -212,6 +214,7 @@ const Content = () => {
             path: itemPath,
             type: 'FOLDER',
             action: 'NEW',
+            availableOffline: false,
         });
 
         const item = getItemByPath(itemPath);

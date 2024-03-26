@@ -1,7 +1,8 @@
 import {
     BaseTreeItem,
-    encodeID,
+    decodeID,
     toast,
+    useGetItemById,
     useItemActions,
     useItemsContext,
     usePathContent,
@@ -12,16 +13,20 @@ import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useSelectedPath } from 'src/store/document-drive';
 import { useLoadDefaultDrive } from './useLoadDefaultDrive';
+import { useNavigateToItemId } from './useNavigateToItemId';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
     const { setBaseItems, items } = useItemsContext();
     const { documentDrives } = useDocumentDriveServer();
-    const [selectedPath, setSelectedPath] = useSelectedPath();
+    const [selectedPath] = useSelectedPath();
     const actions = useItemActions();
     const { driveToBaseItems } = useDrivesContainer();
     const drives = usePathContent();
     const prevDrivesState = useRef([...drives]);
+    const isFirstLoad = useRef(true);
+    const navigateToItemId = useNavigateToItemId();
+    const getItemById = useGetItemById();
 
     useLoadDefaultDrive();
 
@@ -82,9 +87,34 @@ export const useLoadInitialData = () => {
         if (!selectedPath && items.length > 0) {
             const driveID = documentDrives[0].state.global.id;
 
-            setSelectedPath(encodeID(driveID));
             actions.setSelectedItem(driveID);
             actions.setExpandedItem(driveID, true);
+
+            navigateToItemId(driveID);
         }
     }, [items, selectedPath]);
+
+    // expand the selected path in the Sidebar on first load
+    useEffect(() => {
+        if (selectedPath && isFirstLoad.current) {
+            isFirstLoad.current = false;
+            const pathItemsIds = selectedPath.split('/');
+
+            for (const id of pathItemsIds) {
+                const item = getItemById(decodeID(id));
+                if (item?.type === 'FILE') return;
+
+                actions.setExpandedItem(decodeID(id), true);
+            }
+
+            // get the last item in the path and select it
+            const lastItemId = pathItemsIds[pathItemsIds.length - 1];
+            if (lastItemId) {
+                const item = getItemById(decodeID(lastItemId));
+                if (item?.type === 'FILE') return;
+
+                actions.setSelectedItem(decodeID(lastItemId));
+            }
+        }
+    }, [selectedPath]);
 };
