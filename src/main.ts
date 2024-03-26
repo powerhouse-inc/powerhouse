@@ -444,3 +444,5 @@ app.on('activate', async () => {
         await createWindow();
     }
 });
+
+ipcMain.handle('isPackaged', () => app.isPackaged);
