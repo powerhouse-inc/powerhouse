@@ -19,7 +19,8 @@
         "declarationMap": true,
         "baseUrl": ".",
         "paths": {
-            "@/assets": ["assets"]
+            "@/assets": ["assets"],
+            "connect-config": ["connect.config.ts"],
         },
         "types": ["vite/client"]
     },

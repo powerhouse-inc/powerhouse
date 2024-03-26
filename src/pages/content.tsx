@@ -9,6 +9,7 @@ import {
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
+import connectConfig from 'connect-config';
 import { FileNode, isFileNode } from 'document-model-libs/document-drive';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
@@ -282,7 +283,7 @@ const Content = () => {
                                 onCancelInput={console.log}
                             />
                         )}
-                        <SearchBar />
+                        {connectConfig.content.showSearchBar && <SearchBar />}
                         <div className="px-4">
                             <div className="mb-5">
                                 <FolderView
