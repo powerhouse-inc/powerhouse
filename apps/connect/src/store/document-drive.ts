@@ -47,7 +47,28 @@ function debounceOperations(
         if (timer) {
             clearTimeout(timer);
         }
-        operations.push(operation);
+        const index = operations.findIndex(
+            op => op.scope === operation.scope && op.index === operation.index,
+        );
+        if (index > -1) {
+            const oldOperation = operations[index];
+            if (
+                !(
+                    oldOperation.type === operation.type &&
+                    JSON.stringify(operation.input) ===
+                        JSON.stringify(oldOperation.input)
+                )
+            ) {
+                console.warn(
+                    'Two conflicting operations were dispatched:',
+                    oldOperation,
+                    operation,
+                );
+            }
+            operations[index] = operation;
+        } else {
+            operations.push(operation);
+        }
         return new Promise<Document | undefined>((resolve, reject) => {
             timer = setTimeout(() => {
                 callback(operations).then(resolve).catch(reject);
