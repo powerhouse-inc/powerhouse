@@ -1,3 +1,10 @@
+# [1.0.0-alpha.81](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.80...v1.0.0-alpha.81) (2024-03-26)
+
+
+### Features
+
+* added selected styles for TreeViewItem ([e5bfd87](https://github.com/powerhouse-inc/design-system/commit/e5bfd87da1063b9eb012752ca81c6f1704429713))
+
 # [1.0.0-alpha.80](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.79...v1.0.0-alpha.80) (2024-03-22)
 
 
