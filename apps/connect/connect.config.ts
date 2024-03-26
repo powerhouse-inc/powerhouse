@@ -18,7 +18,12 @@ const CLOUD_DRIVES_ENABLED =
 const PUBLIC_DRIVES_ENABLED =
     import.meta.env.VITE_PUBLIC_DRIVES_ENABLED || undefined;
 
+const SEARCH_BAR_ENABLED = import.meta.env.VITE_SEARCH_BAR_ENABLED || undefined;
+
 export default {
+    content: {
+        showSearchBar: SEARCH_BAR_ENABLED !== 'false',
+    },
     drives: {
         sections: {
             local: {
