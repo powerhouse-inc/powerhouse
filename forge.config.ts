@@ -15,6 +15,11 @@ const config: ForgeConfig = {
         osxSign: {},
         icon: 'assets/icon',
         overwrite: true,
+        protocols: [{
+            name: 'connect',
+            schemes: ['phd'],
+        
+        }],
     },
     rebuildConfig: {},
     makers: [
@@ -24,12 +29,14 @@ const config: ForgeConfig = {
             options: {
                 bin: pkg.productName,
                 name: pkg.productName,
+                mimeType: ['x-scheme-handler/phd',]
             },
         }),
         new MakerDeb({
             options: {
                 bin: pkg.productName,
                 name: pkg.productName,
+                mimeType: ['x-scheme-handler/phd',]
             },
         }),
     ],
