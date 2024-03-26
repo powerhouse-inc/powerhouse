@@ -1,7 +1,5 @@
-// TODO: electron-deeplink dep is deprecated, we need to find a new alternative
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
-const { Deeplink } = require('electron-deeplink');
-import isDev from 'electron-is-dev';
+import path from 'path';
 
 export function addDeeplink(
     app: Electron.App,
@@ -9,16 +7,15 @@ export function addDeeplink(
     protocol: string,
     handleOpenUrl: (event: Electron.Event, url: string) => void,
 ) {
-    app.on('ready', () => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        new Deeplink({
-            app,
-            protocol: protocol,
-            isDev,
-            debugLogging: true,
-            mainWindow: window,
-        });
-    });
+    if (process.defaultApp) {
+        if (process.argv.length >= 2) {
+            app.setAsDefaultProtocolClient(protocol, process.execPath, [
+                path.resolve(process.argv[1]),
+            ]);
+        }
+    } else {
+        app.setAsDefaultProtocolClient(protocol);
+    }
 
     app.on('open-url', (event, url) => {
         if (url.startsWith(`${protocol}://`)) {
