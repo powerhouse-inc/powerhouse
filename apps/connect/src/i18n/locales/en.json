@@ -5,7 +5,8 @@
         "continue": "Continue",
         "empty": "Empty",
         "create": "Create",
-        "save": "Save"
+        "save": "Save",
+        "export": "Export"
     },
     "searchbar": {
         "placeholder": "Search Powerhouse",
@@ -69,6 +70,10 @@
                 "description": "Documents enabled",
                 "allSelected": "All documents are selected"
             }
+        },
+        "exportDocumentWithErrors": {
+            "title": "Your document contains errors",
+            "body": "Your document contains structure errors. Do you want to export it anyway?"
         }
     },
     "notifications": {
