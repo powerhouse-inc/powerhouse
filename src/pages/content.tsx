@@ -13,6 +13,7 @@ import { FileNode, isFileNode } from 'document-model-libs/document-drive';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
@@ -33,6 +34,7 @@ import {
 } from 'src/store/document-model';
 import { preloadTabs } from 'src/store/tabs';
 import { exportFile } from 'src/utils';
+import { validateDocument } from 'src/utils/validate-document';
 import { v4 as uuid } from 'uuid';
 
 const getDocumentModelName = (name: string) => {
@@ -55,6 +57,7 @@ const Content = () => {
     const getItemById = useGetItemById();
     const actions = useItemActions();
     const [connectConfig] = useConnectConfig();
+    const { t } = useTranslation();
 
     const selectedFolder = getItemByPath(selectedPath || '');
     const driveID = getRootPath(selectedFolder?.path ?? '');
@@ -199,7 +202,34 @@ const Content = () => {
     }
 
     function exportDocument(document: Document) {
-        return exportFile(document, getDocumentModel);
+        const validationErrors = validateDocument(document);
+
+        if (validationErrors.length) {
+            showModal('confirmationModal', {
+                title: t('modals.exportDocumentWithErrors.title'),
+                body: (
+                    <div>
+                        <p>{t('modals.exportDocumentWithErrors.body')}</p>
+                        <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
+                            {validationErrors.map((error, index) => (
+                                <li key={index}>{error.message}</li>
+                            ))}
+                        </ul>
+                    </div>
+                ),
+                cancelLabel: t('common.cancel'),
+                continueLabel: t('common.export'),
+                onCancel(closeModal) {
+                    closeModal();
+                },
+                onContinue(closeModal) {
+                    closeModal();
+                    return exportFile(document, getDocumentModel);
+                },
+            });
+        } else {
+            return exportFile(document, getDocumentModel);
+        }
     }
 
     const selectFolder = (item: TreeItem) => {
