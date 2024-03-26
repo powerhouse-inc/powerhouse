@@ -17,10 +17,10 @@
     "scripts": {
         "start": "electron-forge start",
         "package": "electron-forge package",
-        "make": "electron-forge make",
-        "make:mac": "electron-forge make -p darwin",
-        "make:linux": "electron-forge make -p linux",
-        "make:windows": "electron-forge make -p win32",
+        "make": "VITE_BASE_HREF=./ electron-forge make",
+        "make:mac": "VITE_BASE_HREF=./ electron-forge make -p darwin",
+        "make:linux": "VITE_BASE_HREF=./ electron-forge make -p linux",
+        "make:windows": "VITE_BASE_HREF=./ electron-forge make -p win32",
         "publish": "electron-forge publish",
         "lint": "eslint --ext .js,.ts,.tsx . && tsc --noemit --project tsconfig.spec.json",
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
@@ -84,6 +84,7 @@
         "tw-colors": "^1.2.6",
         "typescript": "^5.3.3",
         "vite": "^5.1.2",
+        "vite-plugin-html": "^3.2.2",
         "vite-plugin-svgr": "^3.2.0",
         "vite-tsconfig-paths": "^4.2.0",
         "xvfb-maybe": "^0.2.1"

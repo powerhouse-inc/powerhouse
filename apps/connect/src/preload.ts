@@ -41,6 +41,7 @@ const electronApi = {
     platformInfo,
     ready: () => ipcRenderer.send('ready'),
     protocol: () => ipcRenderer.invoke('protocol') as Promise<string>,
+    isPackaged: () => ipcRenderer.invoke('isPackaged') as Promise<boolean>,
     fileSaved: (document: Document, path?: string) =>
         ipcRenderer.invoke('fileSaved', document, path),
     handleFileOpen: (
