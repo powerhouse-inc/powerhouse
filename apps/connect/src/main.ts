@@ -89,7 +89,7 @@ async function initApp() {
         });
 
         // deeplink login
-        const appProtocol = isDev ? 'connect-dev' : 'connect';
+        const appProtocol = isDev ? 'phd-dev' : 'phd';
         addDeeplink(app, browserWindow, appProtocol, async (_e, url) => {
             try {
                 const text = decodeURIComponent(url).slice(

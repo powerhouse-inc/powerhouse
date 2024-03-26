@@ -96,45 +96,53 @@ const Content = () => {
         ) {
             return;
         }
-        // retrieves the drive id from the url
-        const driveId = decodeURIComponent(params.driveId);
-        const drive = documentDrives.find(
-            drive =>
-                drive.state.global.slug === driveId ||
-                drive.state.global.id === driveId ||
-                drive.state.global.name === driveId,
-        );
-        if (!drive) {
-            return;
-        }
 
-        // builds the path from the url checking if the nodes exist
-        const path = [encodeID(drive.state.global.id)];
-        if (params['*']) {
-            for (const nodeId of decodeURIComponent(params['*']).split('/')) {
-                const node = drive.state.global.nodes.find(
-                    node => node.name === nodeId || node.id === nodeId,
-                );
-                if (node) {
-                    // if the node is a file, then opens it instead of adding it to the path
-                    if (isFileNode(node)) {
-                        if (
-                            selectedFileNode?.drive !== drive.state.global.id ||
-                            selectedFileNode.id !== node.id
-                        ) {
-                            setSelectedFileNode({
-                                drive: drive.state.global.id,
-                                id: node.id,
-                            });
+        try {
+            // retrieves the drive id from the url
+            const driveId = decodeURIComponent(params.driveId);
+            const drive = documentDrives.find(
+                drive =>
+                    drive.state.global.slug === driveId ||
+                    drive.state.global.id === driveId ||
+                    drive.state.global.name === driveId,
+            );
+            if (!drive) {
+                return;
+            }
+
+            // builds the path from the url checking if the nodes exist
+            const path = [encodeID(drive.state.global.id)];
+            if (params['*']) {
+                for (const nodeId of decodeURIComponent(params['*']).split(
+                    '/',
+                )) {
+                    const node = drive.state.global.nodes.find(
+                        node => node.name === nodeId || node.id === nodeId,
+                    );
+                    if (node) {
+                        // if the node is a file, then opens it instead of adding it to the path
+                        if (isFileNode(node)) {
+                            if (
+                                selectedFileNode?.drive !==
+                                    drive.state.global.id ||
+                                selectedFileNode.id !== node.id
+                            ) {
+                                setSelectedFileNode({
+                                    drive: drive.state.global.id,
+                                    id: node.id,
+                                });
+                            }
+                            break;
                         }
-                        break;
+                        path.push(encodeID(node.id));
                     }
-                    path.push(encodeID(node.id));
                 }
             }
+            setSelectedPath(path.join('/'));
+            setParamsShown(params);
+        } catch (e) {
+            console.error(e);
         }
-        setSelectedPath(path.join('/'));
-        setParamsShown(params);
     }, [params, paramsShown, documentDrives]);
 
     // preload document editors
