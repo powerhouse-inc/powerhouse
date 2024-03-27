@@ -7,7 +7,11 @@ import React, { Suspense } from 'react';
 import { ModalManager } from 'src/components/modal';
 import atoms from 'src/store';
 
-const Router = React.lazy(() => import('./router'));
+const Router = React.lazy(async () => {
+    const createRouterComponent = await import('./router');
+    const router = await createRouterComponent.default();
+    return { default: router };
+});
 
 const Preloader = () => {
     for (const atom of Object.values(atoms)) {
