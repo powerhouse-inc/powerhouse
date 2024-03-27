@@ -11,32 +11,31 @@ async function createRouter(routes: RouteObject[]) {
     return createRouter(routes);
 }
 
-type Router = Awaited<ReturnType<typeof createRouter>>;
+const RouterAsync = async () => {
+    const router = await createRouter([
+        {
+            path: '/',
+            lazy: () => import('./root'),
+            loader: () => <></>, // TODO loading
+            children: [
+                {
+                    path: 'd?/:driveId?/*?',
+                    lazy: () => import('src/pages/content'),
+                },
+                {
+                    path: 'settings',
+                    lazy: () => import('src/pages/settings'),
+                },
+            ],
+        },
+        {
+            lazy: () => import('./root'),
+            loader: () => <></>, // TODO loading
+        },
+    ]);
 
-const router = await createRouter([
-    {
-        path: '/',
-        lazy: () => import('./root'),
-        loader: () => <></>, // TODO loading
-        children: [
-            {
-                path: 'd?/:driveId?/*?',
-                lazy: () => import('src/pages/content'),
-            },
-            {
-                path: 'settings',
-                lazy: () => import('src/pages/settings'),
-            },
-        ],
-    },
-    {
-        lazy: () => import('./root'),
-        loader: () => <></>, // TODO loading
-    },
-]);
-
-const Router = () => {
-    return <RouterProvider router={router} />;
+    const Router = () => <RouterProvider router={router} />;
+    return Router;
 };
 
-export default Router;
+export default RouterAsync;
