@@ -9,7 +9,6 @@ import {
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
-import connectConfig from 'connect-config';
 import { FileNode, isFileNode } from 'document-model-libs/document-drive';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
@@ -20,6 +19,7 @@ import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
 import { useModal } from 'src/components/modal';
 import { SearchBar } from 'src/components/search-bar';
+import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
@@ -54,6 +54,7 @@ const Content = () => {
     const getItemByPath = useGetItemByPath();
     const getItemById = useGetItemById();
     const actions = useItemActions();
+    const [connectConfig] = useConnectConfig();
 
     const selectedFolder = getItemByPath(selectedPath || '');
     const driveID = getRootPath(selectedFolder?.path ?? '');
