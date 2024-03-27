@@ -25,6 +25,7 @@ export default defineConfig({
         alias: {
             '@/assets': path.resolve(__dirname, './assets'),
             src: path.resolve(__dirname, './src'),
+            'connect-config': path.resolve(__dirname, './connect.config.ts'),
             path: 'rollup-plugin-node-polyfills/polyfills/path',
             events: 'rollup-plugin-node-polyfills/polyfills/events',
         },

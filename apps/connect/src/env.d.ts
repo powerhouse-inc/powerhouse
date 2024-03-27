@@ -13,6 +13,7 @@ interface ImportMetaEnv {
     VITE_PUBLIC_DRIVES_ENABLED: string;
     VITE_CLOUD_DRIVES_ENABLED: string;
     VITE_LOCAL_DRIVES_ENABLED: string;
+    VITE_SEARCH_BAR_ENABLED: string;
 }
 
 interface ImportMeta {
