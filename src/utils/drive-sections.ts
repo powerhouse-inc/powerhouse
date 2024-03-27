@@ -2,7 +2,7 @@ import {
     ConnectDropdownMenuItem,
     defaultDropdownMenuOptions,
 } from '@powerhousedao/design-system';
-import connectConfig from '../../connect.config';
+import connectConfig from 'connect-config';
 
 type DriveSectionKey = 'public' | 'cloud' | 'local';
 
