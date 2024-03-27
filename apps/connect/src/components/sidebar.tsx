@@ -1,4 +1,5 @@
-import { ConnectSidebar } from '@powerhousedao/design-system';
+/* eslint-disable tailwindcss/no-arbitrary-value */
+import { ConnectSidebar, Icon } from '@powerhousedao/design-system';
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -30,6 +31,12 @@ export default function Sidebar() {
         showModal('settingsModal', {});
     };
 
+    const headerContent = (
+        <div className="flex h-full items-center">
+            <Icon name="connect" className="!h-[30px] !w-[100px]" />
+        </div>
+    );
+
     return (
         <ConnectSidebar
             collapsed={collapsed}
@@ -37,6 +44,7 @@ export default function Sidebar() {
             username={ensInfo?.name || ''}
             avatarUrl={ensInfo?.avatarUrl || ''}
             onClickSettings={onClickSettings}
+            headerContent={headerContent}
             address={user?.address ? shortAddress(user.address) : '-'}
         >
             <ErrorBoundary
