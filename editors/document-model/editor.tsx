@@ -40,24 +40,6 @@ function Editor(props: IProps) {
     const latestOperation =
         document.operations.global[document.operations.global.length - 1];
 
-    useEffect(() => {
-        const ops = [
-            ...document.operations.global,
-            ...document.operations.local,
-        ];
-
-        if (ops.length < 1) {
-            dispatch(actions.setModelId({ id: '' }));
-        }
-
-        const globalOps = document.operations.global;
-        const latestGlobalOp = globalOps[globalOps.length - 1];
-
-        if (latestGlobalOp && latestGlobalOp.type === 'SET_MODEL_NAME') {
-            dispatch(actions.setName(latestGlobalOp.input.name));
-        }
-    }, [document.operations]);
-
     const setModelId = (id: string) => {
         dispatch(actions.setModelId({ id }));
     };
@@ -72,6 +54,7 @@ function Editor(props: IProps) {
 
     const setModelName = (name: string) => {
         dispatch(actions.setModelName({ name }));
+        dispatch(actions.setName(name));
     };
 
     const setAuthorName = (authorName: string) => {
