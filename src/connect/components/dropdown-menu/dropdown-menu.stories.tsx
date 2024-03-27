@@ -40,6 +40,7 @@ export const Default: Story = {
     args: {
         isOpen: false,
         onOpenChange: () => {},
+        onItemClick: () => {},
         className:
             'bg-blue-500 text-white w-8 h-8 rounded justify-center items-center flex',
         menuClassName: 'bg-white cursor-pointer',

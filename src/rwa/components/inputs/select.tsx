@@ -1,6 +1,6 @@
+import { RWASelect, RWASelectProps } from '@/rwa';
 import { Control, Controller, FieldValues, Path } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
-import { RWASelect, RWASelectProps } from '../select';
 
 export interface RWATableSelectProps<ControlInputs extends FieldValues>
     extends RWASelectProps {

@@ -85,3 +85,9 @@ export type ServiceProviderFeeType = {
     id: Scalars['ID']['output'];
     name: Scalars['String']['output'];
 };
+
+export type Account = {
+    id: Scalars['ID']['output'];
+    label: Maybe<Scalars['String']['output']>;
+    reference: Scalars['String']['output'];
+};

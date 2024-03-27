@@ -15,6 +15,7 @@ const Template: Story = {
         onSubmit: data => {
             console.log(data);
         },
+        onCancel: () => {},
     },
     decorators: [
         Story => (

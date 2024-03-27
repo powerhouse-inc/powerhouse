@@ -19,6 +19,8 @@ const Template: Story = {
         sharingType: 'PRIVATE',
         availableOffline: false,
         location: 'CLOUD',
+        onCancel: () => {},
+        onDeleteDrive: () => {},
     },
     decorators: [
         Story => (
