@@ -1,3 +1,11 @@
+# [1.0.0-alpha.83](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.82...v1.0.0-alpha.83) (2024-03-27)
+
+
+### Features
+
+* add option to replace input from header sidebar ([1c0f9e9](https://github.com/powerhouse-inc/design-system/commit/1c0f9e9be0deb43aae555deed360d4a1731481ff))
+* hide add drive icon when disabled + disable drive settings ([7f2db8a](https://github.com/powerhouse-inc/design-system/commit/7f2db8a2a925e856a90c22a13ed61db2fdd7e4bb))
+
 # [1.0.0-alpha.82](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.81...v1.0.0-alpha.82) (2024-03-27)
 
 
