@@ -1,3 +1,10 @@
+# [1.0.0-alpha.82](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.81...v1.0.0-alpha.82) (2024-03-27)
+
+
+### Features
+
+* add other tab ([#251](https://github.com/powerhouse-inc/design-system/issues/251)) ([c25ddab](https://github.com/powerhouse-inc/design-system/commit/c25ddab57a6be836282bd6cf891af978dc0c6bef))
+
 # [1.0.0-alpha.81](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.80...v1.0.0-alpha.81) (2024-03-26)
 
 
