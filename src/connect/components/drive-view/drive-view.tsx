@@ -98,20 +98,19 @@ export function DriveView(props: DriveViewProps) {
                     {name}
                 </p>
                 <div className="flex gap-1 text-gray-600">
-                    <button
-                        disabled={disableAddDrives}
-                        onClick={() => setShowAddModal(true)}
-                        className={twMerge(
-                            'transition hover:text-gray-800',
-                            disableAddDrives &&
-                                'cursor-not-allowed text-gray-400 hover:text-gray-400',
-                        )}
-                    >
-                        <Icon name="plus-circle" size={16} />
-                    </button>
-                    <button className="transition hover:text-gray-800">
+                    {!disableAddDrives && (
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className={twMerge(
+                                'transition hover:text-gray-800',
+                            )}
+                        >
+                            <Icon name="plus-circle" size={16} />
+                        </button>
+                    )}
+                    {/* <button className="transition hover:text-gray-800">
                         <Icon name="gear" size={16} />
-                    </button>
+                    </button> */}
                 </div>
             </div>
             <div className="p-2 text-gray-800">
