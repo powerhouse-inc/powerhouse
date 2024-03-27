@@ -387,5 +387,19 @@ export function replayDocument<T, A extends Action, L>(
         { global: [], local: [] },
     );
 
-    return { ...result, operations: resultOperations };
+    // gets the last modified timestamp from the latest operation
+    const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
+        for (const operation of curr) {
+            if (operation.timestamp > acc) {
+                acc = operation.timestamp;
+            }
+        }
+        return acc;
+    }, '0');
+
+    return { ...result, operations: resultOperations, lastModified };
+}
+
+export function isSameDocument(documentA: Document, documentB: Document) {
+    return JSONDeterministic(documentA) === JSONDeterministic(documentB);
 }

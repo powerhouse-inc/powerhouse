@@ -1,7 +1,19 @@
 import fs from 'fs';
-import { getLocalFile, validateOperations } from '../../src/document/utils';
+import {
+    createDocument,
+    getLocalFile,
+    replayDocument,
+    validateOperations,
+} from '../../src/document/utils';
 import { hash as hashBrowser } from '../../src/document/utils/browser';
 import { hash as hashNode } from '../../src/document/utils/node';
+import {
+    CountAction,
+    CountLocalState,
+    countReducer,
+    CountState,
+    setLocalName,
+} from '../helpers';
 
 describe('Base utils', () => {
     const tempDir = './test/document/temp/utils/';
@@ -77,5 +89,28 @@ describe('Base utils', () => {
         expect(errors[0].message).toStrictEqual(
             'Invalid operation index 0 at position 1',
         );
+    });
+
+    it('should replay document and keep lastModified timestamp', async () => {
+        const document = createDocument<
+            CountState,
+            CountAction,
+            CountLocalState
+        >({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: { name: '' } },
+        });
+        const newDocument = countReducer(document, setLocalName('test'));
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const replayedDocument = replayDocument(
+            document.initialState,
+            newDocument.operations,
+            countReducer,
+            undefined,
+        );
+
+        expect(newDocument.state).toStrictEqual(replayedDocument.state);
+        expect(newDocument.lastModified).toBe(replayedDocument.lastModified);
     });
 });
