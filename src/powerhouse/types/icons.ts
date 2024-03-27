@@ -18,6 +18,7 @@ export type IconName =
     | 'clock-fill'
     | 'cloud-slash'
     | 'collapse'
+    | 'connect'
     | 'drive'
     | 'error'
     | 'files-earmark'

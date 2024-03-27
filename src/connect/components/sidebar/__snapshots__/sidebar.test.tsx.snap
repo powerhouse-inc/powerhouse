@@ -11,12 +11,16 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       class="no-scrollbar flex-1 overflow-auto transition-shadow"
     >
       <div
-        class="flex-shrink-0 mb-4 flex justify-center gap-4 px-2 pt-11"
+        class="flex-shrink-0 mb-4 flex justify-between gap-4 px-2 pt-11 collapsed:justify-center"
       >
-        <input
-          class="flex-1 rounded-md border border-gray-100 px-5 py-3 leading-none text-gray-600 placeholder-shown:bg-transparent collapsed:hidden expanding:hidden"
-          placeholder="Create new document"
-        />
+        <div
+          class="collapsed:hidden expanding:hidden"
+        >
+          <input
+            class="flex-1 rounded-md border border-gray-100 px-5 py-3 leading-none text-gray-600 placeholder-shown:bg-transparent"
+            placeholder="Create new document"
+          />
+        </div>
         <button
           class="rounded-md border border-gray-100 p-3 outline-none hover:bg-slate-50
                 collapsed:rotate-180 collapsed:border-gray-100/10 collapsed:bg-gray-100

@@ -14,6 +14,7 @@ export interface ConnectSidebarProps
         ConnectSidebarFooterProps {
     maxWidth?: string;
     minWidth?: string;
+    headerContent?: React.ReactNode;
 }
 
 export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
@@ -21,6 +22,7 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
     username,
     address,
     avatarUrl,
+    headerContent,
     onClickSettings,
     collapsed = false,
     maxWidth = '304px',
@@ -35,7 +37,9 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
             minWidth={minWidth}
         >
             <SidebarPanel>
-                <ConnectSidebarHeader onToggle={onToggle} />
+                <ConnectSidebarHeader onToggle={onToggle}>
+                    {headerContent}
+                </ConnectSidebarHeader>
                 <div className="hidden expanded:block">{props.children}</div>
             </SidebarPanel>
             <ConnectSidebarFooter
