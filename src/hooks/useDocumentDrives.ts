@@ -2,7 +2,7 @@ import type { IDocumentDriveServer } from 'document-drive/server';
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 // map of DocumentDriveServer objects and their Document Drives
 const documentDrivesAtom = atom(
@@ -27,22 +27,25 @@ export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
 // server and a method to fetch the document drives
 export function useDocumentDrives(server: IDocumentDriveServer) {
     const [documentDrives, setDocumentDrives] = useAtom(
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         useMemo(readWriteDocumentDrivesAtom(server), [server]),
     );
 
-    async function refreshDocumentDrives() {
+    const refreshDocumentDrives = useCallback(async () => {
         try {
             const driveIds = await server.getDrives();
             const drives = await Promise.all(
                 driveIds.map(id => server.getDrive(id)),
             );
-            setDocumentDrives(drives);
+            if (JSON.stringify(documentDrives) !== JSON.stringify(drives)) {
+                setDocumentDrives(drives);
+            }
             return drives;
         } catch (error) {
             console.error(error);
             setDocumentDrives([]);
         }
-    }
+    }, [server, documentDrives]);
 
     // if the server has not been initialized then
     // fetches the drives for the first time
@@ -53,9 +56,16 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
     if (!isInitialized) {
         setIsInitialized(true);
         refreshDocumentDrives();
-        server.on('syncStatus', () => refreshDocumentDrives());
-        server.on('strandUpdate', () => refreshDocumentDrives());
     }
+
+    useEffect(() => {
+        const unsub1 = server.on('syncStatus', () => refreshDocumentDrives());
+        const unsub2 = server.on('strandUpdate', () => refreshDocumentDrives());
+        return () => {
+            unsub1();
+            unsub2();
+        };
+    }, [refreshDocumentDrives, server]);
 
     return useMemo(
         () => [documentDrives, refreshDocumentDrives] as const,
