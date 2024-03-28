@@ -1,4 +1,4 @@
-import { ReactComponent as IconRenown } from '@/assets/icons/renown.svg';
+import IconRenown from '@/assets/icons/renown.svg?react';
 import { Button } from '@powerhousedao/design-system';
 import { useState } from 'react';
 import DotsLoader from 'src/components/dots-loader';

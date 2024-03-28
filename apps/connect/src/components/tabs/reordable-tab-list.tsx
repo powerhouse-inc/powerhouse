@@ -1,4 +1,4 @@
-import { ReactComponent as IconCross } from '@/assets/icons/cross.svg';
+import IconCross from '@/assets/icons/cross.svg?react';
 import type { TabListStateOptions } from '@react-stately/tabs';
 import { useRef } from 'react';
 import {
@@ -33,7 +33,7 @@ export function ReorderableTabList(
             onNewTab: () => void;
             onCloseTab: (tab: Tab) => void;
             onUpdateTab: (tab: Tab) => void;
-        }
+        },
 ) {
     // Setup listbox as normal. See the useListBox docs for more details.
     const state = useTabListState<Tab>(props);
@@ -45,7 +45,7 @@ export function ReorderableTabList(
             orientation: 'horizontal',
         },
         state,
-        ref
+        ref,
     );
 
     // Setup drag state for the collection.
@@ -96,15 +96,15 @@ export function ReorderableTabList(
             keyboardDelegate: new ListKeyboardDelegate(
                 state.collection,
                 state.disabledKeys,
-                ref
+                ref,
             ),
             dropTargetDelegate: new TabListDropTargetDelegate(
                 state.collection,
-                ref
+                ref,
             ),
         },
         dropState,
-        ref
+        ref,
     );
 
     return (
@@ -133,7 +133,7 @@ export function ReorderableTabList(
                     className={`h-10 px-2`}
                     onClick={() => props.onNewTab()}
                 >
-                    <div className="flex h-6 w-6 items-center justify-center rounded-md text-gray-500 hover:bg-slate-100 hover:text-slate-800">
+                    <div className="flex size-6 items-center justify-center rounded-md text-gray-500 hover:bg-slate-100 hover:text-slate-800">
                         <IconCross />
                     </div>
                 </button>
@@ -151,7 +151,7 @@ export function ReorderableTabList(
                 </DragPreview>
             </ul>
             <TabPanel
-                key={state.selectedItem?.key}
+                key={state.selectedItem.key}
                 state={state}
                 onUpdateTab={props.onUpdateTab}
             />
