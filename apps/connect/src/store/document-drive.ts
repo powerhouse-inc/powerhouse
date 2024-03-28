@@ -34,7 +34,10 @@ export const useSelectedPath = () => {
         }
     }, [documentDrives, selectedPath]);
 
-    return [selectedPath, setSelectedPath] as const;
+    return useMemo(
+        () => [selectedPath, setSelectedPath] as const,
+        [selectedPath, setSelectedPath],
+    );
 };
 
 function debounceOperations(
