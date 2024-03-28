@@ -1,4 +1,4 @@
-import { ReactComponent as IconCross } from '@/assets/icons/cross.svg';
+import IconCross from '@/assets/icons/cross.svg?react';
 import { NavLink } from 'react-router-dom';
 
 const Settings = () => {
@@ -10,7 +10,7 @@ const Settings = () => {
                     <IconCross
                         width={24}
                         height={24}
-                        className="rotate-45 fill-current"
+                        className="fill-current rotate-45"
                     />
                 </NavLink>
             </div>

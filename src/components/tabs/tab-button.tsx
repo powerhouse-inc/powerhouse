@@ -1,4 +1,4 @@
-import { ReactComponent as IconCross } from '@/assets/icons/cross.svg';
+import IconCross from '@/assets/icons/cross.svg?react';
 import { Node } from '@react-types/shared';
 import { ButtonHTMLAttributes, DetailedHTMLProps, forwardRef } from 'react';
 import { Tab } from 'src/store/tabs';
@@ -30,14 +30,14 @@ export default forwardRef(function TabButton(props: IProps, ref) {
             border border-slate-100 px-4 py-1.5 text-gray-500 outline-none
             last-of-type:mr-0 hover:bg-slate-50 hover:shadow-button aria-selected:border-transparent aria-selected:bg-slate-100 aria-selected:shadow-button
             `,
-                className
+                className,
             )}
             ref={ref}
             {...buttonProps}
         >
             <span>{typeof item === 'string' ? item : item.rendered}</span>
             <div
-                className="ml-3 mt-px flex h-5 w-5 items-center justify-center rounded-full hover:bg-slate-50 hover:text-slate-800"
+                className="ml-3 mt-px flex size-5 items-center justify-center rounded-full hover:bg-slate-50 hover:text-slate-800"
                 onClick={() =>
                     typeof item !== 'string' &&
                     item.value &&
