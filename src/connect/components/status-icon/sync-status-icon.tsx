@@ -17,48 +17,49 @@ export type SyncStatusIconProps = Omit<
     syncStatus: SyncStatus;
 };
 export function SyncStatusIcon(props: SyncStatusIconProps) {
+    const { syncStatus, className, ...iconProps } = props;
     const syncStatusIcons = {
         [SYNCING]: (
             <Icon
                 size={12}
-                {...props}
-                className={twMerge('text-blue-900', props.className)}
+                {...iconProps}
+                className={twMerge('text-blue-900', className)}
                 name="syncing"
             />
         ),
         [SUCCESS]: (
             <Icon
                 size={12}
-                {...props}
-                className={twMerge('text-green-900', props.className)}
+                {...iconProps}
+                className={twMerge('text-green-900', className)}
                 name="synced"
             />
         ),
         [CONFLICT]: (
             <Icon
                 size={12}
-                {...props}
-                className={twMerge('text-orange-900', props.className)}
+                {...iconProps}
+                className={twMerge('text-orange-900', className)}
                 name="error"
             />
         ),
         [MISSING]: (
             <Icon
                 size={12}
-                {...props}
-                className={twMerge('text-red-900', props.className)}
+                {...iconProps}
+                className={twMerge('text-red-900', className)}
                 name="circle"
             />
         ),
         [ERROR]: (
             <Icon
                 size={12}
-                {...props}
-                className={twMerge('text-red-900', props.className)}
+                {...iconProps}
+                className={twMerge('text-red-900', className)}
                 name="error"
             />
         ),
     } as const;
 
-    return syncStatusIcons[props.syncStatus];
+    return syncStatusIcons[syncStatus];
 }
