@@ -1,12 +1,11 @@
 import {
-    FixedIncomesTableProps,
-    RWAFixedIncomesTable,
+    AssetFormInputs,
+    AssetsTable,
+    AssetsTableProps,
     FixedIncome as UiFixedIncome,
 } from '@powerhousedao/design-system';
-import { RWAAssetDetailInputs } from '@powerhousedao/design-system/dist/rwa/components/asset-details/form';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
-import { twMerge } from 'tailwind-merge';
 import {
     FixedIncome,
     actions,
@@ -15,8 +14,8 @@ import {
 } from '../../document-models/real-world-assets';
 import { IProps } from './editor';
 
-function createAssetFromFormInputs(data: RWAAssetDetailInputs) {
-    const maturity = data.maturity.toString() + 'T00:00:00.000Z';
+function createAssetFromFormInputs(data: AssetFormInputs) {
+    const maturity = new Date(data.maturity).toISOString();
     return {
         ...data,
         maturity,
@@ -25,9 +24,8 @@ function createAssetFromFormInputs(data: RWAAssetDetailInputs) {
 
 export const Portfolio = (props: IProps) => {
     const [expandedRowId, setExpandedRowId] = useState<string>();
-    const [selectedAssetToEdit, setSelectedAssetToEdit] =
-        useState<UiFixedIncome>();
-    const [showNewAssetForm, setShowNewAssetForm] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<UiFixedIncome>();
+    const [showNewItemForm, setShowNewItemForm] = useState(false);
 
     const { dispatch, document } = props;
 
@@ -39,54 +37,50 @@ export const Portfolio = (props: IProps) => {
         (asset): asset is FixedIncome => isFixedIncomeAsset(asset),
     );
 
-    const toggleExpandedRow = useCallback((id: string) => {
-        setExpandedRowId(curr => (id === curr ? undefined : id));
-    }, []);
+    const toggleExpandedRow = useCallback(
+        (id: string | undefined) => {
+            setExpandedRowId(curr =>
+                curr && curr === expandedRowId ? undefined : id,
+            );
+        },
+        [expandedRowId],
+    );
 
-    const onClickDetails: FixedIncomesTableProps['onClickDetails'] =
-        useCallback(item => {}, []);
-
-    const onCancelEdit: FixedIncomesTableProps['onCancelEdit'] =
-        useCallback(() => {
-            setSelectedAssetToEdit(undefined);
-        }, []);
-
-    const onSubmitEdit: FixedIncomesTableProps['onSubmitEdit'] = useCallback(
+    const onSubmitEdit: AssetsTableProps['onSubmitEdit'] = useCallback(
         data => {
-            if (!selectedAssetToEdit) return;
+            if (!selectedItem) return;
             const asset = createAssetFromFormInputs(data);
-            const changedFields = getDifferences(selectedAssetToEdit, asset);
+            const changedFields = getDifferences(selectedItem, asset);
 
             if (Object.values(changedFields).filter(Boolean).length === 0) {
-                setSelectedAssetToEdit(undefined);
+                setSelectedItem(undefined);
                 return;
             }
 
             dispatch(
                 actions.editFixedIncomeAsset({
                     ...changedFields,
-                    id: selectedAssetToEdit.id,
+                    id: selectedItem.id,
                 }),
             );
-            setSelectedAssetToEdit(undefined);
+            setSelectedItem(undefined);
         },
-        [dispatch, selectedAssetToEdit],
+        [dispatch, selectedItem],
     );
 
-    const onSubmitCreate: FixedIncomesTableProps['onSubmitCreate'] =
-        useCallback(
-            data => {
-                const asset = createAssetFromFormInputs(data);
-                dispatch(
-                    actions.createFixedIncomeAsset({
-                        ...asset,
-                        id: utils.hashKey(),
-                    }),
-                );
-                setShowNewAssetForm(false);
-            },
-            [dispatch],
-        );
+    const onSubmitCreate: AssetsTableProps['onSubmitCreate'] = useCallback(
+        data => {
+            const asset = createAssetFromFormInputs(data);
+            dispatch(
+                actions.createFixedIncomeAsset({
+                    ...asset,
+                    id: utils.hashKey(),
+                }),
+            );
+            setShowNewItemForm(false);
+        },
+        [dispatch],
+    );
 
     return (
         <div>
@@ -95,22 +89,16 @@ export const Portfolio = (props: IProps) => {
                 Details on the distribution of assets among different financial
                 institutions or investment vehicles.
             </p>
-            <RWAFixedIncomesTable
-                className={twMerge(
-                    'bg-white',
-                    expandedRowId && 'max-h-[680px]',
-                )}
-                items={portfolio as UiFixedIncome[]}
+            <AssetsTable
+                assets={portfolio as UiFixedIncome[]}
                 fixedIncomeTypes={fixedIncomeTypes}
                 spvs={spvs}
                 expandedRowId={expandedRowId}
-                selectedAssetToEdit={selectedAssetToEdit}
-                showNewAssetForm={showNewAssetForm}
+                selectedItem={selectedItem}
+                showNewItemForm={showNewItemForm}
                 toggleExpandedRow={toggleExpandedRow}
-                onClickDetails={onClickDetails}
-                setSelectedAssetToEdit={setSelectedAssetToEdit}
-                setShowNewAssetForm={setShowNewAssetForm}
-                onCancelEdit={onCancelEdit}
+                setSelectedItem={setSelectedItem}
+                setShowNewItemForm={setShowNewItemForm}
                 onSubmitEdit={onSubmitEdit}
                 onSubmitCreate={onSubmitCreate}
             />

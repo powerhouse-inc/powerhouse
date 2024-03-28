@@ -8,6 +8,7 @@ import {
     RealWorldAssetsState,
 } from '../../document-models/real-world-assets';
 import { Attachments } from './attachments';
+import { Other } from './other';
 import { Portfolio } from './portfolio';
 import { Transactions } from './transactions';
 
@@ -51,6 +52,7 @@ function Editor(props: IProps) {
                 { id: 'portfolio', label: 'Portfolio' },
                 { id: 'transactions', label: 'Transactions' },
                 { id: 'attachments', label: 'Attachments' },
+                { id: 'other', label: 'Other' },
             ]}
         >
             <div className="flex justify-center mt-3">
@@ -63,6 +65,9 @@ function Editor(props: IProps) {
                     </TabPanel>
                     <TabPanel id="attachments">
                         <Attachments />
+                    </TabPanel>
+                    <TabPanel id="other">
+                        <Other {...props} />
                     </TabPanel>
                 </div>
             </div>
