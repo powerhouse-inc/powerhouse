@@ -1,3 +1,10 @@
+# [1.0.0-alpha.84](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.83...v1.0.0-alpha.84) (2024-03-28)
+
+
+### Features
+
+* use strings for isin and cusip ([c1fdd7c](https://github.com/powerhouse-inc/design-system/commit/c1fdd7cbdc1c9f31a67dd68893a74ec05963767f))
+
 # [1.0.0-alpha.83](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.82...v1.0.0-alpha.83) (2024-03-27)
 
 
