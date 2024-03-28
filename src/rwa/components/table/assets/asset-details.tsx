@@ -41,7 +41,11 @@ export function AssetDetails(props: AssetDetailsProps) {
     });
 
     const onSubmit: SubmitHandler<AssetFormInputs> = data => {
-        onSubmitForm(data);
+        onSubmitForm({
+            ...data,
+            ISIN: data.ISIN?.toString(),
+            CUSIP: data.CUSIP?.toString(),
+        });
     };
 
     const formInputs = () => (
