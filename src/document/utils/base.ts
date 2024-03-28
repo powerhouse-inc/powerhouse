@@ -395,7 +395,7 @@ export function replayDocument<T, A extends Action, L>(
             }
         }
         return acc;
-    }, '0');
+    }, initialState.lastModified);
 
     return { ...result, operations: resultOperations, lastModified };
 }
