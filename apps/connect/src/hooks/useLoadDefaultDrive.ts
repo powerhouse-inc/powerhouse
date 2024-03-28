@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useFeatureFlag } from './useFeatureFlags';
 
 export const useLoadDefaultDrive = () => {
-    const [loading, setLoading] = useState(false);
+    const loading = useRef(false);
     const { addRemoteDrive, documentDrives } = useDocumentDriveServer();
     const {
         setConfig,
@@ -11,7 +11,12 @@ export const useLoadDefaultDrive = () => {
     } = useFeatureFlag();
 
     useEffect(() => {
-        if (documentDrives.length > 0 && defaultDrive && !defaultDrive.loaded) {
+        if (
+            documentDrives.length > 0 &&
+            defaultDrive &&
+            !defaultDrive.loaded &&
+            !loading.current
+        ) {
             const isDriveAlreadyAdded = documentDrives.some(drive => {
                 return drive.state.local.triggers.some(
                     trigger => trigger.data?.url === defaultDrive.url,
@@ -20,7 +25,7 @@ export const useLoadDefaultDrive = () => {
 
             if (isDriveAlreadyAdded) return;
 
-            setLoading(true);
+            loading.current = true;
 
             addRemoteDrive(defaultDrive.url, {
                 sharingType: 'PUBLIC',
@@ -54,9 +59,9 @@ export const useLoadDefaultDrive = () => {
                     })),
                 )
                 .catch(console.error)
-                .finally(() => setLoading(false));
+                .finally(() => (loading.current = false));
         }
     }, [documentDrives, defaultDrive]);
 
-    return loading;
+    return loading.current;
 };
