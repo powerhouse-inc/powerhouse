@@ -1,5 +1,5 @@
-import { ReactComponent as IconConnect } from '@/assets/icons/connect.svg';
-import { ReactComponent as IconLogo } from '@/assets/icons/logo.svg';
+import IconConnect from '@/assets/icons/connect.svg?react';
+import IconLogo from '@/assets/icons/logo.svg?react';
 import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
