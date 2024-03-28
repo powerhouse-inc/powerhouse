@@ -1,3 +1,10 @@
+# [1.0.0-alpha.85](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.84...v1.0.0-alpha.85) (2024-03-28)
+
+
+### Features
+
+* remove sync status from icon props ([09a827b](https://github.com/powerhouse-inc/design-system/commit/09a827be8648fe1cdba6ccf42244995fe16e35f7))
+
 # [1.0.0-alpha.84](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.83...v1.0.0-alpha.84) (2024-03-28)
 
 
