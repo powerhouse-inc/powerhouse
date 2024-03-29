@@ -1,3 +1,10 @@
+# [1.0.0-alpha.23](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.22...v1.0.0-alpha.23) (2024-03-29)
+
+
+### Bug Fixes
+
+* generate drive Id if empty string ([9c5044c](https://github.com/powerhouse-inc/document-drive/commit/9c5044cb21b9f311b999ab60612e8e61991d0dad))
+
 # [1.0.0-alpha.22](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.21...v1.0.0-alpha.22) (2024-03-29)
 
 
