@@ -1,3 +1,14 @@
+# [1.16.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.15.0...v1.16.0) (2024-03-29)
+
+
+### Features
+
+* add other tab ([#111](https://github.com/powerhouse-inc/document-model-libs/issues/111)) ([5efcc4f](https://github.com/powerhouse-inc/document-model-libs/commit/5efcc4f7f6994befa7462d2b9c83e0e392c6cfbb))
+* bump libs ([0f0d30a](https://github.com/powerhouse-inc/document-model-libs/commit/0f0d30aefcd2ccdaff16f398c1f6b99db0b61647))
+* fix calc highest sync id on document drive ([#116](https://github.com/powerhouse-inc/document-model-libs/issues/116)) ([133a6fe](https://github.com/powerhouse-inc/document-model-libs/commit/133a6fed0b13e7b3ffed3f9bab46026c5ef09003))
+* fix set name action dispatch ([bcd9f4c](https://github.com/powerhouse-inc/document-model-libs/commit/bcd9f4cc493eb403ba741808f15cbb9ca2aaa4a1))
+* fix textInput rerender ([180fd62](https://github.com/powerhouse-inc/document-model-libs/commit/180fd62ed57cb12aa9fe865596b085eb4405a091))
+
 # [1.15.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.14.0...v1.15.0) (2024-03-22)
 
 
