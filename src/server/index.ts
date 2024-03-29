@@ -399,7 +399,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     async addDrive(drive: DriveInput) {
-        const id = drive.global.id ?? generateUUID();
+        const id = drive.global.id || generateUUID();
         if (!id) {
             throw new Error('Invalid Drive Id');
         }
