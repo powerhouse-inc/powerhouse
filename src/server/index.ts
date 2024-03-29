@@ -417,6 +417,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         await this.storage.createDrive(id, document);
         await this._initializeDrive(id);
+        return document;
     }
 
     async addRemoteDrive(url: string, options: RemoteDriveOptions) {
@@ -665,6 +666,13 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                         op,
                         `Conflicting operation on index ${op.index}`,
                         { existingOperation, newOperation: op }
+                    );
+                    continue;
+                } else if (!existingOperation) {
+                    error = new OperationError(
+                        'MISSING',
+                        op,
+                        `Missing operation on index ${nextIndex}`
                     );
                     continue;
                 }

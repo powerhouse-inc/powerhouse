@@ -42,6 +42,7 @@ export class ListenerManager extends BaseListenerManager {
             this.listenerState.set(drive, new Map());
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const driveMap = this.listenerState.get(drive)!;
         driveMap.set(listener.listenerId, {
             block: listener.block,

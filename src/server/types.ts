@@ -142,11 +142,11 @@ export type GetDocumentOptions = {
 export abstract class BaseDocumentDriveServer {
     /** Public methods **/
     abstract getDrives(): Promise<string[]>;
-    abstract addDrive(drive: DriveInput): Promise<void>;
+    abstract addDrive(drive: DriveInput): Promise<DocumentDriveDocument>;
     abstract addRemoteDrive(
         url: string,
         options: RemoteDriveOptions
-    ): Promise<void>;
+    ): Promise<DocumentDriveDocument>;
     abstract deleteDrive(id: string): Promise<void>;
     abstract getDrive(
         id: string,
