@@ -55,7 +55,7 @@
         "@typescript-eslint/parser": "^6.18.1",
         "@vitest/coverage-v8": "^0.34.6",
         "document-model": "^1.0.34",
-        "document-model-libs": "^1.1.51",
+        "document-model-libs": "^1.17.1",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^9.1.0",
         "fake-indexeddb": "^5.0.1",
