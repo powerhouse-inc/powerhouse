@@ -1,3 +1,10 @@
+# [1.0.0-alpha.22](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.21...v1.0.0-alpha.22) (2024-03-29)
+
+
+### Features
+
+* emit missing operation error ([8250681](https://github.com/powerhouse-inc/document-drive/commit/82506819148565aa6a7034b8e4a6d27ec9d3a0a3))
+
 # [1.0.0-alpha.21](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.20...v1.0.0-alpha.21) (2024-03-29)
 
 
