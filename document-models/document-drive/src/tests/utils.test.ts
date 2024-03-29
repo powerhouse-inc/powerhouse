@@ -1,4 +1,9 @@
-import { utils, DocumentDriveState, CopyNodeInput } from '../..';
+import {
+    utils,
+    DocumentDriveState,
+    CopyNodeInput,
+    getLatestSyncId,
+} from '../..';
 
 const baseNodes: DocumentDriveState['nodes'] = [
     {
@@ -203,6 +208,90 @@ describe('DocumentDrive Utils', () => {
                     nodes,
                 ),
             ).toThrowError(`Node with id invalid not found`);
+        });
+
+        it('should return the largest sync id from all the nodes', () => {
+            const state: DocumentDriveState = {
+                icon: null,
+                id: '',
+                name: '',
+                nodes: [],
+                slug: null,
+            };
+            const id = getLatestSyncId(state);
+            expect(id).toBe('0');
+
+            state.nodes.push({
+                id: '1',
+                synchronizationUnits: [
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '1',
+                    },
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '2',
+                    },
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '3',
+                    },
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '4',
+                    },
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '9', // max id
+                    },
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '5',
+                    },
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '6',
+                    },
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '7',
+                    },
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '8',
+                    },
+                ],
+                kind: 'file',
+                name: '',
+                parentFolder: null,
+            });
+
+            expect(getLatestSyncId(state)).toBe('9');
+
+            state.nodes.push({
+                id: '2',
+                synchronizationUnits: [
+                    {
+                        branch: '',
+                        scope: '',
+                        syncId: '10',
+                    },
+                ],
+                kind: 'file',
+                name: '',
+                parentFolder: null,
+            });
+
+            expect(getLatestSyncId(state)).toBe('10');
         });
     });
 });
