@@ -2,7 +2,7 @@ import { ConnectConfirmationModal } from '@powerhousedao/design-system';
 import React from 'react';
 
 export interface ConfirmationModalProps {
-    body: string;
+    body: React.ReactNode;
     open: boolean;
     title: string;
     cancelLabel: string;
