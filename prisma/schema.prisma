@@ -43,6 +43,8 @@ model Operation {
   clipboard   Boolean?     @default(false)
 
   SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
+
+  @@unique([driveId, documentId, scope, branch, index], name: "unique_operation")
 }
 
 model SyncronizationUnit {
