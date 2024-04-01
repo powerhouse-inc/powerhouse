@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useSelectedPath } from 'src/store/document-drive';
+import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-server';
+import { useDocumentDrives } from './useDocumentDrives';
 import { useLoadDefaultDrive } from './useLoadDefaultDrive';
 import { useNavigateToItemId } from './useNavigateToItemId';
 
@@ -27,8 +29,14 @@ export const useLoadInitialData = () => {
     const isFirstLoad = useRef(true);
     const navigateToItemId = useNavigateToItemId();
     const getItemById = useGetItemById();
+    const [, , serverSubscribeUpdates] = useDocumentDrives(server);
 
     useLoadDefaultDrive();
+
+    useEffect(() => {
+        const unsubscribe = serverSubscribeUpdates();
+        return unsubscribe;
+    }, [serverSubscribeUpdates]);
 
     useEffect(() => {
         drives.forEach(drive => {
