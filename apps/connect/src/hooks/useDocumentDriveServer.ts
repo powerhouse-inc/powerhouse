@@ -23,7 +23,7 @@ import {
 import { Document, Operation, utils } from 'document-model/document';
 import { useMemo } from 'react';
 import { useGetDocumentModel } from 'src/store/document-model';
-import { BrowserDocumentDriveServer } from 'src/utils/browser-document-drive';
+import { DefaultDocumentDriveServer } from 'src/utils/document-drive-server';
 import { loadFile } from 'src/utils/file';
 import { useDocumentDrives } from './useDocumentDrives';
 
@@ -31,9 +31,6 @@ import { useDocumentDrives } from './useDocumentDrives';
 export interface SortOptions {
     afterNodePath?: string;
 }
-
-const DefaultDocumentDriveServer =
-    window.electronAPI?.documentDrive ?? BrowserDocumentDriveServer;
 
 export function useDocumentDriveServer(
     server: IDocumentDriveServer | undefined = DefaultDocumentDriveServer,
