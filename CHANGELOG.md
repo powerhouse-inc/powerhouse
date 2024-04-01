@@ -1,3 +1,11 @@
+# [1.0.0-alpha.24](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.23...v1.0.0-alpha.24) (2024-04-01)
+
+
+### Features
+
+* add unique constraint on operation index ([b058834](https://github.com/powerhouse-inc/document-drive/commit/b058834a8b48c2f6db971427e9633a91141c1079))
+* check if there are conflicting operations when storing operations ([2487ab1](https://github.com/powerhouse-inc/document-drive/commit/2487ab10017ab819c560a115409829027dad9fda))
+
 # [1.0.0-alpha.23](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.22...v1.0.0-alpha.23) (2024-03-29)
 
 
