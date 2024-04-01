@@ -93,7 +93,7 @@
         "@powerhousedao/design-system": "1.0.0-alpha.83",
         "did-key-creator": "^1.2.0",
         "document-drive": "^0.0.30",
-        "document-model": "^1.0.34",
+        "document-model": "^1.0.35",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
