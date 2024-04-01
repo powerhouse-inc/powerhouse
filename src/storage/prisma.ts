@@ -107,12 +107,9 @@ export class PrismaStorage implements IDriveStorage {
             throw new Error(`Document with id ${id} not found`);
         }
 
-        const mergedOperations = [...operations, ...updatedOperations].sort(
-            (a, b) => a.index - b.index
-        );
         try {
             await tx.operation.createMany({
-                data: mergedOperations.map(op => ({
+                data: operations.map(op => ({
                     driveId: drive,
                     documentId: id,
                     hash: op.hash,
@@ -125,6 +122,34 @@ export class PrismaStorage implements IDriveStorage {
                     skip: op.skip
                 }))
             });
+
+            await Promise.all(
+                updatedOperations.map(op =>
+                    tx.operation.updateMany({
+                        where: {
+                            AND: {
+                                driveId: drive,
+                                documentId: id,
+                                scope: op.scope,
+                                branch: 'main',
+                                index: op.index
+                            }
+                        },
+                        data: {
+                            driveId: drive,
+                            documentId: id,
+                            hash: op.hash,
+                            index: op.index,
+                            input: op.input as Prisma.InputJsonObject,
+                            timestamp: op.timestamp,
+                            type: op.type,
+                            scope: op.scope,
+                            branch: 'main',
+                            skip: op.skip
+                        }
+                    })
+                )
+            );
 
             await tx.document.updateMany({
                 where: {
@@ -145,7 +170,7 @@ export class PrismaStorage implements IDriveStorage {
             ) {
                 const existingOperation = await this.db.operation.findFirst({
                     where: {
-                        AND: mergedOperations.map(op => ({
+                        AND: operations.map(op => ({
                             driveId: drive,
                             documentId: id,
                             scope: op.scope,
@@ -154,24 +179,20 @@ export class PrismaStorage implements IDriveStorage {
                         }))
                     }
                 });
-                if (!existingOperation) {
-                    throw e;
-                }
 
-                const conflictOp = mergedOperations.find(
+                const conflictOp = operations.find(
                     op =>
-                        existingOperation.index === op.index &&
+                        existingOperation?.index === op.index &&
                         existingOperation.scope === op.scope
                 );
 
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                if (conflictOp && existingOperation) {
+                if (!existingOperation || !conflictOp) {
+                    throw e;
+                } else {
                     throw new ConflictOperationError(
                         storageToOperation(existingOperation),
                         conflictOp
                     );
-                } else {
-                    throw e;
                 }
             } else {
                 throw e;

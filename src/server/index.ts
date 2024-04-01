@@ -98,7 +98,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     ) {
         if (status === null) {
             this.syncStatus.delete(driveId);
-        } else if (this.getSyncStatus(driveId) !== status) {
+        } else if (this.syncStatus.get(driveId) !== status) {
             this.syncStatus.set(driveId, status);
             this.emit('syncStatus', driveId, status, error);
         }

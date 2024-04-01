@@ -146,7 +146,8 @@ export class SequelizeStorage implements IDriveStorage {
         drive: string,
         id: string,
         operations: Operation[],
-        header: DocumentHeader
+        header: DocumentHeader,
+        updatedOperations: Operation[] = []
     ): Promise<void> {
         const document = await this.getDocument(drive, id);
         if (!document) {
@@ -158,30 +159,47 @@ export class SequelizeStorage implements IDriveStorage {
             throw new Error('Operation model not found');
         }
 
-        await Promise.all(
-            operations.map(async op => {
-                return Operation.create({
-                    driveId: drive,
-                    documentId: id,
-                    hash: op.hash,
-                    index: op.index,
-                    input: op.input,
-                    timestamp: op.timestamp,
-                    type: op.type,
-                    scope: op.scope,
-                    branch: 'main'
-                }).then(async () => {
-                    if (op.attachments) {
-                        await this._addDocumentOperationAttachments(
-                            drive,
-                            id,
-                            op,
-                            op.attachments
-                        );
-                    }
-                });
-            })
+        await Operation.bulkCreate(
+            operations.map(op => ({
+                driveId: drive,
+                documentId: id,
+                hash: op.hash,
+                index: op.index,
+                input: op.input,
+                timestamp: op.timestamp,
+                type: op.type,
+                scope: op.scope,
+                branch: 'main'
+            }))
         );
+
+        const attachments = operations.reduce<AttachmentInput[]>((acc, op) => {
+            if (op.attachments?.length) {
+                return acc.concat(
+                    op.attachments.map(attachment => ({
+                        driveId: drive,
+                        documentId: id,
+                        scope: op.scope,
+                        branch: 'main',
+                        index: op.index,
+                        mimeType: attachment.mimeType,
+                        fileName: attachment.fileName,
+                        extension: attachment.extension,
+                        data: attachment.data,
+                        hash: attachment.hash
+                    }))
+                );
+            }
+            return acc;
+        }, []);
+        if (attachments.length) {
+            const Attachment = this.db.models.attachment;
+            if (!Attachment) {
+                throw new Error('Attachment model not found');
+            }
+
+            await Attachment.bulkCreate(attachments);
+        }
 
         const Document = this.db.models.document;
         if (!Document) {
@@ -213,21 +231,19 @@ export class SequelizeStorage implements IDriveStorage {
             throw new Error('Attachment model not found');
         }
 
-        await Promise.all(
-            attachments.map(async attachment => {
-                return Attachment.create({
-                    driveId: driveId,
-                    documentId: documentId,
-                    scope: operation.scope,
-                    branch: 'main',
-                    index: operation.index,
-                    mimeType: attachment.mimeType,
-                    fileName: attachment.fileName,
-                    extension: attachment.extension,
-                    data: attachment.data,
-                    hash: attachment.hash
-                });
-            })
+        return Attachment.bulkCreate(
+            attachments.map(attachment => ({
+                driveId: driveId,
+                documentId: documentId,
+                scope: operation.scope,
+                branch: 'main',
+                index: operation.index,
+                mimeType: attachment.mimeType,
+                fileName: attachment.fileName,
+                extension: attachment.extension,
+                data: attachment.data,
+                hash: attachment.hash
+            }))
         );
     }
 
