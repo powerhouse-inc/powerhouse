@@ -30,6 +30,15 @@ export interface IStorage {
         header: DocumentHeader,
         updatedOperations?: Operation[]
     ): Promise<void>;
+    addDocumentOperationsWithTransaction?(
+        drive: string,
+        id: string,
+        callback: (document: DocumentStorage) => Promise<{
+            operations: Operation[];
+            header: DocumentHeader;
+            updatedOperations?: Operation[];
+        }>
+    ): Promise<void>;
     deleteDocument(drive: string, id: string): Promise<void>;
 }
 
@@ -43,5 +52,13 @@ export interface IDriveStorage extends IStorage {
         id: string,
         operations: Operation<DocumentDriveAction | BaseAction>[],
         header: DocumentHeader
+    ): Promise<void>;
+    addDriveOperationsWithTransaction?(
+        drive: string,
+        callback: (document: DocumentDriveStorage) => Promise<{
+            operations: Operation[];
+            header: DocumentHeader;
+            updatedOperations?: Operation[];
+        }>
     ): Promise<void>;
 }

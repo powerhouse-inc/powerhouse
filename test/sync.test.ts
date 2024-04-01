@@ -30,7 +30,9 @@ import {
     SyncStatus,
     UpdateStatus
 } from '../src/server';
+import { ConflictOperationError } from '../src/server/error';
 import { MemoryStorage } from '../src/storage/memory';
+import { PrismaStorage } from '../src/storage/prisma';
 
 describe('Document Drive Server with %s', () => {
     const documentModels = [
@@ -684,5 +686,74 @@ describe('Document Drive Server with %s', () => {
         const drive = await server.getDrive('1');
         expect(drive.operations.global.length).toBe(1);
         // expect(server.getSyncStatus('1')).toBe('');
+    });
+
+    it('should not store operation with repeated index', async ({ expect }) => {
+        vi.useRealTimers();
+        const prismaClient = new PrismaClient();
+        const server = new DocumentDriveServer(
+            documentModels,
+            new PrismaStorage(prismaClient)
+        );
+
+        await server.initialize();
+        await server.addDrive({
+            global: {
+                id: '1',
+                name: '!',
+                icon: null,
+                slug: null
+            },
+            local: {
+                availableOffline: false,
+                sharingType: 'PUBLIC',
+                triggers: [],
+                listeners: []
+            }
+        });
+
+        await server.addDriveAction(
+            '1',
+            actions.addFile({
+                id: '1.1',
+                documentType: 'powerhouse/document-model',
+                scopes: ['global', 'local'],
+                name: 'test'
+            })
+        );
+
+        let document = (await server.getDocument(
+            '1',
+            '1.1'
+        )) as DocumentModelDocument;
+        expect(document.operations.global.length).toBe(0);
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const operationA = DocumentModelLib.reducer(
+            document,
+            DocumentModelActions.addModule({ id: 'a', name: 'a' })
+        ).operations.global[0]!;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const operationB = DocumentModelLib.reducer(
+            document,
+            DocumentModelActions.addModule({ id: 'b', name: 'b' })
+        ).operations.global[0]!;
+
+        const resultDelayP = server.addOperations('1', '1.1', [operationA]);
+        const result = await server.addOperations('1', '1.1', [operationB]);
+
+        const resultDelay = await resultDelayP;
+        expect(resultDelay.status).toBe('SUCCESS');
+        expect(result.status).toBe('CONFLICT');
+        expect(result.error).toBeInstanceOf(ConflictOperationError);
+        document = (await server.getDocument(
+            '1',
+            '1.1'
+        )) as DocumentModelDocument;
+        expect(document.operations.global.length).toBe(1);
+        expect(document.operations.global[0]?.index).toBe(0);
+        expect(document.state.global.specifications[0]?.modules[0]?.id).toBe(
+            'a'
+        );
     });
 });

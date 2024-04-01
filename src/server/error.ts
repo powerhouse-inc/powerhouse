@@ -16,3 +16,20 @@ export class OperationError extends Error {
         this.operation = operation;
     }
 }
+
+export class ConflictOperationError extends OperationError {
+    constructor(existingOperation: Operation, newOperation: Operation) {
+        super(
+            'CONFLICT',
+            newOperation,
+            `Conflicting operation on index ${newOperation.index}`,
+            { existingOperation, newOperation }
+        );
+    }
+}
+
+export class MissingOperationError extends OperationError {
+    constructor(index: number, operation: Operation) {
+        super('MISSING', operation, `Missing operation on index ${index}`);
+    }
+}

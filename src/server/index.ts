@@ -16,13 +16,18 @@ import {
     BaseAction,
     utils as baseUtils,
     Document,
+    DocumentHeader,
     DocumentModel,
     Operation,
     OperationScope
 } from 'document-model/document';
 import { createNanoEvents, Unsubscribe } from 'nanoevents';
 import { MemoryStorage } from '../storage/memory';
-import type { DocumentStorage, IDriveStorage } from '../storage/types';
+import type {
+    DocumentDriveStorage,
+    DocumentStorage,
+    IDriveStorage
+} from '../storage/types';
 import {
     generateUUID,
     isBefore,
@@ -30,7 +35,11 @@ import {
     isNoopUpdate
 } from '../utils';
 import { requestPublicDrive } from '../utils/graphql';
-import { OperationError } from './error';
+import {
+    ConflictOperationError,
+    MissingOperationError,
+    OperationError
+} from './error';
 import { ListenerManager } from './listener/manager';
 import {
     CancelPullLoop,
@@ -647,11 +656,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             }
 
             if (op.index > nextIndex) {
-                error = new OperationError(
-                    'MISSING',
-                    op,
-                    `Missing operation on index ${nextIndex}`
-                );
+                error = new MissingOperationError(nextIndex, op);
                 continue;
             } else if (op.index < nextIndex) {
                 const existingOperation = scopeOperations
@@ -661,19 +666,10 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                             existingOperation.index === op.index
                     );
                 if (existingOperation && existingOperation.hash !== op.hash) {
-                    error = new OperationError(
-                        'CONFLICT',
-                        op,
-                        `Conflicting operation on index ${op.index}`,
-                        { existingOperation, newOperation: op }
-                    );
+                    error = new ConflictOperationError(existingOperation, op);
                     continue;
                 } else if (!existingOperation) {
-                    error = new OperationError(
-                        'MISSING',
-                        op,
-                        `Missing operation on index ${nextIndex}`
-                    );
+                    error = new MissingOperationError(nextIndex, op);
                     continue;
                 }
             } else {
@@ -773,10 +769,42 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         return this.addOperations(drive, id, [operation]);
     }
 
-    async addOperations(drive: string, id: string, operations: Operation[]) {
-        // retrieves document from storage
-        const documentStorage = await this.storage.getDocument(drive, id);
+    private async _addOperations(
+        drive: string,
+        id: string,
+        callback: (document: DocumentStorage) => Promise<{
+            operations: Operation[];
+            header: DocumentHeader;
+            updatedOperations?: Operation[];
+        }>
+    ) {
+        if (!this.storage.addDocumentOperationsWithTransaction) {
+            const documentStorage = await this.storage.getDocument(drive, id);
+            const result = await callback(documentStorage);
+            // saves the applied operations to storage
+            if (
+                result.operations.length > 0 ||
+                (result.updatedOperations &&
+                    result.updatedOperations.length > 0)
+            ) {
+                await this.storage.addDocumentOperations(
+                    drive,
+                    id,
+                    result.operations,
+                    result.header,
+                    result.updatedOperations
+                );
+            }
+        } else {
+            await this.storage.addDocumentOperationsWithTransaction(
+                drive,
+                id,
+                callback
+            );
+        }
+    }
 
+    async addOperations(drive: string, id: string, operations: Operation[]) {
         let document: Document | undefined;
         const operationsApplied: Operation[] = [];
         const updatedOperations: Operation[] = [];
@@ -784,36 +812,29 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         let error: Error | undefined;
 
         try {
-            // retrieves the document's document model and
-            // applies the operations using its reducer
-            const result = await this._processOperations(
-                drive,
-                documentStorage,
-                operations
-            );
-
-            document = result.document;
-
-            operationsApplied.push(...result.operationsApplied);
-            updatedOperations.push(...result.operationsUpdated);
-
-            signals.push(...result.signals);
-            error = result.error;
-
-            if (!document) {
-                throw error ?? new Error('Invalid document');
-            }
-
-            // saves the applied operations to storage
-            if (operationsApplied.length > 0 || updatedOperations.length > 0) {
-                await this.storage.addDocumentOperations(
+            await this._addOperations(drive, id, async documentStorage => {
+                const result = await this._processOperations(
                     drive,
-                    id,
-                    operationsApplied,
-                    document,
-                    updatedOperations
+                    documentStorage,
+                    operations
                 );
-            }
+
+                if (!result.document) {
+                    throw result.error ?? new Error('Invalid document');
+                }
+
+                document = result.document;
+                error = result.error;
+                signals.push(...result.signals);
+                operationsApplied.push(...result.operationsApplied);
+                updatedOperations.push(...result.operationsUpdated);
+
+                return {
+                    operations: result.operationsApplied,
+                    header: result.document,
+                    updatedOperations: result.operationsUpdated
+                };
+            });
 
             // gets all the different scopes and branches combinations from the operations
             const { scopes, branches } = [
@@ -908,13 +929,38 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         await this.storage.clearStorage?.();
     }
 
+    private async _addDriveOperations(
+        drive: string,
+        callback: (document: DocumentDriveStorage) => Promise<{
+            operations: Operation<DocumentDriveAction | BaseAction>[];
+            header: DocumentHeader;
+            updatedOperations?: Operation[];
+        }>
+    ) {
+        if (!this.storage.addDriveOperationsWithTransaction) {
+            const documentStorage = await this.storage.getDrive(drive);
+            const result = await callback(documentStorage);
+            // saves the applied operations to storage
+            if (result.operations.length > 0) {
+                await this.storage.addDriveOperations(
+                    drive,
+                    result.operations,
+                    result.header
+                );
+            }
+            return result;
+        } else {
+            return this.storage.addDriveOperationsWithTransaction(
+                drive,
+                callback
+            );
+        }
+    }
+
     async addDriveOperations(
         drive: string,
         operations: Operation<DocumentDriveAction | BaseAction>[]
     ) {
-        // retrieves document from storage
-        const documentStorage = await this.storage.getDrive(drive);
-
         let document: DocumentDriveDocument | undefined;
         const operationsApplied: Operation<DocumentDriveAction | BaseAction>[] =
             [];
@@ -922,27 +968,26 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         let error: Error | undefined;
 
         try {
-            const result = await this._processOperations<
-                DocumentDriveDocument,
-                DocumentDriveAction
-            >(drive, documentStorage, operations.slice());
+            await this._addDriveOperations(drive, async documentStorage => {
+                const result = await this._processOperations<
+                    DocumentDriveDocument,
+                    DocumentDriveAction
+                >(drive, documentStorage, operations.slice());
 
-            document = result.document;
-            operationsApplied.push(...result.operationsApplied);
-            signals.push(...result.signals);
-            error = result.error;
+                document = result.document;
+                operationsApplied.push(...result.operationsApplied);
+                signals.push(...result.signals);
+                error = result.error;
+
+                return {
+                    operations: result.operationsApplied,
+                    header: result.document,
+                    updatedOperations: result.operationsUpdated
+                };
+            });
 
             if (!document || !isDocumentDrive(document)) {
                 throw error ?? new Error('Invalid Document Drive document');
-            }
-
-            // saves the applied operations to storage
-            if (operationsApplied.length > 0) {
-                await this.storage.addDriveOperations(
-                    drive,
-                    operationsApplied,
-                    document
-                );
             }
 
             for (const operation of operationsApplied) {

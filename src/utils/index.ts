@@ -10,7 +10,7 @@ import {
     DocumentOperations,
     Operation
 } from 'document-model/document';
-import { OperationError } from '../server/error';
+import { ConflictOperationError } from '../server/error';
 
 export function isDocumentDrive(
     document: Document
@@ -25,21 +25,19 @@ export function mergeOperations<A extends Action = Action>(
     currentOperations: DocumentOperations<A>,
     newOperations: Operation<A | BaseAction>[]
 ): DocumentOperations<A> {
-    const conflictOp = newOperations.find(op =>
-        currentOperations[op.scope].find(
+    let existingOperation: Operation<A | BaseAction> | null = null;
+    const conflictOp = newOperations.find(op => {
+        const result = currentOperations[op.scope].find(
             o => o.index === op.index && o.scope === op.scope
-        )
-    );
+        );
+        if (result) {
+            existingOperation = result;
+            return true;
+        }
+    });
     if (conflictOp) {
-        const existingOperation = currentOperations[conflictOp.scope].find(
-            o => o.index === conflictOp.index && o.scope === conflictOp.scope
-        );
-        throw new OperationError(
-            'CONFLICT',
-            conflictOp,
-            `Conflicting operation on index ${conflictOp.index}`,
-            { existingOperation, newOperation: conflictOp }
-        );
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        throw new ConflictOperationError(existingOperation!, conflictOp);
     }
 
     return newOperations.reduce((acc, curr) => {
