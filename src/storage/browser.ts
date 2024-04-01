@@ -79,9 +79,8 @@ export class BrowserStorage implements IDriveStorage {
             updatedOperations
         );
 
-        await (
-            await this.db
-        ).setItem(this.buildKey(drive, id), {
+        const db = await this.db;
+        await db.setItem(this.buildKey(drive, id), {
             ...document,
             ...header,
             operations: mergedUpdatedOperations
@@ -89,7 +88,8 @@ export class BrowserStorage implements IDriveStorage {
     }
 
     async getDrives() {
-        const keys = (await (await this.db).keys()) ?? [];
+        const db = await this.db;
+        const keys = (await db.keys()) ?? [];
         return keys
             .filter(key => key.startsWith(BrowserStorage.DRIVES_KEY))
             .map(key =>
@@ -131,8 +131,9 @@ export class BrowserStorage implements IDriveStorage {
     ): Promise<void> {
         const drive = await this.getDrive(id);
         const mergedOperations = mergeOperations(drive.operations, operations);
+        const db = await this.db;
 
-        (await this.db).setItem(this.buildKey(BrowserStorage.DRIVES_KEY, id), {
+        await db.setItem(this.buildKey(BrowserStorage.DRIVES_KEY, id), {
             ...drive,
             ...header,
             operations: mergedOperations

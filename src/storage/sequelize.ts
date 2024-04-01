@@ -39,27 +39,32 @@ export class SequelizeStorage implements IDriveStorage {
         const Operation = this.db.define('operation', {
             driveId: {
                 type: DataTypes.STRING,
-                primaryKey: true
+                primaryKey: true,
+                unique: 'unique_operation'
             },
             documentId: {
                 type: DataTypes.STRING,
-                primaryKey: true
+                primaryKey: true,
+                unique: 'unique_operation'
             },
             hash: DataTypes.STRING,
             index: {
                 type: DataTypes.INTEGER,
-                primaryKey: true
+                primaryKey: true,
+                unique: 'unique_operation'
             },
             input: DataTypes.JSON,
             timestamp: DataTypes.DATE,
             type: DataTypes.STRING,
             scope: {
                 type: DataTypes.STRING,
-                primaryKey: true
+                primaryKey: true,
+                unique: 'unique_operation'
             },
             branch: {
                 type: DataTypes.STRING,
-                primaryKey: true
+                primaryKey: true,
+                unique: 'unique_operation'
             }
         });
 

@@ -10,6 +10,7 @@ import {
     DocumentOperations,
     Operation
 } from 'document-model/document';
+import { OperationError } from '../server/error';
 
 export function isDocumentDrive(
     document: Document
@@ -24,9 +25,28 @@ export function mergeOperations<A extends Action = Action>(
     currentOperations: DocumentOperations<A>,
     newOperations: Operation<A | BaseAction>[]
 ): DocumentOperations<A> {
+    const conflictOp = newOperations.find(op =>
+        currentOperations[op.scope].find(
+            o => o.index === op.index && o.scope === op.scope
+        )
+    );
+    if (conflictOp) {
+        const existingOperation = currentOperations[conflictOp.scope].find(
+            o => o.index === conflictOp.index && o.scope === conflictOp.scope
+        );
+        throw new OperationError(
+            'CONFLICT',
+            conflictOp,
+            `Conflicting operation on index ${conflictOp.index}`,
+            { existingOperation, newOperation: conflictOp }
+        );
+    }
+
     return newOperations.reduce((acc, curr) => {
         const operations = acc[curr.scope] ?? [];
-        acc[curr.scope] = [...operations, curr] as Operation<A>[];
+        acc[curr.scope] = [...operations, curr].sort(
+            (a, b) => a.index - b.index
+        ) as Operation<A>[];
         return acc;
     }, currentOperations);
 }
