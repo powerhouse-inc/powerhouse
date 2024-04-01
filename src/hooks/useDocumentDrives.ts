@@ -59,7 +59,16 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
     }
 
     const serverSubscribeUpdates = useCallback(() => {
-        const unsub1 = server.on('syncStatus', () => refreshDocumentDrives());
+        const unsub1 = server.on(
+            'syncStatus',
+            async (_event, _status, error) => {
+                if (error) {
+                    console.error(error);
+                }
+
+                await refreshDocumentDrives();
+            },
+        );
         const unsub2 = server.on('strandUpdate', () => refreshDocumentDrives());
         return () => {
             unsub1();
