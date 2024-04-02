@@ -103,20 +103,6 @@ export function generateNodesCopy(
     return copyNodesInput;
 }
 
-export function getLatestSyncId(state: DocumentDriveState) {
-    return state.nodes
-        .reduce((maxId, node) => {
-            if (!isFileNode(node)) {
-                return maxId;
-            }
-            let maxIdInt = maxId;
-            for (const unit of node.synchronizationUnits) {
-                const syncId = BigInt(unit.syncId);
-                if (syncId > maxIdInt) {
-                    maxIdInt = syncId;
-                }
-            }
-            return maxIdInt;
-        }, BigInt(0))
-        .toString();
+export function generateSyncId() {
+    return crypto.randomUUID();
 }
