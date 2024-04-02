@@ -1,3 +1,11 @@
+# [1.0.0-alpha.25](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2024-04-02)
+
+
+### Features
+
+* update updatedOperations instead of create ([f87691d](https://github.com/powerhouse-inc/document-drive/commit/f87691dadee45b08f357f5b9df7374bbf7dd39f1))
+* use prisma transaction ([4a02fb8](https://github.com/powerhouse-inc/document-drive/commit/4a02fb8c7d2b93253c4cd7104318772e3b199b61))
+
 # [1.0.0-alpha.24](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.23...v1.0.0-alpha.24) (2024-04-01)
 
 
