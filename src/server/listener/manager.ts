@@ -1,5 +1,5 @@
 import {
-    ListenerCallInfo,
+    DocumentDriveDocument,
     ListenerFilter
 } from 'document-model-libs/document-drive';
 import { OperationScope } from 'document-model/document';
@@ -372,33 +372,28 @@ export class ListenerManager extends BaseListenerManager {
         return false;
     }
 
-    async init() {
-        const drives = await this.drive.getDrives();
-        for (const driveId of drives) {
-            const drive = await this.drive.getDrive(driveId);
-            const {
-                state: {
-                    local: { listeners }
-                }
-            } = drive;
-
-            for (const listener of listeners) {
-                this.addListener({
-                    block: listener.block,
-                    driveId,
-                    filter: {
-                        branch: listener.filter.branch ?? [],
-                        documentId: listener.filter.documentId ?? [],
-                        documentType: listener.filter.documentType,
-                        scope: listener.filter.scope ?? []
-                    },
-                    listenerId: listener.listenerId,
-                    system: listener.system,
-                    callInfo:
-                        (listener.callInfo as ListenerCallInfo) ?? undefined,
-                    label: listener.label ?? ''
-                });
+    async initDrive(drive: DocumentDriveDocument) {
+        const {
+            state: {
+                local: { listeners }
             }
+        } = drive;
+
+        for (const listener of listeners) {
+            await this.addListener({
+                block: listener.block,
+                driveId: drive.state.global.id,
+                filter: {
+                    branch: listener.filter.branch ?? [],
+                    documentId: listener.filter.documentId ?? [],
+                    documentType: listener.filter.documentType,
+                    scope: listener.filter.scope ?? []
+                },
+                listenerId: listener.listenerId,
+                system: listener.system,
+                callInfo: listener.callInfo ?? undefined,
+                label: listener.label ?? ''
+            });
         }
     }
 

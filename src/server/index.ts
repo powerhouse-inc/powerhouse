@@ -209,7 +209,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     async initialize() {
-        await this.listenerStateManager.init();
         const drives = await this.getDrives();
         for (const drive of drives) {
             await this._initializeDrive(drive);
@@ -223,22 +222,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             await this.startSyncRemoteDrive(driveId);
         }
 
-        for (const listener of drive.state.local.listeners) {
-            await this.listenerStateManager.addListener({
-                driveId,
-                block: listener.block,
-                filter: {
-                    branch: listener.filter.branch ?? [],
-                    documentId: listener.filter.documentId ?? [],
-                    documentType: listener.filter.documentType ?? [],
-                    scope: listener.filter.scope ?? []
-                },
-                listenerId: listener.listenerId,
-                system: listener.system,
-                callInfo: listener.callInfo ?? undefined,
-                label: listener.label ?? ''
-            });
-        }
+        await this.listenerStateManager.initDrive(drive);
     }
 
     public async getSynchronizationUnits(

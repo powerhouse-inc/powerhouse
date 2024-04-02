@@ -267,7 +267,7 @@ export abstract class BaseListenerManager {
         this.listenerState = listenerState;
     }
 
-    abstract init(): Promise<void>;
+    abstract initDrive(drive: DocumentDriveDocument): Promise<void>;
 
     abstract addListener(listener: Listener): Promise<ITransmitter>;
     abstract removeListener(
