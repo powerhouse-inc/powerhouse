@@ -7,7 +7,8 @@ import {
     useItemsContext,
     usePathContent,
 } from '@powerhousedao/design-system';
-import { useEffect, useRef } from 'react';
+import { DocumentDriveDocument } from 'document-model-libs/document-drive';
+import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
@@ -20,7 +21,7 @@ import { useNavigateToItemId } from './useNavigateToItemId';
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
     const { setBaseItems, items } = useItemsContext();
-    const { documentDrives } = useDocumentDriveServer();
+    const { documentDrives, onSyncStatus } = useDocumentDriveServer();
     const [selectedPath] = useSelectedPath();
     const actions = useItemActions();
     const { driveToBaseItems } = useDrivesContainer();
@@ -73,10 +74,8 @@ export const useLoadInitialData = () => {
         prevDrivesState.current = [...drives];
     }, [drives]);
 
-    useEffect(() => {
-        updateBaseItems().catch(console.error);
-
-        async function updateBaseItems() {
+    const updateBaseItems = useCallback(
+        async (documentDrives: DocumentDriveDocument[]) => {
             const baseItems: Array<BaseTreeItem> =
                 documentDrives.length > 0
                     ? (
@@ -87,8 +86,18 @@ export const useLoadInitialData = () => {
                     : [];
 
             setBaseItems(baseItems);
-        }
-    }, [documentDrives]);
+        },
+        [documentDrives],
+    );
+
+    useEffect(() => {
+        updateBaseItems(documentDrives).catch(console.error);
+    }, [documentDrives, updateBaseItems]);
+
+    useEffect(() => {
+        const unsub = onSyncStatus(() => updateBaseItems(documentDrives));
+        return unsub;
+    }, [documentDrives, onSyncStatus, updateBaseItems]);
 
     // Auto select first drive if there is no selected path
     useEffect(() => {

@@ -14,10 +14,18 @@ const readWriteDocumentDrivesAtom = (server: IDocumentDriveServer) => () =>
     atom(
         get => get(documentDrivesAtom).get(server) ?? [],
         (_get, set, newDrives: DocumentDriveDocument[]) => {
-            set(documentDrivesAtom, map => new Map(map).set(server, newDrives));
+            set(documentDrivesAtom, map => {
+                const currentDrives = map.get(server) ?? [];
+                if (
+                    JSON.stringify(currentDrives) !== JSON.stringify(newDrives)
+                ) {
+                    return new Map(map).set(server, newDrives);
+                } else {
+                    return map;
+                }
+            });
         },
     );
-
 // keeps track of document drives that have been initialized
 export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
     atom(false),
@@ -37,15 +45,13 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
             const drives = await Promise.all(
                 driveIds.map(id => server.getDrive(id)),
             );
-            if (JSON.stringify(documentDrives) !== JSON.stringify(drives)) {
-                setDocumentDrives(drives);
-            }
-            return drives;
+
+            setDocumentDrives(drives);
         } catch (error) {
             console.error(error);
             setDocumentDrives([]);
         }
-    }, [server, documentDrives]);
+    }, [server]);
 
     // if the server has not been initialized then
     // fetches the drives for the first time
@@ -65,7 +71,6 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
                 if (error) {
                     console.error(error);
                 }
-
                 await refreshDocumentDrives();
             },
         );
