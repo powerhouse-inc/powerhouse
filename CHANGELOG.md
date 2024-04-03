@@ -1,3 +1,10 @@
+# [1.0.0-alpha.86](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.85...v1.0.0-alpha.86) (2024-04-03)
+
+
+### Features
+
+* implement teep's feedback 2 ([#259](https://github.com/powerhouse-inc/design-system/issues/259)) ([f1f9064](https://github.com/powerhouse-inc/design-system/commit/f1f90640b29784bfbd4e7a7658a4d519d5648b09))
+
 # [1.0.0-alpha.85](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.84...v1.0.0-alpha.85) (2024-03-28)
 
 
