@@ -1,5 +1,10 @@
-import { v4 as uuid } from 'uuid';
-import { CopyNodeInput, FileNode, FolderNode, Node } from '..';
+import {
+    CopyNodeInput,
+    DocumentDriveState,
+    FileNode,
+    FolderNode,
+    Node,
+} from '..';
 
 export function isFileNode(node: Node): node is FileNode {
     return node.kind === 'file';
@@ -99,5 +104,5 @@ export function generateNodesCopy(
 }
 
 export function generateSyncId() {
-    return uuid();
+    return crypto.randomUUID();
 }
