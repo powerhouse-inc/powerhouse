@@ -1,3 +1,11 @@
+## [1.18.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.18.0...v1.18.1) (2024-04-03)
+
+
+### Reverts
+
+* Revert "feat: use uuid instead of incrementing sync id on document drive" ([49a7bd8](https://github.com/powerhouse-inc/document-model-libs/commit/49a7bd8d2b5597ff08c1e050186984df87c70ddd))
+* Revert "feat: use uuid to generate sync id" ([d55e309](https://github.com/powerhouse-inc/document-model-libs/commit/d55e30926a105d5d21b7296ba6620e1f47304eab))
+
 # [1.18.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.17.1...v1.18.0) (2024-04-03)
 
 
