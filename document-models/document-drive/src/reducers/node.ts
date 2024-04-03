@@ -9,10 +9,9 @@ import {
     CreateChildDocumentInput,
     SynchronizationUnit,
 } from 'document-model/document';
-import { FileNode, generateSyncId, getDescendants, isFileNode } from '../..';
+import { FileNode, getDescendants, getLatestSyncId, isFileNode } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
 import { z } from 'document-model/document-model';
-import { generate } from '@powerhousedao/codegen';
 
 export const reducer: DocumentDriveNodeOperations = {
     addFileOperation(state, action, dispatch) {
@@ -28,8 +27,9 @@ export const reducer: DocumentDriveNodeOperations = {
         }
         const scopes = action.input.scopes as OperationScope[];
 
-        const synchronizationUnits = scopes.map(scope => ({
-            syncId: generateSyncId(),
+        const latestSyncId = BigInt(getLatestSyncId(state));
+        const synchronizationUnits = scopes.map((scope, index) => ({
+            syncId: (latestSyncId + BigInt(1 + index)).toString(),
             scope,
             branch: 'main',
         }));
@@ -135,8 +135,9 @@ export const reducer: DocumentDriveNodeOperations = {
         const isFile = isFileNode(newNode);
 
         if (isFile) {
-            const synchronizationUnits = newNode.scopes.map(scope => ({
-                syncId: generateSyncId(),
+            const latestSyncId = BigInt(getLatestSyncId(state));
+            const synchronizationUnits = newNode.scopes.map((scope, index) => ({
+                syncId: (latestSyncId + BigInt(1 + index)).toString(),
                 scope: scope,
                 branch: 'main',
             }));

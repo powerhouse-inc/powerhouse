@@ -1,4 +1,4 @@
-import { CreateChildDocumentSignal, Signal } from 'document-model/document';
+import { Signal } from 'document-model/document';
 import {
     DocumentDrive,
     DocumentDriveDocument,
@@ -7,7 +7,6 @@ import {
     reducer,
     utils,
 } from '../..';
-import { expectUUID } from './test-utils';
 
 describe('DocumentDrive Class', () => {
     it('should rename drive', () => {
@@ -72,12 +71,12 @@ describe('DocumentDrive Class', () => {
                 scopes: ['global', 'local'],
                 synchronizationUnits: [
                     {
-                        syncId: expectUUID,
+                        syncId: '1',
                         scope: 'global',
                         branch: 'main',
                     },
                     {
-                        syncId: expectUUID,
+                        syncId: '2',
                         scope: 'local',
                         branch: 'main',
                     },
@@ -122,12 +121,12 @@ describe('DocumentDrive Class', () => {
             scopes: ['global', 'local'],
             synchronizationUnits: [
                 {
-                    syncId: expectUUID,
+                    syncId: '9007199254740992',
                     scope: 'global',
                     branch: 'main',
                 },
                 {
-                    syncId: expectUUID,
+                    syncId: '9007199254740993',
                     scope: 'local',
                     branch: 'main',
                 },
@@ -149,9 +148,7 @@ describe('DocumentDrive Class', () => {
         });
 
         expect(spy).toHaveBeenCalledOnce();
-        const result =
-            spy.mock.lastCall!.shift() as unknown as CreateChildDocumentSignal;
-        expect(result).toStrictEqual({
+        expect(spy.mock.lastCall!.shift()).toStrictEqual({
             type: 'CREATE_CHILD_DOCUMENT',
             input: {
                 id: '1',
@@ -161,19 +158,16 @@ describe('DocumentDrive Class', () => {
                     {
                         branch: 'main',
                         scope: 'global',
-                        syncId: expectUUID,
+                        syncId: '1',
                     },
                     {
                         branch: 'main',
                         scope: 'local',
-                        syncId: expectUUID,
+                        syncId: '2',
                     },
                 ],
             },
         });
-        expect(result.input.synchronizationUnits[0].syncId).not.toEqual(
-            result.input.synchronizationUnits[1].syncId,
-        );
     });
 
     it('should set local sharing type', () => {
