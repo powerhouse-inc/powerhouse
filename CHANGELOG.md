@@ -1,3 +1,11 @@
+# [1.18.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.17.1...v1.18.0) (2024-04-03)
+
+
+### Features
+
+* use uuid instead of incrementing sync id on document drive ([b77f2fe](https://github.com/powerhouse-inc/document-model-libs/commit/b77f2fe5d0fcdac7f923f331598719af27544caf))
+* use uuid to generate sync id ([b322b0c](https://github.com/powerhouse-inc/document-model-libs/commit/b322b0c08c32f74a377d18394f5e2077474ecfcf))
+
 # [1.16.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.15.0...v1.16.0) (2024-03-29)
 
 
