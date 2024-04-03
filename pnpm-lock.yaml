@@ -6,8 +6,13 @@ settings:
 
 dependencies:
   document-model-libs:
+<<<<<<< HEAD
     specifier: ^1.17.2
     version: 1.17.2(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.4.0)
+=======
+    specifier: ^1.18.1
+    version: 1.18.1(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.4.0)
+>>>>>>> cd77496 (feat: updated document-model-libs dep)
   graphql:
     specifier: ^16.8.1
     version: 16.8.1
@@ -4602,8 +4607,13 @@ packages:
       esutils: 2.0.3
     dev: true
 
+<<<<<<< HEAD
   /document-model-libs@1.17.2(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.4.0):
     resolution: {integrity: sha512-OdPIG7ji+kX3rgjIKusRobWlCemRFHE1IjOU2+tRNwBKymT5NjrtSxIrOLUoCCbyE3ANwKNt2qgGXy1vPsulzw==}
+=======
+  /document-model-libs@1.18.1(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.4.0):
+    resolution: {integrity: sha512-q/i0+rL2N44bkCF0rLXdbZtjEwtXzpdTa9XYc7TVpENcQ7gT8Tp6e7JJU/cyleGoPxKsLgHakdKCQ5QIxwWd+Q==}
+>>>>>>> cd77496 (feat: updated document-model-libs dep)
     peerDependencies:
       react: ^18.2.0
       react-dom: ^18.2.0
