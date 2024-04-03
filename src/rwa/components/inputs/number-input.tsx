@@ -42,9 +42,10 @@ export function RWANumberInput<ControlInputs extends FieldValues>(
             name={name}
             control={control}
             rules={{ required: requiredErrorMessage ?? props.required }}
-            render={({ field: { onChange, value } }) => (
+            render={({ field: { onChange, value, ref } }) => (
                 <NumericFormat
                     {...inputProps}
+                    getInputRef={ref}
                     prefix={prefix}
                     allowNegative={allowNegative}
                     decimalScale={decimalScale}

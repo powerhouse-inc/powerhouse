@@ -28,10 +28,10 @@ type ServiceProviderFeeTypesTableProps = ComponentPropsWithoutRef<
     typeof ServiceProviderFeeTypesTable
 >;
 
-export const Primary: Story = {
+export const Empty: Story = {
     args: {
-        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
-        accounts: mockAccounts,
+        serviceProviderFeeTypes: [],
+        accounts: [],
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -107,5 +107,13 @@ export const Primary: Story = {
                     ))}
             </div>
         );
+    },
+};
+
+export const WithData: Story = {
+    ...Empty,
+    args: {
+        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+        accounts: mockAccounts,
     },
 };

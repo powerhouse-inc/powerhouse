@@ -9,6 +9,11 @@ import { useMemo } from 'react';
 
 const columns = [
     { key: 'name' as const, label: 'Name', allowSorting: true },
+    {
+        key: 'purchaseDate' as const,
+        label: 'Purchase Date',
+        allowSorting: true,
+    },
     { key: 'maturity' as const, label: 'Maturity', allowSorting: true },
     {
         key: 'notional' as const,
@@ -21,17 +26,6 @@ const columns = [
         label: 'Purchase Price',
         allowSorting: true,
         isNumberColumn: true,
-    },
-    {
-        key: 'realizedSurplus' as const,
-        label: 'Realized Surplus',
-        allowSorting: true,
-        isNumberColumn: true,
-    },
-    {
-        key: 'purchaseDate' as const,
-        label: 'Purchase Date',
-        allowSorting: true,
     },
     {
         key: 'totalDiscount' as const,
@@ -52,8 +46,8 @@ const columns = [
         isNumberColumn: true,
     },
     {
-        key: 'coupon' as const,
-        label: 'Coupon',
+        key: 'realizedSurplus' as const,
+        label: 'Realized Surplus',
         allowSorting: true,
         isNumberColumn: true,
     },

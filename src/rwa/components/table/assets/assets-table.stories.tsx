@@ -1,4 +1,4 @@
-import { FixedIncome } from '@/rwa';
+import { defaultColumnCountByTableWidth, FixedIncome } from '@/rwa';
 import type { Meta, StoryObj } from '@storybook/react';
 import { utils } from 'document-model/document';
 import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
@@ -16,19 +16,11 @@ const meta: Meta<typeof AssetsTable> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const columnCountByTableWidth = {
-    1520: 12,
-    1394: 11,
-    1239: 10,
-    1112: 9,
-    984: 8,
-};
-
 type FixedIncomesTableProps = ComponentPropsWithoutRef<typeof AssetsTable>;
 
 function createAssetFromFormInputs(data: AssetFormInputs) {
     const id = utils.hashKey();
-    const maturity = data.maturity.toString();
+    const maturity = data.maturity?.toString() ?? null;
 
     return {
         ...data,
@@ -37,11 +29,11 @@ function createAssetFromFormInputs(data: AssetFormInputs) {
     };
 }
 
-export const Primary: Story = {
+export const Empty: Story = {
     args: {
-        assets: mockFixedIncomes,
-        fixedIncomeTypes: mockFixedIncomeTypes,
-        spvs: mockSPVs,
+        assets: [],
+        fixedIncomeTypes: [],
+        spvs: [],
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -86,7 +78,7 @@ export const Primary: Story = {
                     <p>parent element width: 100%</p>
                     <AssetsTable {...argsWithHandlers} />
                 </div>
-                {Object.keys(columnCountByTableWidth)
+                {Object.keys(defaultColumnCountByTableWidth)
                     .map(Number)
                     .map(width => width + 50)
                     .map(width => (
@@ -94,12 +86,24 @@ export const Primary: Story = {
                             <p>parent element width: {width}px</p>
                             <p>
                                 column count:{' '}
-                                {getColumnCount(width, columnCountByTableWidth)}
+                                {getColumnCount(
+                                    width,
+                                    defaultColumnCountByTableWidth,
+                                )}
                             </p>
                             <AssetsTable {...argsWithHandlers} />
                         </div>
                     ))}
             </div>
         );
+    },
+};
+
+export const WithData: Story = {
+    ...Empty,
+    args: {
+        assets: mockFixedIncomes,
+        fixedIncomeTypes: mockFixedIncomeTypes,
+        spvs: mockSPVs,
     },
 };

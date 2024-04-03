@@ -8,7 +8,6 @@ import {
     GroupTransactionType,
     SPV,
     ServiceProviderFeeType,
-    TransactionFee,
 } from '@/rwa';
 import { ComponentType, ReactNode } from 'react';
 import { FieldValues, SubmitHandler, UseFormReturn } from 'react-hook-form';
@@ -84,7 +83,7 @@ export type GroupTransactionsTableProps = Pick<
     PropsToKeepFromTable
 > & {
     transactions: GroupTransaction[];
-    cashAssets: CashAsset[];
+    cashAsset: CashAsset | undefined;
     fixedIncomes: FixedIncome[];
     serviceProviderFeeTypes: ServiceProviderFeeType[];
     principalLenderAccountId: string;
@@ -206,40 +205,45 @@ export type FixedIncomeTypeDetailsProps = Pick<
 };
 
 export type ServiceProviderFeeTypeFormInputs = {
-    name: string;
-    feeType: string;
-    accountId: string;
+    name?: string | null;
+    feeType?: string | null;
+    accountId?: string | null;
 };
 
 export type AssetFormInputs = {
-    fixedIncomeTypeId: string;
-    spvId: string;
-    maturity: string;
-    name: string;
-    ISIN?: string;
-    CUSIP?: string;
-    coupon?: number;
+    fixedIncomeTypeId?: string | null;
+    spvId?: string | null;
+    maturity?: string;
+    name?: string | null;
+    ISIN?: string | null;
+    CUSIP?: string | null;
+    coupon?: number | null;
+};
+
+export type TransactionFeeInput = {
+    amount?: number | null;
+    serviceProviderFeeTypeId?: string | null;
 };
 
 export type GroupTransactionFormInputs = {
-    type: GroupTransactionType;
-    entryTime: string;
-    cashAmount: number;
-    fixedIncomeId: string;
-    fixedIncomeAmount: number;
-    fees: TransactionFee[];
-    cashBalanceChange: number;
+    type?: GroupTransactionType;
+    entryTime?: string;
+    fixedIncomeId?: string | null;
+    fees?: TransactionFeeInput[] | null;
+    cashAmount?: number | null;
+    fixedIncomeAmount?: number | null;
+    cashBalanceChange?: number | null;
 };
 
 export type AccountFormInputs = {
-    label: string;
-    reference: string;
+    label?: string | null;
+    reference?: string | null;
 };
 
 export type SPVFormInputs = {
-    name: string;
+    name?: string | null;
 };
 
 export type FixedIncomeTypeFormInputs = {
-    name: string;
+    name?: string | null;
 };

@@ -28,9 +28,9 @@ type FixedIncomeTypesTableProps = ComponentPropsWithoutRef<
     typeof FixedIncomeTypesTable
 >;
 
-export const Primary: Story = {
+export const Empty: Story = {
     args: {
-        fixedIncomeTypes: mockFixedIncomeTypes,
+        fixedIncomeTypes: [],
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -101,5 +101,12 @@ export const Primary: Story = {
                     ))}
             </div>
         );
+    },
+};
+
+export const WithData: Story = {
+    ...Empty,
+    args: {
+        fixedIncomeTypes: mockFixedIncomeTypes,
     },
 };

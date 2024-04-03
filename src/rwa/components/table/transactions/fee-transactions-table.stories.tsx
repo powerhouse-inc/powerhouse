@@ -1,12 +1,8 @@
-import { Icon } from '@/powerhouse';
 import { ServiceProviderFeeType } from '@/rwa';
-import {
-    mockGroupTransactions,
-    mockServiceProviderFeeTypes,
-} from '@/rwa/mocks';
+import { mockServiceProviderFeeTypes } from '@/rwa/mocks';
 import { Meta, StoryObj } from '@storybook/react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { GroupTransactionFormInputs } from '../types';
+import { GroupTransactionFormInputs, TransactionFeeInput } from '../types';
 import { FeeTransactionsTable } from './fee-transactions-table';
 
 const meta = {
@@ -19,57 +15,56 @@ export default meta;
 type Story = StoryObj<{
     serviceProviderFeeTypes: ServiceProviderFeeType[];
     isViewOnly: boolean;
+    feeInputs: TransactionFeeInput[];
 }>;
 
-export const Primary: Story = {
+export const Empty: Story = {
     args: {
-        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+        serviceProviderFeeTypes: [],
         isViewOnly: false,
+        feeInputs: [],
     },
     render: function Wrapper(args) {
-        const transaction = mockGroupTransactions[0];
-
         const {
             control,
             register,
             watch,
             formState: { errors },
-        } = useForm<GroupTransactionFormInputs>({
-            defaultValues: {
-                fees: transaction.fees,
-            },
-        });
+        } = useForm<GroupTransactionFormInputs>();
 
         const { fields, append, remove } = useFieldArray({
             control,
             name: 'fees',
         });
         return (
-            <>
-                <FeeTransactionsTable
-                    {...args}
-                    feeInputs={fields}
-                    register={register}
-                    control={control}
-                    watch={watch}
-                    append={append}
-                    remove={remove}
-                    errors={errors}
-                />
-                <button
-                    onClick={() =>
-                        append({
-                            amount: 0,
-                            serviceProviderFeeTypeId:
-                                args.serviceProviderFeeTypes[0].id,
-                        })
-                    }
-                    className="flex w-full items-center justify-center gap-x-2 rounded-lg bg-white p-2 text-sm font-semibold text-gray-900"
-                >
-                    <span>Add Fee</span>
-                    <Icon name="plus" size={14} />
-                </button>
-            </>
+            <FeeTransactionsTable
+                {...args}
+                feeInputs={fields}
+                register={register}
+                control={control}
+                watch={watch}
+                append={append}
+                remove={remove}
+                errors={errors}
+            />
         );
+    },
+};
+
+export const WithData: Story = {
+    ...Empty,
+    args: {
+        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+        isViewOnly: false,
+        feeInputs: [
+            {
+                amount: 1000,
+                serviceProviderFeeTypeId: mockServiceProviderFeeTypes[0].id,
+            },
+            {
+                amount: 2000,
+                serviceProviderFeeTypeId: mockServiceProviderFeeTypes[1].id,
+            },
+        ],
     },
 };

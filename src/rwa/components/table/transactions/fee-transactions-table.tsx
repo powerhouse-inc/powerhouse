@@ -9,7 +9,6 @@ import {
     Control,
     FieldArrayWithId,
     FieldErrors,
-    FieldValues,
     Path,
     UseFieldArrayAppend,
     UseFieldArrayRemove,
@@ -18,11 +17,11 @@ import {
 } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
 
-type Props<ControlInputs extends FieldValues> = {
+type Props = {
     feeInputs: FieldArrayWithId<GroupTransactionFormInputs, 'fees'>[];
     serviceProviderFeeTypes: ServiceProviderFeeType[];
     register: UseFormRegister<GroupTransactionFormInputs>;
-    control: Control<ControlInputs>;
+    control: Control<GroupTransactionFormInputs>;
     watch: UseFormWatch<GroupTransactionFormInputs>;
     append: UseFieldArrayAppend<GroupTransactionFormInputs, 'fees'>;
     remove: UseFieldArrayRemove;
@@ -30,9 +29,7 @@ type Props<ControlInputs extends FieldValues> = {
     isViewOnly: boolean;
 };
 
-export function FeeTransactionsTable<ControlInputs extends FieldValues>(
-    props: Props<ControlInputs>,
-) {
+export function FeeTransactionsTable(props: Props) {
     const headings = ['Fees', 'Service Provider', 'Amount', ''] as const;
 
     const serviceProviderFeeTypeOptions = props.serviceProviderFeeTypes.map(
@@ -97,7 +94,7 @@ export function FeeTransactionsTable<ControlInputs extends FieldValues>(
                                             <RWANumberInput
                                                 required
                                                 name={
-                                                    `fees.${index}.amount` as Path<ControlInputs>
+                                                    `fees.${index}.amount` as Path<GroupTransactionFormInputs>
                                                 }
                                                 control={props.control}
                                                 disabled={props.isViewOnly}
@@ -139,9 +136,9 @@ export function FeeTransactionsTable<ControlInputs extends FieldValues>(
                 <button
                     onClick={() =>
                         props.append({
-                            amount: undefined,
+                            amount: null,
                             serviceProviderFeeTypeId:
-                                props.serviceProviderFeeTypes[0].id,
+                                props.serviceProviderFeeTypes[0]?.id,
                         })
                     }
                     className="flex w-full items-center justify-center gap-x-2 rounded-lg bg-white pb-6 pt-0 text-sm font-semibold  text-gray-900"

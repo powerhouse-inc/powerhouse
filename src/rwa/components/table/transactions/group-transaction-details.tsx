@@ -10,26 +10,32 @@ import {
     RWAFormRow,
     RWANumberInput,
     RWATableSelect,
-    TransactionFee,
+    TransactionFeeInput,
     convertToDateTimeLocalFormat,
     groupTransactionTypeLabels,
     groupTransactionTypes,
 } from '@/rwa';
 import { InputMaybe } from 'document-model/document';
-import { SubmitHandler, useFieldArray, useForm } from 'react-hook-form';
+import {
+    Control,
+    SubmitHandler,
+    useFieldArray,
+    useForm,
+    useWatch,
+} from 'react-hook-form';
 
-function calculateUnitPricePercent(
+function calculateUnitPrice(
     cashAmount: InputMaybe<number>,
     fixedIncomeAmount: InputMaybe<number>,
 ) {
     if (!cashAmount || !fixedIncomeAmount) return 0;
-    return ((cashAmount / fixedIncomeAmount) * 100).toFixed(2);
+    return (cashAmount / fixedIncomeAmount).toFixed(2);
 }
 
 function calculateCashBalanceChange(
     transactionType: InputMaybe<GroupTransactionType>,
     cashAmount: InputMaybe<number>,
-    fees: InputMaybe<TransactionFee[]>,
+    fees: InputMaybe<TransactionFeeInput[]>,
 ) {
     if (!cashAmount || !transactionType) return 0;
 
@@ -40,6 +46,51 @@ function calculateCashBalanceChange(
     const totalFees = feeAmounts.reduce((acc, fee) => acc + fee, 0);
 
     return cashAmount * operation - totalFees;
+}
+
+function CashBalanceChange(props: {
+    control: Control<GroupTransactionFormInputs>;
+}) {
+    const { control } = props;
+    const cashAmount = useWatch({ control, name: 'cashAmount' });
+    const type = useWatch({ control, name: 'type' });
+    const fees = useWatch({ control, name: 'fees' });
+
+    const cashBalanceChange = calculateCashBalanceChange(
+        type,
+        cashAmount,
+        fees,
+    );
+
+    return (
+        <>
+            <div className="flex items-center justify-between border-t border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">
+                <div className="mr-6 text-sm text-gray-600">
+                    Cash Balance Change $USD
+                </div>
+                <div className="h-px flex-1 border-b border-dashed border-gray-400" />
+                <div className="pl-8 text-sm text-gray-900">
+                    <FormattedNumber value={cashBalanceChange} />
+                </div>
+            </div>
+        </>
+    );
+}
+
+function UnitPrice(props: { control: Control<GroupTransactionFormInputs> }) {
+    const { control } = props;
+
+    const cashAmount = useWatch({ control, name: 'cashAmount' });
+    const fixedIncomeAmount = useWatch({ control, name: 'fixedIncomeAmount' });
+
+    const unitPrice = calculateUnitPrice(cashAmount, fixedIncomeAmount);
+
+    return (
+        <div className="my-2 ml-auto mr-6 w-fit text-xs">
+            <span className="mr-2 inline-block text-gray-600">Unit Price</span>{' '}
+            <span className="text-gray-900">{unitPrice}</span>
+        </div>
+    );
 }
 
 export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
@@ -89,42 +140,35 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
         watch,
         formState: { errors },
     } = useForm<GroupTransactionFormInputs>({
+        mode: 'onBlur',
         defaultValues: {
             type: item?.type ?? currentlySupportedGroupTransactionTypes[0],
             entryTime: convertToDateTimeLocalFormat(
                 item?.entryTime ?? new Date(),
             ),
-            cashAmount: item?.cashTransaction?.amount ?? undefined,
-            fixedIncomeId: fixedIncome?.id ?? fixedIncomes[0]?.id,
-            fixedIncomeAmount:
-                item?.fixedIncomeTransaction?.amount ?? undefined,
-            fees: item?.fees ?? undefined,
+            cashAmount: item?.cashTransaction?.amount ?? null,
+            fixedIncomeId:
+                fixedIncome?.id ?? fixedIncomes.length > 0
+                    ? fixedIncomes[0].id
+                    : null,
+            fixedIncomeAmount: item?.fixedIncomeTransaction?.amount ?? null,
+            fees: item?.fees ?? null,
         },
     });
 
     const { fields, append, remove } = useFieldArray({
         control,
-        name: 'fees', // Name of the field array in your form
+        name: 'fees',
     });
-
-    const cashAmount = watch('cashAmount');
-    const fixedIncomeAmount = watch('fixedIncomeAmount');
-    const type = watch('type');
-    const fees = watch('fees');
-    const unitPricePercent = calculateUnitPricePercent(
-        cashAmount,
-        fixedIncomeAmount,
-    );
-    const cashBalanceChange = calculateCashBalanceChange(
-        type,
-        cashAmount,
-        fees,
-    );
 
     const onSubmit: SubmitHandler<GroupTransactionFormInputs> = data => {
         onSubmitForm({
             ...data,
-            cashBalanceChange,
+            cashBalanceChange: calculateCashBalanceChange(
+                data.type,
+                data.cashAmount,
+                data.fees,
+            ),
         });
     };
 
@@ -209,12 +253,7 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
                         />
                     }
                 />
-                <div className="my-2 ml-auto mr-6 w-fit text-xs">
-                    <span className="mr-2 inline-block text-gray-600">
-                        Unit Price
-                    </span>{' '}
-                    <span className="text-gray-900">{unitPricePercent}%</span>
-                </div>
+                <UnitPrice control={control} />
             </div>
             <FeeTransactionsTable
                 register={register}
@@ -227,15 +266,7 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
                 errors={errors}
                 isViewOnly={operation === 'view'}
             />
-            <div className="flex items-center justify-between border-t border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">
-                <div className="mr-6 text-sm text-gray-600">
-                    Cash Balance Change $USD
-                </div>
-                <div className="h-px flex-1 border-b border-dashed border-gray-400" />
-                <div className="pl-8 text-sm text-gray-900">
-                    <FormattedNumber value={cashBalanceChange} />
-                </div>
-            </div>
+            <CashBalanceChange control={control} />
         </>
     );
 

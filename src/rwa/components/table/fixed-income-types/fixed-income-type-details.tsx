@@ -17,7 +17,7 @@ export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
         formState: { errors },
     } = useForm<FixedIncomeTypeFormInputs>({
         defaultValues: {
-            name: item?.name,
+            name: item?.name ?? null,
         },
     });
 
@@ -27,11 +27,6 @@ export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
 
     const formInputs = () => (
         <div>
-            <RWAFormRow
-                label="Fixed Income Type ID"
-                hideLine={operation !== 'view'}
-                value={item?.id}
-            />
             <RWAFormRow
                 label="Fixed Income Type Name"
                 hideLine={operation !== 'view'}

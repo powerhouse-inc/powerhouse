@@ -4,7 +4,6 @@ import {
     AssetFormInputs,
     ItemDetails,
     RWAFormRow,
-    RWANumberInput,
     RWATableSelect,
     RWATableTextInput,
     convertToDateTimeLocalFormat,
@@ -27,34 +26,29 @@ export function AssetDetails(props: AssetDetailsProps) {
         reset,
         formState: { errors },
     } = useForm<AssetFormInputs>({
+        mode: 'onBlur',
         defaultValues: {
-            fixedIncomeTypeId: fixedIncomeType?.id ?? fixedIncomeTypes[0].id,
-            spvId: spv?.id ?? spvs[0].id,
-            name: item?.name,
+            fixedIncomeTypeId:
+                fixedIncomeType?.id ?? fixedIncomeTypes.length > 0
+                    ? fixedIncomeTypes[0].id
+                    : null,
+            spvId: spv?.id ?? spvs.length > 0 ? spvs[0].id : null,
+            name: item?.name ?? null,
             maturity: convertToDateTimeLocalFormat(
                 item?.maturity ?? new Date(),
             ),
-            ISIN: item?.ISIN,
-            CUSIP: item?.CUSIP,
-            coupon: item?.coupon,
+            ISIN: item?.ISIN ?? null,
+            CUSIP: item?.CUSIP ?? null,
+            coupon: item?.coupon ?? null,
         },
     });
 
     const onSubmit: SubmitHandler<AssetFormInputs> = data => {
-        onSubmitForm({
-            ...data,
-            ISIN: data.ISIN?.toString(),
-            CUSIP: data.CUSIP?.toString(),
-        });
+        onSubmitForm(data);
     };
 
     const formInputs = () => (
         <div>
-            <RWAFormRow
-                label="Asset ID"
-                hideLine={operation !== 'view'}
-                value={item?.id}
-            />
             <RWAFormRow
                 label="Asset Name"
                 hideLine={operation !== 'view'}
@@ -64,9 +58,7 @@ export function AssetDetails(props: AssetDetailsProps) {
                             disabled: operation === 'view',
                             required: 'Asset name is required',
                         })}
-                        aria-invalid={
-                            errors.name?.type === 'required' ? 'true' : 'false'
-                        }
+                        aria-invalid={errors.name ? 'true' : 'false'}
                         errorMessage={errors.name?.message}
                         placeholder="E.g. My Asset"
                     />
@@ -76,36 +68,62 @@ export function AssetDetails(props: AssetDetailsProps) {
                 label="CUSIP"
                 hideLine={operation !== 'view'}
                 value={
-                    <RWANumberInput
-                        name="CUSIP"
-                        control={control}
-                        disabled={operation === 'view'}
-                        placeholder="E.g. 123456789"
-                        maxLength={9}
-                        numericFormatProps={{
-                            allowNegative: false,
-                            decimalScale: 0,
-                            thousandSeparator: '',
-                        }}
-                    />
+                    operation === 'view' ? (
+                        item?.CUSIP ?? 'Not available'
+                    ) : (
+                        <RWATableTextInput
+                            {...register('CUSIP', {
+                                maxLength: {
+                                    value: 9,
+                                    message:
+                                        'CUSIP cannot be longer than 9 characters',
+                                },
+                                minLength: {
+                                    value: 9,
+                                    message:
+                                        'CUSIP cannot be shorter than 9 characters',
+                                },
+                                pattern: {
+                                    value: /^[a-zA-Z0-9]*$/,
+                                    message: 'CUSIP must be alphanumeric',
+                                },
+                            })}
+                            errorMessage={errors.CUSIP?.message}
+                            aria-invalid={errors.CUSIP ? 'true' : 'false'}
+                            placeholder="E.g. A2345B789"
+                        />
+                    )
                 }
             />
             <RWAFormRow
                 label="ISIN"
                 hideLine={operation !== 'view'}
                 value={
-                    <RWANumberInput
-                        name="ISIN"
-                        control={control}
-                        disabled={operation === 'view'}
-                        placeholder="E.g. 123456789012"
-                        maxLength={12}
-                        numericFormatProps={{
-                            allowNegative: false,
-                            decimalScale: 0,
-                            thousandSeparator: '',
-                        }}
-                    />
+                    operation === 'view' ? (
+                        item?.ISIN ?? 'Not available'
+                    ) : (
+                        <RWATableTextInput
+                            {...register('ISIN', {
+                                maxLength: {
+                                    value: 12,
+                                    message:
+                                        'ISIN cannot be longer than 12 characters',
+                                },
+                                minLength: {
+                                    value: 12,
+                                    message:
+                                        'ISIN cannot be shorter than 12 characters',
+                                },
+                                pattern: {
+                                    value: /^[a-zA-Z0-9]*$/,
+                                    message: 'ISIN must be alphanumeric',
+                                },
+                            })}
+                            errorMessage={errors.ISIN?.message}
+                            aria-invalid={errors.ISIN ? 'true' : 'false'}
+                            placeholder="E.g. 123456789ABC"
+                        />
+                    )
                 }
             />
             <RWAFormRow

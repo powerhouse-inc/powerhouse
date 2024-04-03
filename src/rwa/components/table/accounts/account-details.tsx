@@ -17,8 +17,8 @@ export function AccountDetails(props: AccountDetailsProps) {
         formState: { errors },
     } = useForm<AccountFormInputs>({
         defaultValues: {
-            label: item?.label ?? undefined,
-            reference: item?.reference,
+            label: item?.label ?? null,
+            reference: item?.reference ?? null,
         },
     });
 
@@ -28,11 +28,6 @@ export function AccountDetails(props: AccountDetailsProps) {
 
     const formInputs = () => (
         <div>
-            <RWAFormRow
-                label="Account ID"
-                hideLine={operation !== 'view'}
-                value={item?.id}
-            />
             <RWAFormRow
                 label="Account Label"
                 hideLine={operation !== 'view'}

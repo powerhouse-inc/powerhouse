@@ -17,7 +17,7 @@ export function SPVDetails(props: SPVDetailsProps) {
         formState: { errors },
     } = useForm<SPVFormInputs>({
         defaultValues: {
-            name: item?.name,
+            name: item?.name ?? null,
         },
     });
 
@@ -27,11 +27,6 @@ export function SPVDetails(props: SPVDetailsProps) {
 
     const formInputs = () => (
         <div>
-            <RWAFormRow
-                label="SPV ID"
-                hideLine={operation !== 'view'}
-                value={item?.id}
-            />
             <RWAFormRow
                 label="SPV Label"
                 hideLine={operation !== 'view'}

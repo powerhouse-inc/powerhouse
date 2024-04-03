@@ -26,9 +26,9 @@ const columnCountByTableWidth = {
 
 type SPVsTableProps = ComponentPropsWithoutRef<typeof SPVsTable>;
 
-export const Primary: Story = {
+export const Empty: Story = {
     args: {
-        spvs: mockSPVs,
+        spvs: [],
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -101,5 +101,12 @@ export const Primary: Story = {
                     ))}
             </div>
         );
+    },
+};
+
+export const WithData: Story = {
+    ...Empty,
+    args: {
+        spvs: mockSPVs,
     },
 };

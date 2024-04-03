@@ -1,11 +1,11 @@
 import { GroupTransaction } from '@/rwa';
 import {
-    mockCashAssets,
+    mockCashAsset,
     mockFixedIncomes,
+    mockGroupTransactions,
     mockPrincipalLenderAccountId,
     mockServiceProviderFeeTypes,
 } from '@/rwa/mocks';
-import { mockGroupTransactions } from '@/rwa/mocks/transactions';
 import type { Meta, StoryObj } from '@storybook/react';
 import { useCallback, useState } from 'react';
 import { getColumnCount } from '../hooks/useColumnPriority';
@@ -28,12 +28,12 @@ const columnCountByTableWidth = {
     984: 8,
 };
 
-export const Primary: Story = {
+export const Empty: Story = {
     args: {
-        transactions: mockGroupTransactions,
-        fixedIncomes: mockFixedIncomes,
-        cashAssets: mockCashAssets,
-        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+        transactions: [],
+        fixedIncomes: [],
+        cashAsset: undefined,
+        serviceProviderFeeTypes: [],
         principalLenderAccountId: mockPrincipalLenderAccountId,
     },
     render: function Wrapper(args) {
@@ -89,5 +89,16 @@ export const Primary: Story = {
                     ))}
             </div>
         );
+    },
+};
+
+export const WithData: Story = {
+    ...Empty,
+    args: {
+        transactions: mockGroupTransactions,
+        fixedIncomes: mockFixedIncomes,
+        cashAsset: mockCashAsset,
+        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+        principalLenderAccountId: mockPrincipalLenderAccountId,
     },
 };

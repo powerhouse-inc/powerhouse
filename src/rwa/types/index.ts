@@ -1,10 +1,4 @@
-import { InputMaybe, Maybe, Scalars } from 'document-model/document';
-import {
-    groupTransactionTypeLabels,
-    groupTransactionTypes,
-} from '../constants/transactions';
-
-export type RWAComponentMode = 'view' | 'edit';
+import { groupTransactionTypeLabels, groupTransactionTypes } from '@/rwa';
 
 export type FixedIncome = {
     // editable fields
@@ -13,9 +7,9 @@ export type FixedIncome = {
     fixedIncomeTypeId: string;
     spvId: string;
     maturity: string;
-    ISIN?: string;
-    CUSIP?: string;
-    coupon?: number;
+    ISIN?: string | null;
+    CUSIP?: string | null;
+    coupon?: number | null;
     // derived fields
     notional: number;
     purchaseDate: string;
@@ -42,21 +36,21 @@ export type GroupTransactionTypeLabel =
     (typeof groupTransactionTypeLabels)[keyof typeof groupTransactionTypeLabels];
 
 export type GroupTransaction = {
-    cashBalanceChange: Scalars['Float']['output'];
-    cashTransaction: Maybe<BaseTransaction>;
-    entryTime: Scalars['DateTime']['output'];
-    feeTransactions: Maybe<Array<BaseTransaction>>;
-    fees: Maybe<Array<TransactionFee>>;
-    fixedIncomeTransaction: Maybe<BaseTransaction>;
-    id: Scalars['ID']['output'];
-    interestTransaction: Maybe<BaseTransaction>;
+    id: string;
     type: GroupTransactionType;
+    cashBalanceChange: number;
+    entryTime: string;
+    fees?: TransactionFee[] | null;
+    fixedIncomeTransaction?: BaseTransaction | null;
+    cashTransaction?: BaseTransaction | null;
+    feeTransactions?: BaseTransaction[] | null;
+    interestTransaction?: BaseTransaction | null;
 };
 
 export type TransactionFee = {
-    id?: Scalars['ID']['output'];
-    amount: InputMaybe<number>;
-    serviceProviderFeeTypeId: Scalars['ID']['output'];
+    id: string;
+    amount: number;
+    serviceProviderFeeTypeId: string;
 };
 
 export type CashAsset = {
@@ -68,26 +62,26 @@ export type CashAsset = {
 export type Asset = CashAsset | FixedIncome;
 
 export type BaseTransaction = {
-    id: InputMaybe<string>;
-    assetId: InputMaybe<string>;
-    amount: InputMaybe<number>;
-    entryTime?: InputMaybe<string>;
-    tradeTime?: InputMaybe<string>;
-    settlementTime?: InputMaybe<string>;
-    txRef?: InputMaybe<string>;
-    accountId?: InputMaybe<string>;
-    counterPartyAccountId?: InputMaybe<string>;
+    id: string;
+    assetId: string;
+    amount: number;
+    entryTime: string;
+    tradeTime?: string | null;
+    settlementTime?: string | null;
+    txRef?: string | null;
+    accountId?: string | null;
+    counterPartyAccountId?: string | null;
 };
 
 export type ServiceProviderFeeType = {
-    accountId: Scalars['ID']['output'];
-    feeType: Scalars['String']['output'];
-    id: Scalars['ID']['output'];
-    name: Scalars['String']['output'];
+    accountId: string;
+    feeType: string;
+    id: string;
+    name: string;
 };
 
 export type Account = {
-    id: Scalars['ID']['output'];
-    label: Maybe<Scalars['String']['output']>;
-    reference: Scalars['String']['output'];
+    id: string;
+    label?: string | null;
+    reference: string;
 };

@@ -26,9 +26,9 @@ const columnCountByTableWidth = {
 
 type AccountsTableProps = ComponentPropsWithoutRef<typeof AccountsTable>;
 
-export const Primary: Story = {
+export const Empty: Story = {
     args: {
-        accounts: mockAccounts,
+        accounts: [],
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -99,5 +99,12 @@ export const Primary: Story = {
                     ))}
             </div>
         );
+    },
+};
+
+export const WithData: Story = {
+    ...Empty,
+    args: {
+        accounts: mockAccounts,
     },
 };

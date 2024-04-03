@@ -41,6 +41,7 @@
   "devDependencies": {
     "@commitlint/cli": "^18.6.1",
     "@commitlint/config-conventional": "^18.6.2",
+    "@hookform/devtools": "^4.3.1",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@storybook/addon-actions": "^8.0.4",
@@ -120,7 +121,7 @@
     "@radix-ui/react-dialog": "^1.0.5",
     "change-case": "^5.4.3",
     "date-fns": "^3.3.1",
-    "react-hook-form": "^7.50.1",
+    "react-hook-form": "^7.51.2",
     "react-multi-select-component": "^4.3.4",
     "react-number-format": "^5.3.4",
     "react-toastify": "^10.0.4"
