@@ -1,3 +1,10 @@
+# [1.0.0-alpha.26](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2024-04-03)
+
+
+### Features
+
+* only add listeners once ([12ca458](https://github.com/powerhouse-inc/document-drive/commit/12ca458ce9a4b5577fc45c5a8bcca5d905bd80ee))
+
 # [1.0.0-alpha.25](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2024-04-02)
 
 
