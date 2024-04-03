@@ -1,3 +1,11 @@
+# [1.0.0-alpha.27](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.26...v1.0.0-alpha.27) (2024-04-03)
+
+
+### Features
+
+* updated document-model-libs dep ([44bced0](https://github.com/powerhouse-inc/document-drive/commit/44bced07a07d6f65f105f342c8b07f98b5f1bbc4))
+* updated document-model-libs dep ([e73b813](https://github.com/powerhouse-inc/document-drive/commit/e73b81352899b1478512f2e9a50d61e534c6c360))
+
 # [1.0.0-alpha.26](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2024-04-03)
 
 
