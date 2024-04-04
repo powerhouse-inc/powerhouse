@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.18.1...v1.19.0) (2024-04-04)
+
+
+### Features
+
+* implement teep's feedback 2 ([#120](https://github.com/powerhouse-inc/document-model-libs/issues/120)) ([1a8ac23](https://github.com/powerhouse-inc/document-model-libs/commit/1a8ac235e6df8ac91eab279c97ccc12b665f41e7))
+
 ## [1.18.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.18.0...v1.18.1) (2024-04-03)
 
 
