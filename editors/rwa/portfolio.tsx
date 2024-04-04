@@ -43,7 +43,9 @@ export const Portfolio = (props: IProps) => {
             if (!selectedItem) return;
             const update = copy(selectedItem);
             const newName = data.name;
-            const newMaturity = data.maturity;
+            const newMaturity = data.maturity
+                ? new Date(data.maturity).toISOString()
+                : undefined;
             const fixedIncomeTypeId = data.fixedIncomeTypeId;
             const newSpvId = data.spvId;
             const newCUSIP = data.CUSIP;
@@ -80,7 +82,9 @@ export const Portfolio = (props: IProps) => {
         data => {
             const id = utils.hashKey();
             const name = data.name;
-            const maturity = data.maturity;
+            const maturity = data.maturity
+                ? new Date(data.maturity).toISOString()
+                : undefined;
             const fixedIncomeTypeId = data.fixedIncomeTypeId;
             const spvId = data.spvId;
             const CUSIP = data.CUSIP;
