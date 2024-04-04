@@ -32,7 +32,7 @@ export const Empty: Story = {
     args: {
         transactions: [],
         fixedIncomes: [],
-        cashAsset: undefined,
+        cashAsset: mockCashAsset,
         serviceProviderFeeTypes: [],
         principalLenderAccountId: mockPrincipalLenderAccountId,
     },

@@ -1,4 +1,4 @@
-import { groupTransactionTypeLabels, groupTransactionTypes } from '@/rwa';
+import { allGroupTransactionTypes, groupTransactionTypeLabels } from '@/rwa';
 
 export type FixedIncome = {
     // editable fields
@@ -30,7 +30,7 @@ export type SPV = {
     name: string;
 };
 
-export type GroupTransactionType = (typeof groupTransactionTypes)[number];
+export type GroupTransactionType = (typeof allGroupTransactionTypes)[number];
 
 export type GroupTransactionTypeLabel =
     (typeof groupTransactionTypeLabels)[keyof typeof groupTransactionTypeLabels];
