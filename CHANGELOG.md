@@ -1,3 +1,10 @@
+# [1.0.0-alpha.87](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.86...v1.0.0-alpha.87) (2024-04-04)
+
+
+### Features
+
+* add remaining transaction types ([#263](https://github.com/powerhouse-inc/design-system/issues/263)) ([6f23314](https://github.com/powerhouse-inc/design-system/commit/6f233140f243c6732dfe544f82b98351a848b3fa))
+
 # [1.0.0-alpha.86](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.85...v1.0.0-alpha.86) (2024-04-03)
 
 
