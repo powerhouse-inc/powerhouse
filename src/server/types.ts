@@ -92,6 +92,7 @@ export type ListenerRevision = {
     branch: string;
     status: UpdateStatus;
     revision: number;
+    error?: Error;
 };
 
 export type ListenerRevisionWithError = ListenerRevision & { error?: Error };
@@ -289,11 +290,9 @@ export abstract class BaseListenerManager {
         since?: string
     ): Promise<StrandUpdate[]>;
 
-    abstract updateSynchronizationRevision(
+    abstract updateSynchronizationRevisions(
         driveId: string,
-        syncId: string,
-        syncRev: number,
-        lastUpdated: string,
+        syncUnits: SynchronizationUnit[],
         willUpdate?: (listeners: Listener[]) => void,
         onError?: (
             error: Error,
@@ -328,11 +327,11 @@ export interface ListenerState {
     block: boolean;
     pendingTimeout: string;
     listener: Listener;
-    syncUnits: SyncronizationUnitState[];
+    syncUnits: Map<SynchronizationUnit['syncId'], SyncronizationUnitState>;
     listenerStatus: ListenerStatus;
 }
 
-export interface SyncronizationUnitState extends SynchronizationUnit {
+export interface SyncronizationUnitState {
     listenerRev: number;
-    syncRev: number;
+    lastUpdated: string;
 }

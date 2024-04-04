@@ -35,6 +35,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
                             branch
                             status
                             revision
+                            error
                         }
                     }
                 `,

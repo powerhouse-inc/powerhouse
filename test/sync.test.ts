@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import {
     DocumentDriveAction,
+    Trigger,
     actions,
     reducer
 } from 'document-model-libs/document-drive';
@@ -243,8 +244,8 @@ describe('Document Drive Server with %s', () => {
                         system: true
                     }
                 ],
-                triggers: [],
-                availableOffline: false,
+                triggers: [{} as unknown as Trigger],
+                availableOffline: true,
                 sharingType: 'PUBLIC'
             }
         });
@@ -314,6 +315,7 @@ describe('Document Drive Server with %s', () => {
                     branch
                     status
                     revision
+                    error
                 }
             }
         `

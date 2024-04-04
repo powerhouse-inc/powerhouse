@@ -71,11 +71,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         listenerId: string,
         revisions: ListenerRevision[]
     ): Promise<boolean> {
-        const listener = await this.manager.getListener(driveId, listenerId);
-
+        const syncUnits = await this.manager.getListenerSyncUnits(
+            driveId,
+            listenerId
+        );
         let success = true;
         for (const revision of revisions) {
-            const syncUnit = listener.syncUnits.find(
+            const syncUnit = syncUnits.find(
                 s =>
                     s.scope === revision.scope &&
                     s.branch === revision.branch &&
@@ -83,7 +85,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                     s.documentId == revision.documentId
             );
             if (!syncUnit) {
-                console.log('Sync unit not found', revision);
+                console.warn('Unknown sync unit was acknowledged', revision);
                 success = false;
                 continue;
             }

@@ -506,31 +506,15 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         await this.storage.createDocument(driveId, input.id, document);
 
-        await this.listenerStateManager.addSyncUnits(
-            input.synchronizationUnits.map(({ syncId, scope, branch }) => {
-                const lastOperation = document.operations[scope].slice().pop();
-                return {
-                    syncId,
-                    scope,
-                    branch,
-                    driveId,
-                    documentId: input.id,
-                    documentType: document.documentType,
-                    lastUpdated:
-                        lastOperation?.timestamp ?? document.lastModified,
-                    revision: lastOperation?.index ?? 0
-                };
-            })
-        );
         return document;
     }
 
     async deleteDocument(driveId: string, id: string) {
         try {
             const syncUnits = await this.getSynchronizationUnits(driveId, [id]);
-            this.listenerStateManager.removeSyncUnits(syncUnits);
-        } catch {
-            /* empty */
+            await this.listenerStateManager.removeSyncUnits(driveId, syncUnits);
+        } catch (error) {
+            console.warn('Error deleting document', error);
         }
         return this.storage.deleteDocument(driveId, id);
     }
@@ -841,29 +825,25 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 branches
             );
             // update listener cache
-            for (const syncUnit of syncUnits) {
-                this.listenerStateManager
-                    .updateSynchronizationRevision(
-                        drive,
-                        syncUnit.syncId,
-                        syncUnit.revision,
-                        syncUnit.lastUpdated,
-                        () => this.updateSyncStatus(drive, 'SYNCING'),
-                        this.handleListenerError.bind(this)
-                    )
-                    .then(
-                        updates =>
-                            updates.length &&
-                            this.updateSyncStatus(drive, 'SUCCESS')
-                    )
-                    .catch(error => {
-                        console.error(
-                            'Non handled error updating sync revision',
-                            error
-                        );
-                        this.updateSyncStatus(drive, 'ERROR', error as Error);
-                    });
-            }
+            this.listenerStateManager
+                .updateSynchronizationRevisions(
+                    drive,
+                    syncUnits,
+                    () => this.updateSyncStatus(drive, 'SYNCING'),
+                    this.handleListenerError.bind(this)
+                )
+                .then(
+                    updates =>
+                        updates.length &&
+                        this.updateSyncStatus(drive, 'SUCCESS')
+                )
+                .catch(error => {
+                    console.error(
+                        'Non handled error updating sync revision',
+                        error
+                    );
+                    this.updateSyncStatus(drive, 'ERROR', error as Error);
+                });
 
             // after applying all the valid operations,throws
             // an error if there was an invalid operation
@@ -994,11 +974,20 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 .pop();
             if (lastOperation) {
                 this.listenerStateManager
-                    .updateSynchronizationRevision(
+                    .updateSynchronizationRevisions(
                         drive,
-                        '0',
-                        lastOperation.index,
-                        lastOperation.timestamp,
+                        [
+                            {
+                                syncId: '0',
+                                driveId: drive,
+                                documentId: '',
+                                scope: 'global',
+                                branch: 'main',
+                                documentType: 'powerhouse/document-drive',
+                                lastUpdated: lastOperation.timestamp,
+                                revision: lastOperation.index
+                            }
+                        ],
                         () => this.updateSyncStatus(drive, 'SYNCING'),
                         this.handleListenerError.bind(this)
                     )
