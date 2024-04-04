@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.19.0...v1.20.0) (2024-04-04)
+
+
+### Features
+
+* add missing date string conversion ([bd6b6e5](https://github.com/powerhouse-inc/document-model-libs/commit/bd6b6e5ce2c30fa54cf95816357cb10f99df0e14))
+
 # [1.19.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.18.1...v1.19.0) (2024-04-04)
 
 
