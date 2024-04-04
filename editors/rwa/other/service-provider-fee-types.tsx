@@ -3,6 +3,7 @@ import {
     ServiceProviderFeeTypesTable,
     ServiceProviderFeeTypesTableProps,
 } from '@powerhousedao/design-system';
+import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
 import {
@@ -35,7 +36,17 @@ export function ServiceProviderFeeTypes(props: IProps) {
         useCallback(
             data => {
                 if (!selectedItem) return;
-                const changedFields = getDifferences(selectedItem, data);
+
+                const update = copy(selectedItem);
+                const newName = data.name;
+                const newAccountId = data.accountId;
+                const newFeeType = data.feeType;
+
+                if (newName) update.name = newName;
+                if (newAccountId) update.accountId = newAccountId;
+                if (newFeeType) update.feeType = newFeeType;
+
+                const changedFields = getDifferences(selectedItem, update);
 
                 if (Object.values(changedFields).filter(Boolean).length === 0) {
                     setSelectedItem(undefined);
@@ -56,10 +67,21 @@ export function ServiceProviderFeeTypes(props: IProps) {
     const onSubmitCreate: ServiceProviderFeeTypesTableProps['onSubmitCreate'] =
         useCallback(
             data => {
+                const id = utils.hashKey();
+                const name = data.name;
+                const accountId = data.accountId;
+                const feeType = data.feeType;
+
+                if (!name) throw new Error('Name is required');
+                if (!accountId) throw new Error('Account is required');
+                if (!feeType) throw new Error('Fee Type is required');
+
                 dispatch(
                     actions.createServiceProviderFeeType({
-                        ...data,
-                        id: utils.hashKey(),
+                        id,
+                        name,
+                        accountId,
+                        feeType,
                     }),
                 );
                 setShowNewItemForm(false);

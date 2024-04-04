@@ -287,6 +287,7 @@ export function makeFixedIncomeAssetWithDerivedFields(
     const derivedFields = computeFixedIncomeAssetDerivedFields(
         assetPurchaseFixedIncomeTransactions,
         assetSaleFixedIncomeTransactions,
+        groupTransactions,
     );
     validateFixedIncomeAssetDerivedFields(derivedFields);
     const newAsset = {
@@ -300,6 +301,7 @@ export function makeFixedIncomeAssetWithDerivedFields(
 export function computeFixedIncomeAssetDerivedFields(
     assetPurchaseFixedIncomeTransactions: BaseTransaction[],
     assetSaleFixedIncomeTransactions: BaseTransaction[],
+    groupTransactions: GroupTransaction[],
 ) {
     const allFixedIncomeTransactions = [
         ...assetPurchaseFixedIncomeTransactions,
@@ -311,6 +313,7 @@ export function computeFixedIncomeAssetDerivedFields(
     );
     const purchaseProceeds = calculatePurchaseProceeds(
         assetPurchaseFixedIncomeTransactions,
+        groupTransactions,
     );
     const salesProceeds = calculateSalesProceeds(
         assetSaleFixedIncomeTransactions,
@@ -548,10 +551,15 @@ export function calculateNotional(
 }
 
 export function calculatePurchaseProceeds(
-    assetPurchaseFixedIncomeTransactions: BaseTransaction[],
+    assetPurchaseBaseTransactions: BaseTransaction[],
+    allGroupTransactions: GroupTransaction[],
 ) {
-    // total cost of purchases
-    return sumBaseTransactionAmounts(assetPurchaseFixedIncomeTransactions);
+    const totalSpentOnPurchases = sumBaseTransactionAmounts(
+        assetPurchaseBaseTransactions,
+    );
+    const totalFees = sumGroupTransactionFees(allGroupTransactions);
+
+    return totalSpentOnPurchases + totalFees;
 }
 
 export function calculateSalesProceeds(
@@ -568,6 +576,13 @@ export function calculateRealizedSurplus(
     // todo: when interest payment transactions are implemented, change to
     // salesProceeds + interestPayments - purchaseProceeds
     return salesProceeds - purchaseProceeds;
+}
+
+export function sumGroupTransactionFees(transactions: GroupTransaction[]) {
+    return transactions.reduce((sum, { fees }) => {
+        if (!fees) return sum;
+        return sum + fees.reduce((feeSum, { amount }) => feeSum + amount, 0);
+    }, 0);
 }
 
 export function sumBaseTransactionAmounts(transactions: BaseTransaction[]) {
@@ -590,8 +605,8 @@ export function calculateTotalDiscount(
 }
 
 export function getDifferences<T extends object>(
-    obj1: T | null,
-    obj2: Partial<T> | null,
+    obj1: T | undefined | null,
+    obj2: Partial<T> | undefined | null,
 ): Partial<T> {
     if (!obj1 || !obj2) return {};
 

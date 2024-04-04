@@ -3,17 +3,15 @@ import {
     GroupTransactionFormInputs,
     GroupTransactionsTable,
     GroupTransactionsTableProps,
-    TransactionFee,
     FixedIncome as UiFixedIncome,
     GroupTransaction as UiGroupTransaction,
 } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
-import { Maybe, utils } from 'document-model/document';
+import { utils } from 'document-model/document';
 import diff from 'microdiff';
 import { useCallback, useState } from 'react';
 import {
     BaseTransaction,
-    Cash,
     EditBaseTransactionInput,
     FixedIncome,
     GroupTransaction,
@@ -48,12 +46,11 @@ export const Transactions = (props: IProps) => {
             purchaseDate: item.purchaseDate.split('T')[0],
         })) as FixedIncome[];
 
-    const cashAssets = document.state.global.portfolio.filter(
-        (asset): asset is Cash => isCashAsset(asset),
-    ) as CashAsset[];
-
     // there is only one cash asset for v1
-    const cashAsset = cashAssets[0];
+    // this is always defined for every document model
+    const cashAsset = document.state.global.portfolio.find(
+        isCashAsset,
+    ) as CashAsset;
 
     const principalLenderAccountId =
         document.state.global.principalLenderAccountId;
@@ -74,7 +71,6 @@ export const Transactions = (props: IProps) => {
                 type,
                 cashBalanceChange,
             } = data;
-
             if (!type) throw new Error('Type is required');
             if (!data.entryTime) throw new Error('Entry time is required');
             if (!cashBalanceChange) {
@@ -83,11 +79,12 @@ export const Transactions = (props: IProps) => {
 
             const entryTime = new Date(data.entryTime).toISOString();
 
-            const fees =
-                data.fees.map(fee => ({
-                    ...fee,
-                    id: utils.hashKey(),
-                })) ?? null;
+            const fees = data.fees?.length
+                ? data.fees.map(fee => ({
+                      ...fee,
+                      id: utils.hashKey(),
+                  }))
+                : null;
 
             const cashTransaction = cashAmount
                 ? {
@@ -96,6 +93,7 @@ export const Transactions = (props: IProps) => {
                       entryTime,
                       counterPartyAccountId: principalLenderAccountId,
                       amount: cashAmount,
+                      accountId: null,
                       settlementTime: null,
                       tradeTime: null,
                       txRef: null,
@@ -115,6 +113,7 @@ export const Transactions = (props: IProps) => {
                           assetId: fixedIncomeId,
                           amount: fixedIncomeAmount,
                           entryTime,
+                          accountId: null,
                           counterPartyAccountId: null,
                           settlementTime: null,
                           tradeTime: null,
@@ -149,10 +148,10 @@ export const Transactions = (props: IProps) => {
 
     const handleFeeUpdates = useCallback(
         async (
-            feeInputs: Maybe<TransactionFee[]> | undefined,
+            feeInputs: TransactionFeeInput[] | null | undefined,
             transaction: GroupTransaction,
         ) => {
-            if (!feeInputs) {
+            if (!feeInputs?.length) {
                 return;
             }
 
@@ -272,8 +271,8 @@ export const Transactions = (props: IProps) => {
                     update.entryTime = newEntryTime;
                 }
 
-                // use direct comparison to avoid false positives on zero
-                if (newCashAmount !== undefined) {
+                // use type comparison to avoid false positives on zero
+                if (typeof newCashAmount === 'number') {
                     update.cashTransaction!.amount = newCashAmount;
                 }
 
@@ -283,7 +282,7 @@ export const Transactions = (props: IProps) => {
                 }
 
                 // use direct comparison to avoid false positives on zero
-                if (newFixedIncomeAssetAmount !== undefined) {
+                if (typeof newFixedIncomeAssetAmount === 'number') {
                     update.fixedIncomeTransaction!.amount =
                         newFixedIncomeAssetAmount;
                 }
@@ -365,7 +364,7 @@ export const Transactions = (props: IProps) => {
             </p>
             <GroupTransactionsTable
                 fixedIncomes={fixedIncomeAssets as UiFixedIncome[]}
-                cashAssets={cashAssets}
+                cashAsset={cashAsset}
                 transactions={transactions}
                 serviceProviderFeeTypes={serviceProviderFeeTypes}
                 expandedRowId={expandedRowId}

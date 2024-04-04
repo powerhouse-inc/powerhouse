@@ -1,4 +1,5 @@
 import { SPV, SPVsTable, SPVsTableProps } from '@powerhousedao/design-system';
+import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
 import {
@@ -28,7 +29,13 @@ export function SPVs(props: IProps) {
     const onSubmitEdit: SPVsTableProps['onSubmitEdit'] = useCallback(
         data => {
             if (!selectedItem) return;
-            const changedFields = getDifferences(selectedItem, data);
+
+            const update = copy(selectedItem);
+            const newName = data.name;
+
+            if (newName) update.name = newName;
+
+            const changedFields = getDifferences(selectedItem, update);
 
             if (Object.values(changedFields).filter(Boolean).length === 0) {
                 setSelectedItem(undefined);
@@ -48,10 +55,15 @@ export function SPVs(props: IProps) {
 
     const onSubmitCreate: SPVsTableProps['onSubmitCreate'] = useCallback(
         data => {
+            const id = utils.hashKey();
+            const name = data.name;
+
+            if (!name) throw new Error('Name is required');
+
             dispatch(
                 actions.createSpv({
-                    ...data,
-                    id: utils.hashKey(),
+                    id,
+                    name,
                 }),
             );
             setShowNewItemForm(false);

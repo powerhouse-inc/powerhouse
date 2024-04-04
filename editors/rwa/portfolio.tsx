@@ -1,9 +1,9 @@
 import {
-    AssetFormInputs,
     AssetsTable,
     AssetsTableProps,
     FixedIncome as UiFixedIncome,
 } from '@powerhousedao/design-system';
+import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
 import {
@@ -13,14 +13,6 @@ import {
     isFixedIncomeAsset,
 } from '../../document-models/real-world-assets';
 import { IProps } from './editor';
-
-function createAssetFromFormInputs(data: AssetFormInputs) {
-    const maturity = new Date(data.maturity).toISOString();
-    return {
-        ...data,
-        maturity,
-    };
-}
 
 export const Portfolio = (props: IProps) => {
     const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -49,8 +41,24 @@ export const Portfolio = (props: IProps) => {
     const onSubmitEdit: AssetsTableProps['onSubmitEdit'] = useCallback(
         data => {
             if (!selectedItem) return;
-            const asset = createAssetFromFormInputs(data);
-            const changedFields = getDifferences(selectedItem, asset);
+            const update = copy(selectedItem);
+            const newName = data.name;
+            const newMaturity = data.maturity;
+            const fixedIncomeTypeId = data.fixedIncomeTypeId;
+            const newSpvId = data.spvId;
+            const newCUSIP = data.CUSIP;
+            const newISIN = data.ISIN;
+            const newCoupon = data.coupon;
+
+            if (newName) update.name = newName;
+            if (newMaturity) update.maturity = newMaturity;
+            if (fixedIncomeTypeId) update.fixedIncomeTypeId = fixedIncomeTypeId;
+            if (newSpvId) update.spvId = newSpvId;
+            if (newCUSIP) update.CUSIP = newCUSIP;
+            if (newISIN) update.ISIN = newISIN;
+            if (newCoupon) update.coupon = newCoupon;
+
+            const changedFields = getDifferences(selectedItem, update);
 
             if (Object.values(changedFields).filter(Boolean).length === 0) {
                 setSelectedItem(undefined);
@@ -70,11 +78,31 @@ export const Portfolio = (props: IProps) => {
 
     const onSubmitCreate: AssetsTableProps['onSubmitCreate'] = useCallback(
         data => {
-            const asset = createAssetFromFormInputs(data);
+            const id = utils.hashKey();
+            const name = data.name;
+            const maturity = data.maturity;
+            const fixedIncomeTypeId = data.fixedIncomeTypeId;
+            const spvId = data.spvId;
+            const CUSIP = data.CUSIP;
+            const ISIN = data.ISIN;
+            const coupon = data.coupon;
+
+            if (!name) throw new Error('Name is required');
+            if (!maturity) throw new Error('Maturity is required');
+            if (!fixedIncomeTypeId)
+                throw new Error('Fixed income type is required');
+            if (!spvId) throw new Error('SPV is required');
+
             dispatch(
                 actions.createFixedIncomeAsset({
-                    ...asset,
-                    id: utils.hashKey(),
+                    id,
+                    name,
+                    maturity,
+                    fixedIncomeTypeId,
+                    spvId,
+                    CUSIP,
+                    ISIN,
+                    coupon,
                 }),
             );
             setShowNewItemForm(false);

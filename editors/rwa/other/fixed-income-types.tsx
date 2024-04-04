@@ -3,6 +3,7 @@ import {
     FixedIncomeTypesTable,
     FixedIncomeTypesTableProps,
 } from '@powerhousedao/design-system';
+import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
 import {
@@ -33,7 +34,13 @@ export function FixedIncomeTypes(props: IProps) {
         useCallback(
             data => {
                 if (!selectedItem) return;
-                const changedFields = getDifferences(selectedItem, data);
+
+                const update = copy(selectedItem);
+                const newName = data.name;
+
+                if (newName) update.name = newName;
+
+                const changedFields = getDifferences(selectedItem, update);
 
                 if (Object.values(changedFields).filter(Boolean).length === 0) {
                     setSelectedItem(undefined);
@@ -54,12 +61,12 @@ export function FixedIncomeTypes(props: IProps) {
     const onSubmitCreate: FixedIncomeTypesTableProps['onSubmitCreate'] =
         useCallback(
             data => {
-                dispatch(
-                    actions.createFixedIncomeType({
-                        ...data,
-                        id: utils.hashKey(),
-                    }),
-                );
+                const id = utils.hashKey();
+                const name = data.name;
+
+                if (!name) throw new Error('Name is required');
+
+                dispatch(actions.createFixedIncomeType({ id, name }));
                 setShowNewItemForm(false);
             },
             [dispatch],

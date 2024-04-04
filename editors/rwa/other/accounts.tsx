@@ -3,6 +3,7 @@ import {
     AccountsTable,
     AccountsTableProps,
 } from '@powerhousedao/design-system';
+import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
 import {
@@ -17,8 +18,11 @@ export function Accounts(props: IProps) {
     const [showNewItemForm, setShowNewItemForm] = useState(false);
 
     const { dispatch, document } = props;
-
-    const accounts = document.state.global.accounts;
+    const principalLenderAccountId =
+        document.state.global.principalLenderAccountId;
+    const accounts = document.state.global.accounts.filter(
+        account => account.id !== principalLenderAccountId,
+    );
 
     const toggleExpandedRow = useCallback(
         (id: string | undefined) => {
@@ -32,7 +36,15 @@ export function Accounts(props: IProps) {
     const onSubmitEdit: AccountsTableProps['onSubmitEdit'] = useCallback(
         data => {
             if (!selectedItem) return;
-            const changedFields = getDifferences(selectedItem, data);
+
+            const update = copy(selectedItem);
+            const newReference = data.reference;
+            const newLabel = data.label;
+
+            if (newReference) update.reference = newReference;
+            if (newLabel) update.label = newLabel;
+
+            const changedFields = getDifferences(selectedItem, update);
 
             if (Object.values(changedFields).filter(Boolean).length === 0) {
                 setSelectedItem(undefined);
@@ -52,10 +64,16 @@ export function Accounts(props: IProps) {
 
     const onSubmitCreate: AccountsTableProps['onSubmitCreate'] = useCallback(
         data => {
+            const id = utils.hashKey();
+            const reference = data.reference;
+            const label = data.label;
+            if (!reference) throw new Error('Reference is required');
+
             dispatch(
                 actions.createAccount({
-                    ...data,
-                    id: utils.hashKey(),
+                    id,
+                    reference,
+                    label,
                 }),
             );
             setShowNewItemForm(false);
