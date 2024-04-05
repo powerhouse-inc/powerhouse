@@ -1,3 +1,10 @@
+# [1.0.0-alpha.88](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.87...v1.0.0-alpha.88) (2024-04-05)
+
+
+### Features
+
+* add unit price ([14d993e](https://github.com/powerhouse-inc/design-system/commit/14d993ede3627d4fac4969aac5cb11733fc893ad))
+
 # [1.0.0-alpha.87](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.86...v1.0.0-alpha.87) (2024-04-04)
 
 
