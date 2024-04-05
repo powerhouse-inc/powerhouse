@@ -19,7 +19,35 @@ import { InternalTransmitter } from './transmitter/internal';
 import { SwitchboardPushTransmitter } from './transmitter/switchboard-push';
 import { ITransmitter } from './transmitter/types';
 
+function debounce<T extends unknown[], R>(
+    func: (...args: T) => Promise<R>,
+    delay = 250
+) {
+    let timer: number;
+    return (immediate: boolean, ...args: T) => {
+        if (timer) {
+            clearTimeout(timer);
+        }
+        return new Promise<R>((resolve, reject) => {
+            if (immediate) {
+                func(...args)
+                    .then(resolve)
+                    .catch(reject);
+            } else {
+                timer = setTimeout(() => {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                    func(...args)
+                        .then(resolve)
+                        .catch(reject);
+                }, delay) as unknown as number;
+            }
+        });
+    };
+}
+
 export class ListenerManager extends BaseListenerManager {
+    static LISTENER_UPDATE_DELAY = 250;
+
     async getTransmitter(
         driveId: string,
         listenerId: string
@@ -109,7 +137,8 @@ export class ListenerManager extends BaseListenerManager {
             error: Error,
             driveId: string,
             listener: ListenerState
-        ) => void
+        ) => void,
+        forceSync = false
     ) {
         const drive = this.listenerState.get(driveId);
         if (!drive) {
@@ -144,7 +173,7 @@ export class ListenerManager extends BaseListenerManager {
 
         if (outdatedListeners.length) {
             willUpdate?.(outdatedListeners);
-            return this.triggerUpdate(onError);
+            return this.triggerUpdate(forceSync, onError);
         }
         return [];
     }
@@ -175,7 +204,12 @@ export class ListenerManager extends BaseListenerManager {
         }
     }
 
-    async triggerUpdate(
+    triggerUpdate = debounce(
+        this._triggerUpdate.bind(this),
+        ListenerManager.LISTENER_UPDATE_DELAY
+    );
+
+    private async _triggerUpdate(
         onError?: (
             error: Error,
             driveId: string,
@@ -278,7 +312,7 @@ export class ListenerManager extends BaseListenerManager {
                         throw new OperationError(
                             revisionError.status as ErrorStatus,
                             undefined,
-                            revisionError.error?.message,
+                            revisionError.error,
                             revisionError.error
                         );
                     }
@@ -333,7 +367,8 @@ export class ListenerManager extends BaseListenerManager {
             driveId,
             filter.documentId ?? ['*'],
             filter.scope ?? ['*'],
-            filter.branch ?? ['*']
+            filter.branch ?? ['*'],
+            filter.documentType ?? ['*']
         );
     }
 

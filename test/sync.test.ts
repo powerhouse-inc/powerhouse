@@ -271,6 +271,9 @@ describe('Document Drive Server with %s', () => {
         );
         await server.addDriveOperation('1', drive.operations.global[0]!);
         expect(server.getSyncStatus('1')).toBe('SYNCING');
+
+        vi.advanceTimersToNextTimer();
+
         const waitSync = new Promise(resolve =>
             server.on(
                 'syncStatus',
@@ -344,7 +347,7 @@ describe('Document Drive Server with %s', () => {
         const result = await server.addOperation('1', '1.1', operation);
         expect(result.status).toBe('SUCCESS');
         expect(server.getSyncStatus('1')).toBe('SYNCING');
-
+        vi.advanceTimersToNextTimer();
         const setNameBody = await (await setNameRequest).json();
         expect(setNameBody).toEqual(
             expect.objectContaining({

@@ -121,12 +121,14 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const result = await (!strand.documentId
             ? this.addDriveOperations(
                   strand.driveId,
-                  operations as Operation<DocumentDriveAction | BaseAction>[]
+                  operations as Operation<DocumentDriveAction | BaseAction>[],
+                  false
               )
             : this.addOperations(
                   strand.driveId,
                   strand.documentId,
-                  operations
+                  operations,
+                  false
               ));
 
         if (result.status === 'ERROR') {
@@ -229,7 +231,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         driveId: string,
         documentId?: string[],
         scope?: string[],
-        branch?: string[]
+        branch?: string[],
+        documentType?: string[]
     ) {
         const drive = await this.getDrive(driveId);
 
@@ -238,21 +241,23 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 isFileNode(node) &&
                 (!documentId?.length ||
                     documentId.includes(node.id) ||
-                    documentId.includes('*'))
+                    documentId.includes('*')) &&
+                (!documentType?.length ||
+                    documentType.includes(node.documentType) ||
+                    documentType.includes('*'))
         ) as Pick<
             FileNode,
             'id' | 'documentType' | 'scopes' | 'synchronizationUnits'
         >[];
 
-        if (documentId && !nodes.length) {
-            throw new Error('File node not found');
-        }
-
         // checks if document drive synchronization unit should be added
         if (
-            !documentId ||
-            documentId.includes('*') ||
-            documentId.includes('')
+            (!documentId ||
+                documentId.includes('*') ||
+                documentId.includes('')) &&
+            (!documentType?.length ||
+                documentType.includes('powerhouse/document-drive') ||
+                documentType.includes('*'))
         ) {
             nodes.unshift({
                 id: '',
@@ -275,8 +280,12 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 scope?.length || branch?.length
                     ? node.synchronizationUnits.filter(
                           unit =>
-                              (!scope?.length || scope.includes(unit.scope)) &&
-                              (!branch?.length || branch.includes(unit.branch))
+                              (!scope?.length ||
+                                  scope.includes(unit.scope) ||
+                                  scope.includes('*')) &&
+                              (!branch?.length ||
+                                  branch.includes(unit.branch) ||
+                                  branch.includes('*'))
                       )
                     : node.synchronizationUnits;
             if (!nodeUnits.length) {
@@ -772,7 +781,12 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }
     }
 
-    async addOperations(drive: string, id: string, operations: Operation[]) {
+    async addOperations(
+        drive: string,
+        id: string,
+        operations: Operation[],
+        forceSync = true
+    ) {
         let document: Document | undefined;
         const operationsApplied: Operation[] = [];
         const updatedOperations: Operation[] = [];
@@ -830,7 +844,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                     drive,
                     syncUnits,
                     () => this.updateSyncStatus(drive, 'SYNCING'),
-                    this.handleListenerError.bind(this)
+                    this.handleListenerError.bind(this),
+                    forceSync
                 )
                 .then(
                     updates =>
@@ -923,7 +938,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     async addDriveOperations(
         drive: string,
-        operations: Operation<DocumentDriveAction | BaseAction>[]
+        operations: Operation<DocumentDriveAction | BaseAction>[],
+        forceSync = true
     ) {
         let document: DocumentDriveDocument | undefined;
         const operationsApplied: Operation<DocumentDriveAction | BaseAction>[] =
@@ -989,7 +1005,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                             }
                         ],
                         () => this.updateSyncStatus(drive, 'SYNCING'),
-                        this.handleListenerError.bind(this)
+                        this.handleListenerError.bind(this),
+                        forceSync
                     )
                     .then(
                         updates =>

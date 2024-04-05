@@ -256,11 +256,6 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                         : 'SUCCESS',
                     error
                 });
-
-                // TODO: Should try to parse remaining strands?
-                // if (error) {
-                //     break;
-                // }
             }
 
             onRevisions?.(listenerRevisions);

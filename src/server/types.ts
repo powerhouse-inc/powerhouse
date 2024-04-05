@@ -92,10 +92,12 @@ export type ListenerRevision = {
     branch: string;
     status: UpdateStatus;
     revision: number;
-    error?: Error;
+    error?: string;
 };
 
-export type ListenerRevisionWithError = ListenerRevision & { error?: Error };
+export type ListenerRevisionWithError = Omit<ListenerRevision, 'error'> & {
+    error?: Error;
+};
 
 export type ListenerUpdate = {
     listenerId: string;
@@ -164,12 +166,14 @@ export abstract class BaseDocumentDriveServer {
     abstract addOperation(
         drive: string,
         id: string,
-        operation: Operation
+        operation: Operation,
+        forceSync?: boolean
     ): Promise<IOperationResult>;
     abstract addOperations(
         drive: string,
         id: string,
-        operations: Operation[]
+        operations: Operation[],
+        forceSync?: boolean
     ): Promise<IOperationResult>;
 
     abstract addDriveOperation(
@@ -208,7 +212,8 @@ export abstract class BaseDocumentDriveServer {
         driveId: string,
         documentId?: string[],
         scope?: string[],
-        branch?: string[]
+        branch?: string[],
+        documentType?: string[]
     ): Promise<SynchronizationUnit[]>;
 
     abstract getSynchronizationUnit(

@@ -292,6 +292,14 @@ describe('Document Drive Server interaction', () => {
         expect(connectDrive.operations.global.length).toBe(0);
 
         const remoteDrive = await remoteServer.getDrive('1');
+
+        await new Promise<SyncStatus>(resolve =>
+            connectServer.on(
+                'syncStatus',
+                (_, status) => status === 'SUCCESS' && resolve(status)
+            )
+        );
+
         await remoteServer.addDriveOperation(
             '1',
             buildOperation(
@@ -301,11 +309,9 @@ describe('Document Drive Server interaction', () => {
             )
         );
 
-        await new Promise<SyncStatus>(resolve =>
-            connectServer.on(
-                'syncStatus',
-                (_, status) => status === 'SUCCESS' && resolve(status)
-            )
+        vi.advanceTimersByTime(5000);
+        await new Promise<void>(resolve =>
+            connectServer.on('strandUpdate', () => resolve())
         );
 
         connectDrive = await connectServer.getDrive('1');
@@ -564,7 +570,7 @@ describe('Document Drive Server interaction', () => {
             )
         );
 
-        vi.advanceTimersToNextTimer();
+        vi.advanceTimersByTime(5000);
 
         await vi.waitFor(async () => {
             const connectDocument = await connectServer.getDrive('1');
@@ -585,7 +591,7 @@ describe('Document Drive Server interaction', () => {
     });
 
     it('should filter strands', async ({ expect }) => {
-        const { remoteServer, mswServer } = await createRemoteDrive();
+        const { remoteServer } = await createRemoteDrive();
         let remoteDrive = await remoteServer.getDrive('1');
         await remoteServer.addDriveOperations(
             '1',
