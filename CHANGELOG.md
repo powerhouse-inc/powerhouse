@@ -1,3 +1,11 @@
+# [1.0.0-alpha.28](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.27...v1.0.0-alpha.28) (2024-04-05)
+
+
+### Features
+
+* avoid duplicating sync units on listener manager ([ad9a015](https://github.com/powerhouse-inc/document-drive/commit/ad9a015d8b50ba444362b85b1f57b9349037c325))
+* delay sync updates after receiving strands ([e1d3a87](https://github.com/powerhouse-inc/document-drive/commit/e1d3a871a99042d397b7c7928432028251fba55d))
+
 # [1.0.0-alpha.27](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.26...v1.0.0-alpha.27) (2024-04-03)
 
 
