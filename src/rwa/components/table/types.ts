@@ -232,7 +232,8 @@ export type GroupTransactionFormInputs = {
     fees?: TransactionFeeInput[] | null;
     cashAmount?: number | null;
     fixedIncomeAmount?: number | null;
-    cashBalanceChange?: number | null;
+    unitPrice: number | null;
+    cashBalanceChange: number | null;
 };
 
 export type AccountFormInputs = {

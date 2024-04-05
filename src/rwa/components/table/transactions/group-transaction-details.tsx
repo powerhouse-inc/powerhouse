@@ -33,7 +33,7 @@ function calculateUnitPrice(
     fixedIncomeAmount: InputMaybe<number>,
 ) {
     if (!cashAmount || !fixedIncomeAmount) return 0;
-    return (cashAmount / fixedIncomeAmount).toFixed(2);
+    return cashAmount / fixedIncomeAmount;
 }
 
 function calculateCashBalanceChange(
@@ -95,7 +95,9 @@ function UnitPrice(props: { control: Control<GroupTransactionFormInputs> }) {
     return (
         <div className="my-2 ml-auto mr-6 w-fit text-xs">
             <span className="mr-2 inline-block text-gray-600">Unit Price</span>{' '}
-            <span className="text-gray-900">{unitPrice}</span>
+            <span className="text-gray-900">
+                <FormattedNumber value={unitPrice} />
+            </span>
         </div>
     );
 }
@@ -171,25 +173,30 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
         const type = data.type;
         const entryTime = data.entryTime;
         const cashAmount = data.cashAmount;
-        const cashBalanceChange = calculateCashBalanceChange(
-            data.type,
-            data.cashAmount,
-            data.fees,
-        );
         const fixedIncomeId = isAssetTransaction ? data.fixedIncomeId : null;
         const fixedIncomeAmount = isAssetTransaction
             ? data.fixedIncomeAmount
             : null;
         const fees = canHaveTransactionFees ? data.fees : null;
+        const cashBalanceChange = calculateCashBalanceChange(
+            data.type,
+            data.cashAmount,
+            data.fees,
+        );
+        const unitPrice = calculateUnitPrice(
+            data.cashAmount,
+            data.fixedIncomeAmount,
+        );
 
         onSubmitForm({
             type,
             entryTime,
             cashAmount,
-            cashBalanceChange,
             fixedIncomeId,
             fixedIncomeAmount,
             fees,
+            cashBalanceChange,
+            unitPrice,
         });
     };
 
