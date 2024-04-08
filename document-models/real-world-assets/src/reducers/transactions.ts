@@ -8,9 +8,7 @@ import {
     Cash,
     makeFixedIncomeAssetWithDerivedFields,
     validateCashTransaction,
-    validateFeeTransactions,
     validateFixedIncomeTransaction,
-    validateInterestTransaction,
     validateTransactionFee,
     validateTransactionFees,
 } from '../..';
@@ -25,15 +23,12 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         const type = action.input.type;
         const entryTime = action.input.entryTime;
-        const fees = action.input.fees ?? null;
         const cashBalanceChange = action.input.cashBalanceChange;
+        const unitPrice = action.input.unitPrice ?? null;
+        const fees = action.input.fees ?? null;
         let cashTransaction = action.input.cashTransaction ?? null;
         let fixedIncomeTransaction =
             action.input.fixedIncomeTransaction ?? null;
-        let interestTransaction = action.input.interestTransaction ?? null;
-        let feeTransactions = action.input.feeTransactions
-            ? action.input.feeTransactions
-            : null;
 
         if (cashTransaction) {
             cashTransaction = {
@@ -51,22 +46,6 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             validateFixedIncomeTransaction(state, fixedIncomeTransaction);
         }
 
-        if (interestTransaction) {
-            interestTransaction = {
-                ...interestTransaction,
-                entryTime,
-            };
-            validateInterestTransaction(state, interestTransaction);
-        }
-
-        if (feeTransactions) {
-            feeTransactions = feeTransactions.map(ft => ({
-                ...ft,
-                entryTime,
-            }));
-            validateFeeTransactions(state, feeTransactions);
-        }
-
         if (fees) {
             validateTransactionFees(state, fees);
         }
@@ -75,12 +54,11 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             id,
             type,
             entryTime,
-            fees,
             cashBalanceChange,
+            unitPrice,
+            fees,
             cashTransaction,
-            feeTransactions,
             fixedIncomeTransaction,
-            interestTransaction,
         };
 
         state.transactions.push(newGroupTransaction);
@@ -160,6 +138,10 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         if (action.input.cashBalanceChange) {
             transaction.cashBalanceChange = action.input.cashBalanceChange;
+        }
+
+        if (action.input.unitPrice) {
+            transaction.unitPrice = action.input.unitPrice;
         }
 
         state.transactions = state.transactions.map(t =>

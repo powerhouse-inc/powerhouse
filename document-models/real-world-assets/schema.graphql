@@ -1,6 +1,6 @@
 type RealWorldAssetsState {
     accounts: [Account!]!
-    principalLenderAccountId: ID! # Account.id (That relates to the Maker account)
+    principalLenderAccountId: ID!
     spvs: [Spv!]!
     serviceProviderFeeTypes: [ServiceProviderFeeType!]!
     fixedIncomeTypes: [FixedIncomeType!]!
@@ -12,17 +12,18 @@ union Asset = FixedIncome | Cash
 
 type FixedIncome {
     id: ID!
-    fixedIncomeTypeId: ID! # FixedIncomeType.id
+    fixedIncomeTypeId: ID!
     name: String!
-    spvId: ID! # Spv.id
+    spvId: ID!
     maturity: DateTime!
-    purchaseDate: DateTime! # Weighted average of underlying transactions
-    notional: Float! # Face value sum of the underlying transactions
-    purchaseProceeds: Float! # Total cash outflow spent on purchases
-    salesProceeds: Float! # 
-    purchasePrice: Float! # purchaseProceeds / notional
-    totalDiscount: Float! # notional - purchaseProceeds
-    realizedSurplus: Float! # Sum(Asset Proceeds) + Purchase Proceeds
+    purchaseDate: DateTime!
+    notional: Float!
+    assetProceeds: Float!
+    purchaseProceeds: Float!
+    salesProceeds: Float!
+    purchasePrice: Float!
+    totalDiscount: Float!
+    realizedSurplus: Float!
     ISIN: String
     CUSIP: String
     coupon: Float
@@ -30,9 +31,9 @@ type FixedIncome {
 
 type Cash {
     id: ID!
-    spvId: ID! # Spv.id
-    currency: String! # Will always be 'USD' for version 1
-    balance: Float! # Sum of all underlying transactions
+    spvId: ID!
+    currency: String!
+    balance: Float!
 }
 
 type FixedIncomeType {
@@ -47,19 +48,19 @@ type Spv {
 
 type BaseTransaction {
     id: ID!
-    assetId: ID! # Asset.id
+    assetId: ID!
     amount: Float!
     entryTime: DateTime!
     tradeTime: DateTime
     settlementTime: DateTime
     txRef: String
-    accountId: ID # Account.id
-    counterPartyAccountId: ID # Account.id
+    accountId: ID
+    counterPartyAccountId: ID
 }
 
 type Account {
     id: ID!
-    reference: String! # e.g. bank account number or ETH address
+    reference: String!
     label: String
 }
 
@@ -74,40 +75,29 @@ type GroupTransaction {
     type: GroupTransactionType!
     entryTime: DateTime!
     cashBalanceChange: Float!
+    unitPrice: Float
     fees: [TransactionFee!]
     cashTransaction: BaseTransaction
     fixedIncomeTransaction: BaseTransaction
-    feeTransactions: [BaseTransaction!]
-    interestTransaction: BaseTransaction
 }
 
-enum CashGroupTransactionType {
+enum GroupTransactionType {
     PrincipalDraw
     PrincipalReturn
-}
-
-enum FixedIncomeGroupTransactionType {
     AssetPurchase
     AssetSale
-    InterestDraw # Payment from Borrower to Arranger (If there is a coupon)
-    InterestReturn # Payment from Arranger to Maker
+    InterestPayment
     FeesPayment
 }
-
-union GroupTransactionType =
-    | CashGroupTransactionType
-    | FixedIncomeGroupTransactionType
 
 type ServiceProviderFeeType {
     id: ID!
     name: String!
     feeType: String!
-    accountId: ID! # Account.id
+    accountId: ID!
 }
 
 scalar DateTime
-
-# general
 
 input CreateSpvInput {
     id: ID!
@@ -127,7 +117,7 @@ input CreateServiceProviderFeeTypeInput {
     id: ID!
     name: String!
     feeType: String!
-    accountId: ID! # Account.id
+    accountId: ID!
 }
 
 input EditServiceProviderFeeTypeInput {
@@ -141,8 +131,6 @@ input DeleteServiceProviderFeeTypeInput {
     id: ID!
 }
 
-# portfolio
-
 input CreateFixedIncomeTypeInput {
     id: ID!
     name: String!
@@ -155,8 +143,8 @@ input EditFixedIncomeTypeInput {
 
 input CreateFixedIncomeAssetInput {
     id: ID!
-    fixedIncomeTypeId: ID! # FixedIncomeType.id
-    spvId: ID! # Spv.id
+    fixedIncomeTypeId: ID!
+    spvId: ID!
     name: String!
     maturity: DateTime!
     ISIN: String
@@ -166,21 +154,21 @@ input CreateFixedIncomeAssetInput {
 
 input CreateCashAssetInput {
     id: ID!
-    spvId: ID! # Spv.id
-    currency: String! # Will always be 'USD' for version 1
+    spvId: ID!
+    currency: String!
     balance: Float!
 }
 
 input EditCashAssetInput {
     id: ID!
-    spvId: ID # Spv.id
-    currency: String # Will always be 'USD' for version 1
+    spvId: ID
+    currency: String
 }
 
 input EditFixedIncomeAssetInput {
     id: ID!
-    fixedIncomeTypeId: ID # RwaFixedIncomeType.id
-    spvId: ID # Spv.id
+    fixedIncomeTypeId: ID
+    spvId: ID
     name: String
     ISIN: String
     CUSIP: String
@@ -198,13 +186,13 @@ input DeleteCashAssetInput {
 
 input CreateAccountInput {
     id: ID!
-    reference: String! # e.g. bank account number or ETH address
+    reference: String!
     label: String
 }
 
 input EditAccountInput {
     id: ID!
-    reference: String # e.g. bank account number or ETH address
+    reference: String
     label: String
 }
 
@@ -212,30 +200,28 @@ input DeleteAccountInput {
     id: ID!
 }
 
-# transactions
-
 input CreateBaseTransactionInput {
     id: ID!
-    assetId: ID! # Asset.id
+    assetId: ID!
     amount: Float!
     entryTime: DateTime!
     tradeTime: DateTime
     settlementTime: DateTime
     txRef: String
-    accountId: ID # Account.id
-    counterPartyAccountId: ID # Account.id
+    accountId: ID
+    counterPartyAccountId: ID
 }
 
 input EditBaseTransactionInput {
     id: ID!
-    assetId: ID # Asset.id
+    assetId: ID
     amount: Float
     entryTime: DateTime
     tradeTime: DateTime
     settlementTime: DateTime
     txRef: String
-    accountId: ID # Account.id
-    counterPartyAccountId: ID # Account.id
+    accountId: ID
+    counterPartyAccountId: ID
 }
 
 input TransactionFeeInput {
@@ -250,10 +236,9 @@ input CreateGroupTransactionInput {
     entryTime: DateTime!
     fees: [TransactionFeeInput!]
     cashBalanceChange: Float!
+    unitPrice: Float
     cashTransaction: CreateBaseTransactionInput
     fixedIncomeTransaction: CreateBaseTransactionInput
-    feeTransactions: [CreateBaseTransactionInput!]
-    interestTransaction: CreateBaseTransactionInput
 }
 
 input EditGroupTransactionInput {
@@ -261,9 +246,9 @@ input EditGroupTransactionInput {
     type: GroupTransactionType
     entryTime: DateTime
     cashBalanceChange: Float
+    unitPrice: Float
     cashTransaction: EditBaseTransactionInput
     fixedIncomeTransaction: EditBaseTransactionInput
-    interestTransaction: EditBaseTransactionInput
 }
 
 input DeleteGroupTransactionInput {
