@@ -1,6 +1,6 @@
 {
   "name": "document-model-libs",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "license": "AGPL-3.0-only",
   "types": "dist/index.d.ts",
   "main": "dist/index.cjs",

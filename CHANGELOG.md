@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.20.0...v1.21.0) (2024-04-08)
+
+
+### Features
+
+* add remaining transaction types ([#121](https://github.com/powerhouse-inc/document-model-libs/issues/121)) ([20cb3f0](https://github.com/powerhouse-inc/document-model-libs/commit/20cb3f05a217ec121996c1f07f0e612bb0ed3ac3))
+
 # [1.20.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.19.0...v1.20.0) (2024-04-04)
 
 
