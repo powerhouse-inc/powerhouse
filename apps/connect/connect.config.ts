@@ -20,7 +20,10 @@ const PUBLIC_DRIVES_ENABLED =
 
 const SEARCH_BAR_ENABLED = import.meta.env.VITE_SEARCH_BAR_ENABLED || undefined;
 
+const VITE_ROUTER_BASENAME = import.meta.env.VITE_ROUTER_BASENAME || '/';
+
 export default {
+    routerBasename: VITE_ROUTER_BASENAME,
     content: {
         showSearchBar: SEARCH_BAR_ENABLED !== 'false',
     },

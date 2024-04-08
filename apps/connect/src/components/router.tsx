@@ -1,3 +1,4 @@
+import connectConfig from 'connect-config';
 import {
     RouteObject,
     RouterProvider,
@@ -8,7 +9,7 @@ import {
 async function createRouter(routes: RouteObject[]) {
     const isPackaged = await window.electronAPI?.isPackaged();
     const createRouter = isPackaged ? createMemoryRouter : createBrowserRouter;
-    return createRouter(routes);
+    return createRouter(routes, { basename: connectConfig.routerBasename });
 }
 
 const RouterAsync = async () => {
