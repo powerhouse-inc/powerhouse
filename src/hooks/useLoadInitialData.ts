@@ -63,7 +63,10 @@ export const useLoadInitialData = () => {
                 drive.syncStatus !== prevDrive.syncStatus
             ) {
                 return toast(
-                    t('notifications.driveSyncError', { drive: drive.label }),
+                    t(
+                        `notifications.${drive.syncStatus === 'CONFLICT' ? 'driveSyncConflict' : 'driveSyncError'}`,
+                        { drive: drive.label },
+                    ),
                     {
                         type: 'connect-warning',
                     },

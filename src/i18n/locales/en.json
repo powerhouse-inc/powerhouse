@@ -82,6 +82,7 @@
         "fileDeleteSuccess": "File deleted",
         "addDriveSuccess": "New drive successfully added",
         "driveSyncSuccess": "Drive synced successfully",
-        "driveSyncError": "Conflict error detected in {{drive}}"
+        "driveSyncError": "Error synchronizing drive {{drive}}",
+        "driveSyncConflict": "Conflict error detected in {{drive}}"
     }
 }
