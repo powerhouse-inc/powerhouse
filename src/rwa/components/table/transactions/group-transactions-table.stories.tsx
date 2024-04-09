@@ -1,5 +1,7 @@
 import { GroupTransaction } from '@/rwa';
 import {
+    manyMockGroupTransactions,
+    mockAccounts,
     mockCashAsset,
     mockFixedIncomes,
     mockGroupTransactions,
@@ -34,6 +36,7 @@ export const Empty: Story = {
         fixedIncomes: [],
         cashAsset: mockCashAsset,
         serviceProviderFeeTypes: [],
+        accounts: [],
         principalLenderAccountId: mockPrincipalLenderAccountId,
     },
     render: function Wrapper(args) {
@@ -57,6 +60,12 @@ export const Empty: Story = {
                 setShowNewItemForm(false);
             }, []);
 
+        const onSubmitDelete: GroupTransactionsTableProps['onSubmitDelete'] =
+            useCallback(id => {
+                console.log('delete', { id });
+                setSelectedItem(undefined);
+            }, []);
+
         const argsWithHandlers: GroupTransactionsTableProps = {
             ...args,
             expandedRowId,
@@ -67,6 +76,7 @@ export const Empty: Story = {
             setShowNewItemForm,
             onSubmitEdit,
             onSubmitCreate,
+            onSubmitDelete,
         };
         return (
             <div className="flex flex-col gap-4">
@@ -100,5 +110,14 @@ export const WithData: Story = {
         cashAsset: mockCashAsset,
         serviceProviderFeeTypes: mockServiceProviderFeeTypes,
         principalLenderAccountId: mockPrincipalLenderAccountId,
+        accounts: mockAccounts,
+    },
+};
+
+export const WithManyItems: Story = {
+    ...WithData,
+    args: {
+        ...WithData.args,
+        transactions: manyMockGroupTransactions,
     },
 };

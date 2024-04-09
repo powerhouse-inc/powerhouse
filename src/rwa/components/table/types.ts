@@ -45,6 +45,7 @@ export type TableBaseProps<TTableData extends TableItem> = DivProps & {
     onClickSort: (key: string, direction: SortDirection) => void;
     children?: ReactNode;
     footer?: ReactNode;
+    hasExpandedRow?: boolean;
 };
 
 export type TableProps<
@@ -64,6 +65,7 @@ export type TableProps<
     toggleExpandedRow: (id: string | undefined) => void;
     onSubmitEdit: (data: TFieldValues) => void;
     onSubmitCreate: (data: TFieldValues) => void;
+    onSubmitDelete: (itemId: string) => void;
     editForm: ComponentType<{ itemId: string; itemNumber: number }>;
     createForm: ComponentType;
 };
@@ -76,7 +78,8 @@ export type PropsToKeepFromTable =
     | 'setShowNewItemForm'
     | 'toggleExpandedRow'
     | 'onSubmitEdit'
-    | 'onSubmitCreate';
+    | 'onSubmitCreate'
+    | 'onSubmitDelete';
 
 export type GroupTransactionsTableProps = Pick<
     TableProps<GroupTransaction, GroupTransactionFormInputs>,
@@ -86,6 +89,7 @@ export type GroupTransactionsTableProps = Pick<
     cashAsset: CashAsset | undefined;
     fixedIncomes: FixedIncome[];
     serviceProviderFeeTypes: ServiceProviderFeeType[];
+    accounts: Account[];
     principalLenderAccountId: string;
 };
 
@@ -131,6 +135,7 @@ export type ItemDetailsFormProps<
     TFieldValues extends FieldValues = FieldValues,
 > = Pick<UseFormReturn<TFieldValues>, 'handleSubmit' | 'reset'> & {
     onSubmit: SubmitHandler<TFieldValues>;
+    onSubmitDelete: (itemId: string) => void;
 };
 
 export type ItemDetailsProps<
@@ -155,7 +160,8 @@ export type PropsToKeepFromItemDetails =
     | 'operation'
     | 'setSelectedItem'
     | 'setShowNewItemForm'
-    | 'onCancel';
+    | 'onCancel'
+    | 'onSubmitDelete';
 
 export type AssetDetailsProps = Pick<
     ItemDetailsProps<FixedIncome>,
@@ -164,6 +170,7 @@ export type AssetDetailsProps = Pick<
     fixedIncomeTypes: FixedIncomeType[];
     spvs: SPV[];
     onSubmitForm: (data: AssetFormInputs) => void;
+    onSubmitDelete: (itemId: string) => void;
 };
 
 export type GroupTransactionDetailsProps = Pick<
@@ -172,6 +179,7 @@ export type GroupTransactionDetailsProps = Pick<
 > & {
     fixedIncomes: FixedIncome[];
     serviceProviderFeeTypes: ServiceProviderFeeType[];
+    accounts: Account[];
     onSubmitForm: (data: GroupTransactionFormInputs) => void;
 };
 

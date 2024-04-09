@@ -1,6 +1,5 @@
 import { RWASelect, RWASelectProps } from '@/rwa';
 import { Control, Controller, FieldValues, Path } from 'react-hook-form';
-import { twMerge } from 'tailwind-merge';
 
 export interface RWATableSelectProps<ControlInputs extends FieldValues>
     extends RWASelectProps {
@@ -32,13 +31,6 @@ export function RWATableSelect<ControlInputs extends FieldValues>(
                     selectedKey={value}
                     isDisabled={disabled}
                     onSelectionChange={onChange}
-                    buttonProps={{
-                        className: twMerge(
-                            'h-[32px] rounded-md',
-                            disabled &&
-                                'bg-white p-0 [&>span:last-child]:hidden ',
-                        ),
-                    }}
                     {...restProps}
                 />
             )}

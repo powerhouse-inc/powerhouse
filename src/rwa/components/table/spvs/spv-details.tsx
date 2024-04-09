@@ -1,11 +1,11 @@
 import {
     ItemDetails,
-    RWAFormRow,
     RWATableTextInput,
     SPVDetailsProps,
     SPVFormInputs,
 } from '@/rwa';
 import { SubmitHandler, useForm } from 'react-hook-form';
+import { FormInputs } from '../../inputs/form-inputs';
 
 export function SPVDetails(props: SPVDetailsProps) {
     const { onCancel, onSubmitForm, item, operation } = props;
@@ -25,27 +25,26 @@ export function SPVDetails(props: SPVDetailsProps) {
         onSubmitForm(data);
     };
 
-    const formInputs = () => (
-        <div>
-            <RWAFormRow
-                label="SPV Label"
-                hideLine={operation !== 'view'}
-                value={
-                    <RWATableTextInput
-                        {...register('name', {
-                            disabled: operation === 'view',
-                            required: 'SPV name is required',
-                        })}
-                        aria-invalid={
-                            errors.name?.type === 'required' ? 'true' : 'false'
-                        }
-                        errorMessage={errors.name?.message}
-                        placeholder="E.g. My SPV name"
-                    />
-                }
-            />
-        </div>
-    );
+    const inputs = [
+        {
+            label: 'SPV name',
+            Input: () => (
+                <RWATableTextInput
+                    {...register('name', {
+                        disabled: operation === 'view',
+                        required: 'SPV name is required',
+                    })}
+                    aria-invalid={
+                        errors.name?.type === 'required' ? 'true' : 'false'
+                    }
+                    errorMessage={errors.name?.message}
+                    placeholder="E.g. My SPV name"
+                />
+            ),
+        },
+    ];
+
+    const formInputs = () => <FormInputs inputs={inputs} />;
 
     const formProps = {
         formInputs,

@@ -17,6 +17,7 @@ import { twMerge } from 'tailwind-merge';
  * @param operation - Operation to perform on the item. Can be 'view', 'edit', or 'create'. Defaults to 'view'
  * @param handleSubmit - Function to handle form submission, returned by the `useForm` hook which is called in the parent `*Details` element
  * @param onSubmit - Submit handler to be called by `handleSubmit`. defined in the parent `*Details` element
+ * @param onSubmitDelete - Function to perform the delete operation on the item. Defined in the parent `*Details` element
  * @param reset - Function to reset the form, returned by the `useForm` hook which is called in the parent `*Details` element
  * @param setSelectedItem - Function to set the selected item in the parent `Table` element
  * @param setShowNewItemForm - Function to set the showNewItemForm state in the parent `Table` element
@@ -35,6 +36,7 @@ export function ItemDetails<
         operation = 'view',
         handleSubmit,
         onSubmit,
+        onSubmitDelete,
         reset,
         setSelectedItem,
         setShowNewItemForm,
@@ -49,6 +51,13 @@ export function ItemDetails<
         onCancel?.();
         if (operation === 'create') setShowNewItemForm?.(false);
         else setSelectedItem?.(undefined);
+    }
+
+    function handleDelete() {
+        if (!item) return;
+
+        onSubmitDelete(item.id);
+        setSelectedItem?.(undefined);
     }
 
     return (
@@ -79,6 +88,13 @@ export function ItemDetails<
                                 ? 'Save New ' + itemName
                                 : 'Save Edits'}
                         </RWAButton>
+                        <button onClick={handleDelete}>
+                            <Icon
+                                name="trash"
+                                className="ml-3 text-red-800"
+                                size={22}
+                            />
+                        </button>
                     </div>
                 ) : (
                     <RWAButton

@@ -1,4 +1,12 @@
-import { FormattedNumber, TableItem, formatDateForDisplay } from '@/rwa';
+import {
+    FormattedNumber,
+    GroupTransactionType,
+    TableItem,
+    TransactionFeeInput,
+    cashTransactionSignByTransactionType,
+    formatDateForDisplay,
+} from '@/rwa';
+import { InputMaybe } from 'document-model/document';
 
 export function isISODate(str: string) {
     if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(str)) return false;
@@ -38,4 +46,28 @@ export function addItemNumber<TItem extends TableItem>(items: TItem[]) {
         ...item,
         itemNumber: index + 1,
     }));
+}
+
+export function calculateUnitPrice(
+    cashAmount: InputMaybe<number>,
+    fixedIncomeAmount: InputMaybe<number>,
+) {
+    if (!cashAmount || !fixedIncomeAmount) return 0;
+    return cashAmount / fixedIncomeAmount;
+}
+
+export function calculateCashBalanceChange(
+    transactionType: InputMaybe<GroupTransactionType>,
+    cashAmount: InputMaybe<number>,
+    fees: InputMaybe<TransactionFeeInput[]>,
+) {
+    if (!cashAmount || !transactionType) return 0;
+
+    const sign = cashTransactionSignByTransactionType[transactionType];
+
+    const feeAmounts = fees?.map(fee => fee.amount).filter(Boolean) ?? [];
+
+    const totalFees = feeAmounts.reduce((acc, fee) => acc + fee, 0);
+
+    return cashAmount * sign - totalFees;
 }

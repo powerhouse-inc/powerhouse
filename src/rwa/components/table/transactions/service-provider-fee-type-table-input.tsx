@@ -35,7 +35,7 @@ export function ServiceProviderAndFeeTypeTableInput<
                     selectedKey={selectedServiceProviderFeeType?.id}
                     buttonProps={{
                         className:
-                            'w-full h-8 bg-white border border-gray-300 rounded-lg',
+                            'w-full h-8 border border-gray-300 bg-transparent rounded-lg px-2 disabled:border-none',
                     }}
                 />
             )}

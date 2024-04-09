@@ -2,10 +2,10 @@ import {
     FixedIncomeTypeDetailsProps,
     FixedIncomeTypeFormInputs,
     ItemDetails,
-    RWAFormRow,
     RWATableTextInput,
 } from '@/rwa';
 import { SubmitHandler, useForm } from 'react-hook-form';
+import { FormInputs } from '../../inputs/form-inputs';
 
 export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
     const { onCancel, onSubmitForm, item, operation } = props;
@@ -25,27 +25,26 @@ export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
         onSubmitForm(data);
     };
 
-    const formInputs = () => (
-        <div>
-            <RWAFormRow
-                label="Fixed Income Type Name"
-                hideLine={operation !== 'view'}
-                value={
-                    <RWATableTextInput
-                        {...register('name', {
-                            disabled: operation === 'view',
-                            required: 'Fixed Income Type name is required',
-                        })}
-                        aria-invalid={
-                            errors.name?.type === 'required' ? 'true' : 'false'
-                        }
-                        errorMessage={errors.name?.message}
-                        placeholder="E.g. My Fixed Income Type name"
-                    />
-                }
-            />
-        </div>
-    );
+    const inputs = [
+        {
+            label: 'Fixed Income Type Name',
+            Input: () => (
+                <RWATableTextInput
+                    {...register('name', {
+                        disabled: operation === 'view',
+                        required: 'Fixed Income Type name is required',
+                    })}
+                    aria-invalid={
+                        errors.name?.type === 'required' ? 'true' : 'false'
+                    }
+                    errorMessage={errors.name?.message}
+                    placeholder="E.g. My Fixed Income Type name"
+                />
+            ),
+        },
+    ];
+
+    const formInputs = () => <FormInputs inputs={inputs} />;
 
     const formProps = {
         formInputs,

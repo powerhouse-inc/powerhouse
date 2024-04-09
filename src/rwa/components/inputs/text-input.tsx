@@ -29,7 +29,7 @@ export const RWATableTextInput = forwardRef(function RWATableTextInput(
                 type="text"
                 ref={ref}
                 className={twMerge(
-                    'size-full h-8 rounded-md border border-transparent bg-gray-100 p-3 text-right text-sm text-gray-800 placeholder:text-gray-500 disabled:bg-white disabled:pr-0',
+                    'h-8 w-full rounded-md border border-transparent bg-gray-100 p-3 text-right placeholder:text-gray-500 disabled:bg-transparent disabled:p-0 disabled:text-left',
                     invalid &&
                         'border-red-900 outline-red-900 placeholder:text-red-800',
                     inputClassName,

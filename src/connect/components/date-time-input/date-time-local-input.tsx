@@ -13,7 +13,10 @@ export const DateTimeLocalInput = forwardRef(function DateTimeLocalInput(
     return (
         <input
             {...props}
-            className={twMerge('disabled:bg-transparent', props.className)}
+            className={twMerge(
+                'h-8 w-full rounded-md bg-gray-100 px-3 disabled:bg-transparent disabled:p-0',
+                props.className,
+            )}
             type="datetime-local"
             ref={ref}
             step={props.step ?? '1'}

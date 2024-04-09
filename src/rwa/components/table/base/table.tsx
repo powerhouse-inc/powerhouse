@@ -16,7 +16,7 @@ import {
 } from '@/rwa';
 import { Fragment, useRef } from 'react';
 import { FieldValues } from 'react-hook-form';
-import { twJoin, twMerge } from 'tailwind-merge';
+import { twMerge } from 'tailwind-merge';
 
 /**
  * Generic table with standard styles intended to be used for most of the RWA tables in the app.
@@ -127,10 +127,6 @@ export function Table<
     return (
         <>
             <TableBase
-                className={twJoin(
-                    'rounded-b-none bg-white',
-                    expandedRowId && 'max-h-max',
-                )}
                 onClickSort={sortHandler}
                 ref={tableContainerRef}
                 tableData={sortedItems}
@@ -139,7 +135,7 @@ export function Table<
             />
             <button
                 onClick={() => setShowNewItemForm(true)}
-                className="flex h-11 w-full items-center justify-center gap-x-2 rounded-b-lg border-x border-b border-gray-300 bg-white text-sm font-semibold text-gray-900"
+                className="mt-4 flex h-11 w-full items-center justify-center gap-x-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900"
             >
                 <span>Create {itemName}</span>
                 <Icon name="plus" size={14} />

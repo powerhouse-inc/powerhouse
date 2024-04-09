@@ -1,13 +1,13 @@
 import {
     Account,
     ItemDetails,
-    RWAFormRow,
     RWATableSelect,
     RWATableTextInput,
     ServiceProviderFeeTypeDetailsProps,
     ServiceProviderFeeTypeFormInputs,
 } from '@/rwa';
 import { SubmitHandler, useForm } from 'react-hook-form';
+import { FormInputs } from '../../inputs/form-inputs';
 
 export function ServiceProviderFeeTypeDetails(
     props: ServiceProviderFeeTypeDetailsProps,
@@ -36,7 +36,7 @@ export function ServiceProviderFeeTypeDetails(
     };
 
     function makeAccountLabel(account: Account) {
-        return `${account.label} (${account.id})`;
+        return `${account.label} (${account.reference})`;
     }
 
     function makeAccountOptions(accounts: Account[]) {
@@ -46,61 +46,53 @@ export function ServiceProviderFeeTypeDetails(
         }));
     }
 
-    const formInputs = () => (
-        <div>
-            <RWAFormRow
-                label="Service Provider ID"
-                hideLine={operation !== 'view'}
-                value={item?.id}
-            />
-            <RWAFormRow
-                label="Service Provider Name"
-                hideLine={operation !== 'view'}
-                value={
-                    <RWATableTextInput
-                        {...register('name', {
-                            disabled: operation === 'view',
-                            required: 'Service provider name is required',
-                        })}
-                        aria-invalid={
-                            errors.name?.type === 'required' ? 'true' : 'false'
-                        }
-                        errorMessage={errors.name?.message}
-                        placeholder="E.g. My Service Provider"
-                    />
-                }
-            />
-            <RWAFormRow
-                label="Fee Type"
-                hideLine={operation !== 'view'}
-                value={
-                    <RWATableTextInput
-                        {...register('feeType', {
-                            disabled: operation === 'view',
-                            required: 'Fee type is required',
-                        })}
-                        aria-invalid={
-                            errors.name?.type === 'required' ? 'true' : 'false'
-                        }
-                        errorMessage={errors.name?.message}
-                        placeholder="E.g. My Fee Type"
-                    />
-                }
-            />
-            <RWAFormRow
-                label="Account"
-                hideLine={operation !== 'view'}
-                value={
-                    <RWATableSelect
-                        control={control}
-                        name="accountId"
-                        disabled={operation === 'view'}
-                        options={makeAccountOptions(accounts)}
-                    />
-                }
-            />
-        </div>
-    );
+    const inputs = [
+        {
+            label: 'Service Provider Name',
+            Input: () => (
+                <RWATableTextInput
+                    {...register('name', {
+                        disabled: operation === 'view',
+                        required: 'Service provider name is required',
+                    })}
+                    aria-invalid={
+                        errors.name?.type === 'required' ? 'true' : 'false'
+                    }
+                    errorMessage={errors.name?.message}
+                    placeholder="E.g. My Service Provider"
+                />
+            ),
+        },
+        {
+            label: 'Fee Type',
+            Input: () => (
+                <RWATableTextInput
+                    {...register('feeType', {
+                        disabled: operation === 'view',
+                        required: 'Fee type is required',
+                    })}
+                    aria-invalid={
+                        errors.name?.type === 'required' ? 'true' : 'false'
+                    }
+                    errorMessage={errors.name?.message}
+                    placeholder="E.g. My Fee Type"
+                />
+            ),
+        },
+        {
+            label: 'Account',
+            Input: () => (
+                <RWATableSelect
+                    control={control}
+                    name="accountId"
+                    disabled={operation === 'view'}
+                    options={makeAccountOptions(accounts)}
+                />
+            ),
+        },
+    ];
+
+    const formInputs = () => <FormInputs inputs={inputs} />;
 
     const formProps = {
         formInputs,

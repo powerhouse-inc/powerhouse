@@ -13,6 +13,7 @@ import {
     SelectProps,
     SelectValue,
 } from 'react-aria-components';
+import { twMerge } from 'tailwind-merge';
 
 export type OptionsType = { id: string; label: string };
 
@@ -34,22 +35,24 @@ export const RWASelect: React.FC<RWASelectProps> = props => {
         ...selectProps
     } = props;
 
+    const { className } = buttonProps;
     const buttonRef = useRef(null);
 
     return (
-        <Select {...selectProps}>
+        <Select {...selectProps} className="">
             {label && (
                 <Label className="mb-2 text-xs text-gray-600">{label}</Label>
             )}
             <Button
                 ref={buttonRef}
-                {...mergeClassNameProps(
-                    buttonProps,
-                    'flex h-[42px] items-center justify-between gap-x-2 rounded-xl bg-gray-100 px-3 text-xs outline-none',
+                {...buttonProps}
+                className={twMerge(
+                    'group flex h-8 w-full items-center justify-between gap-x-2 rounded-md bg-gray-100 px-3 text-xs outline-none disabled:bg-transparent disabled:p-0',
+                    className as string,
                 )}
             >
                 <SelectValue />
-                <span aria-hidden="true">
+                <span className="group-disabled:hidden" aria-hidden="true">
                     <Icon name="caret-down" size={16} />
                 </span>
             </Button>
@@ -57,7 +60,7 @@ export const RWASelect: React.FC<RWASelectProps> = props => {
                 <ListBox
                     {...mergeClassNameProps(
                         listBoxProps,
-                        'modal-shadow rounded-xl bg-white py-3 text-xs outline-none',
+                        'modal-shadow w-[--trigger-width] rounded-xl bg-white py-3 text-xs outline-none',
                     )}
                 >
                     {options.map(option => (

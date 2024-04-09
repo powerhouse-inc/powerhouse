@@ -2,13 +2,13 @@ import {
     AccountDetailsProps,
     AccountFormInputs,
     ItemDetails,
-    RWAFormRow,
     RWATableTextInput,
 } from '@/rwa';
 import { SubmitHandler, useForm } from 'react-hook-form';
+import { FormInputs } from '../../inputs/form-inputs';
 
 export function AccountDetails(props: AccountDetailsProps) {
-    const { onCancel, onSubmitForm, item, operation } = props;
+    const { onSubmitForm, item, operation } = props;
 
     const {
         register,
@@ -26,53 +26,48 @@ export function AccountDetails(props: AccountDetailsProps) {
         onSubmitForm(data);
     };
 
-    const formInputs = () => (
-        <div>
-            <RWAFormRow
-                label="Account Label"
-                hideLine={operation !== 'view'}
-                value={
-                    <RWATableTextInput
-                        {...register('label', {
-                            disabled: operation === 'view',
-                            required: 'Account label is required',
-                        })}
-                        aria-invalid={
-                            errors.label?.type === 'required' ? 'true' : 'false'
-                        }
-                        errorMessage={errors.label?.message}
-                        placeholder="E.g. My Label"
-                    />
-                }
-            />
-            <RWAFormRow
-                label="Account Reference"
-                hideLine={operation !== 'view'}
-                value={
-                    <RWATableTextInput
-                        {...register('reference', {
-                            disabled: operation === 'view',
-                            required: 'Account reference is required',
-                        })}
-                        aria-invalid={
-                            errors.reference?.type === 'required'
-                                ? 'true'
-                                : 'false'
-                        }
-                        errorMessage={errors.reference?.message}
-                        placeholder="E.g. bank account number or ETH address"
-                    />
-                }
-            />
-        </div>
-    );
+    const inputs = [
+        {
+            label: 'Account Label',
+            Input: () => (
+                <RWATableTextInput
+                    {...register('label', {
+                        disabled: operation === 'view',
+                        required: 'Account label is required',
+                    })}
+                    aria-invalid={
+                        errors.label?.type === 'required' ? 'true' : 'false'
+                    }
+                    errorMessage={errors.label?.message}
+                    placeholder="E.g. My Label"
+                />
+            ),
+        },
+        {
+            label: 'Account Reference',
+            Input: () => (
+                <RWATableTextInput
+                    {...register('reference', {
+                        disabled: operation === 'view',
+                        required: 'Account reference is required',
+                    })}
+                    aria-invalid={
+                        errors.reference?.type === 'required' ? 'true' : 'false'
+                    }
+                    errorMessage={errors.reference?.message}
+                    placeholder="E.g. bank account number or ETH address"
+                />
+            ),
+        },
+    ];
+
+    const formInputs = () => <FormInputs inputs={inputs} />;
 
     const formProps = {
         formInputs,
         handleSubmit,
         onSubmit,
         reset,
-        onCancel,
     };
 
     return <ItemDetails {...props} {...formProps} />;

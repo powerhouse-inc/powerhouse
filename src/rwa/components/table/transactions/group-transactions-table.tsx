@@ -5,7 +5,10 @@ import {
     GroupTransactionsTableProps,
     Table,
     addItemNumber,
+    assetTransactionSignByTransactionType,
+    cashTransactionSignByTransactionType,
     getItemById,
+    isAssetGroupTransactionType,
 } from '@/rwa';
 import { useMemo } from 'react';
 
@@ -40,6 +43,11 @@ const columns = [
     },
 ];
 
+function maybeAddSignToAmount(amount: number | undefined, sign: 1 | -1) {
+    if (!amount) return amount;
+    return amount * sign;
+}
+
 export function makeGroupTransactionTableData(
     transactions: GroupTransaction[] | undefined,
     fixedIncomes: FixedIncome[] | undefined,
@@ -47,16 +55,33 @@ export function makeGroupTransactionTableData(
     if (!transactions?.length || !fixedIncomes?.length) return [];
 
     const tableData = transactions.map(transaction => {
+        const id = transaction.id;
+        const entryTime = transaction.entryTime;
+        const asset = fixedIncomes.find(
+            asset => asset.id === transaction.fixedIncomeTransaction?.assetId,
+        )?.name;
+        const type = transaction.type;
+        const cashTransactionSign = cashTransactionSignByTransactionType[type];
+        const assetTransactionSign = isAssetGroupTransactionType(type)
+            ? assetTransactionSignByTransactionType[type]
+            : 1;
+        const quantity = maybeAddSignToAmount(
+            transaction.fixedIncomeTransaction?.amount,
+            assetTransactionSign,
+        );
+        const cashAmount = maybeAddSignToAmount(
+            transaction.cashTransaction?.amount,
+            cashTransactionSign,
+        );
+        const cashBalanceChange = transaction.cashBalanceChange;
+
         return {
-            id: transaction.id,
-            entryTime: transaction.entryTime,
-            asset: fixedIncomes.find(
-                asset =>
-                    asset.id === transaction.fixedIncomeTransaction?.assetId,
-            )?.name,
-            quantity: transaction.fixedIncomeTransaction?.amount,
-            cashAmount: transaction.cashTransaction?.amount,
-            cashBalanceChange: transaction.cashBalanceChange,
+            id,
+            entryTime,
+            asset,
+            quantity,
+            cashAmount,
+            cashBalanceChange,
         };
     });
 

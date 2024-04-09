@@ -1,5 +1,5 @@
-import { ServiceProviderFeeType } from '@/rwa';
-import { mockServiceProviderFeeTypes } from '@/rwa/mocks';
+import { Account, ServiceProviderFeeType } from '@/rwa';
+import { mockAccounts, mockServiceProviderFeeTypes } from '@/rwa/mocks';
 import { Meta, StoryObj } from '@storybook/react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { GroupTransactionFormInputs, TransactionFeeInput } from '../types';
@@ -14,6 +14,7 @@ export default meta;
 
 type Story = StoryObj<{
     serviceProviderFeeTypes: ServiceProviderFeeType[];
+    accounts: Account[];
     isViewOnly: boolean;
     feeInputs: TransactionFeeInput[];
 }>;
@@ -21,6 +22,7 @@ type Story = StoryObj<{
 export const Empty: Story = {
     args: {
         serviceProviderFeeTypes: [],
+        accounts: [],
         isViewOnly: false,
         feeInputs: [],
     },
@@ -55,6 +57,7 @@ export const WithData: Story = {
     ...Empty,
     args: {
         serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+        accounts: mockAccounts,
         isViewOnly: false,
         feeInputs: [
             {

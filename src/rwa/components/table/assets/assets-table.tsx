@@ -28,12 +28,6 @@ const columns = [
         isNumberColumn: true,
     },
     {
-        key: 'totalDiscount' as const,
-        label: 'Total Discount',
-        allowSorting: true,
-        isNumberColumn: true,
-    },
-    {
         key: 'purchaseProceeds' as const,
         label: 'Purchase Proceeds',
         allowSorting: true,
@@ -42,6 +36,12 @@ const columns = [
     {
         key: 'salesProceeds' as const,
         label: 'Sales Proceeds',
+        allowSorting: true,
+        isNumberColumn: true,
+    },
+    {
+        key: 'totalDiscount' as const,
+        label: 'Total Discount',
         allowSorting: true,
         isNumberColumn: true,
     },

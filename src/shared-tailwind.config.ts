@@ -98,6 +98,9 @@ const theme = {
             '0px 4px 8px -4px rgba(0, 0, 0, 0.02), 0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset',
     },
     extend: {
+        gridTemplateColumns: {
+            'form-columns': 'max-content auto',
+        },
         keyframes: {
             'fade-in': {
                 '0%': { opacity: '0%' },

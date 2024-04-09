@@ -15,6 +15,7 @@ import { twMerge } from 'tailwind-merge';
  * @param footer - Content to render below the table rows
  * @param renderRow - Function to render a row, must return a React element
  * @param onClickSort - Function to handle sorting, called with key and direction
+ * @param hasExpandedRow - Whether the table has an expanded row
  */
 export const TableBase = fixedForwardRef(function TableBase<
     TItem extends TableItem,
@@ -26,6 +27,7 @@ export const TableBase = fixedForwardRef(function TableBase<
         footer,
         renderRow,
         onClickSort,
+        hasExpandedRow,
         ...containerProps
     } = props;
 
@@ -34,14 +36,23 @@ export const TableBase = fixedForwardRef(function TableBase<
     );
     const [sortKey, setSortKey] = useState<string | null>(null);
 
+    const rowHeight = 34;
+    const headerHeight = 42;
+    const bottomPadding = 8;
+    const heightOf20Rows = rowHeight * 20;
+    const maxHeight = hasExpandedRow
+        ? 'max-content'
+        : `${headerHeight + heightOf20Rows + bottomPadding}px`;
+
     return (
         <>
             <div
                 {...mergeClassNameProps(
                     containerProps,
-                    'relative max-h-[280px] overflow-auto rounded-lg border border-gray-300',
+                    'relative overflow-auto rounded-lg border border-gray-300 bg-white',
                 )}
                 ref={ref}
+                style={{ maxHeight }}
             >
                 <table className="w-full">
                     <thead className="sticky top-0 z-10 select-none text-nowrap border-b border-gray-300 bg-gray-100">
