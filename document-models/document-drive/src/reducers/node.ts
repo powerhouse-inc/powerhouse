@@ -5,13 +5,11 @@
  */
 
 import {
-    OperationScope,
     CreateChildDocumentInput,
     SynchronizationUnit,
 } from 'document-model/document';
-import { FileNode, getDescendants, getLatestSyncId, isFileNode } from '../..';
+import { FileNode, getDescendants, isFileNode } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
-import { z } from 'document-model/document-model';
 
 export const reducer: DocumentDriveNodeOperations = {
     addFileOperation(state, action, dispatch) {
@@ -19,26 +17,29 @@ export const reducer: DocumentDriveNodeOperations = {
             throw new Error(`Node with id ${action.input.id} already exists!`);
         }
 
-        const invalidScope = action.input.scopes.find(
-            scope => !z.OperationScopeSchema().safeParse(scope).success,
-        );
-        if (invalidScope) {
-            throw new Error(`${invalidScope} is not a valid scope`);
+        const synchronizationUnits = action.input
+            .synchronizationUnits as SynchronizationUnit[];
+
+        const invalidSyncUnit: SynchronizationUnit | undefined =
+            synchronizationUnits.find(
+                unit =>
+                    !!state.nodes.find(
+                        node =>
+                            isFileNode(node) &&
+                            node.synchronizationUnits.find(
+                                fileUnit => fileUnit.syncId === unit.syncId,
+                            ),
+                    ),
+            );
+        if (invalidSyncUnit) {
+            throw new Error(
+                `A synchronization unit with Id ${invalidSyncUnit.syncId} already exists`,
+            );
         }
-        const scopes = action.input.scopes as OperationScope[];
-
-        const latestSyncId = BigInt(getLatestSyncId(state));
-        const synchronizationUnits = scopes.map((scope, index) => ({
-            syncId: (latestSyncId + BigInt(1 + index)).toString(),
-            scope,
-            branch: 'main',
-        }));
-
         const fileNode: FileNode = {
             ...action.input,
             kind: 'file',
             parentFolder: action.input.parentFolder ?? null,
-            scopes,
             synchronizationUnits,
         };
         state.nodes.push(fileNode);
@@ -135,12 +136,30 @@ export const reducer: DocumentDriveNodeOperations = {
         const isFile = isFileNode(newNode);
 
         if (isFile) {
-            const latestSyncId = BigInt(getLatestSyncId(state));
-            const synchronizationUnits = newNode.scopes.map((scope, index) => ({
-                syncId: (latestSyncId + BigInt(1 + index)).toString(),
-                scope: scope,
-                branch: 'main',
-            }));
+            const synchronizationUnits = action.input
+                .synchronizationUnits as SynchronizationUnit[];
+
+            if (!action.input.synchronizationUnits) {
+                throw new Error('Synchronization units were not provided');
+            }
+
+            const invalidSyncUnit: SynchronizationUnit | undefined =
+                synchronizationUnits.find(
+                    unit =>
+                        !!state.nodes.find(
+                            node =>
+                                isFileNode(node) &&
+                                node.synchronizationUnits.find(
+                                    fileUnit => fileUnit.syncId === unit.syncId,
+                                ),
+                        ),
+                );
+            if (invalidSyncUnit) {
+                throw new Error(
+                    `A synchronization unit with Id ${invalidSyncUnit.syncId} already exists`,
+                );
+            }
+
             newNode.synchronizationUnits = synchronizationUnits;
         }
 

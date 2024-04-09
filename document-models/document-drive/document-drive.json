@@ -13,7 +13,7 @@
             "changeLog": [],
             "state": {
                 "global": {
-                    "schema": "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype SynchronizationUnit {\n    syncId: ID!\n    scope: String!\n    branch: String!\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    scopes: [String!]!\n    parentFolder: String\n    synchronizationUnits: [SynchronizationUnit!]!\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    id: ID!\n    name: String!\n    nodes: [Node!]!\n    icon: String\n    slug: String\n}",
+                    "schema": "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype SynchronizationUnit {\n    syncId: ID!\n    scope: String!\n    branch: String!\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n    synchronizationUnits: [SynchronizationUnit!]!\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    id: ID!\n    name: String!\n    nodes: [Node!]!\n    icon: String\n    slug: String\n}",
                     "initialValue": "{\"id\":\"\",\"name\":\"\",\"nodes\":[],\"icon\":null,\"slug\":null}",
                     "examples": []
                 },
@@ -33,7 +33,7 @@
                             "id": "7xiTdxonc9yEASR8sfV/KnbSV10=",
                             "name": "ADD_FILE",
                             "description": "",
-                            "schema": "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    parentFolder: ID\n    scopes: [String!]!\n}",
+                            "schema": "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    parentFolder: ID\n    synchronizationUnits: [SynchronizationUnit!]!\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],
@@ -88,7 +88,7 @@
                             "id": "vnQ7OB5b3wGLgjhbgJqAIpA+JLE=",
                             "name": "COPY_NODE",
                             "description": "",
-                            "schema": "input CopyNodeInput {\n    srcId: ID!\n    targetId: ID!\n    targetName: String\n    targetParentFolder: ID\n}",
+                            "schema": "input CopyNodeInput {\n    srcId: ID!\n    targetId: ID!\n    targetName: String\n    targetParentFolder: ID\n    synchronizationUnits: [SynchronizationUnit!]\n}",
                             "template": "",
                             "reducer": "",
                             "errors": [],

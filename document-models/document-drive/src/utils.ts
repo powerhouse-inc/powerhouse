@@ -1,10 +1,17 @@
+import { v4 as generateUUID } from 'uuid';
+
 import {
+    AddFileInput,
     CopyNodeInput,
     DocumentDriveState,
     FileNode,
     FolderNode,
     Node,
 } from '..';
+
+import { addFile, copyNode } from '../gen/node/creators';
+import { AddFileAction, CopyNodeAction } from '../gen/node/actions';
+import { OperationScope, SynchronizationUnit } from 'document-model/document';
 
 export function isFileNode(node: Node): node is FileNode {
     return node.kind === 'file';
@@ -98,25 +105,79 @@ export function generateNodesCopy(
         targetParentFolder: node.parentFolder
             ? getNewNodeId(node.parentFolder)
             : null,
+        synchronizationUnits: isFileNode(node)
+            ? node.synchronizationUnits.map(unit => ({
+                  ...unit,
+                  syncId: generateSynchronizationUnitId(nodes),
+              }))
+            : undefined,
     }));
 
     return copyNodesInput;
 }
 
-export function getLatestSyncId(state: DocumentDriveState) {
-    return state.nodes
-        .reduce((maxId, node) => {
-            if (!isFileNode(node)) {
-                return maxId;
-            }
-            let maxIdInt = maxId;
-            for (const unit of node.synchronizationUnits) {
-                const syncId = BigInt(unit.syncId);
-                if (syncId > maxIdInt) {
-                    maxIdInt = syncId;
-                }
-            }
-            return maxIdInt;
-        }, BigInt(0))
-        .toString();
+export function generateSynchronizationUnitId(
+    nodes: DocumentDriveState['nodes'],
+): string {
+    let syncId = '';
+    while (
+        !syncId ||
+        nodes.find(
+            node =>
+                isFileNode(node) &&
+                node.synchronizationUnits.find(unit => unit.syncId === syncId),
+        )
+    ) {
+        syncId = generateUUID();
+    }
+    return syncId;
+}
+
+export function generateSynchronizationUnits(
+    state: DocumentDriveState,
+    scopes: OperationScope[],
+    branch = 'main',
+): SynchronizationUnit[] {
+    return scopes.map(scope => ({
+        scope,
+        branch,
+        syncId: generateSynchronizationUnitId(state.nodes),
+    }));
+}
+
+export function generateAddNodeAction(
+    state: DocumentDriveState,
+    action: Omit<AddFileInput, 'synchronizationUnits'>,
+    scopes: OperationScope[],
+): AddFileAction {
+    return addFile({
+        ...action,
+        synchronizationUnits: generateSynchronizationUnits(state, scopes),
+    });
+}
+
+export function generateCopyNodeAction(
+    state: DocumentDriveState,
+    action: Omit<CopyNodeInput, 'synchronizationUnits'>,
+): CopyNodeAction {
+    const originalNode = state.nodes.find(node => node.id === action.srcId);
+    if (!originalNode) {
+        throw new Error(`Node with id ${action.srcId} not found`);
+    }
+
+    let synchronizationUnits: SynchronizationUnit[] | undefined = undefined;
+
+    if (isFileNode(originalNode)) {
+        synchronizationUnits = originalNode.synchronizationUnits.map(
+            syncUnit => ({
+                ...syncUnit,
+                syncId: generateSynchronizationUnitId(state.nodes),
+            }),
+        ) as SynchronizationUnit[];
+    }
+
+    return copyNode({
+        ...action,
+        synchronizationUnits,
+    });
 }

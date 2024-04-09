@@ -1,8 +1,10 @@
+import { validate } from 'uuid';
 import {
     utils,
     DocumentDriveState,
     CopyNodeInput,
-    getLatestSyncId,
+    generateSynchronizationUnitId,
+    generateSynchronizationUnits,
 } from '../..';
 
 const baseNodes: DocumentDriveState['nodes'] = [
@@ -210,7 +212,7 @@ describe('DocumentDrive Utils', () => {
             ).toThrowError(`Node with id invalid not found`);
         });
 
-        it('should return the largest sync id from all the nodes', () => {
+        it('should generate uuid sync id', () => {
             const state: DocumentDriveState = {
                 icon: null,
                 id: '',
@@ -218,80 +220,38 @@ describe('DocumentDrive Utils', () => {
                 nodes: [],
                 slug: null,
             };
-            const id = getLatestSyncId(state);
-            expect(id).toBe('0');
+            const id = generateSynchronizationUnitId(state.nodes);
+            expect(validate(id)).toBe(true);
+        });
 
-            state.nodes.push({
-                id: '1',
-                synchronizationUnits: [
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '1',
-                    },
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '2',
-                    },
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '3',
-                    },
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '4',
-                    },
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '9', // max id
-                    },
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '5',
-                    },
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '6',
-                    },
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '7',
-                    },
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '8',
-                    },
-                ],
-                kind: 'file',
+        it('should generate a sync unit for each scope', () => {
+            const state: DocumentDriveState = {
+                icon: null,
+                id: '',
                 name: '',
-                parentFolder: null,
-            });
-
-            expect(getLatestSyncId(state)).toBe('9');
-
-            state.nodes.push({
-                id: '2',
-                synchronizationUnits: [
-                    {
-                        branch: '',
-                        scope: '',
-                        syncId: '10',
-                    },
-                ],
-                kind: 'file',
-                name: '',
-                parentFolder: null,
-            });
-
-            expect(getLatestSyncId(state)).toBe('10');
+                nodes: [],
+                slug: null,
+            };
+            const units = generateSynchronizationUnits(state, [
+                'global',
+                'local',
+            ]);
+            expect(units).toStrictEqual([
+                {
+                    scope: 'global',
+                    branch: 'main',
+                    syncId: expect.stringMatching(
+                        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+                    ) as string,
+                },
+                {
+                    scope: 'local',
+                    branch: 'main',
+                    syncId: expect.stringMatching(
+                        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+                    ) as string,
+                },
+            ]);
         });
     });
 });

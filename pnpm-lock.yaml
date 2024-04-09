@@ -115,6 +115,9 @@ devDependencies:
   '@types/react':
     specifier: ^18.2.57
     version: 18.2.57
+  '@types/uuid':
+    specifier: ^9.0.8
+    version: 9.0.8
   '@typescript-eslint/eslint-plugin':
     specifier: ^6.19.0
     version: 6.19.0(@typescript-eslint/parser@6.19.0)(eslint@8.56.0)(typescript@5.3.3)
@@ -214,6 +217,9 @@ devDependencies:
   typescript:
     specifier: ^5.3.3
     version: 5.3.3
+  uuid:
+    specifier: ^9.0.1
+    version: 9.0.1
   vite:
     specifier: ^5.1.6
     version: 5.1.6(@types/node@20.11.20)

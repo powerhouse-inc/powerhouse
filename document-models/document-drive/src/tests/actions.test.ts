@@ -3,7 +3,9 @@ import {
     DocumentDriveAction,
     DocumentDriveLocalState,
     DocumentDriveState,
+    FileNode,
     actions,
+    generateSynchronizationUnits,
     reducer,
     utils,
 } from '../..';
@@ -301,6 +303,53 @@ describe('DocumentDrive Actions', () => {
             );
             expect(copiedNode?.name).toBe('Folder 1.1');
             expect(copiedNode?.parentFolder).toBe(targetParentFolder);
+        });
+
+        it('should set sync units when copying a file node', () => {
+            const synchronizationUnits = generateSynchronizationUnits(
+                documentDrive.state.global,
+                ['global', 'local'],
+            );
+
+            documentDrive = reducer(
+                documentDrive,
+                actions.addFile({
+                    id: 'testFile',
+                    documentType: '',
+                    name: 'Test File',
+                    synchronizationUnits,
+                }),
+            );
+
+            const initialNodesLength = documentDrive.state.global.nodes.length;
+
+            const newSynchronizationUnits = generateSynchronizationUnits(
+                documentDrive.state.global,
+                ['global', 'local'],
+            );
+            documentDrive = reducer(
+                documentDrive,
+                actions.copyNode({
+                    srcId: 'testFile',
+                    targetId: 'testFile-copy',
+                    targetName: null,
+                    synchronizationUnits: newSynchronizationUnits,
+                }),
+            );
+
+            const copiedNode = documentDrive.state.global.nodes.find(
+                node => node.id === 'testFile-copy',
+            );
+
+            expect(documentDrive.state.global.nodes.length).toBe(
+                initialNodesLength + 1,
+            );
+            expect((copiedNode as FileNode).synchronizationUnits).toStrictEqual(
+                newSynchronizationUnits,
+            );
+            expect(newSynchronizationUnits).to.not.toStrictEqual(
+                synchronizationUnits,
+            );
         });
     });
 });
