@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.21.0...v1.22.0) (2024-04-09)
+
+
+### Features
+
+* implement teep's feeback 4 ([#122](https://github.com/powerhouse-inc/document-model-libs/issues/122)) ([cc568a9](https://github.com/powerhouse-inc/document-model-libs/commit/cc568a99cf1e51c65dafe9f578cee3e7f173b2f1))
+
 # [1.21.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.20.0...v1.21.0) (2024-04-08)
 
 
