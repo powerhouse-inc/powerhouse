@@ -14,8 +14,8 @@ FROM nginx:latest AS runner
 ARG X_TAG
 WORKDIR /opt/app
 ENV NODE_ENV=production
-
+ENV BASE_PATH=${BASE_PATH}
 COPY --from=builder /opt/app/dist /usr/share/nginx/html
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
-CMD /bin/sh -c "envsubst '\$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf" && nginx -g 'daemon off;'
+CMD /bin/sh -c "envsubst '\$PORT,\$BASE_PATH' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf" && nginx -g 'daemon off;'
