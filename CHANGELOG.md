@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.22.0...v1.23.0) (2024-04-09)
+
+
+### Features
+
+* set sync unit ids on actions ([3c1489a](https://github.com/powerhouse-inc/document-model-libs/commit/3c1489adcbb2be4d5032514ae9914596cbc7b730))
+
 # [1.22.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.21.0...v1.22.0) (2024-04-09)
 
 
