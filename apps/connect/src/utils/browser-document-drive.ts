@@ -1,3 +1,4 @@
+import connectConfig from 'connect-config';
 import { DocumentDriveServer } from 'document-drive/server';
 import { BrowserStorage } from 'document-drive/storage/browser';
 import { utils } from 'document-model/document';
@@ -12,7 +13,10 @@ BrowserDocumentDriveServer.initialize()
     .then(() =>
         BrowserDocumentDriveServer.getDrives()
             .then(drives => {
-                if (!drives.length) {
+                if (
+                    !drives.length &&
+                    connectConfig.drives.sections.local.enabled
+                ) {
                     BrowserDocumentDriveServer.addDrive({
                         global: {
                             id: utils.hashKey(),

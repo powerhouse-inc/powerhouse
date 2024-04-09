@@ -3,6 +3,7 @@ import { ConnectSidebar, Icon } from '@powerhousedao/design-system';
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
+import { useNavigate } from 'react-router-dom';
 import { useENSInfo } from 'src/hooks/useEnsInfo';
 import { sidebarCollapsedAtom } from 'src/store';
 import { userAtom } from 'src/store/user';
@@ -19,6 +20,7 @@ export default function Sidebar() {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
     const [disableHoverStyles, setDisableHoverStyles] = useState(false);
     const { showModal } = useModal();
+    const navigate = useNavigate();
 
     const user = useAtomValue(userAtom);
     const ensInfo = useENSInfo(user?.address, user?.chainId);
@@ -28,7 +30,7 @@ export default function Sidebar() {
     }
 
     const onClickSettings = () => {
-        showModal('settingsModal', {});
+        showModal('settingsModal', { onRefresh: () => navigate(0) });
     };
 
     const headerContent = (

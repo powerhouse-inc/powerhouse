@@ -1,3 +1,4 @@
+import connectConfig from 'connect-config';
 import {
     DocumentDriveServer,
     DriveInput,
@@ -30,7 +31,10 @@ export default (
             documentDrive
                 .getDrives()
                 .then(drives => {
-                    if (!drives.length) {
+                    if (
+                        !drives.length &&
+                        connectConfig.drives.sections.local.enabled
+                    ) {
                         documentDrive
                             .addDrive({
                                 global: {
