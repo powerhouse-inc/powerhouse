@@ -89,6 +89,14 @@ export function ServiceProviderFeeTypes(props: IProps) {
             [dispatch],
         );
 
+    const onSubmitDelete: ServiceProviderFeeTypesTableProps['onSubmitDelete'] =
+        useCallback(
+            (id: string) => {
+                dispatch(actions.deleteServiceProviderFeeType({ id }));
+            },
+            [dispatch],
+        );
+
     return (
         <ServiceProviderFeeTypesTable
             serviceProviderFeeTypes={serviceProviderFeeTypes}
@@ -101,6 +109,7 @@ export function ServiceProviderFeeTypes(props: IProps) {
             setShowNewItemForm={setShowNewItemForm}
             onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
+            onSubmitDelete={onSubmitDelete}
         />
     );
 }

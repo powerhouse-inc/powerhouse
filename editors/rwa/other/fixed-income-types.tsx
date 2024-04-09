@@ -72,6 +72,14 @@ export function FixedIncomeTypes(props: IProps) {
             [dispatch],
         );
 
+    const onSubmitDelete: FixedIncomeTypesTableProps['onSubmitDelete'] =
+        useCallback(
+            (id: string) => {
+                dispatch(actions.deleteFixedIncomeType({ id }));
+            },
+            [dispatch],
+        );
+
     return (
         <FixedIncomeTypesTable
             fixedIncomeTypes={fixedIncomeTypes}
@@ -83,6 +91,7 @@ export function FixedIncomeTypes(props: IProps) {
             setShowNewItemForm={setShowNewItemForm}
             onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
+            onSubmitDelete={onSubmitDelete}
         />
     );
 }

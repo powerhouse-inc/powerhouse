@@ -81,6 +81,13 @@ export function Accounts(props: IProps) {
         [dispatch],
     );
 
+    const onSubmitDelete: AccountsTableProps['onSubmitDelete'] = useCallback(
+        id => {
+            dispatch(actions.deleteAccount({ id }));
+        },
+        [dispatch],
+    );
+
     return (
         <AccountsTable
             accounts={accounts}
@@ -92,6 +99,7 @@ export function Accounts(props: IProps) {
             setShowNewItemForm={setShowNewItemForm}
             onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
+            onSubmitDelete={onSubmitDelete}
         />
     );
 }

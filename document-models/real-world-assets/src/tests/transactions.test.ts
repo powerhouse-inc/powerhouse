@@ -65,6 +65,9 @@ describe('Transactions Operations', () => {
         const existingGroupTransaction = generateMock(
             z.GroupTransactionSchema(),
         );
+        existingGroupTransaction.cashTransaction = mockCashTransaction;
+        existingGroupTransaction.fixedIncomeTransaction =
+            mockFixedIncomeTransaction;
         const input = generateMock(z.DeleteGroupTransactionInputSchema());
         input.id = existingGroupTransaction.id;
         const initialDocument = utils.createDocument({
@@ -74,6 +77,7 @@ describe('Transactions Operations', () => {
                 global: {
                     ...document.state.global,
                     transactions: [existingGroupTransaction],
+                    portfolio: [mockCashAsset, mockFixedIncomeAsset],
                 },
             },
         });

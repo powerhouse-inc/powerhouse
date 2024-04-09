@@ -40,6 +40,25 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
                 : type,
         );
     },
+    deleteFixedIncomeTypeOperation(state, action, dispatch) {
+        const id = action.input.id;
+
+        if (!id) {
+            throw new Error(`Fixed income type must have an id`);
+        }
+
+        const fixedIncomeType = state.fixedIncomeTypes.find(
+            type => type.id === id,
+        );
+
+        if (!fixedIncomeType) {
+            throw new Error(`Type with id ${id} does not exist!`);
+        }
+
+        state.fixedIncomeTypes = state.fixedIncomeTypes.filter(
+            type => type.id !== id,
+        );
+    },
     createFixedIncomeAssetOperation(state, action, dispatch) {
         if (!action.input.id) {
             throw new Error(`Fixed income asset must have an id`);

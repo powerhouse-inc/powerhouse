@@ -158,6 +158,17 @@
                             "scope": "global"
                         },
                         {
+                            "id": "Ja0ufhN/5mYl2PUfvbEf58jeeJE=",
+                            "name": "DELETE_FIXED_INCOME_TYPE",
+                            "description": "",
+                            "schema": "input DeleteFixedIncomeTypeInput {\n    id: ID!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
                             "id": "nKGLGOHqaxtn382PRYgMni6JKyo=",
                             "name": "CREATE_FIXED_INCOME_ASSET",
                             "description": "",

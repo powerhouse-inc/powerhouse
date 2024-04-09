@@ -78,14 +78,21 @@ export function calculatePurchaseDate(transactions: GroupTransaction[]) {
  * Notional
  *
  * Face value sum of cash transactions for a given asset
- * Notional = SUM(Asset Proceeds)
+ * Notional = Purchase Price * (assetAmountPurchase - assetAmountSale)
  * Where Asset Proceeds is the amount of each cash transaction
  */
 export function calculateNotional(transactions: GroupTransaction[]) {
-    return (
-        sumCashTransactionsForType(transactions, ASSET_SALE) -
-        sumCashTransactionsForType(transactions, ASSET_PURCHASE)
+    const purchasePrice = calculatePurchasePrice(transactions);
+    const assetAmountPurchase = sumAssetTransactionsForType(
+        transactions,
+        ASSET_PURCHASE,
     );
+    const assetAmountSale = sumAssetTransactionsForType(
+        transactions,
+        ASSET_SALE,
+    );
+
+    return purchasePrice * (assetAmountPurchase - assetAmountSale);
 }
 
 /**
@@ -138,22 +145,24 @@ export function calculateSalesProceeds(transactions: GroupTransaction[]) {
 /**
  * Purchase price
  *
- * Total spent per unit including fees
+ * Total spent per unit not including fees
  *
  * Purchase price = Purchase proceeds / Quantity
  */
 export function calculatePurchasePrice(transactions: GroupTransaction[]) {
-    const sumAssetPurchaseAmounts = sumAssetTransactionsForType(
+    const sumAssetPurchaseAssetTransactions = sumAssetTransactionsForType(
+        transactions,
+        ASSET_PURCHASE,
+    );
+    const sumAssetPurchaseCashTransactions = sumCashTransactionsForType(
         transactions,
         ASSET_PURCHASE,
     );
 
     // avoid divide by zero
-    if (sumAssetPurchaseAmounts === 0) return 0;
+    if (sumAssetPurchaseAssetTransactions === 0) return 0;
 
-    const purchaseProceeds = calculatePurchaseProceeds(transactions);
-
-    return purchaseProceeds / sumAssetPurchaseAmounts;
+    return sumAssetPurchaseCashTransactions / sumAssetPurchaseAssetTransactions;
 }
 
 /**

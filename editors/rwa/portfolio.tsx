@@ -114,6 +114,13 @@ export const Portfolio = (props: IProps) => {
         [dispatch],
     );
 
+    const onSubmitDelete: AssetsTableProps['onSubmitDelete'] = useCallback(
+        (id: string) => {
+            dispatch(actions.deleteFixedIncomeAsset({ id }));
+        },
+        [dispatch],
+    );
+
     return (
         <div>
             <h1 className="text-lg font-bold mb-2">Portfolio</h1>
@@ -133,6 +140,7 @@ export const Portfolio = (props: IProps) => {
                 setShowNewItemForm={setShowNewItemForm}
                 onSubmitEdit={onSubmitEdit}
                 onSubmitCreate={onSubmitCreate}
+                onSubmitDelete={onSubmitDelete}
             />
         </div>
     );

@@ -71,6 +71,13 @@ export function SPVs(props: IProps) {
         [dispatch],
     );
 
+    const onSubmitDelete: SPVsTableProps['onSubmitDelete'] = useCallback(
+        (id: string) => {
+            dispatch(actions.deleteSpv({ id }));
+        },
+        [dispatch],
+    );
+
     return (
         <SPVsTable
             spvs={spvs}
@@ -82,6 +89,7 @@ export function SPVs(props: IProps) {
             setShowNewItemForm={setShowNewItemForm}
             onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
+            onSubmitDelete={onSubmitDelete}
         />
     );
 }

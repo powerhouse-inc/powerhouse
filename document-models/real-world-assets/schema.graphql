@@ -141,6 +141,10 @@ input EditFixedIncomeTypeInput {
     name: String
 }
 
+input DeleteFixedIncomeTypeInput {
+    id: ID!
+}
+
 input CreateFixedIncomeAssetInput {
     id: ID!
     fixedIncomeTypeId: ID!
