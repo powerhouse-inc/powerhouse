@@ -11,6 +11,7 @@ describe('Connect Sidebar Component', () => {
                 username="Willow"
                 address="0x123"
                 collapsed={false}
+                onLogin={() => {}}
             />,
         );
         expect(asFragment()).toMatchSnapshot();
@@ -24,6 +25,7 @@ describe('Connect Sidebar Component', () => {
                 username="Willow"
                 address="0x123"
                 collapsed={false}
+                onLogin={() => {}}
             />,
         );
         expect(screen.getByTestId('sidebar')).toBeInTheDocument();
@@ -37,6 +39,7 @@ describe('Connect Sidebar Component', () => {
                 username="Willow"
                 address="0x123"
                 collapsed={false}
+                onLogin={() => {}}
             />,
         );
         expect(screen.getByTestId('sidebar')).toHaveStyle({ width: '304px' });
@@ -50,6 +53,7 @@ describe('Connect Sidebar Component', () => {
                 username="Willow"
                 address="0x123"
                 collapsed={true}
+                onLogin={() => {}}
             />,
         );
         expect(screen.getByTestId('sidebar')).toHaveStyle({ width: '58px' });

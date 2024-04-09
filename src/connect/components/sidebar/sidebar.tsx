@@ -15,6 +15,8 @@ export interface ConnectSidebarProps
     maxWidth?: string;
     minWidth?: string;
     headerContent?: React.ReactNode;
+    loadingUser?: boolean;
+    onLogin: () => void;
 }
 
 export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
@@ -27,6 +29,8 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
     collapsed = false,
     maxWidth = '304px',
     minWidth = '58px',
+    loadingUser,
+    onLogin,
     ...props
 }) => {
     return (
@@ -46,6 +50,8 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
                 username={username}
                 address={address}
                 avatarUrl={avatarUrl}
+                loadingUser={loadingUser}
+                onLogin={onLogin}
                 onClickSettings={onClickSettings}
             />
         </Sidebar>
