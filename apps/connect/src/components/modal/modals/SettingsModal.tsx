@@ -28,10 +28,11 @@ const mapDocumentModelsToOptions = (documentModels: DocumentModel[]) =>
 export interface SettingsModalProps {
     open: boolean;
     onClose: () => void;
+    onRefresh: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = props => {
-    const { open, onClose } = props;
+    const { open, onClose, onRefresh } = props;
     const { clearStorage } = useDocumentDriveServer();
     const { t } = useTranslation();
     const enabledDocuments = useFilteredDocumentModels();
@@ -67,10 +68,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                 'modals.connectSettings.clearStorage.confirmation.clearButton',
             ),
             onContinue: () => {
-                clearStorage().catch(console.error);
-                showModal('settingsModal', {});
+                clearStorage()
+                    .then(() => {
+                        // resets the default drive to unloaded if it is defined
+                        setConfig(conf => ({
+                            ...conf,
+                            defaultDrive: conf.defaultDrive
+                                ? { ...conf.defaultDrive, loaded: false }
+                                : undefined,
+                        }));
+
+                        // refreshes the page to reload default drive
+                        onRefresh();
+                    })
+                    .catch(console.error);
             },
-            onCancel: () => showModal('settingsModal', {}),
+            onCancel: () => showModal('settingsModal', { onRefresh }),
         });
     };
 
