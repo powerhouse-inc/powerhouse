@@ -16,6 +16,7 @@ import {
     DocumentDriveAction,
     actions,
     utils as documentDriveUtils,
+    generateAddNodeAction,
     isFileNode,
     isFolderNode,
     reducer,
@@ -106,17 +107,25 @@ export function useDocumentDriveServer(
     ) {
         const id = utils.hashKey();
 
-        const drive = await _addDriveOperation(
-            driveId,
-            actions.addFile({
+        let drive = documentDrives.find(d => d.state.global.id === driveId);
+        if (!drive) {
+            throw new Error(`Drive with id ${driveId} not found`);
+        }
+
+        const action = generateAddNodeAction(
+            drive.state.global,
+            {
                 id,
                 name,
                 parentFolder,
                 documentType,
-                scopes: ['global'],
+
                 document,
-            }),
+            },
+            ['global'],
         );
+
+        drive = await _addDriveOperation(driveId, action);
 
         const node = drive?.state.global.nodes.find(node => node.id === id);
         if (!node || !isFileNode(node)) {
@@ -246,8 +255,14 @@ export function useDocumentDriveServer(
                 actions.copyNode(copyNodeInput),
             );
 
-            for (const action of copyActions) {
-                await _addDriveOperation(driveId, action);
+            const result = await server.addDriveActions(driveId, copyActions);
+            if (result.operations.length) {
+                await refreshDocumentDrives();
+            } else if (result.status !== 'SUCCESS') {
+                console.error(
+                    `Error copying files: ${result.status}`,
+                    result.error,
+                );
             }
         } else {
             await _addDriveOperation(
