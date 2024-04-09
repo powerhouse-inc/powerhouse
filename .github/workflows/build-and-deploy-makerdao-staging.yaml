@@ -1,0 +1,26 @@
+name: Deploy Connect to MakerDAO Staging
+
+on:
+  push:
+    branches: [deployments/staging/makerdao]
+
+env:
+  HUSKY: 0
+
+jobs:
+  build:
+    environment: MakerDAO Staging
+    runs-on: ubuntu-latest
+    steps:
+      # Check-out your repository.
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build, Push and Release APP to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          docker_options: "--build-arg BASE_PATH=/alpha/makerdao/connect --build-arg VITE_BASE_HREF=/alpha/makerdao/connect --build-arg VITE_ROUTER_BASENAME=/alpha/makerdao/connect"
+          process_type: web
