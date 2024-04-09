@@ -1,6 +1,12 @@
 FROM node:lts-alpine AS builder
-ARG BASE_PATH="/alpha/powerhouse/connect"
+ARG BASE_PATH=/alpha/powerhouse/connect
 ENV BASE_PATH=${BASE_PATH}
+
+ARG VITE_BASE_HREF=/alpha/powerhouse/connect
+ENV VITE_BASE_HREF=${VITE_BASE_HREF}
+
+ARG VITE_ROUTER_BASENAME=/alpha/powerhouse/connect
+ENV VITE_ROUTER_BASENAME=${VITE_ROUTER_BASENAME}
 
 WORKDIR /opt/app
 COPY . .
