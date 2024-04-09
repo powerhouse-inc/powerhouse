@@ -6,7 +6,7 @@ WORKDIR /opt/app
 COPY . .
 RUN npm install -g husky vite
 RUN npm install --frozen-lockfile
-RUN npm run build:web --base ${BASE_PATH}
+RUN npm run build:web -- --base ${BASE_PATH}
 
 # Production image, copy all the files and run next
 FROM nginx:latest AS runner
