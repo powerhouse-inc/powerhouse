@@ -1,5 +1,5 @@
 FROM node:lts-alpine AS builder
-ARG BASE_PATH="/alpha/makerdao/connect"
+ARG BASE_PATH="/alpha/powerhouse/connect"
 ENV BASE_PATH=${BASE_PATH}
 
 WORKDIR /opt/app
@@ -14,6 +14,7 @@ FROM nginx:latest AS runner
 ARG X_TAG
 WORKDIR /opt/app
 ENV NODE_ENV=production
+ARG BASE_PATH="/alpha/powerhouse/connect"
 ENV BASE_PATH=${BASE_PATH}
 COPY --from=builder /opt/app/dist /usr/share/nginx/html
 
