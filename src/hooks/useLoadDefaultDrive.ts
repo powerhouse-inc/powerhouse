@@ -11,12 +11,7 @@ export const useLoadDefaultDrive = () => {
     } = useFeatureFlag();
 
     useEffect(() => {
-        if (
-            documentDrives.length > 0 &&
-            defaultDrive &&
-            !defaultDrive.loaded &&
-            !loading.current
-        ) {
+        if (defaultDrive && !defaultDrive.loaded && !loading.current) {
             const isDriveAlreadyAdded = documentDrives.some(drive => {
                 return drive.state.local.triggers.some(
                     trigger => trigger.data?.url === defaultDrive.url,
