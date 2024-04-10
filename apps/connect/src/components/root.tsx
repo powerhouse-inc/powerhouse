@@ -1,13 +1,11 @@
 import IconConnect from '@/assets/icons/connect.svg?react';
 import IconLogo from '@/assets/icons/logo.svg?react';
-import { useSetAtom } from 'jotai';
 import React, { Suspense, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDropFile } from 'src/hooks';
 import { useLoadInitialData } from 'src/hooks/useLoadInitialData';
 import { useRenown } from 'src/hooks/useRenown';
 import { isElectron, isMac } from 'src/hooks/utils';
-import { userAtom } from 'src/store/user';
 import Sidebar from './sidebar';
 
 const ROOT_FILE_DROP = false;
@@ -16,26 +14,31 @@ const Root = () => {
     useLoadInitialData();
     const ref = React.useRef(null);
     const navigate = useNavigate();
-
     const renown = useRenown();
-    const setUser = useSetAtom(userAtom);
 
     useEffect(() => {
         window.electronAPI?.ready();
+    }, []);
 
-        renown
-            ?.user()
-            .then(user => {
-                setUser(user);
-            })
-            .catch(console.error);
+    const [searchParams, setSearchParams] = useSearchParams();
 
-        const unsubscribeLogin = renown?.on.user(user => {
-            setUser(user);
-        });
-
-        return unsubscribeLogin;
-    }, [renown, setUser]);
+    useEffect(() => {
+        const userStr = searchParams.get('user');
+        if (userStr) {
+            const userDid = decodeURIComponent(userStr);
+            searchParams.delete('user');
+            setSearchParams(searchParams);
+            renown
+                ?.user()
+                .then(user => {
+                    if (user?.did === userDid) {
+                        return;
+                    }
+                    return renown.login(userDid);
+                })
+                .catch(console.error);
+        }
+    }, [renown, searchParams, setSearchParams]);
 
     useEffect(() => {
         const unsubscribe = window.electronAPI?.handleURL((_e, url) => {

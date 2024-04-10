@@ -1,50 +1,15 @@
 import IconRenown from '@/assets/icons/renown.svg?react';
 import { Button } from '@powerhousedao/design-system';
-import { useState } from 'react';
 import DotsLoader from 'src/components/dots-loader';
-import { useConnectCrypto } from 'src/hooks/useConnectCrypto';
+import { useLogin } from 'src/hooks/useLogin';
 import { useRenown } from 'src/hooks/useRenown';
-import { RENOWN_URL } from 'src/services/renown/constants';
 import { useUser } from 'src/store/user';
 
-type LoginStatus = 'initial' | 'checking' | 'not-authorized' | 'authorized';
-
 export const Login: React.FC = () => {
-    const [status, setStatus] = useState<LoginStatus>('initial');
     const user = useUser();
     const renown = useRenown();
-    const { did } = useConnectCrypto();
 
-    async function login() {
-        const connectId = await did();
-        const url = `${RENOWN_URL}?connect=${encodeURIComponent(connectId)}`;
-
-        if (window.electronAPI) {
-            const protocol = await window.electronAPI.protocol();
-            await window.electronAPI.openURL(`${url}&deeplink=${protocol}`);
-        } else {
-            window.open(url, '_blank')?.focus();
-        }
-    }
-
-    async function checkLogin() {
-        try {
-            setStatus('checking');
-            const connectId = await did();
-            const user = await renown?.login(connectId);
-            if (user) {
-                setStatus('authorized');
-            } else {
-                setStatus('initial');
-            }
-        } catch (e) {
-            setStatus('not-authorized');
-        }
-    }
-
-    if (status === 'initial' && user) {
-        setStatus('authorized');
-    }
+    const { login, status } = useLogin();
 
     return (
         <div>

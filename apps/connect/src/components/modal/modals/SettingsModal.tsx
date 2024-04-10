@@ -104,7 +104,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                     <>
                         <p>
                             Logged in with address:{' '}
-                            <span className="text-sm">{user.address}</span>
+                            <span className="text-sm font-semibold">
+                                {user.address}
+                            </span>
                         </p>
                         <Button
                             className="mt-2 w-full"
