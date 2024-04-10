@@ -1,12 +1,12 @@
 /* eslint-disable tailwindcss/no-arbitrary-value */
 import { ConnectSidebar, Icon } from '@powerhousedao/design-system';
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtom } from 'jotai';
 import { useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { useENSInfo } from 'src/hooks/useEnsInfo';
+import { useLogin } from 'src/hooks/useLogin';
 import { sidebarCollapsedAtom } from 'src/store';
-import { userAtom } from 'src/store/user';
 import DriveContainer from './drive-container';
 import { useModal } from './modal';
 
@@ -22,8 +22,11 @@ export default function Sidebar() {
     const { showModal } = useModal();
     const navigate = useNavigate();
 
-    const user = useAtomValue(userAtom);
-    const ensInfo = useENSInfo(user?.address, user?.chainId);
+    const { user, login } = useLogin();
+    const { info: ensInfo, loading: loadingUser } = useENSInfo(
+        user?.address,
+        user?.chainId,
+    );
 
     function toggleCollapse() {
         setCollapsed(value => !value);
@@ -44,10 +47,12 @@ export default function Sidebar() {
             collapsed={collapsed}
             onToggle={toggleCollapse}
             username={ensInfo?.name || ''}
-            avatarUrl={ensInfo?.avatarUrl || ''}
+            avatarUrl={ensInfo?.avatarUrl}
             onClickSettings={onClickSettings}
             headerContent={headerContent}
-            address={user?.address ? shortAddress(user.address) : '-'}
+            address={user?.address ? shortAddress(user.address) : ''}
+            loadingUser={loadingUser}
+            onLogin={login}
         >
             <ErrorBoundary
                 fallback={

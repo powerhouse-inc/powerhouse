@@ -46,23 +46,30 @@ export class Renown {
     }
 
     async login(did: string): Promise<User> {
-        const result = parsePkhDid(did);
-        const credential = await this.#getCredential(
-            result.address,
-            result.chainId,
-            this.#connectId,
-        );
-        if (!credential) {
+        try {
+            const result = parsePkhDid(did);
+
+            const credential = await this.#getCredential(
+                result.address,
+                result.chainId,
+                this.#connectId,
+            );
+            if (!credential) {
+                this.#updateUser(undefined);
+                throw new Error('Credential not found');
+            }
+            const user: User = {
+                ...result,
+                did,
+                credential,
+            };
+            this.#updateUser(user);
+            return user;
+        } catch (error) {
+            console.error(error);
             this.#updateUser(undefined);
-            throw new Error('Credential not found');
+            throw error;
         }
-        const user: User = {
-            ...result,
-            did,
-            credential,
-        };
-        this.#updateUser(user);
-        return user;
     }
 
     logout() {

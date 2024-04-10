@@ -1,5 +1,4 @@
 import { atom, useAtom } from 'jotai';
-import { useEffect } from 'react';
 import { IRenown, User } from 'src/services/renown/types';
 import { useConnectCrypto } from './useConnectCrypto';
 
@@ -10,15 +9,6 @@ const renownAtom = atom<Promise<IRenown | undefined> | undefined>(
 export function useRenown() {
     const [renown, setRenown] = useAtom(renownAtom);
     const { did } = useConnectCrypto();
-
-    useEffect(() => {
-        const query = new URLSearchParams(window.location.search);
-        const userStr = query.get('user');
-        if (userStr) {
-            const userDid = decodeURIComponent(userStr);
-            renown?.login(userDid).catch(console.error);
-        }
-    }, [renown]);
 
     async function initRenown(
         getDid: () => Promise<string>,
