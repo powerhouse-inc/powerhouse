@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.23.0...v1.24.0) (2024-04-10)
+
+
+### Features
+
+* add cash asset row ([#124](https://github.com/powerhouse-inc/document-model-libs/issues/124)) ([4498747](https://github.com/powerhouse-inc/document-model-libs/commit/44987476097c7a65205f7f3c83e76188cd2db87e))
+
 # [1.23.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.22.0...v1.23.0) (2024-04-09)
 
 
