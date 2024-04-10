@@ -23,13 +23,17 @@ const Root = () => {
     const [searchParams, setSearchParams] = useSearchParams();
 
     useEffect(() => {
+        if (!renown) {
+            return;
+        }
+
         const userStr = searchParams.get('user');
         if (userStr) {
             const userDid = decodeURIComponent(userStr);
             searchParams.delete('user');
             setSearchParams(searchParams);
             renown
-                ?.user()
+                .user()
                 .then(user => {
                     if (user?.did === userDid) {
                         return;
