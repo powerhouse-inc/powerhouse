@@ -1,4 +1,5 @@
 import request, { GraphQLClient, gql } from 'graphql-request';
+import { logger } from './logger';
 
 export { gql } from 'graphql-request';
 
@@ -34,7 +35,7 @@ export async function requestPublicDrive(url: string): Promise<DriveInfo> {
         );
         drive = result.drive;
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         throw new Error("Couldn't find drive info");
     }
 

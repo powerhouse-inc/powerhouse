@@ -64,6 +64,8 @@ import {
     type SynchronizationUnit
 } from './types';
 import { filterOperationsByRevision } from './utils';
+import winston from 'winston';
+import { logger as defaultLogger } from '../utils/logger';
 
 export * from './listener';
 export type * from './types';
@@ -120,16 +122,16 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const result = await (!strand.documentId
             ? this.addDriveOperations(
-                  strand.driveId,
-                  operations as Operation<DocumentDriveAction | BaseAction>[],
-                  false
-              )
+                strand.driveId,
+                operations as Operation<DocumentDriveAction | BaseAction>[],
+                false
+            )
             : this.addOperations(
-                  strand.driveId,
-                  strand.documentId,
-                  operations,
-                  false
-              ));
+                strand.driveId,
+                strand.documentId,
+                operations,
+                false
+            ));
 
         if (result.status === 'ERROR') {
             this.updateSyncStatus(strand.driveId, result.status, result.error);
@@ -143,7 +145,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         driveId: string,
         listener: ListenerState
     ) {
-        console.error(
+        this.logger.error(
             `Listener ${listener.listener.label ?? listener.listener.listenerId} error: ${error.message}`
         );
         this.updateSyncStatus(
@@ -279,14 +281,14 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             const nodeUnits =
                 scope?.length || branch?.length
                     ? node.synchronizationUnits.filter(
-                          unit =>
-                              (!scope?.length ||
-                                  scope.includes(unit.scope) ||
-                                  scope.includes('*')) &&
-                              (!branch?.length ||
-                                  branch.includes(unit.branch) ||
-                                  branch.includes('*'))
-                      )
+                        unit =>
+                            (!scope?.length ||
+                                scope.includes(unit.scope) ||
+                                scope.includes('*')) &&
+                            (!branch?.length ||
+                                branch.includes(unit.branch) ||
+                                branch.includes('*'))
+                    )
                     : node.synchronizationUnits;
             if (!nodeUnits.length) {
                 continue;
@@ -523,7 +525,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             const syncUnits = await this.getSynchronizationUnits(driveId, [id]);
             await this.listenerStateManager.removeSyncUnits(driveId, syncUnits);
         } catch (error) {
-            console.warn('Error deleting document', error);
+            this.logger.warn('Error deleting document', error);
         }
         return this.storage.deleteDocument(driveId, id);
     }
@@ -580,11 +582,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                         e instanceof OperationError
                             ? e
                             : new OperationError(
-                                  'ERROR',
-                                  operation,
-                                  (e as Error).message,
-                                  (e as Error).cause
-                              );
+                                'ERROR',
+                                operation,
+                                (e as Error).message,
+                                (e as Error).cause
+                            );
                 }
                 break;
             }
@@ -802,6 +804,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 );
 
                 if (!result.document) {
+                    this.logger.error('Invalid document');
                     throw result.error ?? new Error('Invalid document');
                 }
 
@@ -853,7 +856,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                         this.updateSyncStatus(drive, 'SUCCESS')
                 )
                 .catch(error => {
-                    console.error(
+                    this.logger.error(
                         'Non handled error updating sync revision',
                         error
                     );
@@ -877,11 +880,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 error instanceof OperationError
                     ? error
                     : new OperationError(
-                          'ERROR',
-                          undefined,
-                          (error as Error).message,
-                          (error as Error).cause
-                      );
+                        'ERROR',
+                        undefined,
+                        (error as Error).message,
+                        (error as Error).cause
+                    );
 
             return {
                 status: operationError.status,
@@ -1014,7 +1017,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                             this.updateSyncStatus(drive, 'SUCCESS')
                     )
                     .catch(error => {
-                        console.error(
+                        this.logger.error(
                             'Non handled error updating sync revision',
                             error
                         );
@@ -1045,11 +1048,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 error instanceof OperationError
                     ? error
                     : new OperationError(
-                          'ERROR',
-                          undefined,
-                          (error as Error).message,
-                          (error as Error).cause
-                      );
+                        'ERROR',
+                        undefined,
+                        (error as Error).message,
+                        (error as Error).cause
+                    );
 
             return {
                 status: operationError.status,
@@ -1161,9 +1164,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             options.listenerId
         );
         if (!transmitter) {
+            this.logger.error('Internal listener not found');
             throw new Error('Internal listener not found');
         }
         if (!(transmitter instanceof InternalTransmitter)) {
+            this.logger.error('Listener is not an internal transmitter');
             throw new Error('Listener is not an internal transmitter');
         }
 
@@ -1221,6 +1226,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     getSyncStatus(drive: string): SyncStatus {
         const status = this.syncStatus.get(drive);
         if (!status) {
+            this.logger.error(`Sync status not found for drive ${drive}`);
             throw new Error(`Sync status not found for drive ${drive}`);
         }
         return status;
@@ -1234,6 +1240,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         event: K,
         ...args: Parameters<DriveEvents[K]>
     ): void {
+        this.logger.debug(`Emitting event ${event}`, args);
         return this.emitter.emit(event, ...args);
     }
 }

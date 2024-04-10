@@ -19,6 +19,9 @@ import type {
 import { Unsubscribe } from 'nanoevents';
 import { OperationError } from './error';
 import { ITransmitter } from './listener/transmitter/types';
+import winston from 'winston';
+import { logger as defaultLogger } from '../utils/logger';
+
 
 export type DriveInput = State<
     Omit<DocumentDriveState, '__typename' | 'id' | 'nodes'> & { id?: string },
@@ -142,7 +145,19 @@ export type GetDocumentOptions = {
     revisions?: RevisionsFilter;
 };
 
-export abstract class BaseDocumentDriveServer {
+export class Logger {
+    protected logger: winston.Logger;
+
+    constructor(logger: winston.Logger = defaultLogger) {
+        this.logger = logger;
+    }
+
+    static getLogger() {
+        return this;
+    }
+}
+
+export abstract class BaseDocumentDriveServer extends Logger {
     /** Public methods **/
     abstract getDrives(): Promise<string[]>;
     abstract addDrive(drive: DriveInput): Promise<DocumentDriveDocument>;
@@ -257,7 +272,7 @@ export abstract class BaseDocumentDriveServer {
     abstract clearStorage(): Promise<void>;
 }
 
-export abstract class BaseListenerManager {
+export abstract class BaseListenerManager extends Logger {
     protected drive: BaseDocumentDriveServer;
     protected listenerState = new Map<string, Map<string, ListenerState>>();
     protected transmitters: Record<
@@ -267,8 +282,9 @@ export abstract class BaseListenerManager {
 
     constructor(
         drive: BaseDocumentDriveServer,
-        listenerState = new Map<string, Map<string, ListenerState>>()
+        listenerState = new Map<string, Map<string, ListenerState>>(),
     ) {
+        super();
         this.drive = drive;
         this.listenerState = listenerState;
     }

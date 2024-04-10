@@ -10,12 +10,14 @@ import {
     Listener,
     ListenerRevision,
     ListenerRevisionWithError,
+    Logger,
     OperationUpdate,
     RemoteDriveOptions,
     StrandUpdate
 } from '../../types';
 import { ListenerManager } from '../manager';
 import { ITransmitter, PullResponderTrigger } from './types';
+import { logger as defaultLogger } from '../../../utils/logger';
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, 'input'> & {
     input: string;
@@ -39,7 +41,7 @@ export interface IPullResponderTransmitter extends ITransmitter {
     getStrands(since?: string): Promise<StrandUpdate[]>;
 }
 
-export class PullResponderTransmitter implements IPullResponderTransmitter {
+export class PullResponderTransmitter extends Logger implements IPullResponderTransmitter {
     private drive: BaseDocumentDriveServer;
     private listener: Listener;
     private manager: ListenerManager;
@@ -49,6 +51,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         drive: BaseDocumentDriveServer,
         manager: ListenerManager
     ) {
+        super();
         this.listener = listener;
         this.drive = drive;
         this.manager = manager;
@@ -85,7 +88,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                     s.documentId == revision.documentId
             );
             if (!syncUnit) {
-                console.warn('Unknown sync unit was acknowledged', revision);
+                defaultLogger.warn('Unknown sync unit was acknowledged', revision);
                 success = false;
                 continue;
             }
@@ -270,7 +273,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                 })
             )
                 .then(result => onAcknowledge?.(result))
-                .catch(error => console.error('ACK error', error));
+                .catch(error => defaultLogger.error('ACK error', error));
         } catch (error) {
             onError(error as Error);
         }
@@ -319,7 +322,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             }
         };
 
-        executeLoop().catch(console.error);
+        executeLoop().catch(defaultLogger.error);
 
         return () => {
             isCancelled = true;

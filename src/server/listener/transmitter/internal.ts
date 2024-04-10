@@ -3,6 +3,7 @@ import {
     BaseDocumentDriveServer,
     Listener,
     ListenerRevision,
+    Logger,
     OperationUpdate,
     StrandUpdate
 } from '../../types';
@@ -25,12 +26,13 @@ export type InternalTransmitterUpdate<
     state: T['state'][S];
 };
 
-export class InternalTransmitter implements ITransmitter {
+export class InternalTransmitter extends Logger implements ITransmitter {
     private drive: BaseDocumentDriveServer;
     private listener: Listener;
     private receiver: IReceiver | undefined;
 
     constructor(listener: Listener, drive: BaseDocumentDriveServer) {
+        super();
         this.listener = listener;
         this.drive = drive;
     }
@@ -54,10 +56,10 @@ export class InternalTransmitter implements ITransmitter {
                 );
                 document = await (strand.documentId
                     ? this.drive.getDocument(
-                          strand.driveId,
-                          strand.documentId,
-                          { revisions }
-                      )
+                        strand.driveId,
+                        strand.documentId,
+                        { revisions }
+                    )
                     : this.drive.getDrive(strand.driveId, { revisions }));
                 retrievedDocuments.set(
                     `${strand.driveId}:${strand.documentId}`,
@@ -74,7 +76,7 @@ export class InternalTransmitter implements ITransmitter {
                 revision: operations[operations.length - 1]?.index ?? -1
             }));
         } catch (error) {
-            console.error(error);
+            this.logger.error(error);
             // TODO check which strand caused an error
             return strands.map(({ operations, ...s }) => ({
                 ...s,

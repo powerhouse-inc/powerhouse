@@ -14,6 +14,7 @@ import type {
 } from 'document-model/document';
 import { ConflictOperationError } from '../server/error';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
+import { Logger } from '../server';
 
 type Transaction = Omit<
     PrismaClient<Prisma.PrismaClientOptions, never>,
@@ -35,10 +36,11 @@ function storageToOperation(
     };
 }
 
-export class PrismaStorage implements IDriveStorage {
+export class PrismaStorage extends Logger implements IDriveStorage {
     private db: PrismaClient;
 
     constructor(db: PrismaClient) {
+        super();
         this.db = db;
     }
 
@@ -352,7 +354,7 @@ export class PrismaStorage implements IDriveStorage {
             const doc = await this.getDocument('drives', id);
             return doc as DocumentDriveStorage;
         } catch (e) {
-            console.error(e);
+            this.logger.error(e);
             throw new Error(`Drive with id ${id} not found`);
         }
     }

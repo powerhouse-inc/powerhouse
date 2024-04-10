@@ -251,7 +251,7 @@ export class ListenerManager extends BaseListenerManager {
                         );
                         opData.push(...data);
                     } catch (e) {
-                        console.error(e);
+                        this.logger.error(e);
                     }
 
                     if (!opData.length) {
@@ -299,7 +299,7 @@ export class ListenerManager extends BaseListenerManager {
                                 listenerRev: revision.revision
                             });
                         } else {
-                            console.warn(
+                            this.logger.warn(
                                 `Received revision for untracked unit for listener ${listener.listener.listenerId}`,
                                 revision
                             );
