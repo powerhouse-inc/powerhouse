@@ -359,12 +359,11 @@ export class PrismaStorage implements IDriveStorage {
     }
 
     async deleteDrive(id: string) {
-        const docs = await this.getDocuments(id);
-        await Promise.all(
-            docs.map(async doc => {
-                return this.deleteDocument(id, doc);
-            })
-        );
+        await this.db.document.deleteMany({
+            where: {
+                driveId: id
+            }
+        });
         await this.deleteDocument('drives', id);
     }
 }
