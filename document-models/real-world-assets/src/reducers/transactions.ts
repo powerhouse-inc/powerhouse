@@ -6,6 +6,7 @@
 
 import {
     Cash,
+    isCashAsset,
     makeFixedIncomeAssetWithDerivedFields,
     validateCashTransaction,
     validateFixedIncomeTransaction,
@@ -63,6 +64,17 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         state.transactions.push(newGroupTransaction);
 
+        const cashAsset = state.portfolio.find(a => isCashAsset(a)) as Cash;
+
+        const updatedCashAsset = {
+            ...cashAsset,
+            balance: cashAsset.balance + cashBalanceChange,
+        };
+
+        state.portfolio = state.portfolio.map(a =>
+            a.id === cashAsset.id ? updatedCashAsset : a,
+        );
+
         const fixedIncomeAssetId = fixedIncomeTransaction?.assetId;
 
         if (!fixedIncomeAssetId) return;
@@ -74,21 +86,6 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         state.portfolio = state.portfolio.map(a =>
             a.id === fixedIncomeAssetId ? updatedFixedIncomeAsset : a,
-        );
-
-        const cashAssetId = cashTransaction?.assetId;
-
-        const cashAsset = state.portfolio.find(
-            a => a.id === cashAssetId,
-        ) as Cash;
-
-        const updatedCashAsset = {
-            ...cashAsset,
-            balance: cashAsset.balance + cashBalanceChange,
-        };
-
-        state.portfolio = state.portfolio.map(a =>
-            a.id === cashAssetId ? updatedCashAsset : a,
         );
     },
     editGroupTransactionOperation(state, action, dispatch) {
@@ -161,11 +158,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             t.id === transaction.id ? transaction : t,
         );
 
-        const cashAssetId = transaction.cashTransaction?.assetId;
-
-        const cashAsset = state.portfolio.find(
-            a => a.id === cashAssetId,
-        ) as Cash;
+        const cashAsset = state.portfolio.find(a => isCashAsset(a)) as Cash;
 
         const updatedCashAsset = {
             ...cashAsset,
@@ -173,7 +166,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
         };
 
         state.portfolio = state.portfolio.map(a =>
-            a.id === cashAssetId ? updatedCashAsset : a,
+            a.id === cashAsset.id ? updatedCashAsset : a,
         );
 
         const fixedIncomeAssetId = transaction.fixedIncomeTransaction?.assetId;

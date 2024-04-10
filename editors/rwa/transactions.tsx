@@ -36,13 +36,9 @@ export const Transactions = (props: IProps) => {
 
     const transactions = document.state.global.transactions;
 
-    const fixedIncomeAssets = document.state.global.portfolio
-        .filter((asset): asset is FixedIncome => isFixedIncomeAsset(asset))
-        .map(item => ({
-            ...item,
-            maturity: item.maturity.split('T')[0],
-            purchaseDate: item.purchaseDate.split('T')[0],
-        })) as FixedIncome[];
+    const fixedIncomeAssets = document.state.global.portfolio.filter(
+        (asset): asset is FixedIncome => isFixedIncomeAsset(asset),
+    );
 
     // there is only one cash asset for v1
     // this is always defined for every document model
