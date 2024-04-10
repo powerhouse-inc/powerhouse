@@ -65,17 +65,19 @@ describe('Internal Listener', () => {
         const server = await buildServer({ transmit: transmitFn });
         const drive = await server.getDrive('drive');
 
+
+        const action = utils.generateAddNodeAction(
+            drive.state.global,
+            {
+                id: '1',
+                name: 'test',
+                documentType: 'powerhouse/document-model'
+            },
+            ['global', 'local']
+        );
         await server.addDriveAction(
             'drive',
-            utils.generateAddNodeAction(
-                drive.state.global,
-                {
-                    id: '1',
-                    name: 'test',
-                    documentType: 'powerhouse/document-model'
-                },
-                ['global', 'local']
-            )
+            action
         );
 
         await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
@@ -86,14 +88,9 @@ describe('Internal Listener', () => {
                 driveId: 'drive',
                 operations: [
                     {
-                        hash: 'XsiPXaQJ0Lk4Y6CKyEkaFatdbLo=',
+                        hash: expect.any(String) as string,
                         index: 0,
-                        input: {
-                            documentType: 'powerhouse/document-model',
-                            id: '1',
-                            name: 'test',
-                            scopes: ['global', 'local']
-                        },
+                        input: action.input,
                         skip: 0,
                         timestamp: '2024-01-01T00:00:00.000Z',
                         type: 'ADD_FILE'
@@ -110,17 +107,16 @@ describe('Internal Listener', () => {
                             kind: 'file',
                             name: 'test',
                             parentFolder: null,
-                            scopes: ['global', 'local'],
                             synchronizationUnits: [
                                 {
                                     branch: 'main',
                                     scope: 'global',
-                                    syncId: '1'
+                                    syncId: action.input.synchronizationUnits[0]?.syncId
                                 },
                                 {
                                     branch: 'main',
                                     scope: 'local',
-                                    syncId: '2'
+                                    syncId: action.input.synchronizationUnits[1]?.syncId
                                 }
                             ]
                         }

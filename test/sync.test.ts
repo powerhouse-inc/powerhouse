@@ -3,7 +3,8 @@ import {
     DocumentDriveAction,
     Trigger,
     actions,
-    reducer
+    reducer,
+    utils
 } from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { DocumentModel, Operation } from 'document-model/document';
@@ -60,9 +61,20 @@ describe('Document Drive Server with %s', () => {
                         id: '1.1',
                         name: 'document 1',
                         documentType: 'powerhouse/document-model',
-                        scopes: ['global', 'local']
+                        synchronizationUnits: [
+                            {
+                                syncId: "1",
+                                scope: "global",
+                                branch: 'main'
+                            },
+                            {
+                                syncId: "2",
+                                scope: "local",
+                                branch: 'main'
+                            }
+                        ]
                     }),
-                    hash: 'nQBsTlP2MNb+FDBAzOw3svwyHvg='
+                    hash: '1912p2O/5+/f+JbNQJIBUXQZ5n0='
                 }
             ]
         },
@@ -129,7 +141,7 @@ describe('Document Drive Server with %s', () => {
         }),
         graphql.mutation('acknowledge', () => {
             return HttpResponse.json({
-                data: { success: true }
+                data: { acknowledge: true }
             });
         })
     ];
@@ -186,7 +198,7 @@ describe('Document Drive Server with %s', () => {
             listeners: [],
             triggers: [
                 {
-                    id: expect.any(String),
+                    id: expect.any(String) as string,
                     type: 'PullResponder',
                     data: {
                         interval: '5000',
@@ -260,15 +272,26 @@ describe('Document Drive Server with %s', () => {
             }
             mswServer.events.on('request:start', listener);
         });
+
         drive = reducer(
             drive,
             actions.addFile({
                 id: '1.1',
                 name: 'document 1',
                 documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local']
-            })
-        );
+                synchronizationUnits: [
+                    {
+                        syncId: "1",
+                        scope: "global",
+                        branch: 'main'
+                    },
+                    {
+                        syncId: "2",
+                        scope: "local",
+                        branch: 'main'
+                    }
+                ]
+        }));
         await server.addDriveOperation('1', drive.operations.global[0]!);
         expect(server.getSyncStatus('1')).toBe('SYNCING');
 
@@ -282,11 +305,12 @@ describe('Document Drive Server with %s', () => {
         );
         const status = await waitSync;
         expect(status).toBe('SUCCESS');
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const addFileBody = await (await addFileRequest).json();
         expect(addFileBody).toEqual(
             expect.objectContaining({
                 operationName: 'pushUpdates',
-                query: expect.stringContaining('mutation pushUpdates'),
+                query: expect.stringContaining('mutation pushUpdates') as string,
                 variables: {
                     strands: [
                         {
@@ -295,9 +319,9 @@ describe('Document Drive Server with %s', () => {
                             driveId: '1',
                             operations: [
                                 {
-                                    hash: 'nQBsTlP2MNb+FDBAzOw3svwyHvg=',
+                                    hash: '1912p2O/5+/f+JbNQJIBUXQZ5n0=',
                                     index: 0,
-                                    input: '{"documentType":"powerhouse/document-model","id":"1.1","name":"document 1","scopes":["global","local"]}',
+                                    input: '{"documentType":"powerhouse/document-model","id":"1.1","name":"document 1","synchronizationUnits":[{"branch":"main","scope":"global","syncId":"1"},{"branch":"main","scope":"local","syncId":"2"}]}',
                                     skip: 0,
                                     timestamp: '2024-01-01T00:00:00.000Z',
                                     type: 'ADD_FILE'
@@ -309,6 +333,7 @@ describe('Document Drive Server with %s', () => {
                 }
             })
         );
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         expect(addFileBody.query.replace(/\s+/g, ' ').trim()).toStrictEqual(
             `mutation pushUpdates($strands: [InputStrandUpdate!]) {
                 pushUpdates(strands: $strands) {
@@ -348,11 +373,12 @@ describe('Document Drive Server with %s', () => {
         expect(result.status).toBe('SUCCESS');
         expect(server.getSyncStatus('1')).toBe('SYNCING');
         vi.advanceTimersToNextTimer();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const setNameBody = await (await setNameRequest).json();
         expect(setNameBody).toEqual(
             expect.objectContaining({
                 operationName: 'pushUpdates',
-                query: expect.stringContaining('mutation pushUpdates'),
+                query: expect.stringContaining('mutation pushUpdates') as string,
                 variables: {
                     strands: [
                         {
@@ -386,7 +412,9 @@ describe('Document Drive Server with %s', () => {
                     .clone()
                     .json()
                     .then(body => {
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         if (body.operationName === 'acknowledge') {
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                             resolve(body);
                         }
                     });
@@ -419,21 +447,31 @@ describe('Document Drive Server with %s', () => {
         await new Promise(resolve => server.on('strandUpdate', resolve));
 
         const drive = await server.getDrive('1');
-
         expect(drive.operations.global[0]).toMatchObject({
             index: 0,
             skip: 0,
             type: 'ADD_FILE',
             scope: 'global',
-            hash: 'nQBsTlP2MNb+FDBAzOw3svwyHvg=',
+            hash: '1912p2O/5+/f+JbNQJIBUXQZ5n0=',
             timestamp: expect.stringMatching(
                 /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/
-            ),
+            ) as string,
             input: {
                 id: '1.1',
                 name: 'document 1',
                 documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local']
+                synchronizationUnits: [
+                    {
+                        syncId: "1",
+                        scope: "global",
+                        branch: 'main'
+                    },
+                    {
+                        syncId: "2",
+                        scope: "local",
+                        branch: 'main'
+                    }
+                ]
             }
         });
 
@@ -441,7 +479,7 @@ describe('Document Drive Server with %s', () => {
         expect(ackRequest).toEqual(
             expect.objectContaining({
                 operationName: 'acknowledge',
-                query: expect.stringContaining('mutation acknowledge'),
+                query: expect.stringContaining('mutation acknowledge') as string,
                 variables: {
                     listenerId: 'listener-1',
                     revisions: [
@@ -497,13 +535,24 @@ describe('Document Drive Server with %s', () => {
             skip: 0,
             type: 'ADD_FILE',
             scope: 'global',
-            hash: 'nf7WF7HnxrfpF6il8qQRAH9URgM=',
+            hash: '9ic1WgNomITicM0piSYLTqgDx7w=',
             timestamp: '2024-01-01T00:00:00.000Z',
             input: {
                 id: '1.1',
                 name: 'local document 1',
                 documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local']
+                synchronizationUnits: [
+                    {
+                        syncId: "1",
+                        scope: "global",
+                        branch: 'main'
+                    },
+                    {
+                        syncId: "2",
+                        scope: "local",
+                        branch: 'main'
+                    }
+                ]
             }
         };
 
@@ -517,15 +566,26 @@ describe('Document Drive Server with %s', () => {
                 skip: 0,
                 type: 'ADD_FILE',
                 scope: 'global',
-                hash: 'nQBsTlP2MNb+FDBAzOw3svwyHvg=',
+                hash: '1912p2O/5+/f+JbNQJIBUXQZ5n0=',
                 timestamp: expect.stringMatching(
                     /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/
-                ),
+                ) as string,
                 input: {
                     id: '1.1',
                     name: 'document 1',
                     documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
+                    synchronizationUnits: [
+                        {
+                            syncId: "1",
+                            scope: "global",
+                            branch: 'main'
+                        },
+                        {
+                            syncId: "2",
+                            scope: "local",
+                            branch: 'main'
+                        }
+                    ]
                 }
             },
             newOperation: operation
@@ -567,13 +627,24 @@ describe('Document Drive Server with %s', () => {
             skip: 0,
             type: 'ADD_FILE',
             scope: 'global',
-            hash: 'nf7WF7HnxrfpF6il8qQRAH9URgM=',
+            hash: '9ic1WgNomITicM0piSYLTqgDx7w=',
             timestamp: '2024-01-01T00:00:00.000Z',
             input: {
                 id: '1.1',
                 name: 'local document 1',
                 documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local']
+                synchronizationUnits: [
+                    {
+                        syncId: "1",
+                        scope: "global",
+                        branch: 'main'
+                    },
+                    {
+                        syncId: "2",
+                        scope: "local",
+                        branch: 'main'
+                    }
+                ]
             }
         };
 
@@ -672,13 +743,24 @@ describe('Document Drive Server with %s', () => {
             skip: 0,
             type: 'ADD_FILE',
             scope: 'global',
-            hash: 'nf7WF7HnxrfpF6il8qQRAH9URgM=',
+            hash: '9ic1WgNomITicM0piSYLTqgDx7w=',
             timestamp: '2024-01-01T00:00:00.000Z',
             input: {
                 id: '1.1',
                 name: 'local document 1',
                 documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local']
+                synchronizationUnits: [
+                    {
+                        syncId: "1",
+                        scope: "global",
+                        branch: 'main'
+                    },
+                    {
+                        syncId: "2",
+                        scope: "local",
+                        branch: 'main'
+                    }
+                ]
             }
         };
 
@@ -722,7 +804,18 @@ describe('Document Drive Server with %s', () => {
             actions.addFile({
                 id: '1.1',
                 documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local'],
+                synchronizationUnits: [
+                    {
+                        syncId: "1",
+                        scope: "global",
+                        branch: 'main'
+                    },
+                    {
+                        syncId: "2",
+                        scope: "local",
+                        branch: 'main'
+                    }
+                ],
                 name: 'test'
             })
         );

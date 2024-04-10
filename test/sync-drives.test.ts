@@ -44,22 +44,25 @@ describe('Document Drive Server interaction', () => {
                 'pushUpdates',
                 async ({ variables }) => {
                     const strands = variables.strands;
-                    let listenerRevisions: ListenerRevision[] = [];
+                    const listenerRevisions: ListenerRevision[] = [];
                     if (strands.length) {
-                        listenerRevisions = await Promise.all(
-                            strands.map(async s => {
-                                const operations =
-                                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                                    s.operations?.map(o => ({
-                                        ...o,
-                                        input: JSON.parse(
-                                            o.input as unknown as string
-                                        ) as unknown,
-                                        skip: o.skip ?? 0,
-                                        scope: s.scope as OperationScope,
-                                        branch: 'main',
-                                        scopes: ['global', 'local']
-                                    })) ?? [];
+                        const sortedStrands = strands.reduce<typeof strands>(
+                            (acc, curr) =>
+                                curr.documentId ? [...acc, curr] : [curr, ...acc],
+                            []
+                          );
+                    
+                          for (const s of sortedStrands) {
+                            const operations =
+                              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                              s.operations?.map((o) => ({
+                                  ...o,
+                                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                                  input: JSON.parse(o.input.toString()),
+                                  skip: o.skip ?? 0,
+                                  scope: s.scope as OperationScope,
+                                  branch: "main",
+                              })) ?? [];
 
                                 const result = await (!s.documentId
                                     ? server.addDriveOperations(
@@ -79,16 +82,17 @@ describe('Document Drive Server interaction', () => {
                                     result.document?.operations[s.scope]
                                         .slice()
                                         .pop()?.index ?? -1;
-                                return {
+                                listenerRevisions.push({
                                     revision,
                                     branch: s.branch,
                                     documentId: s.documentId,
                                     driveId: s.driveId,
                                     scope: s.scope as OperationScope,
-                                    status: result.status
-                                };
-                            })
-                        );
+                                    status: result.status,
+                                    error: result.error?.message
+                                });
+                            }
+
                     }
                     return HttpResponse.json({
                         data: { pushUpdates: listenerRevisions }
@@ -353,7 +357,18 @@ describe('Document Drive Server interaction', () => {
                     id: '1',
                     name: 'test',
                     documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
+                    synchronizationUnits: [
+                        {
+                            syncId: "1",
+                            scope: "global",
+                            branch: 'main'
+                        },
+                        {
+                            syncId: "2",
+                            scope: "local",
+                            branch: 'main'
+                        }
+                    ],
                 })
             )
         );
@@ -384,7 +399,6 @@ describe('Document Drive Server interaction', () => {
                 kind: 'file',
                 name: 'test',
                 documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local'],
                 parentFolder: null,
                 synchronizationUnits: [
                     {
@@ -422,7 +436,18 @@ describe('Document Drive Server interaction', () => {
                     id: '1',
                     name: 'test',
                     documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
+                    synchronizationUnits: [
+                        {
+                            syncId: "1",
+                            scope: "global",
+                            branch: 'main'
+                        },
+                        {
+                            syncId: "2",
+                            scope: "local",
+                            branch: 'main'
+                        }
+                    ],
                 })
             ])
         );
@@ -488,7 +513,18 @@ describe('Document Drive Server interaction', () => {
                     id: '1',
                     name: 'test',
                     documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
+                    synchronizationUnits: [
+                        {
+                            syncId: "1",
+                            scope: "global",
+                            branch: 'main'
+                        },
+                        {
+                            syncId: "2",
+                            scope: "local",
+                            branch: 'main'
+                        }
+                    ],
                 })
             ])
         );
@@ -533,7 +569,6 @@ describe('Document Drive Server interaction', () => {
                 documentType: 'powerhouse/document-model',
                 kind: 'file',
                 parentFolder: null,
-                scopes: ['global', 'local'],
                 synchronizationUnits: [
                     {
                         branch: 'main',
@@ -601,7 +636,18 @@ describe('Document Drive Server interaction', () => {
                     id: '1',
                     name: 'test',
                     documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
+                    synchronizationUnits: [
+                        {
+                            syncId: "1",
+                            scope: "global",
+                            branch: 'main'
+                        },
+                        {
+                            syncId: "2",
+                            scope: "local",
+                            branch: 'main'
+                        }
+                    ],
                 })
             ])
         );
@@ -688,7 +734,7 @@ describe('Document Drive Server interaction', () => {
     });
 
     it('should stop pulling if trigger is removed', async ({ expect }) => {
-        const { remoteServer, mswServer } = await createRemoteDrive();
+        await createRemoteDrive();
 
         const connectServer = new DocumentDriveServer(documentModels);
         await connectServer.addRemoteDrive('http://test', {
