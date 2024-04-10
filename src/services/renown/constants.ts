@@ -1,7 +1,7 @@
 export const RENOWN_URL =
-    (import.meta.env.VITE_RENOWN_URL as string) || 'http://localhost:3001';
+    (import.meta.env.VITE_RENOWN_URL as string) || 'https://renown.vercel.app/';
 export const RENOWN_NETWORK_ID =
-    (import.meta.env.VITE_RENOWN_NETWORK_ID as string) || '11155111';
+    (import.meta.env.VITE_RENOWN_NETWORK_ID as string) || '1';
 
 export const DOMAIN_TYPE = [
     { name: 'name', type: 'string' },
