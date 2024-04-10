@@ -19,9 +19,6 @@ import type {
 import { Unsubscribe } from 'nanoevents';
 import { OperationError } from './error';
 import { ITransmitter } from './listener/transmitter/types';
-import winston from 'winston';
-import { logger as defaultLogger } from '../utils/logger';
-
 
 export type DriveInput = State<
     Omit<DocumentDriveState, '__typename' | 'id' | 'nodes'> & { id?: string },
@@ -270,7 +267,7 @@ export abstract class BaseListenerManager {
 
     constructor(
         drive: BaseDocumentDriveServer,
-        listenerState = new Map<string, Map<string, ListenerState>>(),
+        listenerState = new Map<string, Map<string, ListenerState>>()
     ) {
         this.drive = drive;
         this.listenerState = listenerState;
