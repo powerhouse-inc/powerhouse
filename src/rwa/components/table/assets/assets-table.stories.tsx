@@ -3,7 +3,12 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { utils } from 'document-model/document';
 import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
 
-import { mockFixedIncomes, mockFixedIncomeTypes, mockSPVs } from '@/rwa/mocks';
+import {
+    mockCashAsset,
+    mockFixedIncomes,
+    mockFixedIncomeTypes,
+    mockSPVs,
+} from '@/rwa/mocks';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { AssetFormInputs } from '../types';
 import { AssetsTable } from './assets-table';
@@ -32,6 +37,7 @@ function createAssetFromFormInputs(data: AssetFormInputs) {
 export const Empty: Story = {
     args: {
         assets: [],
+        cashAsset: undefined,
         fixedIncomeTypes: [],
         spvs: [],
     },
@@ -103,6 +109,7 @@ export const WithData: Story = {
     ...Empty,
     args: {
         assets: mockFixedIncomes,
+        cashAsset: mockCashAsset,
         fixedIncomeTypes: mockFixedIncomeTypes,
         spvs: mockSPVs,
     },

@@ -46,6 +46,7 @@ export type TableBaseProps<TTableData extends TableItem> = DivProps & {
     children?: ReactNode;
     footer?: ReactNode;
     hasExpandedRow?: boolean;
+    specialFirstRow?: (columns: TableColumn<TableItem>[]) => JSX.Element;
 };
 
 export type TableProps<
@@ -68,6 +69,7 @@ export type TableProps<
     onSubmitDelete: (itemId: string) => void;
     editForm: ComponentType<{ itemId: string; itemNumber: number }>;
     createForm: ComponentType;
+    specialFirstRow?: (columns: TableColumn<TableItem>[]) => JSX.Element;
 };
 
 export type PropsToKeepFromTable =
@@ -79,7 +81,8 @@ export type PropsToKeepFromTable =
     | 'toggleExpandedRow'
     | 'onSubmitEdit'
     | 'onSubmitCreate'
-    | 'onSubmitDelete';
+    | 'onSubmitDelete'
+    | 'specialFirstRow';
 
 export type GroupTransactionsTableProps = Pick<
     TableProps<GroupTransaction, GroupTransactionFormInputs>,
@@ -97,6 +100,7 @@ export type AssetsTableProps = Pick<
     TableProps<FixedIncome, AssetFormInputs>,
     PropsToKeepFromTable
 > & {
+    cashAsset: CashAsset | undefined;
     assets: FixedIncome[];
     fixedIncomeTypes: FixedIncomeType[];
     spvs: SPV[];

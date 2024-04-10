@@ -77,6 +77,7 @@ export function makeGroupTransactionTableData(
 
         return {
             id,
+            type,
             entryTime,
             asset,
             quantity,

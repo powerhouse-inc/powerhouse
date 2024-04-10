@@ -191,6 +191,7 @@ export const mockCashAsset = {
     id: 'cash-asset-1',
     spvId: mockSPVs[0].id,
     currency: 'USD',
+    balance: 1000000,
 };
 
 export const mockCashAssets = [mockCashAsset];

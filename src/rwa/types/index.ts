@@ -63,6 +63,7 @@ export type CashAsset = {
     id: string;
     spvId: string;
     currency: string;
+    balance: number;
 };
 
 export type Asset = CashAsset | FixedIncome;

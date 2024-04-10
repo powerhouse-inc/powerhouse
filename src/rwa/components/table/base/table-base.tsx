@@ -1,5 +1,5 @@
 import { Icon, fixedForwardRef, mergeClassNameProps } from '@/powerhouse';
-import { SortDirection, TableBaseProps, TableItem } from '@/rwa';
+import { SortDirection, TableBaseProps, TableColumn, TableItem } from '@/rwa';
 import { Order } from 'natural-orderby';
 import React, { useState } from 'react';
 import { twMerge } from 'tailwind-merge';
@@ -16,6 +16,7 @@ import { twMerge } from 'tailwind-merge';
  * @param renderRow - Function to render a row, must return a React element
  * @param onClickSort - Function to handle sorting, called with key and direction
  * @param hasExpandedRow - Whether the table has an expanded row
+ * @param specialFirstRow - Function to render a special first row (like the cash asset for instance), must return a React element
  */
 export const TableBase = fixedForwardRef(function TableBase<
     TItem extends TableItem,
@@ -28,6 +29,7 @@ export const TableBase = fixedForwardRef(function TableBase<
         renderRow,
         onClickSort,
         hasExpandedRow,
+        specialFirstRow,
         ...containerProps
     } = props;
 
@@ -110,6 +112,7 @@ export const TableBase = fixedForwardRef(function TableBase<
                     </thead>
                     <tbody>
                         {children}
+                        {specialFirstRow?.(columns as TableColumn<TableItem>[])}
                         {tableData?.map((item, index) =>
                             renderRow(item, columns, index),
                         )}

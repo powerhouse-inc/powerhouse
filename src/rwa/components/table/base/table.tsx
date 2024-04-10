@@ -35,6 +35,7 @@ import { twMerge } from 'tailwind-merge';
  * @param toggleExpandedRow - Function to toggle the expanded row
  * @param editForm - Form component for editing an item. Must be a React component that accepts an `itemId` prop and an `itemNumber` prop. Intended to be used with react-hook-form register/control.
  * @param createForm - Form component for creating an item. Must be a React component. Intended to be used with react-hook-form register/control.
+ * @param specialFirstRow - Function to render a special first row (like the cash asset for instance), must return a React element
  */
 export function Table<
     TItem extends TableItem,
@@ -52,6 +53,7 @@ export function Table<
         toggleExpandedRow,
         editForm: EditForm,
         createForm: CreateForm,
+        specialFirstRow,
     } = props;
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -69,6 +71,8 @@ export function Table<
         columns: TableColumn<TTableData & SpecialColumns>[],
         index: number,
     ) => {
+        const maybeModifiedIndex = specialFirstRow ? index + 1 : index;
+
         return (
             <RWATableRow
                 isExpanded={expandedRowId === item.id}
@@ -87,7 +91,7 @@ export function Table<
                     key={item.id}
                     className={twMerge(
                         '[&>td:not(:first-child)]:border-l [&>td:not(:first-child)]:border-gray-300',
-                        index % 2 !== 0 && 'bg-gray-50',
+                        maybeModifiedIndex % 2 !== 0 && 'bg-gray-50',
                     )}
                 >
                     {columns.map(column => (
@@ -132,6 +136,7 @@ export function Table<
                 tableData={sortedItems}
                 columns={columnsToShow}
                 renderRow={renderRow}
+                specialFirstRow={specialFirstRow}
             />
             <button
                 onClick={() => setShowNewItemForm(true)}

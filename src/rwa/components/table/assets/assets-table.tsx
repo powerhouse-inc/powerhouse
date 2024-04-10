@@ -1,11 +1,16 @@
 import {
     AssetDetails,
     AssetsTableProps,
+    RWATableCell,
+    RWATableRow,
     Table,
+    TableColumn,
     addItemNumber,
     getItemById,
+    handleTableDatum,
 } from '@/rwa';
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
+import { twMerge } from 'tailwind-merge';
 
 const columns = [
     { key: 'name' as const, label: 'Name', allowSorting: true },
@@ -54,10 +59,29 @@ const columns = [
 ];
 
 export function AssetsTable(props: AssetsTableProps) {
-    const { assets, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { assets, cashAsset, selectedItem, onSubmitCreate, onSubmitEdit } =
+        props;
     const itemName = 'Asset';
 
     const tableData = useMemo(() => addItemNumber(assets), [assets]);
+
+    const cashAssetFormattedAsTableItem = {
+        id: 'special-first-row',
+        name: 'Cash $USD',
+        fixedIncomeTypeId: '--',
+        spvId: '--',
+        maturity: '--',
+        ISIN: '--',
+        CUSIP: '--',
+        coupon: null,
+        notional: cashAsset?.balance ?? 0,
+        purchaseDate: '--',
+        purchasePrice: '--',
+        purchaseProceeds: '--',
+        salesProceeds: '--',
+        totalDiscount: '--',
+        realizedSurplus: '--',
+    };
 
     const editForm = ({
         itemId,
@@ -86,6 +110,39 @@ export function AssetsTable(props: AssetsTableProps) {
         />
     );
 
+    const specialFirstRow = (c: TableColumn<(typeof tableData)[number]>[]) => (
+        <RWATableRow tdProps={{ colSpan: 100 }} accordionContent={undefined}>
+            <tr
+                className={twMerge(
+                    '[&>td:not(:first-child)]:border-l [&>td]:border-gray-300',
+                )}
+            >
+                {c.map(column => (
+                    <Fragment key={column.key}>
+                        {column.key === 'name' && (
+                            <RWATableCell>Cash $USD</RWATableCell>
+                        )}
+                        {column.key === 'notional' && (
+                            <RWATableCell
+                                key={column.key}
+                                className={
+                                    column.isNumberColumn ? 'text-right' : ''
+                                }
+                            >
+                                {handleTableDatum(
+                                    cashAssetFormattedAsTableItem[column.key],
+                                )}
+                            </RWATableCell>
+                        )}
+                        {column.key !== 'name' && column.key !== 'notional' && (
+                            <RWATableCell></RWATableCell>
+                        )}
+                    </Fragment>
+                ))}
+            </tr>
+        </RWATableRow>
+    );
+
     return (
         <Table
             {...props}
@@ -94,6 +151,7 @@ export function AssetsTable(props: AssetsTableProps) {
             columns={columns}
             editForm={editForm}
             createForm={createForm}
+            specialFirstRow={specialFirstRow}
         />
     );
 }
