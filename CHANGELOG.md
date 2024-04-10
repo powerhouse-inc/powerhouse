@@ -1,3 +1,10 @@
+# [1.0.0-alpha.29](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2024-04-10)
+
+
+### Features
+
+* added winston as default logger ([77c2451](https://github.com/powerhouse-inc/document-drive/commit/77c2451e4ceaddb11dd378a89f89c4245db51cb0))
+
 # [1.0.0-alpha.28](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.27...v1.0.0-alpha.28) (2024-04-05)
 
 
