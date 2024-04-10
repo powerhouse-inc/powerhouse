@@ -3,6 +3,7 @@ import { Operation, OperationScope } from 'document-model/document';
 import { PULL_DRIVE_INTERVAL } from '../..';
 import { generateUUID } from '../../../utils';
 import { gql, requestGraphql } from '../../../utils/graphql';
+import { logger as defaultLogger } from '../../../utils/logger';
 import { OperationError } from '../../error';
 import {
     BaseDocumentDriveServer,
@@ -10,14 +11,12 @@ import {
     Listener,
     ListenerRevision,
     ListenerRevisionWithError,
-    Logger,
     OperationUpdate,
     RemoteDriveOptions,
     StrandUpdate
 } from '../../types';
 import { ListenerManager } from '../manager';
 import { ITransmitter, PullResponderTrigger } from './types';
-import { logger as defaultLogger } from '../../../utils/logger';
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, 'input'> & {
     input: string;
@@ -87,7 +86,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                     s.documentId == revision.documentId
             );
             if (!syncUnit) {
-                defaultLogger.warn('Unknown sync unit was acknowledged', revision);
+                defaultLogger.warn(
+                    'Unknown sync unit was acknowledged',
+                    revision
+                );
                 success = false;
                 continue;
             }

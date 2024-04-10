@@ -13,8 +13,8 @@ import type {
     OperationScope
 } from 'document-model/document';
 import { ConflictOperationError } from '../server/error';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 import { logger } from '../utils/logger';
+import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 type Transaction = Omit<
     PrismaClient<Prisma.PrismaClientOptions, never>,

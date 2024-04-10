@@ -41,12 +41,15 @@ describe('Document operations', () => {
             buildOperation(
                 DocumentDrive.reducer,
                 drive,
-                DocumentDrive.actions.addFile({
-                    id: '1',
-                    name: 'test',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
-                })
+                DocumentDrive.utils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1',
+                        name: 'test',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                )
             )
         );
 

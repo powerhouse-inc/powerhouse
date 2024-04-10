@@ -21,6 +21,8 @@ import { FilesystemStorage } from '../src/storage/filesystem';
 import { MemoryStorage } from '../src/storage/memory';
 import { PrismaStorage } from '../src/storage/prisma';
 import { SequelizeStorage } from '../src/storage/sequelize';
+import { IDriveStorage } from '../src/storage/types';
+import { expectUUID } from './utils';
 
 const documentModels = [
     DocumentModelLib,
@@ -46,7 +48,7 @@ const storageLayers = [
             return storage;
         }
     ]
-] as const;
+] as unknown as [string, () => Promise<IDriveStorage>][];
 
 describe.each(storageLayers)(
     'Document Drive Server with %s',
@@ -132,16 +134,18 @@ describe.each(storageLayers)(
                 }
             });
             let drive = await server.getDrive('1');
-
             // performs ADD_FILE operation locally
             drive = reducer(
                 drive,
-                actions.addFile({
-                    id: '1.1',
-                    name: 'document 1',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
-                })
+                DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                )
             );
 
             // dispatches operation to server
@@ -160,18 +164,17 @@ describe.each(storageLayers)(
                 kind: 'file',
                 name: 'document 1',
                 documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local'],
                 parentFolder: null,
                 synchronizationUnits: [
                     {
                         branch: 'main',
                         scope: 'global',
-                        syncId: '1'
+                        syncId: expectUUID(expect)
                     },
                     {
                         branch: 'main',
                         scope: 'local',
-                        syncId: '2'
+                        syncId: expectUUID(expect)
                     }
                 ]
             });
@@ -201,12 +204,15 @@ describe.each(storageLayers)(
             let drive = await server.getDrive('1');
             drive = reducer(
                 drive,
-                actions.addFile({
-                    id: '1.1',
-                    name: 'document 1',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
-                })
+                DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                )
             );
             const operation = drive.operations.global[0]!;
 
@@ -247,12 +253,15 @@ describe.each(storageLayers)(
             // adds file
             drive = reducer(
                 drive,
-                actions.addFile({
-                    id: '1.1',
-                    name: 'document 1',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
-                })
+                DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                )
             );
             let result = await server.addDriveOperation(
                 '1',
@@ -301,12 +310,15 @@ describe.each(storageLayers)(
             let drive = await server.getDrive('1');
             drive = reducer(
                 drive,
-                actions.addFile({
-                    id: '1.1',
-                    name: 'document 1',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
-                })
+                DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                )
             );
             drive = reducer(
                 drive,
@@ -361,13 +373,17 @@ describe.each(storageLayers)(
             );
             drive = reducer(
                 drive,
-                actions.addFile({
-                    id: '1.1.1',
-                    name: 'document 1',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local'],
-                    parentFolder: '1.1'
-                })
+                DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model',
+
+                        parentFolder: '1.1'
+                    },
+                    ['global', 'local']
+                )
             );
             drive = reducer(
                 drive,
@@ -441,12 +457,15 @@ describe.each(storageLayers)(
             let drive = await server.getDrive('1');
             drive = reducer(
                 drive,
-                actions.addFile({
-                    id: '1.1.1',
-                    name: 'document 1',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
-                })
+                DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                )
             );
 
             const result = await server.addDriveOperation(
@@ -534,17 +553,20 @@ describe.each(storageLayers)(
             );
             drive = reducer(
                 drive,
-                actions.addFile({
-                    id: '1.1',
-                    name: '1.1',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local'],
-                    parentFolder: '1'
-                })
+                DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1',
+                        name: '1.1',
+                        documentType: 'powerhouse/document-model',
+                        parentFolder: '1'
+                    },
+                    ['global', 'local']
+                )
             );
             drive = reducer(
                 drive,
-                actions.copyNode({
+                DocumentDriveUtils.generateCopyNodeAction(drive.state.global, {
                     srcId: '1.1',
                     targetId: '2.1',
                     targetName: '2.2',
@@ -588,12 +610,15 @@ describe.each(storageLayers)(
             // adds file
             drive = reducer(
                 drive,
-                actions.addFile({
-                    id: '1.1',
-                    name: 'document 1',
-                    documentType: 'powerhouse/document-model',
-                    scopes: ['global', 'local']
-                })
+                DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                )
             );
             await server.addDriveOperation('1', drive.operations.global[0]!);
 

@@ -1,4 +1,4 @@
-import { actions } from 'document-model-libs/document-drive';
+import { utils } from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { DocumentModel } from 'document-model/document';
 import * as DocumentModelLib from 'document-model/document-model';
@@ -63,14 +63,19 @@ describe('Internal Listener', () => {
         const transmitFn = vitest.fn(() => Promise.resolve());
 
         const server = await buildServer({ transmit: transmitFn });
+        const drive = await server.getDrive('drive');
+
         await server.addDriveAction(
             'drive',
-            actions.addFile({
-                id: '1',
-                name: 'test',
-                documentType: 'powerhouse/document-model',
-                scopes: ['global', 'local']
-            })
+            utils.generateAddNodeAction(
+                drive.state.global,
+                {
+                    id: '1',
+                    name: 'test',
+                    documentType: 'powerhouse/document-model'
+                },
+                ['global', 'local']
+            )
         );
 
         await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
