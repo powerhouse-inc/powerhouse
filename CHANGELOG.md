@@ -1,3 +1,10 @@
+# [1.0.0-alpha.31](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.30...v1.0.0-alpha.31) (2024-04-10)
+
+
+### Bug Fixes
+
+* remove sentry ([75faf6a](https://github.com/powerhouse-inc/document-drive/commit/75faf6acff391bb2f5fac016190a481019a225ee))
+
 # [1.0.0-alpha.30](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.29...v1.0.0-alpha.30) (2024-04-10)
 
 
