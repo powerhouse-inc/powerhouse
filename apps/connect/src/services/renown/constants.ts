@@ -1,5 +1,5 @@
 export const RENOWN_URL =
-    (import.meta.env.VITE_RENOWN_URL as string) || 'https://renown.vercel.app/';
+    (import.meta.env.VITE_RENOWN_URL as string) || 'https://renown.vercel.app';
 export const RENOWN_NETWORK_ID =
     (import.meta.env.VITE_RENOWN_NETWORK_ID as string) || '1';
 
