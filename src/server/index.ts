@@ -249,7 +249,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                     documentType.includes('*'))
         ) as Pick<
             FileNode,
-            'id' | 'documentType' | 'scopes' | 'synchronizationUnits'
+            'id' | 'documentType' | 'synchronizationUnits'
         >[];
 
         // checks if document drive synchronization unit should be added
@@ -264,7 +264,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             nodes.unshift({
                 id: '',
                 documentType: 'powerhouse/document-drive',
-                scopes: ['global'],
                 synchronizationUnits: [
                     {
                         syncId: '0',
