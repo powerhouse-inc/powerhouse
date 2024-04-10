@@ -18,6 +18,7 @@ import { PullResponderTransmitter } from './transmitter';
 import { InternalTransmitter } from './transmitter/internal';
 import { SwitchboardPushTransmitter } from './transmitter/switchboard-push';
 import { ITransmitter } from './transmitter/types';
+import { logger } from '../../utils/logger';
 
 function debounce<T extends unknown[], R>(
     func: (...args: T) => Promise<R>,
@@ -251,7 +252,7 @@ export class ListenerManager extends BaseListenerManager {
                         );
                         opData.push(...data);
                     } catch (e) {
-                        this.logger.error(e);
+                        logger.error(e);
                     }
 
                     if (!opData.length) {
@@ -299,7 +300,7 @@ export class ListenerManager extends BaseListenerManager {
                                 listenerRev: revision.revision
                             });
                         } else {
-                            this.logger.warn(
+                            logger.warn(
                                 `Received revision for untracked unit for listener ${listener.listener.listenerId}`,
                                 revision
                             );

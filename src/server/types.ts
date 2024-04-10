@@ -145,19 +145,7 @@ export type GetDocumentOptions = {
     revisions?: RevisionsFilter;
 };
 
-export class Logger {
-    protected logger: winston.Logger;
-
-    constructor(logger: winston.Logger = defaultLogger) {
-        this.logger = logger;
-    }
-
-    static getLogger() {
-        return this;
-    }
-}
-
-export abstract class BaseDocumentDriveServer extends Logger {
+export abstract class BaseDocumentDriveServer {
     /** Public methods **/
     abstract getDrives(): Promise<string[]>;
     abstract addDrive(drive: DriveInput): Promise<DocumentDriveDocument>;
@@ -272,7 +260,7 @@ export abstract class BaseDocumentDriveServer extends Logger {
     abstract clearStorage(): Promise<void>;
 }
 
-export abstract class BaseListenerManager extends Logger {
+export abstract class BaseListenerManager {
     protected drive: BaseDocumentDriveServer;
     protected listenerState = new Map<string, Map<string, ListenerState>>();
     protected transmitters: Record<
@@ -284,7 +272,6 @@ export abstract class BaseListenerManager extends Logger {
         drive: BaseDocumentDriveServer,
         listenerState = new Map<string, Map<string, ListenerState>>(),
     ) {
-        super();
         this.drive = drive;
         this.listenerState = listenerState;
     }

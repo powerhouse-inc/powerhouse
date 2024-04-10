@@ -41,7 +41,7 @@ export interface IPullResponderTransmitter extends ITransmitter {
     getStrands(since?: string): Promise<StrandUpdate[]>;
 }
 
-export class PullResponderTransmitter extends Logger implements IPullResponderTransmitter {
+export class PullResponderTransmitter implements IPullResponderTransmitter {
     private drive: BaseDocumentDriveServer;
     private listener: Listener;
     private manager: ListenerManager;
@@ -51,7 +51,6 @@ export class PullResponderTransmitter extends Logger implements IPullResponderTr
         drive: BaseDocumentDriveServer,
         manager: ListenerManager
     ) {
-        super();
         this.listener = listener;
         this.drive = drive;
         this.manager = manager;

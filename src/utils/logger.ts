@@ -3,14 +3,10 @@ import Sentry from 'winston-sentry-log';
 
 export const logger = winston.createLogger({
     level: 'info',
-    format: winston.format.json(),
+    // format: winston.format.colorize(),
     transports: [new winston.transports.Console()],
 });
 
-//
-// If we're not in production then log to the `console` with the format:
-// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
-//
 if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
     const options = {
         config: {

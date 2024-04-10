@@ -4,18 +4,17 @@ import {
     BaseDocumentDriveServer,
     Listener,
     ListenerRevision,
-    Logger,
     StrandUpdate
 } from '../../types';
 import { ITransmitter } from './types';
+import { logger } from '../../../utils/logger';
 
-export class SwitchboardPushTransmitter extends Logger implements ITransmitter {
+export class SwitchboardPushTransmitter implements ITransmitter {
     private drive: BaseDocumentDriveServer;
     private listener: Listener;
     private targetURL: string;
 
     constructor(listener: Listener, drive: BaseDocumentDriveServer) {
-        super();
         this.listener = listener;
         this.drive = drive;
         this.targetURL = listener.callInfo!.data!;
@@ -58,7 +57,7 @@ export class SwitchboardPushTransmitter extends Logger implements ITransmitter {
 
             return pushUpdates;
         } catch (e) {
-            this.logger.error(e);
+            logger.error(e);
             throw e;
         }
         return [];

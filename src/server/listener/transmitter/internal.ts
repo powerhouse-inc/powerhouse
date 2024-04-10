@@ -3,12 +3,12 @@ import {
     BaseDocumentDriveServer,
     Listener,
     ListenerRevision,
-    Logger,
     OperationUpdate,
     StrandUpdate
 } from '../../types';
 import { buildRevisionsFilter } from '../../utils';
 import { ITransmitter } from './types';
+import { logger } from '../../../utils/logger';
 
 export interface IReceiver {
     transmit: (strands: InternalTransmitterUpdate[]) => Promise<void>;
@@ -26,13 +26,12 @@ export type InternalTransmitterUpdate<
     state: T['state'][S];
 };
 
-export class InternalTransmitter extends Logger implements ITransmitter {
+export class InternalTransmitter implements ITransmitter {
     private drive: BaseDocumentDriveServer;
     private listener: Listener;
     private receiver: IReceiver | undefined;
 
     constructor(listener: Listener, drive: BaseDocumentDriveServer) {
-        super();
         this.listener = listener;
         this.drive = drive;
     }
@@ -76,7 +75,7 @@ export class InternalTransmitter extends Logger implements ITransmitter {
                 revision: operations[operations.length - 1]?.index ?? -1
             }));
         } catch (error) {
-            this.logger.error(error);
+            logger.error(error);
             // TODO check which strand caused an error
             return strands.map(({ operations, ...s }) => ({
                 ...s,
