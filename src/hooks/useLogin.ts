@@ -14,19 +14,22 @@ export const useLogin = () => {
 
     const login = useCallback(async () => {
         const connectId = await did();
-        const url = `${RENOWN_URL}?connect=${encodeURIComponent(connectId)}&network=${RENOWN_NETWORK_ID}`;
+        const url = new URL(RENOWN_URL);
+        url.searchParams.set('connect', connectId);
+        url.searchParams.set('network', RENOWN_NETWORK_ID);
 
         setStatus('checking');
         if (window.electronAPI) {
             const protocol = await window.electronAPI.protocol();
-            await window.electronAPI.openURL(`${url}&deeplink=${protocol}`);
+            url.searchParams.set('deeplink', protocol);
+            await window.electronAPI.openURL(url.toString());
         } else {
-            window
-                .open(
-                    `${url}&returnUrl=${encodeURIComponent(`${window.location.origin}${window.location.pathname}`)}`,
-                    '_self',
-                )
-                ?.focus();
+            const returnUrl = new URL(
+                window.location.pathname,
+                window.location.origin,
+            );
+            url.searchParams.set('returnUrl', returnUrl.toJSON());
+            window.open(url, '_self')?.focus();
         }
     }, [did]);
 
