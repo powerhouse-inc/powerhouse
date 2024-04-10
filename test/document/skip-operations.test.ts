@@ -1,9 +1,10 @@
-import { utils } from '../../src/document';
+import { Operation, utils } from '../../src/document';
 import { setName } from '../../src/document/actions/creators';
 import {
     createDocument,
     createExtendedState,
     mapSkippedOperations,
+    calculateSkipsLeft,
 } from '../../src/document/utils';
 import {
     emptyReducer,
@@ -285,6 +286,77 @@ describe('skip operations', () => {
 
                 expect(mapOp).toHaveProperty('ignore', ignore);
             });
+        });
+
+        it('should be able to detect cleared operations', () => {
+            const operations = [
+                createFakeOperation(0),
+                createFakeOperation(1),
+                createFakeOperation(3, 1),
+            ];
+
+            const mappedOps = mapSkippedOperations(operations);
+            console.log(mappedOps);
+            expect(mappedOps.length).toBe(3);
+            mappedOps.forEach(mapOp => {
+                expect(mapOp).toHaveProperty('ignore', false);
+            });
+        });
+    });
+
+    describe('calculateSkipsLeft', () => {
+        it('should return 0 when there are no skip operations to be performed', () => {
+            const operations = [
+                createFakeOperation(0),
+                createFakeOperation(1),
+                createFakeOperation(2),
+            ];
+
+            const skipsLeft = calculateSkipsLeft(operations, 4, 1);
+            expect(skipsLeft).toBe(0);
+        });
+
+        it('should return 1 when there is still 1 operation to be skipped', () => {
+            const operations = [
+                createFakeOperation(0),
+                createFakeOperation(1),
+                createFakeOperation(2),
+            ];
+
+            const skipsLeft = calculateSkipsLeft(operations, 4, 2);
+            expect(skipsLeft).toBe(1);
+        });
+
+        it('should return 3 when there is still 3 operations to be skipped', () => {
+            const operations = [
+                createFakeOperation(0),
+                createFakeOperation(1),
+                createFakeOperation(2),
+                createFakeOperation(3),
+                createFakeOperation(4),
+            ];
+
+            const skipsLeft = calculateSkipsLeft(operations, 6, 4);
+            expect(skipsLeft).toBe(3);
+        });
+
+        it('should return 2 when there is still 2 operations to be skipped (gap between operations)', () => {
+            const operations = [
+                createFakeOperation(0),
+                createFakeOperation(1),
+                createFakeOperation(2),
+                createFakeOperation(4),
+            ];
+
+            const skipsLeft = calculateSkipsLeft(operations, 6, 4);
+            expect(skipsLeft).toBe(2);
+        });
+
+        it('should return 0 if there are no operations', () => {
+            const operations = [] as Operation[];
+
+            const skipsLeft = calculateSkipsLeft(operations, 0, 1);
+            expect(skipsLeft).toBe(0);
         });
     });
 

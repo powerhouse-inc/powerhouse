@@ -84,6 +84,7 @@ export function undoOperation<T, A extends Action, L>(
         }
 
         const [lastOperation] = draft.document.operations[scope].slice(-1);
+
         const isLatestOpNOOP =
             lastOperation.type === 'NOOP' && lastOperation.skip > 0;
 
@@ -91,7 +92,17 @@ export function undoOperation<T, A extends Action, L>(
 
         if (isLatestOpNOOP) {
             draft.skip += lastOperation.skip;
-            draft.document.operations[scope].pop();
+
+            const preLastOperation =
+                draft.document.operations[scope][
+                    draft.document.operations[scope].length - 2
+                ];
+            if (
+                preLastOperation &&
+                lastOperation.index - preLastOperation.index === 1
+            ) {
+                draft.document.operations[scope].pop();
+            }
         }
 
         if (draft.document.operations[scope].length < draft.skip) {
@@ -108,6 +119,12 @@ export function undoOperation<T, A extends Action, L>(
 
         while (skippedOpsLeft > 0 && index >= 0) {
             const op = draft.document.operations[scope][index];
+
+            if (!op) {
+                skippedOpsLeft--;
+                index--;
+                continue;
+            }
 
             if (op.type === 'NOOP' && op.skip > 0) {
                 index = index - (op.skip + 1);

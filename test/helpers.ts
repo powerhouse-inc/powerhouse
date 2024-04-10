@@ -1,12 +1,25 @@
+import { SignalDispatch } from '../src/document';
 import {
+    Document,
     Action,
+    BaseAction,
     ImmutableStateReducer,
     Operation,
     OperationScope,
+    ReducerOptions,
 } from '../src/document/types';
 import { createAction, createReducer } from '../src/document/utils';
 // Empty reducer that supports base actions
 export const emptyReducer = createReducer(state => state);
+
+export const wrappedEmptyReducer = (
+    state: Document<unknown, Action>,
+    action: Action | BaseAction | Operation,
+    dispatch?: SignalDispatch,
+    options?: ReducerOptions,
+) => {
+    return emptyReducer(state, action, dispatch, options);
+};
 
 // Counter reducer that supports increment/decrement actions
 export interface IncrementAction extends Action {

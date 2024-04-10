@@ -20,6 +20,7 @@ import {
     Action,
     Document,
     ImmutableStateReducer,
+    Operation,
     ReducerOptions,
 } from './types';
 import {
@@ -28,6 +29,7 @@ import {
     hashDocument,
     replayOperations,
     isNoopOperation,
+    calculateSkipsLeft,
 } from './utils/base';
 import { SignalDispatch } from './signal';
 
@@ -74,7 +76,7 @@ function updateHeader<T extends Document>(document: T, action: Action): T {
  */
 function updateOperations<T extends Document>(
     document: T,
-    action: Action,
+    action: Action | Operation,
     skip = 0,
 ): T {
     // UNDO, REDO and PRUNE are meta operations
@@ -92,10 +94,17 @@ function updateOperations<T extends Document>(
         document.revision[scope],
     );
 
+    const latestOperation = [...operations].pop();
+    let nextIndex = (latestOperation?.index ?? -1) + 1;
+
+    if ('index' in action) {
+        nextIndex = action.index;
+    }
+
     // adds the operation to its scope operations
     operations.push({
         ...action,
-        index: operations.length,
+        index: nextIndex,
         timestamp: new Date().toISOString(),
         hash: '',
         scope,
@@ -198,7 +207,7 @@ export function processUndoRedo<T, A extends Action, L>(
  */
 export function baseReducer<T, A extends Action, L>(
     document: Document<T, A, L>,
-    action: A | BaseAction,
+    action: A | BaseAction | Operation,
     customReducer: ImmutableStateReducer<T, A, L>,
     dispatch?: SignalDispatch,
     options: ReducerOptions = {},
@@ -243,6 +252,17 @@ export function baseReducer<T, A extends Action, L>(
     // specified number of operations before applying
     // the action
     if (skipValue > 0 && !ignoreSkipOperations) {
+        let skipsLeft = skipValue;
+
+        if ('index' in _action) {
+            // if we are dealing with an operation, we have to caluclate the skips left based on the operation index
+            skipsLeft = calculateSkipsLeft(
+                newDocument.operations[_action.scope],
+                _action.index,
+                skipValue,
+            );
+        }
+
         newDocument = replayOperations(
             newDocument.initialState,
             newDocument.operations,
@@ -250,7 +270,7 @@ export function baseReducer<T, A extends Action, L>(
             undefined,
             undefined,
             undefined,
-            { [_action.scope]: skipValue },
+            { [_action.scope]: skipsLeft },
         );
     }
 
