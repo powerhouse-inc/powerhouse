@@ -38,6 +38,7 @@ export type IconName =
     | 'project'
     | 'redo-arrow'
     | 'renown'
+    | 'renown_hover'
     | 'save'
     | 'search'
     | 'server'

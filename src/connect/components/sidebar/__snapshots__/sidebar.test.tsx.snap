@@ -3,7 +3,7 @@
 exports[`Connect Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="group/sidebar group expanded flex h-full flex-col overflow-hidden transition-none duration-300 animate-in fade-in bg-gray-50 shadow-sidebar"
+    class="group/sidebar group expanded flex h-full flex-col overflow-hidden transition-none duration-300 animate-in fade-in shadow-sidebar"
     data-testid="sidebar"
     style="width: 304px;"
   >
@@ -47,31 +47,34 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       class="flex-shrink-0 border-t border-slate-700/10 p-4 collapsed:px-1 expanding:px-1"
     >
       <div
-        class="flex gap-2 rounded-sm px-3 py-2.5 collapsed:justify-center
-            collapsed:bg-transparent collapsed:px-1 collapsing:bg-transparent
-            expanding:justify-center expanding:bg-transparent expanding:px-1
-        "
+        class="bg-gray-50 collapsed:bg-transparent collapsing:bg-transparent expanding:bg-transparent"
       >
-        <img
-          alt="Willow"
-          class="rounded-full object-contain"
-          height="40"
-          src="/src/assets/powerhouse-rounded.png"
-          width="40"
-        />
         <div
-          class="collapsed:hidden expanding:hidden"
+          class="flex gap-2 rounded-sm px-3 py-2.5 collapsed:justify-center
+            collapsed:px-1 expanding:justify-center expanding:px-1
+        "
         >
-          <p
-            class="text-sm font-semibold text-gray-800"
+          <img
+            alt="Willow"
+            class="rounded-full object-contain"
+            height="40"
+            src="/src/assets/powerhouse-rounded.png"
+            width="40"
+          />
+          <div
+            class="collapsed:hidden expanding:hidden"
           >
-            Willow
-          </p>
-          <p
-            class="text-xs font-semibold text-gray-600"
-          >
-            0x123
-          </p>
+            <p
+              class="text-sm font-semibold text-gray-800"
+            >
+              Willow
+            </p>
+            <p
+              class="text-xs font-semibold text-gray-600"
+            >
+              0x123
+            </p>
+          </div>
         </div>
       </div>
       <button

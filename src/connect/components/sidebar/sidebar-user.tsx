@@ -1,4 +1,5 @@
 import ImgPowerhouse from '@/assets/powerhouse-rounded.png';
+import { useEffect, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export interface SidebarUserProps {
@@ -14,28 +15,39 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
     avatarUrl,
     loadingUser,
 }) => {
+    const [loadingImage, setLoadingImage] = useState(false);
+    const [imageError, setImageError] = useState(false);
+    useEffect(() => {
+        setImageError(false);
+        setLoadingImage(!avatarUrl);
+    }, [avatarUrl]);
+    const loading = loadingUser || (avatarUrl && loadingImage);
     return (
         <div
             className={`flex gap-2 rounded-sm px-3 py-2.5 collapsed:justify-center
-            collapsed:bg-transparent collapsed:px-1 collapsing:bg-transparent
-            expanding:justify-center expanding:bg-transparent expanding:px-1
+            collapsed:px-1 expanding:justify-center expanding:px-1
         `}
         >
             <img
-                src={avatarUrl || ImgPowerhouse}
+                src={imageError || !avatarUrl ? ImgPowerhouse : avatarUrl}
                 alt={username}
                 width={40}
                 height={40}
                 className={twMerge(
                     'rounded-full object-contain',
-                    loadingUser && 'animate-pulse',
+                    loading && 'animate-pulse',
                 )}
+                onLoad={() => setLoadingImage(false)}
+                onError={() => {
+                    setLoadingImage(false);
+                    setImageError(true);
+                }}
             />
             <div className="collapsed:hidden expanding:hidden">
                 <p
                     className={twMerge(
                         'text-sm font-semibold text-gray-800',
-                        loadingUser && 'animate-pulse rounded',
+                        loading && 'animate-pulse rounded',
                     )}
                 >
                     {username}
