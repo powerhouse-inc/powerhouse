@@ -1,3 +1,10 @@
+# [1.0.0-alpha.30](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.29...v1.0.0-alpha.30) (2024-04-10)
+
+
+### Bug Fixes
+
+* delete drive handling ([6547274](https://github.com/powerhouse-inc/document-drive/commit/6547274d4ebe02e737aa429699af39fbabe2184b))
+
 # [1.0.0-alpha.29](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2024-04-10)
 
 
