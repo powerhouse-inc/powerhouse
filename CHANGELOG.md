@@ -1,3 +1,10 @@
+# [1.0.0-alpha.32](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.31...v1.0.0-alpha.32) (2024-04-11)
+
+
+### Features
+
+* replaced winston with console ([bbb7fc5](https://github.com/powerhouse-inc/document-drive/commit/bbb7fc53fa8cb5da97c6068e95ab77d5149d87fc))
+
 # [1.0.0-alpha.31](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.30...v1.0.0-alpha.31) (2024-04-10)
 
 
