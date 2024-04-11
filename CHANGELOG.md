@@ -1,3 +1,10 @@
+# [1.0.0-alpha.33](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.32...v1.0.0-alpha.33) (2024-04-11)
+
+
+### Features
+
+* added debug and trace methods and logger export ([c7336de](https://github.com/powerhouse-inc/document-drive/commit/c7336de1f4b0e55a4c8d4e5efe5b063c7a4ccc88))
+
 # [1.0.0-alpha.32](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.31...v1.0.0-alpha.32) (2024-04-11)
 
 
