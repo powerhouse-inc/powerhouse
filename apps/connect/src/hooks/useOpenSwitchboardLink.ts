@@ -15,8 +15,7 @@ export const useOpenSwitchboardLink = (driveId: string) => {
 
         if (document) {
             const url = getSwitchboardUrl(
-                baseUrl,
-                driveId,
+                remoteUrl,
                 document.documentType,
                 document.id,
             );

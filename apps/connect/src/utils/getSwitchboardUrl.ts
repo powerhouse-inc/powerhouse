@@ -1,42 +1,50 @@
-import { join } from './join';
-
 const rwaQuery = `... on RealWorldAssets {
-  state {
-    accounts {
-      id
-      reference
-      label
-    }
-    principalLenderAccountId
-    spvs {
-      id
-      name
-    }
-    serviceProviderFeeTypes {
-      id
-      name
-      feeType
-      accountId
-    }
-    fixedIncomeTypes {
-      id
-      name
-    }
-    portfolio {
-      ... on FixedIncome {
+    state {
+        accounts {
         id
-        spvId
-        ISIN
-        CUSIP
-        coupon
-      }
-      ... on Cash {
+        reference
+        label
+        }
+        principalLenderAccountId
+        spvs {
         id
-        spvId
-        currency
-      }
+        name
+        }
+        serviceProviderFeeTypes {
+        id
+        name
+        feeType
+        accountId
+        }
+        fixedIncomeTypes {
+        id
+        name
+        }
+        portfolio {
+        ... on FixedIncome {
+            id
+            spvId
+            ISIN
+            CUSIP
+            coupon
+        }
+        ... on Cash {
+            id
+            spvId
+            currency
+        }
+        }
+        transactions {
+            type
+            entryTime
+            cashBalanceChange
+            feeTransactions {
+            id
+            amount
+            tradeTime
+            }
+        }
     }
-  }
 }`;
 
 const accountSnapshot = `... on AccountSnapshot {
@@ -115,13 +123,13 @@ const getQuery = (documentId: string, documentType: string) => {
 };
 
 export const getSwitchboardUrl = (
-    baseUrl: string,
-    driveId: string,
+    remoteUrl: string,
     documentType: string,
     documentId: string,
 ) => {
+    const explorerUrl = remoteUrl.replace(/\/d\//, '/graphql/');
     const query = getQuery(documentId, documentType);
-    const url = join(baseUrl, 'explorer', driveId) + `?query=${query}`;
+    const url = explorerUrl + `?query=${query}`;
 
     return url.toString();
 };
