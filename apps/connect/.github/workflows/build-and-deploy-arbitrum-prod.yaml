@@ -22,5 +22,5 @@ jobs:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          docker_options: "--build-arg BASE_PATH=/arbitrum/connect --build-arg VITE_BASE_HREF=/arbitrum/connect/ --build-arg VITE_ROUTER_BASENAME=/arbitrum/connect"
+          docker_options: "--build-arg BASE_PATH=/arbitrum/connect --build-arg VITE_BASE_HREF=/arbitrum/connect/ --build-arg VITE_ROUTER_BASENAME=/arbitrum/connect --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}"
           process_type: web
