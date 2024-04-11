@@ -6,6 +6,7 @@ import {
     RWATableSelect,
     RWATableTextInput,
     convertToDateTimeLocalFormat,
+    handleTableDatum,
 } from '@/rwa';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { FormInputs } from '../../inputs/form-inputs';
@@ -50,18 +51,23 @@ export function AssetDetails(props: AssetDetailsProps) {
     const derivedInputsToDisplay =
         operation !== 'create'
             ? [
-                  { label: 'Notional', Input: () => <>{item?.notional}</> },
+                  {
+                      label: 'Notional',
+                      Input: () => <>{handleTableDatum(item?.notional)}</>,
+                  },
                   {
                       label: 'Purchase Date',
-                      Input: () => <>{item?.purchaseDate}</>,
+                      Input: () => <>{handleTableDatum(item?.purchaseDate)}</>,
                   },
                   {
                       label: 'Purchase Price',
-                      Input: () => <>{item?.purchasePrice}</>,
+                      Input: () => <>{handleTableDatum(item?.purchasePrice)}</>,
                   },
                   {
                       label: 'Purchase Proceeds',
-                      Input: () => <>{item?.purchaseProceeds}</>,
+                      Input: () => (
+                          <>{handleTableDatum(item?.purchaseProceeds)}</>
+                      ),
                   },
               ]
             : [];
