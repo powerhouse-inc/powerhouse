@@ -14,7 +14,8 @@
         "./storage/memory": "./src/storage/memory.ts",
         "./storage/prisma": "./src/storage/prisma.ts",
         "./utils": "./src/utils/index.ts",
-        "./utils/graphql": "./src/utils/graphql.ts"
+        "./utils/graphql": "./src/utils/graphql.ts",
+        "./logger": "./src/utils/logger.ts"
     },
     "files": [
         "./src"
