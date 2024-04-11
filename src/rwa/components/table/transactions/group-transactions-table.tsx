@@ -52,12 +52,12 @@ export function makeGroupTransactionTableData(
     transactions: GroupTransaction[] | undefined,
     fixedIncomes: FixedIncome[] | undefined,
 ) {
-    if (!transactions?.length || !fixedIncomes?.length) return [];
+    if (!transactions?.length) return [];
 
     const tableData = transactions.map(transaction => {
         const id = transaction.id;
         const entryTime = transaction.entryTime;
-        const asset = fixedIncomes.find(
+        const asset = fixedIncomes?.find(
             asset => asset.id === transaction.fixedIncomeTransaction?.assetId,
         )?.name;
         const type = transaction.type;
