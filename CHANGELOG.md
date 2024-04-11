@@ -1,3 +1,10 @@
+# [1.0.0-alpha.93](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.92...v1.0.0-alpha.93) (2024-04-11)
+
+
+### Features
+
+* use handle table datum in asset details ([766d1ee](https://github.com/powerhouse-inc/design-system/commit/766d1ee4bcc46e7e9172abd958ea977b14b47db4))
+
 # [1.0.0-alpha.92](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.91...v1.0.0-alpha.92) (2024-04-11)
 
 
