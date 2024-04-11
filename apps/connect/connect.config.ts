@@ -22,8 +22,14 @@ const SEARCH_BAR_ENABLED = import.meta.env.VITE_SEARCH_BAR_ENABLED || undefined;
 
 const VITE_ROUTER_BASENAME = import.meta.env.VITE_ROUTER_BASENAME || '/';
 
+const VITE_SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || '';
+const VITE_SENTRY_ENV = import.meta.env.VITE_SENTRY_ENV || 'dev';
 export default {
     routerBasename: VITE_ROUTER_BASENAME,
+    sentry: {
+        dsn: VITE_SENTRY_DSN,
+        env: VITE_SENTRY_ENV,
+    },
     content: {
         showSearchBar: SEARCH_BAR_ENABLED !== 'false',
     },

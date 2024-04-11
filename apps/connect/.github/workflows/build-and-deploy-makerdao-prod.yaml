@@ -22,5 +22,5 @@ jobs:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          docker_options: "--build-arg BASE_PATH=/makerdao/connect --build-arg VITE_BASE_HREF=/makerdao/connect/ --build-arg VITE_ROUTER_BASENAME=/makerdao/connect --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}"
+          docker_options: "--build-arg BASE_PATH=/makerdao/connect --build-arg VITE_BASE_HREF=/makerdao/connect/ --build-arg VITE_ROUTER_BASENAME=/makerdao/connect --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }} --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}"
           process_type: web

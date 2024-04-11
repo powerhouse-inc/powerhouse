@@ -7,16 +7,16 @@ import {
     useNavigationType,
 } from 'react-router-dom';
 
+import config from '../../connect.config';
+
 export default () => {
-    if (
-        !import.meta.env.VITE_SENTRY_DSN ||
-        import.meta.env.VITE_SENTRY_DSN === ''
-    ) {
+    if (!config.sentry.dsn || config.sentry.dsn === '') {
         return;
     }
 
     Sentry.init({
-        dsn: import.meta.env.VITE_SENTRY_DSN,
+        dsn: config.sentry.dsn,
+        environment: config.sentry.env,
         integrations: [
             Sentry.reactRouterV6BrowserTracingIntegration({
                 useEffect: React.useEffect,
@@ -28,12 +28,7 @@ export default () => {
             Sentry.replayIntegration(),
         ],
 
-        // Set tracesSampleRate to 1.0 to capture 100%
-        // of transactions for performance monitoring.
         tracesSampleRate: 1.0,
-
-        // Capture Replay for 10% of all sessions,
-        // plus for 100% of sessions with an error
         replaysSessionSampleRate: 0.1,
         replaysOnErrorSampleRate: 1.0,
     });
