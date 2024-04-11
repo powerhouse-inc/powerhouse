@@ -98,6 +98,12 @@ function updateOperations<T extends Document>(
     let nextIndex = (latestOperation?.index ?? -1) + 1;
 
     if ('index' in action) {
+        if (action.index > nextIndex + skip) {
+            throw new Error(
+                `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${action.index} with skip ${skip}`,
+            );
+        }
+
         nextIndex = action.index;
     }
 

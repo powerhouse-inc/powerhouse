@@ -296,7 +296,6 @@ describe('skip operations', () => {
             ];
 
             const mappedOps = mapSkippedOperations(operations);
-            console.log(mappedOps);
             expect(mappedOps.length).toBe(3);
             mappedOps.forEach(mapOp => {
                 expect(mapOp).toHaveProperty('ignore', false);

@@ -382,8 +382,6 @@ describe('UNDO/REDO', () => {
             expect(document.clipboard[2].type).toBe('INCREMENT');
             expect(document.clipboard[2].index).toBe(2);
 
-            console.log(document.operations.global);
-
             expect(document.operations.global.length).toBe(6);
             expect(document.operations.global[5]).toMatchObject({
                 type: 'NOOP',
