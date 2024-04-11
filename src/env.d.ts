@@ -16,6 +16,7 @@ interface ImportMetaEnv {
     VITE_SEARCH_BAR_ENABLED: string;
     VITE_ROUTER_BASENAME: string;
     VITE_SENTRY_DSN: string;
+    VITE_SENTRY_ENV: string;
 }
 
 interface ImportMeta {
