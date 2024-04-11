@@ -14,7 +14,6 @@ import fs from 'node:fs';
 import path, { basename } from 'path';
 import { addDeeplink } from './app/deeplink';
 import initDocumentDrive from './app/document-drive';
-import initSentry from './app/sentry';
 import store from './app/store';
 import { ConnectCrypto } from './services/crypto';
 import {
@@ -79,8 +78,6 @@ async function initApp() {
             app.getPath('userData'),
             ipcMain,
         );
-
-        initSentry();
 
         // creates window
         const browserWindow = await createWindow({

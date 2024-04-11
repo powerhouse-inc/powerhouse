@@ -26,6 +26,7 @@
  * ```
  */
 import { createRoot } from 'react-dom/client';
+import initSentry from './app/sentry';
 import App from './components/app';
 import './i18n';
 import './index.css';
@@ -35,4 +36,5 @@ if (import.meta.env.MODE === 'development') {
     window.documentEditorDebugTools = new DocumentEditorDebugTools();
 }
 
+initSentry();
 createRoot(document.getElementById('app')!).render(App);
