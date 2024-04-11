@@ -94,7 +94,7 @@
         "@sentry/react": "^7.109.0",
         "did-key-creator": "^1.2.0",
         "document-drive": "^1.0.0-alpha.32",
-        "document-model": "^1.0.35",
+        "document-model": "^1.0.36",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
