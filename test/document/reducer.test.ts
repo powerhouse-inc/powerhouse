@@ -6,7 +6,7 @@ import {
     createDocument,
     createReducer,
 } from '../../src/document/utils';
-import { emptyReducer } from '../helpers';
+import { emptyReducer, wrappedEmptyReducer } from '../helpers';
 
 describe('Base reducer', () => {
     beforeAll(() => {
@@ -138,5 +138,105 @@ describe('Base reducer', () => {
                 value: 'test',
             });
         });
+    });
+
+    it('should throw an error when there is a missing index operation', () => {
+        let document = createDocument();
+        document = emptyReducer(document, {
+            type: 'TEST_0',
+            input: {},
+            scope: 'global',
+        });
+
+        document = emptyReducer(document, {
+            type: 'TEST_1',
+            input: {},
+            scope: 'global',
+        });
+
+        expect(() => {
+            wrappedEmptyReducer(document, {
+                type: 'TEST_2',
+                input: {},
+                scope: 'global',
+                index: 3,
+            });
+        }).toThrow(
+            'Missing operations: expected 2 with skip 0 or equivalent, got index 3 with skip 0',
+        );
+    });
+
+    it('should throw an error when there is a missing index operation + skip', () => {
+        let document = createDocument();
+        document = emptyReducer(document, {
+            type: 'TEST_0',
+            input: {},
+            scope: 'global',
+        });
+
+        document = emptyReducer(document, {
+            type: 'TEST_1',
+            input: {},
+            scope: 'global',
+        });
+
+        expect(() => {
+            wrappedEmptyReducer(
+                document,
+                {
+                    type: 'TEST_2',
+                    input: {},
+                    scope: 'global',
+                    index: 4,
+                },
+                undefined,
+                { skip: 1 },
+            );
+        }).toThrow(
+            'Missing operations: expected 2 with skip 0 or equivalent, got index 4 with skip 1',
+        );
+    });
+
+    it('should not throw an error when there is a valid index operation + skip', () => {
+        let document = createDocument();
+        document = emptyReducer(document, {
+            type: 'TEST_0',
+            input: {},
+            scope: 'global',
+        });
+
+        document = emptyReducer(document, {
+            type: 'TEST_1',
+            input: {},
+            scope: 'global',
+        });
+
+        document = wrappedEmptyReducer(
+            document,
+            {
+                type: 'TEST_2',
+                input: {},
+                scope: 'global',
+                index: 3,
+            },
+            undefined,
+            { skip: 1 },
+        );
+
+        expect(document.operations.global).toMatchObject([
+            {
+                type: 'TEST_0',
+                index: 0,
+            },
+            {
+                type: 'TEST_1',
+                index: 1,
+            },
+            {
+                type: 'TEST_2',
+                index: 3,
+                skip: 1,
+            },
+        ]);
     });
 });
