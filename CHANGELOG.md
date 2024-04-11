@@ -1,3 +1,10 @@
+# [1.0.0-alpha.92](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.91...v1.0.0-alpha.92) (2024-04-11)
+
+
+### Features
+
+* fix transactions not showing when assets not yet added ([1797e1f](https://github.com/powerhouse-inc/design-system/commit/1797e1f12d2ad1fb865b6d2800defa792e0556ad))
+
 # [1.0.0-alpha.91](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.90...v1.0.0-alpha.91) (2024-04-10)
 
 
