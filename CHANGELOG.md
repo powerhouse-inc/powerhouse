@@ -1,3 +1,10 @@
+# [1.0.0-alpha.34](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.33...v1.0.0-alpha.34) (2024-04-12)
+
+
+### Features
+
+* force deploy ([#126](https://github.com/powerhouse-inc/document-drive/issues/126)) ([e02d22e](https://github.com/powerhouse-inc/document-drive/commit/e02d22ee00471f3f20544cc27155108143d22512))
+
 # [1.0.0-alpha.33](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.32...v1.0.0-alpha.33) (2024-04-11)
 
 
