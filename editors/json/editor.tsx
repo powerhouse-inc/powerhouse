@@ -11,7 +11,7 @@ import JSONEditor from '../common/json-editor';
 
 export type IProps = EditorProps<unknown, Action, unknown>;
 
-export default function Editor({ dispatch, document, editorContext }: IProps) {
+export default function Editor({ dispatch, document, context }: IProps) {
     const [state, setState] = useState(document.state.global);
     useEffect(() => {
         setState(document.state.global);
@@ -34,7 +34,7 @@ export default function Editor({ dispatch, document, editorContext }: IProps) {
     };
 
     return (
-        <DocumentEditor mode={editorContext.theme}>
+        <DocumentEditor mode={context.theme}>
             <EditorToolbar
                 key="toolbar"
                 left={[
@@ -70,13 +70,13 @@ export default function Editor({ dispatch, document, editorContext }: IProps) {
                         placeholder="Document name"
                         value={document.name}
                         size="medium"
-                        theme={editorContext.theme}
+                        theme={context.theme}
                         onSubmit={handleSetDocumentName}
                     />
                 </div>
                 <JSONEditor
                     value={state as JSON}
-                    theme={editorContext.theme}
+                    theme={context.theme}
                     onBlur={value => handleSave(value)}
                     onChange={value => setState(value || {})}
                 />

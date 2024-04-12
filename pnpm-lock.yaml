@@ -143,14 +143,14 @@ devDependencies:
     specifier: ^3.12.0
     version: 3.12.0
   document-model:
-    specifier: 1.0.34
-    version: 1.0.34
+    specifier: ^1.0.37
+    version: 1.0.37
   document-model-editors:
     specifier: ^1.0.1
-    version: 1.0.1(document-model@1.0.34)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2)
+    version: 1.0.1(document-model@1.0.37)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2)
   dspot-powerhouse-components:
     specifier: ^1.1.0
-    version: 1.1.0(@emotion/react@11.11.3)(@emotion/styled@11.11.0)(@mui/material@5.15.5)(document-model-libs@1.1.46)(react-dom@18.2.0)(react@18.2.0)
+    version: 1.1.0(@emotion/react@11.11.3)(@emotion/styled@11.11.0)(@mui/material@5.15.5)(document-model-libs@1.24.0)(react-dom@18.2.0)(react@18.2.0)
   eslint:
     specifier: ^8.56.0
     version: 8.56.0
@@ -3555,7 +3555,7 @@ packages:
       '@types/node': 20.11.20
       arg: 5.0.2
       change-case: 4.1.2
-      document-model: 1.0.34
+      document-model: 1.0.37
       enquirer: 2.4.1
       execa: 8.0.1
       graphql: 16.8.1
@@ -4465,19 +4465,6 @@ packages:
       '@react-types/checkbox': 3.7.1(react@18.2.0)
       '@swc/helpers': 0.5.6
       react: 18.2.0
-
-  /@react-aria/toolbar@3.0.0-beta.1(react@18.2.0):
-    resolution: {integrity: sha512-GTQ76i0N8/BzWRJ/95RpOFGmbtv0lV3T2zd7CUis6xmP1zJCpSycs1V2jAUs6ggkVDedHLU2d0AOMkXorZLiUg==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0
-    dependencies:
-      '@react-aria/focus': 3.16.2(react@18.2.0)
-      '@react-aria/i18n': 3.10.2(react@18.2.0)
-      '@react-aria/utils': 3.23.2(react@18.2.0)
-      '@react-types/shared': 3.22.1(react@18.2.0)
-      '@swc/helpers': 0.5.6
-      react: 18.2.0
-    dev: true
 
   /@react-aria/toolbar@3.0.0-beta.3(react@18.2.0):
     resolution: {integrity: sha512-tPIEPRsZI/6Mb0tAW/GBTt3wBk7dfJg/eUnTloY8NHialvDa+cMUQyUVzPyLWGpErhYeBeutBmw1e2seMjmu+A==}
@@ -8140,7 +8127,6 @@ packages:
     engines: {node: '>=12.13'}
     dependencies:
       is-what: 4.1.16
-    dev: false
 
   /core-js-compat@3.36.0:
     resolution: {integrity: sha512-iV9Pd/PsgjNWBXeq8XRtWVSgz2tKAfhfvBs7qxYty+RlRd+OCksaWmOnc4JKrTc1cToXL1N0s3l/vwlxPtdElw==}
@@ -8407,7 +8393,6 @@ packages:
 
   /deep-object-diff@1.1.9:
     resolution: {integrity: sha512-Rn+RuwkmkDwCi2/oXOFS9Gsr5lJZu/yTGpK7wAaAIE75CC+LCGEZHpY6VQJa/RoJcrmaA/docWJZvYohlNkWPA==}
-    dev: false
 
   /default-browser-id@3.0.0:
     resolution: {integrity: sha512-OZ1y3y0SqSICtE8DE4S8YOE9UZOJ8wO16fKWVP5J1Qz42kV9jcnMVFrEE/noXb/ss3Q4pZIH79kxofzyNNtUNA==}
@@ -8564,7 +8549,7 @@ packages:
       esutils: 2.0.3
     dev: true
 
-  /document-model-editors@1.0.1(document-model@1.0.34)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2):
+  /document-model-editors@1.0.1(document-model@1.0.37)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2):
     resolution: {integrity: sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==}
     peerDependencies:
       document-model: ^1.0.5
@@ -8572,31 +8557,47 @@ packages:
       react-dom: ^18.2.0
       storybook: ^7.0.17
     dependencies:
-      document-model: 1.0.34
+      document-model: 1.0.37
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       storybook: 8.0.2(react-dom@18.2.0)(react@18.2.0)
     dev: true
 
-  /document-model-libs@1.1.46(document-model@1.0.34)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-7KLDaPS1FbQmElnqUJcc2O9lrR5biWTbRXgLvbGxWOiggritDg6pHVmdhcQ0V6u++6DFzIl5Zh82P9dMqlF47Q==}
+  /document-model-libs@1.24.0(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.2.1):
+    resolution: {integrity: sha512-PO/RR6f2SIkFYnkXoznVBu0DIbDGdo2qdvwOM/shO54AatfsIeWkd/v149X7qGklaDvZ+FznGaVhDchFLG7OcQ==}
     peerDependencies:
-      document-model: ^1.0.29
       react: ^18.2.0
       react-dom: ^18.2.0
     dependencies:
+      '@acaldas/graphql-codegen-typescript-validation-schema': 0.12.3(graphql@16.8.1)
+      '@graphql-codegen/core': 4.0.2(graphql@16.8.1)
+      '@graphql-codegen/typescript': 4.0.6(graphql@16.8.1)
       '@internationalized/date': 3.5.2
+      '@storybook/test': 8.0.2(vitest@1.2.1)
+      copy-anything: 3.0.5
       date-fns: 3.3.1
-      document-model: 1.0.34
+      deep-object-diff: 1.1.9
+      jsonc-parser: 3.2.1
+      jszip: 3.10.1
       react: 18.2.0
-      react-aria-components: 1.0.1(react-dom@18.2.0)(react@18.2.0)
+      react-aria-components: 1.1.1(react-dom@18.2.0)(react@18.2.0)
       react-dom: 18.2.0(react@18.2.0)
       tailwind-merge: 2.2.1
+    transitivePeerDependencies:
+      - '@jest/globals'
+      - '@types/bun'
+      - '@types/jest'
+      - encoding
+      - graphql
+      - jest
+      - supports-color
+      - vitest
     dev: true
 
-  /document-model@1.0.34:
-    resolution: {integrity: sha512-JKO3Oarg9psXR98Oa7HLPp3iWcnHpkMw4B6YraKJVrOYDxvf1XM26lhPlLfkWHA53KuQCd91KGuoLnrASIOMvQ==}
+  /document-model@1.0.37:
+    resolution: {integrity: sha512-mZ1IzYZlwU68MtTLTv5OyOcxcJU2B2GS9suyUH8/LM8NAfWt+BOMf2fj1ngaq39xc+3ZnXIIK7mLnwIVzzfFEA==}
     dependencies:
+      change-case: 5.4.3
       immer: 10.0.3
       json-stringify-deterministic: 1.0.12
       jszip: 3.10.1
@@ -8659,7 +8660,7 @@ packages:
     resolution: {integrity: sha512-20TuZZHCEZ2O71q9/+8BwKwZ0QtD9D8ObhrihJPr+vLLYlSuAU3/zL4cSlgbfeoGHTjCSJBa7NGcrF9/Bx/WJQ==}
     engines: {node: '>=4'}
 
-  /dspot-powerhouse-components@1.1.0(@emotion/react@11.11.3)(@emotion/styled@11.11.0)(@mui/material@5.15.5)(document-model-libs@1.1.46)(react-dom@18.2.0)(react@18.2.0):
+  /dspot-powerhouse-components@1.1.0(@emotion/react@11.11.3)(@emotion/styled@11.11.0)(@mui/material@5.15.5)(document-model-libs@1.24.0)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-9ee+yOsbVKfOTm3M8JsqADGMpxnzmCdS3BGIFZWaWpmb3Icip69ap0R84no6D7nyrmEcLNe5s9gz/klm1g3wUQ==}
     peerDependencies:
       '@emotion/react': ^11.11.1
@@ -8672,7 +8673,7 @@ packages:
       '@emotion/react': 11.11.3(@types/react@18.2.57)(react@18.2.0)
       '@emotion/styled': 11.11.0(@emotion/react@11.11.3)(@types/react@18.2.57)(react@18.2.0)
       '@mui/material': 5.15.5(@emotion/react@11.11.3)(@emotion/styled@11.11.0)(@types/react@18.2.57)(react-dom@18.2.0)(react@18.2.0)
-      document-model-libs: 1.1.46(document-model@1.0.34)(react-dom@18.2.0)(react@18.2.0)
+      document-model-libs: 1.24.0(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.2.1)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     dev: true
@@ -10735,7 +10736,6 @@ packages:
   /is-what@4.1.16:
     resolution: {integrity: sha512-ZhMwEosbFJkA0YhFnNDgTM4ZxDRsS6HqTo7qsZM08fehyRYIYa0yHu5R6mgo1n/8MgaPBXiPimPD77baVFYg+A==}
     engines: {node: '>=12.13'}
-    dev: false
 
   /is-windows@1.0.2:
     resolution: {integrity: sha512-eXK1UInq2bPmjyX6e3VHIzMLobc4J94i4AWn+Hpq3OU5KkrRC96OAcR3PRJ/pGu6m8TRnBHP9dkXQVsT/COVIA==}
@@ -12750,31 +12750,6 @@ packages:
       ini: 1.3.8
       minimist: 1.2.8
       strip-json-comments: 2.0.1
-    dev: true
-
-  /react-aria-components@1.0.1(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-zlSx5r7Hu3kTg7hDEGNBwrtMNWJnJ81Zt1AXPJASAdO0dw6WUgSgQH2/ZgkDiKLlNmRFQhR8/gKN70rAJ+LZiQ==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0
-      react-dom: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0
-    dependencies:
-      '@internationalized/date': 3.5.2
-      '@internationalized/string': 3.2.1
-      '@react-aria/focus': 3.16.2(react@18.2.0)
-      '@react-aria/interactions': 3.21.1(react@18.2.0)
-      '@react-aria/toolbar': 3.0.0-beta.1(react@18.2.0)
-      '@react-aria/utils': 3.23.2(react@18.2.0)
-      '@react-stately/table': 3.11.6(react@18.2.0)
-      '@react-types/form': 3.7.2(react@18.2.0)
-      '@react-types/grid': 3.2.4(react@18.2.0)
-      '@react-types/shared': 3.22.1(react@18.2.0)
-      '@react-types/table': 3.9.3(react@18.2.0)
-      '@swc/helpers': 0.5.6
-      react: 18.2.0
-      react-aria: 3.32.1(react-dom@18.2.0)(react@18.2.0)
-      react-dom: 18.2.0(react@18.2.0)
-      react-stately: 3.30.1(react@18.2.0)
-      use-sync-external-store: 1.2.0(react@18.2.0)
     dev: true
 
   /react-aria-components@1.1.1(react-dom@18.2.0)(react@18.2.0):

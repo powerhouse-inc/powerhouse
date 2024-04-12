@@ -7,20 +7,20 @@ import {
     BaseAction,
     Document,
     EditorContext,
+    EditorProps,
     ExtendedState,
     Reducer,
     utils,
 } from 'document-model/document';
 import React, { useState } from 'react';
 import { useDocumentReducer } from '../reducer';
-import { EditorProps } from '../types';
 
 export type DocumentStory<S, A extends Action, LocalState> = StoryAnnotations<
     ReactRenderer,
     {
         document: Document<S, A, LocalState>;
         dispatch: (action: A | BaseAction) => void;
-        editorContext: EditorContext;
+        context: EditorContext;
     }
 >;
 
@@ -53,7 +53,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                 setError(undefined);
             }, [state]);
 
-            const darkTheme = args.editorContext.theme === 'dark';
+            const darkTheme = args.context.theme === 'dark';
             return (
                 <div
                     style={{
@@ -76,7 +76,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                     disable: true,
                 },
             },
-            editorContext: {
+            context: {
                 name: 'Theme',
                 options: ['light', 'dark'],
                 mapping: {
@@ -99,7 +99,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
         name: 'New document',
         args: {
             document: utils.createDocument(initialState),
-            editorContext: {
+            context: {
                 theme: 'light',
             },
         },

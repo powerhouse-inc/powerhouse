@@ -108,7 +108,7 @@
     "chromatic": "^11.0.0",
     "constrained-editor-plugin": "^1.3.0",
     "crypto-browserify": "^3.12.0",
-    "document-model": "1.0.34",
+    "document-model": "^1.0.37",
     "document-model-editors": "^1.0.1",
     "dspot-powerhouse-components": "^1.1.0",
     "eslint": "^8.56.0",

@@ -78,7 +78,7 @@ const getNextPath = (
 };
 
 function ScopeFrameworkEditor(props: IProps) {
-    const { document, dispatch, editorContext } = props;
+    const { document, dispatch, context } = props;
     console.log(document);
     const {
         state: { global: state },
@@ -165,7 +165,7 @@ function ScopeFrameworkEditor(props: IProps) {
     };
 
     return (
-        <DocumentEditor mode={editorContext.theme}>
+        <DocumentEditor mode={context.theme}>
             <EditorToolbar
                 key="toolbar"
                 left={[
@@ -206,7 +206,7 @@ function ScopeFrameworkEditor(props: IProps) {
                         key="doc-title"
                         value={document.name}
                         size="huge"
-                        theme={editorContext.theme}
+                        theme={context.theme}
                         onSubmit={handleSetDocumentName}
                     />
                     <p key="lastModified">
@@ -226,7 +226,7 @@ function ScopeFrameworkEditor(props: IProps) {
                         key="doc-title"
                         value={state.rootPath}
                         size="medium"
-                        theme={editorContext.theme}
+                        theme={context.theme}
                         onSubmit={handleSetRootPath}
                     />
                 </div>
@@ -238,10 +238,10 @@ function ScopeFrameworkEditor(props: IProps) {
                         onUpdateType={handleTypeUpdate}
                         onUpdateComponents={handleComponentsUpdate}
                         onDelete={handleDelete}
-                        mode={props.editorContext.theme}
+                        mode={props.context.theme}
                     />
                 ))}
-                {editorContext.debug ? (
+                {context.debug ? (
                     <code
                         key="stateView"
                         style={{

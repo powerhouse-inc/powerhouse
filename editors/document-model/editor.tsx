@@ -19,7 +19,7 @@ export type IProps = EditorProps<
 >;
 
 function Editor(props: IProps) {
-    const theme: styles.ColorTheme = props.editorContext.theme || 'light';
+    const theme: styles.ColorTheme = props.context.theme || 'light';
     const scheme = styles.colorScheme[theme];
     const style: CSSProperties = {
         backgroundColor: scheme.bgColor,
