@@ -1,3 +1,10 @@
+# [1.0.0-alpha.94](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.93...v1.0.0-alpha.94) (2024-04-12)
+
+
+### Features
+
+* sidebar login improvements ([719cb28](https://github.com/powerhouse-inc/design-system/commit/719cb2810d746842834d678db0fb438b8597332c))
+
 # [1.0.0-alpha.93](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.92...v1.0.0-alpha.93) (2024-04-11)
 
 
