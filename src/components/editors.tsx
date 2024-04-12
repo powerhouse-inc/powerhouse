@@ -1,17 +1,21 @@
 import {
     Action,
     ActionErrorCallback,
+    ActionSigner,
     BaseAction,
     Document,
+    EditorContext,
     Operation,
     actions,
 } from 'document-model/document';
 import { useAtomValue } from 'jotai';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useConnectDid } from 'src/hooks/useConnectCrypto';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
 import { useDocumentModel } from 'src/store/document-model';
 import { useEditor } from 'src/store/editor';
 import { themeAtom } from 'src/store/theme';
+import { useUser } from 'src/store/user';
 import { useDocumentDispatch } from 'src/utils/document-model';
 import Button from './button';
 
@@ -45,6 +49,8 @@ export const DocumentEditor: React.FC<IProps> = ({
     onAddOperation,
     onOpenSwitchboardLink,
 }) => {
+    const user = useUser();
+    const connectDid = useConnectDid();
     const documentModel = useDocumentModel(initialDocument.documentType);
     const editor = useEditor(initialDocument.documentType);
     const theme = useAtomValue(themeAtom);
@@ -52,13 +58,38 @@ export const DocumentEditor: React.FC<IProps> = ({
         documentModel?.reducer,
         initialDocument,
     );
+    const context: EditorContext = useMemo(
+        () => ({ theme, user }),
+        [theme, user],
+    );
+
+    function addActionContext(action: Action): Action {
+        if (!user) return action;
+        const signer: ActionSigner = {
+            app: {
+                name: 'Connect',
+                key: connectDid || '',
+            },
+            user: {
+                address: user.address,
+                chainId: user.chainId.toString(),
+            },
+            signature: '',
+        };
+        return {
+            ...action,
+            context: {
+                signer,
+            },
+        };
+    }
 
     function dispatch(
         action: BaseAction | Action,
         onErrorCallback?: ActionErrorCallback,
     ) {
         _dispatch(
-            action,
+            addActionContext(action),
             operation => {
                 window.documentEditorDebugTools?.pushOperation(operation);
                 onAddOperation(operation).catch(console.error);
@@ -77,10 +108,6 @@ export const DocumentEditor: React.FC<IProps> = ({
         window.documentEditorDebugTools?.setDocument(document);
         onChange?.(document);
     }, [document]);
-
-    const operations = document
-        ? [...document.operations.global].reverse()
-        : [];
 
     function undo() {
         dispatch(actions.undo());
@@ -138,7 +165,7 @@ export const DocumentEditor: React.FC<IProps> = ({
             )}
             <EditorComponent
                 error={error}
-                editorContext={{ theme }}
+                context={context}
                 document={document}
                 dispatch={dispatch}
                 onClose={onClose}

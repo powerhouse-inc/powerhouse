@@ -1,10 +1,8 @@
+import type { User as EditorUser } from 'document-model/document';
 import type { IStorage } from '../storage';
 import { CREDENTIAL_TYPES } from './constants';
 
-export type User = {
-    address: `0x:${string}`;
-    networkId: string;
-    chainId: number;
+export type User = EditorUser & {
     did: string;
     credential: PowerhouseVerifiableCredential | undefined;
 };

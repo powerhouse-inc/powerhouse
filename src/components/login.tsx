@@ -2,14 +2,12 @@ import IconRenown from '@/assets/icons/renown.svg?react';
 import { Button } from '@powerhousedao/design-system';
 import DotsLoader from 'src/components/dots-loader';
 import { useLogin } from 'src/hooks/useLogin';
-import { useRenown } from 'src/hooks/useRenown';
 import { useUser } from 'src/store/user';
 
 export const Login: React.FC = () => {
     const user = useUser();
-    const renown = useRenown();
 
-    const { login, status } = useLogin();
+    const { openRenown, status } = useLogin();
 
     return (
         <div>
@@ -29,8 +27,7 @@ export const Login: React.FC = () => {
                         Connect on behalf of your Ethereum identity
                     </p>
                     <Button
-                        onClick={() => login()}
-                        disabled={!renown}
+                        onClick={() => openRenown()}
                         className="mb-3 w-full p-0 text-white shadow-none transition-colors"
                     >
                         <p className="block h-10 px-7 leading-10">

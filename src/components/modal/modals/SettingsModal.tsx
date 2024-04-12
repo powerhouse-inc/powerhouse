@@ -11,7 +11,7 @@ import { Option } from 'react-multi-select-component';
 import { useModal } from 'src/components/modal';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
-import { useRenown } from 'src/hooks/useRenown';
+import { useLogin } from 'src/hooks/useLogin';
 import {
     useDocumentModels,
     useFilteredDocumentModels,
@@ -42,9 +42,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
     const [selectedDocuments, setSelectedDocuments] = useState<Option[]>(
         mapDocumentModelsToOptions(enabledDocuments),
     );
+    const { logout, status } = useLogin();
     const user = useUser();
-    const renown = useRenown();
-    const [showLogin, setShowLogin] = useState(false);
 
     const onSaveHandler = () => {
         setConfig(conf => ({
@@ -100,18 +99,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
             }}
         >
             <div className="rounded border border-gray-400 p-4">
-                {user ? (
+                {status === 'authorized' ? (
                     <>
                         <p>
                             Logged in with address:{' '}
                             <span className="text-sm font-semibold">
-                                {user.address}
+                                {user?.address}
                             </span>
                         </p>
-                        <Button
-                            className="mt-2 w-full"
-                            onClick={() => renown?.logout()}
-                        >
+                        <Button className="mt-2 w-full" onClick={logout}>
                             Logout
                         </Button>
                     </>

@@ -23,11 +23,11 @@ function ab2hex(ab: ArrayBuffer) {
 }
 
 export interface IConnectCrypto {
-    did: () => Promise<string>;
+    did: () => Promise<DID>;
     regenerateDid(): Promise<void>;
 }
 
-type DID = `did:key:${string}`;
+export type DID = `did:key:${string}`;
 
 export class ConnectCrypto implements IConnectCrypto {
     #subtleCrypto: Promise<SubtleCrypto>;

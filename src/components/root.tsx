@@ -4,7 +4,7 @@ import React, { Suspense, useEffect } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDropFile } from 'src/hooks';
 import { useLoadInitialData } from 'src/hooks/useLoadInitialData';
-import { useRenown } from 'src/hooks/useRenown';
+import { useLogin } from 'src/hooks/useLogin';
 import { isElectron, isMac } from 'src/hooks/utils';
 import Sidebar from './sidebar';
 
@@ -14,7 +14,7 @@ const Root = () => {
     useLoadInitialData();
     const ref = React.useRef(null);
     const navigate = useNavigate();
-    const renown = useRenown();
+    const { login } = useLogin();
 
     useEffect(() => {
         window.electronAPI?.ready();
@@ -23,26 +23,14 @@ const Root = () => {
     const [searchParams, setSearchParams] = useSearchParams();
 
     useEffect(() => {
-        if (!renown) {
-            return;
-        }
-
         const userStr = searchParams.get('user');
-        if (userStr) {
+        if (userStr && login) {
             const userDid = decodeURIComponent(userStr);
             searchParams.delete('user');
             setSearchParams(searchParams);
-            renown
-                .user()
-                .then(user => {
-                    if (user?.did === userDid) {
-                        return;
-                    }
-                    return renown.login(userDid);
-                })
-                .catch(console.error);
+            login(userDid).catch(console.error);
         }
-    }, [renown, searchParams, setSearchParams]);
+    }, [login, searchParams, setSearchParams]);
 
     useEffect(() => {
         const unsubscribe = window.electronAPI?.handleURL((_e, url) => {
