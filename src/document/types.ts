@@ -307,7 +307,6 @@ export type ENSInfo = {
 
 export type User = {
     address: `0x${string}`;
-    networkId: string;
     chainId: number;
     ens?: ENSInfo;
 };
