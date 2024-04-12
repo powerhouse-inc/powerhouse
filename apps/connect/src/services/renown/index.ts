@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import type { IStorage } from '../storage';
+import { getEnsInfo } from '../viem';
 import { RENOWN_URL } from './constants';
 import { PowerhouseVerifiableCredential, RenownStorage, User } from './types';
 import { parsePkhDid } from './utils';
@@ -63,6 +64,14 @@ export class Renown {
                 did,
                 credential,
             };
+
+            try {
+                const ens = await getEnsInfo(user.address, user.chainId);
+                user.ens = ens;
+            } catch (error) {
+                console.error(error);
+            }
+
             this.#updateUser(user);
             return user;
         } catch (error) {

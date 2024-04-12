@@ -57,7 +57,7 @@
         "@vitejs/plugin-react": "^4.2.1",
         "asar": "^3.2.0",
         "autoprefixer": "^10.4.14",
-        "document-model-libs": "^1.24.0",
+        "document-model-libs": "^1.25.0",
         "electron": "28.2.3",
         "electron-playwright-helpers": "^1.7.1",
         "eslint": "^8.56.0",
@@ -90,7 +90,7 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "^1.0.0-alpha.91",
+        "@powerhousedao/design-system": "^1.0.0-alpha.94",
         "@sentry/react": "^7.109.0",
         "did-key-creator": "^1.2.0",
         "document-drive": "^1.0.0-alpha.34",

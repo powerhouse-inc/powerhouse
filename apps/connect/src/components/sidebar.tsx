@@ -4,7 +4,6 @@ import { useAtom } from 'jotai';
 import { useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
-import { useENSInfo } from 'src/hooks/useEnsInfo';
 import { useLogin } from 'src/hooks/useLogin';
 import { sidebarCollapsedAtom } from 'src/store';
 import DriveContainer from './drive-container';
@@ -22,11 +21,7 @@ export default function Sidebar() {
     const { showModal } = useModal();
     const navigate = useNavigate();
 
-    const { user, login } = useLogin();
-    const { info: ensInfo, loading: loadingUser } = useENSInfo(
-        user?.address,
-        user?.chainId,
-    );
+    const { user, openRenown, status } = useLogin();
 
     function toggleCollapse() {
         setCollapsed(value => !value);
@@ -46,13 +41,13 @@ export default function Sidebar() {
         <ConnectSidebar
             collapsed={collapsed}
             onToggle={toggleCollapse}
-            username={ensInfo?.name || ''}
-            avatarUrl={ensInfo?.avatarUrl}
+            username={user?.ens?.name || ''}
+            avatarUrl={user?.ens?.avatarUrl}
             onClickSettings={onClickSettings}
             headerContent={headerContent}
             address={user?.address ? shortAddress(user.address) : ''}
-            loadingUser={loadingUser}
-            onLogin={login}
+            loadingUser={status === 'checking'}
+            onLogin={openRenown}
         >
             <ErrorBoundary
                 fallback={
