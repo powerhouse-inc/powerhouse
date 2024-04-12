@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.24.0...v1.25.0) (2024-04-12)
+
+
+### Features
+
+* added user to editor context ([fed9c6e](https://github.com/powerhouse-inc/document-model-libs/commit/fed9c6e7feef58749755787d72d1f333c5e80131))
+
 # [1.24.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.23.0...v1.24.0) (2024-04-10)
 
 
