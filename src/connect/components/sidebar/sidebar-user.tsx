@@ -34,8 +34,9 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
                 width={40}
                 height={40}
                 className={twMerge(
-                    'rounded-full object-contain',
+                    'size-10 rounded-full object-contain transition-opacity',
                     loading && 'animate-pulse',
+                    !loading && avatarUrl && 'duration-1000 animate-in fade-in',
                 )}
                 onLoad={() => setLoadingImage(false)}
                 onError={() => {
@@ -43,22 +44,24 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
                     setImageError(true);
                 }}
             />
-            <div className="collapsed:hidden expanding:hidden">
-                <p
-                    className={twMerge(
-                        'text-sm font-semibold text-gray-800',
-                        loading && 'animate-pulse rounded',
+            <div className="w-full collapsed:hidden expanding:hidden">
+                <p className="h-6 text-sm font-semibold text-gray-800">
+                    {loading ? (
+                        <span className="block h-1/2 w-2/3 translate-y-1/2 animate-pulse rounded bg-gray-400"></span>
+                    ) : (
+                        <span className="duration-1000 animate-in fade-in">
+                            {username}
+                        </span>
                     )}
-                >
-                    {username}
                 </p>
-                <p
-                    className={twMerge(
-                        'text-xs font-semibold text-gray-600',
-                        loadingUser && 'animate-pulse rounded',
+                <p className="h-[18px] text-xs font-semibold text-gray-600">
+                    {loading ? (
+                        <span className="block size-2/3 translate-y-1/3 animate-pulse rounded bg-gray-400"></span>
+                    ) : (
+                        <span className="duration-1000 animate-in fade-in">
+                            {address}
+                        </span>
                     )}
-                >
-                    {address}
                 </p>
             </div>
         </div>

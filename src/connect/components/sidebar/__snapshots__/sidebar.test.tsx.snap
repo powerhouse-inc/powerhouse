@@ -56,29 +56,37 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
         >
           <img
             alt="Willow"
-            class="rounded-full object-contain"
+            class="size-10 rounded-full object-contain transition-opacity"
             height="40"
             src="/src/assets/powerhouse-rounded.png"
             width="40"
           />
           <div
-            class="collapsed:hidden expanding:hidden"
+            class="w-full collapsed:hidden expanding:hidden"
           >
             <p
-              class="text-sm font-semibold text-gray-800"
+              class="h-6 text-sm font-semibold text-gray-800"
             >
-              Willow
+              <span
+                class="duration-1000 animate-in fade-in"
+              >
+                Willow
+              </span>
             </p>
             <p
-              class="text-xs font-semibold text-gray-600"
+              class="h-[18px] text-xs font-semibold text-gray-600"
             >
-              0x123
+              <span
+                class="duration-1000 animate-in fade-in"
+              >
+                0x123
+              </span>
             </p>
           </div>
         </div>
       </div>
       <button
-        class="flex w-full gap-3 px-5 py-3 outline-none collapsed:px-3 expanding:px-3"
+        class="flex w-full cursor-pointer gap-3 px-5 py-3 outline-none collapsed:px-3 expanding:px-3"
         data-rac=""
         type="button"
       >
