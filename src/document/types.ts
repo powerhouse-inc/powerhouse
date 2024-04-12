@@ -10,6 +10,22 @@ export type * from './schema/types';
 export type { FileInput } from './utils';
 export type { Immutable } from 'immer';
 
+export type ActionSigner = {
+    user: {
+        address: string;
+        chainId: string;
+    };
+    app: {
+        name: string; // Connect
+        key: string;
+    };
+    signature: string;
+};
+
+export type ActionContext = {
+    signer?: ActionSigner;
+};
+
 /**
  * Defines the basic structure of an action.
  *
@@ -28,6 +44,8 @@ export type Action<
     scope: S;
     /** The attachments included in the action. */
     attachments?: AttachmentInput[] | undefined;
+    /** The context of the action. */
+    context?: ActionContext;
 };
 
 export type ActionWithAttachment<
@@ -282,9 +300,22 @@ export type DocumentModel<
     documentModel: DocumentModelState;
 };
 
+export type ENSInfo = {
+    name?: string;
+    avatarUrl?: string;
+};
+
+export type User = {
+    address: `0x${string}`;
+    networkId: string;
+    chainId: number;
+    ens?: ENSInfo;
+};
+
 export type EditorContext = {
     theme: 'light' | 'dark';
     debug?: boolean;
+    user?: User;
 };
 
 export type ActionErrorCallback = (error: unknown) => void;
@@ -295,7 +326,7 @@ export type EditorProps<S, A extends Action, L> = {
         action: A | BaseAction,
         onErrorCallback?: ActionErrorCallback,
     ) => void;
-    editorContext: EditorContext;
+    context: EditorContext;
     error?: unknown;
 };
 
