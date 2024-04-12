@@ -28,19 +28,20 @@ import type {
     DocumentStorage,
     IDriveStorage
 } from '../storage/types';
+import { generateUUID, isBefore, isDocumentDrive } from '../utils';
 import {
-    generateUUID,
-    isBefore,
-    isDocumentDrive,
-    isNoopUpdate
-} from '../utils';
+    attachBranch,
+    garbageCollect,
+    groupOperationsByScope,
+    merge,
+    precedes,
+    removeExistingOperations,
+    reshuffleByTimestampAndIndex,
+    sortOperations
+} from '../utils/document-helpers';
 import { requestPublicDrive } from '../utils/graphql';
 import { logger } from '../utils/logger';
-import {
-    ConflictOperationError,
-    MissingOperationError,
-    OperationError
-} from './error';
+import { OperationError } from './error';
 import { ListenerManager } from './listener/manager';
 import {
     CancelPullLoop,
@@ -527,68 +528,88 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     async _processOperations<T extends Document, A extends Action>(
         drive: string,
-        documentStorage: DocumentStorage<T>,
+        storageDocument: DocumentStorage<T>,
         operations: Operation<A | BaseAction>[]
     ) {
         const operationsApplied: Operation<A | BaseAction>[] = [];
         const operationsUpdated: Operation<A | BaseAction>[] = [];
-        let document: T | undefined;
         const signals: SignalResult[] = [];
 
-        // eslint-disable-next-line prefer-const
-        let [operationsToApply, error, updatedOperations] =
-            this._validateOperations(operations, documentStorage);
+        let document: T = this._buildDocument(storageDocument);
+        let error: OperationError | undefined; // TODO: replace with an array of errors/consistency issues
+        const operationsByScope = groupOperationsByScope(operations);
 
-        const unregisteredOps = [
-            ...operationsToApply.map(operation => ({ operation, type: 'new' })),
-            ...updatedOperations.map(operation => ({
-                operation,
-                type: 'update'
-            }))
-        ].sort((a, b) => a.operation.index - b.operation.index);
+        for (const scope of Object.keys(operationsByScope)) {
+            const storageDocumentOperations =
+                storageDocument.operations[scope as OperationScope];
 
-        // retrieves the document's document model and
-        // applies the operations using its reducer
-        for (const unregisteredOp of unregisteredOps) {
-            const { operation, type } = unregisteredOp;
+            const branch = removeExistingOperations(
+                operationsByScope[scope as OperationScope] || [],
+                storageDocumentOperations
+            );
 
-            try {
-                const {
-                    document: newDocument,
-                    signals,
-                    operation: appliedOperation
-                } = await this._performOperation(
-                    drive,
-                    document ?? documentStorage,
-                    operation
-                );
-                document = newDocument;
+            const trunk = garbageCollect(
+                sortOperations(storageDocumentOperations)
+            );
 
-                if (type === 'new') {
-                    operationsApplied.push(appliedOperation);
-                } else {
-                    operationsUpdated.push(appliedOperation);
+            const [invertedTrunk, tail] = attachBranch(trunk, branch);
+
+            const newHistory =
+                tail.length < 1
+                    ? invertedTrunk
+                    : merge(trunk, invertedTrunk, reshuffleByTimestampAndIndex);
+
+            const lastOriginalOperation = trunk[trunk.length - 1];
+
+            const newOperations = newHistory.filter(
+                op => trunk.length < 1 || precedes(trunk[trunk.length - 1]!, op)
+            );
+
+            const firstNewOperation = newOperations[0];
+            let updatedOperationIndex = -1;
+
+            if (lastOriginalOperation && firstNewOperation) {
+                if (lastOriginalOperation.index === firstNewOperation.index) {
+                    if (lastOriginalOperation.skip >= firstNewOperation.skip) {
+                        console.error(
+                            'Unexpected firstNewOperation.skip lower than or equal to lastOriginalOperation.skip.'
+                        );
+                    }
+
+                    updatedOperationIndex = firstNewOperation.index;
                 }
+            }
 
-                signals.push(...signals);
-            } catch (e) {
-                if (!error) {
+            for (const nextOperation of newOperations) {
+                try {
+                    const appliedResult = await this._performOperation<T, A>(
+                        drive,
+                        document,
+                        nextOperation
+                    );
+                    document = appliedResult.document;
+                    signals.push(...appliedResult.signals);
+
+                    if (nextOperation.index === updatedOperationIndex) {
+                        operationsUpdated.push(...appliedResult.operation);
+                    } else {
+                        operationsApplied.push(...appliedResult.operation);
+                    }
+                } catch (e) {
                     error =
                         e instanceof OperationError
                             ? e
                             : new OperationError(
                                   'ERROR',
-                                  operation,
+                                  nextOperation,
                                   (e as Error).message,
                                   (e as Error).cause
                               );
-                }
-                break;
-            }
-        }
 
-        if (!document) {
-            document = this._buildDocument(documentStorage);
+                    // TODO: don't break on errors...
+                    break;
+                }
+            }
         }
 
         return {
@@ -598,64 +619,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             error,
             operationsUpdated
         } as const;
-    }
-
-    private _validateOperations<T extends Document, A extends Action>(
-        operations: Operation<A | BaseAction>[],
-        documentStorage: DocumentStorage<T>
-    ) {
-        const operationsToApply: Operation<A | BaseAction>[] = [];
-        const updatedOperations: Operation<A | BaseAction>[] = [];
-        let error: OperationError | undefined;
-
-        // sort operations so from smaller index to biggest
-        operations = operations.sort((a, b) => a.index - b.index);
-
-        for (let i = 0; i < operations.length; i++) {
-            const op = operations[i]!;
-            const pastOperations = operationsToApply
-                .filter(appliedOperation => appliedOperation.scope === op.scope)
-                .slice(0, i);
-            const scopeOperations = documentStorage.operations[op.scope];
-
-            // get latest operation
-            const ops = [...scopeOperations, ...pastOperations];
-            const latestOperation = ops.slice().pop();
-
-            const noopUpdate = isNoopUpdate(op, latestOperation);
-
-            let nextIndex = scopeOperations.length + pastOperations.length;
-            if (noopUpdate) {
-                nextIndex = nextIndex - 1;
-            }
-
-            if (op.index > nextIndex) {
-                error = new MissingOperationError(nextIndex, op);
-                continue;
-            } else if (op.index < nextIndex) {
-                const existingOperation = scopeOperations
-                    .concat(pastOperations)
-                    .find(
-                        existingOperation =>
-                            existingOperation.index === op.index
-                    );
-                if (existingOperation && existingOperation.hash !== op.hash) {
-                    error = new ConflictOperationError(existingOperation, op);
-                    continue;
-                } else if (!existingOperation) {
-                    error = new MissingOperationError(nextIndex, op);
-                    continue;
-                }
-            } else {
-                if (noopUpdate) {
-                    updatedOperations.push(op);
-                } else {
-                    operationsToApply.push(op);
-                }
-            }
-        }
-
-        return [operationsToApply, error, updatedOperations] as const;
     }
 
     private _buildDocument<T extends Document>(
@@ -687,43 +650,62 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         let newDocument = document;
 
         const operationSignals: (() => Promise<SignalResult>)[] = [];
-        newDocument = documentModel.reducer(newDocument, operation, signal => {
-            let handler: (() => Promise<unknown>) | undefined = undefined;
-            switch (signal.type) {
-                case 'CREATE_CHILD_DOCUMENT':
-                    handler = () => this.createDocument(drive, signal.input);
-                    break;
-                case 'DELETE_CHILD_DOCUMENT':
-                    handler = () => this.deleteDocument(drive, signal.input.id);
-                    break;
-                case 'COPY_CHILD_DOCUMENT':
-                    handler = () =>
-                        this.getDocument(drive, signal.input.id).then(
-                            documentToCopy =>
-                                this.createDocument(drive, {
-                                    id: signal.input.newId,
-                                    documentType: documentToCopy.documentType,
-                                    document: documentToCopy,
-                                    synchronizationUnits:
-                                        signal.input.synchronizationUnits
-                                })
-                        );
-                    break;
-            }
-            if (handler) {
-                operationSignals.push(() =>
-                    handler().then(result => ({ signal, result }))
-                );
-            }
-        }) as T;
+        newDocument = documentModel.reducer(
+            newDocument,
+            operation,
+            signal => {
+                let handler: (() => Promise<unknown>) | undefined = undefined;
+                switch (signal.type) {
+                    case 'CREATE_CHILD_DOCUMENT':
+                        handler = () =>
+                            this.createDocument(drive, signal.input);
+                        break;
+                    case 'DELETE_CHILD_DOCUMENT':
+                        handler = () =>
+                            this.deleteDocument(drive, signal.input.id);
+                        break;
+                    case 'COPY_CHILD_DOCUMENT':
+                        handler = () =>
+                            this.getDocument(drive, signal.input.id).then(
+                                documentToCopy =>
+                                    this.createDocument(drive, {
+                                        id: signal.input.newId,
+                                        documentType:
+                                            documentToCopy.documentType,
+                                        document: documentToCopy,
+                                        synchronizationUnits:
+                                            signal.input.synchronizationUnits
+                                    })
+                            );
+                        break;
+                }
+                if (handler) {
+                    operationSignals.push(() =>
+                        handler().then(result => ({ signal, result }))
+                    );
+                }
+            },
+            { skip: operation.skip }
+        ) as T;
 
-        const appliedOperation =
-            newDocument.operations[operation.scope][operation.index];
-        if (!appliedOperation || appliedOperation.hash !== operation.hash) {
+        const appliedOperation = newDocument.operations[operation.scope].filter(
+            op => op.index == operation.index && op.skip == operation.skip
+        );
+
+        if (appliedOperation.length < 1) {
+            throw new OperationError(
+                'ERROR',
+                operation,
+                `Operation with index ${operation.index}:${operation.skip} was not applied.`
+            );
+        } else if (
+            operation.type !== 'NOOP' &&
+            appliedOperation[0]!.hash !== operation.hash
+        ) {
             throw new OperationError(
                 'CONFLICT',
                 operation,
-                `Operation with index ${operation.index} had different result`
+                `Operation with index ${operation.index}:${operation.skip} has unexpected result hash`
             );
         }
 
