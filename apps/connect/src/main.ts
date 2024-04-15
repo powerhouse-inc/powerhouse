@@ -245,6 +245,7 @@ const createWindow = async (options?: {
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: true,
+            devTools: !app.isPackaged || process.env.NODE_ENV !== 'production',
         },
     });
 
