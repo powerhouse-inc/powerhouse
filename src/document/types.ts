@@ -14,7 +14,8 @@ export type { BaseAction } from './actions/types';
 export type ActionSigner = {
     user: {
         address: string;
-        chainId: number;
+        networkId: string; // CAIP-2
+        chainId: number; // CAIP-10
     };
     app: {
         name: string; // Connect
@@ -308,7 +309,8 @@ export type ENSInfo = {
 
 export type User = {
     address: `0x${string}`;
-    chainId: number;
+    networkId: string; // CAIP-2
+    chainId: number; // CAIP-10
     ens?: ENSInfo;
 };
 
