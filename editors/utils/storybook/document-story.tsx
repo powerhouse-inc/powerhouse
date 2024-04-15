@@ -6,12 +6,9 @@ import {
     Action,
     ActionContext,
     BaseAction,
-    Document,
-    EditorContext,
     EditorProps,
     ExtendedState,
     Reducer,
-    User,
     utils,
 } from 'document-model/document';
 import React, { useState } from 'react';
