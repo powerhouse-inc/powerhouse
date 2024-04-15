@@ -69,6 +69,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                     context.signer = {
                         user: {
                             address: args.user.address,
+                            networkId: args.user.networkId,
                             chainId: args.user.chainId,
                         },
                         app: {
@@ -140,6 +141,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
             theme: 'light',
             user: {
                 address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
+                networkId: 'eip155',
                 chainId: 1,
                 ens: {
                     name: 'vitalik.eth',
