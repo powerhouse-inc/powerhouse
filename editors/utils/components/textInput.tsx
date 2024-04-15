@@ -72,7 +72,7 @@ export function TextInput(props: TextInputProps) {
     };
 
     const setFocus = (f: boolean) => {
-        setState({ ...state, hasFocus: f });
+        setState(state => ({ ...state, hasFocus: f }));
 
         if (!f) {
             const newValue = ref.current?.value || '';
@@ -80,6 +80,9 @@ export function TextInput(props: TextInputProps) {
 
             if (newValue != origValue && props.onSubmit) {
                 props.onSubmit(newValue);
+                if (props.clearOnSubmit) {
+                    setState(state => ({ ...state, value: '' }));
+                }
             }
         }
     };
