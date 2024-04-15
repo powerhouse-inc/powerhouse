@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.25.0...v1.26.0) (2024-04-15)
+
+
+### Features
+
+* added support for setting the user in the editor story ([b1ff8d6](https://github.com/powerhouse-inc/document-model-libs/commit/b1ff8d6c04c3c4a6ee65a8f794b0dc0cf31ddc52))
+
 # [1.25.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.24.0...v1.25.0) (2024-04-12)
 
 
