@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.26.0...v1.27.0) (2024-04-15)
+
+
+### Features
+
+* added networkId to user ([58b5af1](https://github.com/powerhouse-inc/document-model-libs/commit/58b5af19d08470562396bf9af9045089b228de18))
+
 # [1.26.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.25.0...v1.26.0) (2024-04-15)
 
 
