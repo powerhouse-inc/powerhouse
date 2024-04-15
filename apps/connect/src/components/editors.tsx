@@ -72,6 +72,7 @@ export const DocumentEditor: React.FC<IProps> = ({
             },
             user: {
                 address: user.address,
+                networkId: user.networkId,
                 chainId: user.chainId,
             },
             signature: '',

@@ -1,11 +1,15 @@
-import { User } from './types';
+export type PKHDid = {
+    networkId: string;
+    chainId: number;
+    address: `0x${string}`;
+};
 
-export function parsePkhDid(did: string): Pick<User, 'chainId' | 'address'> {
+export function parsePkhDid(did: string): PKHDid {
     const parts = did.split(':');
     if (!did.startsWith('did:pkh:') || parts.length !== 5) {
         throw new Error('Invalid pkh did');
     }
-    const [, , , chainIdStr, address] = parts;
+    const [, , networkId, chainIdStr, address] = parts;
 
     if (!address.startsWith('0x')) {
         throw new Error(`Invalid address: ${address}`);
@@ -18,6 +22,7 @@ export function parsePkhDid(did: string): Pick<User, 'chainId' | 'address'> {
 
     return {
         chainId,
-        address: address as `0x${string}`,
+        networkId,
+        address: address as PKHDid['address'],
     };
 }
