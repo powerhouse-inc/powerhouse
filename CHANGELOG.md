@@ -1,3 +1,15 @@
+# [1.28.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.27.0...v1.28.0) (2024-04-15)
+
+
+### Bug Fixes
+
+* clear input on blur if clearOnSubmit is set ([6fd731c](https://github.com/powerhouse-inc/document-model-libs/commit/6fd731c8b17a2b9a71bbc700a54ff675cdb169a1))
+
+
+### Features
+
+* added ens utils ([c3c69e1](https://github.com/powerhouse-inc/document-model-libs/commit/c3c69e181f5c3e4d66f8b2ec74e50224a2cbb5f6))
+
 # [1.27.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.26.0...v1.27.0) (2024-04-15)
 
 
