@@ -40,12 +40,19 @@ import { SignalDispatch } from './signal';
  * @param action The action being applied to the document.
  * @returns The next revision number.
  */
-function getNextRevision(document: Document, action: Action): number {
-    const currentRevision = document.revision[action.scope];
-    // UNDO, REDO and PRUNE alter the revision themselves
-    return [UNDO, REDO, PRUNE].includes(action.type)
-        ? currentRevision
-        : currentRevision + 1;
+function getNextRevision(
+    document: Document,
+    action: Action | Operation,
+): number {
+    let latestOperation: Operation | undefined;
+
+    if ('index' in action) {
+        latestOperation = { ...action };
+    } else {
+        latestOperation = document.operations[action.scope].slice(-1)[0];
+    }
+
+    return (latestOperation?.index ?? -1) + 1;
 }
 
 /**
