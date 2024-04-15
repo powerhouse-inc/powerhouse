@@ -42,14 +42,6 @@ export type Action = IAction & {
     type: Scalars['String']['output'];
 };
 
-export type BaseAction =
-    | LoadStateAction
-    | PruneAction
-    | RedoAction
-    | SetNameAction
-    | UndoAction
-    | NOOPAction;
-
 export type UndoRedoAction = RedoAction | UndoAction;
 
 export type DocumentFile = {

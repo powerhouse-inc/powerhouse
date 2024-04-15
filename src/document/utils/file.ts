@@ -4,7 +4,6 @@ import type {
     Action,
     Attachment,
     AttachmentInput,
-    AttachmentRef,
     Document,
     DocumentHeader,
     DocumentOperations,

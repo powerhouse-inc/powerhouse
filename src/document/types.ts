@@ -9,11 +9,12 @@ export { z } from './schema';
 export type * from './schema/types';
 export type { FileInput } from './utils';
 export type { Immutable } from 'immer';
+export type { BaseAction } from './actions/types';
 
 export type ActionSigner = {
     user: {
         address: string;
-        chainId: string;
+        chainId: number;
     };
     app: {
         name: string; // Connect
