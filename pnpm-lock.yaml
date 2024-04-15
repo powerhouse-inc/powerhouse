@@ -65,8 +65,8 @@ devDependencies:
     specifier: 0.0.15
     version: 0.0.15(graphql@16.8.1)(zod@3.22.4)
   '@powerhousedao/design-system':
-    specifier: 1.0.0-alpha.90
-    version: 1.0.0-alpha.90(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0)
+    specifier: 1.0.0-alpha.94
+    version: 1.0.0-alpha.94(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0)
   '@semantic-release/changelog':
     specifier: ^6.0.3
     version: 6.0.3(semantic-release@23.0.2)
@@ -143,11 +143,11 @@ devDependencies:
     specifier: ^3.12.0
     version: 3.12.0
   document-model:
-    specifier: ^1.0.37
-    version: 1.0.37
+    specifier: ^1.0.39
+    version: 1.0.39
   document-model-editors:
     specifier: ^1.0.1
-    version: 1.0.1(document-model@1.0.37)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2)
+    version: 1.0.1(document-model@1.0.39)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2)
   dspot-powerhouse-components:
     specifier: ^1.1.0
     version: 1.1.0(@emotion/react@11.11.3)(@emotion/styled@11.11.0)(@mui/material@5.15.5)(document-model-libs@1.24.0)(react-dom@18.2.0)(react@18.2.0)
@@ -3555,7 +3555,7 @@ packages:
       '@types/node': 20.11.20
       arg: 5.0.2
       change-case: 4.1.2
-      document-model: 1.0.37
+      document-model: 1.0.39
       enquirer: 2.4.1
       execa: 8.0.1
       graphql: 16.8.1
@@ -3571,8 +3571,8 @@ packages:
       - zod
     dev: true
 
-  /@powerhousedao/design-system@1.0.0-alpha.90(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-1J08gP0dQsTdsLfsmb3zcGmbX/nrW8y+GajfX3Q7rcNjr7qv1SFkUEsVbfwKbvS90XOlMRU+Ds8ogMozJjidqQ==}
+  /@powerhousedao/design-system@1.0.0-alpha.94(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-ledc4p1bzTU6NpUABNlxvz4ibzq9iJ6KtADG0wtwBAw9hRnMk3eK442l1xUHouiCLb6hHgtmRW71yrCmilsomA==}
     peerDependencies:
       react: ^18.2.0
       react-aria: ^3.32.0
@@ -3587,7 +3587,7 @@ packages:
       react-aria: 3.32.1(react-dom@18.2.0)(react@18.2.0)
       react-aria-components: 1.1.1(react-dom@18.2.0)(react@18.2.0)
       react-dom: 18.2.0(react@18.2.0)
-      react-hook-form: 7.51.2(react@18.2.0)
+      react-hook-form: 7.51.3(react@18.2.0)
       react-multi-select-component: 4.3.4(react-dom@18.2.0)(react@18.2.0)
       react-number-format: 5.3.4(react-dom@18.2.0)(react@18.2.0)
       react-toastify: 10.0.5(react-dom@18.2.0)(react@18.2.0)
@@ -8549,7 +8549,7 @@ packages:
       esutils: 2.0.3
     dev: true
 
-  /document-model-editors@1.0.1(document-model@1.0.37)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2):
+  /document-model-editors@1.0.1(document-model@1.0.39)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2):
     resolution: {integrity: sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==}
     peerDependencies:
       document-model: ^1.0.5
@@ -8557,7 +8557,7 @@ packages:
       react-dom: ^18.2.0
       storybook: ^7.0.17
     dependencies:
-      document-model: 1.0.37
+      document-model: 1.0.39
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       storybook: 8.0.2(react-dom@18.2.0)(react@18.2.0)
@@ -8594,8 +8594,8 @@ packages:
       - vitest
     dev: true
 
-  /document-model@1.0.37:
-    resolution: {integrity: sha512-mZ1IzYZlwU68MtTLTv5OyOcxcJU2B2GS9suyUH8/LM8NAfWt+BOMf2fj1ngaq39xc+3ZnXIIK7mLnwIVzzfFEA==}
+  /document-model@1.0.39:
+    resolution: {integrity: sha512-4PZ2A+4AxLgfdxsP8ddEC0VHdOsfLNQQn8c8iCjVWenULBxeEhWPOWqyYpkEQwStP/drvU3donzOxvnxXK1C7g==}
     dependencies:
       change-case: 5.4.3
       immer: 10.0.3
@@ -12884,8 +12884,8 @@ packages:
       react-is: 18.1.0
     dev: true
 
-  /react-hook-form@7.51.2(react@18.2.0):
-    resolution: {integrity: sha512-y++lwaWjtzDt/XNnyGDQy6goHskFualmDlf+jzEZvjvz6KWDf7EboL7pUvRCzPTJd0EOPpdekYaQLEvvG6m6HA==}
+  /react-hook-form@7.51.3(react@18.2.0):
+    resolution: {integrity: sha512-cvJ/wbHdhYx8aviSWh28w9ImjmVsb5Y05n1+FW786vEZQJV5STNM0pW6ujS+oiBecb0ARBxJFyAnXj9+GHXACQ==}
     engines: {node: '>=12.22.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18

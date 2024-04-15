@@ -4,12 +4,14 @@ import { Meta, ReactRenderer } from '@storybook/react';
 import { type StoryAnnotations } from '@storybook/types';
 import {
     Action,
+    ActionContext,
     BaseAction,
     Document,
     EditorContext,
     EditorProps,
     ExtendedState,
     Reducer,
+    User,
     utils,
 } from 'document-model/document';
 import React, { useState } from 'react';
@@ -17,12 +19,28 @@ import { useDocumentReducer } from '../reducer';
 
 export type DocumentStory<S, A extends Action, LocalState> = StoryAnnotations<
     ReactRenderer,
-    {
-        document: Document<S, A, LocalState>;
-        dispatch: (action: A | BaseAction) => void;
-        context: EditorContext;
-    }
+    EditorArgs<S, A, LocalState>
 >;
+
+type EditorComponent<S, A extends Action, L = unknown> = (
+    props: EditorProps<S, A, L>,
+) => React.JSX.Element;
+
+type EditorArgs<S, A extends Action, L = unknown> = Omit<
+    EditorProps<S, A, L>,
+    'context'
+> &
+    Pick<EditorProps<S, A, L>['context'], 'theme' | 'user'>;
+
+function wrapEditor<S, A extends Action, L = unknown>(
+    Editor: EditorComponent<S, A, L>,
+) {
+    const WrappedEditor = (args: EditorArgs<S, A, L>) => {
+        const { theme, user, ...restArgs } = args;
+        return <Editor {...restArgs} context={{ theme, user }} />;
+    };
+    return WrappedEditor;
+}
 
 export function createDocumentStory<S, A extends Action, L = unknown>(
     Editor: (props: EditorProps<S, A, L>) => React.JSX.Element,
@@ -30,13 +48,13 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
     initialState: ExtendedState<Partial<S>>,
 ) {
     const meta = {
-        component: Editor,
+        component: wrapEditor(Editor),
         render: () => {
-            const [args, setArgs] = useArgs<EditorProps<S, A, L>>();
+            const [args, setArgs] = useArgs<EditorArgs<S, A, L>>();
             const [error, setError] = useState<unknown>();
             const emit = useChannel({});
 
-            const [state, dispatch] = useDocumentReducer(
+            const [state, _dispatch] = useDocumentReducer(
                 reducer,
                 args.document,
                 error => {
@@ -44,6 +62,28 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                     setError(error);
                 },
             );
+
+            function dispatch(action: A | BaseAction) {
+                const context: ActionContext = {};
+                if (args.user) {
+                    context.signer = {
+                        user: {
+                            address: args.user.address,
+                            chainId: args.user.chainId,
+                        },
+                        app: {
+                            name: 'storybook',
+                            key: 'storybook',
+                        },
+                        signature: '',
+                    };
+                }
+                return _dispatch({
+                    ...action,
+                    context,
+                });
+            }
+
             //  resets the budget state in the reducer when the prop changes
             React.useEffect(() => {
                 if (state) {
@@ -53,7 +93,8 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                 setError(undefined);
             }, [state]);
 
-            const darkTheme = args.context.theme === 'dark';
+            const darkTheme = args.theme === 'dark';
+            const WrappedEditor = wrapEditor(Editor);
             return (
                 <div
                     style={{
@@ -63,7 +104,11 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                         backgroundColor: darkTheme ? '#1A1D1F' : 'white',
                     }}
                 >
-                    <Editor {...args} dispatch={dispatch} error={error} />
+                    <WrappedEditor
+                        {...args}
+                        dispatch={dispatch}
+                        error={error}
+                    />
                 </div>
             );
         },
@@ -76,31 +121,31 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                     disable: true,
                 },
             },
-            context: {
+            theme: {
                 name: 'Theme',
                 options: ['light', 'dark'],
-                mapping: {
-                    light: {
-                        theme: 'light',
-                    },
-                    dark: {
-                        theme: 'dark',
-                    },
-                },
-                defaultValue: {
-                    theme: 'light',
-                },
+                defaultValue: 'light',
                 control: 'inline-radio',
             },
+            user: {
+                control: 'object',
+            },
         },
-    } satisfies Meta<typeof Editor>;
+    } satisfies Meta<(args: EditorArgs<S, A, L>) => JSX.Element>;
 
     const CreateDocumentStory: DocumentStory<S, A, unknown> = {
         name: 'New document',
         args: {
             document: utils.createDocument(initialState),
-            context: {
-                theme: 'light',
+            theme: 'light',
+            user: {
+                address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
+                chainId: 1,
+                ens: {
+                    name: 'vitalik.eth',
+                    avatarUrl:
+                        'https://ipfs.io/ipfs/QmSP4nq9fnN9dAiCj42ug9Wa79rqmQerZXZch82VqpiH7U/image.gif',
+                },
             },
         },
     };

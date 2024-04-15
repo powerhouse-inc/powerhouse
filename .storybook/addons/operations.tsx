@@ -31,6 +31,7 @@ const OperationsPanel = (
                     <th>Timestamp</th>
                     <th>Hash</th>
                     <th>Scope</th>
+                    <th>Context</th>
                 </tr>
             </thead>
             <tbody>
@@ -53,6 +54,20 @@ const OperationsPanel = (
                         <td>{op.index}</td>
                         <td>{new Date(op.timestamp).toISOString()}</td>
                         <td>{op.hash}</td>
+                        <td>{op.scope}</td>
+                        <td>
+                            <pre
+                                style={{
+                                    margin: '0 10px',
+                                    padding: 0,
+                                    maxHeight: 200,
+                                    overflow: 'auto',
+                                    background: 'rgba(100,100,100,0.2)',
+                                }}
+                            >
+                                {JSON.stringify(op.context, null, 2)}
+                            </pre>
+                        </td>
                     </tr>
                 ))}
             </tbody>
