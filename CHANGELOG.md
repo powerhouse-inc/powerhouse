@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.29.0...v1.30.0) (2024-04-16)
+
+
+### Features
+
+* remove root dir from ts config ([#130](https://github.com/powerhouse-inc/document-model-libs/issues/130)) ([b2c3b80](https://github.com/powerhouse-inc/document-model-libs/commit/b2c3b80d55d8cdf25b3a2073917030eb86ff5b83))
+
 # [1.29.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.28.0...v1.29.0) (2024-04-16)
 
 
