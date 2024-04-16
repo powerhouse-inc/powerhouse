@@ -1,3 +1,10 @@
+# [1.0.0-alpha.35](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.34...v1.0.0-alpha.35) (2024-04-16)
+
+
+### Features
+
+* use reshuffleByTimestamp + added BasciClient + tests ([#129](https://github.com/powerhouse-inc/document-drive/issues/129)) ([8e0cfae](https://github.com/powerhouse-inc/document-drive/commit/8e0cfae5e0d2de52064689f023e4a80c170d8c84))
+
 # [1.0.0-alpha.34](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.33...v1.0.0-alpha.34) (2024-04-12)
 
 
