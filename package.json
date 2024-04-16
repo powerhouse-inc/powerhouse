@@ -68,6 +68,7 @@
     "storybook": "powerhouse generate && storybook dev -p 6006",
     "build-storybook": "powerhouse generate && storybook build",
     "test": "powerhouse generate && vitest run",
+    "test:nogen": "vitest run",
     "test:watch": "powerhouse generate && vitest",
     "prepublishOnly": "npm run prepare:scripts && npm run build",
     "prepare:scripts": "node scripts/index.cjs",

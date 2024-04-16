@@ -8,7 +8,7 @@ import {
     CreateChildDocumentInput,
     SynchronizationUnit,
 } from 'document-model/document';
-import { FileNode, getDescendants, isFileNode } from '../..';
+import { FileNode, getDescendants, isFileNode, isFolderNode } from '../..';
 import { DocumentDriveNodeOperations } from '../../gen/node/operations';
 
 export const reducer: DocumentDriveNodeOperations = {
@@ -184,6 +184,24 @@ export const reducer: DocumentDriveNodeOperations = {
 
         if (!node) {
             throw new Error(`Node with id ${action.input.srcFolder} not found`);
+        }
+
+        if (isFolderNode(node)) {
+            if (action.input.srcFolder === action.input.targetParentFolder) {
+                throw new Error('Cannot make folder its own parent');
+            }
+            const descendants = getDescendants(node, state.nodes);
+            // throw error if moving a folder to one of its descendants
+            if (
+                descendants.find(
+                    descendant =>
+                        descendant.id === action.input.targetParentFolder,
+                )
+            ) {
+                throw new Error(
+                    'Cannot move a folder to one of its descendants',
+                );
+            }
         }
 
         state.nodes = state.nodes.map(node => {
