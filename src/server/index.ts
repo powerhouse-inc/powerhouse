@@ -36,7 +36,7 @@ import {
     merge,
     precedes,
     removeExistingOperations,
-    reshuffleByTimestampAndIndex,
+    reshuffleByTimestamp,
     sortOperations
 } from '../utils/document-helpers';
 import { requestPublicDrive } from '../utils/graphql';
@@ -557,7 +557,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             const newHistory =
                 tail.length < 1
                     ? invertedTrunk
-                    : merge(trunk, invertedTrunk, reshuffleByTimestampAndIndex);
+                    : merge(trunk, invertedTrunk, reshuffleByTimestamp);
 
             const lastOriginalOperation = trunk[trunk.length - 1];
 
@@ -581,11 +581,23 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             }
 
             for (const nextOperation of newOperations) {
+                let skipHashValidation = false;
+
+                // when dealing with a merge (tail.length > 0) we have to skip hash validation
+                // for the operations that were re-indexed (previous hash becomes invalid due the new position in the history)
+                if (tail.length > 0) {
+                    skipHashValidation = [...invertedTrunk, ...tail].some(
+                        invertedTrunkOp =>
+                            invertedTrunkOp.hash === nextOperation.hash
+                    );
+                }
+
                 try {
                     const appliedResult = await this._performOperation<T, A>(
                         drive,
                         document,
-                        nextOperation
+                        nextOperation,
+                        skipHashValidation
                     );
                     document = appliedResult.document;
                     signals.push(...appliedResult.signals);
@@ -639,7 +651,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     private async _performOperation<T extends Document, A extends Action>(
         drive: string,
         documentStorage: DocumentStorage<T>,
-        operation: Operation<A | BaseAction>
+        operation: Operation<A | BaseAction>,
+        skipHashValidation = false
     ) {
         const documentModel = this._getDocumentModel(
             documentStorage.documentType
@@ -700,7 +713,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             );
         } else if (
             operation.type !== 'NOOP' &&
-            appliedOperation[0]!.hash !== operation.hash
+            appliedOperation[0]!.hash !== operation.hash &&
+            !skipHashValidation
         ) {
             throw new OperationError(
                 'CONFLICT',

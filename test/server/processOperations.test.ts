@@ -12,10 +12,10 @@ import {
     reducer
 } from 'document-model/document-model';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DocumentDriveServer } from '../../src';
+import { DocumentDriveServer, IOperationResult } from '../../src';
 import { OperationError } from '../../src/server/error';
 import { garbageCollect } from '../../src/utils/document-helpers';
-import { buildOperation, buildOperations } from '../utils';
+import { BasicClient, buildOperation, buildOperations } from '../utils';
 
 const mapExpectedOperations = (operations: Operation[]) =>
     operations.map(op => {
@@ -460,5 +460,243 @@ describe('processOperations', () => {
                 skip: operation.skip
             }
         ]);
+    });
+
+    it('should preserve the right order of the operations when merge conflict is applied', async () => {
+        let document = await buildFile();
+
+        const operation0 = buildOperation(
+            reducer,
+            document,
+            actions.setModelName({ name: '1' }),
+            0
+        );
+
+        const resultOp0 = await server.addOperation(
+            driveId,
+            documentId,
+            operation0
+        );
+
+        expect(resultOp0.status).toBe('SUCCESS');
+
+        document = (await server.getDocument(
+            driveId,
+            documentId
+        )) as DocumentModelDocument;
+
+        const operation1 = buildOperation(
+            reducer,
+            document,
+            actions.setModelName({ name: '2' }),
+            0
+        );
+
+        const resultOp1 = await server.addOperation(
+            driveId,
+            documentId,
+            operation1
+        );
+
+        expect(resultOp1.status).toBe('SUCCESS');
+
+        document = (await server.getDocument(
+            driveId,
+            documentId
+        )) as DocumentModelDocument;
+
+        const operation2 = buildOperation(
+            reducer,
+            document,
+            actions.setModelId({ id: '3' }),
+            0
+        );
+
+        const resultOp2 = await server.addOperation(
+            driveId,
+            documentId,
+            operation2
+        );
+
+        expect(resultOp2.status).toBe('SUCCESS');
+
+        document = (await server.getDocument(
+            driveId,
+            documentId
+        )) as DocumentModelDocument;
+
+        const operation3 = buildOperation(
+            reducer,
+            document,
+            actions.setModelId({ id: '4' }),
+            0
+        );
+
+        const resultOp3 = await server.addOperation(
+            driveId,
+            documentId,
+            operation3
+        );
+
+        expect(resultOp3.status).toBe('SUCCESS');
+
+        document = (await server.getDocument(
+            driveId,
+            documentId
+        )) as DocumentModelDocument;
+
+        const operations = document.operations.global.slice(-4);
+
+        expect(document.state.global).toMatchObject({
+            name: '2',
+            id: '4'
+        });
+        expect(operations).toMatchObject([
+            {
+                type: 'SET_MODEL_NAME',
+                input: { name: '1' },
+                index: 6,
+                skip: 6
+            },
+            {
+                type: 'SET_MODEL_NAME',
+                input: { name: '2' },
+                index: 7,
+                skip: 0
+            },
+            {
+                type: 'SET_MODEL_ID',
+                input: { id: '3' },
+                index: 8,
+                skip: 0
+            },
+            {
+                type: 'SET_MODEL_ID',
+                input: { id: '4' },
+                index: 9,
+                skip: 0
+            }
+        ]);
+    });
+
+    it('should resolve conflicts using the right order for merge operations (simulate clients conflict)', async () => {
+        const initialDocument = await buildFile();
+        let pushOperationResult: IOperationResult;
+
+        const client1 = new BasicClient(
+            server,
+            driveId,
+            documentId,
+            initialDocument,
+            reducer
+        );
+
+        const client2 = new BasicClient(
+            server,
+            driveId,
+            documentId,
+            initialDocument,
+            reducer
+        );
+
+        client1.dispatchDocumentAction(actions.setModelName({ name: '1' }));
+        pushOperationResult = await client1.pushOperationsToServer();
+        expect(pushOperationResult.status).toBe('SUCCESS');
+
+        client2.dispatchDocumentAction(actions.setModelName({ name: '2' }));
+        pushOperationResult = await client2.pushOperationsToServer();
+        expect(pushOperationResult.status).toBe('SUCCESS');
+
+        client2.dispatchDocumentAction(actions.setModelId({ id: '3' }));
+        pushOperationResult = await client2.pushOperationsToServer();
+        expect(pushOperationResult.status).toBe('SUCCESS');
+
+        client1.dispatchDocumentAction(actions.setModelId({ id: '4' }));
+        pushOperationResult = await client1.pushOperationsToServer();
+        expect(pushOperationResult.status).toBe('SUCCESS');
+
+        // Check the final state of the document
+        const finalDocument = (await server.getDocument(
+            driveId,
+            documentId
+        )) as DocumentModelDocument;
+
+        const operations = finalDocument.operations.global.slice(-4);
+
+        expect(finalDocument.state.global).toMatchObject({
+            name: '2',
+            id: '4'
+        });
+        expect(operations).toMatchObject([
+            {
+                type: 'SET_MODEL_NAME',
+                input: { name: '1' },
+                index: 6,
+                skip: 6
+            },
+            {
+                type: 'SET_MODEL_NAME',
+                input: { name: '2' },
+                index: 7,
+                skip: 0
+            },
+            {
+                type: 'SET_MODEL_ID',
+                input: { id: '3' },
+                index: 8,
+                skip: 0
+            },
+            {
+                type: 'SET_MODEL_ID',
+                input: { id: '4' },
+                index: 9,
+                skip: 0
+            }
+        ]);
+    });
+
+    it('should produce the same operations result for a local document (simulate sync: pull)', async () => {
+        const initialDocument = await buildFile();
+        let pushOperationResult: IOperationResult;
+
+        const client1 = new BasicClient(
+            server,
+            driveId,
+            documentId,
+            initialDocument,
+            reducer
+        );
+
+        const client2 = new BasicClient(
+            server,
+            driveId,
+            documentId,
+            initialDocument,
+            reducer
+        );
+
+        client1.dispatchDocumentAction(actions.setModelName({ name: '1' }));
+        pushOperationResult = await client1.pushOperationsToServer();
+        expect(pushOperationResult.status).toBe('SUCCESS');
+
+        client2.dispatchDocumentAction(actions.setModelName({ name: '2' }));
+        pushOperationResult = await client2.pushOperationsToServer();
+        expect(pushOperationResult.status).toBe('SUCCESS');
+
+        const finalDocument = (await server.getDocument(
+            driveId,
+            documentId
+        )) as DocumentModelDocument;
+
+        const clientDocument = client1.getDocument();
+        expect(clientDocument.operations.global.length).toBe(1);
+
+        const updatedClientDocument = await client1.syncDocument();
+
+        expect(finalDocument.operations.global.length).toBe(3);
+        expect(updatedClientDocument.operations.global.length).toBe(3);
+        expect(updatedClientDocument.operations.global).toMatchObject(
+            mapExpectedOperations(finalDocument.operations.global)
+        );
     });
 });
