@@ -24,7 +24,17 @@ import { v4 as uuid } from 'uuid';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useNavigateToItemId } from './useNavigateToItemId';
 
-export function getNodePath(node: Node, allNodes: Node[]): string {
+export function getNodePath(
+    node: Node,
+    allNodes: Node[],
+    visited = new Set<string>(),
+): string {
+    if (visited.has(node.id)) {
+        throw new Error(`Circular reference detected at node ${node.id}`);
+    }
+
+    visited.add(node.id);
+
     if (!node.parentFolder) {
         return encodeID(node.id);
     }
@@ -33,7 +43,10 @@ export function getNodePath(node: Node, allNodes: Node[]): string {
         throw new Error(`Invalid parent node ${node.parentFolder}`);
     }
 
-    return path.join(getNodePath(parentNode, allNodes), encodeID(node.id));
+    // Recursive call to get the path for the parent node
+    const parentPath = getNodePath(parentNode, allNodes, visited);
+
+    return path.join(parentPath, encodeID(node.id));
 }
 
 function getDriveBaseItemType(sharingType: string) {
