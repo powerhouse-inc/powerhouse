@@ -37,7 +37,7 @@ describe('Event', () => {
             { skip: 1 },
         );
 
-        expect(document.revision.global).toBe(3);
+        expect(document.revision.global).toBe(4);
         expect(document.operations.global).toMatchObject([
             {
                 type: 'TEST',
@@ -145,7 +145,7 @@ describe('Event', () => {
             scope: 'global',
         });
 
-        expect(document.revision.global).toBe(4);
+        expect(document.revision.global).toBe(5);
         expect(document.operations.global).toMatchObject([
             {
                 type: 'TEST',
@@ -163,6 +163,52 @@ describe('Event', () => {
             {
                 type: 'TEST_5',
                 index: 4,
+            },
+        ]);
+    });
+
+    it('should calculate the right document revision when last action is an event', () => {
+        let document = createDocument();
+
+        document = emptyReducer(document, {
+            type: 'TEST',
+            input: {},
+            scope: 'global',
+        });
+
+        document = emptyReducer(document, {
+            type: 'TEST_2',
+            input: {},
+            scope: 'global',
+        });
+
+        document = wrappedEmptyReducer(
+            document,
+            {
+                type: 'TEST_4',
+                input: {},
+                index: 3,
+                hash: 'test-4-hash',
+                scope: 'global',
+            },
+            undefined,
+            { skip: 1 },
+        );
+
+        expect(document.revision.global).toBe(4);
+        expect(document.operations.global).toMatchObject([
+            {
+                type: 'TEST',
+                index: 0,
+            },
+            {
+                type: 'TEST_2',
+                index: 1,
+            },
+            {
+                type: 'TEST_4',
+                index: 3,
+                skip: 1,
             },
         ]);
     });
