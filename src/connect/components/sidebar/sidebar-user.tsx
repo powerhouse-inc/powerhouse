@@ -50,7 +50,7 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
                         <span className="block h-1/2 w-2/3 translate-y-1/2 animate-pulse rounded bg-gray-400"></span>
                     ) : (
                         <span className="duration-1000 animate-in fade-in">
-                            {username}
+                            {username ? username : address}
                         </span>
                     )}
                 </p>
@@ -59,7 +59,7 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
                         <span className="block size-2/3 translate-y-1/3 animate-pulse rounded bg-gray-400"></span>
                     ) : (
                         <span className="duration-1000 animate-in fade-in">
-                            {address}
+                            {username ? address : undefined}
                         </span>
                     )}
                 </p>
