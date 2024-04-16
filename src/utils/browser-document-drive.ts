@@ -6,7 +6,7 @@ import { documentModels } from 'src/store/document-model';
 
 export const BrowserDocumentDriveServer = new DocumentDriveServer(
     documentModels,
-    new BrowserStorage(connectConfig.routerBasename),
+    new BrowserStorage(),
 );
 
 BrowserDocumentDriveServer.initialize()

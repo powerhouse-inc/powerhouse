@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import { atomWithStorage } from 'src/store/utils';
+import { atomWithStorage } from 'jotai/utils';
 
 export const sidebarCollapsedAtom = atomWithStorage('sidebar-collapsed', false);
 export const sidebarDisableHoverStyles = atom(false);
