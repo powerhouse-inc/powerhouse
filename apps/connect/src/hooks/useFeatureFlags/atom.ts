@@ -1,4 +1,4 @@
-import { atomWithStorage } from 'src/store/utils';
+import { atomWithStorage } from 'jotai/utils';
 import defaultConfig, {
     FEATURE_FLAG_KEY_STORAGE,
     FeatureFlag,

@@ -1,52 +1,31 @@
-import connectConfig from 'connect-config';
-// eslint-disable-next-line no-restricted-imports
-import { atomWithStorage as _atomWithStorage } from 'jotai/utils';
-import type { SyncStorage } from 'jotai/vanilla/utils/atomWithStorage';
-
-const namespace = connectConfig.routerBasename;
-
-export const atomWithStorage = <T>(
-    key: string,
-    initialValue: T,
-    storage?: SyncStorage<T>,
-    options?: {
-        getOnInit?: boolean;
-    },
-) =>
-    _atomWithStorage<T>(
-        `${namespace}:${key}`,
-        initialValue,
-        storage ? storage : undefined,
-        options,
-    );
+import { atomWithStorage } from 'jotai/utils';
 
 export const atomWithStorageCallback = <T>(
     key: string,
     initialValue: T,
-    callback: (value: T) => void,
+    callback: (value: T) => void
 ) =>
-    _atomWithStorage<T>(key, initialValue, {
+    atomWithStorage<T>(key, initialValue, {
         getItem(key, initialValue) {
-            const value = localStorage.getItem(`${namespace}:${key}`);
+            const value = localStorage.getItem(key);
             return value ? (JSON.parse(value) as T) : initialValue;
         },
         setItem(key, value) {
-            localStorage.setItem(`${namespace}:${key}`, JSON.stringify(value));
+            localStorage.setItem(key, JSON.stringify(value));
             callback(value);
         },
         removeItem(key) {
-            localStorage.removeItem(`${namespace}:${key}`);
+            localStorage.removeItem(key);
         },
         subscribe(key, callback) {
-            if (typeof window.addEventListener === 'undefined') {
+            if (
+                typeof window?.addEventListener === 'undefined'
+            ) {
                 return () => null;
             }
 
             function listener(e: StorageEvent) {
-                if (
-                    e.storageArea === localStorage &&
-                    e.key === `${namespace}:${key}`
-                ) {
+                if (e.storageArea === localStorage && e.key === key) {
                     callback((e.newValue ?? '') as T);
                 }
             }
