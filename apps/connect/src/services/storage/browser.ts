@@ -1,3 +1,4 @@
+import connectConfig from 'connect-config';
 import { BaseStorage, IStorage } from '.';
 
 const store: IStorage = {
@@ -22,6 +23,9 @@ export class BrowserStorage<
     T extends Record<string, unknown> = Record<string, unknown>,
 > extends BaseStorage<T> {
     constructor(namespace: string) {
-        super(store as IStorage<T>, namespace);
+        super(
+            store as IStorage<T>,
+            `${connectConfig.routerBasename}:${namespace}`,
+        );
     }
 }
