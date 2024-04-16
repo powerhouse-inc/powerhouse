@@ -110,7 +110,7 @@
     "chromatic": "^11.0.0",
     "constrained-editor-plugin": "^1.3.0",
     "crypto-browserify": "^3.12.0",
-    "document-model": "^1.0.40",
+    "document-model": "^1.0.41",
     "document-model-editors": "^1.0.1",
     "dspot-powerhouse-components": "^1.1.0",
     "eslint": "^8.56.0",
@@ -145,7 +145,7 @@
     "zod": "^3.22.4"
   },
   "peerDependencies": {
-    "document-model": "^1.0.40",
+    "document-model": "^1.0.41",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
