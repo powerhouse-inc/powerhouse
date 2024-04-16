@@ -93,7 +93,7 @@
         "@powerhousedao/design-system": "^1.0.0-alpha.94",
         "@sentry/react": "^7.109.0",
         "did-key-creator": "^1.2.0",
-        "document-drive": "^1.0.0-alpha.35",
+        "document-drive": "^1.0.0-alpha.36",
         "document-model": "^1.0.41",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
