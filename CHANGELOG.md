@@ -1,3 +1,10 @@
+# [1.0.0-alpha.95](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.94...v1.0.0-alpha.95) (2024-04-16)
+
+
+### Features
+
+* show user address on top if there is no username ([c235e42](https://github.com/powerhouse-inc/design-system/commit/c235e425c0b0013184119210641b55bf2e3dae95))
+
 # [1.0.0-alpha.94](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.93...v1.0.0-alpha.94) (2024-04-12)
 
 
