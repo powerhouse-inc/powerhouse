@@ -1,3 +1,10 @@
+# [1.0.0-alpha.36](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.35...v1.0.0-alpha.36) (2024-04-16)
+
+
+### Features
+
+* added namespace option for browser storage ([2fb312a](https://github.com/powerhouse-inc/document-drive/commit/2fb312a020d6593157c401814e0327d260f64718))
+
 # [1.0.0-alpha.35](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.34...v1.0.0-alpha.35) (2024-04-16)
 
 
