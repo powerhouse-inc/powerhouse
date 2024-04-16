@@ -1,7 +1,9 @@
 export const RENOWN_URL =
     (import.meta.env.VITE_RENOWN_URL as string) || 'https://renown.vercel.app';
 export const RENOWN_NETWORK_ID =
-    (import.meta.env.VITE_RENOWN_NETWORK_ID as string) || '1';
+    (import.meta.env.VITE_RENOWN_NETWORK_ID as string) || 'eip155';
+export const RENOWN_CHAIN_ID =
+    (import.meta.env.VITE_RENOWN_CHAIN_ID as string) || '1';
 
 export const DOMAIN_TYPE = [
     { name: 'name', type: 'string' },

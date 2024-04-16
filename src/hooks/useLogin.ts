@@ -2,7 +2,11 @@ import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useConnectCrypto } from 'src/hooks/useConnectCrypto';
 import { useRenown } from 'src/hooks/useRenown';
-import { RENOWN_NETWORK_ID, RENOWN_URL } from 'src/services/renown/constants';
+import {
+    RENOWN_CHAIN_ID,
+    RENOWN_NETWORK_ID,
+    RENOWN_URL,
+} from 'src/services/renown/constants';
 import { useUser } from 'src/store/user';
 
 type LoginStatus = 'initial' | 'checking' | 'not-authorized' | 'authorized';
@@ -20,6 +24,7 @@ export const useLogin = () => {
         const url = new URL(RENOWN_URL);
         url.searchParams.set('connect', connectId);
         url.searchParams.set('network', RENOWN_NETWORK_ID);
+        url.searchParams.set('chain', RENOWN_CHAIN_ID);
 
         if (window.electronAPI) {
             const protocol = await window.electronAPI.protocol();
