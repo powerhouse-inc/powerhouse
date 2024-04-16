@@ -15,10 +15,10 @@ export class BrowserStorage implements IDriveStorage {
     static SEP = ':';
     static DRIVES_KEY = 'DRIVES';
 
-    constructor() {
+    constructor(namespace?: string) {
         this.db = import('localforage').then(localForage =>
             localForage.default.createInstance({
-                name: BrowserStorage.DBName
+                name: namespace ? `${namespace}:${BrowserStorage.DBName}` : BrowserStorage.DBName
             })
         );
     }
