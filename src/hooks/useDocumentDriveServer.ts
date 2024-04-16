@@ -27,6 +27,7 @@ import { useGetDocumentModel } from 'src/store/document-model';
 import { DefaultDocumentDriveServer } from 'src/utils/document-drive-server';
 import { loadFile } from 'src/utils/file';
 import { useDocumentDrives } from './useDocumentDrives';
+import { useIsAllowedToCreateDocuments } from './useIsAllowedToCreateDocuments';
 
 // TODO this should be added to the document model
 export interface SortOptions {
@@ -36,6 +37,8 @@ export interface SortOptions {
 export function useDocumentDriveServer(
     server: IDocumentDriveServer | undefined = DefaultDocumentDriveServer,
 ) {
+    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+
     if (!server) {
         throw new Error('Invalid Document Drive Server');
     }
@@ -58,6 +61,10 @@ export function useDocumentDriveServer(
         driveId: string,
         action: DocumentDriveAction,
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to create documents');
+        }
+
         if (!server) {
             throw new Error('Server is not defined');
         }

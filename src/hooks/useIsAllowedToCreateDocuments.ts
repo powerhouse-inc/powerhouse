@@ -9,7 +9,8 @@ export function useIsAllowedToCreateDocuments() {
     const { user, status } = useLogin();
     const createDocumentWhitelistEnvString = import.meta.env
         .VITE_CREATE_DOCUMENT_WHITE_LIST;
-    const createDocumentWhitelist = createDocumentWhitelistEnvString.split(',');
+    const createDocumentWhitelist =
+        createDocumentWhitelistEnvString?.split(',');
 
     useEffect(() => {
         if (status !== 'authorized' || !user) {
@@ -17,7 +18,7 @@ export function useIsAllowedToCreateDocuments() {
             return;
         }
 
-        const userAddressIsOnWhitelist = createDocumentWhitelist.includes(
+        const userAddressIsOnWhitelist = createDocumentWhitelist?.includes(
             user.address,
         );
 
@@ -26,6 +27,14 @@ export function useIsAllowedToCreateDocuments() {
             return;
         }
     });
+
+    if (createDocumentWhitelist === undefined) {
+        console.warn(`
+            WARNING: The VITE_CREATE_DOCUMENT_WHITE_LIST environment variable is not set.
+            This means that _any_ users will be allowed to create documents.
+        `);
+        return true;
+    }
 
     return isAllowed;
 }
