@@ -17,7 +17,7 @@ interface ImportMetaEnv {
     VITE_ROUTER_BASENAME: string;
     VITE_SENTRY_DSN: string;
     VITE_SENTRY_ENV: string;
-    VITE_CREATE_DOCUMENT_WHITE_LIST: string;
+    VITE_CREATE_DOCUMENT_WHITE_LIST: string | undefined;
 }
 
 interface ImportMeta {
