@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.28.0...v1.29.0) (2024-04-16)
+
+
+### Features
+
+* handle moving folder to descendent ([#129](https://github.com/powerhouse-inc/document-model-libs/issues/129)) ([d9f5004](https://github.com/powerhouse-inc/document-model-libs/commit/d9f5004e23183f9c96c5d1075726297dc9fb9191))
+
 # [1.28.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.27.0...v1.28.0) (2024-04-15)
 
 
