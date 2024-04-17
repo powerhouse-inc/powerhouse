@@ -66,6 +66,8 @@ import {
     type SynchronizationUnit
 } from './types';
 import { filterOperationsByRevision } from './utils';
+import { ICache } from '../cache';
+import InMemoryCache from '../cache/memory';
 
 export * from './listener';
 export type * from './types';
@@ -74,6 +76,7 @@ export const PULL_DRIVE_INTERVAL = 5000;
 
 export class DocumentDriveServer extends BaseDocumentDriveServer {
     private emitter = createNanoEvents<DriveEvents>();
+    private cache: ICache;
     private documentModels: DocumentModel[];
     private storage: IDriveStorage;
     private listenerStateManager: ListenerManager;
@@ -85,12 +88,14 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     constructor(
         documentModels: DocumentModel[],
-        storage: IDriveStorage = new MemoryStorage()
+        storage: IDriveStorage = new MemoryStorage(),
+        cache: ICache = new InMemoryCache()
     ) {
         super();
         this.listenerStateManager = new ListenerManager(this);
         this.documentModels = documentModels;
         this.storage = storage;
+        this.cache = cache;
     }
 
     private updateSyncStatus(
@@ -122,16 +127,17 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const result = await (!strand.documentId
             ? this.addDriveOperations(
-                  strand.driveId,
-                  operations as Operation<DocumentDriveAction | BaseAction>[],
-                  false
-              )
+                strand.driveId,
+                operations as Operation<DocumentDriveAction | BaseAction>[],
+                false
+            )
             : this.addOperations(
-                  strand.driveId,
-                  strand.documentId,
-                  operations,
-                  false
-              ));
+                strand.driveId,
+                strand.documentId,
+                operations,
+                false
+            ));
+
         if (result.status === 'ERROR') {
             this.updateSyncStatus(strand.driveId, result.status, result.error);
         }
@@ -277,14 +283,14 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             const nodeUnits =
                 scope?.length || branch?.length
                     ? node.synchronizationUnits.filter(
-                          unit =>
-                              (!scope?.length ||
-                                  scope.includes(unit.scope) ||
-                                  scope.includes('*')) &&
-                              (!branch?.length ||
-                                  branch.includes(unit.branch) ||
-                                  branch.includes('*'))
-                      )
+                        unit =>
+                            (!scope?.length ||
+                                scope.includes(unit.scope) ||
+                                scope.includes('*')) &&
+                            (!branch?.length ||
+                                branch.includes(unit.branch) ||
+                                branch.includes('*'))
+                    )
                     : node.synchronizationUnits;
             if (!nodeUnits.length) {
                 continue;
@@ -403,7 +409,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         if (!id) {
             throw new Error('Invalid Drive Id');
         }
-        
+
         const drives = await this.storage.getDrives();
         if (drives.includes(id)) {
             throw new Error('Drive already exists');
@@ -451,8 +457,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         });
     }
 
-    deleteDrive(id: string) {
+    async deleteDrive(id: string) {
         this.stopSyncRemoteDrive(id);
+        await this.cache.deleteDocument('drives', id);
         return this.storage.deleteDrive(id);
     }
 
@@ -461,6 +468,12 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     async getDrive(drive: string, options?: GetDocumentOptions) {
+        try {
+            const document = await this.cache.getDocument("drives", drive);
+            return document;
+        } catch (e) {
+            logger.error('Error getting drive from cache', e);
+        }
         const driveStorage = await this.storage.getDrive(drive);
         const documentModel = this._getDocumentModel(driveStorage.documentType);
         const document = baseUtils.replayDocument(
@@ -483,6 +496,12 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     async getDocument(drive: string, id: string, options?: GetDocumentOptions) {
+        try {
+            const document = await this.cache.getDocument(drive, id);
+            return document;
+        } catch (e) {
+            logger.error('Error getting document from cache', e);
+        }
         const { initialState, operations, ...header } =
             await this.storage.getDocument(drive, id);
 
@@ -521,6 +540,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         } catch (error) {
             logger.warn('Error deleting document', error);
         }
+        await this.cache.deleteDocument(driveId, id);
         return this.storage.deleteDocument(driveId, id);
     }
 
@@ -610,11 +630,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                         e instanceof OperationError
                             ? e
                             : new OperationError(
-                                  'ERROR',
-                                  nextOperation,
-                                  (e as Error).message,
-                                  (e as Error).cause
-                              );
+                                'ERROR',
+                                nextOperation,
+                                (e as Error).message,
+                                (e as Error).cause
+                            );
 
                     // TODO: don't break on errors...
                     break;
@@ -858,6 +878,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 throw error;
             }
 
+            await this.cache.setDocument(drive, id, document);
+
             return {
                 status: 'SUCCESS',
                 document,
@@ -869,11 +891,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 error instanceof OperationError
                     ? error
                     : new OperationError(
-                          'ERROR',
-                          undefined,
-                          (error as Error).message,
-                          (error as Error).cause
-                      );
+                        'ERROR',
+                        undefined,
+                        (error as Error).message,
+                        (error as Error).cause
+                    );
 
             return {
                 status: operationError.status,
@@ -1026,6 +1048,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 throw error;
             }
 
+            await this.cache.setDocument("drives", drive, document);
+
             return {
                 status: 'SUCCESS',
                 document,
@@ -1037,11 +1061,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 error instanceof OperationError
                     ? error
                     : new OperationError(
-                          'ERROR',
-                          undefined,
-                          (error as Error).message,
-                          (error as Error).cause
-                      );
+                        'ERROR',
+                        undefined,
+                        (error as Error).message,
+                        (error as Error).cause
+                    );
 
             return {
                 status: operationError.status,
