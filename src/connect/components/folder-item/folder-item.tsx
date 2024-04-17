@@ -34,6 +34,7 @@ export interface FolderItemProps
     onDragStart?: UseDraggableTargetProps<TreeItem>['onDragStart'];
     onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
     onDropEvent?: UseDraggableTargetProps<TreeItem>['onDropEvent'];
+    isAllowedToCreateDocuments?: boolean;
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({
@@ -47,6 +48,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
     onDragEnd,
     onDragStart,
     onDropEvent,
+    isAllowedToCreateDocuments = true,
     ...divProps
 }) => {
     const containerRef = useRef(null);
@@ -70,28 +72,29 @@ export const FolderItem: React.FC<FolderItemProps> = ({
         isDropTarget && 'bg-blue-100',
     );
 
-    const content = isReadMode ? (
-        <>
-            <div className="ml-3 max-h-6 overflow-hidden whitespace-nowrap font-medium text-slate-200 group-hover:text-gray-800">
-                {title}
-            </div>
-            <div
-                className={twMerge(
-                    'absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-gray-200',
-                    isDropTarget && 'to-blue-100',
-                )}
+    const content =
+        isReadMode || !isAllowedToCreateDocuments ? (
+            <>
+                <div className="ml-3 max-h-6 overflow-hidden whitespace-nowrap font-medium text-slate-200 group-hover:text-gray-800">
+                    {title}
+                </div>
+                <div
+                    className={twMerge(
+                        'absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-gray-200',
+                        isDropTarget && 'to-blue-100',
+                    )}
+                />
+            </>
+        ) : (
+            <TreeViewInput
+                className="ml-3 flex-1 font-medium"
+                defaultValue={title}
+                cancelIcon={cancelIcon}
+                submitIcon={submitIcon}
+                onCancelInput={onCancelInput}
+                onSubmitInput={onSubmitInput}
             />
-        </>
-    ) : (
-        <TreeViewInput
-            className="ml-3 flex-1 font-medium"
-            defaultValue={title}
-            cancelIcon={cancelIcon}
-            submitIcon={submitIcon}
-            onCancelInput={onCancelInput}
-            onSubmitInput={onSubmitInput}
-        />
-    );
+        );
 
     return (
         <div className="relative" ref={containerRef}>
@@ -107,7 +110,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                     </div>
                     {content}
                 </div>
-                {isReadMode && (
+                {isReadMode && isAllowedToCreateDocuments && (
                     <div
                         onClick={e => {
                             e.stopPropagation();
@@ -122,19 +125,23 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                     </div>
                 )}
             </div>
-            <ConnectDropdownMenu
-                isOpen={isDropdownMenuOpen}
-                onOpenChange={() => setIsDropdownMenuOpen(!isDropdownMenuOpen)}
-                items={itemOptions || [...defaultDropdownMenuOptions]}
-                menuClassName="bg-white cursor-pointer"
-                menuItemClassName="hover:bg-slate-50 px-2"
-                onItemClick={onOptionsClick}
-                popoverProps={{
-                    triggerRef: containerRef,
-                    placement: 'bottom end',
-                    offset: -10,
-                }}
-            />
+            {isAllowedToCreateDocuments && (
+                <ConnectDropdownMenu
+                    isOpen={isDropdownMenuOpen}
+                    onOpenChange={() =>
+                        setIsDropdownMenuOpen(!isDropdownMenuOpen)
+                    }
+                    items={itemOptions || [...defaultDropdownMenuOptions]}
+                    menuClassName="bg-white cursor-pointer"
+                    menuItemClassName="hover:bg-slate-50 px-2"
+                    onItemClick={onOptionsClick}
+                    popoverProps={{
+                        triggerRef: containerRef,
+                        placement: 'bottom end',
+                        offset: -10,
+                    }}
+                />
+            )}
         </div>
     );
 };
