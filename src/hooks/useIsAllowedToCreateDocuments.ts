@@ -26,7 +26,7 @@ export function useIsAllowedToCreateDocuments() {
             setIsAllowed(true);
             return;
         }
-    });
+    }, [status, user, createDocumentAllowList, setIsAllowed]);
 
     if (createDocumentAllowList === undefined) {
         console.warn(`
