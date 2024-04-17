@@ -1,3 +1,10 @@
+# [1.0.0-alpha.96](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.95...v1.0.0-alpha.96) (2024-04-17)
+
+
+### Features
+
+* remove buttons when not whitelisted ([#272](https://github.com/powerhouse-inc/design-system/issues/272)) ([c2549a7](https://github.com/powerhouse-inc/design-system/commit/c2549a7f2f95945729ec5a8f8cc8b0bf1a510fc9))
+
 # [1.0.0-alpha.95](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.94...v1.0.0-alpha.95) (2024-04-16)
 
 
