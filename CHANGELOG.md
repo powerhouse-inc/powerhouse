@@ -1,3 +1,10 @@
+# [1.0.0-alpha.97](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.96...v1.0.0-alpha.97) (2024-04-17)
+
+
+### Features
+
+* add allow param to folder item ([#273](https://github.com/powerhouse-inc/design-system/issues/273)) ([1220624](https://github.com/powerhouse-inc/design-system/commit/12206247b38e87e3ddb0c436fccf11ea0421bece))
+
 # [1.0.0-alpha.96](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.95...v1.0.0-alpha.96) (2024-04-17)
 
 
