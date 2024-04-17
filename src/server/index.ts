@@ -470,7 +470,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async getDrive(drive: string, options?: GetDocumentOptions) {
         try {
             const document = await this.cache.getDocument("drives", drive);
-            return document;
+            if (document) {
+                return document;
+            }
         } catch (e) {
             logger.error('Error getting drive from cache', e);
         }
@@ -498,7 +500,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async getDocument(drive: string, id: string, options?: GetDocumentOptions) {
         try {
             const document = await this.cache.getDocument(drive, id);
-            return document;
+            if (document) {
+                return document;
+            }
         } catch (e) {
             logger.error('Error getting document from cache', e);
         }
@@ -878,7 +882,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 throw error;
             }
 
-            await this.cache.setDocument(drive, id, document);
+            if (document) {
+                await this.cache.setDocument(drive, id, document);
+            } else {
+                logger.warn("Successfully applied operations but no document returned");
+            }
 
             return {
                 status: 'SUCCESS',
@@ -1048,7 +1056,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 throw error;
             }
 
-            await this.cache.setDocument("drives", drive, document);
+            if (document) {
+                await this.cache.setDocument("drives", drive, document);
+            } else {
+                logger.warn("Successfully applied operations but no drive returned");
+            }
 
             return {
                 status: 'SUCCESS',
