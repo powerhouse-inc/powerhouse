@@ -27,6 +27,7 @@
         "dev:web": "vite -c vite.renderer.config.ts",
         "build:web": "vite build -c vite.renderer.config.ts",
         "release": "semantic-release",
+        "prepare": "npm run prepare:scripts",
         "prepare:scripts": "node scripts/index.js",
         "e2e": "playwright test"
     },
