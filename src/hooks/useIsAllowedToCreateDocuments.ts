@@ -7,10 +7,10 @@ const isAllowedAtom = atom<boolean>(false);
 export function useIsAllowedToCreateDocuments() {
     const [isAllowed, setIsAllowed] = useAtom(isAllowedAtom);
     const { user, status } = useLogin();
-    const createDocumentWhitelistEnvString = import.meta.env
-        .VITE_CREATE_DOCUMENT_WHITE_LIST;
-    const createDocumentWhitelist =
-        createDocumentWhitelistEnvString?.split(',');
+    const createDocumentAllowListEnvString = import.meta.env
+        .VITE_CREATE_DOCUMENT_ALLOW_LIST;
+    const createDocumentAllowList =
+        createDocumentAllowListEnvString?.split(',');
 
     useEffect(() => {
         if (status !== 'authorized' || !user) {
@@ -18,19 +18,19 @@ export function useIsAllowedToCreateDocuments() {
             return;
         }
 
-        const userAddressIsOnWhitelist = createDocumentWhitelist?.includes(
+        const userAddressIsOnAllowList = createDocumentAllowList?.includes(
             user.address,
         );
 
-        if (userAddressIsOnWhitelist) {
+        if (userAddressIsOnAllowList) {
             setIsAllowed(true);
             return;
         }
     });
 
-    if (createDocumentWhitelist === undefined) {
+    if (createDocumentAllowList === undefined) {
         console.warn(`
-            WARNING: The VITE_CREATE_DOCUMENT_WHITE_LIST environment variable is not set.
+            WARNING: The VITE_CREATE_DOCUMENT_ALLOW_LIST environment variable is not set.
             This means that _any_ users will be allowed to create documents.
         `);
         return true;
