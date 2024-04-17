@@ -1,3 +1,11 @@
+# [1.0.0-alpha.37](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.36...v1.0.0-alpha.37) (2024-04-17)
+
+
+### Features
+
+* fixed unit tests ([46edd15](https://github.com/powerhouse-inc/document-drive/commit/46edd150aa4deb8814b4d1e6bd41b13e42b6ae91))
+* initial work on tests migration ([3046dc1](https://github.com/powerhouse-inc/document-drive/commit/3046dc16a0405476a0af22aaf605be6ce43bf4c5))
+
 # [1.0.0-alpha.36](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.35...v1.0.0-alpha.36) (2024-04-16)
 
 
