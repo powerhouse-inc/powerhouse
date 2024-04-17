@@ -22,6 +22,11 @@
     },
     "plugins": ["react", "@typescript-eslint"],
     "rules": {
+        "no-restricted-imports": ["error", {
+            "name": "jotai/utils",
+            "importNames": ["atomWithStorage"],
+            "message": "Please use atomWithStorage from 'src/store/utils' instead."
+        }],
         "react/prop-types": "off",
         "react/react-in-jsx-scope": "off",
         "@typescript-eslint/explicit-function-return-type": "off",
