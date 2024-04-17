@@ -7,6 +7,7 @@ const isAllowedAtom = atom<boolean>(false);
 export function useIsAllowedToCreateDocuments() {
     const [isAllowed, setIsAllowed] = useAtom(isAllowedAtom);
     const { user, status } = useLogin();
+
     const createDocumentAllowListEnvString = import.meta.env
         .VITE_CREATE_DOCUMENT_ALLOW_LIST;
     const createDocumentAllowList =
