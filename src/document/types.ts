@@ -128,6 +128,8 @@ export type Operation<A extends Action = Action> = A & {
     hash: string;
     /** The number of operations skipped with this Operation */
     skip: number;
+    /** Error message for a failed action */
+    error?: string;
 };
 
 /**

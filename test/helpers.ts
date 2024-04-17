@@ -29,6 +29,10 @@ export interface DecrementAction extends Action {
     type: 'DECREMENT';
 }
 
+export interface ErrorAction extends Action {
+    type: 'ERROR';
+}
+
 export interface SetLocalNameAction extends Action {
     type: 'SET_LOCAL_NAME';
     input: string;
@@ -36,7 +40,8 @@ export interface SetLocalNameAction extends Action {
 export type CountAction =
     | IncrementAction
     | DecrementAction
-    | SetLocalNameAction;
+    | SetLocalNameAction
+    | ErrorAction;
 
 export type CountState = { count: number };
 
@@ -45,6 +50,8 @@ export type CountLocalState = { name: string };
 export const increment = () => createAction<IncrementAction>('INCREMENT');
 
 export const decrement = () => createAction<DecrementAction>('DECREMENT');
+
+export const error = () => createAction<ErrorAction>('ERROR');
 
 export const setLocalName = (name: string) =>
     createAction<SetLocalNameAction>(
@@ -70,6 +77,8 @@ export const baseCountReducer: ImmutableStateReducer<
         case 'SET_LOCAL_NAME':
             state.local.name = action.input;
             break;
+        case 'ERROR':
+            throw new Error('Error action');
         default:
             return state;
     }
