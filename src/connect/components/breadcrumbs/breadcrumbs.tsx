@@ -12,6 +12,7 @@ export type BreadcrumbsProps = DivProps & {
     onAddNewItem: (basePath: string, option: 'new-folder') => void;
     onSubmitInput: (basepath: string, label: string) => void;
     onCancelInput: (basePath: string) => void;
+    isAllowedToCreateDocuments?: boolean;
 };
 
 /**
@@ -20,6 +21,8 @@ export type BreadcrumbsProps = DivProps & {
  */
 export function Breadcrumbs(props: BreadcrumbsProps) {
     const [isAddingNewItem, setIsAddingNewItem] = useState(false);
+
+    const { isAllowedToCreateDocuments = true } = props;
 
     function onAddNew() {
         setIsAddingNewItem(true);
@@ -40,28 +43,37 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
                     className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
                 />
             ))}
-            {isAddingNewItem ? (
-                <AddNewItemInput
-                    defaultValue="New Folder"
-                    placeholder="New Folder"
-                    onSubmit={value => {
-                        props.onSubmitInput(props.filterPath, value);
-                        setIsAddingNewItem(false);
-                    }}
-                    onCancel={() => {
-                        props.onCancelInput(props.filterPath);
-                        setIsAddingNewItem(false);
-                    }}
-                />
-            ) : (
-                <button
-                    onClick={onAddNew}
-                    className="ml-1 flex items-center justify-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 transition-colors hover:bg-gray-200 hover:text-gray-800"
-                >
-                    <Icon name="plus" size={14} />
-                    Add new
-                </button>
-            )}
+            <>
+                {isAllowedToCreateDocuments && (
+                    <>
+                        {isAddingNewItem ? (
+                            <AddNewItemInput
+                                defaultValue="New Folder"
+                                placeholder="New Folder"
+                                onSubmit={value => {
+                                    props.onSubmitInput(
+                                        props.filterPath,
+                                        value,
+                                    );
+                                    setIsAddingNewItem(false);
+                                }}
+                                onCancel={() => {
+                                    props.onCancelInput(props.filterPath);
+                                    setIsAddingNewItem(false);
+                                }}
+                            />
+                        ) : (
+                            <button
+                                onClick={onAddNew}
+                                className="ml-1 flex items-center justify-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 transition-colors hover:bg-gray-200 hover:text-gray-800"
+                            >
+                                <Icon name="plus" size={14} />
+                                Add new
+                            </button>
+                        )}
+                    </>
+                )}
+            </>
         </div>
     );
 }
@@ -73,6 +85,7 @@ export type BreadcrumbProps = {
     ) => void;
     filterPath: string;
     className?: string;
+    isAllowedToCreateDocuments?: boolean;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {

@@ -41,3 +41,11 @@ export const TreeViewItem: Story = {
         },
     },
 };
+
+export const NotAllowedToCreateDocuments: Story = {
+    ...TreeViewItem,
+    args: {
+        ...TreeViewItem.args,
+        isAllowedToCreateDocuments: false,
+    },
+};

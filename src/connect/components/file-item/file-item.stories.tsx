@@ -47,3 +47,11 @@ export const Default: Story = {
         },
     },
 };
+
+export const NotAllowedToCreateDocuments: Story = {
+    ...Default,
+    args: {
+        ...Default.args,
+        isAllowedToCreateDocuments: false,
+    },
+};

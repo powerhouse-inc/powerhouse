@@ -41,6 +41,7 @@ export interface FileItemProps
     icon?: FileItemIconType;
     customIcon?: React.ReactNode;
     itemOptions?: ConnectDropdownMenuProps['items'];
+    isAllowedToCreateDocuments?: boolean;
     onOptionsClick: ConnectDropdownMenuProps['onItemClick'];
     onSubmitInput?: TreeViewInputProps['onSubmitInput'];
     onCancelInput?: TreeViewInputProps['onCancelInput'];
@@ -58,6 +59,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     mode = 'read',
     icon = 'global',
     item,
+    isAllowedToCreateDocuments = true,
     onDragEnd,
     onDragStart,
     onCancelInput = () => {},
@@ -122,7 +124,7 @@ export const FileItem: React.FC<FileItemProps> = ({
                         {content}
                     </div>
                 </div>
-                {isReadMode && (
+                {isReadMode && isAllowedToCreateDocuments && (
                     <div
                         onClick={e => {
                             e.stopPropagation();
@@ -137,19 +139,23 @@ export const FileItem: React.FC<FileItemProps> = ({
                     </div>
                 )}
             </div>
-            <ConnectDropdownMenu
-                isOpen={isDropdownMenuOpen}
-                onOpenChange={() => setIsDropdownMenuOpen(!isDropdownMenuOpen)}
-                items={itemOptions || [...defaultDropdownMenuOptions]}
-                menuClassName="bg-white cursor-pointer"
-                menuItemClassName="hover:bg-slate-50 px-2"
-                onItemClick={onOptionsClick}
-                popoverProps={{
-                    triggerRef: containerRef,
-                    placement: 'bottom end',
-                    offset: -10,
-                }}
-            />
+            {isAllowedToCreateDocuments && (
+                <ConnectDropdownMenu
+                    isOpen={isDropdownMenuOpen}
+                    onOpenChange={() =>
+                        setIsDropdownMenuOpen(!isDropdownMenuOpen)
+                    }
+                    items={itemOptions || [...defaultDropdownMenuOptions]}
+                    menuClassName="bg-white cursor-pointer"
+                    menuItemClassName="hover:bg-slate-50 px-2"
+                    onItemClick={onOptionsClick}
+                    popoverProps={{
+                        triggerRef: containerRef,
+                        placement: 'bottom end',
+                        offset: -10,
+                    }}
+                />
+            )}
         </div>
     );
 };

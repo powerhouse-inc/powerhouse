@@ -115,6 +115,7 @@ export const Default: Story = {
         return (
             <div className="bg-white p-10">
                 <Breadcrumbs
+                    {...args}
                     filterPath={filterPath}
                     onItemClick={onItemClickHandler}
                     onAddNewItem={onAddNewItemHandler}
@@ -123,5 +124,13 @@ export const Default: Story = {
                 />
             </div>
         );
+    },
+};
+
+export const NotAllowedToCreateDocuments: Story = {
+    ...Default,
+    args: {
+        ...Default.args,
+        isAllowedToCreateDocuments: false,
     },
 };

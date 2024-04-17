@@ -215,3 +215,11 @@ export const Local: Story = {
     },
     render: args => <DriveViewImpl {...(args as DriveViewProps)} />,
 };
+
+export const NotAllowedToCreateDocuments: Story = {
+    ...Local,
+    args: {
+        ...Local.args,
+        isAllowedToCreateDocuments: false,
+    },
+};

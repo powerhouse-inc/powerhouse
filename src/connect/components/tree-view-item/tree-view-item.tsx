@@ -45,6 +45,7 @@ export type ConnectTreeViewItemProps = {
     onDragStart?: UseDraggableTargetProps<TreeItem>['onDragStart'];
     onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
     disableHighlightStyles?: boolean;
+    isAllowedToCreateDocuments?: boolean;
 };
 
 export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
@@ -64,6 +65,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         disableDropBetween = false,
         disableHighlightStyles = false,
         defaultOptions = defaultDropdownMenuOptions,
+        isAllowedToCreateDocuments = true,
         ...divProps
     } = props;
 
@@ -250,7 +252,8 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         };
     }
     function statusIconOrDropdownMenuButton() {
-        if (showDropdownMenuButton) return dropdownMenuButton;
+        if (showDropdownMenuButton && isAllowedToCreateDocuments)
+            return dropdownMenuButton;
         if (item.syncStatus && isCloudOrPublicDrive) {
             return (
                 <SyncStatusIcon
@@ -281,20 +284,22 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 {children}
             </TreeViewItem>
             {statusIconOrDropdownMenuButton()}
-            <ConnectDropdownMenu
-                isOpen={isDropdownMenuOpen}
-                onOpenChange={onDropdownMenuOpenChange}
-                items={dropdownMenuItems}
-                menuClassName="bg-white cursor-pointer"
-                menuItemClassName="hover:bg-slate-50 px-2"
-                onItemClick={onItemOptionsClick}
-                popoverProps={{
-                    triggerRef: containerRef,
-                    placement: 'bottom end',
-                    offset: -10,
-                }}
-            />
-            {isDrive && (
+            {isAllowedToCreateDocuments && (
+                <ConnectDropdownMenu
+                    isOpen={isDropdownMenuOpen}
+                    onOpenChange={onDropdownMenuOpenChange}
+                    items={dropdownMenuItems}
+                    menuClassName="bg-white cursor-pointer"
+                    menuItemClassName="hover:bg-slate-50 px-2"
+                    onItemClick={onItemOptionsClick}
+                    popoverProps={{
+                        triggerRef: containerRef,
+                        placement: 'bottom end',
+                        offset: -10,
+                    }}
+                />
+            )}
+            {isDrive && isAllowedToCreateDocuments && (
                 <DriveSettingsModal
                     formProps={{
                         driveName: item.label,

@@ -24,12 +24,14 @@ export interface DriveViewProps
     name: string;
     defaultItemOptions?: ConnectTreeViewItemProps['defaultOptions'];
     drivePath?: string;
+    disableHighlightStyles?: boolean;
+
+    isAllowedToCreateDocuments?: boolean;
     onDropEvent?: ConnectTreeViewProps['onDropEvent'];
     onItemClick?: ConnectTreeViewProps['onItemClick'];
     onSubmitInput?: ConnectTreeViewProps['onSubmitInput'];
     onCancelInput?: ConnectTreeViewProps['onCancelInput'];
     onItemOptionsClick?: ConnectTreeViewProps['onItemOptionsClick'];
-    disableHighlightStyles?: boolean;
     onDropActivate?: ConnectTreeViewProps['onDropActivate'];
     onDragStart?: ConnectTreeViewProps['onDragStart'];
     onDragEnd?: ConnectTreeViewProps['onDragEnd'];
@@ -68,6 +70,7 @@ export function DriveView(props: DriveViewProps) {
         drivePath = '/',
         onCreateDrive,
         disableAddDrives,
+        isAllowedToCreateDocuments = true,
         ...restProps
     } = props;
     const [showAddModal, setShowAddModal] = useState(false);
@@ -98,7 +101,7 @@ export function DriveView(props: DriveViewProps) {
                     {name}
                 </p>
                 <div className="flex gap-1 text-gray-600">
-                    {!disableAddDrives && (
+                    {!disableAddDrives && isAllowedToCreateDocuments && (
                         <button
                             onClick={() => setShowAddModal(true)}
                             className={twMerge(
@@ -127,9 +130,10 @@ export function DriveView(props: DriveViewProps) {
                     onItemOptionsClick={onItemOptionsClick}
                     defaultItemOptions={defaultItemOptions}
                     allowedTypes={allowedTypes}
+                    isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                 />
             </div>
-            {props.type === 'LOCAL_DRIVE' && (
+            {props.type === 'LOCAL_DRIVE' && isAllowedToCreateDocuments && (
                 <CreateDriveModal
                     modalProps={{
                         open: showAddModal,
@@ -145,24 +149,26 @@ export function DriveView(props: DriveViewProps) {
                     }}
                 />
             )}
-            {(props.type === 'PUBLIC_DRIVE' ||
-                props.type === 'CLOUD_DRIVE') && (
-                <AddPublicDriveModal
-                    modalProps={{
-                        open: showAddModal,
-                        onOpenChange: setShowAddModal,
-                    }}
-                    formProps={{
-                        sharingType:
-                            props.type === 'PUBLIC_DRIVE' ? 'PUBLIC' : 'SHARED',
-                        onSubmit: data => {
-                            onCreateDrive?.(data);
-                            setShowAddModal(false);
-                        },
-                        onCancel: () => setShowAddModal(false),
-                    }}
-                />
-            )}
+            {(props.type === 'PUBLIC_DRIVE' || props.type === 'CLOUD_DRIVE') &&
+                isAllowedToCreateDocuments && (
+                    <AddPublicDriveModal
+                        modalProps={{
+                            open: showAddModal,
+                            onOpenChange: setShowAddModal,
+                        }}
+                        formProps={{
+                            sharingType:
+                                props.type === 'PUBLIC_DRIVE'
+                                    ? 'PUBLIC'
+                                    : 'SHARED',
+                            onSubmit: data => {
+                                onCreateDrive?.(data);
+                                setShowAddModal(false);
+                            },
+                            onCancel: () => setShowAddModal(false),
+                        }}
+                    />
+                )}
         </div>
     );
 }
