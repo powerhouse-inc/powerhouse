@@ -22,7 +22,7 @@ readdirSync(documentModelsDir, { withFileTypes: true })
     });
 
 export default defineConfig(({ mode }) => {
-    const external = ['react', 'react/jsx-runtime', 'react-dom'];
+    const external = ['react', 'react/jsx-runtime', 'react-dom', /^document-model\//];
 
     const test: InlineConfig = {
         globals: true,
