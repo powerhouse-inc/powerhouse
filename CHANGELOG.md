@@ -1,3 +1,15 @@
+# [1.0.0-alpha.38](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.37...v1.0.0-alpha.38) (2024-04-17)
+
+
+### Bug Fixes
+
+* types ([37ebeca](https://github.com/powerhouse-inc/document-drive/commit/37ebeca0ff18a8f60c4604ace6ba17bad730f4cb))
+
+
+### Features
+
+* added document cache ([deae523](https://github.com/powerhouse-inc/document-drive/commit/deae523851b98fcd250825a4b2918b364525660f))
+
 # [1.0.0-alpha.37](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.36...v1.0.0-alpha.37) (2024-04-17)
 
 
