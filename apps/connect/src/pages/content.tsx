@@ -311,6 +311,9 @@ const Content = () => {
                                 onAddNewItem={() => undefined}
                                 onSubmitInput={submitNewFolderAndSelect}
                                 onCancelInput={console.log}
+                                isAllowedToCreateDocuments={
+                                    isAllowedToCreateDocuments
+                                }
                             />
                         )}
                         {connectConfig.content.showSearchBar && <SearchBar />}
