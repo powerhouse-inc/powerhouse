@@ -61,10 +61,6 @@ export function useDocumentDriveServer(
         driveId: string,
         action: DocumentDriveAction,
     ) {
-        if (!isAllowedToCreateDocuments) {
-            throw new Error('User is not allowed to create documents');
-        }
-
         if (!server) {
             throw new Error('Server is not defined');
         }
@@ -112,6 +108,10 @@ export function useDocumentDriveServer(
         parentFolder?: string,
         document?: Document,
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to create documents');
+        }
+
         const id = utils.hashKey();
 
         let drive = documentDrives.find(d => d.state.global.id === driveId);
@@ -148,6 +148,9 @@ export function useDocumentDriveServer(
         name?: string,
         parentFolder?: string,
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to create files');
+        }
         const document = await loadFile(file, getDocumentModel);
         return addDocument(
             drive,
@@ -165,6 +168,9 @@ export function useDocumentDriveServer(
         name?: string,
         parentFolder?: string,
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to update files');
+        }
         const drive = await _addDriveOperation(
             driveId,
             actions.updateFile({
@@ -187,6 +193,9 @@ export function useDocumentDriveServer(
         name: string,
         parentFolder?: string,
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to create folders');
+        }
         const id = utils.hashKey();
         const drive = await _addDriveOperation(
             driveId,
@@ -205,6 +214,9 @@ export function useDocumentDriveServer(
     }
 
     async function deleteNode(drive: string, id: string) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to delete documents');
+        }
         await _addDriveOperation(
             drive,
             actions.deleteNode({
@@ -214,6 +226,9 @@ export function useDocumentDriveServer(
     }
 
     async function renameNode(driveId: string, id: string, name: string) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to rename documents');
+        }
         const drive = await _addDriveOperation(
             driveId,
             actions.updateNode({
@@ -238,6 +253,9 @@ export function useDocumentDriveServer(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO: use this later for sorting
         sortOptions?: SortOptions,
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to copy or move nodes');
+        }
         if (srcId === targetId) return;
 
         const drive = documentDrives.find(
@@ -291,6 +309,9 @@ export function useDocumentDriveServer(
         id: string,
         operation: Operation,
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to add operations');
+        }
         if (!server) {
             throw new Error('Server is not defined');
         }
@@ -311,6 +332,9 @@ export function useDocumentDriveServer(
         id: string,
         operations: Operation[],
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to add operations');
+        }
         if (!server) {
             throw new Error('Server is not defined');
         }
@@ -327,6 +351,9 @@ export function useDocumentDriveServer(
     }
 
     async function addDrive(drive: DriveInput) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to create drives');
+        }
         const id = drive.global.id || utils.hashKey();
         drive = documentDriveUtils.createState(drive);
         await server.addDrive({
@@ -337,11 +364,17 @@ export function useDocumentDriveServer(
     }
 
     async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to create drives');
+        }
         await server.addRemoteDrive(url, options);
         await refreshDocumentDrives();
     }
 
     async function deleteDrive(id: string) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to delete drives');
+        }
         if (!server) {
             throw new Error('Server is not defined');
         }
@@ -357,6 +390,9 @@ export function useDocumentDriveServer(
     }
 
     async function renameDrive(id: string, name: string) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to rename drives');
+        }
         return _addDriveOperation(id, actions.setDriveName({ name }));
     }
 
@@ -364,6 +400,9 @@ export function useDocumentDriveServer(
         id: string,
         availableOffline: boolean,
     ) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to change drive availability');
+        }
         return _addDriveOperation(
             id,
             actions.setAvailableOffline({ availableOffline }),
@@ -371,6 +410,9 @@ export function useDocumentDriveServer(
     }
 
     async function setDriveSharingType(id: string, sharingType: SharingType) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to change drive availability');
+        }
         return _addDriveOperation(
             id,
             actions.setSharingType({ type: sharingType }),
