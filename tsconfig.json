@@ -11,7 +11,7 @@
         "strict": true,
         "noImplicitAny": true,
         "skipLibCheck": true,
-        "emitDeclarationOnly": true
+        "emitDeclarationOnly": true,
     },
     "include": [
         "src/**/*",
@@ -19,7 +19,8 @@
         "node_modules/@types/wicg-file-system-access/index.d.ts",
         "*.config.ts",
         "*.config.js",
-        "reset.d.ts"
+        "reset.d.ts",
+        "modules.d.ts",
     ],
-    "exclude": ["src/document/utils/browser.ts"]
+    "exclude": ["src/document/utils/browser.ts"],
 }

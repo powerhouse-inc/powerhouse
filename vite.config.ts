@@ -21,13 +21,7 @@ const entry = {
 
 export default defineConfig(({ mode = 'node' }) => {
     const isBrowser = mode === 'browser';
-    const external = [
-        'immer',
-        'json-stringify-deterministic',
-        'jszip',
-        'mime',
-        'zod',
-    ];
+    const external = ['immer', 'jszip', 'mime', 'zod'];
 
     // if building for node then don't polyfill node core modules
     if (!isBrowser) {

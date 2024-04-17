@@ -1,4 +1,4 @@
-import JSONDeterministic from 'json-stringify-deterministic';
+import stringifyJson from 'safe-stable-stringify';
 import { baseReducer } from '../reducer';
 import {
     Action,
@@ -184,7 +184,7 @@ export const hashDocument = (
     document: Pick<Document, 'state'>,
     scope: OperationScope = 'global',
 ) => {
-    return hash(JSONDeterministic(document.state[scope]));
+    return hash(stringifyJson(document.state[scope] || ''));
 };
 
 export const hashKey = (date?: Date, randomLimit = 1000) => {
@@ -431,5 +431,5 @@ export function replayDocument<T, A extends Action, L>(
 }
 
 export function isSameDocument(documentA: Document, documentB: Document) {
-    return JSONDeterministic(documentA) === JSONDeterministic(documentB);
+    return stringifyJson(documentA) === stringifyJson(documentB);
 }

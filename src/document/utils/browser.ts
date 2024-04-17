@@ -1,6 +1,6 @@
 import type { Buffer } from 'buffer';
-// @ts-expect-error - no types
 import Sha1 from 'sha.js/sha1';
+import Sha256 from 'sha.js/sha256';
 
 const FileSystemError = new Error('File system not available.');
 
@@ -26,20 +26,18 @@ export const getFile = async (file: string) => {
     return readFile(file);
 };
 
-function hexToBase64(str: string) {
-    let bString = '';
-    for (let i = 0; i < str.length; i += 2) {
-        bString += String.fromCharCode(parseInt(str.substr(i, 2), 16));
-    }
-    return btoa(bString);
-}
+const hashAlgorithms = {
+    sha1: Sha1,
+    sha256: Sha256,
+} as const;
 
 export const hash = (data: string, algorithm = 'sha1') => {
-    if (algorithm !== 'sha1') {
-        throw new Error('Only sha1 algorithm is available.');
+    if (!['sha1', 'sha256'].includes(algorithm)) {
+        throw new Error('Hashing algorithm not supported: Available: sha1, sha256');
     }
 
-    const sha1 = new Sha1();
-    // @ts-ignore
-    return hexToBase64(sha1.update(data).digest('hex'));
+    const Algorithm = hashAlgorithms[algorithm as keyof typeof hashAlgorithms];
+    const sha = new Algorithm();
+
+    return sha.update(data).digest('base64');
 };
