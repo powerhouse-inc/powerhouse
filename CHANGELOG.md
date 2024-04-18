@@ -1,3 +1,10 @@
+# [1.0.0-alpha.98](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.97...v1.0.0-alpha.98) (2024-04-18)
+
+
+### Features
+
+* add dependency versions component ([#275](https://github.com/powerhouse-inc/design-system/issues/275)) ([b9cded4](https://github.com/powerhouse-inc/design-system/commit/b9cded447020c74ed3cfb5f8fb83ff6de877e28a))
+
 # [1.0.0-alpha.97](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.96...v1.0.0-alpha.97) (2024-04-17)
 
 
