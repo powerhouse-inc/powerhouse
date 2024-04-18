@@ -67,11 +67,11 @@ devDependencies:
     specifier: ^1.4.0
     version: 1.4.0(vitest@1.5.0)
   document-model:
-    specifier: ^1.0.44
-    version: 1.0.44
+    specifier: ^1.0.45
+    version: 1.0.45
   document-model-libs:
     specifier: ^1.34.0
-    version: 1.34.0(document-model@1.0.44)(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.5.0)
+    version: 1.34.0(document-model@1.0.45)(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.5.0)
   eslint:
     specifier: ^8.57.0
     version: 8.57.0
@@ -4811,7 +4811,7 @@ packages:
       esutils: 2.0.3
     dev: true
 
-  /document-model-libs@1.34.0(document-model@1.0.44)(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.5.0):
+  /document-model-libs@1.34.0(document-model@1.0.45)(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.5.0):
     resolution: {integrity: sha512-jL/w8qzZbF0wR67z/TWn1or32vVCOexK09W7DrTxsxHY0oAOAMpeXV+BEoyPf91NM6Kyw/qTwAUz1j3skGfcgQ==}
     peerDependencies:
       document-model: ^1.0.42
@@ -4826,7 +4826,7 @@ packages:
       copy-anything: 3.0.5
       date-fns: 3.6.0
       deep-object-diff: 1.1.9
-      document-model: 1.0.44
+      document-model: 1.0.45
       jsonc-parser: 3.2.1
       jszip: 3.10.1
       react: 18.2.0
@@ -4844,8 +4844,8 @@ packages:
       - vitest
     dev: true
 
-  /document-model@1.0.44:
-    resolution: {integrity: sha512-b/l5DmroCe2ISjGPJNAJ5O3J8TbTatu+Yd1UlQUSuwsPIyUapiHh6fGZdeJkSv/S9rag+KmSxD/LANYowLvDHQ==}
+  /document-model@1.0.45:
+    resolution: {integrity: sha512-qlD1owtJJBzXjezbJ1LFcDwfMcmi6zDD+9023wjQqM1UuFgogploDmDTEqsujajUudQjFaznm/WGkf9gH9+bFQ==}
     dependencies:
       change-case: 5.4.4
       immer: 10.0.4
