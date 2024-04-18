@@ -408,18 +408,20 @@ export function replayDocument<T, A extends Action, L>(
         document,
     );
 
-    // checks if the hash of each scope
-    // matches the hash of last operation
-    for (const scope of Object.keys(result.state)) {
-        for (let i = sortedOperations.length - 1; i >= 0; i--) {
-            if (sortedOperations[i].operation.scope === scope) {
-                if (
-                    sortedOperations[i].operation.hash !==
-                    hashDocument(result, scope)
-                ) {
-                    throw new Error(`Hash mismatch for scope ${scope}`);
-                } else {
-                    break;
+    // if hash generation was skipped then checks if the hash
+    // of each scope matches the hash of last operation
+    if (!checkHashes) {
+        for (const scope of Object.keys(result.state)) {
+            for (let i = sortedOperations.length - 1; i >= 0; i--) {
+                if (sortedOperations[i].operation.scope === scope) {
+                    if (
+                        sortedOperations[i].operation.hash !==
+                        hashDocument(result, scope)
+                    ) {
+                        throw new Error(`Hash mismatch for scope ${scope}`);
+                    } else {
+                        break;
+                    }
                 }
             }
         }

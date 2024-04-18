@@ -167,6 +167,8 @@ async function loadFromZip<S, A extends Action, L>(
         reducer,
         undefined,
         header,
+        {},
+        options,
     );
     if (header) {
         result = {
