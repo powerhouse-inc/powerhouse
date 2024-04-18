@@ -7,9 +7,9 @@
         "dist"
     ],
     "types": "dist/node/index.d.ts",
-    "main": "dist/node/index.cjs",
-    "module": "dist/node/index.js",
-    "browser": "dist/browser/index.js",
+    "main": "dist/node/cjs/index.cjs",
+    "module": "dist/node/es/index.js",
+    "browser": "dist/browser/es/index.js",
     "type": "module",
     "scripts": {
         "check-types": "tsc",

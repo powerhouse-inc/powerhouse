@@ -47,7 +47,7 @@ export default defineConfig(({ mode = 'node' }) => {
             },
         },
         optimizeDeps: {
-            include: isBrowser ? ['sha.js/sha1'] : [],
+            include: isBrowser ? ['sha.js/sha1', 'sha.js/sha256'] : [],
         },
         plugins: [
             isBrowser ? replaceBrowserModules() : undefined,
