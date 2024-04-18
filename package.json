@@ -13,6 +13,8 @@
         "./storage/filesystem": "./src/storage/filesystem.ts",
         "./storage/memory": "./src/storage/memory.ts",
         "./storage/prisma": "./src/storage/prisma.ts",
+        "./cache/redis": "./src/cache/redis.ts",
+        "./cache/memory": "./src/cache/memory.ts",
         "./utils": "./src/utils/index.ts",
         "./utils/graphql": "./src/utils/graphql.ts",
         "./logger": "./src/utils/logger.ts"
