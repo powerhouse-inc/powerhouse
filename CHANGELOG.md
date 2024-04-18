@@ -1,3 +1,10 @@
+# [1.34.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.33.0...v1.34.0) (2024-04-18)
+
+
+### Features
+
+* fix failing imports ([#136](https://github.com/powerhouse-inc/document-model-libs/issues/136)) ([718202b](https://github.com/powerhouse-inc/document-model-libs/commit/718202bfeb65f8e46b51a5dad335544e911948d8))
+
 # [1.33.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.32.0...v1.33.0) (2024-04-18)
 
 
