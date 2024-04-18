@@ -316,9 +316,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 : this.getDrive(driveId));
 
             for (const { syncId, scope, branch } of nodeUnits) {
-                const operations =
-                    document.operations[scope as OperationScope] ?? [];
-                const lastOperation = operations.pop();
+                const operations = document.operations[scope as OperationScope] ?? [];
+                const lastOperation = operations[operations.length - 1];
                 synchronizationUnits.push({
                     syncId,
                     scope,
@@ -501,7 +500,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             ),
             documentModel.reducer,
             undefined,
-            driveStorage
+            driveStorage,
+            undefined,
+            { checkHashes: false }
         );
         if (!isDocumentDrive(document)) {
             throw new Error(
@@ -532,7 +533,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             filterOperationsByRevision(operations, options?.revisions),
             documentModel.reducer,
             undefined,
-            header
+            header,
+            undefined,
+            { checkHashes: false }
         );
         this.cache.setDocument(drive, id, document).catch(logger.error);
         return document;
@@ -683,7 +686,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             documentStorage.operations,
             documentModel.reducer,
             undefined,
-            documentStorage
+            documentStorage,
+            undefined,
+            { checkHashes: false }
         ) as T;
     }
 
@@ -1105,31 +1110,13 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }
     }
 
-    private _buildOperation<T extends Action>(
-        documentStorage: DocumentStorage,
-        action: T | BaseAction
-    ): Operation<T | BaseAction> {
-        const [operation] = this._buildOperations(documentStorage, [action]);
-        if (!operation) {
-            throw new Error('Error creating operation');
-        }
-        return operation;
-    }
-
     private _buildOperations<T extends Action>(
-        documentStorage: DocumentStorage,
+        document: Document,
         actions: (T | BaseAction)[]
     ): Operation<T | BaseAction>[] {
         const operations: Operation<T | BaseAction>[] = [];
         const { reducer } = this._getDocumentModel(
-            documentStorage.documentType
-        );
-        let document = baseUtils.replayDocument(
-            documentStorage.initialState,
-            documentStorage.operations,
-            reducer,
-            undefined,
-            documentStorage
+            document.documentType
         );
         for (const action of actions) {
             document = reducer(document, action);
@@ -1147,9 +1134,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         id: string,
         action: Action
     ): Promise<IOperationResult> {
-        const documentStorage = await this.storage.getDocument(drive, id);
-        const operation = this._buildOperation(documentStorage, action);
-        return this.addOperation(drive, id, operation);
+        return this.addActions(drive, id, [action]);
     }
 
     async addActions(
@@ -1157,8 +1142,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         id: string,
         actions: Action[]
     ): Promise<IOperationResult> {
-        const documentStorage = await this.storage.getDocument(drive, id);
-        const operations = this._buildOperations(documentStorage, actions);
+        const document = await this.getDocument(drive, id);
+        const operations = this._buildOperations(document, actions);
         return this.addOperations(drive, id, operations);
     }
 
@@ -1166,17 +1151,15 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         drive: string,
         action: DocumentDriveAction | BaseAction
     ): Promise<IOperationResult<DocumentDriveDocument>> {
-        const documentStorage = await this.storage.getDrive(drive);
-        const operation = this._buildOperation(documentStorage, action);
-        return this.addDriveOperation(drive, operation);
+        return this.addDriveActions(drive, [action]);
     }
 
     async addDriveActions(
         drive: string,
         actions: (DocumentDriveAction | BaseAction)[]
     ): Promise<IOperationResult<DocumentDriveDocument>> {
-        const documentStorage = await this.storage.getDrive(drive);
-        const operations = this._buildOperations(documentStorage, actions);
+        const document = await this.getDrive(drive);
+        const operations = this._buildOperations(document, actions);
         return this.addDriveOperations(drive, operations);
     }
 
