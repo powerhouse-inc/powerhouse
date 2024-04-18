@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.31.0...v1.32.0) (2024-04-18)
+
+
+### Features
+
+* exclude document-model from bundle ([7a60d7c](https://github.com/powerhouse-inc/document-model-libs/commit/7a60d7c7f605b572829f0c5ab8a4c7d34f74ae69))
+
 # [1.31.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.30.0...v1.31.0) (2024-04-16)
 
 
