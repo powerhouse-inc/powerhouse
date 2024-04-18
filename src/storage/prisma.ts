@@ -215,18 +215,14 @@ export class PrismaStorage implements IDriveStorage {
             header: DocumentHeader;
             updatedOperations?: Operation[] | undefined;
         } | null = null;
-
         await this.db.$transaction(async tx => {
             const document = await this.getDocument(drive, id, tx);
-
             if (!document) {
                 throw new Error(`Document with id ${id} not found`);
             }
-
             result = await callback(document);
 
             const { operations, header, updatedOperations } = result;
-
             return this._addDocumentOperations(
                 tx,
                 drive,

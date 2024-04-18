@@ -223,6 +223,21 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         for (const drive of drives) {
             await this._initializeDrive(drive);
         }
+
+        // if network connect comes online then
+        // triggers the listeners update
+        if (typeof window !== "undefined") {
+            window.addEventListener('online', () => {
+                this.listenerStateManager.triggerUpdate(false,
+                    this.handleListenerError.bind(this)).catch(error => {
+                        logger.error(
+                            'Non handled error updating listeners',
+                            error
+                        );
+                    });
+
+            });
+        }
     }
 
     private async _initializeDrive(driveId: string) {
@@ -470,7 +485,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async getDrive(drive: string, options?: GetDocumentOptions) {
         try {
             const document = await this.cache.getDocument("drives", drive);
-            if (document) {
+            if (document && isDocumentDrive(document)) {
                 return document;
             }
         } catch (e) {
@@ -493,6 +508,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 `Document with id ${drive} is not a Document Drive`
             );
         } else {
+            this.cache.setDocument("drives", drive, document).catch(logger.error);
             return document;
         }
     }
@@ -511,13 +527,15 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const documentModel = this._getDocumentModel(header.documentType);
 
-        return baseUtils.replayDocument(
+        const document = baseUtils.replayDocument(
             initialState,
             filterOperationsByRevision(operations, options?.revisions),
             documentModel.reducer,
             undefined,
             header
         );
+        this.cache.setDocument(drive, id, document).catch(logger.error);
+        return document;
     }
 
     getDocuments(drive: string) {
@@ -556,8 +574,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const operationsApplied: Operation<A | BaseAction>[] = [];
         const operationsUpdated: Operation<A | BaseAction>[] = [];
         const signals: SignalResult[] = [];
-
         let document: T = this._buildDocument(storageDocument);
+
         let error: OperationError | undefined; // TODO: replace with an array of errors/consistency issues
         const operationsByScope = groupOperationsByScope(operations);
 
@@ -601,7 +619,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                     updatedOperationIndex = firstNewOperation.index;
                 }
             }
-
             for (const nextOperation of newOperations) {
                 let skipHashValidation = false;
 
@@ -615,7 +632,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 }
 
                 try {
-                    const appliedResult = await this._performOperation<T, A>(
+                    const appliedResult = await this._performOperation(
                         drive,
                         document,
                         nextOperation,
@@ -670,16 +687,15 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         ) as T;
     }
 
-    private async _performOperation<T extends Document, A extends Action>(
+    private async _performOperation<T extends Document>(
         drive: string,
-        documentStorage: DocumentStorage<T>,
-        operation: Operation<A | BaseAction>,
+        document: T,
+        operation: Operation,
         skipHashValidation = false
     ) {
         const documentModel = this._getDocumentModel(
-            documentStorage.documentType
+            document.documentType
         );
-        const document = this._buildDocument(documentStorage);
 
         const signalResults: SignalResult[] = [];
         let newDocument = document;
