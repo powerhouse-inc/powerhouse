@@ -1,6 +1,6 @@
 // Command = action => should process the action and asign the index, timestamp, and hash
 // Event = operation => should keep the same operation information but execute the action input against the document
-
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { createDocument } from '../../src/document/utils';
 import { emptyReducer, wrappedEmptyReducer } from '../helpers';
 

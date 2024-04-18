@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { Operation, utils } from '../../src/document';
 import { setName } from '../../src/document/actions/creators';
 import {

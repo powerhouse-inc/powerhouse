@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { prune, redo, undo } from '../../src/document/actions';
 import { createDocument } from '../../src/document/utils';
 import {

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach } from 'vitest';
 import { noop, undo, redo } from '../../src/document/actions';
 import { createDocument, createExtendedState } from '../../src/document/utils';
 import { processUndoRedo } from '../../src/document/reducer';

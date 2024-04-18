@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
     createDocument,
     getLocalFile,
@@ -46,7 +47,7 @@ describe('Base utils', () => {
         await expect(getLocalFile('as')).rejects.toBeDefined();
     });
 
-    it('should hash in browser and node', async () => {
+    it('should hash in browser and node', () => {
         expect(hashNode('test')).toEqual(hashBrowser('test'));
     });
 

@@ -1,5 +1,6 @@
 import { Plugin, defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
+import generateFile from 'vite-plugin-generate-file';
 
 function replaceBrowserModules(): Plugin {
     return {
@@ -35,13 +36,12 @@ export default defineConfig(({ mode = 'node' }) => {
             lib: {
                 entry,
                 formats: ['es', 'cjs'],
-                fileName: (format, entryName) =>
-                    `${entryName}.${format === 'cjs' ? 'cjs' : 'js'}`,
             },
             rollupOptions: {
                 external,
                 output: {
-                    chunkFileNames: 'internal/[name]-[hash].js',
+                    entryFileNames: '[format]/[name].js',
+                    chunkFileNames: '[format]/internal/[name]-[hash].js',
                     exports: 'named',
                 },
             },
@@ -52,6 +52,22 @@ export default defineConfig(({ mode = 'node' }) => {
         plugins: [
             isBrowser ? replaceBrowserModules() : undefined,
             dts({ insertTypesEntry: true }),
+            generateFile([
+                {
+                    type: 'json',
+                    output: './es/package.json',
+                    data: {
+                        type: 'module',
+                    },
+                },
+                {
+                    type: 'json',
+                    output: `./cjs/package.json`,
+                    data: {
+                        type: 'commonjs',
+                    },
+                },
+            ]),
         ],
     };
 });

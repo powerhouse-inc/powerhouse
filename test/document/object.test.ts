@@ -1,3 +1,4 @@
+import { it, expect } from 'vitest';
 import { DocumentModel } from '../../src/document-model';
 
 it('should return a read only object on toDocument', () => {

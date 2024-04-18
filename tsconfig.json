@@ -15,7 +15,6 @@
     },
     "include": [
         "src/**/*",
-        "test/**/*",
         "node_modules/@types/wicg-file-system-access/index.d.ts",
         "*.config.ts",
         "*.config.js",

@@ -23,32 +23,32 @@
     "exports": {
         ".": {
             "node": {
-                "import": "./dist/node/index.js",
-                "require": "./dist/node/index.cjs",
+                "import": "./dist/node/es/index.js",
+                "require": "./dist/node/cjs/index.cjs",
                 "types": "./dist/node/index.d.ts"
             },
-            "import": "./dist/browser/index.js",
-            "require": "./dist/browser/index.cjs",
+            "import": "./dist/browser/es/index.js",
+            "require": "./dist/browser/cjs/index.cjs",
             "types": "./dist/browser/index.d.ts"
         },
         "./document": {
             "node": {
-                "import": "./dist/node/document.js",
-                "require": "./dist/node/document.cjs",
+                "import": "./dist/node/es/document.js",
+                "require": "./dist/node/cjs/document.js",
                 "types": "./dist/node/document.d.ts"
             },
-            "import": "./dist/browser/document.js",
-            "require": "./dist/browser/document.cjs",
+            "import": "./dist/browser/es/document.js",
+            "require": "./dist/browser/cjs/document.js",
             "types": "./dist/browser/document.d.ts"
         },
         "./document-model": {
             "node": {
-                "import": "./dist/node/document-model.js",
-                "require": "./dist/node/document-model.cjs",
+                "import": "./dist/node/es/document-model.js",
+                "require": "./dist/node/cjs/document-model.js",
                 "types": "./dist/node/document-model.d.ts"
             },
-            "import": "./dist/browser/document-model.js",
-            "require": "./dist/browser/document-model.cjs",
+            "import": "./dist/browser/es/document-model.js",
+            "require": "./dist/browser/cjs/document-model.js",
             "types": "./dist/browser/document-model.d.ts"
         }
     },
@@ -75,6 +75,7 @@
         "typescript": "^5.3.3",
         "vite": "^5.0.11",
         "vite-plugin-dts": "^3.7.1",
+        "vite-plugin-generate-file": "^0.1.1",
         "vite-plugin-node-polyfills": "^0.19.0",
         "vitest": "^1.5.0"
     },
