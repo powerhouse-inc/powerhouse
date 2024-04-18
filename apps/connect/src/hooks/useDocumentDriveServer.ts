@@ -222,60 +222,111 @@ export function useDocumentDriveServer(
         return node;
     }
 
-    async function copyOrMoveNode(
-        driveId: string,
-        srcId: string,
-        targetId: string,
-        operation: string,
-        targetName?: string,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO: use this later for sorting
-        sortOptions?: SortOptions,
-    ) {
-        if (srcId === targetId) return;
+    async function moveNode(params: {
+        srcId: string;
+        decodedDriveId: string;
+        decodedTargetId: string;
+    }) {
+        const { decodedDriveId, srcId, decodedTargetId } = params;
+
+        await _addDriveOperation(
+            decodedDriveId,
+            actions.moveNode({
+                srcFolder: srcId,
+                targetParentFolder: decodedTargetId,
+            }),
+        );
+    }
+
+    async function copyNode(params: {
+        srcId: string;
+        srcName: string;
+        decodedDriveId: string;
+        decodedTargetId: string;
+    }) {
+        const { decodedDriveId, srcId, srcName, decodedTargetId } = params;
+
+        if (srcId === decodedTargetId) return;
 
         const drive = documentDrives.find(
-            drive => drive.state.global.id === driveId,
+            drive => drive.state.global.id === decodedDriveId,
         );
 
-        if (operation === 'copy' && drive) {
-            const targetParentFolder = targetId === '' ? null : targetId;
-            const generateId = () => utils.hashKey();
+        if (!drive) return;
 
-            const copyNodesInput = documentDriveUtils.generateNodesCopy(
-                {
-                    srcId,
-                    targetParentFolder,
-                    ...(targetName && { targetName }),
-                },
-                generateId,
-                drive.state.global.nodes,
+        const targetNode = drive.state.global.nodes.find(
+            node => node.id === decodedTargetId,
+        );
+
+        if (!targetNode) return;
+
+        function getNextCopyNumber(
+            files: string[],
+            baseFilename: string,
+        ): number {
+            let maxNumber = 0; // Start by assuming no copies exist
+
+            // Regex to find files that match the base filename followed by " (copy)" and possibly a number
+            const regex = new RegExp(
+                `^${escapeRegExp(baseFilename)} \\(copy\\)(?: (\\d+))?$`,
             );
 
-            const copyActions = copyNodesInput.map(copyNodeInput =>
-                actions.copyNode(copyNodeInput),
-            );
-
-            const result = await server.addDriveActions(driveId, copyActions);
-            if (result.operations.length) {
-                await refreshDocumentDrives();
-            } else if (result.status !== 'SUCCESS') {
-                console.error(
-                    `Error copying files: ${result.status}`,
-                    result.error,
-                );
+            for (const file of files) {
+                const match = file.match(regex);
+                if (match) {
+                    const number = match[1] ? parseInt(match[1], 10) : 1;
+                    if (number > maxNumber) {
+                        maxNumber = number;
+                    }
+                }
             }
-        } else {
-            await _addDriveOperation(
-                driveId,
-                actions.moveNode({
-                    srcFolder: srcId,
-                    targetParentFolder: targetId,
-                }),
-            );
 
-            if (targetName) {
-                await renameNode(driveId, srcId, targetName);
-            }
+            return maxNumber + 1; // Return the next available number
+        }
+
+        // Helper function to escape any special characters in the filename for use in a regex
+        function escapeRegExp(string: string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+        }
+
+        const targetNodeChildrenNames = drive.state.global.nodes
+            .filter(node => node.parentFolder === decodedTargetId)
+            .map(node => node.name);
+
+        const targetHasNodesWithSameName =
+            targetNodeChildrenNames.includes(srcName);
+
+        const targetName = targetHasNodesWithSameName
+            ? `${srcName} (copy) ${getNextCopyNumber(targetNodeChildrenNames, srcName)}`
+            : srcName;
+
+        const generateId = () => utils.hashKey();
+
+        const copyNodesInput = documentDriveUtils.generateNodesCopy(
+            {
+                srcId,
+                targetParentFolder: decodedTargetId,
+                targetName,
+            },
+            generateId,
+            drive.state.global.nodes,
+        );
+
+        const copyActions = copyNodesInput.map(copyNodeInput =>
+            actions.copyNode(copyNodeInput),
+        );
+
+        const result = await server.addDriveActions(
+            decodedDriveId,
+            copyActions,
+        );
+        if (result.operations.length) {
+            await refreshDocumentDrives();
+        } else if (result.status !== 'SUCCESS') {
+            console.error(
+                `Error copying files: ${result.status}`,
+                result.error,
+            );
         }
     }
 
@@ -418,7 +469,8 @@ export function useDocumentDriveServer(
             addFolder,
             deleteNode,
             renameNode,
-            copyOrMoveNode,
+            moveNode,
+            copyNode,
             addOperation,
             addOperations,
             getChildren,
