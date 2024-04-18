@@ -63,6 +63,8 @@ export type ReducerOptions = {
     skip?: number;
     /** When true the skip count is ignored and the action is applied regardless of the skip count */
     ignoreSkipOperations?: boolean;
+    /** if true reuses the provided action hash  */
+    reuseHash?: boolean;
 };
 
 /**

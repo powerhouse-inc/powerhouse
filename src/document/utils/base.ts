@@ -81,7 +81,7 @@ export function createAction<A extends Action>(
     }
 
     if (typeof type !== 'string') {
-        throw new Error(`Invalid action type: ${type}`);
+        throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
     }
 
     const action: Action = { type, input, scope };
@@ -316,6 +316,9 @@ export function replayOperations<T, A extends Action, L>(
     header?: DocumentHeader,
     documentReducer = baseReducer,
     skipHeaderOperations: SkipHeaderOperations = {},
+    options?: {
+        checkHashes?: boolean;
+    },
 ): Document<T, A, L> {
     // wraps the provided custom reducer with the
     // base document reducer
@@ -328,10 +331,17 @@ export function replayOperations<T, A extends Action, L>(
         dispatch,
         header,
         skipHeaderOperations,
+        options,
     );
 }
 
 export type SkipHeaderOperations = Partial<Record<OperationScope, number>>;
+
+export type ReplayDocumentOptions = {
+    // if false then reuses the hash from the operations
+    // and only checks the final hash of each scope
+    checkHashes?: boolean;
+};
 
 // Runs the operations on the initial data using the
 // provided document reducer.
@@ -343,7 +353,10 @@ export function replayDocument<T, A extends Action, L>(
     dispatch?: SignalDispatch,
     header?: DocumentHeader,
     skipHeaderOperations: SkipHeaderOperations = {},
+    options?: ReplayDocumentOptions,
 ): Document<T, A, L> {
+    const checkHashes = options?.checkHashes ?? true;
+
     // builds a new document from the initial data
     const document = createDocument<T, A, L>(initialState);
 
@@ -372,23 +385,47 @@ export function replayDocument<T, A extends Action, L>(
 
     // runs all the operations not ignored on the new document
     // and returns the resulting state
-    const result = sortMappedOperations(activeOperationsMap).reduce(
-        (document, { ignore, operation }) => {
+    const sortedOperations = sortMappedOperations(activeOperationsMap);
+    const result = sortedOperations.reduce(
+        (document, { ignore, operation }, index, array) => {
             if (ignore) {
                 // ignored operations are replaced by NOOP operations
                 return reducer(document, noop(operation.scope), dispatch, {
                     skip: operation.skip,
                     ignoreSkipOperations: true,
+                    // TODO: reuse hash?
                 });
             }
 
-            return reducer(document, operation, dispatch, {
+            const result = reducer(document, operation, dispatch, {
                 skip: operation.skip,
                 ignoreSkipOperations: true,
+                reuseHash: !checkHashes,
             });
+
+            return result;
         },
         document,
     );
+
+    // if hash generation was skipped then checks if the hash
+    // of each scope matches the hash of last operation
+    if (!checkHashes) {
+        for (const scope of Object.keys(result.state)) {
+            for (let i = sortedOperations.length - 1; i >= 0; i--) {
+                if (sortedOperations[i].operation.scope === scope) {
+                    if (
+                        sortedOperations[i].operation.hash !==
+                        hashDocument(result, scope)
+                    ) {
+                        throw new Error(`Hash mismatch for scope ${scope}`);
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     const resultOperations: DocumentOperations<A> = Object.keys(
         result.operations,
