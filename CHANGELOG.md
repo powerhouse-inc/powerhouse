@@ -1,3 +1,10 @@
+# [1.0.0-alpha.41](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.40...v1.0.0-alpha.41) (2024-04-18)
+
+
+### Features
+
+* updated document-model ([6d2eb8b](https://github.com/powerhouse-inc/document-drive/commit/6d2eb8b6eb35696b84d6dbe4586ec410ff5c61e6))
+
 # [1.0.0-alpha.40](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.39...v1.0.0-alpha.40) (2024-04-18)
 
 
