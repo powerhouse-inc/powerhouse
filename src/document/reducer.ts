@@ -225,7 +225,7 @@ export function baseReducer<T, A extends Action, L>(
     dispatch?: SignalDispatch,
     options: ReducerOptions = {},
 ) {
-    const { skip, ignoreSkipOperations = false } = options;
+    const { skip, ignoreSkipOperations = false, reuseHash = false } = options;
 
     let _action = { ...action };
     let skipValue = skip || 0;
@@ -284,6 +284,7 @@ export function baseReducer<T, A extends Action, L>(
             undefined,
             undefined,
             { [_action.scope]: skipsLeft },
+            // TODO reuse hash?
         );
     }
 
@@ -325,10 +326,16 @@ export function baseReducer<T, A extends Action, L>(
             return draft;
         }
 
-        // updates the last operation with the hash of the resulting state
+        // if reuseHash is true, checks if the action has
+        // an hash and uses it instead of generating it
         const scope = _action.scope || 'global';
-        draft.operations[scope][draft.operations[scope].length - 1].hash =
-            hashDocument(draft, scope);
+        const hash =
+            reuseHash && Object.prototype.hasOwnProperty.call(_action, 'hash')
+                ? (_action as Operation).hash
+                : hashDocument(draft, scope);
+
+        // updates the last operation with the hash of the resulting state
+        draft.operations[scope][draft.operations[scope].length - 1].hash = hash;
 
         // if the action has attachments then adds them to the document
         if (!isBaseAction(_action) && _action.attachments) {

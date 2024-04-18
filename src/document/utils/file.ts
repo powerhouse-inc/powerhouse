@@ -11,7 +11,7 @@ import type {
     Reducer,
 } from '../types';
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
-import { replayDocument } from './base';
+import { replayDocument, ReplayDocumentOptions } from './base';
 import { validateOperations } from './validation';
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
@@ -112,23 +112,26 @@ export const saveToFileHandle = async (
 export const loadFromFile = async <S, A extends Action, L>(
     path: string,
     reducer: Reducer<S, A, L>,
+    options?: ReplayDocumentOptions,
 ) => {
     const file = readFile(path);
-    return loadFromInput(file, reducer);
+    return loadFromInput(file, reducer, options);
 };
 
 export const loadFromInput = async <S, A extends Action, L>(
     input: FileInput,
     reducer: Reducer<S, A, L>,
+    options?: ReplayDocumentOptions,
 ) => {
     const zip = new JSZip();
     await zip.loadAsync(input);
-    return loadFromZip(zip, reducer);
+    return loadFromZip(zip, reducer, options);
 };
 
 async function loadFromZip<S, A extends Action, L>(
     zip: JSZip,
     reducer: Reducer<S, A, L>,
+    options?: ReplayDocumentOptions,
 ) {
     const initialStateZip = zip.file('state.json');
     if (!initialStateZip) {
