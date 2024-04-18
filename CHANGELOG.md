@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.32.0...v1.33.0) (2024-04-18)
+
+
+### Features
+
+* updated document-model dep ([4eb5a03](https://github.com/powerhouse-inc/document-model-libs/commit/4eb5a03df20e4217a28828addba80d2369936c5a))
+
 # [1.32.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.31.0...v1.32.0) (2024-04-18)
 
 
