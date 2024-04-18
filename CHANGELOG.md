@@ -1,3 +1,10 @@
+# [1.0.0-alpha.40](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.39...v1.0.0-alpha.40) (2024-04-18)
+
+
+### Features
+
+* skip hash generation when replaying documents ([697ea35](https://github.com/powerhouse-inc/document-drive/commit/697ea35ae79a6697c8bfd4810a8d28139bf1a01f))
+
 # [1.0.0-alpha.39](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.38...v1.0.0-alpha.39) (2024-04-18)
 
 
