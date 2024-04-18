@@ -122,6 +122,7 @@ function updateOperations<T extends Document>(
         hash: '',
         scope,
         skip,
+        error: undefined,
     });
 
     // adds the action to the operations history with
@@ -298,24 +299,39 @@ export function baseReducer<T, A extends Action, L>(
     newDocument = produce(newDocument, draft => {
         // the reducer runs on a immutable version of
         // provided state
-        const returnedDraft = customReducer(
-            draft.state,
-            _action as A,
-            dispatch,
-        );
-        const clipboardValue = isUndoRedo(action) ? [...clipboard] : [];
 
-        // if the reducer creates a new state object instead
-        // of mutating the draft then returns the new state
-        if (returnedDraft) {
-            // casts new state as draft to comply with typescript
-            return castDraft<Document<T, A, L>>({
-                ...newDocument,
-                clipboard: [...clipboardValue],
-                state: returnedDraft,
-            });
-        } else {
-            draft.clipboard = castDraft([...clipboardValue]);
+        try {
+            const returnedDraft = customReducer(
+                draft.state,
+                _action as A,
+                dispatch,
+            );
+
+            const clipboardValue = isUndoRedo(action) ? [...clipboard] : [];
+
+            // if the reducer creates a new state object instead
+            // of mutating the draft then returns the new state
+            if (returnedDraft) {
+                // casts new state as draft to comply with typescript
+                return castDraft<Document<T, A, L>>({
+                    ...newDocument,
+                    clipboard: [...clipboardValue],
+                    state: returnedDraft,
+                });
+            } else {
+                draft.clipboard = castDraft([...clipboardValue]);
+            }
+        } catch (error) {
+            const lastOperationIndex =
+                newDocument.operations[_action.scope].length - 1;
+            draft.operations[_action.scope][lastOperationIndex].error = (
+                error as Error
+            ).message;
+
+            console.error(
+                `Error thrown in reducer. Action: ${JSON.stringify(_action)}, Error:`,
+                error,
+            );
         }
     });
 

@@ -60,6 +60,7 @@ describe('Local reducer', () => {
                 input: {},
                 hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
                 scope: 'local',
+                error: undefined,
             },
         ]);
         expect(newDocument.operations.global).toStrictEqual([]);
@@ -83,6 +84,7 @@ describe('Local reducer', () => {
                 input: {},
                 hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
                 scope: 'local',
+                error: undefined,
             },
         ]);
 
@@ -119,6 +121,7 @@ describe('Local reducer', () => {
                     skip: 0,
                     scope: 'local',
                     timestamp: new Date().toISOString(),
+                    error: undefined,
                 },
             ],
         });
@@ -254,6 +257,7 @@ describe('Local reducer', () => {
                     skip: 0,
                     scope: 'local',
                     timestamp: new Date().toISOString(),
+                    error: undefined,
                 },
 
                 {
@@ -264,6 +268,7 @@ describe('Local reducer', () => {
                     skip: 0,
                     scope: 'local',
                     timestamp: new Date().toISOString(),
+                    error: undefined,
                 },
             ],
         });
@@ -277,6 +282,7 @@ describe('Local reducer', () => {
         expect(newDocument.operations).toStrictEqual({
             global: [
                 {
+                    error: undefined,
                     hash: 'ch7MNww9+xUYoTgutbGr6VU0GaU=',
                     type: 'LOAD_STATE',
                     input: {

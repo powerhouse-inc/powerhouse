@@ -43,6 +43,7 @@ describe('DocumentModel Class', () => {
                 scope: 'global',
                 type: 'SET_MODEL_ID',
                 timestamp,
+                error: undefined,
             },
         ]);
     });

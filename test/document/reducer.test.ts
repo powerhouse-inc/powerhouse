@@ -4,9 +4,18 @@ import { SET_NAME } from '../../src/document/actions/types';
 import {
     createAction,
     createDocument,
+    createExtendedState,
     createReducer,
 } from '../../src/document/utils';
 import { emptyReducer, wrappedEmptyReducer } from '../helpers';
+import {
+    CountState,
+    CountAction,
+    CountLocalState,
+    countReducer,
+    increment,
+    error,
+} from '../helpers';
 
 describe('Base reducer', () => {
     beforeAll(() => {
@@ -57,6 +66,7 @@ describe('Base reducer', () => {
                 input: {},
                 hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
                 scope: 'global',
+                error: undefined,
             },
         ]);
         expect(newDocument.operations.local).toStrictEqual([]);
@@ -238,5 +248,62 @@ describe('Base reducer', () => {
                 skip: 1,
             },
         ]);
+    });
+
+    it('should not throw errors from reducer', () => {
+        const initialState = createExtendedState<CountState, CountLocalState>({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: {} },
+        });
+
+        let document = createDocument<CountState, CountAction, CountLocalState>(
+            initialState,
+        );
+
+        document = countReducer(document, increment());
+        document = countReducer(document, increment(), undefined, { skip: 1 });
+        document = countReducer(document, error());
+        document = countReducer(document, increment());
+
+        expect(document.state.global.count).toBe(2);
+    });
+
+    it('should include error message into error operation prop', () => {
+        const initialState = createExtendedState<CountState, CountLocalState>({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: {} },
+        });
+
+        let document = createDocument<CountState, CountAction, CountLocalState>(
+            initialState,
+        );
+
+        document = countReducer(document, increment());
+        document = countReducer(document, increment(), undefined, { skip: 1 });
+        document = countReducer(document, error());
+        document = countReducer(document, increment());
+
+        expect(document.operations.global.length).toBe(4);
+        expect(document.operations.global[2].error).toBe('Error action');
+    });
+
+    it('should not include error message in successful operations', () => {
+        const initialState = createExtendedState<CountState, CountLocalState>({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: {} },
+        });
+
+        let document = createDocument<CountState, CountAction, CountLocalState>(
+            initialState,
+        );
+
+        document = countReducer(document, increment());
+        document = countReducer(document, increment());
+        document = countReducer(document, increment());
+
+        expect(document.operations.global.length).toBe(3);
+        for (const operation of document.operations.global) {
+            expect(operation.error).toBeUndefined();
+        }
     });
 });
