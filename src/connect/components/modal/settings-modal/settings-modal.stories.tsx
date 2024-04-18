@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { ClearStorageSettingsRow } from './clear-storage-row';
+import { DependencyVersions } from './dependency-versions';
+import mockPackageJson from './dependency-versions/mock-package-json.json';
 import { DocumentSelectSettingsRow } from './document-select-row';
 import { SettingsModal } from './settings-modal';
 
@@ -55,6 +57,7 @@ export const Primary: Story = {
                     description="Delete previous session data"
                     buttonLabel="Clear Storage"
                 />
+                <DependencyVersions packageJson={mockPackageJson} />
             </>
         ),
     },
