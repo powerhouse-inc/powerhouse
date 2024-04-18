@@ -6,13 +6,13 @@ import {
     decodeID,
     defaultDropdownMenuOptions,
 } from '@powerhousedao/design-system';
-import { FileNode } from 'document-model-libs/document-drive';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
+import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
 import { useModal } from '../modal';
 
@@ -36,6 +36,7 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
     const getDocumentById = useGetDocumentById();
     const { updateNodeName } = useDrivesContainer();
     const { showModal } = useModal();
+    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
 
     const decodedDriveID = decodeID(drive);
     const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);
@@ -56,9 +57,7 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
         }
 
         if (optionId === 'switchboard-link') {
-            const document = getDocumentById(decodedDriveID, fileNode.id) as
-                | FileNode
-                | undefined;
+            const document = getDocumentById(decodedDriveID, fileNode.id);
 
             await openSwitchboardLink(document);
         }
@@ -100,6 +99,7 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
             onClick={() =>
                 !isWriteMode && onFileSelected(decodedDriveID, file.id)
             }
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
         />
     );
 };

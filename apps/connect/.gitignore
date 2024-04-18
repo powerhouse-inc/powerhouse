@@ -63,3 +63,5 @@ out/
 
 # Generated assets
 public/icons.svg
+
+.env.local
