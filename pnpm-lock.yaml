@@ -143,11 +143,11 @@ devDependencies:
     specifier: ^3.12.0
     version: 3.12.0
   document-model:
-    specifier: ^1.0.42
-    version: 1.0.42
+    specifier: ^1.0.48
+    version: 1.0.48
   document-model-editors:
     specifier: ^1.0.1
-    version: 1.0.1(document-model@1.0.42)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2)
+    version: 1.0.1(document-model@1.0.48)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2)
   dspot-powerhouse-components:
     specifier: ^1.1.0
     version: 1.1.0(@emotion/react@11.11.3)(@emotion/styled@11.11.0)(@mui/material@5.15.5)(document-model-libs@1.24.0)(react-dom@18.2.0)(react@18.2.0)
@@ -229,6 +229,9 @@ devDependencies:
   vite-plugin-dts:
     specifier: ^3.8.3
     version: 3.8.3(@types/node@20.11.20)(typescript@5.4.5)(vite@5.2.9)
+  vite-plugin-generate-file:
+    specifier: ^0.1.1
+    version: 0.1.1
   vitest:
     specifier: ^1.2.1
     version: 1.2.1(@types/node@20.11.20)
@@ -3781,7 +3784,7 @@ packages:
       '@types/node': 20.11.20
       arg: 5.0.2
       change-case: 4.1.2
-      document-model: 1.0.42
+      document-model: 1.0.48
       enquirer: 2.4.1
       execa: 8.0.1
       graphql: 16.8.1
@@ -8839,7 +8842,7 @@ packages:
       esutils: 2.0.3
     dev: true
 
-  /document-model-editors@1.0.1(document-model@1.0.42)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2):
+  /document-model-editors@1.0.1(document-model@1.0.48)(react-dom@18.2.0)(react@18.2.0)(storybook@8.0.2):
     resolution: {integrity: sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==}
     peerDependencies:
       document-model: ^1.0.5
@@ -8847,7 +8850,7 @@ packages:
       react-dom: ^18.2.0
       storybook: ^7.0.17
     dependencies:
-      document-model: 1.0.42
+      document-model: 1.0.48
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       storybook: 8.0.2(react-dom@18.2.0)(react@18.2.0)
@@ -8884,8 +8887,8 @@ packages:
       - vitest
     dev: true
 
-  /document-model@1.0.42:
-    resolution: {integrity: sha512-Qp3sWjoruYkz920By46QrZZbNwmdIyGE/h3GY0AMeheRLnuR3ortFs94jHAcl8cCtdcE0FvNSnqGyJzeRcb51w==}
+  /document-model@1.0.48:
+    resolution: {integrity: sha512-Q9QwslTI5FjUw2HMRK5t4K3JIT+QJMvE2zYJ9P+XtrwhN00sfy+joWcj/uj5AGANnIJtgY7NJNaH46upbbpQMg==}
     dependencies:
       change-case: 5.4.3
       immer: 10.0.3
@@ -15179,6 +15182,15 @@ packages:
       - '@types/node'
       - rollup
       - supports-color
+    dev: true
+
+  /vite-plugin-generate-file@0.1.1:
+    resolution: {integrity: sha512-V1TsLEXlrRiMZognzZqE3cgAHTJwQ84aE45gTR0Hhel6ROTQQU1i7qRbuyBqZI7QC4fUYLhugdaLPpaDpkB2pA==}
+    dependencies:
+      ejs: 3.1.9
+      js-yaml: 4.1.0
+      mime-types: 2.1.35
+      picocolors: 1.0.0
     dev: true
 
   /vite@5.2.9(@types/node@20.11.20):
