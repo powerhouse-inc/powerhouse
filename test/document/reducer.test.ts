@@ -66,6 +66,7 @@ describe('Base reducer', () => {
                 input: {},
                 hash: 'vyGp6PvFo4RvsFtPoIWeCReyIC8=',
                 scope: 'global',
+                error: undefined,
             },
         ]);
         expect(newDocument.operations.local).toStrictEqual([]);
