@@ -356,7 +356,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const documentId = node.id;
         const document = await this.getDocument(driveId, documentId);
         const operations = document.operations[scope as OperationScope] ?? [];
-        const lastOperation = operations.pop();
+        const lastOperation = operations[operations.length - 1];
 
         return {
             syncId,
