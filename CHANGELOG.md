@@ -1,3 +1,10 @@
+# [1.0.0-alpha.99](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.98...v1.0.0-alpha.99) (2024-04-19)
+
+
+### Features
+
+* add missing export ([f96f54b](https://github.com/powerhouse-inc/design-system/commit/f96f54b64c1da6d9a2a2c7448cfacb75b22d9103))
+
 # [1.0.0-alpha.98](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.97...v1.0.0-alpha.98) (2024-04-18)
 
 
