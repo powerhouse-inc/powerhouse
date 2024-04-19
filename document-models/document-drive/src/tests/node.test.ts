@@ -149,7 +149,9 @@ describe('Node Operations', () => {
                     targetParentFolder: '3',
                 }),
             );
-        }).toThrowError('Cannot move a folder to one of its descendants');
+        }).toThrowError(
+            'Circular Reference Error: Cannot move a folder to one of its descendants',
+        );
     });
     it('should not allow making folder its own parent', () => {
         // Mock data setup
@@ -169,6 +171,8 @@ describe('Node Operations', () => {
                     targetParentFolder: '1',
                 }),
             );
-        }).toThrowError('Cannot make folder its own parent');
+        }).toThrowError(
+            'Circular Reference Error: Cannot make folder its own parent',
+        );
     });
 });

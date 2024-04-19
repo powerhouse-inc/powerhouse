@@ -188,7 +188,9 @@ export const reducer: DocumentDriveNodeOperations = {
 
         if (isFolderNode(node)) {
             if (action.input.srcFolder === action.input.targetParentFolder) {
-                throw new Error('Cannot make folder its own parent');
+                throw new Error(
+                    'Circular Reference Error: Cannot make folder its own parent',
+                );
             }
             const descendants = getDescendants(node, state.nodes);
             // throw error if moving a folder to one of its descendants
@@ -199,7 +201,7 @@ export const reducer: DocumentDriveNodeOperations = {
                 )
             ) {
                 throw new Error(
-                    'Cannot move a folder to one of its descendants',
+                    'Circular Reference Error: Cannot move a folder to one of its descendants',
                 );
             }
         }
