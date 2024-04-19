@@ -9,7 +9,7 @@ import {
     useItemActions,
     useItemsContext,
 } from '@powerhousedao/design-system';
-import { FileNode, isFileNode } from 'document-model-libs/document-drive';
+import { isFileNode } from 'document-model-libs/document-drive';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
 import { useEffect, useState } from 'react';
@@ -25,6 +25,7 @@ import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
+import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useNavigateToItemId } from 'src/hooks/useNavigateToItemId';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
 import { useFileNodeDocument, useSelectedPath } from 'src/store/document-drive';
@@ -73,6 +74,7 @@ const Content = () => {
     const getDocumentModel = useGetDocumentModel();
     const { onSubmitInput } = useDrivesContainer();
     const navigateToItemId = useNavigateToItemId();
+    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
 
     const driveNodes = documentDrives.find(
         drive => drive.state.global.id === decodedDriveID,
@@ -276,10 +278,7 @@ const Content = () => {
     };
 
     const onOpenSwitchboardLink = async () => {
-        const doc = getDocumentById(
-            decodedDriveID,
-            selectedFileNode?.id || '',
-        ) as FileNode | undefined;
+        const doc = getDocumentById(decodedDriveID, selectedFileNode?.id || '');
 
         await openSwitchboardLink(doc);
     };
@@ -312,6 +311,9 @@ const Content = () => {
                                 onAddNewItem={() => undefined}
                                 onSubmitInput={submitNewFolderAndSelect}
                                 onCancelInput={console.log}
+                                isAllowedToCreateDocuments={
+                                    isAllowedToCreateDocuments
+                                }
                             />
                         )}
                         {connectConfig.content.showSearchBar && <SearchBar />}
@@ -327,27 +329,34 @@ const Content = () => {
                                     onFileDeleted={deleteNode}
                                 />
                             </div>
-                            <h3 className="mb-3 mt-4 text-xl font-bold text-gray-600">
-                                New document
-                            </h3>
-                            <div className="flex w-full flex-wrap gap-4">
-                                {documentModels.map(doc => (
-                                    <Button
-                                        key={doc.documentModel.id}
-                                        aria-details={
-                                            doc.documentModel.description
-                                        }
-                                        className="bg-gray-200 text-slate-800"
-                                        onClick={() => createDocument(doc)}
-                                    >
-                                        <span className="text-sm">
-                                            {getDocumentModelName(
-                                                doc.documentModel.name,
-                                            )}
-                                        </span>
-                                    </Button>
-                                ))}
-                            </div>
+                            {isAllowedToCreateDocuments && (
+                                <>
+                                    <h3 className="mb-3 mt-4 text-xl font-bold text-gray-600">
+                                        New document
+                                    </h3>
+                                    <div className="flex w-full flex-wrap gap-4">
+                                        {documentModels.map(doc => (
+                                            <Button
+                                                key={doc.documentModel.id}
+                                                aria-details={
+                                                    doc.documentModel
+                                                        .description
+                                                }
+                                                className="bg-gray-200 text-slate-800"
+                                                onClick={() =>
+                                                    createDocument(doc)
+                                                }
+                                            >
+                                                <span className="text-sm">
+                                                    {getDocumentModelName(
+                                                        doc.documentModel.name,
+                                                    )}
+                                                </span>
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </>
