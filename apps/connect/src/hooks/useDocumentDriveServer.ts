@@ -282,35 +282,6 @@ export function useDocumentDriveServer(
 
         if (!targetNode) return;
 
-        function getNextCopyNumber(
-            files: string[],
-            baseFilename: string,
-        ): number {
-            let maxNumber = 0; // Start by assuming no copies exist
-
-            // Regex to find files that match the base filename followed by " (copy)" and possibly a number
-            const regex = new RegExp(
-                `^${escapeRegExp(baseFilename)} \\(copy\\)(?: (\\d+))?$`,
-            );
-
-            for (const file of files) {
-                const match = file.match(regex);
-                if (match) {
-                    const number = match[1] ? parseInt(match[1], 10) : 1;
-                    if (number > maxNumber) {
-                        maxNumber = number;
-                    }
-                }
-            }
-
-            return maxNumber + 1; // Return the next available number
-        }
-
-        // Helper function to escape any special characters in the filename for use in a regex
-        function escapeRegExp(string: string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-        }
-
         const targetNodeChildrenNames = drive.state.global.nodes
             .filter(node => node.parentFolder === decodedTargetId)
             .map(node => node.name);
@@ -533,4 +504,33 @@ export function useDocumentDriveServer(
         }),
         [documentDrives],
     );
+}
+
+function getNextCopyNumber(
+    files: string[],
+    baseFilename: string,
+): number {
+    let maxNumber = 0; // Start by assuming no copies exist
+
+    // Regex to find files that match the base filename followed by " (copy)" and possibly a number
+    const regex = new RegExp(
+        `^${escapeRegExp(baseFilename)} \\(copy\\)(?: (\\d+))?$`,
+    );
+
+    for (const file of files) {
+        const match = file.match(regex);
+        if (match) {
+            const number = match[1] ? parseInt(match[1], 10) : 1;
+            if (number > maxNumber) {
+                maxNumber = number;
+            }
+        }
+    }
+
+    return maxNumber + 1; // Return the next available number
+}
+
+// Helper function to escape any special characters in the filename for use in a regex
+function escapeRegExp(string: string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
