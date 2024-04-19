@@ -44,9 +44,13 @@ export const useGetDocumentModel = () => {
  * @returns {Array<DocumentModel>} The filtered document models.
  */
 export const useFilteredDocumentModels = () => {
-    const documentModels = useDocumentModels();
+    const _documentModels = useDocumentModels();
     const { config } = useFeatureFlag();
     const { enabledEditors, disabledEditors } = config.editors;
+
+    const documentModels = _documentModels.filter(
+        model => model.documentModel.id !== 'powerhouse/document-drive',
+    );
 
     if (enabledEditors === '*') {
         return documentModels;
