@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 import { driveSections } from 'src/utils/drive-sections';
 
@@ -31,6 +32,7 @@ export default function DriveContainer(props: DriveContainerProps) {
     const { addDrive, addRemoteDrive } = useDocumentDriveServer();
     const { onItemOptionsClick, onItemClick, onSubmitInput } =
         useDrivesContainer();
+    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
 
     const onDropEvent = useOnDropEvent();
 
@@ -149,6 +151,7 @@ export default function DriveContainer(props: DriveContainerProps) {
                         onDropActivate={onDropActivateHandler}
                         onCreateDrive={onCreateDriveHandler}
                         disableHighlightStyles={disableHoverStyles}
+                        isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                     />
                 ),
             )}
