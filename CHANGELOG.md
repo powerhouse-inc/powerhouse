@@ -1,3 +1,11 @@
+# [1.36.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.35.0...v1.36.0) (2024-04-19)
+
+
+### Features
+
+* added separate bundles for es and cjs ([4ffb17f](https://github.com/powerhouse-inc/document-model-libs/commit/4ffb17f37692da9d4a65885385948e175a5604b3))
+* changed document-model to dependency ([43f8033](https://github.com/powerhouse-inc/document-model-libs/commit/43f8033477af17d29a0aaa826ee6a33b49a24207))
+
 # [1.35.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.34.0...v1.35.0) (2024-04-19)
 
 
