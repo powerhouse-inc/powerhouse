@@ -904,7 +904,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             }
 
             if (document) {
-                this.cache.setDocument(drive, id, document);
+                this.cache.setDocument(drive, id, document).catch(logger.error);
             } else {
                 logger.warn("Successfully applied operations but no document returned");
             }
@@ -1078,7 +1078,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             }
 
             if (document) {
-                this.cache.setDocument("drives", drive, document);
+                this.cache.setDocument("drives", drive, document).catch(logger.error);;
             } else {
                 logger.warn("Successfully applied operations but no drive returned");
             }
