@@ -1,3 +1,10 @@
+# [1.0.0-alpha.42](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.41...v1.0.0-alpha.42) (2024-04-19)
+
+
+### Features
+
+* trigger release ([a99370f](https://github.com/powerhouse-inc/document-drive/commit/a99370fbfea65bbc20f3fc3c39f0a26087795603))
+
 # [1.0.0-alpha.41](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.40...v1.0.0-alpha.41) (2024-04-18)
 
 
