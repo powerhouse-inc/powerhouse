@@ -1,3 +1,10 @@
+# [1.35.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.34.0...v1.35.0) (2024-04-19)
+
+
+### Features
+
+* added circular reference error clarification ([#134](https://github.com/powerhouse-inc/document-model-libs/issues/134)) ([191bfe1](https://github.com/powerhouse-inc/document-model-libs/commit/191bfe1acb2d60b73969779e249e4394957bcd7c))
+
 # [1.34.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.33.0...v1.34.0) (2024-04-18)
 
 
