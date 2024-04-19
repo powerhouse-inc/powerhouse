@@ -1,3 +1,10 @@
+# [1.0.0-alpha.43](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.42...v1.0.0-alpha.43) (2024-04-19)
+
+
+### Features
+
+* fixed array access error ([ed1a3a9](https://github.com/powerhouse-inc/document-drive/commit/ed1a3a953a0a52d629eb8a69f83ce18b976076af))
+
 # [1.0.0-alpha.42](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.41...v1.0.0-alpha.42) (2024-04-19)
 
 
