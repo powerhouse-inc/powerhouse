@@ -118,7 +118,7 @@ describe('Drive operations', () => {
         );
         expect(result.status).toBe('ERROR');
         expect(result.error?.message).toBe(
-            'Operation with index 2:0 was not applied.'
+            'Missing operations: expected 1 with skip 0 or equivalent, got index 2 with skip 0'
         );
     });
 
@@ -148,7 +148,7 @@ describe('Drive operations', () => {
 
         expect(result.status).toBe('ERROR');
         expect(result.error?.message).toBe(
-            'Operation with index 4:0 was not applied.'
+            'Missing operations: expected 3 with skip 0 or equivalent, got index 4 with skip 0'
         );
         expect(result.operations.length).toBe(3);
 

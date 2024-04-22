@@ -855,6 +855,10 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 };
             });
 
+            if (document) {
+                this.cache.setDocument(drive, id, document).catch(logger.error);
+            }
+
             // gets all the different scopes and branches combinations from the operations
             const { scopes, branches } = [
                 ...operationsApplied,
@@ -901,12 +905,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             // an error if there was an invalid operation
             if (error) {
                 throw error;
-            }
-
-            if (document) {
-                this.cache.setDocument(drive, id, document).catch(logger.error);
-            } else {
-                logger.warn("Successfully applied operations but no document returned");
             }
 
             return {
@@ -1013,6 +1011,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 throw error ?? new Error('Invalid Document Drive document');
             }
 
+            this.cache.setDocument("drives", drive, document).catch(logger.error);
+
             for (const operation of operationsApplied) {
                 switch (operation.type) {
                     case 'ADD_LISTENER': {
@@ -1075,12 +1075,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             // an error if there was an invalid operation
             if (error) {
                 throw error;
-            }
-
-            if (document) {
-                this.cache.setDocument("drives", drive, document).catch(logger.error);;
-            } else {
-                logger.warn("Successfully applied operations but no drive returned");
             }
 
             return {
