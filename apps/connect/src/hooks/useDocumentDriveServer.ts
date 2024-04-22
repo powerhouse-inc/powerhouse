@@ -276,12 +276,6 @@ export function useDocumentDriveServer(
 
         if (!drive) return;
 
-        const targetNode = drive.state.global.nodes.find(
-            node => node.id === decodedTargetId,
-        );
-
-        if (!targetNode) return;
-
         const targetNodeChildrenNames = drive.state.global.nodes
             .filter(node => node.parentFolder === decodedTargetId)
             .map(node => node.name);
