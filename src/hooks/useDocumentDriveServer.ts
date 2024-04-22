@@ -277,8 +277,16 @@ export function useDocumentDriveServer(
         if (!drive) return;
 
         const targetNodeChildrenNames = drive.state.global.nodes
-            .filter(node => node.parentFolder === decodedTargetId)
+            .filter(node =>
+                decodedTargetId === ''
+                    ? node.parentFolder === null
+                    : node.parentFolder === decodedTargetId,
+            )
             .map(node => node.name);
+
+        console.log(drive.state.global.nodes, decodedTargetId);
+
+        console.log({ targetNodeChildrenNames });
 
         const targetHasNodesWithSameName =
             targetNodeChildrenNames.includes(srcName);
@@ -500,10 +508,7 @@ export function useDocumentDriveServer(
     );
 }
 
-function getNextCopyNumber(
-    files: string[],
-    baseFilename: string,
-): number {
+function getNextCopyNumber(files: string[], baseFilename: string): number {
     let maxNumber = 0; // Start by assuming no copies exist
 
     // Regex to find files that match the base filename followed by " (copy)" and possibly a number
