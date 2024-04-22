@@ -74,7 +74,8 @@ export function useDrivesContainer() {
         setDriveAvailableOffline,
         setDriveSharingType,
         documentDrives,
-        copyOrMoveNode,
+        copyNode,
+        moveNode,
         getSyncStatus,
     } = useDocumentDriveServer();
 
@@ -198,40 +199,49 @@ export function useDrivesContainer() {
         await renameNode(decodedDriveID, item.id, item.label);
     }
 
-    const onSubmitInput = (item: TreeItem, onCancel?: () => void) => {
-        const driveID = item.path.split('/')[0];
+    const onSubmitInput = async (item: TreeItem, onCancel?: () => void) => {
+        const driveId = getRootPath(item.path);
 
-        if (item.action === 'NEW') {
+        const isCreateNewOperation = item.action === 'NEW';
+        const isMoveOperation = item.action === 'UPDATE_AND_MOVE';
+        const isCopyOperation = item.action === 'UPDATE_AND_COPY';
+
+        if (isCreateNewOperation) {
             actions.deleteVirtualItem(item.id);
-            addNewFolder(item, driveID, onCancel);
+            await addNewFolder(item, driveId, onCancel);
             return;
         }
 
-        if (
-            item.action === 'UPDATE_AND_COPY' ||
-            item.action === 'UPDATE_AND_MOVE'
-        ) {
-            actions.deleteVirtualItem(item.id);
+        const srcId = item.id;
+        const srcName = item.label;
+        const targetPath = path.dirname(item.path);
+        let targetId = targetPath.split('/').pop() ?? '';
 
-            const driveID = getRootPath(item.path);
-            const srcID = item.id.replace('(from)', '');
-            const targetPath = path.dirname(item.path);
-            const operation =
-                item.action === 'UPDATE_AND_COPY' ? 'copy' : 'move';
+        if (targetId === driveId || targetId == '.') {
+            targetId = '';
+        }
 
-            let targetId = targetPath.split('/').pop() ?? '';
+        const decodedDriveId = decodeID(driveId);
+        const decodedTargetId = decodeID(targetId);
 
-            if (targetId === driveID || targetId == '.') {
-                targetId = '';
-            }
+        if (isMoveOperation) {
+            await moveNode({
+                decodedDriveId,
+                srcId,
+                decodedTargetId,
+            });
 
-            copyOrMoveNode(
-                decodeID(driveID),
-                srcID,
-                decodeID(targetId),
-                operation,
-                item.label,
-            );
+            return;
+        }
+
+        if (isCopyOperation) {
+            await copyNode({
+                decodedDriveId,
+                srcId,
+                decodedTargetId,
+                srcName,
+            });
+
             return;
         }
 
@@ -242,7 +252,7 @@ export function useDrivesContainer() {
             return;
         }
 
-        updateNodeName(item, driveID);
+        await updateNodeName(item, driveId);
     };
 
     async function driveToBaseItems(drive: DocumentDriveDocument) {
