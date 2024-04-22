@@ -360,36 +360,26 @@ export function replayDocument<T, A extends Action, L>(
     // builds a new document from the initial data
     const document = createDocument<T, A, L>(initialState);
 
-    // removes undone operations from global scope
-    const activeOperations = Object.keys(operations).reduce((acc, curr) => {
+    // removes skipped operations from each scope
+    const activeOperationsMap = Object.keys(operations).reduce((acc, curr) => {
         const scope = curr as keyof DocumentOperations<A>;
         return {
             ...acc,
-            [scope]: operations[scope].slice(0, header?.revision[scope]),
+            [scope]: mapSkippedOperations(
+                operations[scope],
+                skipHeaderOperations[scope],
+            ),
         };
-    }, {} as DocumentOperations<A>);
-
-    const activeOperationsMap = Object.keys(activeOperations).reduce(
-        (acc, curr) => {
-            const scope = curr as keyof DocumentOperations<A>;
-            return {
-                ...acc,
-                [scope]: mapSkippedOperations(
-                    activeOperations[scope],
-                    skipHeaderOperations[scope],
-                ),
-            };
-        },
-        {} as DocumentOperationsIgnoreMap<A>,
-    );
+    }, {} as DocumentOperationsIgnoreMap<A>);
 
     // runs all the operations not ignored on the new document
     // and returns the resulting state
     const sortedOperations = sortMappedOperations(activeOperationsMap);
     const result = sortedOperations.reduce(
-        (document, { ignore, operation }, index, array) => {
+        (document, { ignore, operation }) => {
             if (ignore) {
                 // ignored operations are replaced by NOOP operations
+                // TODO insert last valid operation hash and reuse it
                 return reducer(document, noop(operation.scope), dispatch, {
                     skip: operation.skip,
                     ignoreSkipOperations: true,
@@ -413,29 +403,26 @@ export function replayDocument<T, A extends Action, L>(
     if (!checkHashes) {
         for (const scope of Object.keys(result.state)) {
             for (let i = sortedOperations.length - 1; i >= 0; i--) {
-                if (sortedOperations[i].operation.scope === scope) {
-                    if (
-                        sortedOperations[i].operation.hash !==
-                        hashDocument(result, scope)
-                    ) {
-                        throw new Error(`Hash mismatch for scope ${scope}`);
-                    } else {
-                        break;
-                    }
+                const { ignore, operation } = sortedOperations[i];
+
+                if (ignore || operation.scope !== scope) {
+                    continue;
+                }
+                if (operation.hash !== hashDocument(result, scope)) {
+                    throw new Error(`Hash mismatch for scope ${scope}`);
+                } else {
+                    break;
                 }
             }
         }
     }
 
+    // reuses operation timestamp if provided
     const resultOperations: DocumentOperations<A> = Object.keys(
         result.operations,
     ).reduce(
         (acc, key) => {
             const scope = key as keyof DocumentOperations<A>;
-            const undoneOperations =
-                header && header.revision[scope] < operations[scope].length
-                    ? operations[scope].slice(header.revision[scope])
-                    : [];
             return {
                 ...acc,
                 [scope]: [
@@ -447,19 +434,16 @@ export function replayDocument<T, A extends Action, L>(
                                 operation.timestamp,
                         };
                     }),
-                    ...undoneOperations,
                 ],
             };
         },
         { global: [], local: [] },
     );
-
     // gets the last modified timestamp from the latest operation
     const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
-        for (const operation of curr) {
-            if (operation.timestamp > acc) {
-                acc = operation.timestamp;
-            }
+        const operation = curr[curr.length - 1];
+        if (operation?.timestamp > acc) {
+            acc = operation.timestamp;
         }
         return acc;
     }, initialState.lastModified);
