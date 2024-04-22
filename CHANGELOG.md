@@ -1,3 +1,10 @@
+# [1.0.0-alpha.100](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.99...v1.0.0-alpha.100) (2024-04-22)
+
+
+### Features
+
+* move libs to dependency in package json type ([b3e8d5d](https://github.com/powerhouse-inc/design-system/commit/b3e8d5d986fead392e67b17c6d98d561fa4dd047))
+
 # [1.0.0-alpha.99](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.98...v1.0.0-alpha.99) (2024-04-19)
 
 
