@@ -219,9 +219,16 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     async initialize() {
+        const errors: Error[] = [];
         const drives = await this.getDrives();
         for (const drive of drives) {
-            await this._initializeDrive(drive);
+            await this._initializeDrive(drive).catch(error => {
+                logger.error(
+                    `Error initializing drive ${drive}`,
+                    error
+                );
+                errors.push(error as Error);
+            });
         }
 
         // if network connect comes online then
@@ -238,6 +245,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
             });
         }
+
+        return errors.length === 0 ? null : errors;
     }
 
     private async _initializeDrive(driveId: string) {
