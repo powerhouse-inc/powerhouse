@@ -1,3 +1,10 @@
+# [1.0.0-alpha.44](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.43...v1.0.0-alpha.44) (2024-04-22)
+
+
+### Features
+
+* cache updated document as soon as possible ([0b3327c](https://github.com/powerhouse-inc/document-drive/commit/0b3327cea01b508e0c07f05dee7fdcb4a6aaea35))
+
 # [1.0.0-alpha.43](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.42...v1.0.0-alpha.43) (2024-04-19)
 
 
