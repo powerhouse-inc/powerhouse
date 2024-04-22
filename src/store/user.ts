@@ -1,12 +1,19 @@
-import { useEffect, useState } from 'react';
+import { atom, useAtom } from 'jotai';
+import { useEffect } from 'react';
 import { useRenown } from 'src/hooks/useRenown';
 import type { User } from 'src/services/renown/types';
 
+let userInit = false;
+
+const userAtom = atom<User | undefined>(undefined);
+
 export const useUser = () => {
-    const [user, setUser] = useState<User | undefined>(undefined);
+    const [user, setUser] = useAtom(userAtom);
     const renown = useRenown();
 
     useEffect(() => {
+        if (userInit) return;
+        userInit = true;
         renown
             ?.user()
             .then(user => {
@@ -20,8 +27,11 @@ export const useUser = () => {
             setUser(user);
         });
 
-        return unsub;
-    }, [renown]);
+        return () => {
+            unsub?.();
+            userInit = false;
+        };
+    }, [renown, userInit]);
 
     return user;
 };
