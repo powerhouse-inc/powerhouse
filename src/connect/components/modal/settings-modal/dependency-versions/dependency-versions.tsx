@@ -7,8 +7,6 @@ export type ConnectAppPackageJson = {
         '@powerhousedao/design-system': string;
         'document-drive': string;
         'document-model': string;
-    };
-    devDependencies: {
         'document-model-libs': string;
     };
 };
@@ -63,10 +61,10 @@ export function verifyPackageJsonFields(
         throw new Error('Invalid document-model dependency');
     }
     if (
-        !('document-model-libs' in packageJson.devDependencies) ||
-        typeof packageJson.devDependencies['document-model-libs'] !== 'string'
+        !('document-model-libs' in packageJson.dependencies) ||
+        typeof packageJson.dependencies['document-model-libs'] !== 'string'
     ) {
-        throw new Error('Invalid document-model-libs devDependency');
+        throw new Error('Invalid document-model-libs dependency');
     }
 }
 
@@ -116,7 +114,7 @@ export function DependencyVersions(props: Props) {
                 <li className="my-1 flex justify-between pr-1">
                     <span>document-model-libs:</span>{' '}
                     <span className="font-medium">
-                        {packageJson.devDependencies['document-model-libs']}
+                        {packageJson.dependencies['document-model-libs']}
                     </span>
                 </li>
             </ul>
