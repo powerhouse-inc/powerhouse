@@ -1,13 +1,15 @@
+import { DocumentDriveAction } from 'document-model-libs/document-drive';
 import {
     Action,
+    BaseAction,
     Document,
     NOOPAction,
     Operation,
     Reducer
 } from 'document-model/document';
 import { DocumentModelDocument } from 'document-model/document-model';
-import { DocumentDriveServer } from '../src';
 import { ExpectStatic } from 'vitest';
+import { DocumentDriveServer } from '../src';
 
 export function expectUUID(expect: ExpectStatic): unknown {
     return expect.stringMatching(
@@ -92,7 +94,7 @@ export class BasicClient {
         private document: Document<any, any, any>,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         private reducer: Reducer<any, any, any>
-    ) { }
+    ) {}
 
     getDocument() {
         return this.document;
@@ -139,6 +141,83 @@ export class BasicClient {
     }
 
     dispatchDocumentAction(action: Action) {
+        const result = buildOperationAndDocument(
+            this.reducer,
+            this.document,
+            action
+        );
+
+        this.document = { ...result.document };
+        this.unsyncedOperations.push({ ...result.operation });
+
+        return result;
+    }
+}
+
+export class DriveBasicClient {
+    private unsyncedOperations: Operation<DocumentDriveAction | BaseAction>[] =
+        [];
+
+    constructor(
+        private server: DocumentDriveServer,
+        private driveId: string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        private document: Document<any, any, any>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        private reducer: Reducer<any, any, any>
+    ) {}
+
+    getDocument() {
+        return this.document;
+    }
+
+    getUnsyncedOperations() {
+        return this.unsyncedOperations;
+    }
+
+    setUnsyncedOperations(
+        operations: Operation<DocumentDriveAction | BaseAction>[]
+    ) {
+        this.unsyncedOperations = operations;
+    }
+
+    clearUnsyncedOperations() {
+        this.unsyncedOperations = [];
+    }
+
+    async pushOperationsToServer() {
+        const result = await this.server.addDriveOperations(
+            this.driveId,
+            this.unsyncedOperations
+        );
+
+        if (result.status === 'SUCCESS') {
+            this.unsyncedOperations = [];
+        }
+
+        return result;
+    }
+
+    async syncDocument() {
+        this.clearUnsyncedOperations();
+
+        const remoteDocument = await this.server.getDrive(this.driveId);
+
+        const remoteDocumentOperations = Object.values(
+            remoteDocument.operations
+        ).flat();
+
+        const result = await this.server._processOperations(
+            this.driveId,
+            this.document,
+            remoteDocumentOperations
+        );
+
+        this.document = result.document;
+        return this.document;
+    }
+
+    dispatchDriveAction(action: Action) {
         const result = buildOperationAndDocument(
             this.reducer,
             this.document,

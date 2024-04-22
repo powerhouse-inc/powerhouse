@@ -483,11 +483,14 @@ export function removeExistingOperations(
     return newOperations.filter(newOperation => {
         return !operationsHistory.some(historyOperation => {
             return (
-                newOperation.index === historyOperation.index &&
-                newOperation.skip === historyOperation.skip &&
-                newOperation.scope === historyOperation.scope &&
-                newOperation.hash === historyOperation.hash &&
-                newOperation.type === historyOperation.type
+                (newOperation.type === 'NOOP' &&
+                    newOperation.skip === 0 &&
+                    newOperation.index === historyOperation.index) ||
+                (newOperation.index === historyOperation.index &&
+                    newOperation.skip === historyOperation.skip &&
+                    newOperation.scope === historyOperation.scope &&
+                    newOperation.hash === historyOperation.hash &&
+                    newOperation.type === historyOperation.type)
             );
         });
     });

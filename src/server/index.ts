@@ -22,6 +22,8 @@ import {
     OperationScope
 } from 'document-model/document';
 import { createNanoEvents, Unsubscribe } from 'nanoevents';
+import { ICache } from '../cache';
+import InMemoryCache from '../cache/memory';
 import { MemoryStorage } from '../storage/memory';
 import type {
     DocumentDriveStorage,
@@ -66,8 +68,6 @@ import {
     type SynchronizationUnit
 } from './types';
 import { filterOperationsByRevision } from './utils';
-import { ICache } from '../cache';
-import InMemoryCache from '../cache/memory';
 
 export * from './listener';
 export type * from './types';
@@ -127,16 +127,16 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const result = await (!strand.documentId
             ? this.addDriveOperations(
-                strand.driveId,
-                operations as Operation<DocumentDriveAction | BaseAction>[],
-                false
-            )
+                  strand.driveId,
+                  operations as Operation<DocumentDriveAction | BaseAction>[],
+                  false
+              )
             : this.addOperations(
-                strand.driveId,
-                strand.documentId,
-                operations,
-                false
-            ));
+                  strand.driveId,
+                  strand.documentId,
+                  operations,
+                  false
+              ));
 
         if (result.status === 'ERROR') {
             this.updateSyncStatus(strand.driveId, result.status, result.error);
@@ -223,26 +223,23 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const drives = await this.getDrives();
         for (const drive of drives) {
             await this._initializeDrive(drive).catch(error => {
-                logger.error(
-                    `Error initializing drive ${drive}`,
-                    error
-                );
+                logger.error(`Error initializing drive ${drive}`, error);
                 errors.push(error as Error);
             });
         }
 
         // if network connect comes online then
         // triggers the listeners update
-        if (typeof window !== "undefined") {
+        if (typeof window !== 'undefined') {
             window.addEventListener('online', () => {
-                this.listenerStateManager.triggerUpdate(false,
-                    this.handleListenerError.bind(this)).catch(error => {
+                this.listenerStateManager
+                    .triggerUpdate(false, this.handleListenerError.bind(this))
+                    .catch(error => {
                         logger.error(
                             'Non handled error updating listeners',
                             error
                         );
                     });
-
             });
         }
 
@@ -307,14 +304,14 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             const nodeUnits =
                 scope?.length || branch?.length
                     ? node.synchronizationUnits.filter(
-                        unit =>
-                            (!scope?.length ||
-                                scope.includes(unit.scope) ||
-                                scope.includes('*')) &&
-                            (!branch?.length ||
-                                branch.includes(unit.branch) ||
-                                branch.includes('*'))
-                    )
+                          unit =>
+                              (!scope?.length ||
+                                  scope.includes(unit.scope) ||
+                                  scope.includes('*')) &&
+                              (!branch?.length ||
+                                  branch.includes(unit.branch) ||
+                                  branch.includes('*'))
+                      )
                     : node.synchronizationUnits;
             if (!nodeUnits.length) {
                 continue;
@@ -325,7 +322,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 : this.getDrive(driveId));
 
             for (const { syncId, scope, branch } of nodeUnits) {
-                const operations = document.operations[scope as OperationScope] ?? [];
+                const operations =
+                    document.operations[scope as OperationScope] ?? [];
                 const lastOperation = operations[operations.length - 1];
                 synchronizationUnits.push({
                     syncId,
@@ -492,7 +490,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     async getDrive(drive: string, options?: GetDocumentOptions) {
         try {
-            const document = await this.cache.getDocument("drives", drive);
+            const document = await this.cache.getDocument('drives', drive);
             if (document && isDocumentDrive(document)) {
                 return document;
             }
@@ -518,7 +516,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 `Document with id ${drive} is not a Document Drive`
             );
         } else {
-            this.cache.setDocument("drives", drive, document).catch(logger.error);
+            this.cache
+                .setDocument('drives', drive, document)
+                .catch(logger.error);
             return document;
         }
     }
@@ -600,6 +600,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 storageDocumentOperations
             );
 
+            // No operations to apply
+            if (branch.length < 1) {
+                continue;
+            }
+
             const trunk = garbageCollect(
                 sortOperations(storageDocumentOperations)
             );
@@ -663,11 +668,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                         e instanceof OperationError
                             ? e
                             : new OperationError(
-                                'ERROR',
-                                nextOperation,
-                                (e as Error).message,
-                                (e as Error).cause
-                            );
+                                  'ERROR',
+                                  nextOperation,
+                                  (e as Error).message,
+                                  (e as Error).cause
+                              );
 
                     // TODO: don't break on errors...
                     break;
@@ -707,9 +712,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         operation: Operation,
         skipHashValidation = false
     ) {
-        const documentModel = this._getDocumentModel(
-            document.documentType
-        );
+        const documentModel = this._getDocumentModel(document.documentType);
 
         const signalResults: SignalResult[] = [];
         let newDocument = document;
@@ -927,11 +930,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 error instanceof OperationError
                     ? error
                     : new OperationError(
-                        'ERROR',
-                        undefined,
-                        (error as Error).message,
-                        (error as Error).cause
-                    );
+                          'ERROR',
+                          undefined,
+                          (error as Error).message,
+                          (error as Error).cause
+                      );
 
             return {
                 status: operationError.status,
@@ -1020,7 +1023,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 throw error ?? new Error('Invalid Document Drive document');
             }
 
-            this.cache.setDocument("drives", drive, document).catch(logger.error);
+            this.cache
+                .setDocument('drives', drive, document)
+                .catch(logger.error);
 
             for (const operation of operationsApplied) {
                 switch (operation.type) {
@@ -1097,11 +1102,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 error instanceof OperationError
                     ? error
                     : new OperationError(
-                        'ERROR',
-                        undefined,
-                        (error as Error).message,
-                        (error as Error).cause
-                    );
+                          'ERROR',
+                          undefined,
+                          (error as Error).message,
+                          (error as Error).cause
+                      );
 
             return {
                 status: operationError.status,
@@ -1118,9 +1123,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         actions: (T | BaseAction)[]
     ): Operation<T | BaseAction>[] {
         const operations: Operation<T | BaseAction>[] = [];
-        const { reducer } = this._getDocumentModel(
-            document.documentType
-        );
+        const { reducer } = this._getDocumentModel(document.documentType);
         for (const action of actions) {
             document = reducer(document, action);
             const operation = document.operations[action.scope].slice().pop();
