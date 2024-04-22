@@ -8,7 +8,6 @@ import { FileItem } from 'src/components/file-item';
 import { FolderItem } from 'src/components/folder-item';
 
 import { useFolderContent } from 'src/hooks/useFolderContent';
-import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
