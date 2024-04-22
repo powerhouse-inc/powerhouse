@@ -19,7 +19,7 @@ import {
 import path from 'path';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
-import { getLastIndexFromPath, sanitizePath } from 'src/utils';
+import { getLastIndexFromPath } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useNavigateToItemId } from './useNavigateToItemId';
@@ -107,17 +107,9 @@ export function useDrivesContainer() {
         });
     }
 
-    async function addNewFolder(
-        item: TreeItem,
-        driveID: string,
-        onCancel?: () => void,
-    ) {
+    async function addNewFolder(item: TreeItem, driveID: string) {
         const basePathComponents = item.path.split('/').slice(1, -1);
-        const basePath = basePathComponents.join('/');
-        const newPath = path.join(basePath, sanitizePath(item.label));
 
-        // TODO is this needed?
-        if (newPath === '.') return onCancel?.();
         const decodedDriveID = decodeID(driveID);
         const parentFolder = basePathComponents.pop();
         await addFolder(
@@ -208,8 +200,8 @@ export function useDrivesContainer() {
 
         if (isCreateNewOperation) {
             actions.deleteVirtualItem(item.id);
-            await addNewFolder(item, driveId, onCancel);
-            return;
+            await addNewFolder(item, driveId);
+            return; 
         }
 
         const srcId = item.id;

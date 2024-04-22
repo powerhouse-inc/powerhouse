@@ -10,7 +10,7 @@ export const useGetReadableItemPath = () => {
         const pathSegments = filteredItem.path.split('/');
         const pathNames = pathSegments.map(segmentId => {
             const segmentItem = items.find(
-                item => item.id === decodeID(segmentId)
+                item => item.id === decodeID(segmentId),
             );
 
             if (!segmentItem) return '';
