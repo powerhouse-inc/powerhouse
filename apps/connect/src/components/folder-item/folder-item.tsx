@@ -9,7 +9,7 @@ import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 
-const allowedItemOptions = ['delete', 'rename'];
+const allowedItemOptions = ['delete', 'rename', 'duplicate'];
 
 const itemOptions = defaultDropdownMenuOptions.filter(option =>
     allowedItemOptions.includes(option.id),
@@ -26,17 +26,27 @@ export const FolderItem: React.FC<FolderItemProps> = props => {
     const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
 
     const { showModal } = useModal();
-    const { updateNodeName } = useDrivesContainer();
+    const { updateNodeName, onSubmitInput } = useDrivesContainer();
     const [isWriteMode, setIsWriteMode] = useState(false);
     const onDropEvent = useOnDropEvent();
 
-    const onFolderOptionsClick = (optionId: string, folderNode: TreeItem) => {
+    const onFolderOptionsClick = async (
+        optionId: string,
+        folderNode: TreeItem,
+    ) => {
         if (optionId === 'delete') {
             showModal('deleteItem', {
                 driveId: decodedDriveID,
                 itemId: folderNode.id,
                 itemName: folderNode.label,
                 type: 'folder',
+            });
+        }
+
+        if (optionId === 'duplicate') {
+            await onSubmitInput({
+                ...folder,
+                action: 'UPDATE_AND_COPY',
             });
         }
 
