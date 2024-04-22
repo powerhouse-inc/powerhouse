@@ -1,3 +1,10 @@
+# [1.0.0-alpha.45](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.44...v1.0.0-alpha.45) (2024-04-22)
+
+
+### Features
+
+* continue initializing remaining drives if one fails ([5cd9962](https://github.com/powerhouse-inc/document-drive/commit/5cd9962785e399aa5eb06f2b87a97fed72b51178))
+
 # [1.0.0-alpha.44](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.43...v1.0.0-alpha.44) (2024-04-22)
 
 
