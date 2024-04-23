@@ -327,11 +327,6 @@ export function baseReducer<T, A extends Action, L>(
             draft.operations[_action.scope][lastOperationIndex].error = (
                 error as Error
             ).message;
-
-            console.error(
-                `Error thrown in reducer. Action: ${JSON.stringify(_action)}, Error:`,
-                error,
-            );
         }
     });
 
