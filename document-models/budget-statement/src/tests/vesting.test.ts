@@ -152,7 +152,7 @@ describe('Budget Statement vesting reducer', () => {
     });
 
     it('should throw if vesting key already exists', () => {
-        const document = createDocument({
+        let document = createDocument({
             state: {
                 global: {
                     vesting: [
@@ -165,15 +165,32 @@ describe('Budget Statement vesting reducer', () => {
                 },
             },
         });
-        expect(() =>
-            reducer(
-                document,
-                addVesting({
+
+        document = reducer(
+            document,
+            addVesting({
+                key: '123',
+                date: '2023-03-13',
+            }),
+        );
+
+        expect(document.state.global).toMatchObject({
+            vesting: [
+                {
                     key: '123',
-                    date: '2023-03-13',
-                }),
-            ),
-        ).toThrow();
+                    date: '2023-03-15',
+                },
+            ],
+        });
+        expect(document.operations.global).toHaveLength(1);
+        expect(document.operations.global[0]).toMatchObject({
+            type: 'ADD_VESTING',
+            input: { key: '123', date: '2023-03-13' },
+            scope: 'global',
+            index: 0,
+            skip: 0,
+            error: 'Vesting with key 123 already exists',
+        });
     });
 
     it('should ignore non existing keys on update', () => {

@@ -182,7 +182,7 @@ describe('Budget Statement Audit Report reducer', () => {
     it('should throw if duplicated audit report', async () => {
         const file = await getLocalFile(tempFile);
 
-        const document = reducer(
+        let document = reducer(
             createDocument(),
             creators.addAuditReport(
                 {
@@ -195,20 +195,41 @@ describe('Budget Statement Audit Report reducer', () => {
             ),
         );
 
-        expect(() =>
-            reducer(
-                document,
-                creators.addAuditReport(
-                    {
-                        report: file.hash,
-                        status: 'Approved',
-                        timestamp: '2023-03-15T17:46:22.754Z',
-                    },
+        document = reducer(
+            document,
+            creators.addAuditReport(
+                {
+                    report: file.hash,
+                    status: 'Approved',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
 
-                    [file],
-                ),
+                [file],
             ),
-        ).toThrow();
+        );
+
+        expect(document.state.global).toMatchObject({
+            auditReports: [
+                {
+                    report: file.hash,
+                    status: 'Approved',
+                    timestamp: '2023-03-15T17:46:22.754Z',
+                },
+            ],
+        });
+        expect(document.operations.global).toHaveLength(2);
+        expect(document.operations.global[1]).toMatchObject({
+            type: 'ADD_AUDIT_REPORT',
+            input: {
+                report: 'Q1pqSc2iiEdpNLjRefhjnQ3nNc8=',
+                status: 'Approved',
+                timestamp: '2023-03-15T17:46:22.754Z',
+            },
+            scope: 'global',
+            index: 1,
+            skip: 0,
+            error: `Audit with report ${file.hash} already exists`,
+        });
     });
 
     it('should fetch attachment from URL', async () => {

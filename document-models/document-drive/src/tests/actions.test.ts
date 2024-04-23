@@ -122,15 +122,27 @@ describe('DocumentDrive Actions', () => {
             const srcFolder = 'invalid';
             const targetParentFolder = '2';
 
-            expect(() =>
-                reducer(
-                    documentDrive,
-                    actions.moveNode({
-                        srcFolder,
-                        targetParentFolder,
-                    }),
-                ),
-            ).toThrowError(`Node with id ${srcFolder} not found`);
+            const document = reducer(
+                documentDrive,
+                actions.moveNode({
+                    srcFolder,
+                    targetParentFolder,
+                }),
+            );
+
+            expect(document.operations.global).toHaveLength(6);
+            expect(document.operations.global[5]).toMatchObject({
+                type: 'MOVE_NODE',
+                input: { srcFolder: 'invalid', targetParentFolder: '2' },
+                scope: 'global',
+                index: 5,
+                skip: 0,
+                error: 'Node with id invalid not found',
+            });
+
+            expect(document.operations.global[5].hash).toBe(
+                document.operations.global[4].hash,
+            );
         });
     });
 
@@ -212,16 +224,32 @@ describe('DocumentDrive Actions', () => {
             const targetId = '1.1-copy';
             const targetParentFolder = '2';
 
-            expect(() =>
-                reducer(
-                    documentDrive,
-                    actions.copyNode({
-                        srcId,
-                        targetId,
-                        targetParentFolder,
-                    }),
-                ),
-            ).toThrowError(`Node with id ${srcId} not found`);
+            const document = reducer(
+                documentDrive,
+                actions.copyNode({
+                    srcId,
+                    targetId,
+                    targetParentFolder,
+                }),
+            );
+
+            expect(document.operations.global).toHaveLength(6);
+            expect(document.operations.global[5]).toMatchObject({
+                type: 'COPY_NODE',
+                input: {
+                    srcId: 'invalid',
+                    targetId: '1.1-copy',
+                    targetParentFolder: '2',
+                },
+                scope: 'global',
+                index: 5,
+                skip: 0,
+                error: 'Node with id invalid not found',
+            });
+
+            expect(document.operations.global[5].hash).toBe(
+                document.operations.global[4].hash,
+            );
         });
 
         it('should copy a node when a new name when targetName is provided', () => {

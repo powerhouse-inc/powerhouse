@@ -99,9 +99,22 @@ describe('Budget Statement account reducer', () => {
         const inputWithTheSameAddress = generateMock(z.AddAccountInputSchema());
         inputWithTheSameAddress.address = input.address;
         document = reducer(document, creators.addAccount(input));
-        expect(() =>
-            reducer(document, creators.addAccount(inputWithTheSameAddress)),
-        ).toThrow();
+
+        document = reducer(
+            document,
+            creators.addAccount(inputWithTheSameAddress),
+        );
+
+        expect(document.state.global.accounts).toMatchObject([input]);
+        expect(document.operations.global).toHaveLength(2);
+        expect(document.operations.global[1]).toMatchObject({
+            type: 'ADD_ACCOUNT',
+            input: inputWithTheSameAddress,
+            scope: 'global',
+            index: 1,
+            skip: 0,
+            error: `Account with address ${input.address} already exists!`,
+        });
     });
 
     it('should sort accounts', () => {

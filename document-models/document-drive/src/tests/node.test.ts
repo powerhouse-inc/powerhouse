@@ -141,17 +141,24 @@ describe('Node Operations', () => {
         document.state.global.nodes = nodes;
 
         // move folder to descendent
-        expect(() => {
-            reducer(
-                document,
-                creators.moveNode({
-                    srcFolder: '1',
-                    targetParentFolder: '3',
-                }),
-            );
-        }).toThrowError(
-            'Circular Reference Error: Cannot move a folder to one of its descendants',
+        const updatedDocument = reducer(
+            document,
+            creators.moveNode({
+                srcFolder: '1',
+                targetParentFolder: '3',
+            }),
         );
+
+        expect(updatedDocument.state.global.nodes).toMatchObject(nodes);
+        expect(updatedDocument.operations.global).toHaveLength(1);
+        expect(updatedDocument.operations.global[0]).toMatchObject({
+            type: 'MOVE_NODE',
+            input: { srcFolder: '1', targetParentFolder: '3' },
+            scope: 'global',
+            index: 0,
+            skip: 0,
+            error: 'Circular Reference Error: Cannot move a folder to one of its descendants',
+        });
     });
     it('should not allow making folder its own parent', () => {
         // Mock data setup
@@ -163,16 +170,23 @@ describe('Node Operations', () => {
 
         document.state.global.nodes = nodes;
 
-        expect(() => {
-            reducer(
-                document,
-                creators.moveNode({
-                    srcFolder: '1',
-                    targetParentFolder: '1',
-                }),
-            );
-        }).toThrowError(
-            'Circular Reference Error: Cannot make folder its own parent',
+        const updatedDocument = reducer(
+            document,
+            creators.moveNode({
+                srcFolder: '1',
+                targetParentFolder: '1',
+            }),
         );
+
+        expect(updatedDocument.state.global.nodes).toMatchObject(nodes);
+        expect(updatedDocument.operations.global).toHaveLength(1);
+        expect(updatedDocument.operations.global[0]).toMatchObject({
+            type: 'MOVE_NODE',
+            input: { srcFolder: '1', targetParentFolder: '1' },
+            scope: 'global',
+            index: 0,
+            skip: 0,
+            error: 'Circular Reference Error: Cannot make folder its own parent',
+        });
     });
 });

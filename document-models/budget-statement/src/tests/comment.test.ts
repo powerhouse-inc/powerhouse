@@ -177,7 +177,7 @@ describe('Budget Statement Comment reducer', () => {
     });
 
     it('should throw if comment key already exists', () => {
-        const document = createDocument({
+        let document = createDocument({
             state: {
                 global: {
                     comments: [
@@ -190,15 +190,33 @@ describe('Budget Statement Comment reducer', () => {
                 },
             },
         });
-        expect(() =>
-            reducer(
-                document,
-                addComment({
+
+        document = reducer(
+            document,
+            addComment({
+                key: '123',
+                comment: '03/13',
+            }),
+        );
+
+        expect(document.state.global).toMatchObject({
+            comments: [
+                {
                     key: '123',
-                    comment: '03/13',
-                }),
-            ),
-        ).toThrow();
+                    comment: '03/15',
+                },
+            ],
+        });
+
+        expect(document.operations.global).toHaveLength(1);
+        expect(document.operations.global[0]).toMatchObject({
+            type: 'ADD_COMMENT',
+            input: { key: '123', comment: '03/13' },
+            scope: 'global',
+            index: 0,
+            skip: 0,
+            error: 'Comment with key 123 already exists',
+        });
     });
 
     it('should ignore non existing keys on update', () => {
