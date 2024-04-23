@@ -231,7 +231,7 @@ export class PrismaStorage implements IDriveStorage {
                 header,
                 updatedOperations
             );
-        });
+        }, { isolationLevel: "Serializable" });
 
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!result) {
