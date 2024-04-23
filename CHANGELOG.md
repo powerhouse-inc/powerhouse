@@ -1,3 +1,10 @@
+# [1.0.0-alpha.47](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.46...v1.0.0-alpha.47) (2024-04-23)
+
+
+### Features
+
+* use serializable transactions ([267cae4](https://github.com/powerhouse-inc/document-drive/commit/267cae47ba3fec4a4863169350cbf961172caebf))
+
 # [1.0.0-alpha.46](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.45...v1.0.0-alpha.46) (2024-04-23)
 
 
