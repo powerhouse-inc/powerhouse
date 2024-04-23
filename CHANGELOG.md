@@ -1,3 +1,10 @@
+# [1.0.0-alpha.49](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.48...v1.0.0-alpha.49) (2024-04-23)
+
+
+### Features
+
+* added duplicate folders id tests ([#143](https://github.com/powerhouse-inc/document-drive/issues/143)) ([abd3688](https://github.com/powerhouse-inc/document-drive/commit/abd3688bb284257a8f088e905e1f7cf6de1f8f5d))
+
 # [1.0.0-alpha.48](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.47...v1.0.0-alpha.48) (2024-04-23)
 
 
