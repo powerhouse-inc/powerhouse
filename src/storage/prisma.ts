@@ -36,11 +36,19 @@ function storageToOperation(
     };
 }
 
+type PrismaStorageOptions = {
+    maxTransactionRetries?: number;
+}
+
+const MAX_TRANSACTION_RETRIES = 5;
+
 export class PrismaStorage implements IDriveStorage {
     private db: PrismaClient;
+    private maxTransactionRetries: number;
 
-    constructor(db: PrismaClient) {
+    constructor(db: PrismaClient, options?: PrismaStorageOptions) {
         this.db = db;
+        this.maxTransactionRetries = options?.maxTransactionRetries ?? MAX_TRANSACTION_RETRIES;
     }
 
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
@@ -215,24 +223,37 @@ export class PrismaStorage implements IDriveStorage {
             header: DocumentHeader;
             updatedOperations?: Operation[] | undefined;
         } | null = null;
-        await this.db.$transaction(async tx => {
-            const document = await this.getDocument(drive, id, tx);
-            if (!document) {
-                throw new Error(`Document with id ${id} not found`);
+        let retries = 0
+
+        while (retries < this.maxTransactionRetries) {
+            try {
+                await this.db.$transaction(async tx => {
+                    const document = await this.getDocument(drive, id, tx);
+                    if (!document) {
+                        throw new Error(`Document with id ${id} not found`);
+                    }
+                    result = await callback(document);
+
+                    const { operations, header, updatedOperations } = result;
+                    return this._addDocumentOperations(
+                        tx,
+                        drive,
+                        id,
+                        operations,
+                        header,
+                        updatedOperations
+                    );
+                }, { isolationLevel: "Serializable" });
+                break;
+            } catch (error) {
+                // transaction lock failed due to concurrent operations
+                if ((error as { code: string }).code === 'P2034') {
+                    retries++
+                    continue;
+                }
+                throw error;
             }
-            result = await callback(document);
-
-            const { operations, header, updatedOperations } = result;
-            return this._addDocumentOperations(
-                tx,
-                drive,
-                id,
-                operations,
-                header,
-                updatedOperations
-            );
-        }, { isolationLevel: "Serializable" });
-
+        }
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!result) {
             throw new Error('No operations were provided');
