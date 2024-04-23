@@ -1,3 +1,10 @@
+# [1.0.0-alpha.48](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.47...v1.0.0-alpha.48) (2024-04-23)
+
+
+### Features
+
+* added retry mechanism to transaction ([e01a2cb](https://github.com/powerhouse-inc/document-drive/commit/e01a2cb6e1c64d37655255191fc4af13254201fe))
+
 # [1.0.0-alpha.47](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.46...v1.0.0-alpha.47) (2024-04-23)
 
 
