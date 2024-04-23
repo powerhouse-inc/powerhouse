@@ -1,3 +1,10 @@
+# [1.0.0-alpha.46](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.45...v1.0.0-alpha.46) (2024-04-23)
+
+
+### Features
+
+* do not consider already skipped operations when adding operations to document ([0778863](https://github.com/powerhouse-inc/document-drive/commit/077886351a1dbde484331a30778fa4daf12cf2a2))
+
 # [1.0.0-alpha.45](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.44...v1.0.0-alpha.45) (2024-04-22)
 
 
