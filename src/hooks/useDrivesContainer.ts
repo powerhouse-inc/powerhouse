@@ -183,6 +183,12 @@ export function useDrivesContainer() {
                     decodeID(item.id),
                     item.sharingType?.toLowerCase() as TreeItemSharingType,
                 );
+                break;
+            case 'duplicate':
+                await onSubmitInput({
+                    ...item,
+                    action: 'UPDATE_AND_COPY',
+                });
         }
     };
 
@@ -191,7 +197,7 @@ export function useDrivesContainer() {
         await renameNode(decodedDriveID, item.id, item.label);
     }
 
-    const onSubmitInput = async (item: TreeItem, onCancel?: () => void) => {
+    async function onSubmitInput(item: TreeItem, onCancel?: () => void) {
         const driveId = getRootPath(item.path);
 
         const isCreateNewOperation = item.action === 'NEW';
@@ -201,7 +207,7 @@ export function useDrivesContainer() {
         if (isCreateNewOperation) {
             actions.deleteVirtualItem(item.id);
             await addNewFolder(item, driveId);
-            return; 
+            return;
         }
 
         const srcId = item.id;
@@ -245,7 +251,7 @@ export function useDrivesContainer() {
         }
 
         await updateNodeName(item, driveId);
-    };
+    }
 
     async function driveToBaseItems(drive: DocumentDriveDocument) {
         const driveID = encodeID(drive.state.global.id);

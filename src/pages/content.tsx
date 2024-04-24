@@ -119,30 +119,44 @@ const Content = () => {
 
             // builds the path from the url checking if the nodes exist
             const path = [encodeID(drive.state.global.id)];
+            let currentNodes = drive.state.global.nodes.filter(
+                node => node.parentFolder === null,
+            );
             if (params['*']) {
-                for (const nodeId of decodeURIComponent(params['*']).split(
-                    '/',
-                )) {
-                    const node = drive.state.global.nodes.find(
-                        node => node.name === nodeId || node.id === nodeId,
+                const nodeNames = decodeURIComponent(params['*']).split('/');
+
+                for (const nodeName of nodeNames) {
+                    const node = currentNodes.find(
+                        node => node.name === nodeName,
                     );
-                    if (node) {
-                        // if the node is a file, then opens it instead of adding it to the path
-                        if (isFileNode(node)) {
-                            if (
-                                selectedFileNode?.drive !==
-                                    drive.state.global.id ||
-                                selectedFileNode.id !== node.id
-                            ) {
-                                setSelectedFileNode({
-                                    drive: drive.state.global.id,
-                                    id: node.id,
-                                });
-                            }
-                            break;
-                        }
-                        path.push(encodeID(node.id));
+
+                    if (!node) {
+                        console.error('Node not found:', nodeName);
+                        break;
                     }
+
+                    // if the node is a file, then opens it instead of adding it to the path
+                    if (isFileNode(node)) {
+                        if (
+                            selectedFileNode?.drive !== drive.state.global.id ||
+                            selectedFileNode.id !== node.id
+                        ) {
+                            setSelectedFileNode({
+                                drive: drive.state.global.id,
+                                id: node.id,
+                            });
+                        }
+                        break;
+                    }
+                    path.push(encodeID(node.id));
+
+                    const nextNodes = drive.state.global.nodes.filter(
+                        n => n.parentFolder === node.id,
+                    );
+
+                    if (!nextNodes.length) break;
+
+                    currentNodes = nextNodes;
                 }
             }
             setSelectedPath(path.join('/'));
