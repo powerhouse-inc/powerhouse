@@ -1,3 +1,13 @@
+# [1.0.0-alpha.101](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.100...v1.0.0-alpha.101) (2024-04-24)
+
+
+### Features
+
+* add change icon to form handler ([105d654](https://github.com/powerhouse-inc/design-system/commit/105d6541a79b26cf70d7817ea175fff595494565))
+* add image input component ([8f2eafc](https://github.com/powerhouse-inc/design-system/commit/8f2eafc7cf6e20687e81b3aa5b3aef643f44afa5))
+* add image input to drive settings ([10e1a02](https://github.com/powerhouse-inc/design-system/commit/10e1a023d45d681f51067de2069741db31fefca1))
+* added object-fit to drive icon ([1a647ed](https://github.com/powerhouse-inc/design-system/commit/1a647edd99b0543ddfce5663a111ce6481506318))
+
 # [1.0.0-alpha.100](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.99...v1.0.0-alpha.100) (2024-04-22)
 
 
