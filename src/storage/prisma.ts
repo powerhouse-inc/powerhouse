@@ -1,5 +1,6 @@
-import { PrismaClient, type Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { backOff, IBackOffOptions } from "exponential-backoff";
 import {
     DocumentDriveAction,
     DocumentDriveLocalState,
@@ -15,11 +16,12 @@ import type {
 import { ConflictOperationError } from '../server/error';
 import { logger } from '../utils/logger';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
+import { JitterType } from 'exponential-backoff/dist/options';
 
 type Transaction = Omit<
     PrismaClient<Prisma.PrismaClientOptions, never>,
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
->;
+> | ExtendedPrismaClient;
 
 function storageToOperation(
     op: Prisma.$OperationPayload['scalars']
@@ -36,19 +38,40 @@ function storageToOperation(
     };
 }
 
-type PrismaStorageOptions = {
-    maxTransactionRetries?: number;
+export type PrismaStorageOptions = {
+    transactionRetryBackoff?: IBackOffOptions;
 }
 
-const MAX_TRANSACTION_RETRIES = 5;
+function getRetryTransactionsClient<T extends PrismaClient>(prisma: T, backOffOptions?: Partial<IBackOffOptions>) {
+    return prisma.$extends({
+        client: {
+            $transaction: (...args: Parameters<T["$transaction"]>) => {
+                // eslint-disable-next-line prefer-spread
+                return backOff(() => prisma.$transaction.apply(prisma, args), {
+                    retry: (e) => {
+                        // Retry the transaction only if the error was due to a write conflict or deadlock
+                        // See: https://www.prisma.io/docs/reference/api-reference/error-reference#p2034
+                        return (e as { code: string }).code === "P2034";
+                    },
+                    ...backOffOptions,
+                });
+            }
+        }
+    });
+}
+
+type ExtendedPrismaClient = ReturnType<typeof getRetryTransactionsClient<PrismaClient>>;
 
 export class PrismaStorage implements IDriveStorage {
-    private db: PrismaClient;
-    private maxTransactionRetries: number;
+    private db: ExtendedPrismaClient;
 
     constructor(db: PrismaClient, options?: PrismaStorageOptions) {
-        this.db = db;
-        this.maxTransactionRetries = options?.maxTransactionRetries ?? MAX_TRANSACTION_RETRIES;
+        const backOffOptions = options?.transactionRetryBackoff;
+        this.db = getRetryTransactionsClient(db, {
+            ...backOffOptions,
+            jitter: backOffOptions?.jitter ?? "full"
+        });
+
     }
 
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
@@ -223,37 +246,26 @@ export class PrismaStorage implements IDriveStorage {
             header: DocumentHeader;
             updatedOperations?: Operation[] | undefined;
         } | null = null;
-        let retries = 0
 
-        while (retries < this.maxTransactionRetries) {
-            try {
-                await this.db.$transaction(async tx => {
-                    const document = await this.getDocument(drive, id, tx);
-                    if (!document) {
-                        throw new Error(`Document with id ${id} not found`);
-                    }
-                    result = await callback(document);
-
-                    const { operations, header, updatedOperations } = result;
-                    return this._addDocumentOperations(
-                        tx,
-                        drive,
-                        id,
-                        operations,
-                        header,
-                        updatedOperations
-                    );
-                }, { isolationLevel: "Serializable" });
-                break;
-            } catch (error) {
-                // transaction lock failed due to concurrent operations
-                if ((error as { code: string }).code === 'P2034') {
-                    retries++
-                    continue;
-                }
-                throw error;
+        await this.db.$transaction(async tx => {
+            const document = await this.getDocument(drive, id, tx);
+            if (!document) {
+                throw new Error(`Document with id ${id} not found`);
             }
-        }
+            result = await callback(document);
+
+            const { operations, header, updatedOperations } = result;
+            return this._addDocumentOperations(
+                tx,
+                drive,
+                id,
+                operations,
+                header,
+                updatedOperations
+            );
+        }, { isolationLevel: "Serializable" });
+
+
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!result) {
             throw new Error('No operations were provided');
