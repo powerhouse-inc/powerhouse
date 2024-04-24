@@ -4,6 +4,7 @@ import {
     ConnectDropdownMenuItem,
     DriveSettingsFormSubmitHandler,
     DriveSettingsModal,
+    DriveTreeItem,
     FILE,
     FOLDER,
     LOCAL_DRIVE,
@@ -194,6 +195,16 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 },
                 'change-availability',
             );
+            if (getIsPublicDrive(item)) {
+                onOptionsClick?.(
+                    {
+                        ...item,
+                        icon: data.driveIcon,
+                    } as DriveTreeItem,
+                    'change-icon',
+                );
+            }
+
             setIsDriveSettingsModalOpen(false);
         };
 
