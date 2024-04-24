@@ -1,3 +1,10 @@
+# [1.0.0-alpha.51](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.50...v1.0.0-alpha.51) (2024-04-24)
+
+
+### Features
+
+* added exponential retry backoff to prisma transactions ([b38e72f](https://github.com/powerhouse-inc/document-drive/commit/b38e72fdfd29f4c39e15f606fccc942ec966fffe))
+
 # [1.0.0-alpha.50](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.49...v1.0.0-alpha.50) (2024-04-23)
 
 
