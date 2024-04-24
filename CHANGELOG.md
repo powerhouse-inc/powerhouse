@@ -1,3 +1,10 @@
+# [1.40.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.39.0...v1.40.0) (2024-04-24)
+
+
+### Features
+
+* re-enable onErrorCallback with new operations error prop ([#145](https://github.com/powerhouse-inc/document-model-libs/issues/145)) ([abbb15b](https://github.com/powerhouse-inc/document-model-libs/commit/abbb15b9e16b916e06e9bb22bb389b385a158e95))
+
 # [1.39.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.38.0...v1.39.0) (2024-04-24)
 
 
