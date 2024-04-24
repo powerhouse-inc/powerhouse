@@ -27,9 +27,6 @@ export default defineConfig(({ mode }) => {
 
     const test: InlineConfig = {
         globals: true,
-        coverage: {
-            enabled: true,
-        },
     };
 
     return {

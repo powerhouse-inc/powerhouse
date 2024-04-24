@@ -8891,7 +8891,7 @@ packages:
     resolution: {integrity: sha512-Ld+ECcBFEP6l83YArZJH/TmUqYGX1n+sC9dvKw2icnvlzxnlkjzMJUdsVBcGX8pLRx+pHd6v2Vu5N3ffaKMsqg==}
     dependencies:
       change-case: 5.4.3
-      immer: 10.0.3
+      immer: 10.0.4
       jszip: 3.10.1
       mime: 4.0.1
       safe-stable-stringify: 2.4.3
@@ -10619,8 +10619,8 @@ packages:
   /immediate@3.0.6:
     resolution: {integrity: sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==}
 
-  /immer@10.0.3:
-    resolution: {integrity: sha512-pwupu3eWfouuaowscykeckFmVTpqbzW+rXFCX8rQLkZzM9ftBmU/++Ra+o+L27mz03zJTlyV4UUr+fdKNffo4A==}
+  /immer@10.0.4:
+    resolution: {integrity: sha512-cuBuGK40P/sk5IzWa9QPUaAdvPHjkk1c+xYsd9oZw+YQQEV+10G0P5uMpGctZZKnyQ+ibRO08bD25nWLmYi2pw==}
     dev: true
 
   /immutable@3.7.6:

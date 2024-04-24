@@ -26,7 +26,65 @@ describe('Node Operations', () => {
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
-
+    it('should prevent name collisions in addFile operation when parent is a folder', () => {
+        const firstInput = generateMock(z.AddFileInputSchema());
+        const secondInput = generateMock(z.AddFileInputSchema());
+        const thirdInput = generateMock(z.AddFileInputSchema());
+        firstInput.name = 'test';
+        secondInput.name = 'test';
+        thirdInput.name = 'test (copy) 1';
+        secondInput.parentFolder = firstInput.parentFolder;
+        thirdInput.parentFolder = firstInput.parentFolder;
+        const updatedDocument = reducer(
+            document,
+            creators.addFile(secondInput),
+        );
+        const secondUpdatedDocument = reducer(
+            updatedDocument,
+            creators.addFile(firstInput),
+        );
+        const thirdUpdatedDocument = reducer(
+            secondUpdatedDocument,
+            creators.addFile(thirdInput),
+        );
+        const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe('test');
+        expect(nodeNames[1]).toBe('test (copy) 1');
+        expect(nodeNames[2]).toBe('test (copy) 1 (copy) 1');
+    });
+    it('should prevent name collisions in addFile operation when parent is a drive', () => {
+        const firstInput = generateMock(z.AddFileInputSchema());
+        const secondInput = generateMock(z.AddFileInputSchema());
+        const thirdInput = generateMock(z.AddFileInputSchema());
+        firstInput.name = 'test';
+        secondInput.name = 'test';
+        thirdInput.name = 'test (copy) 1';
+        firstInput.parentFolder = null;
+        secondInput.parentFolder = null;
+        thirdInput.parentFolder = null;
+        const updatedDocument = reducer(
+            document,
+            creators.addFile(secondInput),
+        );
+        const secondUpdatedDocument = reducer(
+            updatedDocument,
+            creators.addFile(firstInput),
+        );
+        const thirdUpdatedDocument = reducer(
+            secondUpdatedDocument,
+            creators.addFile(thirdInput),
+        );
+        const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe('test');
+        expect(nodeNames[1]).toBe('test (copy) 1');
+        expect(nodeNames[2]).toBe('test (copy) 1 (copy) 1');
+    });
     it('should handle addFolder operation', () => {
         const input = generateMock(z.AddFolderInputSchema());
         const updatedDocument = reducer(document, creators.addFolder(input));
@@ -35,6 +93,66 @@ describe('Node Operations', () => {
         expect(updatedDocument.operations.global[0].type).toBe('ADD_FOLDER');
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
+    });
+    it('should prevent name collisions in addFolder operation when parent is a folder', () => {
+        const firstInput = generateMock(z.AddFolderInputSchema());
+        const secondInput = generateMock(z.AddFolderInputSchema());
+        const thirdInput = generateMock(z.AddFolderInputSchema());
+        firstInput.name = 'test';
+        secondInput.name = 'test';
+        thirdInput.name = 'test (copy) 1';
+        secondInput.parentFolder = firstInput.parentFolder;
+        thirdInput.parentFolder = firstInput.parentFolder;
+        const updatedDocument = reducer(
+            document,
+            creators.addFolder(secondInput),
+        );
+        const secondUpdatedDocument = reducer(
+            updatedDocument,
+            creators.addFolder(firstInput),
+        );
+        const thirdUpdatedDocument = reducer(
+            secondUpdatedDocument,
+            creators.addFolder(thirdInput),
+        );
+        const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe('test');
+        expect(nodeNames[1]).toBe('test (copy) 1');
+        expect(nodeNames[2]).toBe('test (copy) 1 (copy) 1');
+    });
+
+    it('should prevent name collisions in addFolder operation when parent is a drive', () => {
+        const firstInput = generateMock(z.AddFolderInputSchema());
+        const secondInput = generateMock(z.AddFolderInputSchema());
+        const thirdInput = generateMock(z.AddFolderInputSchema());
+        firstInput.name = 'test';
+        secondInput.name = 'test';
+        thirdInput.name = 'test (copy) 1';
+        firstInput.parentFolder = null;
+        secondInput.parentFolder = null;
+        thirdInput.parentFolder = null;
+        const updatedDocument = reducer(
+            document,
+            creators.addFolder(secondInput),
+        );
+        const secondUpdatedDocument = reducer(
+            updatedDocument,
+            creators.addFolder(firstInput),
+        );
+        const thirdUpdatedDocument = reducer(
+            secondUpdatedDocument,
+            creators.addFolder(thirdInput),
+        );
+        const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe('test');
+        expect(nodeNames[1]).toBe('test (copy) 1');
+        expect(nodeNames[2]).toBe('test (copy) 1 (copy) 1');
     });
 
     it('should handle deleteNode operation', () => {
@@ -64,7 +182,24 @@ describe('Node Operations', () => {
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
+    it('should handle name collisions in updateFile operation', () => {
+        const existingFile1 = generateMock(z.FileNodeSchema());
+        const existingFile2 = generateMock(z.FileNodeSchema());
+        existingFile2.parentFolder = existingFile1.parentFolder;
+        const input = generateMock(z.UpdateFileInputSchema());
+        input.id = existingFile2.id;
+        input.name = existingFile1.name;
+        input.parentFolder = existingFile1.parentFolder;
+        document.state.global.nodes = [existingFile1, existingFile2];
+        const updatedDocument = reducer(document, creators.updateFile(input));
 
+        const nodeNames = updatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe(existingFile1.name);
+        expect(nodeNames[1]).toBe(input.name + ' (copy) 1');
+    });
     it('should handle updateNode operation', () => {
         const input = generateMock(z.UpdateNodeInputSchema());
         const updatedDocument = reducer(document, creators.updateNode(input));
@@ -74,7 +209,24 @@ describe('Node Operations', () => {
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
+    it('should handle name collisions in updateNode operation', () => {
+        const existingNode1 = generateMock(z.NodeSchema());
+        const existingNode2 = generateMock(z.NodeSchema());
+        existingNode2.parentFolder = existingNode1.parentFolder;
+        const input = generateMock(z.UpdateNodeInputSchema());
+        input.id = existingNode2.id;
+        input.name = existingNode1.name;
+        input.parentFolder = existingNode1.parentFolder;
+        document.state.global.nodes = [existingNode1, existingNode2];
+        const updatedDocument = reducer(document, creators.updateNode(input));
 
+        const nodeNames = updatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe(existingNode1.name);
+        expect(nodeNames[1]).toBe(input.name + ' (copy) 1');
+    });
     it('should handle copyNode operation', () => {
         const input = generateMock(z.CopyNodeInputSchema());
         const document = utils.createDocument({
@@ -102,7 +254,55 @@ describe('Node Operations', () => {
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
+    it('should handle name collisions in copyNode operation', () => {
+        const existingNode = generateMock(z.NodeSchema());
+        const input = generateMock(z.CopyNodeInputSchema());
+        input.srcId = existingNode.id;
+        input.targetName = existingNode.name;
+        input.targetParentFolder = existingNode.parentFolder;
+        document.state.global.nodes = [existingNode];
+        const updatedDocument = reducer(document, creators.copyNode(input));
 
+        const nodeNames = updatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe(existingNode.name);
+        expect(nodeNames[1]).toBe(input.targetName + ' (copy) 1');
+    });
+    it('should handle name collisions in copyNode operation when parent is drive', () => {
+        const existingNode = generateMock(z.NodeSchema());
+        const input = generateMock(z.CopyNodeInputSchema());
+        existingNode.parentFolder = null;
+        input.srcId = existingNode.id;
+        input.targetName = existingNode.name;
+        input.targetParentFolder = null;
+        document.state.global.nodes = [existingNode];
+        const updatedDocument = reducer(document, creators.copyNode(input));
+
+        const nodeNames = updatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe(existingNode.name);
+        expect(nodeNames[1]).toBe(input.targetName + ' (copy) 1');
+    });
+    it('should handle name collisions in copyNode operation', () => {
+        const existingNode = generateMock(z.NodeSchema());
+        const input = generateMock(z.CopyNodeInputSchema());
+        input.srcId = existingNode.id;
+        input.targetName = existingNode.name;
+        input.targetParentFolder = existingNode.parentFolder;
+        document.state.global.nodes = [existingNode];
+        const updatedDocument = reducer(document, creators.copyNode(input));
+
+        const nodeNames = updatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe(existingNode.name);
+        expect(nodeNames[1]).toBe(input.targetName + ' (copy) 1');
+    });
     it('should handle moveNode operation', () => {
         const input = generateMock(z.MoveNodeInputSchema());
         const document = utils.createDocument({
@@ -129,6 +329,43 @@ describe('Node Operations', () => {
         expect(updatedDocument.operations.global[0].type).toBe('MOVE_NODE');
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
+    });
+    it('should handle name collisions in moveNode operation', () => {
+        const existingNode = generateMock(z.NodeSchema());
+        existingNode.name = 'test';
+        const existingNode2 = generateMock(z.NodeSchema());
+        existingNode2.name = 'test';
+        const input = generateMock(z.MoveNodeInputSchema());
+        input.srcFolder = existingNode2.id;
+        input.targetParentFolder = existingNode.parentFolder;
+        document.state.global.nodes = [existingNode, existingNode2];
+        const updatedDocument = reducer(document, creators.moveNode(input));
+
+        const nodeNames = updatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe('test');
+        expect(nodeNames[1]).toBe('test (copy) 1');
+    });
+    it('should handle name collisions in moveNode operation when parent is drive', () => {
+        const existingNode = generateMock(z.NodeSchema());
+        existingNode.name = 'test';
+        existingNode.parentFolder = null;
+        const existingNode2 = generateMock(z.NodeSchema());
+        existingNode2.name = 'test';
+        const input = generateMock(z.MoveNodeInputSchema());
+        input.srcFolder = existingNode2.id;
+        input.targetParentFolder = null;
+        document.state.global.nodes = [existingNode, existingNode2];
+        const updatedDocument = reducer(document, creators.moveNode(input));
+
+        const nodeNames = updatedDocument.state.global.nodes.map(
+            node => node.name,
+        );
+        expect(new Set(nodeNames).size).toBe(nodeNames.length);
+        expect(nodeNames[0]).toBe('test');
+        expect(nodeNames[1]).toBe('test (copy) 1');
     });
     it('should not allow moving folder to descendent', () => {
         // Mock data setup
