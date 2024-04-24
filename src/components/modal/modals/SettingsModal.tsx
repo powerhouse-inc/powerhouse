@@ -3,13 +3,14 @@ import {
     ClearStorageSettingsRow,
     SettingsModal as ConnectSettingsModal,
     DependencyVersions,
-    DocumentSelectSettingsRow
+    DocumentSelectSettingsRow,
 } from '@powerhousedao/design-system';
 import { DocumentModel } from 'document-model/document';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Option } from 'react-multi-select-component';
 import { useModal } from 'src/components/modal';
+import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
 import { useLogin } from 'src/hooks/useLogin';
@@ -41,6 +42,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
     const documentModels = useDocumentModels();
     const { setConfig } = useFeatureFlag();
     const { showModal } = useModal();
+    const [connectConfig] = useConnectConfig();
     const [selectedDocuments, setSelectedDocuments] = useState<Option[]>(
         mapDocumentModelsToOptions(enabledDocuments),
     );
@@ -117,22 +119,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                     <Login />
                 )}
             </div>
-            <DocumentSelectSettingsRow
-                selected={selectedDocuments}
-                onChange={selectedDocs => setSelectedDocuments(selectedDocs)}
-                options={mapDocumentModelsToOptions(documentModels)}
-                title={t('modals.connectSettings.enabledDocumentTypes.title')}
-                description={t(
-                    'modals.connectSettings.enabledDocumentTypes.description',
-                )}
-                selectProps={{
-                    overrideStrings: {
-                        allItemsAreSelected: t(
-                            'modals.connectSettings.enabledDocumentTypes.allSelected',
-                        ),
-                    },
-                }}
-            />
+            {connectConfig.content.showDocumentModelSelectionSetting && (
+                <DocumentSelectSettingsRow
+                    selected={selectedDocuments}
+                    onChange={selectedDocs =>
+                        setSelectedDocuments(selectedDocs)
+                    }
+                    options={mapDocumentModelsToOptions(documentModels)}
+                    title={t(
+                        'modals.connectSettings.enabledDocumentTypes.title',
+                    )}
+                    description={t(
+                        'modals.connectSettings.enabledDocumentTypes.description',
+                    )}
+                    selectProps={{
+                        overrideStrings: {
+                            allItemsAreSelected: t(
+                                'modals.connectSettings.enabledDocumentTypes.allSelected',
+                            ),
+                        },
+                    }}
+                />
+            )}
             <ClearStorageSettingsRow
                 onClearStorage={onClearStorage}
                 buttonLabel={t('modals.connectSettings.clearStorage.button')}
