@@ -251,6 +251,8 @@ export function useDocumentDriveServer(
     }) {
         const { decodedDriveId, srcId, decodedTargetId } = params;
 
+        if (srcId === decodedTargetId) return;
+
         await _addDriveOperation(
             decodedDriveId,
             actions.moveNode({
