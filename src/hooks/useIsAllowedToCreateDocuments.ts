@@ -6,9 +6,15 @@ export function useIsAllowedToCreateDocuments() {
     const createDocumentAllowListEnvString = import.meta.env
         .VITE_CREATE_DOCUMENT_ALLOW_LIST;
 
-    const createDocumentAllowList =
-        createDocumentAllowListEnvString?.split(',');
-    if (createDocumentAllowList === undefined) {
+    if (
+        createDocumentAllowListEnvString === undefined ||
+        createDocumentAllowListEnvString === ''
+    ) {
+        return true;
+    }
+
+    const createDocumentAllowList = createDocumentAllowListEnvString.split(',');
+    if (createDocumentAllowList.length === 0) {
         return true;
     }
 
