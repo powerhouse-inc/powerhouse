@@ -1,3 +1,10 @@
+# [1.0.0-alpha.52](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.51...v1.0.0-alpha.52) (2024-04-24)
+
+
+### Features
+
+* store and sync operation context ([b2e5d5e](https://github.com/powerhouse-inc/document-drive/commit/b2e5d5efe59ed382fe6f984c193959218cbac4e0))
+
 # [1.0.0-alpha.51](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.50...v1.0.0-alpha.51) (2024-04-24)
 
 
