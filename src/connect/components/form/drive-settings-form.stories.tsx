@@ -1,5 +1,6 @@
 import { Meta, StoryObj } from '@storybook/react';
 import { DriveSettingsForm } from '.';
+import { defaultDriveIcon } from '../image-input/default-drive-icon';
 
 const meta = {
     title: 'Connect/Components/Drive Settings Form',
@@ -33,5 +34,12 @@ const Template: Story = {
 
 export const Default: Story = {
     ...Template,
-    render: args => <DriveSettingsForm {...args} />,
+};
+
+export const WithDriveIcon: Story = {
+    ...Template,
+    args: {
+        ...Template.args,
+        driveIcon: defaultDriveIcon,
+    },
 };

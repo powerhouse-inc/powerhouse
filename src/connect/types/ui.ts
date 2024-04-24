@@ -45,9 +45,9 @@ export type UITreeItem = {
 };
 
 export type TreeItem = BaseTreeItem & UITreeItem;
-
 export type DriveTreeItem = TreeItem & {
     type: DriveType;
+    icon?: string | null;
 };
 
 export type DefaultOptionId = (typeof defaultDropdownMenuOptions)[number]['id'];

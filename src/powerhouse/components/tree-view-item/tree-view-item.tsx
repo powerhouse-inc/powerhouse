@@ -72,7 +72,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                     <div className="absolute top-0 w-full">{topIndicator}</div>
                 )}
                 <div
-                    className="flex w-full cursor-pointer"
+                    className="flex w-full cursor-pointer items-center"
                     style={{ paddingLeft: `${levelPadding}px` }}
                 >
                     {mode === 'read' ? (

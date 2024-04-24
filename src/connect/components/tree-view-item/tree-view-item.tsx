@@ -21,7 +21,11 @@ import {
 } from '@/powerhouse';
 import { MouseEventHandler, useEffect, useRef, useState } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
-import { getIsDrive, getIsLocalDrive } from '../drive-view/utils';
+import {
+    getIsCloudDrive,
+    getIsDrive,
+    getIsPublicDrive,
+} from '../drive-view/utils';
 import { SyncStatusIcon } from '../status-icon';
 
 const submitIcon = <Icon name="check" className="text-gray-600" />;
@@ -105,9 +109,9 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     const isWriteMode = props.mode === 'write';
     const isHighlighted = getIsHighlighted();
     const showDropdownMenuButton = mouseIsWithinItemContainer && !isWriteMode;
-    const isDrive = getIsDrive(item.type);
-    const isLocalDrive = getIsLocalDrive(item.type);
-    const isCloudOrPublicDrive = isDrive && !isLocalDrive;
+    const isDrive = getIsDrive(item);
+    const isCloudDrive = getIsCloudDrive(item);
+    const isPublicDrive = getIsPublicDrive(item);
     const itemOptions =
         item.options ?? (defaultOptions as ConnectDropdownMenuItem[]);
     const dropdownMenuItems = isDrive
@@ -211,6 +215,13 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     }
 
     function getItemIcon() {
+        if (isPublicDrive && item.icon) {
+            return {
+                icon: (
+                    <img src={item.icon} className="size-7" alt="drive icon" />
+                ),
+            };
+        }
         switch (item.type) {
             case FOLDER:
                 return {
@@ -254,7 +265,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     function statusIconOrDropdownMenuButton() {
         if (showDropdownMenuButton && isAllowedToCreateDocuments)
             return dropdownMenuButton;
-        if (item.syncStatus && isCloudOrPublicDrive) {
+        if ((isCloudDrive || isPublicDrive) && item.syncStatus) {
             return (
                 <SyncStatusIcon
                     syncStatus={item.syncStatus}
