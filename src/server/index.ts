@@ -43,7 +43,7 @@ import {
 } from '../utils/document-helpers';
 import { requestPublicDrive } from '../utils/graphql';
 import { logger } from '../utils/logger';
-import { OperationError } from './error';
+import { ConflictOperationError, OperationError } from './error';
 import { ListenerManager } from './listener/manager';
 import {
     CancelPullLoop,
@@ -113,13 +113,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     private async saveStrand(strand: StrandUpdate) {
         const operations: Operation[] = strand.operations.map(
-            ({ index, type, hash, input, skip, timestamp }) => ({
-                index,
-                type,
-                hash,
-                input,
-                skip,
-                timestamp,
+            (op) => ({
+                ...op,
                 scope: strand.scope,
                 branch: strand.branch
             })
@@ -411,7 +406,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             timestamp: operation.timestamp,
             type: operation.type,
             input: operation.input as object,
-            skip: operation.skip
+            skip: operation.skip,
+            context: operation.context
         }));
     }
 
@@ -771,10 +767,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             appliedOperation[0]!.hash !== operation.hash &&
             !skipHashValidation
         ) {
-            throw new OperationError(
-                'CONFLICT',
+            throw new ConflictOperationError(
                 operation,
-                `Operation with index ${operation.index}:${operation.skip} has unexpected result hash`
+                appliedOperation[0]!
             );
         }
 

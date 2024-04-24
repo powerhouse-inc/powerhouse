@@ -7,6 +7,7 @@ import {
     DocumentDriveState
 } from 'document-model-libs/document-drive';
 import type {
+    ActionContext,
     BaseAction,
     DocumentHeader,
     ExtendedState,
@@ -33,7 +34,8 @@ function storageToOperation(
         timestamp: new Date(op.timestamp).toISOString(),
         input: op.input,
         type: op.type,
-        scope: op.scope as OperationScope
+        scope: op.scope as OperationScope,
+        context: op.context ? op.context as ActionContext : undefined,
         // attachments: fileRegistry
     };
 }
@@ -151,7 +153,8 @@ export class PrismaStorage implements IDriveStorage {
                     type: op.type,
                     scope: op.scope,
                     branch: 'main',
-                    skip: op.skip
+                    skip: op.skip,
+                    context: op.context
                 }))
             });
 
@@ -177,7 +180,8 @@ export class PrismaStorage implements IDriveStorage {
                             type: op.type,
                             scope: op.scope,
                             branch: 'main',
-                            skip: op.skip
+                            skip: op.skip,
+                            context: op.context
                         }
                     })
                 )

@@ -41,6 +41,7 @@ model Operation {
   attachments Attachment[]
   syncId      String?
   clipboard   Boolean?     @default(false)
+  context     Json?
 
   SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
 

@@ -5,7 +5,7 @@ import {
     reducer
 } from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
-import { DocumentModel } from 'document-model/document';
+import { ActionContext, DocumentModel } from 'document-model/document';
 import {
     actions as DocumentModelActions,
     DocumentModelDocument,
@@ -62,6 +62,8 @@ describe.each(storageLayers)(
 
             if (storageName === 'FilesystemStorage') {
                 return fs.rm(FileStorageDir, { recursive: true, force: true });
+            } else if (storageName === "BrowserStorage") {
+                return (await buildStorage()).clearStorage?.();
             } else if (storageName === 'PrismaStorage') {
                 await prismaClient.$executeRawUnsafe(
                     'DELETE FROM "Attachment";'
@@ -640,6 +642,71 @@ describe.each(storageLayers)(
             expect(storedDocument.operations).toStrictEqual(
                 document.operations
             );
+        });
+
+        it('saves operation context', async ({ expect }) => {
+            const server = new DocumentDriveServer(
+                documentModels,
+                await buildStorage()
+            );
+            await server.addDrive({
+                global: {
+                    id: '1',
+                    name: 'name',
+                    icon: 'icon',
+                    slug: 'slug'
+                },
+                local: {
+                    availableOffline: false,
+                    sharingType: 'public',
+                    listeners: [],
+                    triggers: []
+                }
+            });
+            let drive = await server.getDrive('1');
+
+
+            const context: ActionContext = {
+                signer: {
+                    user: {
+                        address: '123',
+                        networkId: '1',
+                        chainId: 1
+                    },
+                    app: {
+                        name: 'name',
+                        key: 'key'
+                    },
+                    signature: "test"
+                }
+            }
+
+            drive = reducer(
+                drive,
+                {
+                    ...DocumentDriveUtils.generateAddNodeAction(
+                        drive.state.global,
+                        {
+                            id: '1.1',
+                            name: 'document 1',
+                            documentType: 'powerhouse/document-model'
+                        },
+                        ['global', 'local'],
+
+                    ), context
+                }
+            );
+
+            // dispatches operation to server
+            const operation = drive.operations.global[0]!;
+            const operationResult = await server.addDriveOperation(
+                '1',
+                operation
+            );
+            expect(operationResult.status).toBe('SUCCESS');
+
+            drive = await server.getDrive('1');
+            expect(drive.operations.global[0]?.context).toStrictEqual(context);
         });
     }
 );

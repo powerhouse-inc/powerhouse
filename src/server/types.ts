@@ -8,6 +8,7 @@ import type {
 } from 'document-model-libs/document-drive';
 import type {
     Action,
+    ActionContext,
     BaseAction,
     CreateChildDocumentInput,
     Document,
@@ -114,6 +115,7 @@ export type OperationUpdate = {
     type: string;
     input: object;
     hash: string;
+    context?: ActionContext;
 };
 
 export type StrandUpdate = {

@@ -159,6 +159,20 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                                     input
                                     hash
                                     index
+                                    context {
+                                        signer {
+                                            user {
+                                                address
+                                                networkId
+                                                chainId
+                                            }
+                                            app {
+                                                name
+                                                key
+                                            }
+                                            signature
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -224,13 +238,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
             for (const strand of strands) {
                 const operations: Operation[] = strand.operations.map(
-                    ({ index, type, hash, input, skip, timestamp }) => ({
-                        index,
-                        type,
-                        hash,
-                        input,
-                        skip,
-                        timestamp,
+                    (op) => ({
+                        ...op,
                         scope: strand.scope,
                         branch: strand.branch
                     })
