@@ -1,3 +1,10 @@
+# [1.39.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.38.0...v1.39.0) (2024-04-24)
+
+
+### Features
+
+* do check for both files and folders ([#143](https://github.com/powerhouse-inc/document-model-libs/issues/143)) ([d8ea0cb](https://github.com/powerhouse-inc/document-model-libs/commit/d8ea0cb4952fd2e1e6a29f188856193b34d83ee3))
+
 # [1.38.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.37.0...v1.38.0) (2024-04-24)
 
 
