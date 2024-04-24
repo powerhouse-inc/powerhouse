@@ -229,7 +229,11 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         if (isPublicDrive && item.icon) {
             return {
                 icon: (
-                    <img src={item.icon} className="size-7" alt="drive icon" />
+                    <img
+                        src={item.icon}
+                        className="size-7 object-contain"
+                        alt="drive icon"
+                    />
                 ),
             };
         }
