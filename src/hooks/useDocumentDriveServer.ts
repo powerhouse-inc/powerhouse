@@ -313,9 +313,6 @@ export function useDocumentDriveServer(
         id: string,
         operation: Operation,
     ) {
-        if (!isAllowedToCreateDocuments) {
-            throw new Error('User is not allowed to add operations');
-        }
         if (!server) {
             throw new Error('Server is not defined');
         }
@@ -336,9 +333,6 @@ export function useDocumentDriveServer(
         id: string,
         operations: Operation[],
     ) {
-        if (!isAllowedToCreateDocuments) {
-            throw new Error('User is not allowed to add operations');
-        }
         if (!server) {
             throw new Error('Server is not defined');
         }
