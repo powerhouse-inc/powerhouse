@@ -423,7 +423,7 @@ describe('Node Operations', () => {
             scope: 'global',
             index: 0,
             skip: 0,
-            error: 'Circular Reference Error: Cannot make folder its own parent',
+            error: 'Circular Reference Error: Attempting to move a node to its current parent folder',
         });
     });
 });

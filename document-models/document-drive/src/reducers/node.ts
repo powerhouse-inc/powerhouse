@@ -215,6 +215,12 @@ export const reducer: DocumentDriveNodeOperations = {
         }
     },
     moveNodeOperation(state, action) {
+        if (action.input.srcFolder === action.input.targetParentFolder) {
+            throw new Error(
+                'Circular Reference Error: Attempting to move a node to its current parent folder',
+            );
+        }
+
         const node = state.nodes.find(
             node => node.id === action.input.srcFolder,
         );
@@ -230,11 +236,6 @@ export const reducer: DocumentDriveNodeOperations = {
         });
 
         if (isFolderNode(node)) {
-            if (action.input.srcFolder === action.input.targetParentFolder) {
-                throw new Error(
-                    'Circular Reference Error: Cannot make folder its own parent',
-                );
-            }
             const descendants = getDescendants(node, state.nodes);
             // throw error if moving a folder to one of its descendants
             if (
