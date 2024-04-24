@@ -1,6 +1,7 @@
 import {
     BaseTreeItem,
     CLOUD_DRIVE,
+    DriveTreeItem,
     DriveViewProps,
     LOCAL_DRIVE,
     PUBLIC_DRIVE,
@@ -255,14 +256,15 @@ export function useDrivesContainer() {
 
     async function driveToBaseItems(drive: DocumentDriveDocument) {
         const driveID = encodeID(drive.state.global.id);
-        const { id, name } = drive.state.global;
+        const { id, name, icon } = drive.state.global;
         const { sharingType, availableOffline } = drive.state.local;
         const driveBaseItemType = getDriveBaseItemType(sharingType || '');
-        const driveNode: BaseTreeItem = {
+        const driveNode: DriveTreeItem = {
             id: id,
             label: name,
             path: driveID,
             type: driveBaseItemType,
+            icon,
             sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
             availableOffline,
             syncStatus: await getSyncStatus(driveID, driveBaseItemType),
