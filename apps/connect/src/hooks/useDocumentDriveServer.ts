@@ -364,9 +364,6 @@ export function useDocumentDriveServer(
     }
 
     async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
-        if (!isAllowedToCreateDocuments) {
-            throw new Error('User is not allowed to create drives');
-        }
         await server.addRemoteDrive(url, options);
         await refreshDocumentDrives();
     }
