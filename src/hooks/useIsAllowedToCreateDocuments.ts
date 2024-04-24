@@ -9,11 +9,6 @@ export function useIsAllowedToCreateDocuments() {
     const createDocumentAllowList =
         createDocumentAllowListEnvString?.split(',');
     if (createDocumentAllowList === undefined) {
-        console.warn(`
-                WARNING: The VITE_CREATE_DOCUMENT_ALLOW_LIST environment variable is not set.
-                This means that _any_ users will be allowed to create documents.
-            `);
-
         return true;
     }
 

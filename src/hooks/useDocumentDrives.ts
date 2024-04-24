@@ -40,16 +40,21 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
     );
 
     const refreshDocumentDrives = useCallback(async () => {
+        const documentDrives: DocumentDriveDocument[] = [];
         try {
             const driveIds = await server.getDrives();
-            const drives = await Promise.all(
-                driveIds.map(id => server.getDrive(id)),
-            );
-
-            setDocumentDrives(drives);
+            for (const id of driveIds) {
+                try {
+                    const drive = await server.getDrive(id);
+                    documentDrives.push(drive);
+                } catch (error) {
+                    console.error(error);
+                }
+            }
         } catch (error) {
             console.error(error);
-            setDocumentDrives([]);
+        } finally {
+            setDocumentDrives(documentDrives);
         }
     }, [server]);
 
