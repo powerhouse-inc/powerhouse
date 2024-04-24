@@ -244,63 +244,65 @@ export function useDocumentDriveServer(
         return node;
     }
 
-    async function copyOrMoveNode(
-        driveId: string,
-        srcId: string,
-        targetId: string,
-        operation: string,
-        targetName?: string,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- TODO: use this later for sorting
-        sortOptions?: SortOptions,
-    ) {
-        if (!isAllowedToCreateDocuments) {
-            throw new Error('User is not allowed to copy or move nodes');
-        }
-        if (srcId === targetId) return;
+    async function moveNode(params: {
+        srcId: string;
+        decodedDriveId: string;
+        decodedTargetId: string;
+    }) {
+        const { decodedDriveId, srcId, decodedTargetId } = params;
+
+        await _addDriveOperation(
+            decodedDriveId,
+            actions.moveNode({
+                srcFolder: srcId,
+                targetParentFolder: decodedTargetId,
+            }),
+        );
+    }
+
+    async function copyNode(params: {
+        srcId: string;
+        srcName: string;
+        decodedDriveId: string;
+        decodedTargetId: string;
+    }) {
+        const { decodedDriveId, srcId, srcName, decodedTargetId } = params;
+
+        if (srcId === decodedTargetId) return;
 
         const drive = documentDrives.find(
-            drive => drive.state.global.id === driveId,
+            drive => drive.state.global.id === decodedDriveId,
         );
 
-        if (operation === 'copy' && drive) {
-            const targetParentFolder = targetId === '' ? null : targetId;
-            const generateId = () => utils.hashKey();
+        if (!drive) return;
 
-            const copyNodesInput = documentDriveUtils.generateNodesCopy(
-                {
-                    srcId,
-                    targetParentFolder,
-                    ...(targetName && { targetName }),
-                },
-                generateId,
-                drive.state.global.nodes,
+        const generateId = () => utils.hashKey();
+
+        const copyNodesInput = documentDriveUtils.generateNodesCopy(
+            {
+                srcId,
+                targetParentFolder: decodedTargetId,
+                targetName: srcName,
+            },
+            generateId,
+            drive.state.global.nodes,
+        );
+
+        const copyActions = copyNodesInput.map(copyNodeInput =>
+            actions.copyNode(copyNodeInput),
+        );
+
+        const result = await server.addDriveActions(
+            decodedDriveId,
+            copyActions,
+        );
+        if (result.operations.length) {
+            await refreshDocumentDrives();
+        } else if (result.status !== 'SUCCESS') {
+            console.error(
+                `Error copying files: ${result.status}`,
+                result.error,
             );
-
-            const copyActions = copyNodesInput.map(copyNodeInput =>
-                actions.copyNode(copyNodeInput),
-            );
-
-            const result = await server.addDriveActions(driveId, copyActions);
-            if (result.operations.length) {
-                await refreshDocumentDrives();
-            } else if (result.status !== 'SUCCESS') {
-                console.error(
-                    `Error copying files: ${result.status}`,
-                    result.error,
-                );
-            }
-        } else {
-            await _addDriveOperation(
-                driveId,
-                actions.moveNode({
-                    srcFolder: srcId,
-                    targetParentFolder: targetId,
-                }),
-            );
-
-            if (targetName) {
-                await renameNode(driveId, srcId, targetName);
-            }
         }
     }
 
@@ -464,7 +466,8 @@ export function useDocumentDriveServer(
             addFolder,
             deleteNode,
             renameNode,
-            copyOrMoveNode,
+            moveNode,
+            copyNode,
             addOperation,
             addOperations,
             getChildren,

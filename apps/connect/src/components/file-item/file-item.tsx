@@ -16,7 +16,7 @@ import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDoc
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
 import { useModal } from '../modal';
 
-const allowedItemOptions = ['delete', 'rename'];
+const allowedItemOptions = ['delete', 'rename', 'duplicate'];
 
 const defaultItemOptions = defaultDropdownMenuOptions.filter(option =>
     allowedItemOptions.includes(option.id),
@@ -34,7 +34,7 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
     const [isWriteMode, setIsWriteMode] = useState(false);
     const getReadableItemPath = useGetReadableItemPath();
     const getDocumentById = useGetDocumentById();
-    const { updateNodeName } = useDrivesContainer();
+    const { updateNodeName, onSubmitInput } = useDrivesContainer();
     const { showModal } = useModal();
     const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
 
@@ -49,6 +49,12 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
                 itemId: fileNode.id,
                 itemName: file.label,
                 type: 'file',
+            });
+        }
+        if (optionId === 'duplicate') {
+            await onSubmitInput({
+                ...file,
+                action: 'UPDATE_AND_COPY',
             });
         }
 

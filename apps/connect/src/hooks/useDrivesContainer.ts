@@ -19,7 +19,7 @@ import {
 import path from 'path';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
-import { getLastIndexFromPath, sanitizePath } from 'src/utils';
+import { getLastIndexFromPath } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useNavigateToItemId } from './useNavigateToItemId';
@@ -74,7 +74,8 @@ export function useDrivesContainer() {
         setDriveAvailableOffline,
         setDriveSharingType,
         documentDrives,
-        copyOrMoveNode,
+        copyNode,
+        moveNode,
         getSyncStatus,
     } = useDocumentDriveServer();
 
@@ -106,17 +107,9 @@ export function useDrivesContainer() {
         });
     }
 
-    async function addNewFolder(
-        item: TreeItem,
-        driveID: string,
-        onCancel?: () => void,
-    ) {
+    async function addNewFolder(item: TreeItem, driveID: string) {
         const basePathComponents = item.path.split('/').slice(1, -1);
-        const basePath = basePathComponents.join('/');
-        const newPath = path.join(basePath, sanitizePath(item.label));
 
-        // TODO is this needed?
-        if (newPath === '.') return onCancel?.();
         const decodedDriveID = decodeID(driveID);
         const parentFolder = basePathComponents.pop();
         await addFolder(
@@ -190,6 +183,12 @@ export function useDrivesContainer() {
                     decodeID(item.id),
                     item.sharingType?.toLowerCase() as TreeItemSharingType,
                 );
+                break;
+            case 'duplicate':
+                await onSubmitInput({
+                    ...item,
+                    action: 'UPDATE_AND_COPY',
+                });
         }
     };
 
@@ -198,40 +197,49 @@ export function useDrivesContainer() {
         await renameNode(decodedDriveID, item.id, item.label);
     }
 
-    const onSubmitInput = (item: TreeItem, onCancel?: () => void) => {
-        const driveID = item.path.split('/')[0];
+    async function onSubmitInput(item: TreeItem, onCancel?: () => void) {
+        const driveId = getRootPath(item.path);
 
-        if (item.action === 'NEW') {
+        const isCreateNewOperation = item.action === 'NEW';
+        const isMoveOperation = item.action === 'UPDATE_AND_MOVE';
+        const isCopyOperation = item.action === 'UPDATE_AND_COPY';
+
+        if (isCreateNewOperation) {
             actions.deleteVirtualItem(item.id);
-            addNewFolder(item, driveID, onCancel);
+            await addNewFolder(item, driveId);
             return;
         }
 
-        if (
-            item.action === 'UPDATE_AND_COPY' ||
-            item.action === 'UPDATE_AND_MOVE'
-        ) {
-            actions.deleteVirtualItem(item.id);
+        const srcId = item.id;
+        const srcName = item.label;
+        const targetPath = path.dirname(item.path);
+        let targetId = targetPath.split('/').pop() ?? '';
 
-            const driveID = getRootPath(item.path);
-            const srcID = item.id.replace('(from)', '');
-            const targetPath = path.dirname(item.path);
-            const operation =
-                item.action === 'UPDATE_AND_COPY' ? 'copy' : 'move';
+        if (targetId === driveId || targetId == '.') {
+            targetId = '';
+        }
 
-            let targetId = targetPath.split('/').pop() ?? '';
+        const decodedDriveId = decodeID(driveId);
+        const decodedTargetId = decodeID(targetId);
 
-            if (targetId === driveID || targetId == '.') {
-                targetId = '';
-            }
+        if (isMoveOperation) {
+            await moveNode({
+                decodedDriveId,
+                srcId,
+                decodedTargetId,
+            });
 
-            copyOrMoveNode(
-                decodeID(driveID),
-                srcID,
-                decodeID(targetId),
-                operation,
-                item.label,
-            );
+            return;
+        }
+
+        if (isCopyOperation) {
+            await copyNode({
+                decodedDriveId,
+                srcId,
+                decodedTargetId,
+                srcName,
+            });
+
             return;
         }
 
@@ -242,8 +250,8 @@ export function useDrivesContainer() {
             return;
         }
 
-        updateNodeName(item, driveID);
-    };
+        await updateNodeName(item, driveId);
+    }
 
     async function driveToBaseItems(drive: DocumentDriveDocument) {
         const driveID = encodeID(drive.state.global.id);
