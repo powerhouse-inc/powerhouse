@@ -40,8 +40,4 @@ jobs:
             --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
             --build-arg VITE_CREATE_DOCUMENT_ALLOW_LIST=${{secrets.VITE_CREATE_DOCUMENT_ALLOW_LIST}}
             --build-arg VITE_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS=true
-            --build-arg VITE_META_TITLE='Arbitrum Grants Platform'
-            --build-arg VITE_META_DESCRIPTION='Connect offers participants to the Arbitrum DAO Grant programs an easy and convenient way to report on their grant progress with their arbitrum address.'
-            --build-arg VITE_META_IMAGE=https://cf-ipfs.com/ipfs/bafkreidah6wctc2y4h2n7q7ci6twvgbwbhptfywpy5btwhsm4gucubedhy
-            --build-arg VITE_META_URL=https://www.arbgrants.com
           process_type: web
