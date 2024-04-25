@@ -63,6 +63,13 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
                 const operations = newState.operations[scope];
                 const operation = operations[operations.length - 1];
 
+                if (operation.error) {
+                    const error = new Error(operation.error);
+
+                    onErrorHandler(error);
+                    onErrorCallback?.(error);
+                }
+
                 callback?.(operation);
 
                 return newState;
