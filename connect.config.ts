@@ -20,10 +20,14 @@ const PUBLIC_DRIVES_ENABLED =
 
 const SEARCH_BAR_ENABLED = import.meta.env.VITE_SEARCH_BAR_ENABLED || undefined;
 
+const HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS =
+    import.meta.env.VITE_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS || 'false';
+
 const VITE_ROUTER_BASENAME = import.meta.env.VITE_ROUTER_BASENAME || '/';
 
 const VITE_SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || '';
 const VITE_SENTRY_ENV = import.meta.env.VITE_SENTRY_ENV || 'dev';
+
 export default {
     routerBasename: VITE_ROUTER_BASENAME,
     sentry: {
@@ -32,6 +36,8 @@ export default {
     },
     content: {
         showSearchBar: SEARCH_BAR_ENABLED !== 'false',
+        showDocumentModelSelectionSetting:
+            HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS !== 'true',
     },
     drives: {
         sections: {
