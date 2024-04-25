@@ -19,7 +19,8 @@
         "build:browser": "vite build --mode browser",
         "build:node": "vite build --mode node",
         "test": "vitest run",
-        "prepare": "husky install"
+        "prepare": "husky install",
+        "release": "semantic-release"
     },
     "exports": {
         ".": {
