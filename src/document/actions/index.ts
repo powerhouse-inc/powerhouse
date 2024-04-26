@@ -34,13 +34,14 @@ export function noopOperation<T, A extends Action, L>(
     if (action.skip === undefined) return defaultValues;
 
     return produce(defaultValues, draft => {
-        const [lastOperation] = draft.document.operations[scope].slice(-1);
+        const lastOperation = draft.document.operations[scope].at(-1);
 
         if (action.skip && action.skip > 0) {
             draft.skip = action.skip;
         }
 
         if (
+            lastOperation &&
             lastOperation.type === 'NOOP' &&
             action.index === lastOperation.index &&
             draft.skip > lastOperation.skip
@@ -83,10 +84,12 @@ export function undoOperation<T, A extends Action, L>(
             );
         }
 
-        const [lastOperation] = draft.document.operations[scope].slice(-1);
+        const lastOperation = draft.document.operations[scope].at(-1);
 
         const isLatestOpNOOP =
-            lastOperation.type === 'NOOP' && lastOperation.skip > 0;
+            lastOperation &&
+            lastOperation.type === 'NOOP' &&
+            lastOperation.skip > 0;
 
         draft.skip += input;
 

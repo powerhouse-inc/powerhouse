@@ -49,7 +49,7 @@ function getNextRevision(
     if ('index' in action) {
         latestOperation = { ...action };
     } else {
-        latestOperation = document.operations[action.scope].slice(-1)[0];
+        latestOperation = document.operations[action.scope].at(-1);
     }
 
     return (latestOperation?.index ?? -1) + 1;
