@@ -5,6 +5,7 @@ import {
     TreeItemType,
     usePathContent,
 } from '@/connect';
+import { twMerge } from 'tailwind-merge';
 
 export interface ConnectTreeViewProps
     extends Omit<
@@ -29,6 +30,7 @@ export interface ConnectTreeViewProps
     allowedPaths?: string[];
     allowedTypes?: TreeItemType[];
     isAllowedToCreateDocuments?: boolean;
+    isChildOfPublicDrive?: boolean;
 }
 
 export function ConnectTreeView(props: ConnectTreeViewProps) {
@@ -44,14 +46,23 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
         allowedPaths,
         allowedTypes,
         isAllowedToCreateDocuments = true,
+        isChildOfPublicDrive = false,
         ...elementProps
     } = props;
 
     const items = usePathContent(filterPath, allowedPaths, allowedTypes);
+
     const { defaultItemOptions: _, ...childrenProps } = props;
 
+    const hasItems = items.length > 0;
+
     return (
-        <>
+        <div
+            className={twMerge(
+                'text-gray-800',
+                level === 0 && hasItems && 'py-2',
+            )}
+        >
             {items.map(item => {
                 const mode =
                     item.action === 'NEW' ||
@@ -75,6 +86,7 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
                         onClick={e => onItemClick?.(e, item)}
                         disableDropBetween={level === 0 && !item.expanded}
                         isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                        isChildOfPublicDrive={isChildOfPublicDrive}
                         {...elementProps}
                     >
                         {item.expanded && (
@@ -87,6 +99,6 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
                     </ConnectTreeViewItem>
                 );
             })}
-        </>
+        </div>
     );
 }

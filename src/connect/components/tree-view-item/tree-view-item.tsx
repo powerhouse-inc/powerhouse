@@ -51,6 +51,7 @@ export type ConnectTreeViewItemProps = {
     onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
     disableHighlightStyles?: boolean;
     isAllowedToCreateDocuments?: boolean;
+    isChildOfPublicDrive?: boolean;
 };
 
 export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
@@ -71,6 +72,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         disableHighlightStyles = false,
         defaultOptions = defaultDropdownMenuOptions,
         isAllowedToCreateDocuments = true,
+        isChildOfPublicDrive = false,
         ...divProps
     } = props;
 
@@ -107,8 +109,8 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         };
     }, []);
 
+    const isSelected = item.isSelected;
     const isWriteMode = props.mode === 'write';
-    const isHighlighted = getIsHighlighted();
     const showDropdownMenuButton = mouseIsWithinItemContainer && !isWriteMode;
     const isDrive = getIsDrive(item);
     const isCloudDrive = getIsCloudDrive(item);
@@ -215,16 +217,6 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     function onCancelHandler() {
         onCancelInput?.(item);
     }
-
-    function getIsHighlighted() {
-        if (isDropTarget) return true;
-        if (disableHighlightStyles) return false;
-        if (isDragging) return false;
-        if (isWriteMode) return true;
-        if (isDropdownMenuOpen) return true;
-        return false;
-    }
-
     function getItemIcon() {
         if (isPublicDrive && item.icon) {
             return {
@@ -241,10 +233,16 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
             case FOLDER:
                 return {
                     icon: (
-                        <Icon name="folder-close" className="text-gray-600" />
+                        <Icon
+                            name="folder-close"
+                            className="text-gray-600 transition-colors group-hover/item:text-gray-900 group-aria-[selected=true]:text-gray-900"
+                        />
                     ),
                     expandedIcon: (
-                        <Icon name="folder-open" className="text-gray-600" />
+                        <Icon
+                            name="folder-open"
+                            className="text-gray-600 transition-colors group-hover/item:text-gray-900 group-aria-[selected=true]:text-gray-900"
+                        />
                     ),
                 };
             case FILE:
@@ -258,22 +256,52 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         }
     }
 
+    function getIsHighlighted() {
+        if (isDropTarget) return true;
+        if (disableHighlightStyles) return false;
+        if (isDragging) return false;
+        if (isWriteMode) return true;
+        if (isDropdownMenuOpen) return true;
+        if (isSelected) return true;
+        return false;
+    }
+
+    function getItemContainerClassName(
+        itemContainerClassNameOverrides?: string,
+    ) {
+        const commonStyles =
+            'group/item rounded-lg py-3 transition-colors text-gray-800';
+        const publicDriveHighlightStyles = 'bg-gray-300 text-gray-900';
+        const otherHighlightStyles = 'bg-slate-50 text-gray-900';
+        const highlightStyles = isChildOfPublicDrive
+            ? publicDriveHighlightStyles
+            : otherHighlightStyles;
+
+        const isHighlighted = getIsHighlighted();
+
+        return twMerge(
+            commonStyles,
+            isHighlighted && highlightStyles,
+            itemContainerClassNameOverrides,
+        );
+    }
+
     function getItemContainerProps() {
-        const { className: itemContainerClassName, ...restItemContainerProps } =
-            itemContainerProps;
+        const {
+            className: itemContainerClassNameOverrides,
+            ...restItemContainerProps
+        } = itemContainerProps;
 
-        const backgroundClass = isHighlighted ? 'bg-slate-50' : '';
+        const isHighlighted = getIsHighlighted();
 
-        const className = twMerge(
-            'rounded-lg py-3 transition-colors hover:bg-slate-50 peer-hover:bg-slate-50',
-            backgroundClass,
-            itemContainerClassName,
-            item.isSelected && 'bg-slate-50',
+        const className = getItemContainerClassName(
+            itemContainerClassNameOverrides,
         );
 
         return {
             className,
             ref: containerRef,
+            'aria-selected': isHighlighted,
             ...restItemContainerProps,
         };
     }

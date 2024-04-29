@@ -1,26 +1,44 @@
-import { Icon } from '@/powerhouse';
-
+import renownHover from '@/assets/renown-hover.png';
+import renownShortHover from '@/assets/renown-short-hover.png';
+import renownShort from '@/assets/renown-short.png';
+import renown from '@/assets/renown.png';
 export interface SidebarLoginProps {
     onLogin: () => void;
 }
 
 export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
     return (
-        <button
-            className="group/sidebar-footer flex w-full cursor-pointer items-baseline justify-start gap-2 px-5 py-2.5 text-sm font-semibold leading-10 text-gray-600"
-            onClick={onLogin}
-        >
-            <span>Login with</span>
-            <span className="h-[19px]">
-                <Icon
-                    name="renown"
-                    className="!h-5 !w-[71px] text-gray-500 group-hover/sidebar-footer:hidden"
+        <>
+            {/* full-size version for expanded */}
+            <button
+                className="group/sidebar-footer flex w-full cursor-pointer items-baseline justify-start text-sm font-semibold leading-10 text-gray-600 collapsed:hidden expanded:block"
+                onClick={onLogin}
+            >
+                <span>Login with</span>
+                <img
+                    src={renown}
+                    className="ml-2 h-5 group-hover/sidebar-footer:hidden"
                 />
-                <Icon
-                    name="renown_hover"
-                    className="hidden !h-5 !w-[71px] text-gray-900 group-hover/sidebar-footer:block"
+                <img
+                    src={renownHover}
+                    className="ml-2 hidden h-5 group-hover/sidebar-footer:block"
                 />
-            </span>
-        </button>
+            </button>
+            {/* small version for collapsed */}
+            <button
+                className="group/sidebar-footer grid w-full cursor-pointer place-items-center p-1 collapsed:block expanded:hidden"
+                onClick={onLogin}
+                aria-label="Login with Renown"
+            >
+                <img
+                    src={renownShort}
+                    className="group-hover/sidebar-footer:hidden"
+                />
+                <img
+                    src={renownShortHover}
+                    className="hidden group-hover/sidebar-footer:block"
+                />
+            </button>
+        </>
     );
 };

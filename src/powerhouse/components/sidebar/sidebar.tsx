@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {...props}
             ref={ref}
             className={twMerge(
-                `group/sidebar group ${state} flex
+                ` group ${state} flex
                  h-full flex-col overflow-hidden transition-none duration-300`,
                 className,
                 ['collapsing', 'expanding'].includes(state) &&

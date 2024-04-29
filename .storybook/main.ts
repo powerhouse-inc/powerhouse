@@ -18,7 +18,7 @@ const config: StorybookConfig = {
         reactDocgen: false,
     },
     docs: {
-        autodocs: 'tag',
+        autodocs: false,
     },
     async viteFinal(config) {
         return {

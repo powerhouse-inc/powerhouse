@@ -2,18 +2,25 @@ import {
     AddDriveInput,
     AddPublicDriveInput,
     AddPublicDriveModal,
+    CLOUD_DRIVE,
     ConnectTreeView,
     ConnectTreeViewItemProps,
     ConnectTreeViewProps,
     CreateDriveModal,
     DriveTreeItem,
     DriveType,
+    FOLDER,
+    LOCAL,
+    LOCAL_DRIVE,
+    PUBLIC,
+    PUBLIC_DRIVE,
+    SHARED,
     TreeItemType,
     usePathContent,
 } from '@/connect';
 import { Icon } from '@/powerhouse';
 import { useState } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { twJoin, twMerge } from 'tailwind-merge';
 
 export interface DriveViewProps
     extends Omit<
@@ -78,34 +85,42 @@ export function DriveView(props: DriveViewProps) {
     const drives = usePathContent(drivePath) as DriveTreeItem[];
 
     const allowedTypes: TreeItemType[] = [
-        'CLOUD_DRIVE',
-        'FOLDER',
-        'LOCAL_DRIVE',
-        'PUBLIC_DRIVE',
+        CLOUD_DRIVE,
+        FOLDER,
+        LOCAL_DRIVE,
+        PUBLIC_DRIVE,
     ];
     const allowedDrives = drives
         .filter(drive => filterDriveByType(drive, type))
         .map(drive => drive.path);
 
+    const isPublicDrive = type === PUBLIC_DRIVE;
+    const isCloudDrive = type === CLOUD_DRIVE;
+    const isLocalDrive = type === LOCAL_DRIVE;
+
     return (
         <div
             className={twMerge(
-                'pb-2',
-                type === 'PUBLIC_DRIVE' && 'rounded-lg bg-gray-100',
+                'border-y border-gray-100 pl-4 pr-1 first-of-type:border-b-0 last-of-type:border-t-0',
+                isPublicDrive && 'bg-gray-100 ',
                 className,
             )}
             {...restProps}
         >
-            <div className="flex items-center justify-between border-y border-gray-100 px-4 py-3">
+            <div
+                className={twJoin(
+                    'flex items-center justify-between py-1.5 pr-2',
+                )}
+            >
                 <p className="text-sm font-medium leading-6 text-gray-500">
                     {name}
                 </p>
-                <div className="flex gap-1 text-gray-600">
+                <div className="size-4 text-gray-600">
                     {!disableAddDrives && isAllowedToCreateDocuments && (
                         <button
                             onClick={() => setShowAddModal(true)}
                             className={twMerge(
-                                'transition hover:text-gray-800',
+                                'mr-2 transition hover:text-gray-800',
                             )}
                         >
                             <Icon name="plus-circle" size={16} />
@@ -116,7 +131,7 @@ export function DriveView(props: DriveViewProps) {
                     </button> */}
                 </div>
             </div>
-            <div className="p-2 text-gray-800">
+            <>
                 <ConnectTreeView
                     allowedPaths={allowedDrives}
                     disableHighlightStyles={disableHighlightStyles}
@@ -131,16 +146,17 @@ export function DriveView(props: DriveViewProps) {
                     defaultItemOptions={defaultItemOptions}
                     allowedTypes={allowedTypes}
                     isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                    isChildOfPublicDrive={isPublicDrive}
                 />
-            </div>
-            {props.type === 'LOCAL_DRIVE' && isAllowedToCreateDocuments && (
+            </>
+            {isLocalDrive && isAllowedToCreateDocuments && (
                 <CreateDriveModal
                     modalProps={{
                         open: showAddModal,
                         onOpenChange: setShowAddModal,
                     }}
                     formProps={{
-                        location: 'LOCAL',
+                        location: LOCAL,
                         onSubmit: data => {
                             onCreateDrive?.(data);
                             setShowAddModal(false);
@@ -149,26 +165,22 @@ export function DriveView(props: DriveViewProps) {
                     }}
                 />
             )}
-            {(props.type === 'PUBLIC_DRIVE' || props.type === 'CLOUD_DRIVE') &&
-                isAllowedToCreateDocuments && (
-                    <AddPublicDriveModal
-                        modalProps={{
-                            open: showAddModal,
-                            onOpenChange: setShowAddModal,
-                        }}
-                        formProps={{
-                            sharingType:
-                                props.type === 'PUBLIC_DRIVE'
-                                    ? 'PUBLIC'
-                                    : 'SHARED',
-                            onSubmit: data => {
-                                onCreateDrive?.(data);
-                                setShowAddModal(false);
-                            },
-                            onCancel: () => setShowAddModal(false),
-                        }}
-                    />
-                )}
+            {(isPublicDrive || isCloudDrive) && isAllowedToCreateDocuments && (
+                <AddPublicDriveModal
+                    modalProps={{
+                        open: showAddModal,
+                        onOpenChange: setShowAddModal,
+                    }}
+                    formProps={{
+                        sharingType: isPublicDrive ? PUBLIC : SHARED,
+                        onSubmit: data => {
+                            onCreateDrive?.(data);
+                            setShowAddModal(false);
+                        },
+                        onCancel: () => setShowAddModal(false),
+                    }}
+                />
+            )}
         </div>
     );
 }

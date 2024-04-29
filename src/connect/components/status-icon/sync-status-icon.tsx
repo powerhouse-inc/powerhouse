@@ -21,7 +21,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
     const syncStatusIcons = {
         [SYNCING]: (
             <Icon
-                size={12}
+                size={16}
                 {...iconProps}
                 className={twMerge('text-blue-900', className)}
                 name="syncing"
@@ -29,7 +29,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
         ),
         [SUCCESS]: (
             <Icon
-                size={12}
+                size={16}
                 {...iconProps}
                 className={twMerge('text-green-900', className)}
                 name="synced"
@@ -37,7 +37,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
         ),
         [CONFLICT]: (
             <Icon
-                size={12}
+                size={16}
                 {...iconProps}
                 className={twMerge('text-orange-900', className)}
                 name="error"
@@ -45,7 +45,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
         ),
         [MISSING]: (
             <Icon
-                size={12}
+                size={16}
                 {...iconProps}
                 className={twMerge('text-red-900', className)}
                 name="circle"
@@ -53,7 +53,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
         ),
         [ERROR]: (
             <Icon
-                size={12}
+                size={16}
                 {...iconProps}
                 className={twMerge('text-red-900', className)}
                 name="error"

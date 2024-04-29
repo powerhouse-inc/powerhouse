@@ -1,6 +1,6 @@
 import ImgPowerhouse from '@/assets/powerhouse-rounded.png';
-import { useEffect, useState } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { useState } from 'react';
+import { twJoin, twMerge } from 'tailwind-merge';
 
 export interface SidebarUserProps {
     username: string;
@@ -15,28 +15,36 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
     avatarUrl,
     loadingUser,
 }) => {
-    const [loadingImage, setLoadingImage] = useState(false);
+    const [loadingImage, setLoadingImage] = useState(Boolean(avatarUrl));
     const [imageError, setImageError] = useState(false);
-    useEffect(() => {
-        setImageError(false);
-        setLoadingImage(!avatarUrl);
-    }, [avatarUrl]);
-    const loading = loadingUser || (avatarUrl && loadingImage);
-    return (
-        <div
-            className={`flex gap-2 rounded-sm px-3 py-2.5 collapsed:justify-center
-            collapsed:px-1 expanding:justify-center expanding:px-1
-        `}
-        >
+
+    function getImage() {
+        if (!avatarUrl || imageError) {
+            return <SidebarImage src={ImgPowerhouse} alt={username} />;
+        }
+
+        return (
+            <>
+                <div
+                    className={twJoin(
+                        'size-10 flex-none animate-pulse rounded-full bg-gray-400 fade-out',
+                        !loadingImage && 'hidden',
+                    )}
+                ></div>
+                <SidebarImage src={avatarUrl} alt={username} />
+            </>
+        );
+    }
+
+    const image = getImage();
+
+    function SidebarImage(props: { src: string; alt: string }) {
+        return (
             <img
-                src={imageError || !avatarUrl ? ImgPowerhouse : avatarUrl}
-                alt={username}
-                width={40}
-                height={40}
+                {...props}
                 className={twMerge(
-                    'size-10 rounded-full object-contain transition-opacity',
-                    loading && 'animate-pulse',
-                    !loading && avatarUrl && 'duration-1000 animate-in fade-in',
+                    'size-10 flex-none rounded-full object-contain transition-opacity duration-1000 animate-in fade-in',
+                    loadingImage && 'hidden',
                 )}
                 onLoad={() => setLoadingImage(false)}
                 onError={() => {
@@ -44,25 +52,43 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
                     setImageError(true);
                 }}
             />
-            <div className="w-full collapsed:hidden expanding:hidden">
-                <p className="h-6 text-sm font-semibold text-gray-800">
-                    {loading ? (
-                        <span className="block h-1/2 w-2/3 translate-y-1/2 animate-pulse rounded bg-gray-400"></span>
-                    ) : (
-                        <span className="duration-1000 animate-in fade-in">
-                            {username ? username : address}
-                        </span>
-                    )}
-                </p>
-                <p className="h-[18px] text-xs font-semibold text-gray-600">
-                    {loading ? (
-                        <span className="block size-2/3 translate-y-1/3 animate-pulse rounded bg-gray-400"></span>
-                    ) : (
-                        <span className="duration-1000 animate-in fade-in">
-                            {username ? address : undefined}
-                        </span>
-                    )}
-                </p>
+        );
+    }
+
+    const usernameAndAddressLoader = (
+        <>
+            <p className="mb-2 h-4 w-4/5 animate-pulse rounded bg-gray-400"></p>
+            <p className="h-3 w-4/5 animate-pulse rounded bg-gray-400"></p>
+        </>
+    );
+
+    const usernameAndAddress = (
+        <>
+            <p className="mb-2 h-4 text-sm text-gray-800 duration-1000 animate-in fade-in">
+                {username}
+            </p>
+            <p className="h-3 text-xs text-gray-600 duration-1000 animate-in fade-in">
+                {address}
+            </p>
+        </>
+    );
+
+    const addressOnly = (
+        <p className="text-sm text-gray-800 duration-1000 animate-in fade-in">
+            {address}
+        </p>
+    );
+
+    return (
+        <div
+            className="flex gap-2 rounded-sm py-2.5 collapsed:justify-center
+            collapsed:px-1 expanding:justify-center expanding:px-1"
+        >
+            {image}
+            <div className="grid w-full items-center font-semibold collapsed:hidden expanding:hidden">
+                {loadingUser && usernameAndAddressLoader}
+                {!loadingUser && !!username && usernameAndAddress}
+                {!loadingUser && !username && addressOnly}
             </div>
         </div>
     );

@@ -25,11 +25,11 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         <SidebarFooter
             {...props}
             className={twMerge(
-                'border-t border-slate-700/10 p-4 collapsed:px-1 expanding:px-1',
+                'bg-gray-50 p-4 collapsed:px-1 expanding:px-1',
                 className,
             )}
         >
-            <div className="bg-gray-50 collapsed:bg-transparent collapsing:bg-transparent expanding:bg-transparent">
+            <div className="collapsed:bg-transparent collapsing:bg-transparent expanding:bg-transparent">
                 {address || loadingUser ? (
                     <SidebarUser
                         username={username}
@@ -42,7 +42,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
                 )}
             </div>
             <Button
-                className="flex w-full cursor-pointer gap-3 px-5 py-3 outline-none collapsed:px-3 expanding:px-3"
+                className="mt-3 flex w-full cursor-pointer gap-3 outline-none collapsed:px-3 expanding:px-3"
                 onPress={onClickSettings}
             >
                 <Icon name="settings" className="text-gray-600" />

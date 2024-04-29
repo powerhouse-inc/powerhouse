@@ -16,7 +16,7 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
         <SidebarHeader
             {...props}
             className={twMerge(
-                'mb-4 flex justify-between gap-4 px-2 pt-11 collapsed:justify-center',
+                'mb-4 flex justify-between gap-4 px-4 pt-11 collapsed:justify-center',
                 className,
             )}
         >

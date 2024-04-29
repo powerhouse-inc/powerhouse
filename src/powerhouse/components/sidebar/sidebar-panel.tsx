@@ -45,7 +45,7 @@ export function SidebarPanel({
         <>
             <div
                 className={twMerge(
-                    'no-scrollbar flex-1 overflow-auto transition-shadow',
+                    'no-scrollbar flex-1 overflow-auto text-gray-900 transition-shadow',
                     className,
                 )}
                 ref={containerRef}
