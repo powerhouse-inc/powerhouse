@@ -213,6 +213,60 @@ export function processUndoRedo<T, A extends Action, L>(
 }
 
 /**
+ * Processes a skip operation on a document.
+ *
+ * @template T - The type of the document state.
+ * @template A - The type of the document actions.
+ * @template L - The type of the document labels.
+ * @param {Document<T, A, L>} document - The document to process the skip operation on.
+ * @param {A | BaseAction | Operation} action - The action or operation to process.
+ * @param {ImmutableStateReducer<T, A, L>} customReducer - The custom reducer function for the document state.
+ * @param {number} skipValue - The value to skip.
+ * @returns {Document<T, A, L>} - The updated document after processing the skip operation.
+ */
+function processSkipOperation<T, A extends Action, L>(
+    document: Document<T, A, L>,
+    action: A | BaseAction | Operation,
+    customReducer: ImmutableStateReducer<T, A, L>,
+    skipValue: number,
+): Document<T, A, L> {
+    let skipHeaderOperation: SkipHeaderOperationIndex;
+    const scope = action.scope;
+
+    if ('index' in action) {
+        // Flow for Operation (Event)
+        skipHeaderOperation = { index: action.index, skip: action.skip };
+    } else {
+        // Flow for Action (Command)
+        skipHeaderOperation = { skip: skipValue };
+    }
+
+    const documentOperations = documentHelpers.grabageCollectDocumentOperations(
+        {
+            ...document.operations,
+            [scope]: documentHelpers.skipHeaderOperations(
+                document.operations[scope],
+                skipHeaderOperation,
+            ),
+        },
+    );
+
+    const { state } = replayOperations(
+        document.initialState,
+        documentOperations,
+        customReducer,
+        undefined,
+        undefined,
+        undefined,
+    );
+
+    return {
+        ...document,
+        state,
+    };
+}
+
+/**
  * Base document reducer that wraps a custom document reducer and handles
  * document-level actions such as undo, redo, prune, and set name.
  *
@@ -246,44 +300,17 @@ export function baseReducer<T, A extends Action, L>(
     const skipValue = skip || 0;
     let newDocument = { ...document };
     // let clipboard = [...document.clipboard];
-    const scope = action.scope;
 
     if (
         !ignoreSkipOperations &&
         (skipValue > 0 || ('index' in _action && _action.skip > 0))
     ) {
-        let skipHeaderOperation: SkipHeaderOperationIndex;
-
-        if ('index' in _action) {
-            // Flow for Operation (Event)
-            skipHeaderOperation = { index: _action.index, skip: _action.skip };
-        } else {
-            // Flow for Action (Command)
-            skipHeaderOperation = { skip: skipValue };
-        }
-
-        const documentOperations = {
-            ...newDocument.operations,
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            [scope]: documentHelpers.skipHeaderOperations(
-                newDocument.operations[scope],
-                skipHeaderOperation,
-            ),
-        };
-
-        const { state } = replayOperations(
-            newDocument.initialState,
-            documentOperations,
+        newDocument = processSkipOperation(
+            newDocument,
+            _action,
             customReducer,
-            undefined,
-            undefined,
-            undefined,
+            skipValue,
         );
-
-        newDocument = {
-            ...newDocument,
-            state,
-        };
     }
 
     // ignore undo redo for now

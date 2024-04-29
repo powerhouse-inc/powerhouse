@@ -1,4 +1,9 @@
-import { Operation, OperationScope } from '../types';
+import {
+    Operation,
+    OperationScope,
+    Action,
+    DocumentOperations,
+} from '../types';
 import stringify from 'json-stringify-deterministic';
 
 export type OperationIndex = {
@@ -535,4 +540,24 @@ export function skipHeaderOperations<A extends OperationIndex>(
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     return (clearedOperations || []).slice(0, -1) as A[];
+}
+
+export function grabageCollectDocumentOperations<A extends Action>(
+    documentOperations: DocumentOperations<A>,
+): DocumentOperations<A> {
+    const clearedOperations = Object.entries(documentOperations).reduce(
+        (acc, entry) => {
+            const [scope, ops] = entry;
+
+            return {
+                ...acc,
+                [scope as OperationScope]: garbageCollect(sortOperations(ops)),
+            };
+        },
+        {} as DocumentOperations<A>,
+    );
+
+    return {
+        ...clearedOperations,
+    };
 }
