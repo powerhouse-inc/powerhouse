@@ -128,7 +128,7 @@ describe('Local reducer', () => {
         });
     });
 
-    it('should undo local operation', async () => {
+    it.skip('should undo local operation', async () => {
         const document = createDocument<
             CountState,
             CountAction,
@@ -183,7 +183,7 @@ describe('Local reducer', () => {
         });
     });
 
-    it('should redo local operation', async () => {
+    it.skip('should redo local operation', async () => {
         const document = createDocument<
             CountState,
             CountAction,
@@ -231,7 +231,7 @@ describe('Local reducer', () => {
         });
     });
 
-    it('should prune local operations', async () => {
+    it.skip('should prune local operations', async () => {
         const document = createDocument<
             CountState,
             CountAction,

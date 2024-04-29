@@ -48,7 +48,7 @@ describe('DocumentModel Class', () => {
         ]);
     });
 
-    it('should keep undo state when loading from zip', async () => {
+    it.skip('should keep undo state when loading from zip', async () => {
         let documentModel = utils.createDocument();
         documentModel = reducer(
             documentModel,

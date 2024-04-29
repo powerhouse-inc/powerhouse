@@ -1,7 +1,7 @@
 import { Operation, OperationScope } from '../types';
 import stringify from 'json-stringify-deterministic';
 
-type OperationIndex = {
+export type OperationIndex = {
     index: number;
     skip: number;
 };
@@ -85,8 +85,10 @@ export function checkCleanedOperationsIntegrity(
 // 0:0 1:0 2:0 => 0:0 1:0 2:0, removals 0, no issues
 // 0:0 1:0 2:0 => 0:0 1:0 2:0, removals 0, no issues
 
-export function garbageCollect(sortedOperations: Operation[]): Operation[] {
-    const result: Operation[] = [];
+export function garbageCollect<A extends OperationIndex>(
+    sortedOperations: A[],
+): A[] {
+    const result: A[] = [];
 
     let i = sortedOperations.length - 1;
 
@@ -138,7 +140,7 @@ export function addUndo(sortedOperations: Operation[]): Operation[] {
 
 // [0:0 2:0 1:0 3:3 3:1] => [0:0 1:0 2:0 3:1 3:3]
 // Sort by index _and_ skip number
-export function sortOperations(operations: Operation[]): Operation[] {
+export function sortOperations<A extends OperationIndex>(operations: A[]): A[] {
     return operations
         .slice()
         .sort((a, b) => a.skip - b.skip)
@@ -360,7 +362,9 @@ function getMaxIndex(sortedOperations: Operation[]) {
 // [0:0 1:1 2:0 3:3] => -1
 // [50:50 100:50 150:50 151:0 152:0 153:0 154:3] => 53
 
-export function nextSkipNumber(sortedOperations: Operation[]): number {
+export function nextSkipNumber<A extends OperationIndex>(
+    sortedOperations: A[],
+): number {
     if (sortedOperations.length < 1) {
         return -1;
     }

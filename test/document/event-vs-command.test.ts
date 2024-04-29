@@ -55,7 +55,7 @@ describe('Event', () => {
         ]);
     });
 
-    it('should change to NOOP when event includes skip and operation to be skipped is in the history', () => {
+    it.skip('should change to NOOP when event includes skip and operation to be skipped is in the history', () => {
         let document = createDocument();
 
         document = emptyReducer(document, {

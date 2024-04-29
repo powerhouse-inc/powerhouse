@@ -115,6 +115,18 @@ describe('nextSkipNumber', () => {
             ],
             expected: 53,
         },
+        {
+            title: 'case 15',
+            operations: [
+                { index: 0, skip: 0 },
+                { index: 1, skip: 0 },
+                { index: 2, skip: 0 },
+                { index: 3, skip: 0 },
+                { index: 4, skip: 0 },
+                { index: 6, skip: 1 },
+            ],
+            expected: 2,
+        },
     ];
 
     it.each(scenarios)(

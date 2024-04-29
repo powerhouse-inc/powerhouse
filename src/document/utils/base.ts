@@ -31,6 +31,7 @@ import {
 } from '../actions/types';
 import { castImmutable, freeze } from 'immer';
 import { SignalDispatch } from '../signal';
+import { documentHelpers } from '.';
 
 export function isNoopOperation(op: Partial<Operation>): boolean {
     return (
@@ -324,15 +325,34 @@ export function replayOperations<T, A extends Action, L>(
     // base document reducer
     const wrappedReducer = createReducer(reducer, documentReducer);
 
-    return replayDocument(
+    const clearedOperations = Object.entries(operations).reduce(
+        (acc, entry) => {
+            const [scope, ops] = entry;
+
+            return {
+                ...acc,
+                [scope as OperationScope]: documentHelpers.garbageCollect(
+                    documentHelpers.sortOperations(ops),
+                ),
+            };
+        },
+        {},
+    ) as DocumentOperations<A>;
+
+    const document = replayDocument(
         initialState,
-        operations,
+        clearedOperations,
         wrappedReducer,
         dispatch,
         header,
         skipHeaderOperations,
         options,
     );
+
+    return {
+        ...document,
+        operations,
+    };
 }
 
 export type SkipHeaderOperations = Partial<Record<OperationScope, number>>;
@@ -360,52 +380,26 @@ export function replayDocument<T, A extends Action, L>(
     // builds a new document from the initial data
     const document = createDocument<T, A, L>(initialState);
 
-    // removes skipped operations from each scope
-    const activeOperationsMap = Object.keys(operations).reduce((acc, curr) => {
-        const scope = curr as keyof DocumentOperations<A>;
-        return {
-            ...acc,
-            [scope]: mapSkippedOperations(
-                operations[scope],
-                skipHeaderOperations[scope],
-            ),
-        };
-    }, {} as DocumentOperationsIgnoreMap<A>);
+    const flatOperations = Object.values(operations).flat();
 
-    // runs all the operations not ignored on the new document
-    // and returns the resulting state
-    const sortedOperations = sortMappedOperations(activeOperationsMap);
-    const result = sortedOperations.reduce(
-        (document, { ignore, operation }) => {
-            if (ignore) {
-                // ignored operations are replaced by NOOP operations
-                // TODO insert last valid operation hash and reuse it
-                return reducer(document, noop(operation.scope), dispatch, {
-                    skip: operation.skip,
-                    ignoreSkipOperations: true,
-                    // TODO: reuse hash?
-                });
-            }
+    const result = flatOperations.reduce((document, operation) => {
+        const doc = reducer(document, operation, dispatch, {
+            skip: operation.skip,
+            ignoreSkipOperations: true,
+            reuseHash: !checkHashes,
+        });
 
-            const result = reducer(document, operation, dispatch, {
-                skip: operation.skip,
-                ignoreSkipOperations: true,
-                reuseHash: !checkHashes,
-            });
-
-            return result;
-        },
-        document,
-    );
+        return doc;
+    }, document);
 
     // if hash generation was skipped then checks if the hash
     // of each scope matches the hash of last operation
     if (!checkHashes) {
         for (const scope of Object.keys(result.state)) {
-            for (let i = sortedOperations.length - 1; i >= 0; i--) {
-                const { ignore, operation } = sortedOperations[i];
+            for (let i = flatOperations.length - 1; i >= 0; i--) {
+                const operation = flatOperations[i];
 
-                if (ignore || operation.scope !== scope) {
+                if (operation.scope !== scope) {
                     continue;
                 }
                 if (operation.hash !== hashDocument(result, scope)) {

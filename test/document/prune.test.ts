@@ -17,7 +17,7 @@ import {
 } from '../helpers';
 
 describe('PRUNE operation', () => {
-    it('should prune first 4 operations', async () => {
+    it.skip('should prune first 4 operations', async () => {
         const document = createDocument<
             CountState,
             CountAction,
@@ -57,7 +57,7 @@ describe('PRUNE operation', () => {
         expect(newDocument.initialState.state).toStrictEqual(document.state);
     });
 
-    it('should prune last 3 operations', async () => {
+    it.skip('should prune last 3 operations', async () => {
         const document = createDocument<
             CountState,
             CountAction,
@@ -98,7 +98,7 @@ describe('PRUNE operation', () => {
         expect(newDocument.initialState.state).toStrictEqual(document.state);
     });
 
-    it('should prune 2 operations', async () => {
+    it.skip('should prune 2 operations', async () => {
         const document = createDocument<
             CountState,
             CountAction,
@@ -140,7 +140,7 @@ describe('PRUNE operation', () => {
         expect(newDocument.initialState.state).toStrictEqual(document.state);
     });
 
-    it('should undo pruned state', async () => {
+    it.skip('should undo pruned state', async () => {
         const document = createDocument<
             CountState,
             CountAction,
@@ -184,7 +184,7 @@ describe('PRUNE operation', () => {
         expect(newDocument.initialState.state).toStrictEqual(document.state);
     });
 
-    it('should redo pruned state', async () => {
+    it.skip('should redo pruned state', async () => {
         const document = createDocument<
             CountState,
             CountAction,

@@ -262,6 +262,24 @@ describe('Base reducer', () => {
         );
 
         document = countReducer(document, increment());
+        document = countReducer(document, increment());
+        document = countReducer(document, error());
+        document = countReducer(document, increment());
+
+        expect(document.state.global.count).toBe(3);
+    });
+
+    it('should not throw errors from reducer when there is an error after an operation with skip value', () => {
+        const initialState = createExtendedState<CountState, CountLocalState>({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: {} },
+        });
+
+        let document = createDocument<CountState, CountAction, CountLocalState>(
+            initialState,
+        );
+
+        document = countReducer(document, increment());
         document = countReducer(document, increment(), undefined, { skip: 1 });
         document = countReducer(document, error());
         document = countReducer(document, increment());
