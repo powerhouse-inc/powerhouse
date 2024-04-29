@@ -11,7 +11,7 @@ export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
         <>
             {/* full-size version for expanded */}
             <button
-                className="group/sidebar-footer flex w-full cursor-pointer items-baseline justify-start text-sm font-semibold leading-10 text-gray-600 collapsed:hidden expanded:block"
+                className="group/sidebar-footer hidden w-full cursor-pointer items-baseline justify-start text-sm font-semibold leading-10 text-gray-600 expanded:flex"
                 onClick={onLogin}
             >
                 <span>Login with</span>
@@ -26,7 +26,7 @@ export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
             </button>
             {/* small version for collapsed */}
             <button
-                className="group/sidebar-footer grid w-full cursor-pointer place-items-center p-1 collapsed:block expanded:hidden"
+                className="group/sidebar-footer hidden w-full cursor-pointer place-items-center p-1 collapsed:grid"
                 onClick={onLogin}
                 aria-label="Login with Renown"
             >
