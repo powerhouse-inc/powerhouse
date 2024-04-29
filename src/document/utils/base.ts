@@ -311,7 +311,7 @@ export function sortMappedOperations<A extends Action>(
 // This rebuilds the document according to the provided actions.
 export function replayOperations<T, A extends Action, L>(
     initialState: ExtendedState<T, L>,
-    operations: DocumentOperations<A>,
+    clearedOperations: DocumentOperations<A>,
     reducer: ImmutableStateReducer<T, A, L>,
     dispatch?: SignalDispatch,
     header?: DocumentHeader,
@@ -325,21 +325,7 @@ export function replayOperations<T, A extends Action, L>(
     // base document reducer
     const wrappedReducer = createReducer(reducer, documentReducer);
 
-    const clearedOperations = Object.entries(operations).reduce(
-        (acc, entry) => {
-            const [scope, ops] = entry;
-
-            return {
-                ...acc,
-                [scope as OperationScope]: documentHelpers.garbageCollect(
-                    documentHelpers.sortOperations(ops),
-                ),
-            };
-        },
-        {},
-    ) as DocumentOperations<A>;
-
-    const document = replayDocument(
+    return replayDocument(
         initialState,
         clearedOperations,
         wrappedReducer,
@@ -348,11 +334,6 @@ export function replayOperations<T, A extends Action, L>(
         skipHeaderOperations,
         options,
     );
-
-    return {
-        ...document,
-        operations,
-    };
 }
 
 export type SkipHeaderOperations = Partial<Record<OperationScope, number>>;

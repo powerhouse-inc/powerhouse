@@ -6,6 +6,7 @@ import {
     createExtendedState,
     mapSkippedOperations,
     calculateSkipsLeft,
+    documentHelpers,
 } from '../../src/document/utils';
 import {
     emptyReducer,
@@ -388,26 +389,26 @@ describe('skip operations', () => {
                 { skip: 1, ignoreSkipOperations: false },
             );
 
+            const clearedOperations =
+                documentHelpers.grabageCollectDocumentOperations(
+                    document.operations,
+                );
+
             const replayedDoc = utils.replayOperations(
                 initialState,
-                document.operations,
+                clearedOperations,
                 baseCountReducer,
             );
 
             expect(replayedDoc.state.global.count).toBe(2);
 
             expect(replayedDoc.revision.global).toBe(3);
-            expect(replayedDoc.operations.global.length).toBe(3);
+            expect(replayedDoc.operations.global.length).toBe(2);
             expect(replayedDoc.operations.global).toMatchObject([
                 {
                     type: 'INCREMENT',
                     skip: 0,
                     index: 0,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 1,
                 },
                 {
                     type: 'INCREMENT',
@@ -444,36 +445,26 @@ describe('skip operations', () => {
                 { skip: 3, ignoreSkipOperations: true },
             );
 
+            const clearedOperations =
+                documentHelpers.grabageCollectDocumentOperations(
+                    document.operations,
+                );
+
             const replayedDoc = utils.replayOperations(
                 initialState,
-                document.operations,
+                clearedOperations,
                 baseCountReducer,
             );
 
             expect(replayedDoc.state.global.count).toBe(2);
 
             expect(replayedDoc.revision.global).toBe(5);
-            expect(replayedDoc.operations.global.length).toBe(5);
+            expect(replayedDoc.operations.global.length).toBe(2);
             expect(replayedDoc.operations.global).toMatchObject([
                 {
                     type: 'INCREMENT',
                     skip: 0,
                     index: 0,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 1,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 2,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 3,
                 },
                 {
                     type: 'INCREMENT',
@@ -517,27 +508,27 @@ describe('skip operations', () => {
                 { skip: 1, ignoreSkipOperations: true },
             );
 
+            const clearedOperations =
+                documentHelpers.grabageCollectDocumentOperations(
+                    document.operations,
+                );
+
             const replayedDoc = utils.replayOperations(
                 initialState,
-                document.operations,
+                clearedOperations,
                 baseCountReducer,
             );
 
             expect(replayedDoc.state.global.count).toBe(4);
 
             expect(replayedDoc.revision.global).toBe(6);
-            expect(replayedDoc.operations.global.length).toBe(6);
+            expect(replayedDoc.operations.global.length).toBe(4);
 
             expect(replayedDoc.operations.global).toMatchObject([
                 {
                     type: 'INCREMENT',
                     skip: 0,
                     index: 0,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 1,
                 },
                 {
                     type: 'INCREMENT',
@@ -548,11 +539,6 @@ describe('skip operations', () => {
                     type: 'INCREMENT',
                     skip: 0,
                     index: 3,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 4,
                 },
                 {
                     type: 'INCREMENT',
@@ -589,38 +575,23 @@ describe('skip operations', () => {
                 { skip: 4, ignoreSkipOperations: true },
             );
 
+            const clearedOperations =
+                documentHelpers.grabageCollectDocumentOperations(
+                    document.operations,
+                );
+
             const replayedDoc = utils.replayOperations(
                 initialState,
-                document.operations,
+                clearedOperations,
                 baseCountReducer,
             );
 
             expect(replayedDoc.state.global.count).toBe(1);
 
             expect(replayedDoc.revision.global).toBe(5);
-            expect(replayedDoc.operations.global.length).toBe(5);
+            expect(replayedDoc.operations.global.length).toBe(1);
 
             expect(replayedDoc.operations.global).toMatchObject([
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 0,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 1,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 2,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 3,
-                },
                 {
                     type: 'INCREMENT',
                     skip: 4,
