@@ -22,6 +22,7 @@ import {
     ImmutableStateReducer,
     Operation,
     ReducerOptions,
+    State,
 } from './types';
 import {
     isBaseAction,
@@ -301,10 +302,11 @@ export function baseReducer<T, A extends Action, L>(
     let newDocument = { ...document };
     // let clipboard = [...document.clipboard];
 
-    if (
+    const shouldProcessSkipOperation =
         !ignoreSkipOperations &&
-        (skipValue > 0 || ('index' in _action && _action.skip > 0))
-    ) {
+        (skipValue > 0 || ('index' in _action && _action.skip > 0));
+
+    if (shouldProcessSkipOperation) {
         newDocument = processSkipOperation(
             newDocument,
             _action,
@@ -373,6 +375,12 @@ export function baseReducer<T, A extends Action, L>(
             draft.operations[_action.scope][lastOperationIndex].error = (
                 error as Error
             ).message;
+
+            draft.operations[_action.scope][lastOperationIndex].skip = 0;
+
+            if (shouldProcessSkipOperation) {
+                draft.state = castDraft<State<T, L>>({ ...document.state });
+            }
         }
     });
 

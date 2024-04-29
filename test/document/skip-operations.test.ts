@@ -17,6 +17,7 @@ import {
     CountLocalState,
     countReducer,
     increment,
+    error,
     baseCountReducer,
 } from '../helpers';
 
@@ -699,6 +700,52 @@ describe('skip operations', () => {
                     type: 'INCREMENT',
                     skip: 1,
                     index: 4,
+                },
+            ]);
+        });
+
+        it('should not process and skip operation that throws an error', () => {
+            const initialState = createExtendedState<
+                CountState,
+                CountLocalState
+            >({
+                documentType: 'powerhouse/counter',
+                state: { global: { count: 0 }, local: {} },
+            });
+
+            let document = createDocument<
+                CountState,
+                CountAction,
+                CountLocalState
+            >(initialState);
+
+            document = countReducer(document, increment());
+            document = countReducer(document, increment());
+            document = countReducer(document, error(), undefined, {
+                skip: 1,
+            });
+
+            expect(document.state.global.count).toBe(2);
+            expect(document.operations.global.length).toBe(3);
+
+            expect(document.operations.global).toMatchObject([
+                {
+                    type: 'INCREMENT',
+                    skip: 0,
+                    index: 0,
+                    error: undefined,
+                },
+                {
+                    type: 'INCREMENT',
+                    skip: 0,
+                    index: 1,
+                    error: undefined,
+                },
+                {
+                    type: 'ERROR',
+                    skip: 0,
+                    index: 2,
+                    error: 'Error action',
                 },
             ]);
         });
