@@ -33,7 +33,10 @@ import {
 } from './utils/base';
 import { SignalDispatch } from './signal';
 import { documentHelpers } from './utils';
-import { OperationIndex } from './utils/document-helpers';
+import {
+    OperationIndex,
+    SkipHeaderOperationIndex,
+} from './utils/document-helpers';
 
 /**
  * Gets the next revision number based on the provided action.
@@ -239,8 +242,8 @@ export function baseReducer<T, A extends Action, L>(
 
     const { skip, ignoreSkipOperations = false, reuseHash = false } = options;
 
-    let _action = { ...action };
-    let skipValue = skip || 0;
+    const _action = { ...action };
+    const skipValue = skip || 0;
     let newDocument = { ...document };
     // let clipboard = [...document.clipboard];
     const scope = action.scope;
@@ -249,36 +252,23 @@ export function baseReducer<T, A extends Action, L>(
         !ignoreSkipOperations &&
         (skipValue > 0 || ('index' in _action && _action.skip > 0))
     ) {
-        let tempLastOperation: OperationIndex;
-        const operationHistory = [...newDocument.operations[scope]];
+        let skipHeaderOperation: SkipHeaderOperationIndex;
 
         if ('index' in _action) {
             // Flow for Operation (Event)
-            tempLastOperation = { ..._action };
+            skipHeaderOperation = { index: _action.index, skip: _action.skip };
         } else {
             // Flow for Action (Command)
-            const [lastOperation] = document.operations[scope].slice(-1);
-            const nextIndex = (lastOperation?.index ?? -1) + 1;
-
-            tempLastOperation = {
-                ..._action,
-                index: nextIndex,
-                skip: skipValue,
-            };
+            skipHeaderOperation = { skip: skipValue };
         }
-
-        const sortedOperations = documentHelpers.sortOperations([
-            ...operationHistory,
-            { ...tempLastOperation },
-        ]);
-
-        const clearedOperations =
-            documentHelpers.garbageCollect(sortedOperations);
 
         const documentOperations = {
             ...newDocument.operations,
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            [scope]: (clearedOperations || []).slice(0, -1),
+            [scope]: documentHelpers.skipHeaderOperations(
+                newDocument.operations[scope],
+                skipHeaderOperation,
+            ),
         };
 
         const { state } = replayOperations(

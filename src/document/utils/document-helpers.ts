@@ -499,3 +499,40 @@ export function removeExistingOperations(
         });
     });
 }
+
+export type SkipHeaderOperationIndex = Partial<Pick<OperationIndex, 'index'>> &
+    Pick<OperationIndex, 'skip'>;
+
+/**
+ * Skips header operations and returns the remaining operations.
+ *
+ * @param operations - The array of operations.
+ * @param skipHeaderOperation - The skip header operation index.
+ * @returns The remaining operations after skipping header operations.
+ */
+export function skipHeaderOperations<A extends OperationIndex>(
+    operations: A[],
+    skipHeaderOperation: SkipHeaderOperationIndex,
+): A[] {
+    const [lastOperation] = sortOperations(operations).slice(-1);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    const nextIndex = (lastOperation?.index ?? -1) + 1;
+
+    const skipOperationIndex = {
+        ...skipHeaderOperation,
+        index: skipHeaderOperation.index ?? nextIndex,
+    };
+
+    if (skipOperationIndex.index < nextIndex) {
+        throw new Error(
+            `The skip header operation index must be greater than or equal to ${nextIndex}`,
+        );
+    }
+
+    const clearedOperations = garbageCollect(
+        sortOperations([...operations, skipOperationIndex]),
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    return (clearedOperations || []).slice(0, -1) as A[];
+}
