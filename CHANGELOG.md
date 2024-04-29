@@ -1,3 +1,10 @@
+# [1.0.0-alpha.103](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.102...v1.0.0-alpha.103) (2024-04-29)
+
+
+### Features
+
+* fix collapse style ([05ed9e8](https://github.com/powerhouse-inc/design-system/commit/05ed9e88e1cf93ee1b7f01abdb4553902f159c28))
+
 # [1.0.0-alpha.102](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.101...v1.0.0-alpha.102) (2024-04-29)
 
 
