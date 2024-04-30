@@ -5,12 +5,13 @@ import {
     DocumentHeader,
     Operation
 } from 'document-model/document';
-import { applyUpdatedOperations, mergeOperations } from '..';
+import { applyUpdatedOperations, isUUID, mergeOperations } from '..';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 export class MemoryStorage implements IDriveStorage {
     private documents: Record<string, Record<string, DocumentStorage>>;
     private drives: Record<string, DocumentDriveStorage>;
+    private slugToDriveId: Record<string, string> = {};
 
     constructor() {
         this.documents = {};
@@ -108,16 +109,31 @@ export class MemoryStorage implements IDriveStorage {
         return Object.keys(this.drives);
     }
 
-    async getDrive(id: string) {
-        const drive = this.drives[id];
+    async getDrive(idOrSlug: string) {
+        let drive;
+        if (!isUUID(idOrSlug)) {
+            const driveId = this.slugToDriveId[idOrSlug];
+            if (driveId) {
+                drive = this.drives[driveId];
+            }
+        }
+
         if (!drive) {
-            throw new Error(`Drive with id ${id} not found`);
+            drive = this.drives[idOrSlug];
+        }
+
+        if (!drive) {
+            throw new Error(`Drive with id ${idOrSlug} not found`);
         }
         return drive;
     }
 
     async createDrive(id: string, drive: DocumentDriveStorage) {
         this.drives[id] = drive;
+        const { slug } = drive.initialState.state.global;
+        if (slug) {
+            this.slugToDriveId[slug] = id;
+        }
     }
 
     async addDriveOperations(
