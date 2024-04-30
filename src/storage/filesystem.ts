@@ -197,6 +197,18 @@ export class FilesystemStorage implements IDriveStorage {
         }
     }
 
+    async getDriveIdBySlug(slug: string) {
+        // get oldes drives first
+        const drives = (await this.getDrives()).reverse();
+        for (const drive of drives) {
+            const { initialState: { state: { global: { slug: driveSlug } } } } = await this.getDrive(drive);
+            if (driveSlug === slug) {
+                return drive;
+            }
+        }
+        throw new Error(`Drive with slug ${slug} not found`);
+    }
+
     createDrive(id: string, drive: DocumentDriveStorage) {
         return this.createDocument(FilesystemStorage.DRIVES_DIR, id, drive);
     }

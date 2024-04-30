@@ -45,6 +45,7 @@ export interface IStorage {
 export interface IDriveStorage extends IStorage {
     getDrives(): Promise<string[]>;
     getDrive(id: string): Promise<DocumentDriveStorage>;
+    getDriveIdBySlug(slug: string): Promise<string>;
     createDrive(id: string, drive: DocumentDriveStorage): Promise<void>;
     deleteDrive(id: string): Promise<void>;
     clearStorage?(): Promise<void>;

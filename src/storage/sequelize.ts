@@ -11,6 +11,7 @@ import {
 } from 'document-model/document';
 import { DataTypes, Options, Sequelize } from 'sequelize';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
+import { isUUID } from '../utils';
 
 export class SequelizeStorage implements IDriveStorage {
     private db: Sequelize;
@@ -20,6 +21,13 @@ export class SequelizeStorage implements IDriveStorage {
     }
 
     public syncModels() {
+        const Drive = this.db.define('drive', {
+            id: {
+                type: DataTypes.STRING,
+                primaryKey: true
+            },
+            slug: DataTypes.STRING,
+        })
         const Document = this.db.define('document', {
             id: {
                 type: DataTypes.STRING,
@@ -113,6 +121,11 @@ export class SequelizeStorage implements IDriveStorage {
 
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
         await this.createDocument('drives', id, drive as DocumentStorage);
+        const Drive = this.db.models.drive;
+        await Drive?.upsert({
+            id: id,
+            slug: drive.initialState.state.global.slug ?? ""
+        });
     }
     async addDriveOperations(
         id: string,
@@ -379,6 +392,25 @@ export class SequelizeStorage implements IDriveStorage {
         return doc as DocumentDriveStorage;
     }
 
+    async getDriveIdBySlug(id: string) {
+        const Drive = this.db.models.drive;
+        if (!Drive) {
+            throw new Error('Drive model not found');
+        }
+
+        const result = await Drive.findOne({
+            where: {
+                slug: id
+            }
+        });
+
+        if (!result) {
+            throw new Error(`Drive with slug ${id} not found`);
+        }
+
+        return result.dataValues.id;
+    }
+
     async deleteDrive(id: string) {
         await this.deleteDocument('drives', id);
 
@@ -392,5 +424,14 @@ export class SequelizeStorage implements IDriveStorage {
                 driveId: id
             }
         });
+
+        const Drive = this.db.models.drive;
+        if (Drive) {
+            await Drive.destroy({
+                where: {
+                    id: id
+                }
+            });
+        }
     }
 }

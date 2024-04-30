@@ -381,27 +381,31 @@ export class PrismaStorage implements IDriveStorage {
         return this.getDocuments('drives');
     }
 
-    async getDrive(idOrSlug: string) {
+    async getDrive(id: string) {
         try {
-            if (!isUUID(idOrSlug)) {
-                const drive = await this.db.drive.findFirst({
-                    where: {
-                        slug: idOrSlug
-                    }
-                });
-
-                if (drive) {
-                    const doc = await this.getDocument('drives', drive.id);
-                    return doc as DocumentDriveStorage;
-                }
-            }
-
-            const doc = await this.getDocument('drives', idOrSlug);
+            const doc = await this.getDocument('drives', id);
             return doc as DocumentDriveStorage;
         } catch (e) {
             logger.error(e);
-            throw new Error(`Drive with id ${idOrSlug} not found`);
+            throw new Error(`Drive with id ${id} not found`);
         }
+    }
+
+    async getDriveIdBySlug(slug: string) {
+        const drive = await this.db.document.findFirst({
+            where: {
+                driveId: 'drives',
+                initialState: {
+                    slug
+                }
+            }
+        });
+
+        if (!drive) {
+            throw new Error(`Drive with slug ${slug} not found`);
+        }
+
+        return drive.id;
     }
 
     async deleteDrive(id: string) {
