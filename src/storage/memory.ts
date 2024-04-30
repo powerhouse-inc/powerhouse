@@ -5,7 +5,7 @@ import {
     DocumentHeader,
     Operation
 } from 'document-model/document';
-import { applyUpdatedOperations, isUUID, mergeOperations } from '..';
+import { applyUpdatedOperations, mergeOperations } from '..';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 export class MemoryStorage implements IDriveStorage {

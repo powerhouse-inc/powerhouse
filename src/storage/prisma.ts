@@ -17,8 +17,6 @@ import type {
 import { ConflictOperationError } from '../server/error';
 import { logger } from '../utils/logger';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
-import { isUUID } from '../utils';
-import { GetDocumentOptions } from '../server';
 
 type Transaction = Omit<
     PrismaClient<Prisma.PrismaClientOptions, never>,
@@ -80,7 +78,6 @@ export class PrismaStorage implements IDriveStorage {
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
         // drive for all drive documents
         await this.createDocument('drives', id, drive as DocumentStorage);
-        console.log(id, drive.initialState.state.global.slug)
         const count = await this.db.drive.upsert({
             where: {
                 slug: drive.initialState.state.global.slug ?? id
@@ -93,8 +90,6 @@ export class PrismaStorage implements IDriveStorage {
                 id
             }
         });
-
-        console.log("count: ", count)
     }
     async addDriveOperations(
         id: string,

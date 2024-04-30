@@ -11,8 +11,6 @@ import {
 } from 'document-model/document';
 import { DataTypes, Options, Sequelize } from 'sequelize';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
-import { isUUID } from '../utils';
-import { GetDocumentOptions } from '../server';
 
 export class SequelizeStorage implements IDriveStorage {
     private db: Sequelize;
