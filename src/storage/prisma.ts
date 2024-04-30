@@ -17,7 +17,7 @@ import type {
 import { ConflictOperationError } from '../server/error';
 import { logger } from '../utils/logger';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
-import { JitterType } from 'exponential-backoff/dist/options';
+import { isUUID } from '../utils';
 
 type Transaction = Omit<
     PrismaClient<Prisma.PrismaClientOptions, never>,
@@ -381,13 +381,26 @@ export class PrismaStorage implements IDriveStorage {
         return this.getDocuments('drives');
     }
 
-    async getDrive(id: string) {
+    async getDrive(idOrSlug: string) {
         try {
-            const doc = await this.getDocument('drives', id);
+            if (!isUUID(idOrSlug)) {
+                const drive = await this.db.drive.findFirst({
+                    where: {
+                        slug: idOrSlug
+                    }
+                });
+
+                if (drive) {
+                    const doc = await this.getDocument('drives', drive.id);
+                    return doc as DocumentDriveStorage;
+                }
+            }
+
+            const doc = await this.getDocument('drives', idOrSlug);
             return doc as DocumentDriveStorage;
         } catch (e) {
             logger.error(e);
-            throw new Error(`Drive with id ${id} not found`);
+            throw new Error(`Drive with id ${idOrSlug} not found`);
         }
     }
 

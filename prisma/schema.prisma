@@ -10,6 +10,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Drive {
+  id   String  @id
+  slug String?
+}
+
 model Document {
   id                  String
   driveId             String
