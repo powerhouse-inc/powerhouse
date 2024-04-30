@@ -72,6 +72,9 @@ describe.each(storageLayers)(
                     'DELETE FROM "Operation";'
                 );
                 await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
+                await prismaClient.$executeRawUnsafe(
+                    'DELETE FROM "Drive";'
+                );
             }
         });
 
@@ -708,5 +711,45 @@ describe.each(storageLayers)(
             drive = await server.getDrive('1');
             expect(drive.operations.global[0]?.context).toStrictEqual(context);
         });
-    }
-);
+
+
+        it('get drives by slug', async ({ expect }) => {
+            const server = new DocumentDriveServer(
+                documentModels,
+                await buildStorage()
+            );
+            const addDrive = (driveId: string, slug: string) => server.addDrive({
+                global: {
+                    id: driveId,
+                    name: 'name',
+                    icon: 'icon',
+                    slug: slug
+                },
+                local: {
+                    availableOffline: false,
+                    sharingType: 'public',
+                    listeners: [],
+                    triggers: []
+                }
+            });
+
+
+            await addDrive('1', 'slug1');
+            await addDrive('2', 'slug2');
+            await addDrive('3', 'slug3');
+            await addDrive('4', 'slug1');
+
+
+            let drive = await server.getDriveBySlug('slug1');
+            expect(drive.state.global.id).toBe('4');
+
+            drive = await server.getDriveBySlug('slug2');
+            expect(drive.state.global.id).toBe('2');
+
+            drive = await server.getDriveBySlug('slug3');
+            expect(drive.state.global.id).toBe('3');
+        });
+
+    })
+
+

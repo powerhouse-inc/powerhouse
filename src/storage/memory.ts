@@ -117,12 +117,12 @@ export class MemoryStorage implements IDriveStorage {
         return drive;
     }
 
-    async getDriveIdBySlug(slug: string) {
+    async getDriveBySlug(slug: string) {
         const driveId = this.slugToDriveId[slug];
         if (!driveId) {
             throw new Error(`Drive with slug ${slug} not found`);
         }
-        return driveId;
+        return this.getDrive(driveId);
     }
 
     async createDrive(id: string, drive: DocumentDriveStorage) {

@@ -18,6 +18,7 @@ import { ConflictOperationError } from '../server/error';
 import { logger } from '../utils/logger';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 import { isUUID } from '../utils';
+import { GetDocumentOptions } from '../server';
 
 type Transaction = Omit<
     PrismaClient<Prisma.PrismaClientOptions, never>,
@@ -79,6 +80,21 @@ export class PrismaStorage implements IDriveStorage {
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
         // drive for all drive documents
         await this.createDocument('drives', id, drive as DocumentStorage);
+        console.log(id, drive.initialState.state.global.slug)
+        const count = await this.db.drive.upsert({
+            where: {
+                slug: drive.initialState.state.global.slug ?? id
+            },
+            create: {
+                id: id,
+                slug: drive.initialState.state.global.slug ?? id
+            },
+            update: {
+                id
+            }
+        });
+
+        console.log("count: ", count)
     }
     async addDriveOperations(
         id: string,
@@ -391,21 +407,18 @@ export class PrismaStorage implements IDriveStorage {
         }
     }
 
-    async getDriveIdBySlug(slug: string) {
-        const drive = await this.db.document.findFirst({
+    async getDriveBySlug(slug: string) {
+        const driveEntity = await this.db.drive.findFirst({
             where: {
-                driveId: 'drives',
-                initialState: {
-                    slug
-                }
+                slug
             }
         });
 
-        if (!drive) {
+        if (!driveEntity) {
             throw new Error(`Drive with slug ${slug} not found`);
         }
 
-        return drive.id;
+        return this.getDrive(driveEntity.id);
     }
 
     async deleteDrive(id: string) {

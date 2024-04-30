@@ -111,13 +111,13 @@ export class BrowserStorage implements IDriveStorage {
         return drive;
     }
 
-    async getDriveIdBySlug(slug: string) {
+    async getDriveBySlug(slug: string) {
         // get oldes drives first
         const drives = (await this.getDrives()).reverse();
         for (const drive of drives) {
             const driveData = await this.getDrive(drive);
             if (driveData.initialState.state.global.slug === slug) {
-                return drive;
+                return this.getDrive(drive);
             }
         }
 

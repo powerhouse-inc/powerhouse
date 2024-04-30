@@ -494,19 +494,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             logger.error('Error getting drive from cache', e);
         }
         const driveStorage = await this.storage.getDrive(drive);
-        const documentModel = this._getDocumentModel(driveStorage.documentType);
-        const document = baseUtils.replayDocument(
-            driveStorage.initialState,
-            filterOperationsByRevision(
-                driveStorage.operations,
-                options?.revisions
-            ),
-            documentModel.reducer,
-            undefined,
-            driveStorage,
-            undefined,
-            { checkHashes: false }
-        );
+        const document = this._replayDocument(driveStorage, options);
         if (!isDocumentDrive(document)) {
             throw new Error(
                 `Document with id ${drive} is not a Document Drive`
@@ -520,11 +508,27 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     async getDriveBySlug(slug: string, options?: GetDocumentOptions) {
-        const driveId = await this.storage.getDriveIdBySlug(slug);
-        if (!driveId) {
-            throw new Error(`Drive with slug ${slug} not found`);
+        try {
+            const document = await this.cache.getDocument('drives', slug);
+            if (document && isDocumentDrive(document)) {
+                return document;
+            }
+        } catch (e) {
+            logger.error('Error getting drive from cache', e);
         }
-        return this.getDrive(driveId, options);
+
+        const driveStorage = await this.storage.getDriveBySlug(slug);
+        const document = this._replayDocument(driveStorage, options);
+        if (!isDocumentDrive(document)) {
+            throw new Error(
+                `Document with slug ${slug} is not a Document Drive`
+            );
+        } else {
+            this.cache
+                .setDocument('drives', slug, document)
+                .catch(logger.error);
+            return document;
+        }
     }
 
     async getDocument(drive: string, id: string, options?: GetDocumentOptions) {
@@ -1275,5 +1279,23 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     ): void {
         logger.debug(`Emitting event ${event}`, args);
         return this.emitter.emit(event, ...args);
+    }
+
+    private _replayDocument(documentStorage: DocumentStorage, options?: GetDocumentOptions) {
+        const documentModel = this._getDocumentModel(documentStorage.documentType);
+        const document = baseUtils.replayDocument(
+            documentStorage.initialState,
+            filterOperationsByRevision(
+                documentStorage.operations,
+                options?.revisions
+            ),
+            documentModel.reducer,
+            undefined,
+            documentStorage,
+            undefined,
+            { checkHashes: false }
+        );
+
+        return document;
     }
 }

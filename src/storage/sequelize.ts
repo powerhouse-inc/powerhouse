@@ -12,6 +12,7 @@ import {
 import { DataTypes, Options, Sequelize } from 'sequelize';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 import { isUUID } from '../utils';
+import { GetDocumentOptions } from '../server';
 
 export class SequelizeStorage implements IDriveStorage {
     private db: Sequelize;
@@ -22,11 +23,11 @@ export class SequelizeStorage implements IDriveStorage {
 
     public syncModels() {
         const Drive = this.db.define('drive', {
-            id: {
+            slug: {
                 type: DataTypes.STRING,
                 primaryKey: true
             },
-            slug: DataTypes.STRING,
+            id: DataTypes.STRING,
         })
         const Document = this.db.define('document', {
             id: {
@@ -122,10 +123,7 @@ export class SequelizeStorage implements IDriveStorage {
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
         await this.createDocument('drives', id, drive as DocumentStorage);
         const Drive = this.db.models.drive;
-        await Drive?.upsert({
-            id: id,
-            slug: drive.initialState.state.global.slug ?? ""
-        });
+        await Drive?.upsert({ id, slug: drive.initialState.state.global.slug });
     }
     async addDriveOperations(
         id: string,
@@ -392,23 +390,23 @@ export class SequelizeStorage implements IDriveStorage {
         return doc as DocumentDriveStorage;
     }
 
-    async getDriveIdBySlug(id: string) {
+    async getDriveBySlug(slug: string) {
         const Drive = this.db.models.drive;
         if (!Drive) {
             throw new Error('Drive model not found');
         }
 
-        const result = await Drive.findOne({
+        const driveEntity = await Drive.findOne({
             where: {
-                slug: id
+                slug
             }
         });
 
-        if (!result) {
-            throw new Error(`Drive with slug ${id} not found`);
+        if (!driveEntity) {
+            throw new Error(`Drive with slug ${slug} not found`);
         }
 
-        return result.dataValues.id;
+        return this.getDrive(driveEntity.dataValues.id);
     }
 
     async deleteDrive(id: string) {

@@ -11,8 +11,8 @@ datasource db {
 }
 
 model Drive {
-  id   String  @id
-  slug String?
+  slug String @id
+  id   String
 }
 
 model Document {
