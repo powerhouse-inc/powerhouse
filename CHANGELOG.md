@@ -1,3 +1,12 @@
+# [1.0.0-alpha.53](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.52...v1.0.0-alpha.53) (2024-04-30)
+
+
+### Features
+
+* added getDrive by slug to memory adapter ([5515c34](https://github.com/powerhouse-inc/document-drive/commit/5515c34ecc18a6f14931a1a66cee454f14dbe03f))
+* added getDriveBySlug ([680cf71](https://github.com/powerhouse-inc/document-drive/commit/680cf71209853689e1414f90f58f079460be94d5))
+* get drive by id or slug ([95c171e](https://github.com/powerhouse-inc/document-drive/commit/95c171e97eb7e27a65129d7fc400fae862d62fdc))
+
 # [1.0.0-alpha.52](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.51...v1.0.0-alpha.52) (2024-04-24)
 
 
