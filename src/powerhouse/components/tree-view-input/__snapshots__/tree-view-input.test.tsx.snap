@@ -21,28 +21,6 @@ exports[`TreeViewInput Component > should match snapshot 1`] = `
         value="My Documents"
       />
     </div>
-    <div
-      class="flex items-center pr-2"
-    >
-      <button
-        class="outline-none"
-        data-rac=""
-        type="button"
-      >
-        <div>
-          cancel
-        </div>
-      </button>
-      <button
-        class="outline-none"
-        data-rac=""
-        type="button"
-      >
-        <div>
-          submit
-        </div>
-      </button>
-    </div>
   </div>
 </DocumentFragment>
 `;

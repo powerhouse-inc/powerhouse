@@ -39,6 +39,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
     const hasDriveIcon = Boolean(driveIcon);
     const optionalDriveIconField = hasDriveIcon ? { driveIcon } : {};
     const { register, handleSubmit, control } = useForm<Inputs>({
+        mode: 'onBlur',
         defaultValues: {
             driveName: props.driveName,
             sharingType: props.sharingType,
@@ -50,7 +51,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
     return (
         <form onSubmit={handleSubmit(props.onSubmit)}>
             <DriveNameInput {...register('driveName')} />
-            <Divider className="mb-[18px] mt-4" />
+            <Divider className="my-4" />
             <Label htmlFor="sharingType">Sharing settings</Label>
             <SharingTypeFormInput control={control} />
             {hasDriveIcon && (

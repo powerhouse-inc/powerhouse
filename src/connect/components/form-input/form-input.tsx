@@ -1,29 +1,16 @@
-import {
-    ChangeEventHandler,
-    ComponentPropsWithRef,
-    FocusEventHandler,
-    ForwardedRef,
-    forwardRef,
-    useCallback,
-    useEffect,
-    useState,
-} from 'react';
+import { ComponentPropsWithRef, ForwardedRef, forwardRef } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
+
 type InputProps = ComponentPropsWithRef<'input'>;
 type FormInputProps = Omit<InputProps, 'className'> & {
     icon: React.JSX.Element;
+    errorMessage?: string;
+    isTouched?: boolean;
+    isDirty?: boolean;
     type?: 'text' | 'password' | 'email' | 'url';
     inputClassName?: string;
     containerClassName?: string;
-    customErrorMessages?: {
-        patternMismatch?: React.ReactNode;
-        tooLong?: React.ReactNode;
-        tooShort?: React.ReactNode;
-        typeMismatch?: React.ReactNode;
-        valueMissing?: React.ReactNode;
-    };
-    errorOverride?: React.ReactNode;
-    onError?: (error?: React.ReactNode) => void;
+    errorMessageClassName?: string;
     hideErrors?: boolean;
 };
 export const FormInput = forwardRef(function FormInput(
@@ -32,78 +19,18 @@ export const FormInput = forwardRef(function FormInput(
 ) {
     const {
         icon,
+        name,
+        errorMessage,
+        isDirty,
+        isTouched,
         containerClassName,
         inputClassName,
-        errorOverride,
-        onError,
+        errorMessageClassName,
         hideErrors = false,
         ...delegatedProps
     } = props;
-
-    const [dirty, setDirty] = useState(props.value !== '');
-    const [error, setError] = useState<React.ReactNode>(errorOverride ?? '');
-    const isError = error !== '';
     const type = props.type ?? 'text';
-
-    const onErrorCallback = useCallback(
-        (error: React.ReactNode) => onError?.(error),
-        [onError],
-    );
-
-    useEffect(() => {
-        if (errorOverride) {
-            setError(errorOverride);
-        }
-    }, [errorOverride]);
-
-    useEffect(() => {
-        if (isError) {
-            onErrorCallback(error);
-        }
-    }, [error, isError, onErrorCallback]);
-
-    const onBlur: FocusEventHandler<HTMLInputElement> = e => {
-        const { validity, value } = e.currentTarget;
-        const {
-            patternMismatch,
-            tooLong,
-            tooShort,
-            typeMismatch,
-            valueMissing,
-        } = validity;
-
-        if (value !== '') {
-            setDirty(true);
-        }
-
-        if (patternMismatch) {
-            setError('Please match the requested format');
-        } else if (tooLong) {
-            setError(props.customErrorMessages?.tooLong ?? 'Too long');
-        } else if (tooShort) {
-            setError(props.customErrorMessages?.tooShort ?? 'Too short');
-        } else if (typeMismatch) {
-            setError(
-                props.customErrorMessages?.typeMismatch ??
-                    'Please enter a valid email address',
-            );
-        } else if (valueMissing) {
-            setError(
-                props.customErrorMessages?.valueMissing ?? 'Cannot be empty',
-            );
-        } else {
-            setError('');
-        }
-        props.onBlur?.(e);
-    };
-
-    const onChange: ChangeEventHandler<HTMLInputElement> = e => {
-        if (e.currentTarget.value !== '') {
-            setError('');
-        }
-        props.onChange?.(e);
-    };
-
+    const isError = !!errorMessage;
     return (
         <div>
             <div
@@ -114,15 +41,15 @@ export const FormInput = forwardRef(function FormInput(
                 )}
             >
                 <span
-                    className={twJoin((!dirty || isError) && 'text-slate-200')}
+                    className={twJoin(
+                        (!isDirty || isError) && 'text-slate-200',
+                    )}
                 >
                     {icon}
                 </span>
                 <input
                     {...delegatedProps}
                     type={type}
-                    onBlur={onBlur}
-                    onChange={onChange}
                     ref={ref}
                     className={twMerge(
                         'w-full bg-transparent font-semibold outline-none',
@@ -132,12 +59,12 @@ export const FormInput = forwardRef(function FormInput(
             </div>
             <p
                 className={twMerge(
-                    'invisible min-h-[16px] text-xs text-red-900',
-                    isError && 'visible',
+                    'hidden min-h-4 text-xs text-red-900',
+                    isError && 'block',
                     hideErrors && 'hidden',
                 )}
             >
-                {error}
+                {errorMessage}
             </p>
         </div>
     );

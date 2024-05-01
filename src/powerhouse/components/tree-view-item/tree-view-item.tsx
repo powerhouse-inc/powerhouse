@@ -29,8 +29,6 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         children,
         icon,
         expandedIcon,
-        submitIcon,
-        cancelIcon,
         topIndicator,
         bottomIndicator,
         level = 0,
@@ -50,8 +48,6 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         defaultValue: label,
         onSubmitInput,
         onCancelInput,
-        submitIcon,
-        cancelIcon,
     };
 
     const content = mode === 'read' ? label : <TreeViewInput {...inputProps} />;
@@ -91,8 +87,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                             {open ? expandedIcon || icon : icon}
                         </span>
                     )}
-                    <div className="relative w-full overflow-hidden whitespace-nowrap">
-                        <span className="absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-inherit" />
+                    <div className="w-full cursor-pointer truncate">
                         {content}
                     </div>
                 </div>

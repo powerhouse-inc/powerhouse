@@ -28,12 +28,12 @@ exports[`FileItem Component > should match snapshot 1`] = `
           class="overflow-hidden text-gray-800"
         >
           <div
-            class="max-h-6 truncate text-sm font-medium"
+            class="max-h-6 truncate text-sm font-medium group-hover:text-gray-800"
           >
             Legal Contract #1
           </div>
           <div
-            class="max-h-6 truncate text-xs font-medium text-gray-600"
+            class="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800"
           >
             MakerDAO/Ecosystem Actors/Powerhouse/Chronicle Labs/Legal Contract 1
           </div>

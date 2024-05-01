@@ -12,7 +12,7 @@ import { Button, Icon } from '@/powerhouse';
 import { requestPublicDrive } from 'document-drive/utils/graphql';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useDebounce } from 'usehooks-ts';
+import { useDebounceValue } from 'usehooks-ts';
 
 interface PublicDriveDetails extends AddDriveInput {
     id: string;
@@ -36,28 +36,27 @@ type AddPublicDriveFormProps = {
 
 export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
     const { sharingType = 'PUBLIC' } = props;
-    const [url, setUrl] = useState('');
     const [publicDriveDetails, setPublicDriveDetails] =
         useState<PublicDriveDetails>();
     const [showLocationSettings, setShowLocationSettings] = useState(false);
     const [isUrlValid, setIsUrlValid] = useState(true);
     const [hasConfirmedUrl, setHasConfirmedUrl] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const debouncedUrl = useDebounce(url, 500);
+    const [url, setUrl] = useDebounceValue('', 500);
     const { register, handleSubmit, setValue } = useForm<Inputs>({
+        mode: 'onBlur',
         defaultValues: {
             availableOffline: publicDriveDetails?.availableOffline ?? false,
         },
     });
-
     useEffect(() => {
         setHasConfirmedUrl(false);
-        if (debouncedUrl === '') return;
+        if (url === '') return;
         fetchPublicDrive().catch(console.error);
 
         async function fetchPublicDrive() {
             try {
-                const { id, name } = await requestPublicDrive(debouncedUrl);
+                const { id, name } = await requestPublicDrive(url);
                 setPublicDriveDetails({
                     id,
                     driveName: name,
@@ -74,7 +73,7 @@ export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
                 setErrorMessage((error as Error).message);
             }
         }
-    }, [debouncedUrl, setValue]);
+    }, [url, setValue, sharingType]);
 
     function onSubmit({ availableOffline }: Inputs) {
         if (!publicDriveDetails) return;
@@ -116,7 +115,7 @@ export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
                         placeholder="Drive URL"
                         required
                         onChange={e => setUrl(e.target.value)}
-                        errorOverride={errorMessage}
+                        errorMessage={errorMessage}
                     />
                     <Divider className="mb-3" />
                     <Button

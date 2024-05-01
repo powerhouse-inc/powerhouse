@@ -5,22 +5,18 @@ import {
     useState,
 } from 'react';
 import { useKeyboard } from 'react-aria';
-import { Button, Input, PressEvent, TextField } from 'react-aria-components';
+import { Input, PressEvent, TextField } from 'react-aria-components';
 import ClickAwayListener from 'react-click-away-listener';
 import { twMerge } from 'tailwind-merge';
 
 export interface TreeViewInputProps
     extends Omit<ComponentPropsWithoutRef<'input'>, 'onSubmit'> {
-    cancelIcon?: React.JSX.Element;
-    submitIcon?: React.JSX.Element;
     onCancelInput?: () => void;
     onSubmitInput?: (value: string, event?: PressEvent) => void;
 }
 
 export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
     const {
-        submitIcon,
-        cancelIcon,
         onSubmitInput,
         onCancelInput,
         className,
@@ -37,7 +33,9 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
     useLayoutEffect(() => {
         setTimeout(() => {
             inputRef.current?.focus();
-        }, 500);
+            inputRef.current?.select();
+            inputRef.current?.scroll({ left: 9999 });
+        }, 100);
     }, []);
 
     const { keyboardProps } = useKeyboard({
@@ -74,17 +72,6 @@ export const TreeViewInput: React.FC<TreeViewInputProps> = props => {
                         ref={inputRef}
                     />
                 </TextField>
-                <div className="flex items-center pr-2">
-                    <Button className="outline-none" onPress={onCancelInput}>
-                        {cancelIcon}
-                    </Button>
-                    <Button
-                        onPress={e => onSubmitInput?.(text, e)}
-                        className="outline-none"
-                    >
-                        {submitIcon}
-                    </Button>
-                </div>
             </div>
         </ClickAwayListener>
     );

@@ -1,5 +1,5 @@
 import { Divider, DriveSettingsForm } from '@/connect';
-import { DivProps, Modal } from '@/powerhouse';
+import { DivProps, Icon, Modal } from '@/powerhouse';
 import { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
@@ -33,8 +33,17 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
                     props.containerProps?.className,
                 )}
             >
-                <h1 className="text-xl font-bold">Drive Settings</h1>
-                <Divider className="mb-[18px] mt-4" />
+                <div className="flex justify-between">
+                    <h1 className="text-xl font-bold">Drive settings</h1>
+                    <button
+                        className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900"
+                        onClick={() => props.modalProps?.onOpenChange?.(false)}
+                        tabIndex={-1}
+                    >
+                        <Icon name="xmark-light" size={24} />
+                    </button>
+                </div>
+                <Divider className="my-4" />
                 <DriveSettingsForm
                     {...props.formProps}
                     onDeleteDrive={handleDeleteDrive}

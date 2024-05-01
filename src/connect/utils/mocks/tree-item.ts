@@ -71,7 +71,7 @@ export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
         {
             id: randomId(),
             path: `${drive}/folder3`,
-            label: 'Folder 3',
+            label: 'Folder 3 Folder 3 Folder 3 Folder 3 Folder 3',
             type: 'FOLDER',
             availableOffline: false,
             syncStatus: 'SYNCING',

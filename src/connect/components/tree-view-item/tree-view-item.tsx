@@ -29,9 +29,6 @@ import {
 } from '../drive-view/utils';
 import { SyncStatusIcon } from '../status-icon';
 
-const submitIcon = <Icon name="check" className="text-gray-600" />;
-const cancelIcon = <Icon name="xmark" className="text-gray-600" />;
-
 export type ConnectTreeViewItemProps = {
     item: TreeItem;
     children: React.ReactNode;
@@ -270,7 +267,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         itemContainerClassNameOverrides?: string,
     ) {
         const commonStyles =
-            'group/item rounded-lg py-3 transition-colors text-gray-800';
+            'group/item rounded-lg py-3 pr-4 transition-colors text-gray-800';
         const publicDriveHighlightStyles = 'bg-gray-300 text-gray-900';
         const otherHighlightStyles = 'bg-slate-50 text-gray-900';
         const highlightStyles = isChildOfPublicDrive
@@ -330,8 +327,6 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 label={item.label}
                 open={item.expanded}
                 itemContainerProps={getItemContainerProps()}
-                submitIcon={submitIcon}
-                cancelIcon={cancelIcon}
                 {...getItemIcon()}
                 {...divProps}
             >

@@ -45,7 +45,6 @@ export const TableBase = fixedForwardRef(function TableBase<
     const maxHeight = hasExpandedRow
         ? 'max-content'
         : `${headerHeight + heightOf20Rows + bottomPadding}px`;
-
     return (
         <>
             <div
@@ -57,7 +56,7 @@ export const TableBase = fixedForwardRef(function TableBase<
                 style={{ maxHeight }}
             >
                 <table className="w-full">
-                    <thead className="sticky top-0 z-10 select-none text-nowrap border-b border-gray-300 bg-gray-100">
+                    <thead className="sticky top-0 isolate select-none text-nowrap border-b border-gray-300 bg-gray-100">
                         <tr>
                             {columns.map(column => (
                                 <th

@@ -5,20 +5,22 @@ import { TreeViewInput } from './tree-view-input';
 describe('TreeViewInput Component', () => {
     let onSubmitInput: Mock;
     let onCancelInput: Mock;
+    let input: HTMLInputElement;
+    Object.defineProperty(window.Element.prototype, 'scroll', {
+        writable: true,
+        value: vitest.fn(),
+    });
 
     const props = {
         level: 0,
         'aria-label': 'input',
         icon: 'Icon',
         defaultValue: 'My Documents',
-        submitIcon: <div>submit</div>,
-        cancelIcon: <div>cancel</div>,
     };
 
     beforeEach(() => {
         onSubmitInput = vi.fn();
         onCancelInput = vi.fn();
-
         render(
             <TreeViewInput
                 {...props}
@@ -26,6 +28,7 @@ describe('TreeViewInput Component', () => {
                 onCancelInput={onCancelInput}
             />,
         );
+        input = screen.getByLabelText('input');
     });
 
     it('should match snapshot', () => {
@@ -35,8 +38,6 @@ describe('TreeViewInput Component', () => {
                 onSubmitInput={() => {}}
                 onCancelInput={() => {}}
                 defaultValue="My Documents"
-                submitIcon={<div>submit</div>}
-                cancelIcon={<div>cancel</div>}
             />,
         );
 
@@ -47,18 +48,12 @@ describe('TreeViewInput Component', () => {
         expect(
             screen.getByDisplayValue(props.defaultValue),
         ).toBeInTheDocument();
-        expect(screen.getByText('submit')).toBeInTheDocument();
-        expect(screen.getByText('cancel')).toBeInTheDocument();
-    });
 
-    it('should call onSubmitInput when click submit icon', () => {
-        fireEvent.click(screen.getByText('submit'));
-
-        expect(onSubmitInput).toHaveBeenCalled();
+        expect(input).toBeInTheDocument();
     });
 
     it('should call onSubmitInput when press enter key', () => {
-        fireEvent.keyUp(screen.getByLabelText('input'), {
+        fireEvent.keyUp(input, {
             key: 'Enter',
         });
 
@@ -66,7 +61,7 @@ describe('TreeViewInput Component', () => {
     });
 
     it('should call onSubmitInput when click outside', async () => {
-        await waitFor(() => screen.getByText('submit'), {
+        await waitFor(() => input, {
             timeout: 100,
         });
         fireEvent.click(document.body);
@@ -74,14 +69,8 @@ describe('TreeViewInput Component', () => {
         expect(onSubmitInput).toHaveBeenCalled();
     });
 
-    it('should call onCancelInput when click cancel icon', () => {
-        fireEvent.click(screen.getByText('cancel'));
-
-        expect(onCancelInput).toHaveBeenCalled();
-    });
-
     it('should call onCancelInput when press Esc key', () => {
-        fireEvent.keyUp(screen.getByLabelText('input'), {
+        fireEvent.keyUp(input, {
             key: 'Escape',
         });
 
@@ -89,14 +78,13 @@ describe('TreeViewInput Component', () => {
     });
 
     it('should call onSubmitInput with text value', () => {
-        fireEvent.change(screen.getByLabelText('input'), {
+        fireEvent.change(input, {
             target: { value: 'new value' },
         });
 
-        fireEvent.click(screen.getByText('submit'));
-        expect(onSubmitInput).toHaveBeenCalledWith(
-            'new value',
-            expect.anything(),
-        );
+        fireEvent.keyUp(input, {
+            key: 'Enter',
+        });
+        expect(onSubmitInput).toHaveBeenCalledWith('new value');
     });
 });

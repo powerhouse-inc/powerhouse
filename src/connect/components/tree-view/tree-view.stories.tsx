@@ -152,7 +152,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
     };
 
     return (
-        <div className="bg-white p-10">
+        <div className="max-w-[304px] bg-white p-10">
             <ConnectTreeView
                 onItemClick={onItemClickHandler}
                 onCancelInput={onCancelInputHandler}

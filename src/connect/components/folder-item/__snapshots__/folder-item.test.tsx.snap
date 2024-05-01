@@ -25,13 +25,10 @@ exports[`FolderItem Component > should match read snapshot 1`] = `
           </svg>
         </div>
         <div
-          class="ml-3 max-h-6 overflow-hidden whitespace-nowrap font-medium text-slate-200 group-hover:text-gray-800"
+          class="ml-3 max-h-6 truncate font-medium text-slate-200"
         >
           Chronicle Labs
         </div>
-        <div
-          class="absolute right-0 h-full w-12 bg-gradient-to-r from-transparent to-gray-200"
-        />
       </div>
       <div>
         <svg
@@ -89,38 +86,6 @@ exports[`FolderItem Component > should match write snapshot 1`] = `
               type="text"
               value="Chronicle Labs"
             />
-          </div>
-          <div
-            class="flex items-center pr-2"
-          >
-            <button
-              class="outline-none"
-              data-rac=""
-              type="button"
-            >
-              <svg
-                class="text-gray-600"
-                style="width: 24px; height: 24px;"
-              >
-                <use
-                  href="icons.svg#xmark"
-                />
-              </svg>
-            </button>
-            <button
-              class="outline-none"
-              data-rac=""
-              type="button"
-            >
-              <svg
-                class="text-gray-600"
-                style="width: 24px; height: 24px;"
-              >
-                <use
-                  href="icons.svg#check"
-                />
-              </svg>
-            </button>
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 const Template: Story = {
     args: {
+        name: 'driveName',
         icon: <Icon name="drive" />,
         placeholder: 'Enter value',
     },
@@ -69,19 +70,6 @@ export const WithRegexPattern: Story = {
     args: {
         ...Template.args,
         pattern: '[a-c]{3}',
-    },
-};
-
-export const WithCustomErrorMessage: Story = {
-    ...Template,
-    args: {
-        ...Template.args,
-        required: true,
-        customErrorMessages: {
-            valueMissing: (
-                <span className="text-purple-900">This field is required</span>
-            ),
-        },
     },
 };
 

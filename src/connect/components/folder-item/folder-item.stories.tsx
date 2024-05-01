@@ -27,7 +27,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
+export const ReadMode: Story = {
     args: {
         title: 'Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs',
         item: {
@@ -40,10 +40,18 @@ export const Default: Story = {
     },
 };
 
-export const NotAllowedToCreateDocuments: Story = {
-    ...Default,
+export const WriteMode: Story = {
+    ...ReadMode,
     args: {
-        ...Default.args,
+        ...ReadMode.args,
+        mode: 'write',
+    },
+};
+
+export const NotAllowedToCreateDocuments: Story = {
+    ...ReadMode,
+    args: {
+        ...ReadMode.args,
         isAllowedToCreateDocuments: false,
     },
 };

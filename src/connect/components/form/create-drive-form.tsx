@@ -3,7 +3,7 @@ import {
     Disclosure,
     Divider,
     DriveLocation,
-    DriveNameInput,
+    FormInput,
     Label,
     LocationInfo,
     SharingType,
@@ -33,9 +33,13 @@ export type AddDriveInput = Inputs;
 export function CreateDriveForm(props: CreateDriveFormProps) {
     const [showLocationSettings, setShowLocationSettings] = useState(false);
     const [showUpload, setShowUpload] = useState(false);
-    const { register, handleSubmit, control } = useForm<Inputs>({
+    const {
+        register,
+        handleSubmit,
+        control,
+        formState: { errors },
+    } = useForm<Inputs>({
         defaultValues: {
-            driveName: '',
             sharingType: 'PRIVATE',
             availableOffline: false,
             location: props.location,
@@ -45,8 +49,15 @@ export function CreateDriveForm(props: CreateDriveFormProps) {
     return (
         <form onSubmit={handleSubmit(props.onSubmit)}>
             <Label htmlFor="driveName">Drive Name</Label>
-            <DriveNameInput {...register('driveName')} />
-            <Divider className="mb-[18px] mt-4" />
+            <FormInput
+                {...register('driveName', {
+                    required: 'Drive name is required',
+                })}
+                errorMessage={errors.driveName?.message}
+                icon={<Icon name="drive" />}
+                placeholder="Drive name"
+            />
+            <Divider className="my-4" />
             <Label htmlFor="sharingType">Sharing settings</Label>
             <SharingTypeFormInput control={control} />
             <Divider className="my-3" />
