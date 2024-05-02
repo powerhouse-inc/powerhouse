@@ -18,7 +18,9 @@
         "build": "npm run build:browser && npm run build:node",
         "build:browser": "vite build --mode browser",
         "build:node": "vite build --mode node",
-        "test": "vitest run"
+        "test": "vitest run",
+        "prepare": "husky install",
+        "release": "semantic-release"
     },
     "exports": {
         ".": {
@@ -56,6 +58,8 @@
         "@commitlint/cli": "^18.4.4",
         "@commitlint/config-conventional": "^18.4.4",
         "@rollup/plugin-node-resolve": "^15.2.3",
+        "@semantic-release/changelog": "^6.0.3",
+        "@semantic-release/git": "^10.0.1",
         "@total-typescript/ts-reset": "^0.5.1",
         "@types/mime": "^3.0.4",
         "@types/node": "^20.11.17",
@@ -71,6 +75,7 @@
         "prettier-plugin-organize-imports": "^3.2.4",
         "react": "^18.2.0",
         "rollup-plugin-polyfill-node": "^0.13.0",
+        "semantic-release": "^23.0.8",
         "sha.js": "^2.4.11",
         "typescript": "^5.3.3",
         "vite": "^5.0.11",
