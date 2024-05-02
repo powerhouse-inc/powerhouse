@@ -2,8 +2,11 @@ import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import path from 'path';
-import { defineConfig } from 'vite';
+import { HtmlTagDescriptor, defineConfig } from 'vite';
 import svgr from 'vite-plugin-svgr';
+import { createHtmlPlugin } from 'vite-plugin-html';
+
+import clientConfig from './client.config';
 
 // https://vitejs.dev/config
 export default defineConfig({
@@ -16,6 +19,17 @@ export default defineConfig({
             },
         }),
         svgr(),
+        createHtmlPlugin({
+            minify: true,
+            inject: {
+                tags:[
+                    ...clientConfig.meta.map((meta) => ({
+                        ...meta,
+                        injectTo: 'head',
+                    })) as HtmlTagDescriptor[],
+                ]
+            },
+        }),
     ],
     build: {
         minify: false,

@@ -22,5 +22,11 @@ jobs:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          docker_options: "--build-arg BASE_PATH=/makerdao/connect --build-arg VITE_BASE_HREF=/makerdao/connect/ --build-arg VITE_ROUTER_BASENAME=/makerdao/connect --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }} --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }} --build-arg VITE_DEFAULT_DRIVE_URL=https://apps.powerhouse.io/makerdao/switchboard/d/monetalis" 
+          docker_options: >-
+            --build-arg BASE_PATH=/makerdao/connect
+            --build-arg VITE_BASE_HREF=/makerdao/connect/
+            --build-arg VITE_ROUTER_BASENAME=/makerdao/connect
+            --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
+            --build-arg VITE_DEFAULT_DRIVE_URL=https://apps.powerhouse.io/makerdao/switchboard/d/monetalis
           process_type: web
