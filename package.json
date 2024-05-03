@@ -82,7 +82,6 @@
     "dependencies": {
         "change-case": "^5.4.3",
         "immer": "^10.0.3",
-        "json-stringify-deterministic": "^1.0.12",
         "jszip": "^3.10.1",
         "mime": "^4.0.1",
         "safe-stable-stringify": "^2.4.3",

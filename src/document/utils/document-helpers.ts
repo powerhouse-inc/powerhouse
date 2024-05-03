@@ -4,7 +4,7 @@ import {
     Action,
     DocumentOperations,
 } from '../types';
-import stringify from 'json-stringify-deterministic';
+import stringify from 'safe-stable-stringify';
 
 export type OperationIndex = {
     index: number;
@@ -467,7 +467,7 @@ export const prepareOperations = (
                 integrityError.operation.index === newOperation.index &&
                 integrityError.operation.skip === newOperation.skip &&
                 integrityError.category ===
-                    IntegrityIssueSubType.DUPLICATED_INDEX
+                IntegrityIssueSubType.DUPLICATED_INDEX
             );
         });
 
