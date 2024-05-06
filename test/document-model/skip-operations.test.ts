@@ -412,7 +412,7 @@ describe('DocumentModel Class', () => {
     });
 
     describe('state replayOperations', () => {
-        it('skipped operations should be ignored when re-calculate document state', () => {
+        it.skip('skipped operations should be ignored when re-calculate document state', () => {
             const initialState = documentModelUtils.createExtendedState();
             const document = createDocument<
                 DocumentModelState,

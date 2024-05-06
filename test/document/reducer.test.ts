@@ -262,6 +262,24 @@ describe('Base reducer', () => {
         );
 
         document = countReducer(document, increment());
+        document = countReducer(document, increment());
+        document = countReducer(document, error());
+        document = countReducer(document, increment());
+
+        expect(document.state.global.count).toBe(3);
+    });
+
+    it('should not throw errors from reducer when there is an error after an operation with skip value', () => {
+        const initialState = createExtendedState<CountState, CountLocalState>({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: {} },
+        });
+
+        let document = createDocument<CountState, CountAction, CountLocalState>(
+            initialState,
+        );
+
+        document = countReducer(document, increment());
         document = countReducer(document, increment(), undefined, { skip: 1 });
         document = countReducer(document, error());
         document = countReducer(document, increment());
@@ -284,8 +302,28 @@ describe('Base reducer', () => {
         document = countReducer(document, error());
         document = countReducer(document, increment());
 
-        expect(document.operations.global.length).toBe(4);
-        expect(document.operations.global[2].error).toBe('Error action');
+        expect(document.operations.global.length).toBe(3);
+        expect(document.state.global.count).toBe(2);
+        expect(document.operations.global).toMatchObject([
+            {
+                type: 'INCREMENT',
+                index: 1,
+                skip: 1,
+                error: undefined,
+            },
+            {
+                type: 'ERROR',
+                index: 2,
+                skip: 0,
+                error: 'Error action',
+            },
+            {
+                type: 'INCREMENT',
+                index: 3,
+                skip: 0,
+                error: undefined,
+            },
+        ]);
     });
 
     it('should not include error message in successful operations', () => {
