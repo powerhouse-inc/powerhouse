@@ -467,7 +467,7 @@ export const prepareOperations = (
                 integrityError.operation.index === newOperation.index &&
                 integrityError.operation.skip === newOperation.skip &&
                 integrityError.category ===
-                IntegrityIssueSubType.DUPLICATED_INDEX
+                    IntegrityIssueSubType.DUPLICATED_INDEX
             );
         });
 
@@ -521,16 +521,17 @@ export function skipHeaderOperations<A extends OperationIndex>(
 ): A[] {
     const [lastOperation] = sortOperations(operations).slice(-1);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    const nextIndex = (lastOperation?.index ?? -1) + 1;
+    const lastIndex = lastOperation?.index ?? -1;
+    const nextIndex = lastIndex + 1;
 
     const skipOperationIndex = {
         ...skipHeaderOperation,
         index: skipHeaderOperation.index ?? nextIndex,
     };
 
-    if (skipOperationIndex.index < nextIndex) {
+    if (skipOperationIndex.index < lastIndex) {
         throw new Error(
-            `The skip header operation index must be greater than or equal to ${nextIndex}`,
+            `The skip header operation index must be greater than or equal to ${lastIndex}`,
         );
     }
 

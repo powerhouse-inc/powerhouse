@@ -673,7 +673,7 @@ describe('skip operations', () => {
             });
 
             expect(document.state.global.count).toBe(3);
-            expect(document.operations.global.length).toBe(5);
+            expect(document.operations.global.length).toBe(3);
 
             expect(document.operations.global).toMatchObject([
                 {
@@ -683,18 +683,8 @@ describe('skip operations', () => {
                 },
                 {
                     type: 'INCREMENT',
-                    skip: 0,
-                    index: 1,
-                },
-                {
-                    type: 'INCREMENT',
                     skip: 1,
                     index: 2,
-                },
-                {
-                    type: 'INCREMENT',
-                    skip: 0,
-                    index: 3,
                 },
                 {
                     type: 'INCREMENT',

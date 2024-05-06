@@ -69,18 +69,18 @@ describe('skipHeaderOperations', () => {
         expect(result).toMatchObject(testInput.expected);
     });
 
-    it('should throw an error if try to use a duplicated index in skipHeaderOperation', () => {
+    it('should throw an error if try to use an index < lastIndex', () => {
         const operations = [
             { index: 0, skip: 0, type: 'OP_0' },
             { index: 1, skip: 0, type: 'OP_1' },
             { index: 2, skip: 0, type: 'OP_2' },
         ];
-        const skipHeaderOperation = { skip: 1, index: 2, type: 'SKIP_HEADER' };
+        const skipHeaderOperation = { skip: 1, index: 1, type: 'SKIP_HEADER' };
 
         expect(() =>
             skipHeaderOperations(operations, skipHeaderOperation),
         ).toThrowError(
-            'The skip header operation index must be greater than or equal to 3',
+            'The skip header operation index must be greater than or equal to 2',
         );
     });
 });

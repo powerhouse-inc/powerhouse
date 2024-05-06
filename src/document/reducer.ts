@@ -231,23 +231,18 @@ function processSkipOperation<T, A extends Action, L>(
     customReducer: ImmutableStateReducer<T, A, L>,
     skipValue: number,
 ): Document<T, A, L> {
-    let skipHeaderOperation: SkipHeaderOperationIndex;
     const scope = action.scope;
 
-    if ('index' in action) {
-        // Flow for Operation (Event)
-        skipHeaderOperation = { index: action.index, skip: action.skip };
-    } else {
-        // Flow for Action (Command)
-        skipHeaderOperation = { skip: skipValue };
-    }
+    const latestOperation = document.operations[scope].at(-1);
+
+    if (!latestOperation) return document;
 
     const documentOperations = documentHelpers.grabageCollectDocumentOperations(
         {
             ...document.operations,
             [scope]: documentHelpers.skipHeaderOperations(
                 document.operations[scope],
-                skipHeaderOperation,
+                latestOperation,
             ),
         },
     );
@@ -264,6 +259,9 @@ function processSkipOperation<T, A extends Action, L>(
     return {
         ...document,
         state,
+        operations: documentHelpers.grabageCollectDocumentOperations({
+            ...document.operations,
+        }),
     };
 }
 
@@ -286,15 +284,6 @@ export function baseReducer<T, A extends Action, L>(
     dispatch?: SignalDispatch,
     options: ReducerOptions = {},
 ) {
-    // if there's skip value
-    // 0:0 1:0 2:0 3:0 4:1(new action)
-    // garbagecollector(0:0 1:0 2:0 3:0 4:1)
-    // 0:0 1:0 2:0 4:1
-    // replayedDocument = replayOperation(0:0 1:0 2:0)
-    // newDocument = {...document, state: {...replayedDocument.state} }
-
-    // resutl = reducer(newDocument, 4:1)
-
     const { skip, ignoreSkipOperations = false, reuseHash = false } = options;
 
     const _action = { ...action };
@@ -305,15 +294,6 @@ export function baseReducer<T, A extends Action, L>(
     const shouldProcessSkipOperation =
         !ignoreSkipOperations &&
         (skipValue > 0 || ('index' in _action && _action.skip > 0));
-
-    if (shouldProcessSkipOperation) {
-        newDocument = processSkipOperation(
-            newDocument,
-            _action,
-            customReducer,
-            skipValue,
-        );
-    }
 
     // ignore undo redo for now
 
@@ -339,6 +319,15 @@ export function baseReducer<T, A extends Action, L>(
     // updates the document revision number, last modified date
     // and operation history
     newDocument = updateDocument(newDocument, _action, skipValue);
+
+    if (shouldProcessSkipOperation) {
+        newDocument = processSkipOperation(
+            newDocument,
+            _action,
+            customReducer,
+            skipValue,
+        );
+    }
 
     // wraps the custom reducer with Immer to avoid
     // mutation bugs and allow writing reducers with
@@ -368,7 +357,7 @@ export function baseReducer<T, A extends Action, L>(
                 // draft.clipboard = castDraft([...clipboardValue]);
             }
         } catch (error) {
-            // TODO: if the reducer throws an error then we should keep the previous state (before replayOperations)
+            // if the reducer throws an error then we should keep the previous state (before replayOperations)
             // and remove skip number from action/operation
             const lastOperationIndex =
                 newDocument.operations[_action.scope].length - 1;
@@ -380,6 +369,17 @@ export function baseReducer<T, A extends Action, L>(
 
             if (shouldProcessSkipOperation) {
                 draft.state = castDraft<State<T, L>>({ ...document.state });
+                draft.operations = castDraft({
+                    ...document.operations,
+                    [_action.scope]: [
+                        ...document.operations[_action.scope],
+                        {
+                            ...draft.operations[_action.scope][
+                                lastOperationIndex
+                            ],
+                        },
+                    ],
+                });
             }
         }
     });
