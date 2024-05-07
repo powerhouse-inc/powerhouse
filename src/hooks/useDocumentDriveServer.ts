@@ -2,6 +2,7 @@ import {
     DriveType,
     ERROR,
     SharingType,
+    TreeItem,
     getIsLocalDrive,
 } from '@powerhousedao/design-system';
 import {
@@ -428,7 +429,7 @@ export function useDocumentDriveServer(
         driveId: string,
         type: DriveType,
     ): Promise<SyncStatus | undefined> {
-        if (getIsLocalDrive(type)) return;
+        if (getIsLocalDrive({ type } as unknown as TreeItem)) return;
         try {
             return server.getSyncStatus(driveId);
         } catch (error) {
