@@ -22,7 +22,7 @@ export default defineConfig({
         createHtmlPlugin({
             minify: true,
             inject: {
-                tags:[
+                tags: [
                     ...clientConfig.meta.map((meta) => ({
                         ...meta,
                         injectTo: 'head',
@@ -34,6 +34,23 @@ export default defineConfig({
     build: {
         minify: false,
         sourcemap: false,
+        rollupOptions: {
+            output: {
+                manualChunks: (id, meta) => {
+                    // console.log(id);
+                    if (id.includes("typescript")) {
+                        console.log(meta.getModuleInfo(id)?.importers);
+                    }
+                    if (id.includes("document-model-libs/dist/es/editors/document-model.js")) {
+                        return `document-model-libs/editors.js`
+                    }
+                    if (id.startsWith(path.join(__dirname, 'editors')) && id.match(/editors\/[^\/]+\/editor.tsx/)) {
+                        const editorName = path.basename(path.dirname(id));
+                        return `editors/${editorName}`;
+                    }
+                },
+            }
+        }
     },
     resolve: {
         alias: {
