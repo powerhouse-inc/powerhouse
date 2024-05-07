@@ -123,13 +123,10 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
             entryTime: convertToDateTimeLocalFormat(
                 item?.entryTime ?? new Date(),
             ),
-            cashAmount: item?.cashTransaction?.amount ?? null,
-            fixedIncomeId:
-                fixedIncome?.id ?? fixedIncomes.length > 0
-                    ? fixedIncomes[0].id
-                    : null,
-            fixedIncomeAmount: item?.fixedIncomeTransaction?.amount ?? null,
-            fees: item?.fees ?? null,
+            cashAmount: item?.cashTransaction?.amount,
+            fixedIncomeId: fixedIncome?.id ?? fixedIncomes[0]?.id,
+            fixedIncomeAmount: item?.fixedIncomeTransaction?.amount,
+            fees: item?.fees,
         },
     });
 

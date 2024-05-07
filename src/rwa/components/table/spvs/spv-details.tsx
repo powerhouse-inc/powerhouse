@@ -17,7 +17,7 @@ export function SPVDetails(props: SPVDetailsProps) {
         formState: { errors },
     } = useForm<SPVFormInputs>({
         defaultValues: {
-            name: item?.name ?? null,
+            name: item?.name,
         },
     });
 

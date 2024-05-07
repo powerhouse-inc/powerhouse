@@ -24,10 +24,9 @@ export function ServiceProviderFeeTypeDetails(
         formState: { errors },
     } = useForm<ServiceProviderFeeTypeFormInputs>({
         defaultValues: {
-            name: item?.name ?? null,
-            feeType: item?.feeType ?? null,
-            accountId:
-                account?.id ?? accounts.length > 0 ? accounts[0].id : null,
+            name: item?.name,
+            feeType: item?.feeType,
+            accountId: account?.id ?? accounts[0]?.id,
         },
     });
 

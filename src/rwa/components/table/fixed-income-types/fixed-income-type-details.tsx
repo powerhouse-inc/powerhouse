@@ -17,7 +17,7 @@ export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
         formState: { errors },
     } = useForm<FixedIncomeTypeFormInputs>({
         defaultValues: {
-            name: item?.name ?? null,
+            name: item?.name,
         },
     });
 

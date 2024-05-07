@@ -29,10 +29,7 @@ export function AssetDetails(props: AssetDetailsProps) {
     } = useForm<AssetFormInputs>({
         mode: 'onBlur',
         defaultValues: {
-            fixedIncomeTypeId:
-                fixedIncomeType?.id ?? fixedIncomeTypes.length > 0
-                    ? fixedIncomeTypes[0].id
-                    : null,
+            fixedIncomeTypeId: fixedIncomeType?.id ?? fixedIncomeTypes[0]?.id,
             spvId: spv?.id ?? spvs.length > 0 ? spvs[0].id : null,
             name: item?.name ?? null,
             maturity: convertToDateTimeLocalFormat(
