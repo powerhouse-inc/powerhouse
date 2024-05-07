@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.41.0...v1.42.0) (2024-05-07)
+
+
+### Features
+
+* fix import file to drive ([a7bfdbb](https://github.com/powerhouse-inc/document-model-libs/commit/a7bfdbb30ddb4e3a19eca5556de11ac42fad8b25))
+
 # [1.41.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.40.0...v1.41.0) (2024-05-01)
 
 
