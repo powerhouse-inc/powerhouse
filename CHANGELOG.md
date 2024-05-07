@@ -1,3 +1,10 @@
+# [1.0.0-alpha.105](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.104...v1.0.0-alpha.105) (2024-05-07)
+
+
+### Features
+
+* remove null from default value checks ([fce3de8](https://github.com/powerhouse-inc/design-system/commit/fce3de8cb5bf8fb6c45a28418ca83ceb932c4e4a))
+
 # [1.0.0-alpha.104](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.103...v1.0.0-alpha.104) (2024-05-01)
 
 
