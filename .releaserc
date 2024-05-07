@@ -4,6 +4,10 @@
         {
             "name": "main",
             "prerelease": "alpha"
+        },
+        {
+            "name": "experimental",
+            "prerelease": "experimental"
         }
     ],
     "plugins": [
