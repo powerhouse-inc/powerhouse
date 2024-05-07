@@ -1,10 +1,11 @@
-import Editor, { CustomEditorProps } from './editor';
-import {
+import type { CustomEditorProps } from './editor';
+import type {
     RealWorldAssetsState,
     RealWorldAssetsLocalState,
     RealWorldAssetsAction,
 } from '../../document-models/real-world-assets';
-import { ExtendedEditor } from '../types';
+import type { ExtendedEditor } from '../types';
+import { lazyWithPreload } from 'document-model-libs/utils';
 
 export const module: ExtendedEditor<
     RealWorldAssetsState,
@@ -12,7 +13,7 @@ export const module: ExtendedEditor<
     RealWorldAssetsLocalState,
     CustomEditorProps
 > = {
-    Component: Editor,
+    Component: lazyWithPreload(() => import('./editor')),
     documentTypes: ['makerdao/rwa-portfolio'],
     config: {
         id: 'rwa-editor',

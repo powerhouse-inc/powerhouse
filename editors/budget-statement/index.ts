@@ -1,17 +1,17 @@
 import { ExtendedEditor } from '../types';
-import Editor from './editor';
 import {
     BudgetStatementAction,
     BudgetStatementLocalState,
     BudgetStatementState,
 } from '../../document-models/budget-statement';
+import { lazyWithPreload } from 'document-model-libs/utils';
 
 export const module: ExtendedEditor<
     BudgetStatementState,
     BudgetStatementAction,
     BudgetStatementLocalState
 > = {
-    Component: Editor,
+    Component: lazyWithPreload(() => import('./editor')),
     documentTypes: ['powerhouse/budget-statement'],
     config: {
         id: 'budget-statement-editor',

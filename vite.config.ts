@@ -1,5 +1,6 @@
 import { getConfig } from '@powerhousedao/codegen';
 import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
@@ -52,8 +53,21 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
                 external,
                 output: {
+                    manualChunks: (id, meta) => {
+                        if (id.startsWith(path.join(__dirname, 'editors')) && id.match(/editors\/[^\/]+\/editor.tsx/)) {
+                            const editorName = path.basename(path.dirname(id));
+                            return `editors/${editorName}`;
+                        }
+                    },
                     entryFileNames: '[format]/[name].js',
-                    chunkFileNames: '[format]/internal/[name]-[hash].js'
+                    chunkFileNames: (info) => {
+                        // creates named chunk for editor and vendor components
+                        if (info.name.startsWith('editors/')) {
+                            return `[format]/${info.name}.js`
+                        } else {
+                            return '[format]/internal/[name]-[hash].js'
+                        }
+                    }
                 }
             },
         },

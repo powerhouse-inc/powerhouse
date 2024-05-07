@@ -1,8 +1,8 @@
-import { ExtendedEditor } from '../types';
-import Editor from './editor';
+import { lazyWithPreload } from 'document-model-libs/utils';
+import type { ExtendedEditor } from '../types';
 
 export const module: ExtendedEditor = {
-    Component: Editor,
+    Component: lazyWithPreload(() => import('./editor')),
     documentTypes: ['*'],
     config: {
         id: 'json-editor',

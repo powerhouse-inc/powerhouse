@@ -1,6 +1,6 @@
 import { codegen as generate } from '@graphql-codegen/core';
 import { parse } from 'graphql';
-import * as ts from 'typescript';
+
 import { z } from 'zod';
 
 if (typeof window !== 'undefined') {
@@ -20,6 +20,7 @@ export default async function codegen(code: string) {
     const typescriptValidationSchema = await import(
         '@acaldas/graphql-codegen-typescript-validation-schema'
     );
+    const ts = await import('typescript');
     let generatedCode = await generate({
         schema,
         filename: 'types.ts',

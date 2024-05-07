@@ -1,4 +1,4 @@
-import { Editor as CodeEditor, EditorProps } from '@monaco-editor/react';
+import CodeEditor, { type EditorProps } from './monaco-editor';
 import { useEffect, useState } from 'react';
 import { styles } from 'document-model-libs/utils';
 

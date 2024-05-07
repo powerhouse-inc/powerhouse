@@ -1,5 +1,5 @@
-import { SchemaEditor, SchemaEditorProps } from '@theguild/editor';
-import { styles } from 'document-model-libs/utils';
+import type { SchemaEditorProps } from '@theguild/editor';
+import { lazyWithPreload, styles } from 'document-model-libs/utils';
 import {
     constrainedEditor,
     ConstrainedEditorRestriction,
@@ -10,6 +10,10 @@ export interface IProps extends Omit<SchemaEditorProps, 'onChange'> {
     theme: styles.ColorTheme;
     restrictions?: ConstrainedEditorRestriction[];
 }
+export type { SchemaEditorProps } from '@theguild/editor';
+export const SchemaEditor = lazyWithPreload(async () => ({
+    default: (await import('@theguild/editor')).SchemaEditor,
+}));
 
 const GraphQLEditor: React.FC<IProps> = ({
     schema,

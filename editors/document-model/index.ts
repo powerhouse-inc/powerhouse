@@ -1,13 +1,17 @@
-import Editor from './editor';
-import { ExtendedEditor } from '../types';
-import {
+import type { ExtendedEditor } from '../types';
+import type {
     DocumentModelAction,
     DocumentModelState,
+    DocumentModelLocalState,
 } from 'document-model/document-model';
+import { lazyWithPreload } from 'document-model-libs/utils';
 
-export const module: ExtendedEditor<DocumentModelState, DocumentModelAction> = {
-    // @ts-expect-error todo update type
-    Component: Editor,
+export const module: ExtendedEditor<
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState
+> = {
+    Component: lazyWithPreload(() => import('./editor')),
     documentTypes: ['powerhouse/document-model'],
     config: {
         id: 'document-model-editor',

@@ -1,8 +1,11 @@
-import { SchemaEditor as Editor, SchemaEditorProps } from '@theguild/editor';
+import {
+    SchemaEditor as Editor,
+    type SchemaEditorProps,
+} from '../common/graphql-editor';
 import { pascalCase } from 'change-case';
 import { styles } from 'document-model-libs/utils';
 import { GraphQLSchema } from 'graphql';
-import { editor } from 'monaco-editor';
+import type { editor } from 'monaco-editor';
 import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import codegen from '../common/codegen';

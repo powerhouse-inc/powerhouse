@@ -1,5 +1,10 @@
-import { BaseAction, State, Operation } from 'document-model/document';
-import {
+import type {
+    BaseAction,
+    State,
+    Operation,
+    OperationScope,
+} from 'document-model/document';
+import type {
     DocumentModelState,
     DocumentModelLocalState,
     DocumentSpecification,
@@ -7,8 +12,6 @@ import {
 } from 'document-model/document-model';
 import { useEffect, useState } from 'react';
 import z from 'zod';
-
-import { ScopeType } from './editor-schema';
 import { isJSONEqual } from '../common/json-editor';
 
 type SchemaState = {
@@ -18,9 +21,9 @@ type SchemaState = {
 };
 
 interface UseSchemaEditorProps {
-    scope: ScopeType;
+    scope: OperationScope;
     state: State<DocumentModelState, DocumentModelLocalState>;
-    setInitialState: (initialValue: string, scope: ScopeType) => void;
+    setInitialState: (initialValue: string, scope: OperationScope) => void;
     latestOperation?: Operation<DocumentModelAction | BaseAction> | null;
 }
 

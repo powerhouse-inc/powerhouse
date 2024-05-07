@@ -1,5 +1,5 @@
 import { TextInput, styles } from 'document-model-libs/utils';
-import GraphQLEditor from './graphql-editor';
+import GraphQLEditor from '../common/graphql-editor';
 import { pascalCase } from 'change-case';
 import { OperationScope } from 'document-model/document';
 import { ConstrainedEditorRestriction } from 'constrained-editor-plugin';
