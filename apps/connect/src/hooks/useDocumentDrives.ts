@@ -27,8 +27,9 @@ const readWriteDocumentDrivesAtom = (server: IDocumentDriveServer) => () =>
         },
     );
 // keeps track of document drives that have been initialized
+export type IDrivesState = 'INITIAL' | 'LOADING' | 'LOADED' | 'ERROR';
 export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
-    atom(false),
+    atom<IDrivesState>('INITIAL'),
 );
 
 // returns an array with the document drives of a
@@ -60,13 +61,15 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
 
     // if the server has not been initialized then
     // fetches the drives for the first time
-    const [isInitialized, setIsInitialized] = useAtom(
+    const [status, setStatus] = useAtom(
         documentDrivesInitializedMapAtomFamily(server),
     );
 
-    if (!isInitialized) {
-        setIsInitialized(true);
-        refreshDocumentDrives();
+    if (status === 'INITIAL') {
+        setStatus('LOADING');
+        refreshDocumentDrives()
+            .then(() => setStatus('LOADED'))
+            .catch(() => setStatus('ERROR'));
     }
 
     const serverSubscribeUpdates = useCallback(() => {
@@ -92,7 +95,8 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
                 documentDrives,
                 refreshDocumentDrives,
                 serverSubscribeUpdates,
+                status,
             ] as const,
-        [documentDrives],
+        [documentDrives, status],
     );
 }
