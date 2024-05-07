@@ -29,5 +29,4 @@ jobs:
             --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
             --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
             --build-arg VITE_DEFAULT_DRIVE_URL=https://apps.powerhouse.io/alpha/makerdao/switchboard/d/monetalis
-            --build-arg VITE_CREATE_DOCUMENT_ALLOW_LIST=${{secrets.VITE_CREATE_DOCUMENT_ALLOW_LIST}}
           process_type: web
