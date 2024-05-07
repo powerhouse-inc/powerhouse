@@ -49,11 +49,12 @@ export const reducer: DocumentDriveNodeOperations = {
             );
         }
         const fileNode: FileNode = {
-            ...action.input,
+            id: action.input.id,
             name,
             kind: 'file',
             parentFolder: action.input.parentFolder ?? null,
             synchronizationUnits,
+            documentType: action.input.documentType,
         };
         state.nodes.push(fileNode);
 
