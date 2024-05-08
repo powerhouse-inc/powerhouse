@@ -142,6 +142,7 @@ export type RevisionsFilter = PartialRecord<OperationScope, number>;
 
 export type GetDocumentOptions = {
     revisions?: RevisionsFilter;
+    checkHashes?: boolean;
 };
 
 export abstract class BaseDocumentDriveServer {

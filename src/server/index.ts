@@ -28,7 +28,8 @@ import { MemoryStorage } from '../storage/memory';
 import type {
     DocumentDriveStorage,
     DocumentStorage,
-    IDriveStorage
+    IDriveStorage,
+    StrictDocumentStorage
 } from '../storage/types';
 import { generateUUID, isBefore, isDocumentDrive } from '../utils';
 import {
@@ -494,7 +495,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             logger.error('Error getting drive from cache', e);
         }
         const driveStorage = await this.storage.getDrive(drive);
-        const document = this._replayDocument(driveStorage, options);
+        const document = this._buildDocument(driveStorage, options);
         if (!isDocumentDrive(document)) {
             throw new Error(
                 `Document with id ${drive} is not a Document Drive`
@@ -518,7 +519,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }
 
         const driveStorage = await this.storage.getDriveBySlug(slug);
-        const document = this._replayDocument(driveStorage, options);
+        const document = this._buildDocument(driveStorage, options);
         if (!isDocumentDrive(document)) {
             throw new Error(
                 `Document with slug ${slug} is not a Document Drive`
@@ -540,20 +541,10 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         } catch (e) {
             logger.error('Error getting document from cache', e);
         }
-        const { initialState, operations, ...header } =
+        const documentStorage =
             await this.storage.getDocument(drive, id);
+        const document = this._buildDocument(documentStorage, options)
 
-        const documentModel = this._getDocumentModel(header.documentType);
-
-        const document = baseUtils.replayDocument(
-            initialState,
-            filterOperationsByRevision(operations, options?.revisions),
-            documentModel.reducer,
-            undefined,
-            header,
-            undefined,
-            { checkHashes: false }
-        );
         this.cache.setDocument(drive, id, document).catch(logger.error);
         return document;
     }
@@ -566,11 +557,41 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         driveId: string,
         input: CreateDocumentInput
     ) {
-        const documentModel = this._getDocumentModel(input.documentType);
-        // TODO validate input.document is of documentType
-        const document = input.document ?? documentModel.utils.createDocument();
+        // if a document was provided then checks if it's valid
+        if (input.document) {
+            if (input.documentType !== input.document.documentType) {
+                throw new Error(`Provided document is not ${input.documentType}`);
+            }
+            this._buildDocument(input.document);
+        }
 
-        await this.storage.createDocument(driveId, input.id, document);
+        // if no document was provided then create a new one
+        const document = input.document ??
+            this._getDocumentModel(input.documentType).utils.createDocument();
+
+        // stores document information
+        const documentStorage: DocumentStorage = {
+            name: document.name,
+            revision: document.revision,
+            documentType: document.documentType,
+            created: document.created,
+            lastModified: document.lastModified,
+            operations: { global: [], local: [] },
+            initialState: document.initialState,
+            clipboard: [],
+        };
+        await this.storage.createDocument(driveId, input.id, documentStorage);
+
+        // if the document contains operations then
+        // stores the operations in the storage
+        const operations = Object.values(document.operations).flat();
+        if (operations.length) {
+            if (isDocumentDrive(document)) {
+                await this.storage.addDriveOperations(driveId, operations as Operation<DocumentDriveAction>[], document);
+            } else {
+                await this.storage.addDocumentOperations(driveId, input.id, operations, document)
+            }
+        }
 
         return document;
     }
@@ -603,6 +624,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             const storageDocumentOperations =
                 storageDocument.operations[scope as OperationScope];
 
+            // TODO two equal operations done by two clients will be considered the same, ie: { type: "INCREMENT" }
             const branch = removeExistingOperations(
                 operationsByScope[scope as OperationScope] || [],
                 storageDocumentOperations
@@ -698,20 +720,21 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     private _buildDocument<T extends Document>(
-        documentStorage: DocumentStorage<T>
-    ): T {
-        const documentModel = this._getDocumentModel(
-            documentStorage.documentType
-        );
-        return baseUtils.replayDocument(
+        documentStorage: DocumentStorage<T>, options?: GetDocumentOptions) {
+        const documentModel = this._getDocumentModel(documentStorage.documentType);
+        const document = baseUtils.replayDocument(
             documentStorage.initialState,
-            documentStorage.operations,
+            filterOperationsByRevision(
+                documentStorage.operations,
+                options?.revisions
+            ),
             documentModel.reducer,
             undefined,
             documentStorage,
             undefined,
-            { checkHashes: false }
-        ) as T;
+            { checkHashes: options?.checkHashes ?? true }
+        );
+        return document as T;
     }
 
     private async _performOperation<T extends Document>(
@@ -1279,23 +1302,5 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     ): void {
         logger.debug(`Emitting event ${event}`, args);
         return this.emitter.emit(event, ...args);
-    }
-
-    private _replayDocument(documentStorage: DocumentStorage, options?: GetDocumentOptions) {
-        const documentModel = this._getDocumentModel(documentStorage.documentType);
-        const document = baseUtils.replayDocument(
-            documentStorage.initialState,
-            filterOperationsByRevision(
-                documentStorage.operations,
-                options?.revisions
-            ),
-            documentModel.reducer,
-            undefined,
-            documentStorage,
-            undefined,
-            { checkHashes: false }
-        );
-
-        return document;
     }
 }

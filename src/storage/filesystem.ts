@@ -90,8 +90,8 @@ export class FilesystemStorage implements IDriveStorage {
 
     async createDocument(drive: string, id: string, document: DocumentStorage) {
         const documentPath = this._buildDocumentPath(drive, id);
-        await ensureDir(path.dirname(documentPath));
-        await writeFileSync(documentPath, stringify(document), {
+        ensureDir(path.dirname(documentPath));
+        writeFileSync(documentPath, stringify(document), {
             encoding: 'utf-8'
         });
     }

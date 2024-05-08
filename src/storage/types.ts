@@ -1,6 +1,6 @@
 import type {
     DocumentDriveAction,
-    DocumentDriveDocument
+    DocumentDriveDocument,
 } from 'document-model-libs/document-drive';
 import type {
     BaseAction,
@@ -8,12 +8,12 @@ import type {
     DocumentHeader,
     Operation
 } from 'document-model/document';
-import { GetDocumentOptions } from '../server';
 
 export type DocumentStorage<D extends Document = Document> = Omit<
     D,
     'state' | 'attachments'
 >;
+
 export type DocumentDriveStorage = DocumentStorage<DocumentDriveDocument>;
 
 export interface IStorage {

@@ -11,6 +11,15 @@ import {
     Operation
 } from 'document-model/document';
 import { ConflictOperationError } from '../server/error';
+import { DocumentDriveStorage, DocumentStorage } from '../storage';
+
+export function isDocumentDriveStorage(
+    document: DocumentStorage
+): document is DocumentDriveStorage {
+    return (
+        document.documentType === DocumentDriveModel.id
+    );
+}
 
 export function isDocumentDrive(
     document: Document

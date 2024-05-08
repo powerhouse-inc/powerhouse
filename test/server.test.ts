@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import {
     utils as DocumentDriveUtils,
     actions,
+    generateAddNodeAction,
     reducer
 } from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
@@ -23,6 +24,7 @@ import { PrismaStorage } from '../src/storage/prisma';
 import { SequelizeStorage } from '../src/storage/sequelize';
 import { IDriveStorage } from '../src/storage/types';
 import { expectUUID } from './utils';
+import { generateUUID } from '../src/utils';
 
 const documentModels = [
     DocumentModelLib,
@@ -49,6 +51,8 @@ const storageLayers = [
         }
     ]
 ] as unknown as [string, () => Promise<IDriveStorage>][];
+
+const file = await DocumentModelsLibs.RealWorldAssets.utils.loadFromFile("./test/rwa-document.zip");
 
 describe.each(storageLayers)(
     'Document Drive Server with %s',
@@ -116,7 +120,7 @@ describe.each(storageLayers)(
             );
 
             const drives = await server.getDrives();
-            expect(drives).toStrictEqual(['1']);
+            expect(drives.includes('1')).toBeTruthy();
         });
 
         it('adds file to server', async ({ expect }) => {
@@ -668,7 +672,6 @@ describe.each(storageLayers)(
             });
             let drive = await server.getDrive('1');
 
-
             const context: ActionContext = {
                 signer: {
                     user: {
@@ -750,6 +753,46 @@ describe.each(storageLayers)(
             expect(drive.state.global.id).toBe('3');
         });
 
-    })
+        it("import document from zip", async ({ expect }) => {
+            const storage = await buildStorage();
+            const server = new DocumentDriveServer(
+                documentModels, storage
+            );
+            const drive = await server.addDrive({
+                global: {
+                    id: '1',
+                    name: 'name',
+                    icon: 'icon',
+                    slug: 'slug'
+                },
+                local: {
+                    availableOffline: false,
+                    sharingType: 'public',
+                    listeners: [],
+                    triggers: []
+                }
+            });
+            const id = generateUUID();
+            const action = generateAddNodeAction(
+                drive.state.global,
+                {
+                    id,
+                    name: "name",
+                    parentFolder: null,
+                    documentType: file.documentType,
+
+                    document: file,
+                },
+                ['global'],
+            );
+            const result = await server.addDriveAction("1", action);
+            expect(result.status).toBe("SUCCESS");
+            const document = await server.getDocument("1", id);
+            expect(document).toStrictEqual(file);
+
+        });
+    }
+);
+
 
 

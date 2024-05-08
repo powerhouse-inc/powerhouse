@@ -7,7 +7,6 @@ import {
     DocumentDriveState
 } from 'document-model-libs/document-drive';
 import type {
-    ActionContext,
     BaseAction,
     DocumentHeader,
     ExtendedState,
@@ -26,17 +25,20 @@ type Transaction = Omit<
 function storageToOperation(
     op: Prisma.$OperationPayload['scalars']
 ): Operation {
-    return {
+    const operation: Operation = {
         skip: op.skip,
         hash: op.hash,
         index: op.index,
         timestamp: new Date(op.timestamp).toISOString(),
-        input: op.input,
+        input: JSON.parse(op.input),
         type: op.type,
         scope: op.scope as OperationScope,
-        context: op.context ? op.context as ActionContext : undefined,
         // attachments: fileRegistry
     };
+    if (op.context) {
+        operation.context = op.context as Prisma.JsonObject;
+    }
+    return operation;
 }
 
 export type PrismaStorageOptions = {
@@ -78,7 +80,7 @@ export class PrismaStorage implements IDriveStorage {
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
         // drive for all drive documents
         await this.createDocument('drives', id, drive as DocumentStorage);
-        const count = await this.db.drive.upsert({
+        await this.db.drive.upsert({
             where: {
                 slug: drive.initialState.state.global.slug ?? id
             },
@@ -159,7 +161,7 @@ export class PrismaStorage implements IDriveStorage {
                     documentId: id,
                     hash: op.hash,
                     index: op.index,
-                    input: op.input as Prisma.InputJsonObject,
+                    input: JSON.stringify(op.input),
                     timestamp: op.timestamp,
                     type: op.type,
                     scope: op.scope,
@@ -186,7 +188,7 @@ export class PrismaStorage implements IDriveStorage {
                             documentId: id,
                             hash: op.hash,
                             index: op.index,
-                            input: op.input as Prisma.InputJsonObject,
+                            input: JSON.stringify(op.input),
                             timestamp: op.timestamp,
                             type: op.type,
                             scope: op.scope,
