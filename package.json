@@ -27,6 +27,7 @@
         "dev:web": "vite -c vite.renderer.config.ts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
         "build:web": "vite build -c vite.renderer.config.ts",
+        "preview:web": "vite preview -c vite.renderer.config.ts",
         "release": "semantic-release",
         "prepare": "npm run prepare:scripts",
         "prepare:scripts": "node scripts/index.js",
@@ -90,12 +91,12 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "^1.0.0-alpha.106",
+        "@powerhousedao/design-system": "^1.0.0-alpha.104",
         "@sentry/react": "^7.109.0",
         "did-key-creator": "^1.2.0",
         "document-drive": "^1.0.0-alpha.52",
         "document-model": "^1.0.55",
-        "document-model-libs": "^1.44.0",
+        "document-model-libs": "^1.42.0",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
