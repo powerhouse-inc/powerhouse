@@ -2,7 +2,6 @@ import { DateTimeLocalInput } from '@/connect';
 import {
     FEES_PAYMENT,
     FeeTransactionsTable,
-    FixedIncome,
     FormattedNumber,
     GroupTransactionDetailsProps,
     GroupTransactionFormInputs,
@@ -15,6 +14,7 @@ import {
     calculateUnitPrice,
     convertToDateTimeLocalFormat,
     groupTransactionTypeLabels,
+    makeFixedIncomeOptionLabel,
 } from '@/rwa';
 import {
     Control,
@@ -95,16 +95,7 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
         label: makeFixedIncomeOptionLabel(fixedIncome),
         id: fixedIncome.id,
     }));
-    function makeFixedIncomeOptionLabel(fixedIncome: FixedIncome) {
-        let label = fixedIncome.name;
-        if (fixedIncome.ISIN) {
-            label += ` - ${fixedIncome.ISIN}`;
-        }
-        if (fixedIncome.CUSIP) {
-            label += ` - ${fixedIncome.CUSIP}`;
-        }
-        return label;
-    }
+
     const fixedIncome = fixedIncomes.find(
         ({ id }) => id === item?.fixedIncomeTransaction?.assetId,
     );

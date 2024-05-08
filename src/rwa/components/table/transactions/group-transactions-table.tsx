@@ -1,3 +1,4 @@
+import { Combobox } from '@/connect/components/combobox';
 import {
     FixedIncome,
     GroupTransaction,
@@ -9,8 +10,9 @@ import {
     cashTransactionSignByTransactionType,
     getItemById,
     isAssetGroupTransactionType,
+    makeFixedIncomeOptionLabel,
 } from '@/rwa';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 const columns = [
     {
@@ -102,10 +104,38 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
 
     const itemName = 'Group Transaction';
 
-    const tableData = useMemo(
-        () => makeGroupTransactionTableData(transactions, fixedIncomes),
-        [transactions, fixedIncomes],
+    const [filteredTransactions, setFilteredTransactions] =
+        useState(transactions);
+
+    const filterByAssetOptions = useMemo(
+        () =>
+            fixedIncomes.map(asset => ({
+                label: makeFixedIncomeOptionLabel(asset),
+                value: asset.id,
+            })),
+        [fixedIncomes],
     );
+
+    const tableData = useMemo(
+        () => makeGroupTransactionTableData(filteredTransactions, fixedIncomes),
+        [filteredTransactions, fixedIncomes],
+    );
+
+    function handleFilterByAssetChange(update: unknown) {
+        if (!update || !(typeof update === 'object') || !('value' in update)) {
+            setFilteredTransactions(transactions);
+            return;
+        }
+
+        const { value: assetId } = update;
+
+        setFilteredTransactions(
+            transactions.filter(
+                transaction =>
+                    transaction.fixedIncomeTransaction?.assetId === assetId,
+            ),
+        );
+    }
 
     const editForm = ({
         itemId,
@@ -135,13 +165,22 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
     );
 
     return (
-        <Table
-            {...props}
-            itemName={itemName}
-            tableData={tableData}
-            columns={columns}
-            editForm={editForm}
-            createForm={createForm}
-        />
+        <>
+            <div className="mb-4 max-w-96">
+                <Combobox
+                    options={filterByAssetOptions}
+                    onChange={handleFilterByAssetChange}
+                    placeholder="Filter by Asset"
+                />
+            </div>
+            <Table
+                {...props}
+                itemName={itemName}
+                tableData={tableData}
+                columns={columns}
+                editForm={editForm}
+                createForm={createForm}
+            />
+        </>
     );
 }

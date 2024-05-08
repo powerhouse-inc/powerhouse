@@ -124,6 +124,7 @@
     "react-hook-form": "^7.51.2",
     "react-multi-select-component": "^4.3.4",
     "react-number-format": "^5.3.4",
+    "react-select": "^5.8.0",
     "react-toastify": "^10.0.4"
   }
 }
