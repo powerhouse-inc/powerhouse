@@ -3,13 +3,30 @@ import { z } from 'zod';
 import {
     Asset,
     BaseTransaction,
+    BaseTransactionInput,
     Cash,
-    EditBaseTransactionInput,
+    EditGroupTransactionInput,
+    EditTransactionFeeInput,
     FixedIncome,
     RealWorldAssetsState,
     TransactionFee,
-    TransactionFeeInput,
 } from '../..';
+import {
+    ASSET_PURCHASE,
+    ASSET_SALE,
+    FEES_PAYMENT,
+    PRINCIPAL_DRAW,
+    PRINCIPAL_RETURN,
+} from '../constants';
+import {
+    AssetGroupTransaction,
+    CashBaseTransaction,
+    FeesBaseTransaction,
+    FeesPaymentGroupTransaction,
+    FixedIncomeBaseTransaction,
+    InterestBaseTransaction,
+    PrincipalGroupTransaction,
+} from '../types';
 
 export const dateValidator = z.coerce.date();
 
@@ -19,17 +36,121 @@ export function isFixedIncomeAsset(
     asset: Asset | undefined | null,
 ): asset is FixedIncome {
     if (!asset) return false;
-    return 'fixedIncomeTypeId' in asset;
+    return asset.type === 'FixedIncome';
 }
 
 export function isCashAsset(asset: Asset | undefined | null): asset is Cash {
     if (!asset) return false;
-    return 'currency' in asset;
+    return asset.type === 'Cash';
+}
+
+export function isAssetGroupTransaction(
+    transaction: Partial<EditGroupTransactionInput>,
+): transaction is AssetGroupTransaction {
+    if (!transaction.type) return false;
+    if (![ASSET_PURCHASE, ASSET_SALE].includes(transaction.type)) return false;
+    if (!('unitPrice' in transaction)) return false;
+    if (!('fees' in transaction)) return false;
+    if (!('fixedIncomeTransaction' in transaction)) return false;
+    return true;
+}
+
+export function validateGroupTransaction(
+    transaction: Partial<EditGroupTransactionInput>,
+) {
+    if (!transaction.id) {
+        throw new Error(`Transaction must have an id`);
+    }
+    if (!transaction.type) {
+        throw new Error(`Transaction must have a type`);
+    }
+    if (!transaction.entryTime) {
+        throw new Error(`Transaction must have an entry time`);
+    }
+    if (!dateValidator.safeParse(transaction.entryTime).success) {
+        throw new Error(`Entry time must be a valid date`);
+    }
+    if (!transaction.cashBalanceChange) {
+        throw new Error(`Transaction must have a cash balance change`);
+    }
+    if (!numberValidator.safeParse(transaction.cashBalanceChange).success) {
+        throw new Error(`Cash balance change must be a number`);
+    }
+}
+
+export function validateAssetGroupTransaction(
+    transaction: AssetGroupTransaction,
+    state: RealWorldAssetsState,
+) {
+    if (!numberValidator.safeParse(transaction.unitPrice).success) {
+        throw new Error(`Unit price must be a number`);
+    }
+    if (!numberValidator.positive().safeParse(transaction.unitPrice).success) {
+        throw new Error(`Unit price must be positive`);
+    }
+    validateGroupTransaction(transaction);
+    validateCashTransaction(state, transaction.cashTransaction);
+    validateFixedIncomeTransaction(state, transaction.fixedIncomeTransaction);
+    validateTransactionFees(state, transaction.fees);
+}
+
+export function isPrincipalGroupTransaction(
+    transaction: Partial<EditGroupTransactionInput>,
+): transaction is PrincipalGroupTransaction {
+    if (!transaction.type) return false;
+    if (![PRINCIPAL_DRAW, PRINCIPAL_RETURN].includes(transaction.type))
+        return false;
+    if (!('fees' in transaction)) return false;
+    return true;
+}
+
+export function validatePrincipalGroupTransaction(
+    transaction: PrincipalGroupTransaction,
+    state: RealWorldAssetsState,
+) {
+    validateGroupTransaction(transaction);
+    validateCashTransaction(state, transaction.cashTransaction);
+    validateTransactionFees(state, transaction.fees);
+}
+
+export function isInterestPaymentGroupTransaction(
+    transaction: Partial<EditGroupTransactionInput>,
+): transaction is PrincipalGroupTransaction {
+    if (!transaction.type) return false;
+    if (transaction.type !== PRINCIPAL_RETURN) return false;
+    if (!('fees' in transaction)) return false;
+    return true;
+}
+
+export function validateInterestPaymentGroupTransaction(
+    transaction: PrincipalGroupTransaction,
+    state: RealWorldAssetsState,
+) {
+    validateGroupTransaction(transaction);
+    validateInterestTransaction(state, transaction.cashTransaction);
+    validateTransactionFees(state, transaction.fees);
+}
+
+export function isFeesPaymentGroupTransaction(
+    transaction: Partial<EditGroupTransactionInput>,
+): transaction is FeesPaymentGroupTransaction {
+    if (!transaction.type) return false;
+    if (transaction.type !== FEES_PAYMENT) return false;
+    if ('fees' in transaction) return false;
+    return true;
+}
+
+export function validateFeesPaymentGroupTransaction(
+    transaction: FeesPaymentGroupTransaction,
+    state: RealWorldAssetsState,
+) {
+    validateGroupTransaction(transaction);
+    validateFeeBaseTransaction(state, transaction.cashTransaction);
 }
 
 export function validateTransactionFee(
     state: RealWorldAssetsState,
-    fee: InputMaybe<TransactionFeeInput>,
+    fee: InputMaybe<EditTransactionFeeInput>,
 ): asserts fee is TransactionFee {
     if (!fee) {
         throw new Error('Fee does not exist');
@@ -59,7 +180,7 @@ export function validateTransactionFee(
 
 export function validateTransactionFees(
     state: RealWorldAssetsState,
-    fees: InputMaybe<TransactionFeeInput[]>,
+    fees: InputMaybe<EditTransactionFeeInput[]>,
 ): asserts fees is TransactionFee[] {
     if (!Array.isArray(fees)) {
         throw new Error(`Transaction fees must be an array`);
@@ -71,7 +192,7 @@ export function validateTransactionFees(
 
 export function validateBaseTransaction(
     state: RealWorldAssetsState,
-    transaction: EditBaseTransactionInput,
+    transaction: BaseTransactionInput,
 ): asserts transaction is BaseTransaction {
     if (!transaction.assetId) {
         throw new Error(`Transaction must have an asset`);
@@ -81,6 +202,9 @@ export function validateBaseTransaction(
     }
     if (!transaction.amount) {
         throw new Error(`Transaction must have an amount`);
+    }
+    if (!numberValidator.positive().safeParse(transaction.amount).success) {
+        throw new Error('Transaction amount must be positive');
     }
     if (!transaction.entryTime) {
         throw new Error(`Transaction must have an entry time`);
@@ -121,8 +245,13 @@ export function validateBaseTransaction(
 
 export function validateFixedIncomeTransaction(
     state: RealWorldAssetsState,
-    transaction: EditBaseTransactionInput,
-): asserts transaction is BaseTransaction {
+    transaction: BaseTransactionInput,
+): asserts transaction is FixedIncomeBaseTransaction {
+    if (transaction.assetType !== 'FixedIncome') {
+        throw new Error(
+            `Fixed income transaction must have a fixed income type`,
+        );
+    }
     validateBaseTransaction(state, transaction);
     if (
         !isFixedIncomeAsset(
@@ -130,15 +259,18 @@ export function validateFixedIncomeTransaction(
         )
     ) {
         throw new Error(
-            `Fixed income transaction must have a fixed income asset as the asset`,
+            `Fixed income transaction must have a fixed income type`,
         );
     }
 }
 
 export function validateCashTransaction(
     state: RealWorldAssetsState,
-    transaction: EditBaseTransactionInput,
-): asserts transaction is BaseTransaction {
+    transaction: BaseTransactionInput,
+): asserts transaction is CashBaseTransaction {
+    if (transaction.assetType !== 'Cash') {
+        throw new Error(`Cash transaction must have a cash type`);
+    }
     validateBaseTransaction(state, transaction);
     if (transaction.counterPartyAccountId !== state.principalLenderAccountId) {
         throw new Error(
@@ -152,8 +284,11 @@ export function validateCashTransaction(
 
 export function validateInterestTransaction(
     state: RealWorldAssetsState,
-    transaction: EditBaseTransactionInput,
-): asserts transaction is BaseTransaction {
+    transaction: BaseTransactionInput,
+): asserts transaction is InterestBaseTransaction {
+    if (transaction.assetType !== 'Cash') {
+        throw new Error(`Interest transaction must have a cash type`);
+    }
     validateBaseTransaction(state, transaction);
     if (
         !isFixedIncomeAsset(
@@ -178,51 +313,16 @@ export function validateInterestTransaction(
             `Counter party with id ${transaction.counterPartyAccountId} must be a known service provider`,
         );
     }
-    if (!numberValidator.positive().safeParse(transaction.amount).success) {
-        throw new Error('Interest transaction amount must be positive');
-    }
 }
 
-export function validateFeeTransactions(
+export function validateFeeBaseTransaction(
     state: RealWorldAssetsState,
-    transactions: EditBaseTransactionInput[],
-): asserts transactions is BaseTransaction[] {
-    if (!Array.isArray(transactions)) {
-        throw new Error(`Fee transactions must be an array`);
+    transaction: BaseTransactionInput,
+): asserts transaction is FeesBaseTransaction {
+    if (transaction.assetType !== 'Cash') {
+        throw new Error(`Fees payment transaction must have a cash type`);
     }
-    transactions.forEach(transaction => {
-        validateFeeTransaction(state, transaction);
-    });
-}
-
-export function validateFeeTransaction(
-    state: RealWorldAssetsState,
-    transaction: EditBaseTransactionInput,
-): asserts transaction is BaseTransaction {
-    if (
-        !isFixedIncomeAsset(
-            state.portfolio.find(a => a.id === transaction.assetId),
-        )
-    ) {
-        throw new Error(
-            `Fee transaction must have a fixed income asset as the asset`,
-        );
-    }
-    if (!transaction.counterPartyAccountId) {
-        throw new Error(`Fee transaction must have a counter party account`);
-    }
-    if (
-        !state.serviceProviderFeeTypes.find(
-            a => a.accountId === transaction.counterPartyAccountId,
-        )
-    ) {
-        throw new Error(
-            `Counter party with id ${transaction.counterPartyAccountId} must be a known service provider`,
-        );
-    }
-    if (!numberValidator.negative().safeParse(transaction.amount).success) {
-        throw new Error('Fee transaction amount must be negative');
-    }
+    validateBaseTransaction(state, transaction);
 }
 
 export function validateFixedIncomeAsset(

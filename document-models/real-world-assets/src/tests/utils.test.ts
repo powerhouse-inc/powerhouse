@@ -10,10 +10,8 @@ import {
     getDifferences,
     validateBaseTransaction,
     validateCashTransaction,
-    validateFeeTransaction,
     validateFixedIncomeAsset,
     validateFixedIncomeTransaction,
-    validateInterestTransaction,
 } from '../utils';
 
 const mockEmptyInitialState = {
@@ -40,6 +38,7 @@ const mockEmptyBaseTransaction = {
 
 const mockFixedIncome: FixedIncome = {
     id: 'mock-id',
+    type: 'Cash' as const,
     fixedIncomeTypeId: '',
     name: '',
     spvId: '',
@@ -218,27 +217,29 @@ describe('validateBaseTransaction', () => {
 describe('validateFixedIncomeTransaction', () => {
     it('should throw an error when the asset is not a fixed income asset', () => {
         const state = {
-            portfolio: [{ id: '1', spvId: 'equity' }],
+            portfolio: [{ id: '1', type: 'Cash', spvId: 'equity' }],
         } as RealWorldAssetsState;
         const transaction = {
             assetId: '1',
+            assetType: 'FixedIncome' as const,
             amount: 100,
             entryTime: new Date().toISOString(),
         } as BaseTransaction;
 
         expect(() =>
             validateFixedIncomeTransaction(state, transaction),
-        ).toThrow(
-            'Fixed income transaction must have a fixed income asset as the asset',
-        );
+        ).toThrow('Fixed income transaction must have a fixed income type');
     });
 
     it('should not throw an error when the asset is a fixed income asset', () => {
         const state = {
-            portfolio: [{ id: '1', fixedIncomeTypeId: '1' }],
+            portfolio: [
+                { id: '1', type: 'FixedIncome', fixedIncomeTypeId: '1' },
+            ],
         } as RealWorldAssetsState;
         const transaction = {
             assetId: '1',
+            assetType: 'FixedIncome' as const,
             amount: 100,
             entryTime: new Date().toISOString(),
         } as BaseTransaction;
@@ -254,12 +255,13 @@ describe('validateCashTransaction', () => {
         const state = {
             ...mockEmptyInitialState,
             principalLender: 'principalLender1',
-            portfolio: [{ id: '1', currency: 'USD' }] as Asset[],
+            portfolio: [{ id: '1', type: 'Cash', currency: 'USD' }] as Asset[],
             accounts: [{ id: 'somethingElse' }] as Account[],
             feeTypes: [{ id: 'somethingElse' }] as ServiceProviderFeeType[],
         };
         const transaction = {
             ...mockEmptyBaseTransaction,
+            assetType: 'Cash' as const,
             assetId: '1',
             counterPartyAccountId: 'somethingElse',
             amount: 100,
@@ -287,7 +289,7 @@ describe('validateCashTransaction', () => {
         };
 
         expect(() => validateCashTransaction(state, transaction)).toThrow(
-            'Cash transaction must have a cash asset as the asset',
+            'Cash transaction must have a cash type',
         );
     });
 
@@ -295,149 +297,19 @@ describe('validateCashTransaction', () => {
         const state = {
             ...mockEmptyInitialState,
             principalLenderAccountId: 'principalLender1',
-            portfolio: [{ id: '1', currency: 'USD' }] as Asset[],
+            portfolio: [{ id: '1', type: 'Cash', currency: 'USD' }] as Asset[],
             accounts: [{ id: 'principalLender1' }] as Account[],
             feeTypes: [{ id: 'principalLender1' }] as ServiceProviderFeeType[],
         };
         const transaction = {
             ...mockEmptyBaseTransaction,
+            assetType: 'Cash' as const,
             assetId: '1',
             counterPartyAccountId: 'principalLender1',
             amount: 100,
         };
 
         expect(() => validateCashTransaction(state, transaction)).not.toThrow();
-    });
-});
-
-describe('validateInterestTransaction', () => {
-    it('should throw an error when the asset is a cash asset', () => {
-        const state = {
-            ...mockEmptyInitialState,
-            portfolio: [
-                { id: '1', spvId: 'serviceProviderFeeType1' },
-            ] as Asset[],
-            feeTypes: [
-                { id: 'serviceProviderFeeType1' },
-            ] as ServiceProviderFeeType[],
-            accounts: [{ id: 'serviceProviderFeeType1' }] as Account[],
-        };
-        const transaction = {
-            ...mockEmptyBaseTransaction,
-            assetId: '1',
-            counterPartyAccountId: 'serviceProviderFeeType1',
-            amount: 100,
-        };
-
-        expect(() => validateInterestTransaction(state, transaction)).toThrow(
-            'Interest transaction must have a fixed income asset as the asset',
-        );
-    });
-
-    it('should throw an error when the counterParty is not provided', () => {
-        const state = {
-            ...mockEmptyInitialState,
-            portfolio: [
-                { id: '1', fixedIncomeTypeId: 'fixedIncome' },
-            ] as Asset[],
-            feeTypes: [
-                { id: 'serviceProviderFeeType1' },
-            ] as ServiceProviderFeeType[],
-        };
-        const transaction = {
-            ...mockEmptyBaseTransaction,
-            assetId: '1',
-            amount: 100,
-        };
-
-        expect(() => validateInterestTransaction(state, transaction)).toThrow(
-            'Interest transaction must have a counter party account',
-        );
-    });
-
-    it('should throw an error when the counterParty is not a known service provider', () => {
-        const state = {
-            ...mockEmptyInitialState,
-            portfolio: [
-                { id: '1', fixedIncomeTypeId: 'fixed_income' },
-            ] as Asset[],
-            feeTypes: [
-                { id: 'serviceProviderFeeType1' },
-            ] as ServiceProviderFeeType[],
-        };
-        const transaction = {
-            ...mockEmptyBaseTransaction,
-            assetId: '1',
-            counterPartyAccountId: 'unknownServiceProviderFeeType',
-            amount: 100,
-        };
-
-        expect(() => validateInterestTransaction(state, transaction)).toThrow(
-            'Counter party account with id unknownServiceProviderFeeType does not exist!',
-        );
-    });
-});
-
-describe('validateFeeTransaction', () => {
-    it('should throw an error when the asset is not a fixed income asset', () => {
-        const state = {
-            ...mockEmptyInitialState,
-            portfolio: [{ id: '1', currency: 'USD' }] as Asset[],
-            feeTypes: [
-                { accountId: 'serviceProviderFeeType1' },
-            ] as ServiceProviderFeeType[],
-            accounts: [{ id: 'serviceProviderFeeType1' }] as Account[],
-        };
-        const transaction = {
-            ...mockEmptyBaseTransaction,
-            assetId: '1',
-            counterPartyAccountId: 'serviceProviderFeeType1',
-            amount: -100,
-        };
-
-        expect(() => validateFeeTransaction(state, transaction)).toThrow(
-            'Fee transaction must have a fixed income asset as the asset',
-        );
-    });
-
-    it('should throw an error when the counterParty is not provided', () => {
-        const state = {
-            ...mockEmptyInitialState,
-            portfolio: [{ id: '1', fixedIncomeTypeId: '1' }] as Asset[],
-            feeTypes: [
-                { id: 'serviceProviderFeeType1' },
-            ] as ServiceProviderFeeType[],
-        };
-        const transaction = {
-            ...mockEmptyBaseTransaction,
-            assetId: '1',
-            amount: -100,
-        };
-
-        expect(() => validateFeeTransaction(state, transaction)).toThrow(
-            'Fee transaction must have a counter party account',
-        );
-    });
-
-    it('should throw an error when the counterParty is not a known service provider', () => {
-        const state = {
-            ...mockEmptyInitialState,
-            portfolio: [{ id: '1', fixedIncomeTypeId: '1' }] as Asset[],
-            feeTypes: [
-                { accountId: 'serviceProviderFeeType1' },
-            ] as ServiceProviderFeeType[],
-            accounts: [{ id: 'serviceProviderFeeType1' }] as Account[],
-        };
-        const transaction = {
-            ...mockEmptyBaseTransaction,
-            assetId: '1',
-            counterPartyAccountId: 'unknownServiceProviderFeeType',
-            amount: -100,
-        };
-
-        expect(() => validateFeeTransaction(state, transaction)).toThrow(
-            'Counter party with id unknownServiceProviderFeeType must be a known service provider',
-        );
     });
 });
 

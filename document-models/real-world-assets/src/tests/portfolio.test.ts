@@ -100,8 +100,11 @@ describe('Portfolio Operations', () => {
         input.currency = 'USD';
         const existingSpv = generateMock(z.SpvSchema());
         input.spvId = existingSpv.id;
-        const existingAsset = generateMock(z.CreateCashAssetInputSchema());
-        existingAsset.id = input.id;
+        const existingAsset = {
+            ...generateMock(z.CreateCashAssetInputSchema()),
+            id: input.id,
+            type: 'Cash' as const,
+        };
         const document = utils.createDocument({
             state: {
                 global: {
@@ -149,7 +152,10 @@ describe('Portfolio Operations', () => {
     });
     it('should handle deleteCashAsset operation', () => {
         const input = generateMock(z.DeleteCashAssetInputSchema());
-        const existingAsset = generateMock(z.CreateCashAssetInputSchema());
+        const existingAsset = {
+            ...generateMock(z.CreateCashAssetInputSchema()),
+            type: 'Cash' as const,
+        };
         input.id = existingAsset.id;
         const document = utils.createDocument({
             state: {

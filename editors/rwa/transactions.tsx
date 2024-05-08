@@ -13,13 +13,14 @@ import diff from 'microdiff';
 import { useCallback, useState } from 'react';
 import {
     BaseTransaction,
-    EditBaseTransactionInput,
+    BaseTransactionInput,
+    EditTransactionFeeInput,
     FixedIncome,
     GroupTransaction,
-    TransactionFeeInput,
     getDifferences,
     isCashAsset,
     isFixedIncomeAsset,
+    validateTransactionFees,
 } from '../../document-models/real-world-assets';
 import {
     addFeesToGroupTransaction,
@@ -30,6 +31,7 @@ import {
     removeFeesFromGroupTransaction,
 } from '../../document-models/real-world-assets/gen/creators';
 import { IProps } from './editor';
+import { verifyTransactionFeeFields } from './utils';
 
 export const Transactions = (props: IProps) => {
     const { dispatch, document } = props;
@@ -73,6 +75,9 @@ export const Transactions = (props: IProps) => {
             if (!cashBalanceChange) {
                 throw new Error('Cash balance change is required');
             }
+            if (!cashAmount) {
+                throw new Error('Cash amount is required');
+            }
             if (!unitPrice && assetGroupTransactions.includes(type)) {
                 throw new Error(
                     'Unit price is required for asset transactions',
@@ -88,19 +93,22 @@ export const Transactions = (props: IProps) => {
                   }))
                 : null;
 
-            const cashTransaction = cashAmount
-                ? {
-                      id: utils.hashKey(),
-                      assetId: cashAsset.id,
-                      entryTime,
-                      counterPartyAccountId: principalLenderAccountId,
-                      amount: cashAmount,
-                      accountId: null,
-                      settlementTime: null,
-                      tradeTime: null,
-                      txRef: null,
-                  }
-                : null;
+            if (fees) {
+                verifyTransactionFeeFields(fees);
+            }
+
+            const cashTransaction = {
+                id: utils.hashKey(),
+                assetType: 'Cash' as const,
+                assetId: cashAsset.id,
+                entryTime,
+                counterPartyAccountId: principalLenderAccountId,
+                amount: cashAmount,
+                accountId: null,
+                settlementTime: null,
+                tradeTime: null,
+                txRef: null,
+            };
 
             if (fixedIncomeId && !fixedIncomeAmount) {
                 throw new Error('Fixed income  amount is required');
@@ -112,6 +120,7 @@ export const Transactions = (props: IProps) => {
                 fixedIncomeId && fixedIncomeAmount
                     ? {
                           id: utils.hashKey(),
+                          assetType: 'FixedIncome' as const,
                           assetId: fixedIncomeId,
                           amount: fixedIncomeAmount,
                           entryTime,
@@ -151,7 +160,7 @@ export const Transactions = (props: IProps) => {
 
     const handleFeeUpdates = useCallback(
         (
-            feeInputs: TransactionFeeInput[] | null | undefined,
+            feeInputs: EditTransactionFeeInput[] | null | undefined,
             transaction: GroupTransaction,
         ) => {
             if (!feeInputs) return;
@@ -165,6 +174,7 @@ export const Transactions = (props: IProps) => {
             const existingFees = transaction.fees;
 
             if (!existingFees?.length) {
+                validateTransactionFees(document.state.global, feeUpdates);
                 dispatch(
                     addFeesToGroupTransaction({
                         id: transaction.id,
@@ -175,8 +185,8 @@ export const Transactions = (props: IProps) => {
             }
             const feeDifferences = diff(existingFees, feeInputs);
 
-            const newFeesToCreate: TransactionFeeInput[] = [];
-            const feesToUpdate: TransactionFeeInput[] = [];
+            const newFeesToCreate: EditTransactionFeeInput[] = [];
+            const feesToUpdate: EditTransactionFeeInput[] = [];
             const feeIdsToRemove: string[] = [];
 
             feeDifferences.forEach(difference => {
@@ -203,6 +213,7 @@ export const Transactions = (props: IProps) => {
             });
 
             if (newFeesToCreate.length) {
+                validateTransactionFees(document.state.global, newFeesToCreate);
                 dispatch(
                     addFeesToGroupTransaction({
                         id: transaction.id,
@@ -227,7 +238,7 @@ export const Transactions = (props: IProps) => {
                 );
             }
         },
-        [dispatch],
+        [dispatch, document.state.global],
     );
 
     const onSubmitEdit: GroupTransactionsTableProps['onSubmitEdit'] =
@@ -340,7 +351,7 @@ export const Transactions = (props: IProps) => {
                         editGroupTransaction({
                             ...changedFields,
                             id: selectedItem.id,
-                        } as EditBaseTransactionInput),
+                        } as BaseTransactionInput),
                     );
                 }
 

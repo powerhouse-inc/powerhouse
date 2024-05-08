@@ -81,6 +81,7 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
         validateFixedIncomeAsset(state, action.input as FixedIncome);
         const asset = {
             ...action.input,
+            type: 'FixedIncome' as const,
             ISIN: action.input.ISIN ?? null,
             CUSIP: action.input.CUSIP ?? null,
             coupon: action.input.coupon ?? null,
