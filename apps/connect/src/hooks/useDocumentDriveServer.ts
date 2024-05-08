@@ -2,6 +2,7 @@ import {
     DriveType,
     ERROR,
     SharingType,
+    TreeItem,
     getIsLocalDrive,
 } from '@powerhousedao/design-system';
 import {
@@ -45,7 +46,7 @@ export function useDocumentDriveServer(
 
     const getDocumentModel = useGetDocumentModel();
 
-    const [documentDrives, refreshDocumentDrives] = useDocumentDrives(server);
+    const [documentDrives, refreshDocumentDrives, , documentDrivesStatus] = useDocumentDrives(server);
 
     async function openFile(drive: string, id: string) {
         const document = await server.getDocument(drive, id);
@@ -428,7 +429,7 @@ export function useDocumentDriveServer(
         driveId: string,
         type: DriveType,
     ): Promise<SyncStatus | undefined> {
-        if (getIsLocalDrive(type)) return;
+        if (type === "LOCAL_DRIVE") return;
         try {
             return server.getSyncStatus(driveId);
         } catch (error) {
@@ -455,6 +456,7 @@ export function useDocumentDriveServer(
     return useMemo(
         () => ({
             documentDrives,
+            documentDrivesStatus,
             addDocument,
             openFile,
             addFile,
@@ -478,6 +480,6 @@ export function useDocumentDriveServer(
             onSyncStatus,
             clearStorage,
         }),
-        [documentDrives],
+        [documentDrives, documentDrivesStatus],
     );
 }
