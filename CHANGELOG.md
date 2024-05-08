@@ -1,3 +1,10 @@
+# [1.0.0-alpha.106](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.105...v1.0.0-alpha.106) (2024-05-08)
+
+
+### Features
+
+* add filter transactions by asset ([#285](https://github.com/powerhouse-inc/design-system/issues/285)) ([31382fc](https://github.com/powerhouse-inc/design-system/commit/31382fc2d2c174956e40c235a78c78a93156ea5f))
+
 # [1.0.0-alpha.105](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.104...v1.0.0-alpha.105) (2024-05-07)
 
 
