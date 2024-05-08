@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.42.0...v1.43.0) (2024-05-08)
+
+
+### Features
+
+* update transaction types and fix double count ([#148](https://github.com/powerhouse-inc/document-model-libs/issues/148)) ([c6d6731](https://github.com/powerhouse-inc/document-model-libs/commit/c6d673175d40a74b46a92e31656cda3a85dfc35a))
+
 # [1.42.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.41.0...v1.42.0) (2024-05-07)
 
 
