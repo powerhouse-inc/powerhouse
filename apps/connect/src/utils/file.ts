@@ -34,6 +34,7 @@ export async function loadFile(
     const baseDocument = await Document.utils.loadFromInput(
         path,
         (state: Document) => state,
+        { checkHashes: true },
     );
     const documentModel = getDocumentModel(baseDocument.documentType);
     if (!documentModel) {
