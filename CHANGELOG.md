@@ -1,3 +1,10 @@
+# [1.0.0-alpha.55](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.54...v1.0.0-alpha.55) (2024-05-09)
+
+
+### Features
+
+* fix adding files with documents ([b033ff9](https://github.com/powerhouse-inc/document-drive/commit/b033ff99be62a7024448c51186b26aaa6d49215c))
+
 # [1.0.0-alpha.54](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.53...v1.0.0-alpha.54) (2024-05-07)
 
 
