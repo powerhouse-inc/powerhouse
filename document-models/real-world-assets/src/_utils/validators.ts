@@ -36,12 +36,16 @@ export function isFixedIncomeAsset(
     asset: Asset | undefined | null,
 ): asset is FixedIncome {
     if (!asset) return false;
-    return asset.type === 'FixedIncome';
+    if (asset.type === 'FixedIncome') return true;
+    if ('fixedIncomeId' in asset) return true;
+    return false;
 }
 
 export function isCashAsset(asset: Asset | undefined | null): asset is Cash {
     if (!asset) return false;
-    return asset.type === 'Cash';
+    if (asset.type === 'Cash') return true;
+    if ('currency' in asset) return true;
+    return false;
 }
 
 export function isAssetGroupTransaction(
