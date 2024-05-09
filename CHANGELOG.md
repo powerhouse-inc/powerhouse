@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.44.0...v1.45.0) (2024-05-09)
+
+
+### Features
+
+* allow legacy asset type check ([#150](https://github.com/powerhouse-inc/document-model-libs/issues/150)) ([d53e38b](https://github.com/powerhouse-inc/document-model-libs/commit/d53e38b3e30d09cf15f42b4f81d72ec6cc144c6e))
+
 # [1.44.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.43.0...v1.44.0) (2024-05-08)
 
 
