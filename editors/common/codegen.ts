@@ -1,6 +1,5 @@
 import { codegen as generate } from '@graphql-codegen/core';
 import { parse } from 'graphql';
-
 import { z } from 'zod';
 
 if (typeof window !== 'undefined') {

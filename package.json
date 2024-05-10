@@ -131,6 +131,7 @@
         "react": "^18.2.0",
         "react-aria-components": "1.1.1",
         "react-dom": "^18.2.0",
+        "react-lazy-with-preload": "^2.2.1",
         "semantic-release": "^23.0.2",
         "storybook": "^8.0.2",
         "storybook-mock-date-decorator": "^1.0.1",

@@ -1,1 +1,1 @@
-export { lazyWithPreload } from 'react-lazy-with-preload';
+export { lazyWithPreload, PreloadableComponent } from 'react-lazy-with-preload';

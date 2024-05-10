@@ -1,5 +1,5 @@
 import { getConfig } from '@powerhousedao/codegen';
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
@@ -21,6 +21,16 @@ readdirSync(documentModelsDir, { withFileTypes: true })
     .map(dirent => dirent.name)
     .forEach(name => {
         entry[name] = resolve(documentModelsDir, name, 'index.ts');
+    });
+
+readdirSync(editorsDir, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name)
+    .forEach(name => {
+        const editorPath = resolve(editorsDir, name, 'index.ts');
+        if (existsSync(editorPath)) {
+            entry[name] = editorPath;
+        }
     });
 
 export default defineConfig(({ mode }) => {
@@ -53,16 +63,25 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
                 external,
                 output: {
-                    manualChunks: (id, meta) => {
+                    manualChunks: (id) => {
                         if (id.startsWith(path.join(__dirname, 'editors')) && id.match(/editors\/[^\/]+\/editor.tsx/)) {
                             const editorName = path.basename(path.dirname(id));
                             return `editors/${editorName}`;
+                        } else if (id.startsWith(path.join(__dirname, 'document-models')) && id.match(/document-models\/[^\/]+\/index.ts/)) {
+                            const modelName = path.basename(path.dirname(id));
+                            return `document-models/${modelName}`;
+                        } else if (id.includes("lazy-with-preload")) {
+                            return "utils/lazy-with-preload";
                         }
                     },
                     entryFileNames: '[format]/[name].js',
                     chunkFileNames: (info) => {
-                        // creates named chunk for editor and vendor components
+                        // creates named chunk for editor components, document-models and utils
                         if (info.name.startsWith('editors/')) {
+                            return `[format]/${info.name}.js`
+                        } else if (info.name.startsWith('document-models/')) {
+                            return `[format]/${info.name}.js`
+                        } else if (info.name.startsWith("utils")) {
                             return `[format]/${info.name}.js`
                         } else {
                             return '[format]/internal/[name]-[hash].js'
