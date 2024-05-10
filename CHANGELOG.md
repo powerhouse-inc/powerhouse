@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.45.0...v1.46.0) (2024-05-10)
+
+
+### Features
+
+* qa updates 3 ([#152](https://github.com/powerhouse-inc/document-model-libs/issues/152)) ([5a154f1](https://github.com/powerhouse-inc/document-model-libs/commit/5a154f1387ce673f2ae359408ee98b50426b05c9))
+
 # [1.45.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.44.0...v1.45.0) (2024-05-09)
 
 
