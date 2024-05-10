@@ -1,24 +1,31 @@
 import type { ExtendedEditor } from 'document-model-libs';
 import { atom, useAtomValue } from 'jotai';
-
+import { unwrap } from 'jotai/utils';
 
 async function loadEditors() {
     const Editors = await import('document-model-libs/editors');
     return [...Object.values(Editors)] as ExtendedEditor[];
 }
 
-const editorsAtom = atom(async () => loadEditors());
-// const loadableAtom = loadable(asyncAtom)
+const editorsAtom = atom<Promise<ExtendedEditor[]>>(loadEditors);
+const unwrappedEditorsAtom = unwrap(editorsAtom, prev => prev ?? []);
 
-// export const editorsAtom = atomWithLazy(loadEditors);
-export const useEditors = () => useAtomValue(editorsAtom);
+// return empty array until editors are done loading
+export const useEditors = () => {
+    return useAtomValue(unwrappedEditorsAtom);
+};
+
+// suspends the UI while editors are loading
+export const useEditorsAsync = () => {
+    return useAtomValue(editorsAtom);
+};
 
 const getEditor = (documentType: string, editors: ExtendedEditor[]) =>
     editors.find(e => e.documentTypes.includes(documentType)) ||
     editors.find(e => e.documentTypes.includes('*'));
 
 export const useEditor = (documentType: string) => {
-    const editors = useEditors();
+    const editors = useEditorsAsync();
     return getEditor(documentType, editors);
 };
 
@@ -32,8 +39,9 @@ export const usePreloadEditor = () => {
     return async (documentType: string) => {
         const editor = getEditor(documentType);
         if (editor && 'preload' in editor.Component) {
-            return editor.Component.preload();
+            await (
+                editor.Component as { preload: () => Promise<void> }
+            ).preload();
         }
     };
-
-}
+};
