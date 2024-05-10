@@ -102,9 +102,10 @@ export const Empty: Story = {
     },
 };
 
-export const WithData: Story = {
+export const WithDataReadyOnly: Story = {
     ...Empty,
     args: {
+        ...Empty.args,
         transactions: mockGroupTransactions,
         fixedIncomes: mockFixedIncomes,
         cashAsset: mockCashAsset,
@@ -114,10 +115,19 @@ export const WithData: Story = {
     },
 };
 
-export const WithManyItems: Story = {
-    ...WithData,
+export const WithDataIsAllowedToCreateDocuments: Story = {
+    ...WithDataReadyOnly,
     args: {
-        ...WithData.args,
+        ...WithDataReadyOnly.args,
+        isAllowedToCreateDocuments: true,
+        isAllowedToEditDocuments: true,
+    },
+};
+
+export const WithManyItems: Story = {
+    ...WithDataReadyOnly,
+    args: {
+        ...WithDataReadyOnly.args,
         transactions: manyMockGroupTransactions,
     },
 };

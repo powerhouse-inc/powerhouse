@@ -61,13 +61,19 @@ export type TableProps<
     expandedRowId: string | undefined;
     showNewItemForm: boolean;
     selectedItem: TItem | undefined;
+    isAllowedToCreateDocuments: boolean;
+    isAllowedToEditDocuments: boolean;
     setSelectedItem: (item: TItem | undefined) => void;
     setShowNewItemForm: (show: boolean) => void;
     toggleExpandedRow: (id: string | undefined) => void;
     onSubmitEdit: (data: TFieldValues) => void;
     onSubmitCreate: (data: TFieldValues) => void;
     onSubmitDelete: (itemId: string) => void;
-    editForm: ComponentType<{ itemId: string; itemNumber: number }>;
+    editForm: ComponentType<{
+        itemId: string;
+        itemNumber: number;
+        isAllowedToEditDocuments: boolean;
+    }>;
     createForm: ComponentType;
     specialFirstRow?: (columns: TableColumn<TableItem>[]) => JSX.Element;
 };
@@ -77,6 +83,8 @@ export type PropsToKeepFromTable =
     | 'selectedItem'
     | 'setSelectedItem'
     | 'showNewItemForm'
+    | 'isAllowedToCreateDocuments'
+    | 'isAllowedToEditDocuments'
     | 'setShowNewItemForm'
     | 'toggleExpandedRow'
     | 'onSubmitEdit'
@@ -151,6 +159,8 @@ export type ItemDetailsProps<
         itemName: string;
         operation: 'view' | 'create' | 'edit';
         itemNumber: number;
+        isAllowedToCreateDocuments: boolean;
+        isAllowedToEditDocuments: boolean;
         formInputs: ComponentType;
         setSelectedItem?: (item: TItem | undefined) => void;
         setShowNewItemForm?: (show: boolean) => void;
@@ -162,6 +172,8 @@ export type PropsToKeepFromItemDetails =
     | 'itemNumber'
     | 'itemName'
     | 'operation'
+    | 'isAllowedToCreateDocuments'
+    | 'isAllowedToEditDocuments'
     | 'setSelectedItem'
     | 'setShowNewItemForm'
     | 'onCancel'

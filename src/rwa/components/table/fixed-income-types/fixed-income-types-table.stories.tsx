@@ -104,9 +104,19 @@ export const Empty: Story = {
     },
 };
 
-export const WithData: Story = {
+export const WithDataReadOnly: Story = {
     ...Empty,
     args: {
+        ...Empty.args,
         fixedIncomeTypes: mockFixedIncomeTypes,
+    },
+};
+
+export const WithDataAllowedToCreateDocuments: Story = {
+    ...Empty,
+    args: {
+        ...Empty.args,
+        isAllowedToCreateDocuments: true,
+        isAllowedToEditDocuments: true,
     },
 };

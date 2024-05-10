@@ -49,6 +49,8 @@ export function Table<
         columnCountByTableWidth = defaultColumnCountByTableWidth,
         expandedRowId,
         showNewItemForm,
+        isAllowedToCreateDocuments,
+        isAllowedToEditDocuments,
         setShowNewItemForm,
         toggleExpandedRow,
         editForm: EditForm,
@@ -83,6 +85,7 @@ export function Table<
                         <EditForm
                             itemId={item.id}
                             itemNumber={item.itemNumber ?? index}
+                            isAllowedToEditDocuments={isAllowedToEditDocuments}
                         />
                     )
                 }
@@ -138,17 +141,21 @@ export function Table<
                 renderRow={renderRow}
                 specialFirstRow={specialFirstRow}
             />
-            <button
-                onClick={() => setShowNewItemForm(true)}
-                className="mt-4 flex h-11 w-full items-center justify-center gap-x-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900"
-            >
-                <span>Create {itemName}</span>
-                <Icon name="plus" size={14} />
-            </button>
-            {showNewItemForm && (
-                <div className="mt-4 rounded-md bg-white">
-                    <CreateForm />
-                </div>
+            {isAllowedToCreateDocuments && (
+                <>
+                    <button
+                        onClick={() => setShowNewItemForm(true)}
+                        className="mt-4 flex h-11 w-full items-center justify-center gap-x-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900"
+                    >
+                        <span>Create {itemName}</span>
+                        <Icon name="plus" size={14} />
+                    </button>
+                    {showNewItemForm && (
+                        <div className="mt-4 rounded-md bg-white">
+                            <CreateForm />
+                        </div>
+                    )}
+                </>
             )}
         </>
     );

@@ -34,6 +34,8 @@ export function ItemDetails<
         className,
         formInputs: FormInputs,
         operation = 'view',
+        isAllowedToCreateDocuments,
+        isAllowedToEditDocuments,
         handleSubmit,
         onSubmit,
         onSubmitDelete,
@@ -45,6 +47,14 @@ export function ItemDetails<
 
     const isEditOperation = operation === 'edit';
     const isCreateOperation = operation === 'create';
+    const isViewOperation = operation === 'view';
+    const isAllowedToCreateOrEdit =
+        isAllowedToCreateDocuments || isAllowedToEditDocuments;
+
+    const showCancelButton = !isViewOperation && isAllowedToCreateOrEdit;
+    const showSubmitButton = !isViewOperation && isAllowedToCreateOrEdit;
+    const showDeleteButton = isEditOperation && isAllowedToEditDocuments;
+    const showEditButton = isViewOperation && isAllowedToEditDocuments;
 
     function handleCancel() {
         reset();
@@ -60,6 +70,38 @@ export function ItemDetails<
         setSelectedItem?.(undefined);
     }
 
+    const cancelButton = (
+        <RWAButton onClick={handleCancel} className="text-gray-600">
+            Cancel
+        </RWAButton>
+    );
+
+    const submitButton = (
+        <RWAButton
+            onClick={handleSubmit(onSubmit)}
+            iconPosition="right"
+            icon={<Icon name="save" size={16} />}
+        >
+            {isCreateOperation ? 'Save New ' + itemName : 'Save Edits'}
+        </RWAButton>
+    );
+
+    const deleteButton = (
+        <button onClick={handleDelete}>
+            <Icon name="trash" className="ml-3 text-red-800" size={22} />
+        </button>
+    );
+
+    const editButton = (
+        <RWAButton
+            onClick={() => setSelectedItem?.(item)}
+            iconPosition="right"
+            icon={<Icon name="pencil" size={16} />}
+        >
+            Edit {itemName}
+        </RWAButton>
+    );
+
     return (
         <div
             className={twMerge(
@@ -71,40 +113,12 @@ export function ItemDetails<
                 <div className="flex items-center">
                     {itemName} #{itemNumber}
                 </div>
-                {isEditOperation || isCreateOperation ? (
-                    <div className="flex gap-x-2">
-                        <RWAButton
-                            onClick={handleCancel}
-                            className="text-gray-600"
-                        >
-                            Cancel
-                        </RWAButton>
-                        <RWAButton
-                            onClick={handleSubmit(onSubmit)}
-                            iconPosition="right"
-                            icon={<Icon name="save" size={16} />}
-                        >
-                            {isCreateOperation
-                                ? 'Save New ' + itemName
-                                : 'Save Edits'}
-                        </RWAButton>
-                        <button onClick={handleDelete}>
-                            <Icon
-                                name="trash"
-                                className="ml-3 text-red-800"
-                                size={22}
-                            />
-                        </button>
-                    </div>
-                ) : (
-                    <RWAButton
-                        onClick={() => setSelectedItem?.(item)}
-                        iconPosition="right"
-                        icon={<Icon name="pencil" size={16} />}
-                    >
-                        Edit {itemName}
-                    </RWAButton>
-                )}
+                <div className="flex gap-x-2">
+                    {showCancelButton && cancelButton}
+                    {showSubmitButton && submitButton}
+                    {showDeleteButton && deleteButton}
+                    {showEditButton && editButton}
+                </div>
             </div>
             <FormInputs />
         </div>

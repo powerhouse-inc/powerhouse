@@ -104,9 +104,19 @@ export const Empty: Story = {
     },
 };
 
-export const WithData: Story = {
+export const WithDataReadOnly: Story = {
     ...Empty,
     args: {
+        ...Empty.args,
         spvs: mockSPVs,
+    },
+};
+
+export const WithDataEditable: Story = {
+    ...WithDataReadOnly,
+    args: {
+        ...WithDataReadOnly.args,
+        isAllowedToCreateDocuments: true,
+        isAllowedToEditDocuments: true,
     },
 };
