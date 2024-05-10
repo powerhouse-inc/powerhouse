@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.46.0...v1.47.0) (2024-05-10)
+
+
+### Features
+
+* add allow list props to rwa document editors ([#154](https://github.com/powerhouse-inc/document-model-libs/issues/154)) ([98912f7](https://github.com/powerhouse-inc/document-model-libs/commit/98912f76c2cd9fd3257f0a67b8b7427ca9fbbfa5))
+
 # [1.46.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.45.0...v1.46.0) (2024-05-10)
 
 
