@@ -1,3 +1,10 @@
+# [1.0.0-alpha.108](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.107...v1.0.0-alpha.108) (2024-05-10)
+
+
+### Features
+
+* bump react aria ([0e01efd](https://github.com/powerhouse-inc/design-system/commit/0e01efd3a0d03676c03ef2dc4e6ddc1083d70198))
+
 # [1.0.0-alpha.107](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.106...v1.0.0-alpha.107) (2024-05-10)
 
 
