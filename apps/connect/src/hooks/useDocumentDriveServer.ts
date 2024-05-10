@@ -78,7 +78,7 @@ export function useDocumentDriveServer(
         }
 
         try {
-            const result = await server.addDriveOperation(driveId, operation);
+            const result = await server.queueDriveOperation(driveId, operation);
 
             if (result.status !== 'SUCCESS') {
                 console.error(result.error);
@@ -357,7 +357,11 @@ export function useDocumentDriveServer(
             throw new Error(`Drive with id ${driveId} not found`);
         }
 
-        const newDocument = await server.addOperations(driveId, id, operations);
+        const newDocument = await server.queueOperations(
+            driveId,
+            id,
+            operations,
+        );
         return newDocument.document;
     }
 
