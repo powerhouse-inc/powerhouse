@@ -34,7 +34,6 @@ import {
     useGetDocumentModel,
 } from 'src/store/document-model';
 import { usePreloadEditor } from 'src/store/editor';
-import { preloadTabs } from 'src/store/tabs';
 import { exportFile } from 'src/utils';
 import { validateDocument } from 'src/utils/validate-document';
 import { v4 as uuid } from 'uuid';
@@ -171,9 +170,14 @@ const Content = () => {
 
     // preload document editors
     useEffect(() => {
-        preloadEditor('powerhouse/document-model');
-        preloadTabs();
-    }, [preloadEditor]);
+        // waits 1 second to preload editors
+        const timeout = setTimeout(async () => {
+            for (const documentModel of documentModels) {
+                await preloadEditor(documentModel.documentModel.id);
+            }
+        }, 1000);
+        return () => clearTimeout(timeout);
+    }, [documentModels, preloadEditor]);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
@@ -297,7 +301,6 @@ const Content = () => {
 
     const onOpenSwitchboardLink = async () => {
         const doc = getDocumentById(decodedDriveID, selectedFileNode?.id || '');
-
         await openSwitchboardLink(doc);
     };
 
@@ -307,9 +310,9 @@ const Content = () => {
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
                     <Suspense
                         fallback={
-                            <h1>
-                                LOADING DOCUMENT {selectedDocument.documentType}
-                            </h1>
+                            <div className="flex h-full animate-pulse items-center justify-center">
+                                <h3 className="text-xl">Loading editor</h3>
+                            </div>
                         }
                     >
                         <DocumentEditor
