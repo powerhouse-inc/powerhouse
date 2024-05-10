@@ -1,10 +1,4 @@
-import {
-    DriveType,
-    ERROR,
-    SharingType,
-    TreeItem,
-    getIsLocalDrive,
-} from '@powerhousedao/design-system';
+import { DriveType, ERROR, SharingType } from '@powerhousedao/design-system';
 import {
     DriveInput,
     IDocumentDriveServer,
@@ -46,7 +40,8 @@ export function useDocumentDriveServer(
 
     const getDocumentModel = useGetDocumentModel();
 
-    const [documentDrives, refreshDocumentDrives, , documentDrivesStatus] = useDocumentDrives(server);
+    const [documentDrives, refreshDocumentDrives, , documentDrivesStatus] =
+        useDocumentDrives(server);
 
     async function openFile(drive: string, id: string) {
         const document = await server.getDocument(drive, id);
@@ -82,7 +77,7 @@ export function useDocumentDriveServer(
         }
 
         try {
-            const result = await server.addDriveOperation(driveId, operation);
+            const result = await server.queueDriveOperation(driveId, operation);
 
             if (result.status !== 'SUCCESS') {
                 console.error(result.error);
@@ -345,7 +340,11 @@ export function useDocumentDriveServer(
             throw new Error(`Drive with id ${driveId} not found`);
         }
 
-        const newDocument = await server.addOperations(driveId, id, operations);
+        const newDocument = await server.queueOperations(
+            driveId,
+            id,
+            operations,
+        );
         return newDocument.document;
     }
 
@@ -429,7 +428,7 @@ export function useDocumentDriveServer(
         driveId: string,
         type: DriveType,
     ): Promise<SyncStatus | undefined> {
-        if (type === "LOCAL_DRIVE") return;
+        if (type === 'LOCAL_DRIVE') return;
         try {
             return server.getSyncStatus(driveId);
         } catch (error) {
