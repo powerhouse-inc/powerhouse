@@ -1,3 +1,10 @@
+# [1.0.0-alpha.107](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.106...v1.0.0-alpha.107) (2024-05-10)
+
+
+### Features
+
+* handle rwa allow list ([#287](https://github.com/powerhouse-inc/design-system/issues/287)) ([d93c914](https://github.com/powerhouse-inc/design-system/commit/d93c914db37b1a42e5eca4c583aaf10ad37d12d6))
+
 # [1.0.0-alpha.106](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.105...v1.0.0-alpha.106) (2024-05-08)
 
 
