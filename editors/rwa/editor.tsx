@@ -15,7 +15,10 @@ import { Transactions } from './transactions';
 export type CustomEditorProps = Pick<
     RWATabsProps,
     'onClose' | 'onExport' | 'onSwitchboardLinkClick'
->;
+> & {
+    isAllowedToCreateDocuments: boolean;
+    isAllowedToEditDocuments: boolean;
+};
 
 export type IProps = EditorProps<
     RealWorldAssetsState,

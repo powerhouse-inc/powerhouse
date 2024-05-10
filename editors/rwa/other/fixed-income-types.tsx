@@ -17,7 +17,12 @@ export function FixedIncomeTypes(props: IProps) {
     const [selectedItem, setSelectedItem] = useState<FixedIncomeType>();
     const [showNewItemForm, setShowNewItemForm] = useState(false);
 
-    const { dispatch, document } = props;
+    const {
+        dispatch,
+        document,
+        isAllowedToCreateDocuments,
+        isAllowedToEditDocuments,
+    } = props;
 
     const fixedIncomeTypes = document.state.global.fixedIncomeTypes;
 
@@ -86,6 +91,8 @@ export function FixedIncomeTypes(props: IProps) {
             selectedItem={selectedItem}
             showNewItemForm={showNewItemForm}
             expandedRowId={expandedRowId}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            isAllowedToEditDocuments={isAllowedToEditDocuments}
             toggleExpandedRow={toggleExpandedRow}
             setSelectedItem={setSelectedItem}
             setShowNewItemForm={setShowNewItemForm}

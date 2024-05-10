@@ -34,7 +34,12 @@ import { IProps } from './editor';
 import { verifyTransactionFeeFields } from './utils';
 
 export const Transactions = (props: IProps) => {
-    const { dispatch, document } = props;
+    const {
+        dispatch,
+        document,
+        isAllowedToCreateDocuments,
+        isAllowedToEditDocuments,
+    } = props;
 
     const transactions = document.state.global.transactions;
 
@@ -413,6 +418,8 @@ export const Transactions = (props: IProps) => {
                 toggleExpandedRow={toggleExpandedRow}
                 selectedItem={selectedItem}
                 principalLenderAccountId={principalLenderAccountId}
+                isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                isAllowedToEditDocuments={isAllowedToEditDocuments}
                 setSelectedItem={setSelectedItem}
                 onSubmitEdit={onSubmitEdit}
                 onSubmitCreate={onSubmitCreate}

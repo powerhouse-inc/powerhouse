@@ -21,7 +21,12 @@ export const Portfolio = (props: IProps) => {
     const [selectedItem, setSelectedItem] = useState<UiFixedIncome>();
     const [showNewItemForm, setShowNewItemForm] = useState(false);
 
-    const { dispatch, document } = props;
+    const {
+        dispatch,
+        document,
+        isAllowedToCreateDocuments,
+        isAllowedToEditDocuments,
+    } = props;
 
     const spvs = document.state.global.spvs;
 
@@ -144,6 +149,8 @@ export const Portfolio = (props: IProps) => {
                 expandedRowId={expandedRowId}
                 selectedItem={selectedItem}
                 showNewItemForm={showNewItemForm}
+                isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                isAllowedToEditDocuments={isAllowedToEditDocuments}
                 toggleExpandedRow={toggleExpandedRow}
                 setSelectedItem={setSelectedItem}
                 setShowNewItemForm={setShowNewItemForm}

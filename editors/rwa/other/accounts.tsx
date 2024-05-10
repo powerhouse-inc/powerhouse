@@ -17,7 +17,12 @@ export function Accounts(props: IProps) {
     const [selectedItem, setSelectedItem] = useState<Account>();
     const [showNewItemForm, setShowNewItemForm] = useState(false);
 
-    const { dispatch, document } = props;
+    const {
+        dispatch,
+        document,
+        isAllowedToCreateDocuments,
+        isAllowedToEditDocuments,
+    } = props;
     const principalLenderAccountId =
         document.state.global.principalLenderAccountId;
     const accounts = document.state.global.accounts.filter(
@@ -94,6 +99,8 @@ export function Accounts(props: IProps) {
             selectedItem={selectedItem}
             showNewItemForm={showNewItemForm}
             expandedRowId={expandedRowId}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            isAllowedToEditDocuments={isAllowedToEditDocuments}
             toggleExpandedRow={toggleExpandedRow}
             setSelectedItem={setSelectedItem}
             setShowNewItemForm={setShowNewItemForm}

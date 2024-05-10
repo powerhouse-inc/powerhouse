@@ -17,7 +17,12 @@ export function ServiceProviderFeeTypes(props: IProps) {
     const [selectedItem, setSelectedItem] = useState<ServiceProviderFeeType>();
     const [showNewItemForm, setShowNewItemForm] = useState(false);
 
-    const { dispatch, document } = props;
+    const {
+        dispatch,
+        document,
+        isAllowedToCreateDocuments,
+        isAllowedToEditDocuments,
+    } = props;
 
     const serviceProviderFeeTypes =
         document.state.global.serviceProviderFeeTypes;
@@ -104,6 +109,8 @@ export function ServiceProviderFeeTypes(props: IProps) {
             selectedItem={selectedItem}
             showNewItemForm={showNewItemForm}
             expandedRowId={expandedRowId}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            isAllowedToEditDocuments={isAllowedToEditDocuments}
             toggleExpandedRow={toggleExpandedRow}
             setSelectedItem={setSelectedItem}
             setShowNewItemForm={setShowNewItemForm}
