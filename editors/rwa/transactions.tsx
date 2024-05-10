@@ -163,15 +163,32 @@ export const Transactions = (props: IProps) => {
             feeInputs: EditTransactionFeeInput[] | null | undefined,
             transaction: GroupTransaction,
         ) => {
-            if (!feeInputs) return;
+            const existingFees = transaction.fees;
+
+            // if there are no existing fees and no fees to update, we do nothing
+            if (!existingFees?.length && !feeInputs?.length) return;
+
+            // if there are existing fees and the update is empty, then we remove all fees
+            if (existingFees?.length && !feeInputs?.length) {
+                dispatch(
+                    removeFeesFromGroupTransaction({
+                        id: transaction.id,
+                        feeIds: existingFees.map(fee => fee.id),
+                    }),
+                );
+                return;
+            }
+
+            // once we have handled the edge cases, we can assume that there are fees to update
+            if (!feeInputs) {
+                throw new Error('Fees are required');
+            }
 
             const feeUpdates = feeInputs.map(fee => ({
                 ...fee,
                 id: fee.id ?? utils.hashKey(),
                 amount: Number(fee.amount),
             }));
-
-            const existingFees = transaction.fees;
 
             if (!existingFees?.length) {
                 validateTransactionFees(document.state.global, feeUpdates);

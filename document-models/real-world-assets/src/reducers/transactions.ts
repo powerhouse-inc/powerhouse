@@ -102,6 +102,14 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             );
         }
 
+        const oldCashBalanceChange = transaction.cashBalanceChange;
+        const newCashBalanceChange = action.input.cashBalanceChange;
+
+        const oldFixedIncomeAssetId =
+            transaction.fixedIncomeTransaction?.assetId;
+        const newFixedIncomeAssetId =
+            action.input.fixedIncomeTransaction?.assetId;
+
         if (action.input.type) {
             transaction.type = action.input.type;
         }
@@ -123,14 +131,6 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
                 action.input.fixedIncomeTransaction.amount;
         }
 
-        if (
-            action.input.fixedIncomeTransaction?.assetId &&
-            transaction.fixedIncomeTransaction
-        ) {
-            transaction.fixedIncomeTransaction.assetId =
-                action.input.fixedIncomeTransaction.assetId;
-        }
-
         if (action.input.cashTransaction?.amount) {
             transaction.cashTransaction.amount =
                 action.input.cashTransaction.amount;
@@ -140,9 +140,11 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             transaction.unitPrice = action.input.unitPrice;
         }
 
-        if (action.input.cashBalanceChange) {
-            const oldCashBalanceChange = transaction.cashBalanceChange;
-            const newCashBalanceChange = action.input.cashBalanceChange;
+        if (newFixedIncomeAssetId && transaction.fixedIncomeTransaction) {
+            transaction.fixedIncomeTransaction.assetId = newFixedIncomeAssetId;
+        }
+
+        if (newCashBalanceChange) {
             transaction.cashBalanceChange = newCashBalanceChange;
 
             const cashAsset = state.portfolio.find(a => isCashAsset(a)) as Cash;
@@ -158,18 +160,29 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             t.id === transaction.id ? transaction : t,
         );
 
-        const fixedIncomeAssetId = transaction.fixedIncomeTransaction?.assetId;
+        if (oldFixedIncomeAssetId) {
+            const updatedOldFixedIncomeAsset =
+                makeFixedIncomeAssetWithDerivedFields(
+                    state,
+                    oldFixedIncomeAssetId,
+                );
 
-        if (!fixedIncomeAssetId) return;
+            state.portfolio = state.portfolio.map(a =>
+                a.id === oldFixedIncomeAssetId ? updatedOldFixedIncomeAsset : a,
+            );
+        }
 
-        const updatedFixedIncomeAsset = makeFixedIncomeAssetWithDerivedFields(
-            state,
-            fixedIncomeAssetId,
-        );
+        if (newFixedIncomeAssetId) {
+            const updatedNewFixedIncomeAsset =
+                makeFixedIncomeAssetWithDerivedFields(
+                    state,
+                    newFixedIncomeAssetId,
+                );
 
-        state.portfolio = state.portfolio.map(a =>
-            a.id === fixedIncomeAssetId ? updatedFixedIncomeAsset : a,
-        );
+            state.portfolio = state.portfolio.map(a =>
+                a.id === newFixedIncomeAssetId ? updatedNewFixedIncomeAsset : a,
+            );
+        }
     },
     deleteGroupTransactionOperation(state, action, dispatch) {
         const id = action.input.id;
