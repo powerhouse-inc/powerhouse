@@ -91,7 +91,7 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.107",
+        "@powerhousedao/design-system": "1.0.0-alpha.108",
         "@sentry/react": "^7.109.0",
         "did-key-creator": "^1.2.0",
         "document-drive": "^1.0.0-experimental.6",
