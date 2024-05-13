@@ -75,7 +75,7 @@
         "prettier-plugin-organize-imports": "^3.2.4",
         "react": "^18.2.0",
         "react-aria": "^3.32.0",
-        "react-aria-components": "1.1.0",
+        "react-aria-components": "1.2.0",
         "react-dom": "^18.2.0",
         "rollup-plugin-node-polyfills": "^0.2.1",
         "rollup-plugin-shim": "^1.0.0",
@@ -91,12 +91,12 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.106",
+        "@powerhousedao/design-system": "1.0.0-alpha.108",
         "@sentry/react": "^7.109.0",
         "did-key-creator": "^1.2.0",
         "document-drive": "^1.0.0-experimental.6",
         "document-model": "1.1.0-experimental.1",
-        "document-model-libs": "^1.45.0",
+        "document-model-libs": "^1.47.0",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
@@ -108,7 +108,7 @@
         "react-hotkeys-hook": "^4.5.0",
         "react-i18next": "^13.5.0",
         "react-router-dom": "^6.11.2",
-        "react-stately": "^3.22.0",
+        "react-stately": "^3.31.0",
         "tailwind-merge": "^1.14.0",
         "uuid": "^9.0.1",
         "viem": "^2.8.13"

@@ -22,7 +22,7 @@ import { useGetDocumentModel } from 'src/store/document-model';
 import { DefaultDocumentDriveServer } from 'src/utils/document-drive-server';
 import { loadFile } from 'src/utils/file';
 import { useDocumentDrives } from './useDocumentDrives';
-import { useIsAllowedToCreateDocuments } from './useIsAllowedToCreateDocuments';
+import { useUserPermissions } from './useUserPermissions';
 
 // TODO this should be added to the document model
 export interface SortOptions {
@@ -32,7 +32,8 @@ export interface SortOptions {
 export function useDocumentDriveServer(
     server: IDocumentDriveServer | undefined = DefaultDocumentDriveServer,
 ) {
-    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+    const { isAllowedToCreateDocuments, isAllowedToEditDocuments } =
+        useUserPermissions();
 
     if (!server) {
         throw new Error('Invalid Document Drive Server');
@@ -245,6 +246,10 @@ export function useDocumentDriveServer(
         decodedDriveId: string;
         decodedTargetId: string;
     }) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to move documents');
+        }
+
         const { decodedDriveId, srcId, decodedTargetId } = params;
 
         if (srcId === decodedTargetId) return;
@@ -264,6 +269,10 @@ export function useDocumentDriveServer(
         decodedDriveId: string;
         decodedTargetId: string;
     }) {
+        if (!isAllowedToCreateDocuments) {
+            throw new Error('User is not allowed to copy documents');
+        }
+
         const { decodedDriveId, srcId, srcName, decodedTargetId } = params;
 
         if (srcId === decodedTargetId) return;
@@ -309,6 +318,10 @@ export function useDocumentDriveServer(
         id: string,
         operation: Operation,
     ) {
+        if (!isAllowedToEditDocuments) {
+            throw new Error('User is not allowed to edit documents');
+        }
+
         if (!server) {
             throw new Error('Server is not defined');
         }
@@ -329,6 +342,10 @@ export function useDocumentDriveServer(
         id: string,
         operations: Operation[],
     ) {
+        if (!isAllowedToEditDocuments) {
+            throw new Error('User is not allowed to edit documents');
+        }
+
         if (!server) {
             throw new Error('Server is not defined');
         }
