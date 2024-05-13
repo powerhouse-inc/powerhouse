@@ -96,7 +96,7 @@
         "did-key-creator": "^1.2.0",
         "document-drive": "^1.0.0-experimental.6",
         "document-model": "1.1.0-experimental.1",
-        "document-model-libs": "^1.47.0",
+        "document-model-libs": "^1.49.0",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
