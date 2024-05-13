@@ -1,3 +1,11 @@
+# [1.49.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.48.0...v1.49.0) (2024-05-13)
+
+
+### Features
+
+* added entry chunks for editors ([8095e34](https://github.com/powerhouse-inc/document-model-libs/commit/8095e3488d6c982dcd97ad6dd5c736cb940eb33b))
+* split chunks for editors ([1cbea14](https://github.com/powerhouse-inc/document-model-libs/commit/1cbea143b87c0939411e8619729687b6bdc549c8))
+
 # [1.48.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.47.0...v1.48.0) (2024-05-13)
 
 
