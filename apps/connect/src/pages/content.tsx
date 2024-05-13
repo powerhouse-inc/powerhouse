@@ -171,12 +171,12 @@ const Content = () => {
     // preload document editors
     useEffect(() => {
         // waits 1 second to preload editors
-        const timeout = setTimeout(async () => {
+        const id = requestIdleCallback(async () => {
             for (const documentModel of documentModels) {
                 await preloadEditor(documentModel.documentModel.id);
             }
-        }, 1000);
-        return () => clearTimeout(timeout);
+        });
+        return () => cancelIdleCallback(id);
     }, [documentModels, preloadEditor]);
 
     useEffect(() => {

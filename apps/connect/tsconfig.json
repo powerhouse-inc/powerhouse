@@ -28,8 +28,9 @@
         "src",
         "e2e-tests",
         "*.config.ts",
+        "*.config.mts",
         "*.config.js",
-        "reset.d.ts"
+        "reset.d.ts",
     ],
     "files": ["custom.d.ts"]
 }
