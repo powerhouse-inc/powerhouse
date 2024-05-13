@@ -12,8 +12,8 @@ import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
-import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
+import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { useModal } from '../modal';
 
 const allowedItemOptions = ['delete', 'rename', 'duplicate'];
@@ -36,7 +36,7 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
     const getDocumentById = useGetDocumentById();
     const { updateNodeName, onSubmitInput } = useDrivesContainer();
     const { showModal } = useModal();
-    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+    const { isAllowedToCreateDocuments } = useUserPermissions();
 
     const decodedDriveID = decodeID(drive);
     const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);

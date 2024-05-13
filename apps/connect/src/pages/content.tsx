@@ -25,9 +25,9 @@ import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
-import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useNavigateToItemId } from 'src/hooks/useNavigateToItemId';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
+import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { useFileNodeDocument, useSelectedPath } from 'src/store/document-drive';
 import {
     useFilteredDocumentModels,
@@ -74,7 +74,7 @@ const Content = () => {
     const getDocumentModel = useGetDocumentModel();
     const { onSubmitInput } = useDrivesContainer();
     const navigateToItemId = useNavigateToItemId();
-    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+    const { isAllowedToCreateDocuments } = useUserPermissions();
 
     const driveNodes = documentDrives.find(
         drive => drive.state.global.id === decodedDriveID,

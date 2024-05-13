@@ -12,6 +12,7 @@ import { useAtomValue } from 'jotai';
 import { useEffect, useMemo } from 'react';
 import { useConnectDid } from 'src/hooks/useConnectCrypto';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
+import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { useDocumentModel } from 'src/store/document-model';
 import { useEditor } from 'src/store/editor';
 import { themeAtom } from 'src/store/theme';
@@ -62,6 +63,8 @@ export const DocumentEditor: React.FC<IProps> = ({
         () => ({ theme, user }),
         [theme, user],
     );
+    const { isAllowedToCreateDocuments, isAllowedToEditDocuments } =
+        useUserPermissions();
 
     function addActionContext(action: Action): Action {
         if (!user) return action;
@@ -172,6 +175,8 @@ export const DocumentEditor: React.FC<IProps> = ({
                 onClose={onClose}
                 onExport={onExport}
                 onSwitchboardLinkClick={onOpenSwitchboardLink}
+                isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                isAllowedToEditDocuments={isAllowedToEditDocuments}
             />
         </div>
     );
