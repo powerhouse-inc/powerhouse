@@ -1,3 +1,10 @@
+# [1.48.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.47.0...v1.48.0) (2024-05-13)
+
+
+### Features
+
+* handle principal lender account ([#156](https://github.com/powerhouse-inc/document-model-libs/issues/156)) ([9e53050](https://github.com/powerhouse-inc/document-model-libs/commit/9e5305019f46766bd729cb92650adedad6ba24f7))
+
 # [1.47.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.46.0...v1.47.0) (2024-05-10)
 
 
