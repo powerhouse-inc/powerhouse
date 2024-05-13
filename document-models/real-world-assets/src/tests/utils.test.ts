@@ -269,7 +269,7 @@ describe('validateCashTransaction', () => {
         };
 
         expect(() => validateCashTransaction(state, transaction)).toThrow(
-            'Cash transaction must have Maker principal lender as the counter party',
+            'Cash transaction must have the principal lender as the counter party',
         );
     });
 

@@ -3,7 +3,7 @@ import { reducer, utils } from '../../document-models/real-world-assets';
 import { initialState } from '../../document-models/real-world-assets/mock-data/initial-state';
 import Editor from './editor';
 
-const { meta, CreateDocumentStory: DocumentModel } = createDocumentStory(
+const { meta, CreateDocumentStory } = createDocumentStory(
     // @ts-expect-error todo update type
     Editor,
     reducer,
@@ -25,4 +25,11 @@ export default {
     },
 };
 
-export { DocumentModel };
+export const DocumentModel = {
+    ...CreateDocumentStory,
+    args: {
+        ...CreateDocumentStory.args,
+        isAllowedToCreateDocuments: true,
+        isAllowedToEditDocuments: true,
+    },
+};

@@ -65,8 +65,8 @@ devDependencies:
     specifier: 0.0.15
     version: 0.0.15(graphql@16.8.1)(zod@3.22.4)
   '@powerhousedao/design-system':
-    specifier: 1.0.0-alpha.107
-    version: 1.0.0-alpha.107(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0)
+    specifier: 1.0.0-alpha.109
+    version: 1.0.0-alpha.109(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0)
   '@semantic-release/changelog':
     specifier: ^6.0.3
     version: 6.0.3(semantic-release@23.0.2)
@@ -3800,12 +3800,12 @@ packages:
       - zod
     dev: true
 
-  /@powerhousedao/design-system@1.0.0-alpha.107(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-XJjs2L8N0p+Jz6PTcCEjcfGNwDe0s9uruMaO15aVpvimrFwYnBy1E6iwJlhc7Ry6sufxqPuxX5pnc3MM2NxpMA==}
+  /@powerhousedao/design-system@1.0.0-alpha.109(@types/react@18.2.57)(react-aria-components@1.1.1)(react-aria@3.32.1)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-qNLDL8AaZ4+3g+5rJ7G7b8SjjovDNlZ3S1l2W7h2Wf5cfET4ZPAAEUZ1JmkFfkbLkj2goUu8fjsnYv8odXEH9w==}
     peerDependencies:
       react: ^18.2.0
       react-aria: ^3.32.0
-      react-aria-components: 1.1.0
+      react-aria-components: 1.2.0
       react-dom: ^18.2.0
     dependencies:
       '@internationalized/date': 3.5.2
@@ -3816,7 +3816,7 @@ packages:
       react-aria: 3.32.1(react-dom@18.2.0)(react@18.2.0)
       react-aria-components: 1.1.1(react-dom@18.2.0)(react@18.2.0)
       react-dom: 18.2.0(react@18.2.0)
-      react-hook-form: 7.51.3(react@18.2.0)
+      react-hook-form: 7.51.4(react@18.2.0)
       react-multi-select-component: 4.3.4(react-dom@18.2.0)(react@18.2.0)
       react-number-format: 5.3.4(react-dom@18.2.0)(react@18.2.0)
       react-select: 5.8.0(@types/react@18.2.57)(react-dom@18.2.0)(react@18.2.0)
@@ -13228,8 +13228,8 @@ packages:
       react-is: 18.1.0
     dev: true
 
-  /react-hook-form@7.51.3(react@18.2.0):
-    resolution: {integrity: sha512-cvJ/wbHdhYx8aviSWh28w9ImjmVsb5Y05n1+FW786vEZQJV5STNM0pW6ujS+oiBecb0ARBxJFyAnXj9+GHXACQ==}
+  /react-hook-form@7.51.4(react@18.2.0):
+    resolution: {integrity: sha512-V14i8SEkh+V1gs6YtD0hdHYnoL4tp/HX/A45wWQN15CYr9bFRmmRdYStSO5L65lCCZRF+kYiSKhm9alqbcdiVA==}
     engines: {node: '>=12.22.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18

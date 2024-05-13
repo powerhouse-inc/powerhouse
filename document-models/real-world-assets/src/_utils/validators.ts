@@ -278,7 +278,7 @@ export function validateCashTransaction(
     validateBaseTransaction(state, transaction);
     if (transaction.counterPartyAccountId !== state.principalLenderAccountId) {
         throw new Error(
-            `Cash transaction must have Maker principal lender as the counter party`,
+            `Cash transaction must have the principal lender as the counter party`,
         );
     }
     if (!isCashAsset(state.portfolio.find(a => a.id === transaction.assetId))) {

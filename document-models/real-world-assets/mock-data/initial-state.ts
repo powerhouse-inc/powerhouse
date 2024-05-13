@@ -3,9 +3,9 @@ import { RealWorldAssetsState } from '..';
 export const initialState: RealWorldAssetsState = {
     accounts: [
         {
-            id: 'maker-principal-account-id',
-            reference: 'MakerPrincipal',
-            label: 'Principal',
+            id: 'principal-lender-account-id',
+            reference: '0x',
+            label: 'Principal Lender',
         },
         {
             id: 'account-2',
@@ -23,7 +23,7 @@ export const initialState: RealWorldAssetsState = {
             reference: '0xabc',
         },
     ],
-    principalLenderAccountId: 'maker-principal-account-id',
+    principalLenderAccountId: 'principal-lender-account-id',
     spvs: [
         { id: '1', name: 'TACO' },
         { id: '2', name: 'SPV 2' },
@@ -31,10 +31,10 @@ export const initialState: RealWorldAssetsState = {
     ],
     serviceProviderFeeTypes: [
         {
-            id: 'maker-principal-fee-type-id',
-            name: 'Maker Principal',
+            id: 'principal-fee-type-id',
+            name: 'Principal',
             feeType: 'Principal',
-            accountId: 'maker-principal-account-id',
+            accountId: 'principal-lender-account-id',
         },
         {
             id: '1',
@@ -62,7 +62,7 @@ export const initialState: RealWorldAssetsState = {
     ],
     portfolio: [
         {
-            id: 'maker-principal-asset-id',
+            id: 'principal-asset-id',
             type: 'Cash',
             spvId: '1',
             currency: 'USD',

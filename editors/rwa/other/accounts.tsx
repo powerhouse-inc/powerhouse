@@ -25,9 +25,7 @@ export function Accounts(props: IProps) {
     } = props;
     const principalLenderAccountId =
         document.state.global.principalLenderAccountId;
-    const accounts = document.state.global.accounts.filter(
-        account => account.id !== principalLenderAccountId,
-    );
+    const accounts = document.state.global.accounts;
 
     const toggleExpandedRow = useCallback(
         (id: string | undefined) => {
@@ -101,6 +99,7 @@ export function Accounts(props: IProps) {
             expandedRowId={expandedRowId}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
+            principalLenderAccountId={principalLenderAccountId}
             toggleExpandedRow={toggleExpandedRow}
             setSelectedItem={setSelectedItem}
             setShowNewItemForm={setShowNewItemForm}
