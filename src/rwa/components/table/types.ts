@@ -15,7 +15,13 @@ import { FieldValues, SubmitHandler, UseFormReturn } from 'react-hook-form';
 export type TableItem = {
     id: string;
     itemNumber?: number;
+    customTransform?: (
+        itemData: ItemData,
+        columnKey: string,
+    ) => ReactNode | undefined;
 } & Record<string, any>;
+
+export type ItemData = string | number | Date | null | undefined;
 
 export type SpecialColumns = {
     index: number;
@@ -127,6 +133,7 @@ export type AccountsTableProps = Pick<
     PropsToKeepFromTable
 > & {
     accounts: Account[];
+    principalLenderAccountId: string;
 };
 
 export type SPVsTableProps = Pick<
@@ -161,6 +168,7 @@ export type ItemDetailsProps<
         itemNumber: number;
         isAllowedToCreateDocuments: boolean;
         isAllowedToEditDocuments: boolean;
+        isAllowedToDeleteItem?: boolean;
         formInputs: ComponentType;
         setSelectedItem?: (item: TItem | undefined) => void;
         setShowNewItemForm?: (show: boolean) => void;
@@ -211,6 +219,7 @@ export type AccountDetailsProps = Pick<
     ItemDetailsProps<Account>,
     PropsToKeepFromItemDetails
 > & {
+    isPrincipalLenderAccount: boolean;
     onSubmitForm: (data: AccountFormInputs) => void;
 };
 

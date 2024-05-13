@@ -1,6 +1,6 @@
 import { FixedIncome, FixedIncomeType, SPV } from '@/rwa';
 
-export const mockPrincipalLenderAccountId = 'principal-lender-id';
+export const mockPrincipalLenderAccountId = 'principal-lender-account-id';
 
 export const mockFixedIncomeTypes: FixedIncomeType[] = [
     { id: '1', name: 'T-Bill 91279GF8' },
@@ -200,7 +200,7 @@ export const mockAccounts = [
     {
         id: mockPrincipalLenderAccountId,
         label: 'Principal Lender',
-        reference: '0x123',
+        reference: '0x',
     },
     {
         id: 'account-2',

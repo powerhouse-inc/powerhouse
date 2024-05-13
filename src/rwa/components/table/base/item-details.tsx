@@ -36,6 +36,7 @@ export function ItemDetails<
         operation = 'view',
         isAllowedToCreateDocuments,
         isAllowedToEditDocuments,
+        isAllowedToDeleteItem,
         handleSubmit,
         onSubmit,
         onSubmitDelete,
@@ -53,7 +54,8 @@ export function ItemDetails<
 
     const showCancelButton = !isViewOperation && isAllowedToCreateOrEdit;
     const showSubmitButton = !isViewOperation && isAllowedToCreateOrEdit;
-    const showDeleteButton = isEditOperation && isAllowedToEditDocuments;
+    const showDeleteButton =
+        isEditOperation && isAllowedToEditDocuments && isAllowedToDeleteItem;
     const showEditButton = isViewOperation && isAllowedToEditDocuments;
 
     function handleCancel() {

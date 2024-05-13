@@ -8,7 +8,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { FormInputs } from '../../inputs/form-inputs';
 
 export function AccountDetails(props: AccountDetailsProps) {
-    const { onSubmitForm, item, operation } = props;
+    const { onSubmitForm, item, operation, isPrincipalLenderAccount } = props;
 
     const {
         register,
@@ -63,11 +63,14 @@ export function AccountDetails(props: AccountDetailsProps) {
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
+    const isAllowedToDeleteItem = !isPrincipalLenderAccount;
+
     const formProps = {
         formInputs,
         handleSubmit,
         onSubmit,
         reset,
+        isAllowedToDeleteItem,
     };
 
     return <ItemDetails {...props} {...formProps} />;

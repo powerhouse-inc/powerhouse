@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
 
 import { Account } from '@/rwa';
-import { mockAccounts } from '@/rwa/mocks';
+import { mockAccounts, mockPrincipalLenderAccountId } from '@/rwa/mocks';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { AccountFormInputs } from '../types';
@@ -29,6 +29,7 @@ type AccountsTableProps = ComponentPropsWithoutRef<typeof AccountsTable>;
 export const Empty: Story = {
     args: {
         accounts: [],
+        principalLenderAccountId: mockPrincipalLenderAccountId,
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();

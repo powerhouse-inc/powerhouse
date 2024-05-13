@@ -1,6 +1,7 @@
 import {
     FormattedNumber,
     GroupTransactionType,
+    ItemData,
     TableItem,
     TransactionFeeInput,
     cashTransactionSignByTransactionType,
@@ -24,9 +25,7 @@ export function handleDateInTable(maybeDate: string | Date) {
     return maybeDate;
 }
 
-export function handleTableDatum(
-    datum: string | number | Date | null | undefined,
-) {
+export function handleTableDatum(datum: ItemData) {
     if (datum === null || datum === undefined) return '--';
 
     if (typeof datum === 'number') return <FormattedNumber value={datum} />;

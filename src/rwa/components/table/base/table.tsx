@@ -114,7 +114,10 @@ export function Table<
                                                 : ''
                                         }
                                     >
-                                        {handleTableDatum(item[column.key])}
+                                        {item.customTransform?.(
+                                            item[column.key],
+                                            column.key,
+                                        ) ?? handleTableDatum(item[column.key])}
                                     </RWATableCell>
                                 )}
                             {column.key === 'moreDetails' && (

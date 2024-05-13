@@ -1,6 +1,9 @@
+import { Icon } from '@/powerhouse';
 import {
+    Account,
     AccountDetails,
     AccountsTableProps,
+    ItemData,
     Table,
     addItemNumber,
     getItemById,
@@ -12,10 +15,49 @@ const columns = [
     { key: 'reference' as const, label: 'Reference', allowSorting: true },
 ];
 
+function makeAccountsTableData(
+    accounts: Account[],
+    principalLenderAccountId: string,
+) {
+    const withItemNumber = addItemNumber(accounts);
+
+    const withCustomTransform = withItemNumber.map(account => {
+        const customTransform = (itemData: ItemData, columnKey: string) => {
+            if (
+                account.id === principalLenderAccountId &&
+                columnKey === 'label'
+            )
+                return (
+                    <>
+                        {itemData}{' '}
+                        <span className="ml-2 inline-flex items-center gap-1 rounded bg-green-100 px-1 font-extralight">
+                            Lender <Icon name="check-circle" size={14} />
+                        </span>
+                    </>
+                );
+        };
+        return {
+            ...account,
+            customTransform,
+        };
+    });
+
+    return withCustomTransform;
+}
+
 export function AccountsTable(props: AccountsTableProps) {
-    const { accounts, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const {
+        accounts,
+        principalLenderAccountId,
+        selectedItem,
+        onSubmitCreate,
+        onSubmitEdit,
+    } = props;
     const itemName = 'Account';
-    const tableData = useMemo(() => addItemNumber(accounts), [accounts]);
+    const tableData = useMemo(
+        () => makeAccountsTableData(accounts, principalLenderAccountId),
+        [accounts, principalLenderAccountId],
+    );
 
     const editForm = ({
         itemId,
@@ -29,6 +71,7 @@ export function AccountsTable(props: AccountsTableProps) {
             itemName={itemName}
             item={getItemById(itemId, accounts)}
             itemNumber={itemNumber}
+            isPrincipalLenderAccount={principalLenderAccountId === itemId}
             operation={selectedItem?.id === itemId ? 'edit' : 'view'}
             onSubmitForm={onSubmitEdit}
         />
@@ -39,6 +82,7 @@ export function AccountsTable(props: AccountsTableProps) {
             {...props}
             itemName={itemName}
             itemNumber={accounts.length + 1}
+            isPrincipalLenderAccount={false}
             operation="create"
             onSubmitForm={onSubmitCreate}
         />
