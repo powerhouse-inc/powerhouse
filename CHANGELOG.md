@@ -1,3 +1,10 @@
+# [1.0.0-alpha.109](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.108...v1.0.0-alpha.109) (2024-05-13)
+
+
+### Features
+
+* handle principal lender ([#288](https://github.com/powerhouse-inc/design-system/issues/288)) ([a1f1630](https://github.com/powerhouse-inc/design-system/commit/a1f16304287cfcf9f72dcfc1f45c3bc075ac9144))
+
 # [1.0.0-alpha.108](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.107...v1.0.0-alpha.108) (2024-05-10)
 
 
