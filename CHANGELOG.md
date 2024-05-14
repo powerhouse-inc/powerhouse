@@ -1,3 +1,10 @@
+# [1.0.0-alpha.111](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.110...v1.0.0-alpha.111) (2024-05-14)
+
+
+### Features
+
+* fix button styles ([af13939](https://github.com/powerhouse-inc/design-system/commit/af139397c154977d68ca73536317690426469b53))
+
 # [1.0.0-alpha.110](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.109...v1.0.0-alpha.110) (2024-05-14)
 
 
