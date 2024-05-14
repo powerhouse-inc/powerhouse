@@ -38,14 +38,22 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         );
     },
     deleteSpvOperation(state, action, dispatch) {
-        if (!action.input.id) {
+        const id = action.input.id;
+
+        if (!id) {
             throw new Error(`SPV must have an id`);
         }
-        const spv = state.spvs.find(spv => spv.id === action.input.id);
+        const spv = state.spvs.find(spv => spv.id === id);
         if (!spv) {
-            throw new Error(`SPV with id ${action.input.id} does not exist!`);
+            throw new Error(`SPV with id ${id} does not exist!`);
         }
-        state.spvs = state.spvs.filter(spv => spv.id !== action.input.id);
+        const dependentAssets = state.portfolio.filter(a => a.spvId === id);
+        if (dependentAssets.length !== 0) {
+            throw new Error(
+                'Cannot delete SPV because it has assets that depend on it. Please change or delete those assets first.',
+            );
+        }
+        state.spvs = state.spvs.filter(spv => spv.id !== id);
     },
     createServiceProviderFeeTypeOperation(state, action, dispatch) {
         if (!action.input.id) {
@@ -116,19 +124,28 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         );
     },
     deleteServiceProviderFeeTypeOperation(state, action, dispatch) {
-        if (!action.input.id) {
-            throw new Error(`Service provider must have an id`);
+        const id = action.input.id;
+
+        if (!id) {
+            throw new Error(`Service provider fee type must have an id`);
         }
-        const rsp = state.serviceProviderFeeTypes.find(
-            rsp => rsp.id === action.input.id,
+
+        const serviceProviderFeeType = state.serviceProviderFeeTypes.find(
+            s => s.id === id,
         );
-        if (!rsp) {
+        if (!serviceProviderFeeType) {
+            throw new Error(`Service provider with id ${id} does not exist!`);
+        }
+        const dependentTransactions = state.transactions.filter(t =>
+            t.fees?.some(f => f.serviceProviderFeeTypeId === id),
+        );
+        if (dependentTransactions.length !== 0) {
             throw new Error(
-                `Service provider with id ${action.input.id} does not exist!`,
+                'Cannot delete service provider fee type because it has transactions that depend on it. Please change or delete those transactions first.',
             );
         }
         state.serviceProviderFeeTypes = state.serviceProviderFeeTypes.filter(
-            rsp => rsp.id !== action.input.id,
+            s => s.id !== id,
         );
     },
     createAccountOperation(state, action, dispatch) {
@@ -167,19 +184,34 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         );
     },
     deleteAccountOperation(state, action, dispatch) {
-        if (!action.input.id) {
+        const id = action.input.id;
+        if (!id) {
             throw new Error(`Account must have an id`);
         }
-        const account = state.accounts.find(
-            account => account.id === action.input.id,
-        );
+        if (id === state.principalLenderAccountId) {
+            throw new Error(`Cannot delete principal lender account.`);
+        }
+        const account = state.accounts.find(account => account.id === id);
         if (!account) {
+            throw new Error(`Account with id ${id} does not exist!`);
+        }
+        const dependentServiceProviderFeeTypes =
+            state.serviceProviderFeeTypes.filter(s => s.accountId === id);
+        if (dependentServiceProviderFeeTypes.length !== 0) {
             throw new Error(
-                `Account with id ${action.input.id} does not exist!`,
+                'Cannot delete account because it has service provider fee types that depend on it. Please change or delete those service provider fee types first.',
             );
         }
-        state.accounts = state.accounts.filter(
-            account => account.id !== action.input.id,
+        const dependentTransactions = state.transactions.filter(
+            t =>
+                t.fixedIncomeTransaction?.accountId === id ||
+                t.cashTransaction.accountId === id,
         );
+        if (dependentTransactions.length !== 0) {
+            throw new Error(
+                'Cannot delete account because it has transactions that depend on it. Please change or delete those transactions first.',
+            );
+        }
+        state.accounts = state.accounts.filter(account => account.id !== id);
     },
 };

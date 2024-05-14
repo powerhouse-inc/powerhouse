@@ -6,7 +6,7 @@
 
 import { Asset, FixedIncome } from '../..';
 import { RealWorldAssetsPortfolioOperations } from '../../gen/portfolio/operations';
-import { validateFixedIncomeAsset } from '../utils';
+import { isFixedIncomeAsset, validateFixedIncomeAsset } from '../utils';
 
 export const reducer: RealWorldAssetsPortfolioOperations = {
     createFixedIncomeTypeOperation(state, action, dispatch) {
@@ -53,6 +53,16 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
 
         if (!fixedIncomeType) {
             throw new Error(`Type with id ${id} does not exist!`);
+        }
+
+        const dependentFixedIncomeAssets = state.portfolio.filter(
+            a => isFixedIncomeAsset(a) && a.fixedIncomeTypeId === id,
+        );
+
+        if (dependentFixedIncomeAssets.length !== 0) {
+            throw new Error(
+                'Cannot delete fixed income type because it has assets that depend on it. Please change or delete those assets first.',
+            );
         }
 
         state.fixedIncomeTypes = state.fixedIncomeTypes.filter(
@@ -173,31 +183,42 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
         );
     },
     deleteFixedIncomeAssetOperation(state, action, dispatch) {
-        if (!action.input.id) {
+        const id = action.input.id;
+        if (!id) {
             throw new Error(`Fixed income asset must have an id`);
         }
-        const asset = state.portfolio.find(
-            asset => asset.id === action.input.id,
-        );
+        const asset = state.portfolio.find(asset => asset.id === id);
         if (!asset) {
-            throw new Error(`Asset with id ${action.input.id} does not exist!`);
+            throw new Error(`Asset with id ${id} does not exist!`);
         }
-        state.portfolio = state.portfolio.filter(
-            asset => asset.id !== action.input.id,
+        const dependentTransactions = state.transactions.filter(
+            t => t.fixedIncomeTransaction?.assetId === id,
         );
+        if (dependentTransactions.length !== 0) {
+            throw new Error(
+                'Cannot delete asset because it has dependent transactions. Please change or delete those transactions first.',
+            );
+        }
+        state.portfolio = state.portfolio.filter(asset => asset.id !== id);
     },
     deleteCashAssetOperation(state, action, dispatch) {
-        if (!action.input.id) {
+        const id = action.input.id;
+
+        if (!id) {
             throw new Error(`Fixed income asset must have an id`);
         }
-        const asset = state.portfolio.find(
-            asset => asset.id === action.input.id,
-        );
+        const asset = state.portfolio.find(asset => asset.id === id);
         if (!asset) {
-            throw new Error(`Asset with id ${action.input.id} does not exist!`);
+            throw new Error(`Asset with id ${id} does not exist!`);
         }
-        state.portfolio = state.portfolio.filter(
-            asset => asset.id !== action.input.id,
+        const dependentTransactions = state.transactions.filter(
+            t => t.cashTransaction.assetId === id,
         );
+        if (dependentTransactions.length !== 0) {
+            throw new Error(
+                'Cannot delete asset because it has dependent transactions. Please change or delete those transactions first.',
+            );
+        }
+        state.portfolio = state.portfolio.filter(asset => asset.id !== id);
     },
 };

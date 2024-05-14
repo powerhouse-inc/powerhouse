@@ -26,6 +26,9 @@ export function Accounts(props: IProps) {
     const principalLenderAccountId =
         document.state.global.principalLenderAccountId;
     const accounts = document.state.global.accounts;
+    const transactions = document.state.global.transactions;
+    const serviceProviderFeeTypes =
+        document.state.global.serviceProviderFeeTypes;
 
     const toggleExpandedRow = useCallback(
         (id: string | undefined) => {
@@ -94,6 +97,8 @@ export function Accounts(props: IProps) {
     return (
         <AccountsTable
             accounts={accounts}
+            transactions={transactions}
+            serviceProviderFeeTypes={serviceProviderFeeTypes}
             selectedItem={selectedItem}
             showNewItemForm={showNewItemForm}
             expandedRowId={expandedRowId}

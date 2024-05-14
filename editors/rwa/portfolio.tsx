@@ -36,6 +36,8 @@ export const Portfolio = (props: IProps) => {
         (asset): asset is FixedIncome => isFixedIncomeAsset(asset),
     );
 
+    const transactions = document.state.global.transactions;
+
     // there is only one cash asset for v1
     // this is always defined for every document model
     const cashAsset = document.state.global.portfolio.find(
@@ -143,6 +145,7 @@ export const Portfolio = (props: IProps) => {
             </p>
             <AssetsTable
                 assets={fixedIncomeAssets as UiFixedIncome[]}
+                transactions={transactions}
                 cashAsset={cashAsset}
                 fixedIncomeTypes={fixedIncomeTypes}
                 spvs={spvs}

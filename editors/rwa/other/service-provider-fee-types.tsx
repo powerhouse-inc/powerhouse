@@ -27,6 +27,7 @@ export function ServiceProviderFeeTypes(props: IProps) {
     const serviceProviderFeeTypes =
         document.state.global.serviceProviderFeeTypes;
     const accounts = document.state.global.accounts;
+    const transactions = document.state.global.transactions;
 
     const toggleExpandedRow = useCallback(
         (id: string | undefined) => {
@@ -106,6 +107,7 @@ export function ServiceProviderFeeTypes(props: IProps) {
         <ServiceProviderFeeTypesTable
             serviceProviderFeeTypes={serviceProviderFeeTypes}
             accounts={accounts}
+            transactions={transactions}
             selectedItem={selectedItem}
             showNewItemForm={showNewItemForm}
             expandedRowId={expandedRowId}
