@@ -8,7 +8,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { FormInputs } from '../../inputs/form-inputs';
 
 export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
-    const { onCancel, onSubmitForm, item, operation } = props;
+    const { onCancel, onSubmitForm, item, operation, assets } = props;
 
     const {
         register,
@@ -46,8 +46,22 @@ export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
+    const dependentAssets = assets.filter(
+        asset => asset.fixedIncomeTypeId === item?.id,
+    );
+
+    const dependentItemsList = dependentAssets.map(asset => (
+        <div key={asset.id}>{asset.name}</div>
+    ));
+
+    const dependentItemProps = {
+        dependentItemName: 'assets',
+        dependentItemList: dependentItemsList,
+    };
+
     const formProps = {
         formInputs,
+        dependentItemProps,
         handleSubmit,
         onSubmit,
         reset,

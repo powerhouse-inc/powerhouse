@@ -1,7 +1,9 @@
 import { Icon } from '@/powerhouse';
 import { ItemDetailsProps, RWAButton, TableItem } from '@/rwa';
+import { useState } from 'react';
 import { FieldValues } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
+import { RWADeleteItemModal } from '../../modal';
 
 /**
  * Displays and allows creating or editing an item. Intended to be used with react-hook-form.
@@ -32,11 +34,12 @@ export function ItemDetails<
         itemName,
         itemNumber,
         className,
-        formInputs: FormInputs,
         operation = 'view',
         isAllowedToCreateDocuments,
         isAllowedToEditDocuments,
-        isAllowedToDeleteItem,
+        isAllowedToDeleteItem = true,
+        formInputs: FormInputs,
+        dependentItemProps,
         handleSubmit,
         onSubmit,
         onSubmitDelete,
@@ -45,6 +48,10 @@ export function ItemDetails<
         setShowNewItemForm,
         onCancel,
     } = props;
+
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    const hasDependentItems = !!dependentItemProps?.dependentItemList.length;
 
     const isEditOperation = operation === 'edit';
     const isCreateOperation = operation === 'create';
@@ -68,6 +75,11 @@ export function ItemDetails<
     function handleDelete() {
         if (!item) return;
 
+        if (hasDependentItems) {
+            setShowDeleteModal(true);
+            return;
+        }
+
         onSubmitDelete(item.id);
         setSelectedItem?.(undefined);
     }
@@ -84,7 +96,7 @@ export function ItemDetails<
             iconPosition="right"
             icon={<Icon name="save" size={16} />}
         >
-            {isCreateOperation ? 'Save New ' + itemName : 'Save Edits'}
+            {isCreateOperation ? 'Save' : 'Save Edits'}
         </RWAButton>
     );
 
@@ -123,6 +135,14 @@ export function ItemDetails<
                 </div>
             </div>
             <FormInputs />
+            {dependentItemProps && (
+                <RWADeleteItemModal
+                    {...dependentItemProps}
+                    itemName={itemName.toLowerCase()}
+                    open={showDeleteModal}
+                    onContinue={() => setShowDeleteModal(false)}
+                />
+            )}
         </div>
     );
 }

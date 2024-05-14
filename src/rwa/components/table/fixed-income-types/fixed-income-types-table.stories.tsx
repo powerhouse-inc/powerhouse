@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
 
 import { FixedIncomeType } from '@/rwa';
-import { mockFixedIncomeTypes } from '@/rwa/mocks';
+import { mockFixedIncomeTypes, mockFixedIncomes } from '@/rwa/mocks';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { FixedIncomeTypeFormInputs } from '../types';
@@ -31,6 +31,7 @@ type FixedIncomeTypesTableProps = ComponentPropsWithoutRef<
 export const Empty: Story = {
     args: {
         fixedIncomeTypes: [],
+        assets: [],
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -109,13 +110,14 @@ export const WithDataReadOnly: Story = {
     args: {
         ...Empty.args,
         fixedIncomeTypes: mockFixedIncomeTypes,
+        assets: mockFixedIncomes,
     },
 };
 
 export const WithDataAllowedToCreateDocuments: Story = {
     ...Empty,
     args: {
-        ...Empty.args,
+        ...WithDataReadOnly.args,
         isAllowedToCreateDocuments: true,
         isAllowedToEditDocuments: true,
     },

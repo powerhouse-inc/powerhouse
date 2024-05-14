@@ -8,7 +8,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { FormInputs } from '../../inputs/form-inputs';
 
 export function SPVDetails(props: SPVDetailsProps) {
-    const { onCancel, onSubmitForm, item, operation } = props;
+    const { onCancel, onSubmitForm, item, operation, assets } = props;
 
     const {
         register,
@@ -46,8 +46,18 @@ export function SPVDetails(props: SPVDetailsProps) {
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
+    const dependentAssets = assets.filter(asset => asset.spvId === item?.id);
+
+    const dependentItemProps = {
+        dependentItemName: 'assets',
+        dependentItemList: dependentAssets.map(asset => (
+            <div key={asset.id}>{asset.name}</div>
+        )),
+    };
+
     const formProps = {
         formInputs,
+        dependentItemProps,
         handleSubmit,
         onSubmit,
         reset,

@@ -2,7 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
 
 import { Account } from '@/rwa';
-import { mockAccounts, mockPrincipalLenderAccountId } from '@/rwa/mocks';
+import {
+    mockAccounts,
+    mockGroupTransactions,
+    mockPrincipalLenderAccountId,
+    mockServiceProviderFeeTypes,
+} from '@/rwa/mocks';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { AccountFormInputs } from '../types';
@@ -30,6 +35,8 @@ export const Empty: Story = {
     args: {
         accounts: [],
         principalLenderAccountId: mockPrincipalLenderAccountId,
+        serviceProviderFeeTypes: [],
+        transactions: [],
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -108,6 +115,8 @@ export const WithDataReadOnly: Story = {
     args: {
         ...Empty.args,
         accounts: mockAccounts,
+        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+        transactions: mockGroupTransactions,
     },
 };
 

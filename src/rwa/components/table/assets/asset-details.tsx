@@ -12,8 +12,15 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { FormInputs } from '../../inputs/form-inputs';
 
 export function AssetDetails(props: AssetDetailsProps) {
-    const { fixedIncomeTypes, spvs, onCancel, onSubmitForm, item, operation } =
-        props;
+    const {
+        fixedIncomeTypes,
+        spvs,
+        onCancel,
+        onSubmitForm,
+        item,
+        operation,
+        transactions,
+    } = props;
 
     const fixedIncomeType = fixedIncomeTypes.find(
         ({ id }) => id === item?.fixedIncomeTypeId,
@@ -187,8 +194,25 @@ export function AssetDetails(props: AssetDetailsProps) {
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
+    const dependentTransactions = transactions
+        .map((t, index) => ({
+            ...t,
+            txNumber: index + 1,
+        }))
+        .filter(t => t.fixedIncomeTransaction?.assetId === item?.id);
+
+    const dependentItemList = dependentTransactions.map(t => (
+        <div key={t.id}>Transaction #{t.txNumber}</div>
+    ));
+
+    const dependentItemProps = {
+        dependentItemName: 'transactions',
+        dependentItemList,
+    };
+
     const formProps = {
         formInputs,
+        dependentItemProps,
         handleSubmit,
         onSubmit,
         reset,

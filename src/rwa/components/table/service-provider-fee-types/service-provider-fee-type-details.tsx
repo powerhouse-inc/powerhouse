@@ -12,7 +12,8 @@ import { FormInputs } from '../../inputs/form-inputs';
 export function ServiceProviderFeeTypeDetails(
     props: ServiceProviderFeeTypeDetailsProps,
 ) {
-    const { accounts, onCancel, onSubmitForm, item, operation } = props;
+    const { accounts, transactions, onCancel, onSubmitForm, item, operation } =
+        props;
 
     const account = accounts.find(({ id }) => id === item?.accountId);
 
@@ -93,8 +94,20 @@ export function ServiceProviderFeeTypeDetails(
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
+    const dependentTransactions = transactions.filter(t =>
+        t.fees?.some(f => f.serviceProviderFeeTypeId === item?.id),
+    );
+
+    const dependentItemProps = {
+        dependentItemName: 'transactions',
+        dependentItemList: dependentTransactions.map((transaction, index) => (
+            <div key={transaction.id}>Transaction #{index + 1}</div>
+        )),
+    };
+
     const formProps = {
         formInputs,
+        dependentItemProps,
         handleSubmit,
         onSubmit,
         reset,

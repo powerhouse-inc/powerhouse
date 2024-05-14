@@ -1,4 +1,8 @@
-import { mockFixedIncomes, mockPrincipalLenderAccountId } from '.';
+import {
+    mockAccounts,
+    mockFixedIncomes,
+    mockPrincipalLenderAccountId,
+} from '.';
 import { calculateCashBalanceChange } from '../components';
 import {
     FEES_PAYMENT,
@@ -10,6 +14,7 @@ import { isAssetGroupTransactionType } from '../utils';
 export const mockFixedIncomeTransaction = {
     id: 'fixed-income-transaction-1',
     assetId: mockFixedIncomes[0].id,
+    accountId: mockAccounts[1].id,
     amount: 1000,
     entryTime: '2021-10-01',
 };

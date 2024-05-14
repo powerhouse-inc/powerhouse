@@ -7,6 +7,7 @@ import {
     mockCashAsset,
     mockFixedIncomes,
     mockFixedIncomeTypes,
+    mockGroupTransactions,
     mockSPVs,
 } from '@/rwa/mocks';
 import { getColumnCount } from '../hooks/useColumnPriority';
@@ -40,6 +41,7 @@ export const Empty: Story = {
         cashAsset: undefined,
         fixedIncomeTypes: [],
         spvs: [],
+        transactions: [],
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -113,6 +115,7 @@ export const WithDataReadOnly: Story = {
         cashAsset: mockCashAsset,
         fixedIncomeTypes: mockFixedIncomeTypes,
         spvs: mockSPVs,
+        transactions: mockGroupTransactions,
     },
 };
 

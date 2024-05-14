@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
 
 import { SPV } from '@/rwa';
-import { mockSPVs } from '@/rwa/mocks';
+import { mockFixedIncomes, mockSPVs } from '@/rwa/mocks';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { SPVFormInputs } from '../types';
@@ -109,6 +109,7 @@ export const WithDataReadOnly: Story = {
     args: {
         ...Empty.args,
         spvs: mockSPVs,
+        assets: mockFixedIncomes,
     },
 };
 

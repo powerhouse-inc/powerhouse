@@ -118,6 +118,7 @@ export type AssetsTableProps = Pick<
     assets: FixedIncome[];
     fixedIncomeTypes: FixedIncomeType[];
     spvs: SPV[];
+    transactions: GroupTransaction[];
 };
 
 export type ServiceProviderFeeTypesTableProps = Pick<
@@ -126,6 +127,7 @@ export type ServiceProviderFeeTypesTableProps = Pick<
 > & {
     serviceProviderFeeTypes: ServiceProviderFeeType[];
     accounts: Account[];
+    transactions: GroupTransaction[];
 };
 
 export type AccountsTableProps = Pick<
@@ -134,6 +136,8 @@ export type AccountsTableProps = Pick<
 > & {
     accounts: Account[];
     principalLenderAccountId: string;
+    serviceProviderFeeTypes: ServiceProviderFeeType[];
+    transactions: GroupTransaction[];
 };
 
 export type SPVsTableProps = Pick<
@@ -141,6 +145,7 @@ export type SPVsTableProps = Pick<
     PropsToKeepFromTable
 > & {
     spvs: SPV[];
+    assets: FixedIncome[];
 };
 
 export type FixedIncomeTypesTableProps = Pick<
@@ -148,6 +153,7 @@ export type FixedIncomeTypesTableProps = Pick<
     PropsToKeepFromTable
 > & {
     fixedIncomeTypes: FixedIncomeType[];
+    assets: FixedIncome[];
 };
 
 export type ItemDetailsFormProps<
@@ -169,7 +175,12 @@ export type ItemDetailsProps<
         isAllowedToCreateDocuments: boolean;
         isAllowedToEditDocuments: boolean;
         isAllowedToDeleteItem?: boolean;
+        hasDependentItems?: boolean;
         formInputs: ComponentType;
+        dependentItemProps?: {
+            dependentItemName: string;
+            dependentItemList: ReactNode[];
+        };
         setSelectedItem?: (item: TItem | undefined) => void;
         setShowNewItemForm?: (show: boolean) => void;
         onCancel?: () => void;
@@ -182,6 +193,7 @@ export type PropsToKeepFromItemDetails =
     | 'operation'
     | 'isAllowedToCreateDocuments'
     | 'isAllowedToEditDocuments'
+    | 'dependentItemProps'
     | 'setSelectedItem'
     | 'setShowNewItemForm'
     | 'onCancel'
@@ -193,6 +205,7 @@ export type AssetDetailsProps = Pick<
 > & {
     fixedIncomeTypes: FixedIncomeType[];
     spvs: SPV[];
+    transactions: GroupTransaction[];
     onSubmitForm: (data: AssetFormInputs) => void;
     onSubmitDelete: (itemId: string) => void;
 };
@@ -212,6 +225,7 @@ export type ServiceProviderFeeTypeDetailsProps = Pick<
     PropsToKeepFromItemDetails
 > & {
     accounts: Account[];
+    transactions: GroupTransaction[];
     onSubmitForm: (data: ServiceProviderFeeTypeFormInputs) => void;
 };
 
@@ -221,12 +235,15 @@ export type AccountDetailsProps = Pick<
 > & {
     isPrincipalLenderAccount: boolean;
     onSubmitForm: (data: AccountFormInputs) => void;
+    serviceProviderFeeTypes: ServiceProviderFeeType[];
+    transactions: GroupTransaction[];
 };
 
 export type SPVDetailsProps = Pick<
     ItemDetailsProps<SPV>,
     PropsToKeepFromItemDetails
 > & {
+    assets: FixedIncome[];
     onSubmitForm: (data: SPVFormInputs) => void;
 };
 
@@ -235,6 +252,7 @@ export type FixedIncomeTypeDetailsProps = Pick<
     PropsToKeepFromItemDetails
 > & {
     onSubmitForm: (data: FixedIncomeTypeFormInputs) => void;
+    assets: FixedIncome[];
 };
 
 export type ServiceProviderFeeTypeFormInputs = {
