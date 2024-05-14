@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.49.0...v1.50.0) (2024-05-14)
+
+
+### Features
+
+* handle orphans ([#157](https://github.com/powerhouse-inc/document-model-libs/issues/157)) ([0567608](https://github.com/powerhouse-inc/document-model-libs/commit/05676085b834dd9897bb8c2d1795bd2ab7bc692c))
+
 # [1.49.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.48.0...v1.49.0) (2024-05-13)
 
 
