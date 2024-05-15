@@ -4,14 +4,20 @@ import { useFeatureFlag } from './useFeatureFlags';
 
 export const useLoadDefaultDrive = () => {
     const loading = useRef(false);
-    const { addRemoteDrive, documentDrives, documentDrivesStatus } = useDocumentDriveServer();
+    const { addRemoteDrive, documentDrives, documentDrivesStatus } =
+        useDocumentDriveServer();
     const {
         setConfig,
         config: { defaultDrive },
     } = useFeatureFlag();
 
     useEffect(() => {
-        if (defaultDrive && documentDrivesStatus === "LOADED" && !defaultDrive.loaded && !loading.current) {
+        if (
+            defaultDrive &&
+            documentDrivesStatus === 'LOADED' &&
+            !defaultDrive.loaded &&
+            !loading.current
+        ) {
             const isDriveAlreadyAdded = documentDrives.some(drive => {
                 return drive.state.local.triggers.some(
                     trigger => trigger.data?.url === defaultDrive.url,
