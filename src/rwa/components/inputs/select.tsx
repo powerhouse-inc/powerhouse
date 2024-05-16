@@ -1,18 +1,23 @@
-import { RWASelect, RWASelectProps } from '@/rwa';
+import { Combobox } from '@/connect/components/combobox';
+import { ComponentPropsWithoutRef } from 'react';
 import { Control, Controller, FieldValues, Path } from 'react-hook-form';
 
-export interface RWATableSelectProps<ControlInputs extends FieldValues>
-    extends RWASelectProps {
+export type RWATableSelectProps<ControlInputs extends FieldValues> = Omit<
+    ComponentPropsWithoutRef<typeof Combobox>,
+    'options'
+> & {
+    options: { label: string; value: string }[];
     disabled?: boolean;
     name: Path<ControlInputs>;
     control: Control<ControlInputs>;
     required?: boolean;
-}
+};
 
 export function RWATableSelect<ControlInputs extends FieldValues>(
     props: RWATableSelectProps<ControlInputs>,
 ) {
     const {
+        options,
         name,
         control,
         required = false,
@@ -25,15 +30,25 @@ export function RWATableSelect<ControlInputs extends FieldValues>(
             name={name}
             control={control}
             rules={{ required }}
-            render={({ field: { onChange, onBlur, value } }) => (
-                <RWASelect
-                    onBlur={onBlur}
-                    selectedKey={value}
-                    isDisabled={disabled}
-                    onSelectionChange={onChange}
-                    {...restProps}
-                />
-            )}
+            render={({ field: { onChange, onBlur, value } }) =>
+                disabled ? (
+                    <>{options.find(option => option.value === value)?.label}</>
+                ) : (
+                    <Combobox
+                        options={options}
+                        onBlur={onBlur}
+                        value={options.find(option => option.value === value)}
+                        isDisabled={disabled}
+                        onChange={option =>
+                            !!option &&
+                            typeof option === 'object' &&
+                            'value' in option &&
+                            onChange(option.value)
+                        }
+                        {...restProps}
+                    />
+                )
+            }
         />
     );
 }

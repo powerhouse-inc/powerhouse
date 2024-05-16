@@ -89,11 +89,11 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
     } = props;
     const transactionTypeOptions = allGroupTransactionTypes.map(type => ({
         label: groupTransactionTypeLabels[type],
-        id: type,
+        value: type,
     }));
     const fixedIncomeOptions = fixedIncomes.map(fixedIncome => ({
         label: makeFixedIncomeOptionLabel(fixedIncome),
-        id: fixedIncome.id,
+        value: fixedIncome.id,
     }));
 
     const fixedIncome = fixedIncomes.find(

@@ -125,9 +125,16 @@ export const WithDataIsAllowedToCreateDocuments: Story = {
 };
 
 export const WithManyItems: Story = {
-    ...WithDataReadyOnly,
+    ...WithDataIsAllowedToCreateDocuments,
     args: {
-        ...WithDataReadyOnly.args,
+        ...WithDataIsAllowedToCreateDocuments.args,
         transactions: manyMockGroupTransactions,
+        fixedIncomes: [
+            ...mockFixedIncomes,
+            ...Array.from({ length: 100 }, (_, i) => ({
+                ...mockFixedIncomes[0],
+                id: `fixed-income-${i + 1}`,
+            })),
+        ],
     },
 };

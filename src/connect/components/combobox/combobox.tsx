@@ -8,10 +8,7 @@ import Select, {
 
 type SelectProps = ComponentPropsWithoutRef<typeof Select>;
 
-type Props = Omit<
-    SelectProps,
-    'isSearchable' | 'components' | 'styles' | 'theme'
->;
+type Props = Omit<SelectProps, 'components' | 'styles' | 'theme'>;
 
 function DropdownIndicator(props: DropdownIndicatorProps) {
     return (
@@ -33,8 +30,6 @@ export function Combobox(props: Props) {
     return (
         <Select
             {...props}
-            isSearchable={true}
-            isClearable={true}
             components={{ DropdownIndicator, ClearIndicator }}
             styles={{
                 dropdownIndicator: () => {
@@ -68,7 +63,7 @@ export function Combobox(props: Props) {
                         display: 'flex',
                         flexWrap: 'wrap',
                         justifyContent: 'space-between',
-                        minHeight: 38,
+                        minHeight: 32,
                         outline: '0 !important',
                         position: 'relative',
                         transition: 'all 100ms',

@@ -119,11 +119,11 @@ export function ItemDetails<
     return (
         <div
             className={twMerge(
-                'flex flex-col overflow-hidden rounded-md border border-gray-300 bg-white',
+                'flex flex-col rounded-md border border-gray-300 bg-white',
                 className,
             )}
         >
-            <div className="flex justify-between border-b border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">
+            <div className="flex justify-between rounded-t-md border-b border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">
                 <div className="flex items-center">
                     {itemName} #{itemNumber}
                 </div>

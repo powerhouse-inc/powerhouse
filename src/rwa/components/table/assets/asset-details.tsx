@@ -169,7 +169,7 @@ export function AssetDetails(props: AssetDetailsProps) {
                     name="fixedIncomeTypeId"
                     disabled={operation === 'view'}
                     options={fixedIncomeTypes.map(t => ({
-                        ...t,
+                        value: t.id,
                         label: t.name,
                     }))}
                 />
@@ -183,7 +183,7 @@ export function AssetDetails(props: AssetDetailsProps) {
                     name="spvId"
                     disabled={operation === 'view'}
                     options={spvs.map(t => ({
-                        ...t,
+                        value: t.id,
                         label: t.name,
                     }))}
                 />
