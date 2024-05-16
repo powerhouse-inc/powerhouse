@@ -84,7 +84,7 @@
         "@monaco-editor/react": "^4.6.0",
         "@mui/material": "^5.15.5",
         "@powerhousedao/codegen": "0.0.15",
-        "@powerhousedao/design-system": "1.0.0-alpha.111",
+        "@powerhousedao/design-system": "1.0.0-alpha.112",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@storybook/addon-essentials": "^8.0.2",
@@ -129,7 +129,6 @@
         "prettier": "^3.2.4",
         "prettier-plugin-organize-imports": "^3.2.4",
         "react": "^18.2.0",
-        "react-aria-components": "1.1.1",
         "react-dom": "^18.2.0",
         "react-lazy-with-preload": "^2.2.1",
         "semantic-release": "^23.0.2",
@@ -161,7 +160,7 @@
         "deep-object-diff": "^1.1.9",
         "jsonc-parser": "^3.2.1",
         "jszip": "^3.10.1",
-        "react-aria-components": "1.1.1",
-        "tailwind-merge": "^2.2.1"
+        "tailwind-merge": "^2.2.1",
+        "react-aria-components": "1.2.0"
     }
 }
