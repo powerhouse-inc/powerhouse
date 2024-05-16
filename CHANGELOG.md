@@ -1,3 +1,10 @@
+# [1.0.0-alpha.112](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.111...v1.0.0-alpha.112) (2024-05-16)
+
+
+### Features
+
+* use combobox in rwa select ([#290](https://github.com/powerhouse-inc/design-system/issues/290)) ([dbdce99](https://github.com/powerhouse-inc/design-system/commit/dbdce992756f0ab3fc4e2c7e5a8d0d68c1c9ddeb))
+
 # [1.0.0-alpha.111](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.110...v1.0.0-alpha.111) (2024-05-14)
 
 
