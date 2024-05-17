@@ -158,6 +158,16 @@ export const reducer: DocumentDriveNodeOperations = {
             throw new Error(`Node with id ${action.input.srcId} not found`);
         }
 
+        const duplicatedNode = state.nodes.find(
+            node => node.id === action.input.targetId,
+        );
+
+        if (duplicatedNode) {
+            throw new Error(
+                `Node with id ${action.input.targetId} already exists`,
+            );
+        }
+
         const name = handleTargetNameCollisions({
             nodes: state.nodes,
             srcName: action.input.targetName || node.name,

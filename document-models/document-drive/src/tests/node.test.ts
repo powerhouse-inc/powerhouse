@@ -254,6 +254,49 @@ describe('Node Operations', () => {
         expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
         expect(updatedDocument.operations.global[0].index).toEqual(0);
     });
+    it('should handle duplicated id when copy a node', () => {
+        const input = generateMock(z.CopyNodeInputSchema());
+        const document = utils.createDocument({
+            state: {
+                global: {
+                    nodes: [
+                        // @ts-expect-error mock
+                        {
+                            id: '1',
+                            name: 'Node 1',
+                        },
+                        // @ts-expect-error mock
+                        {
+                            id: '2',
+                            name: 'Node 2',
+                        },
+                    ],
+                },
+            },
+        });
+
+        const updatedDocument = reducer(
+            document,
+            creators.copyNode({
+                ...input,
+                srcId: '1',
+                targetId: '1',
+            }),
+        );
+
+        expect(updatedDocument.state.global.nodes).toMatchObject([
+            { id: '1', name: 'Node 1' },
+            { id: '2', name: 'Node 2' },
+        ]);
+
+        expect(updatedDocument.operations.global).toHaveLength(1);
+        expect(updatedDocument.operations.global[0]).toMatchObject({
+            index: 0,
+            skip: 0,
+            type: 'COPY_NODE',
+            error: 'Node with id 1 already exists',
+        });
+    });
     it('should handle name collisions in copyNode operation', () => {
         const existingNode = generateMock(z.NodeSchema());
         const input = generateMock(z.CopyNodeInputSchema());
