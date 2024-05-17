@@ -1,3 +1,10 @@
+# [1.52.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.51.0...v1.52.0) (2024-05-17)
+
+
+### Features
+
+* added id validation when copy items ([#160](https://github.com/powerhouse-inc/document-model-libs/issues/160)) ([0a6468a](https://github.com/powerhouse-inc/document-model-libs/commit/0a6468a0dda6d5a0a8edffe37d11d2a8c4ac5cfb))
+
 # [1.51.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.50.0...v1.51.0) (2024-05-16)
 
 
