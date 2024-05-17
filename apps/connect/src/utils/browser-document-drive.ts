@@ -1,4 +1,6 @@
 import connectConfig from 'connect-config';
+import InMemoryCache from 'document-drive/cache/memory';
+import { BaseQueueManager } from 'document-drive/queue/base';
 import { DocumentDriveServer } from 'document-drive/server';
 import { BrowserStorage } from 'document-drive/storage/browser';
 import { utils } from 'document-model/document';
@@ -7,6 +9,8 @@ import { documentModels } from 'src/store/document-model';
 export const BrowserDocumentDriveServer = new DocumentDriveServer(
     documentModels,
     new BrowserStorage(connectConfig.routerBasename),
+    new InMemoryCache(),
+    new BaseQueueManager(1, 500),
 );
 
 BrowserDocumentDriveServer.initialize()

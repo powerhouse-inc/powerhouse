@@ -22,14 +22,15 @@
             "@/assets": ["assets"],
             "connect-config": ["connect.config.ts"],
         },
-        "types": ["vite/client", "vite-plugin-svgr/client"]
+        "types": ["vite/client", "vite-plugin-svgr/client", "@types/wicg-file-system-access"]
     },
     "include": [
         "src",
         "e2e-tests",
         "*.config.ts",
+        "*.config.mts",
         "*.config.js",
-        "reset.d.ts"
+        "reset.d.ts",
     ],
     "files": ["custom.d.ts"]
 }

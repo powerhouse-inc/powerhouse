@@ -130,6 +130,40 @@ const electronApi = {
                 id,
                 operations,
             ),
+        queueOperation(drive, id, operation, forceSync) {
+            return ipcRenderer.invoke(
+                'documentDrive:queueOperation',
+                drive,
+                id,
+                operation,
+                forceSync,
+            );
+        },
+        queueOperations(drive, id, operations, forceSync) {
+            return ipcRenderer.invoke(
+                'documentDrive:queueOperations',
+                drive,
+                id,
+                operations,
+                forceSync,
+            );
+        },
+        queueDriveOperation(drive, operation, forceSync) {
+            return ipcRenderer.invoke(
+                'documentDrive:queueDriveOperation',
+                drive,
+                operation,
+                forceSync,
+            );
+        },
+        queueDriveOperations(drive, operations, forceSync) {
+            return ipcRenderer.invoke(
+                'documentDrive:queueDriveOperations',
+                drive,
+                operations,
+                forceSync,
+            );
+        },
         addDriveOperation: (
             drive: string,
             operation: Operation<DocumentDriveAction | BaseAction>,

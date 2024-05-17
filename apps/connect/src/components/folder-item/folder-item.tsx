@@ -6,8 +6,8 @@ import {
 import React, { useState } from 'react';
 import { useModal } from 'src/components/modal';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
-import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
+import { useUserPermissions } from 'src/hooks/useUserPermissions';
 
 const allowedItemOptions = ['delete', 'rename', 'duplicate'];
 
@@ -23,7 +23,7 @@ export interface FolderItemProps {
 
 export const FolderItem: React.FC<FolderItemProps> = props => {
     const { folder, decodedDriveID, onFolderSelected } = props;
-    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+    const { isAllowedToCreateDocuments } = useUserPermissions();
 
     const { showModal } = useModal();
     const { updateNodeName, onSubmitInput } = useDrivesContainer();
