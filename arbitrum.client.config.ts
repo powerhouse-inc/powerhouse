@@ -4,7 +4,7 @@ export default {
             tag: 'meta',
             attrs: {
                 property: 'og:title',
-                content: 'Connect',
+                content: 'Arbitrum Grants Platform',
             },
         },
         {
@@ -18,7 +18,7 @@ export default {
             tag: 'meta',
             attrs: {
                 property: 'og:url',
-                content: 'https://apps.powerhouse.io/powerhouse/connect/',
+                content: 'https://www.arbgrants.com',
             },
         },
         {
@@ -26,7 +26,7 @@ export default {
             attrs: {
                 property: 'og:description',
                 content:
-                    'Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.',
+                    'Connect offers participants to the Arbitrum DAO Grant programs an easy and convenient way to report on their grant progress with their arbitrum address.',
             },
         },
         {
@@ -34,7 +34,7 @@ export default {
             attrs: {
                 property: 'og:image',
                 content:
-                    'https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e',
+                    'https://cf-ipfs.com/ipfs/bafkreidah6wctc2y4h2n7q7ci6twvgbwbhptfywpy5btwhsm4gucubedhy',
             },
         },
         {
@@ -49,14 +49,14 @@ export default {
             attrs: {
                 name: 'twitter:image',
                 content:
-                    'https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e',
+                    'https://cf-ipfs.com/ipfs/bafkreidah6wctc2y4h2n7q7ci6twvgbwbhptfywpy5btwhsm4gucubedhy',
             },
         },
         {
             tag: 'meta',
             attrs: {
                 name: 'twitter:title',
-                content: 'Connect',
+                content: 'Arbitrum Grants Platform',
             },
         },
         {
@@ -64,7 +64,7 @@ export default {
             attrs: {
                 name: 'twitter:description',
                 content:
-                    'Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.',
+                    'Connect offers participants to the Arbitrum DAO Grant programs an easy and convenient way to report on their grant progress with their arbitrum address.',
             },
         },
     ],

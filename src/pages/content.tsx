@@ -12,7 +12,7 @@ import {
 import { isFileNode } from 'document-model-libs/document-drive';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import path from 'path';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import Button from 'src/components/button';
@@ -25,15 +25,15 @@ import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
-import { useIsAllowedToCreateDocuments } from 'src/hooks/useIsAllowedToCreateDocuments';
 import { useNavigateToItemId } from 'src/hooks/useNavigateToItemId';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
+import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { useFileNodeDocument, useSelectedPath } from 'src/store/document-drive';
 import {
     useFilteredDocumentModels,
     useGetDocumentModel,
 } from 'src/store/document-model';
-import { preloadTabs } from 'src/store/tabs';
+import { usePreloadEditor } from 'src/store/editor';
 import { exportFile } from 'src/utils';
 import { validateDocument } from 'src/utils/validate-document';
 import { v4 as uuid } from 'uuid';
@@ -74,7 +74,7 @@ const Content = () => {
     const getDocumentModel = useGetDocumentModel();
     const { onSubmitInput } = useDrivesContainer();
     const navigateToItemId = useNavigateToItemId();
-    const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+    const { isAllowedToCreateDocuments } = useUserPermissions();
 
     const driveNodes = documentDrives.find(
         drive => drive.state.global.id === decodedDriveID,
@@ -166,10 +166,18 @@ const Content = () => {
         }
     }, [params, paramsShown, documentDrives]);
 
+    const preloadEditor = usePreloadEditor();
+
     // preload document editors
     useEffect(() => {
-        preloadTabs();
-    }, []);
+        // waits 1 second to preload editors
+        const id = requestIdleCallback(async () => {
+            for (const documentModel of documentModels) {
+                await preloadEditor(documentModel.documentModel.id);
+            }
+        });
+        return () => cancelIdleCallback(id);
+    }, [documentModels, preloadEditor]);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
@@ -293,7 +301,6 @@ const Content = () => {
 
     const onOpenSwitchboardLink = async () => {
         const doc = getDocumentById(decodedDriveID, selectedFileNode?.id || '');
-
         await openSwitchboardLink(doc);
     };
 
@@ -301,14 +308,22 @@ const Content = () => {
         <div className="flex h-full flex-col overflow-auto bg-gray-100 p-6">
             {selectedFileNode && selectedDocument ? (
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
-                    <DocumentEditor
-                        document={selectedDocument}
-                        onClose={() => setSelectedFileNode(undefined)}
-                        onChange={onDocumentChangeHandler}
-                        onExport={() => exportDocument(selectedDocument)}
-                        onAddOperation={handleAddOperation}
-                        {...(isRemoteDrive && { onOpenSwitchboardLink })}
-                    />
+                    <Suspense
+                        fallback={
+                            <div className="flex h-full animate-pulse items-center justify-center">
+                                <h3 className="text-xl">Loading editor</h3>
+                            </div>
+                        }
+                    >
+                        <DocumentEditor
+                            document={selectedDocument}
+                            onClose={() => setSelectedFileNode(undefined)}
+                            onChange={onDocumentChangeHandler}
+                            onExport={() => exportDocument(selectedDocument)}
+                            onAddOperation={handleAddOperation}
+                            {...(isRemoteDrive && { onOpenSwitchboardLink })}
+                        />
+                    </Suspense>
                 </div>
             ) : (
                 <>
