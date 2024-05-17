@@ -1,4 +1,5 @@
 import { castDraft, produce } from 'immer';
+import { v4 as uuid } from 'uuid';
 import {
     loadStateOperation,
     noopOperation,
@@ -103,6 +104,7 @@ function updateOperations<T extends Document>(
 
     const { scope } = action;
     const operations = document.operations[scope].slice();
+    let operationId: string | undefined;
 
     const latestOperation = operations.at(-1);
     let nextIndex = (latestOperation?.index ?? -1) + 1;
@@ -115,10 +117,14 @@ function updateOperations<T extends Document>(
         }
 
         nextIndex = action.index;
+        operationId = action.id;
+    } else {
+        operationId = uuid();
     }
 
     operations.push({
         ...action,
+        id: operationId,
         index: nextIndex,
         timestamp: new Date().toISOString(),
         hash: '',

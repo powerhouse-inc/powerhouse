@@ -58,7 +58,7 @@ describe('Base reducer', () => {
             scope: 'global',
         });
 
-        expect(newDocument.operations.global).toStrictEqual([
+        expect(newDocument.operations.global).toMatchObject([
             {
                 type: 'TEST',
                 timestamp: new Date().toISOString(),

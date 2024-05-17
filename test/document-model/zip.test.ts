@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { actions, reducer, utils } from '../../src/document-model';
 import { actions as baseActions } from '../../src/document';
 
@@ -34,7 +35,7 @@ describe('DocumentModel Class', () => {
             `${tempDir}/test.phdm.zip`,
         );
         expect(documentModel.state.global.id).toBe('powerhouse/test');
-        expect(documentModel.operations.global).toStrictEqual([
+        expect(documentModel.operations.global).toMatchObject([
             {
                 hash: 'xmstBdekoMQJQXwUZaOcv/Q/d9Q=',
                 index: 0,

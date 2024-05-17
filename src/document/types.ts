@@ -138,6 +138,8 @@ export type Operation<A extends Action = Action> = A & {
     error?: string;
     /** The resulting state after the operation */
     resultingState?: unknown;
+    /** Unique operation id */
+    id?: string;
 };
 
 /**
