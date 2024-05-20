@@ -10,7 +10,8 @@ import { useMemo } from 'react';
 const columns = [{ key: 'name' as const, label: 'Name', allowSorting: true }];
 
 export function SPVsTable(props: SPVsTableProps) {
-    const { spvs, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { spvs } = state;
 
     const itemName = 'SPV';
 

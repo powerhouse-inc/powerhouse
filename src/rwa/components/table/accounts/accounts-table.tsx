@@ -46,13 +46,8 @@ function makeAccountsTableData(
 }
 
 export function AccountsTable(props: AccountsTableProps) {
-    const {
-        accounts,
-        principalLenderAccountId,
-        selectedItem,
-        onSubmitCreate,
-        onSubmitEdit,
-    } = props;
+    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { accounts, principalLenderAccountId } = state;
     const itemName = 'Account';
     const tableData = useMemo(
         () => makeAccountsTableData(accounts, principalLenderAccountId),
@@ -71,7 +66,6 @@ export function AccountsTable(props: AccountsTableProps) {
             itemName={itemName}
             item={getItemById(itemId, accounts)}
             itemNumber={itemNumber}
-            isPrincipalLenderAccount={principalLenderAccountId === itemId}
             operation={selectedItem?.id === itemId ? 'edit' : 'view'}
             onSubmitForm={onSubmitEdit}
         />
@@ -82,7 +76,6 @@ export function AccountsTable(props: AccountsTableProps) {
             {...props}
             itemName={itemName}
             itemNumber={accounts.length + 1}
-            isPrincipalLenderAccount={false}
             operation="create"
             onSubmitForm={onSubmitCreate}
         />

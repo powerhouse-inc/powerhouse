@@ -48,13 +48,8 @@ export function makeServiceProviderFeeTypesTableData(
 export function ServiceProviderFeeTypesTable(
     props: ServiceProviderFeeTypesTableProps,
 ) {
-    const {
-        serviceProviderFeeTypes,
-        accounts,
-        selectedItem,
-        onSubmitCreate,
-        onSubmitEdit,
-    } = props;
+    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { serviceProviderFeeTypes, accounts } = state;
 
     const itemName = 'Service Provider Fee Type';
 

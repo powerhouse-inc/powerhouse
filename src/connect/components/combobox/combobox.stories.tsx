@@ -58,3 +58,16 @@ export const Default: Story = {
         options,
     },
 };
+
+export const WithAddItemButton: Story = {
+    ...Default,
+    args: {
+        ...Default.args,
+        addItemButtonProps: {
+            label: 'Add New Item',
+            onClick: () => {
+                alert('Add Item');
+            },
+        },
+    },
+};

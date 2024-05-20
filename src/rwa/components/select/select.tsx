@@ -1,5 +1,5 @@
 import { Icon, mergeClassNameProps } from '@/powerhouse';
-import React, { useRef } from 'react';
+import React, { ReactNode, useRef } from 'react';
 import {
     Button,
     ButtonProps,
@@ -23,6 +23,10 @@ export interface RWASelectProps extends SelectProps<OptionsType> {
     buttonProps?: ButtonProps;
     listBoxProps?: ListBoxProps<OptionsType>;
     listBoxItemProps?: ListBoxItemProps;
+    createItemButtonProps?: {
+        label: ReactNode;
+        onClick: () => void;
+    };
 }
 
 export const RWASelect: React.FC<RWASelectProps> = props => {
@@ -32,6 +36,7 @@ export const RWASelect: React.FC<RWASelectProps> = props => {
         buttonProps = {},
         listBoxProps = {},
         listBoxItemProps = {},
+        createItemButtonProps,
         ...selectProps
     } = props;
 
@@ -57,25 +62,30 @@ export const RWASelect: React.FC<RWASelectProps> = props => {
                 </span>
             </Button>
             <Popover triggerRef={buttonRef}>
-                <ListBox
-                    {...mergeClassNameProps(
-                        listBoxProps,
-                        'modal-shadow w-[--trigger-width] rounded-xl bg-white py-3 text-xs outline-none',
-                    )}
-                >
-                    {options.map(option => (
-                        <ListBoxItem
-                            key={option.id}
-                            id={option.id}
-                            {...mergeClassNameProps(
-                                listBoxItemProps,
-                                'cursor-pointer px-3 py-2 outline-none hover:bg-gray-100',
-                            )}
+                <div className="modal-shadow w-[--trigger-width] rounded-xl bg-white py-3 text-xs outline-none">
+                    <ListBox {...listBoxProps}>
+                        {options.map(option => (
+                            <ListBoxItem
+                                key={option.id}
+                                id={option.id}
+                                {...mergeClassNameProps(
+                                    listBoxItemProps,
+                                    'cursor-pointer px-3 py-2 outline-none hover:bg-gray-100',
+                                )}
+                            >
+                                {option.label}
+                            </ListBoxItem>
+                        ))}
+                    </ListBox>
+                    {createItemButtonProps && (
+                        <button
+                            onClick={createItemButtonProps.onClick}
+                            className="w-full cursor-pointer px-3 py-2 outline-none hover:bg-gray-100"
                         >
-                            {option.label}
-                        </ListBoxItem>
-                    ))}
-                </ListBox>
+                            {createItemButtonProps.label}
+                        </button>
+                    )}
+                </div>
             </Popover>
         </Select>
     );

@@ -1,4 +1,4 @@
-import { FixedIncome, FixedIncomeType, SPV } from '@/rwa';
+import { Asset, CashAsset, FixedIncomeType, SPV } from '@/rwa';
 
 export const mockPrincipalLenderAccountId = 'principal-lender-account-id';
 
@@ -14,10 +14,11 @@ export const mockSPVs: SPV[] = [
     { id: '3', name: 'SPV 3' },
 ];
 
-export const mockFixedIncomes: FixedIncome[] = [
+export const mockFixedIncomes: Asset[] = [
     {
         id: '137418',
         fixedIncomeTypeId: '1',
+        type: 'FixedIncome',
         name: 'FixedIncome 2703',
         spvId: '1',
         maturity: '2023-06-01T00:00:00.000Z',
@@ -35,6 +36,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '683189',
         fixedIncomeTypeId: '1',
+        type: 'FixedIncome',
         name: 'FixedIncome 6345',
         spvId: '1',
         maturity: '2023-06-15T00:00:00.000Z',
@@ -52,6 +54,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '752165',
         fixedIncomeTypeId: '1',
+        type: 'FixedIncome',
         name: 'FixedIncome 1369',
         spvId: '1',
         maturity: '2022-04-24T00:00:00.000Z',
@@ -69,6 +72,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '472706',
         fixedIncomeTypeId: '2',
+        type: 'FixedIncome',
         name: 'FixedIncome 6762',
         spvId: '2',
         maturity: '2021-09-10T00:00:00.000Z',
@@ -86,6 +90,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '852793',
         fixedIncomeTypeId: '2',
+        type: 'FixedIncome',
         name: 'FixedIncome 4764',
         spvId: '2',
         maturity: '2021-07-11T00:00:00.000Z',
@@ -103,6 +108,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '704871',
         fixedIncomeTypeId: '2',
+        type: 'FixedIncome',
         name: 'FixedIncome 3377',
         spvId: '2',
         maturity: '2023-08-06T00:00:00.000Z',
@@ -120,6 +126,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '117828',
         fixedIncomeTypeId: '3',
+        type: 'FixedIncome',
         name: 'FixedIncome 4552',
         spvId: '2',
         maturity: '2023-11-21T00:00:00.000Z',
@@ -137,6 +144,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '023427',
         fixedIncomeTypeId: '3',
+        type: 'FixedIncome',
         name: 'FixedIncome 4053',
         spvId: '3',
         maturity: '2023-11-28T00:00:00.000Z',
@@ -154,6 +162,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '637391',
         fixedIncomeTypeId: '3',
+        type: 'FixedIncome',
         name: 'FixedIncome 8136',
         spvId: '3',
         maturity: '2023-10-12T00:00:00.000Z',
@@ -171,6 +180,7 @@ export const mockFixedIncomes: FixedIncome[] = [
     {
         id: '269772',
         fixedIncomeTypeId: '3',
+        type: 'FixedIncome',
         name: 'FixedIncome 0761',
         spvId: '3',
         maturity: '2022-04-02T00:00:00.000Z',
@@ -187,8 +197,9 @@ export const mockFixedIncomes: FixedIncome[] = [
     },
 ];
 
-export const mockCashAsset = {
+export const mockCashAsset: CashAsset = {
     id: 'cash-asset-1',
+    type: 'Cash',
     spvId: mockSPVs[0].id,
     currency: 'USD',
     balance: 1000000,

@@ -40,8 +40,7 @@ export function ItemDetails<
         isAllowedToDeleteItem = true,
         formInputs: FormInputs,
         dependentItemProps,
-        handleSubmit,
-        onSubmit,
+        submit,
         onSubmitDelete,
         reset,
         setSelectedItem,
@@ -92,7 +91,7 @@ export function ItemDetails<
 
     const submitButton = (
         <RWAButton
-            onClick={handleSubmit(onSubmit)}
+            onClick={submit}
             iconPosition="right"
             icon={<Icon name="save" size={16} />}
         >

@@ -1,72 +1,24 @@
-import {
-    AccountDetailsProps,
-    AccountFormInputs,
-    ItemDetails,
-    RWATableTextInput,
-} from '@/rwa';
-import { SubmitHandler, useForm } from 'react-hook-form';
+import { AccountDetailsProps, ItemDetails } from '@/rwa';
 import { FormInputs } from '../../inputs/form-inputs';
+import { useAccountForm } from './useAccountForm';
 
 export function AccountDetails(props: AccountDetailsProps) {
-    const {
-        onSubmitForm,
-        item,
-        operation,
-        isPrincipalLenderAccount,
-        serviceProviderFeeTypes,
-        transactions,
-    } = props;
+    const { onSubmitForm, item, operation, state } = props;
 
-    const {
-        register,
-        handleSubmit,
-        reset,
-        formState: { errors },
-    } = useForm<AccountFormInputs>({
+    const { serviceProviderFeeTypes, transactions, principalLenderAccountId } =
+        state;
+
+    const isPrincipalLenderAccount = item?.id === principalLenderAccountId;
+
+    const { submit, reset, inputs } = useAccountForm({
         defaultValues: {
             label: item?.label,
             reference: item?.reference,
         },
+        state,
+        onSubmitForm,
+        operation,
     });
-
-    const onSubmit: SubmitHandler<AccountFormInputs> = data => {
-        onSubmitForm(data);
-    };
-
-    const inputs = [
-        {
-            label: 'Account Label',
-            Input: () => (
-                <RWATableTextInput
-                    {...register('label', {
-                        disabled: operation === 'view',
-                        required: 'Account label is required',
-                    })}
-                    aria-invalid={
-                        errors.label?.type === 'required' ? 'true' : 'false'
-                    }
-                    errorMessage={errors.label?.message}
-                    placeholder="E.g. My Label"
-                />
-            ),
-        },
-        {
-            label: 'Account Reference',
-            Input: () => (
-                <RWATableTextInput
-                    {...register('reference', {
-                        disabled: operation === 'view',
-                        required: 'Account reference is required',
-                    })}
-                    aria-invalid={
-                        errors.reference?.type === 'required' ? 'true' : 'false'
-                    }
-                    errorMessage={errors.reference?.message}
-                    placeholder="E.g. bank account number or ETH address"
-                />
-            ),
-        },
-    ];
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
@@ -129,8 +81,7 @@ export function AccountDetails(props: AccountDetailsProps) {
     const formProps = {
         formInputs,
         dependentItemProps,
-        handleSubmit,
-        onSubmit,
+        submit,
         reset,
         isAllowedToDeleteItem,
     };

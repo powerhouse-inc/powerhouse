@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
 
 import { SPV } from '@/rwa';
-import { mockFixedIncomes, mockSPVs } from '@/rwa/mocks';
+import { mockStateInitial, mockStateWithData } from '@/rwa/mocks/state';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { SPVFormInputs } from '../types';
@@ -28,7 +28,7 @@ type SPVsTableProps = ComponentPropsWithoutRef<typeof SPVsTable>;
 
 export const Empty: Story = {
     args: {
-        spvs: [],
+        state: mockStateInitial,
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -108,8 +108,7 @@ export const WithDataReadOnly: Story = {
     ...Empty,
     args: {
         ...Empty.args,
-        spvs: mockSPVs,
-        assets: mockFixedIncomes,
+        state: mockStateWithData,
     },
 };
 

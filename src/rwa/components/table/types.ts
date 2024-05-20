@@ -1,7 +1,7 @@
 import { DivProps } from '@/powerhouse';
 import {
     Account,
-    CashAsset,
+    Asset,
     FixedIncome,
     FixedIncomeType,
     GroupTransaction,
@@ -10,7 +10,17 @@ import {
     ServiceProviderFeeType,
 } from '@/rwa';
 import { ComponentType, ReactNode } from 'react';
-import { FieldValues, SubmitHandler, UseFormReturn } from 'react-hook-form';
+import { FieldValues, UseFormReturn } from 'react-hook-form';
+
+export type RealWorldAssetsState = {
+    accounts: Account[];
+    fixedIncomeTypes: FixedIncomeType[];
+    portfolio: Asset[];
+    principalLenderAccountId: string;
+    serviceProviderFeeTypes: ServiceProviderFeeType[];
+    spvs: SPV[];
+    transactions: GroupTransaction[];
+};
 
 export type TableItem = {
     id: string;
@@ -60,6 +70,7 @@ export type TableProps<
     TFieldValues extends FieldValues = FieldValues,
     TTableData extends TableItem = TItem,
 > = {
+    state: RealWorldAssetsState;
     columns: TableColumn<TTableData>[];
     tableData: TTableData[] | undefined;
     itemName: string;
@@ -85,6 +96,7 @@ export type TableProps<
 };
 
 export type PropsToKeepFromTable =
+    | 'state'
     | 'expandedRowId'
     | 'selectedItem'
     | 'setSelectedItem'
@@ -102,64 +114,46 @@ export type GroupTransactionsTableProps = Pick<
     TableProps<GroupTransaction, GroupTransactionFormInputs>,
     PropsToKeepFromTable
 > & {
-    transactions: GroupTransaction[];
-    cashAsset: CashAsset | undefined;
-    fixedIncomes: FixedIncome[];
-    serviceProviderFeeTypes: ServiceProviderFeeType[];
-    accounts: Account[];
-    principalLenderAccountId: string;
+    onSubmitCreateAsset: (data: AssetFormInputs) => void;
+    onSubmitCreateServiceProviderFeeType: (
+        data: ServiceProviderFeeTypeFormInputs,
+    ) => void;
 };
 
 export type AssetsTableProps = Pick<
     TableProps<FixedIncome, AssetFormInputs>,
     PropsToKeepFromTable
 > & {
-    cashAsset: CashAsset | undefined;
-    assets: FixedIncome[];
-    fixedIncomeTypes: FixedIncomeType[];
-    spvs: SPV[];
-    transactions: GroupTransaction[];
+    onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
+    onSubmitCreateSpv: (data: SPVFormInputs) => void;
 };
 
 export type ServiceProviderFeeTypesTableProps = Pick<
     TableProps<ServiceProviderFeeType, ServiceProviderFeeTypeFormInputs>,
     PropsToKeepFromTable
 > & {
-    serviceProviderFeeTypes: ServiceProviderFeeType[];
-    accounts: Account[];
-    transactions: GroupTransaction[];
+    onSubmitCreateAccount: (data: AccountFormInputs) => void;
 };
 
 export type AccountsTableProps = Pick<
     TableProps<Account, AccountFormInputs>,
     PropsToKeepFromTable
-> & {
-    accounts: Account[];
-    principalLenderAccountId: string;
-    serviceProviderFeeTypes: ServiceProviderFeeType[];
-    transactions: GroupTransaction[];
-};
+>;
 
 export type SPVsTableProps = Pick<
     TableProps<SPV, SPVFormInputs>,
     PropsToKeepFromTable
-> & {
-    spvs: SPV[];
-    assets: FixedIncome[];
-};
+>;
 
 export type FixedIncomeTypesTableProps = Pick<
     TableProps<FixedIncomeType, FixedIncomeTypeFormInputs>,
     PropsToKeepFromTable
-> & {
-    fixedIncomeTypes: FixedIncomeType[];
-    assets: FixedIncome[];
-};
+>;
 
 export type ItemDetailsFormProps<
     TFieldValues extends FieldValues = FieldValues,
-> = Pick<UseFormReturn<TFieldValues>, 'handleSubmit' | 'reset'> & {
-    onSubmit: SubmitHandler<TFieldValues>;
+> = Pick<UseFormReturn<TFieldValues>, 'reset'> & {
+    submit: (e?: React.BaseSyntheticEvent | undefined) => Promise<void>;
     onSubmitDelete: (itemId: string) => void;
 };
 
@@ -168,6 +162,7 @@ export type ItemDetailsProps<
     TFieldValues extends FieldValues = FieldValues,
 > = Omit<DivProps, 'onSubmit'> &
     ItemDetailsFormProps<TFieldValues> & {
+        state: RealWorldAssetsState;
         item?: TItem | undefined;
         itemName: string;
         operation: 'view' | 'create' | 'edit';
@@ -187,6 +182,7 @@ export type ItemDetailsProps<
     };
 
 export type PropsToKeepFromItemDetails =
+    | 'state'
     | 'item'
     | 'itemNumber'
     | 'itemName'
@@ -203,47 +199,42 @@ export type AssetDetailsProps = Pick<
     ItemDetailsProps<FixedIncome>,
     PropsToKeepFromItemDetails
 > & {
-    fixedIncomeTypes: FixedIncomeType[];
-    spvs: SPV[];
-    transactions: GroupTransaction[];
     onSubmitForm: (data: AssetFormInputs) => void;
     onSubmitDelete: (itemId: string) => void;
+    onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
+    onSubmitCreateSpv: (data: SPVFormInputs) => void;
 };
 
 export type GroupTransactionDetailsProps = Pick<
     ItemDetailsProps<GroupTransaction>,
     PropsToKeepFromItemDetails
 > & {
-    fixedIncomes: FixedIncome[];
-    serviceProviderFeeTypes: ServiceProviderFeeType[];
-    accounts: Account[];
     onSubmitForm: (data: GroupTransactionFormInputs) => void;
+    onSubmitCreateAsset: (data: AssetFormInputs) => void;
+    onSubmitCreateServiceProviderFeeType: (
+        data: ServiceProviderFeeTypeFormInputs,
+    ) => void;
 };
 
 export type ServiceProviderFeeTypeDetailsProps = Pick<
     ItemDetailsProps<ServiceProviderFeeType>,
     PropsToKeepFromItemDetails
 > & {
-    accounts: Account[];
-    transactions: GroupTransaction[];
     onSubmitForm: (data: ServiceProviderFeeTypeFormInputs) => void;
+    onSubmitCreateAccount: (data: AccountFormInputs) => void;
 };
 
 export type AccountDetailsProps = Pick<
     ItemDetailsProps<Account>,
     PropsToKeepFromItemDetails
 > & {
-    isPrincipalLenderAccount: boolean;
     onSubmitForm: (data: AccountFormInputs) => void;
-    serviceProviderFeeTypes: ServiceProviderFeeType[];
-    transactions: GroupTransaction[];
 };
 
 export type SPVDetailsProps = Pick<
     ItemDetailsProps<SPV>,
     PropsToKeepFromItemDetails
 > & {
-    assets: FixedIncome[];
     onSubmitForm: (data: SPVFormInputs) => void;
 };
 
@@ -252,7 +243,6 @@ export type FixedIncomeTypeDetailsProps = Pick<
     PropsToKeepFromItemDetails
 > & {
     onSubmitForm: (data: FixedIncomeTypeFormInputs) => void;
-    assets: FixedIncome[];
 };
 
 export type ServiceProviderFeeTypeFormInputs = {

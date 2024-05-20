@@ -13,9 +13,11 @@ import {
     calculateCashBalanceChange,
     calculateUnitPrice,
     convertToDateTimeLocalFormat,
+    getFixedIncomeAssets,
     groupTransactionTypeLabels,
     makeFixedIncomeOptionLabel,
 } from '@/rwa';
+import { useState } from 'react';
 import {
     Control,
     SubmitHandler,
@@ -25,6 +27,10 @@ import {
 } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
 import { FormInputs } from '../../inputs/form-inputs';
+import { CreateAssetModal } from '../../modal/create-asset-modal';
+import { CreateServiceProviderFeeTypeModal } from '../../modal/create-service-provider-fee-type-modal';
+import { useAssetForm } from '../assets/useAssetForm';
+import { useServiceProviderFeeTypeForm } from '../service-provider-fee-types/useServiceProviderFeeTypeForm';
 
 function CashBalanceChange(props: {
     control: Control<GroupTransactionFormInputs>;
@@ -78,15 +84,22 @@ function UnitPrice(props: {
 
 export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
     const {
-        fixedIncomes,
-        serviceProviderFeeTypes,
-        accounts,
+        state,
         item,
         operation,
         onCancel,
         onSubmitForm,
         onSubmitDelete,
+        onSubmitCreateAsset,
+        onSubmitCreateServiceProviderFeeType,
     } = props;
+    const [showCreateAssetModal, setShowCreateAssetModal] = useState(false);
+    const [
+        showCreateServiceProviderFeeTypeModal,
+        setShowCreateServiceProviderFeeTypeModal,
+    ] = useState(false);
+    const { serviceProviderFeeTypes, accounts, fixedIncomeTypes, spvs } = state;
+    const fixedIncomes = getFixedIncomeAssets(state);
     const transactionTypeOptions = allGroupTransactionTypes.map(type => ({
         label: groupTransactionTypeLabels[type],
         value: type,
@@ -119,6 +132,32 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
             fixedIncomeAmount: item?.fixedIncomeTransaction?.amount,
             fees: item?.fees,
         },
+    });
+
+    const assetFormProps = useAssetForm({
+        defaultValues: {
+            fixedIncomeTypeId: fixedIncomeTypes[0]?.id,
+            spvId: spvs[0]?.id,
+            maturity: convertToDateTimeLocalFormat(new Date()),
+        },
+        state,
+        onSubmitForm: data => {
+            setShowCreateAssetModal(false);
+            onSubmitCreateAsset(data);
+        },
+        operation: 'create',
+    });
+
+    const serviceProviderFeeTypeFormProps = useServiceProviderFeeTypeForm({
+        defaultValues: {
+            accountId: accounts[0]?.id,
+        },
+        state,
+        onSubmitForm: data => {
+            setShowCreateServiceProviderFeeTypeModal(false);
+            onSubmitCreateServiceProviderFeeType(data);
+        },
+        operation: 'create',
     });
 
     const type = useWatch({ control, name: 'type' });
@@ -203,6 +242,10 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
                           name="fixedIncomeId"
                           disabled={operation === 'view'}
                           options={fixedIncomeOptions}
+                          addItemButtonProps={{
+                              onClick: () => setShowCreateAssetModal(true),
+                              label: 'Create Asset',
+                          }}
                       />
                   ),
               }
@@ -264,6 +307,9 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
                     register={register}
                     feeInputs={fields}
                     serviceProviderFeeTypes={serviceProviderFeeTypes}
+                    setShowServiceProviderFeeTypeModal={
+                        setShowCreateServiceProviderFeeTypeModal
+                    }
                     accounts={accounts}
                     control={control}
                     watch={watch}
@@ -277,14 +323,37 @@ export function GroupTransactionDetails(props: GroupTransactionDetailsProps) {
         </>
     );
 
+    const submit = handleSubmit(onSubmit);
+
     const formProps = {
         formInputs,
-        handleSubmit,
-        onSubmit,
+        submit,
         reset,
         onCancel,
         onDelete,
     };
 
-    return <ItemDetails {...props} {...formProps} />;
+    return (
+        <>
+            <ItemDetails {...props} {...formProps} />
+            {showCreateAssetModal && (
+                <CreateAssetModal
+                    {...assetFormProps}
+                    state={state}
+                    open={showCreateAssetModal}
+                    onOpenChange={setShowCreateAssetModal}
+                    onSubmitForm={onSubmitCreateAsset}
+                />
+            )}
+            {showCreateServiceProviderFeeTypeModal && (
+                <CreateServiceProviderFeeTypeModal
+                    {...serviceProviderFeeTypeFormProps}
+                    state={state}
+                    open={showCreateServiceProviderFeeTypeModal}
+                    onOpenChange={setShowCreateServiceProviderFeeTypeModal}
+                    onSubmitForm={onSubmitCreateServiceProviderFeeType}
+                />
+            )}
+        </>
+    );
 }

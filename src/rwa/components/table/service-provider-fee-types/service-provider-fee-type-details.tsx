@@ -1,99 +1,54 @@
-import {
-    Account,
-    ItemDetails,
-    RWATableSelect,
-    RWATableTextInput,
-    ServiceProviderFeeTypeDetailsProps,
-    ServiceProviderFeeTypeFormInputs,
-} from '@/rwa';
-import { SubmitHandler, useForm } from 'react-hook-form';
+import { ItemDetails, ServiceProviderFeeTypeDetailsProps } from '@/rwa';
 import { FormInputs } from '../../inputs/form-inputs';
+import { CreateAccountModal } from '../../modal/create-account-modal';
+import { useAccountForm } from '../accounts/useAccountForm';
+import { useServiceProviderFeeTypeForm } from './useServiceProviderFeeTypeForm';
 
 export function ServiceProviderFeeTypeDetails(
     props: ServiceProviderFeeTypeDetailsProps,
 ) {
-    const { accounts, transactions, onCancel, onSubmitForm, item, operation } =
-        props;
+    const {
+        onCancel,
+        onSubmitForm,
+        onSubmitCreateAccount,
+        item,
+        operation,
+        state,
+    } = props;
+
+    const { accounts, transactions } = state;
 
     const account = accounts.find(({ id }) => id === item?.accountId);
 
+    const defaultValues = {
+        name: item?.name,
+        feeType: item?.feeType,
+        accountId: account?.id ?? accounts[0]?.id,
+    };
     const {
-        register,
-        handleSubmit,
-        control,
+        inputs,
+        submit,
         reset,
-        formState: { errors },
-    } = useForm<ServiceProviderFeeTypeFormInputs>({
-        defaultValues: {
-            name: item?.name,
-            feeType: item?.feeType,
-            accountId: account?.id ?? accounts[0]?.id,
-        },
+        showCreateAccountModal,
+        setShowCreateAccountModal,
+    } = useServiceProviderFeeTypeForm({
+        defaultValues,
+        state,
+        onSubmitForm,
+        operation,
     });
 
-    const onSubmit: SubmitHandler<ServiceProviderFeeTypeFormInputs> = data => {
-        onSubmitForm(data);
-    };
-
-    function makeAccountLabel(account: Account) {
-        return `${account.label} (${account.reference})`;
-    }
-
-    function makeAccountOptions(accounts: Account[]) {
-        return accounts.map(account => ({
-            ...account,
-            value: account.id,
-            label: makeAccountLabel(account),
-        }));
-    }
-
-    const inputs = [
-        {
-            label: 'Service Provider Name',
-            Input: () => (
-                <RWATableTextInput
-                    {...register('name', {
-                        disabled: operation === 'view',
-                        required: 'Service provider name is required',
-                    })}
-                    aria-invalid={
-                        errors.name?.type === 'required' ? 'true' : 'false'
-                    }
-                    errorMessage={errors.name?.message}
-                    placeholder="E.g. My Service Provider"
-                />
-            ),
-        },
-        {
-            label: 'Fee Type',
-            Input: () => (
-                <RWATableTextInput
-                    {...register('feeType', {
-                        disabled: operation === 'view',
-                        required: 'Fee type is required',
-                    })}
-                    aria-invalid={
-                        errors.name?.type === 'required' ? 'true' : 'false'
-                    }
-                    errorMessage={errors.name?.message}
-                    placeholder="E.g. My Fee Type"
-                />
-            ),
-        },
-        {
-            label: 'Account',
-            Input: () => (
-                <RWATableSelect
-                    control={control}
-                    name="accountId"
-                    disabled={operation === 'view'}
-                    options={makeAccountOptions(accounts)}
-                />
-            ),
-        },
-    ];
-
     const formInputs = () => <FormInputs inputs={inputs} />;
+
+    const createAccountModalProps = useAccountForm({
+        defaultValues: {},
+        state,
+        operation: 'create',
+        onSubmitForm: data => {
+            onSubmitCreateAccount(data);
+            setShowCreateAccountModal(false);
+        },
+    });
 
     const dependentTransactions = transactions.filter(t =>
         t.fees?.some(f => f.serviceProviderFeeTypeId === item?.id),
@@ -109,11 +64,22 @@ export function ServiceProviderFeeTypeDetails(
     const formProps = {
         formInputs,
         dependentItemProps,
-        handleSubmit,
-        onSubmit,
+        submit,
         reset,
         onCancel,
     };
 
-    return <ItemDetails {...props} {...formProps} />;
+    return (
+        <>
+            <ItemDetails {...props} {...formProps} />
+            {showCreateAccountModal && (
+                <CreateAccountModal
+                    {...createAccountModalProps}
+                    open={showCreateAccountModal}
+                    onOpenChange={setShowCreateAccountModal}
+                    state={state}
+                />
+            )}
+        </>
+    );
 }

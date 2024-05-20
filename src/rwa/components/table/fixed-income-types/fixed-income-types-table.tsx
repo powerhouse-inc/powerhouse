@@ -9,8 +9,8 @@ import {
 const columns = [{ key: 'name' as const, label: 'Name', allowSorting: true }];
 
 export function FixedIncomeTypesTable(props: FixedIncomeTypesTableProps) {
-    const { fixedIncomeTypes, selectedItem, onSubmitCreate, onSubmitEdit } =
-        props;
+    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { fixedIncomeTypes } = state;
     const itemName = 'Fixed Income Type';
     const tableData = addItemNumber(fixedIncomeTypes);
 

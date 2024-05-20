@@ -10,6 +10,7 @@ import {
     mockGroupTransactions,
     mockSPVs,
 } from '@/rwa/mocks';
+import { mockStateInitial } from '@/rwa/mocks/state';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { AssetFormInputs } from '../types';
 import { AssetsTable } from './assets-table';
@@ -37,11 +38,7 @@ function createAssetFromFormInputs(data: AssetFormInputs) {
 
 export const Empty: Story = {
     args: {
-        assets: [],
-        cashAsset: undefined,
-        fixedIncomeTypes: [],
-        spvs: [],
-        transactions: [],
+        state: mockStateInitial,
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -69,6 +66,16 @@ export const Empty: Story = {
                 setShowNewItemForm(false);
             }, []);
 
+        const onSubmitCreateFixedIncomeType: FixedIncomesTableProps['onSubmitCreateFixedIncomeType'] =
+            useCallback(data => {
+                console.log({ data });
+            }, []);
+
+        const onSubmitCreateSpv: FixedIncomesTableProps['onSubmitCreateSpv'] =
+            useCallback(data => {
+                console.log({ data });
+            }, []);
+
         const argsWithHandlers: FixedIncomesTableProps = {
             ...args,
             expandedRowId,
@@ -79,6 +86,8 @@ export const Empty: Story = {
             setSelectedItem,
             onSubmitCreate,
             onSubmitEdit,
+            onSubmitCreateFixedIncomeType,
+            onSubmitCreateSpv,
         };
         return (
             <div className="flex flex-col gap-4">
@@ -111,11 +120,13 @@ export const WithDataReadOnly: Story = {
     ...Empty,
     args: {
         ...Empty.args,
-        assets: mockFixedIncomes,
-        cashAsset: mockCashAsset,
-        fixedIncomeTypes: mockFixedIncomeTypes,
-        spvs: mockSPVs,
-        transactions: mockGroupTransactions,
+        state: {
+            ...mockStateInitial,
+            portfolio: [mockCashAsset, ...mockFixedIncomes],
+            fixedIncomeTypes: mockFixedIncomeTypes,
+            spvs: mockSPVs,
+            transactions: mockGroupTransactions,
+        },
     },
 };
 

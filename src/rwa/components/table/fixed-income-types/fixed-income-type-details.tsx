@@ -1,48 +1,24 @@
 import {
     FixedIncomeTypeDetailsProps,
-    FixedIncomeTypeFormInputs,
     ItemDetails,
-    RWATableTextInput,
+    getFixedIncomeAssets,
 } from '@/rwa';
-import { SubmitHandler, useForm } from 'react-hook-form';
 import { FormInputs } from '../../inputs/form-inputs';
+import { useFixedIncomeTypeForm } from './useFixedIncomeTypeForm';
 
 export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
-    const { onCancel, onSubmitForm, item, operation, assets } = props;
+    const { onCancel, onSubmitForm, item, operation, state } = props;
 
-    const {
-        register,
-        handleSubmit,
-        reset,
-        formState: { errors },
-    } = useForm<FixedIncomeTypeFormInputs>({
+    const assets = getFixedIncomeAssets(state);
+
+    const { submit, reset, inputs } = useFixedIncomeTypeForm({
         defaultValues: {
             name: item?.name,
         },
+        state,
+        operation,
+        onSubmitForm,
     });
-
-    const onSubmit: SubmitHandler<FixedIncomeTypeFormInputs> = data => {
-        onSubmitForm(data);
-    };
-
-    const inputs = [
-        {
-            label: 'Fixed Income Type Name',
-            Input: () => (
-                <RWATableTextInput
-                    {...register('name', {
-                        disabled: operation === 'view',
-                        required: 'Fixed Income Type name is required',
-                    })}
-                    aria-invalid={
-                        errors.name?.type === 'required' ? 'true' : 'false'
-                    }
-                    errorMessage={errors.name?.message}
-                    placeholder="E.g. My Fixed Income Type name"
-                />
-            ),
-        },
-    ];
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
@@ -62,8 +38,7 @@ export function FixedIncomeTypeDetails(props: FixedIncomeTypeDetailsProps) {
     const formProps = {
         formInputs,
         dependentItemProps,
-        handleSubmit,
-        onSubmit,
+        submit,
         reset,
         onCancel,
     };

@@ -6,6 +6,8 @@ import {
     Table,
     TableColumn,
     addItemNumber,
+    getCashAsset,
+    getFixedIncomeAssets,
     getItemById,
     handleTableDatum,
 } from '@/rwa';
@@ -59,9 +61,11 @@ const columns = [
 ];
 
 export function AssetsTable(props: AssetsTableProps) {
-    const { assets, cashAsset, selectedItem, onSubmitCreate, onSubmitEdit } =
-        props;
+    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
     const itemName = 'Asset';
+
+    const assets = getFixedIncomeAssets(state);
+    const cashAsset = getCashAsset(state);
 
     const tableData = useMemo(() => addItemNumber(assets), [assets]);
 

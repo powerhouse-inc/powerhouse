@@ -41,6 +41,7 @@ export const Empty: Story = {
         return (
             <FeeTransactionsTable
                 {...args}
+                setShowServiceProviderFeeTypeModal={() => {}}
                 feeInputs={fields}
                 register={register}
                 control={control}

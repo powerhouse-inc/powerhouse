@@ -3,6 +3,7 @@ import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
 
 import { FixedIncomeType } from '@/rwa';
 import { mockFixedIncomeTypes, mockFixedIncomes } from '@/rwa/mocks';
+import { mockStateInitial } from '@/rwa/mocks/state';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { FixedIncomeTypeFormInputs } from '../types';
@@ -30,8 +31,7 @@ type FixedIncomeTypesTableProps = ComponentPropsWithoutRef<
 
 export const Empty: Story = {
     args: {
-        fixedIncomeTypes: [],
-        assets: [],
+        state: mockStateInitial,
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -109,8 +109,11 @@ export const WithDataReadOnly: Story = {
     ...Empty,
     args: {
         ...Empty.args,
-        fixedIncomeTypes: mockFixedIncomeTypes,
-        assets: mockFixedIncomes,
+        state: {
+            ...mockStateInitial,
+            fixedIncomeTypes: mockFixedIncomeTypes,
+            portfolio: mockFixedIncomes,
+        },
     },
 };
 

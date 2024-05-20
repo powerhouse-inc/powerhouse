@@ -1,13 +1,6 @@
 import { GroupTransaction } from '@/rwa';
-import {
-    manyMockGroupTransactions,
-    mockAccounts,
-    mockCashAsset,
-    mockFixedIncomes,
-    mockGroupTransactions,
-    mockPrincipalLenderAccountId,
-    mockServiceProviderFeeTypes,
-} from '@/rwa/mocks';
+import { manyMockGroupTransactions, mockFixedIncomes } from '@/rwa/mocks';
+import { mockStateInitial, mockStateWithData } from '@/rwa/mocks/state';
 import type { Meta, StoryObj } from '@storybook/react';
 import { useCallback, useState } from 'react';
 import { getColumnCount } from '../hooks/useColumnPriority';
@@ -32,12 +25,7 @@ const columnCountByTableWidth = {
 
 export const Empty: Story = {
     args: {
-        transactions: [],
-        fixedIncomes: [],
-        cashAsset: mockCashAsset,
-        serviceProviderFeeTypes: [],
-        accounts: [],
-        principalLenderAccountId: mockPrincipalLenderAccountId,
+        state: mockStateInitial,
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -66,6 +54,16 @@ export const Empty: Story = {
                 setSelectedItem(undefined);
             }, []);
 
+        const onSubmitCreateAsset: GroupTransactionsTableProps['onSubmitCreateAsset'] =
+            useCallback(data => {
+                console.log('create asset', { data });
+            }, []);
+
+        const onSubmitCreateServiceProviderFeeType: GroupTransactionsTableProps['onSubmitCreateServiceProviderFeeType'] =
+            useCallback(data => {
+                console.log('create asset', { data });
+            }, []);
+
         const argsWithHandlers: GroupTransactionsTableProps = {
             ...args,
             expandedRowId,
@@ -77,6 +75,8 @@ export const Empty: Story = {
             onSubmitEdit,
             onSubmitCreate,
             onSubmitDelete,
+            onSubmitCreateAsset,
+            onSubmitCreateServiceProviderFeeType,
         };
         return (
             <div className="flex flex-col gap-4">
@@ -106,12 +106,7 @@ export const WithDataReadyOnly: Story = {
     ...Empty,
     args: {
         ...Empty.args,
-        transactions: mockGroupTransactions,
-        fixedIncomes: mockFixedIncomes,
-        cashAsset: mockCashAsset,
-        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
-        principalLenderAccountId: mockPrincipalLenderAccountId,
-        accounts: mockAccounts,
+        state: mockStateWithData,
     },
 };
 
@@ -128,13 +123,16 @@ export const WithManyItems: Story = {
     ...WithDataIsAllowedToCreateDocuments,
     args: {
         ...WithDataIsAllowedToCreateDocuments.args,
-        transactions: manyMockGroupTransactions,
-        fixedIncomes: [
-            ...mockFixedIncomes,
-            ...Array.from({ length: 100 }, (_, i) => ({
-                ...mockFixedIncomes[0],
-                id: `fixed-income-${i + 1}`,
-            })),
-        ],
+        state: {
+            ...mockStateWithData,
+            transactions: manyMockGroupTransactions,
+            portfolio: [
+                ...mockFixedIncomes,
+                ...Array.from({ length: 100 }, (_, i) => ({
+                    ...mockFixedIncomes[0],
+                    id: `fixed-income-${i + 1}`,
+                })),
+            ],
+        },
     },
 };

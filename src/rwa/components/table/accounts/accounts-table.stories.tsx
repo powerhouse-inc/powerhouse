@@ -5,9 +5,9 @@ import { Account } from '@/rwa';
 import {
     mockAccounts,
     mockGroupTransactions,
-    mockPrincipalLenderAccountId,
     mockServiceProviderFeeTypes,
 } from '@/rwa/mocks';
+import { mockStateInitial } from '@/rwa/mocks/state';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { AccountFormInputs } from '../types';
@@ -33,10 +33,7 @@ type AccountsTableProps = ComponentPropsWithoutRef<typeof AccountsTable>;
 
 export const Empty: Story = {
     args: {
-        accounts: [],
-        principalLenderAccountId: mockPrincipalLenderAccountId,
-        serviceProviderFeeTypes: [],
-        transactions: [],
+        state: mockStateInitial,
     },
     render: function Wrapper(args) {
         const [expandedRowId, setExpandedRowId] = useState<string>();
@@ -114,9 +111,12 @@ export const WithDataReadOnly: Story = {
     ...Empty,
     args: {
         ...Empty.args,
-        accounts: mockAccounts,
-        serviceProviderFeeTypes: mockServiceProviderFeeTypes,
-        transactions: mockGroupTransactions,
+        state: {
+            ...mockStateInitial,
+            accounts: mockAccounts,
+            serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+            transactions: mockGroupTransactions,
+        },
     },
 };
 

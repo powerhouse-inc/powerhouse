@@ -3,7 +3,7 @@ import {
     Account,
     GroupTransactionFormInputs,
     RWANumberInput,
-    ServiceProviderAndFeeTypeTableInput,
+    RWATableSelect,
     ServiceProviderFeeType,
 } from '@/rwa';
 import {
@@ -22,6 +22,7 @@ type Props = {
     feeInputs: FieldArrayWithId<GroupTransactionFormInputs, 'fees'>[];
     serviceProviderFeeTypes: ServiceProviderFeeType[];
     accounts: Account[];
+    setShowServiceProviderFeeTypeModal: (show: boolean) => void;
     register: UseFormRegister<GroupTransactionFormInputs>;
     control: Control<GroupTransactionFormInputs>;
     watch: UseFormWatch<GroupTransactionFormInputs>;
@@ -37,7 +38,7 @@ export function FeeTransactionsTable(props: Props) {
     const serviceProviderFeeTypeOptions = props.serviceProviderFeeTypes.map(
         spft => ({
             label: `${spft.name} — ${spft.feeType} — ${props.accounts.find(account => account.id === spft.accountId)?.reference}`,
-            id: spft.id,
+            value: spft.id,
         }),
     );
 
@@ -65,32 +66,25 @@ export function FeeTransactionsTable(props: Props) {
                         </thead>
                         <tbody>
                             {props.feeInputs.map((feeInput, index) => {
-                                const selectedServiceProviderFeeTypeId =
-                                    props.watch(
-                                        `fees.${index}.serviceProviderFeeTypeId`,
-                                    );
-
-                                const selectedServiceProviderFeeType =
-                                    props.serviceProviderFeeTypes.find(
-                                        spft =>
-                                            spft.id ===
-                                            selectedServiceProviderFeeTypeId,
-                                    );
-
                                 return (
                                     <tr key={feeInput.id}>
                                         <td className="w-52"></td>
                                         <td className="w-96">
-                                            <ServiceProviderAndFeeTypeTableInput
-                                                selectedServiceProviderFeeType={
-                                                    selectedServiceProviderFeeType
-                                                }
-                                                index={index}
-                                                isViewOnly={props.isViewOnly}
-                                                serviceProviderFeeTypeOptions={
+                                            <RWATableSelect
+                                                required
+                                                control={props.control}
+                                                name={`fees.${index}.serviceProviderFeeTypeId`}
+                                                disabled={props.isViewOnly}
+                                                options={
                                                     serviceProviderFeeTypeOptions
                                                 }
-                                                control={props.control}
+                                                addItemButtonProps={{
+                                                    onClick: () =>
+                                                        props.setShowServiceProviderFeeTypeModal(
+                                                            true,
+                                                        ),
+                                                    label: 'Add Service Provider',
+                                                }}
                                             />
                                         </td>
                                         <td className="w-52">

@@ -10,6 +10,7 @@ import {
     cashTransactionSignByTransactionType,
     getItemById,
     isAssetGroupTransactionType,
+    isFixedIncomeAsset,
     makeFixedIncomeOptionLabel,
 } from '@/rwa';
 import { useMemo, useState } from 'react';
@@ -94,13 +95,13 @@ export function makeGroupTransactionTableData(
 }
 
 export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
-    const {
-        transactions,
-        fixedIncomes,
-        selectedItem,
-        onSubmitCreate,
-        onSubmitEdit,
-    } = props;
+    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+
+    const { transactions, portfolio } = state;
+
+    const fixedIncomes = portfolio.filter(a =>
+        isFixedIncomeAsset(a),
+    ) as FixedIncome[];
 
     const itemName = 'Group Transaction';
 

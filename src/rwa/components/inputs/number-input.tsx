@@ -29,7 +29,7 @@ export function RWANumberInput<ControlInputs extends FieldValues>(
     } = props;
 
     const {
-        allowNegative = true,
+        allowNegative = false,
         decimalScale = 2,
         thousandSeparator = ',',
         fixedDecimalScale = true,
