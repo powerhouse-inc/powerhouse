@@ -69,7 +69,10 @@ function getNextRevision(
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateHeader<T extends Document>(document: T, action: Action): T {
+export function updateHeader<T extends Document>(
+    document: T,
+    action: Action,
+): T {
     return {
         ...document,
         revision: {
@@ -114,7 +117,6 @@ function updateOperations<T extends Document>(
         nextIndex = action.index;
     }
 
-    // adds the operation to its scope operations
     operations.push({
         ...action,
         index: nextIndex,
@@ -140,7 +142,7 @@ function updateOperations<T extends Document>(
  * @param action The action being applied to the document.
  * @returns The updated document state.
  */
-function updateDocument<T extends Document>(
+export function updateDocument<T extends Document>(
     document: T,
     action: Action,
     skip = 0,
@@ -434,16 +436,23 @@ export function baseReducer<T, A extends Action, L>(
                 : hashDocument(draft, scope);
 
         // updates the last operation with the hash of the resulting state
-        draft.operations[scope][draft.operations[scope].length - 1].hash = hash;
+        const lastOperation = draft.operations[scope].at(-1);
+        if (lastOperation) {
+            lastOperation.hash = hash;
 
-        // if the action has attachments then adds them to the document
-        if (!isBaseAction(_action) && _action.attachments) {
-            _action.attachments.forEach(attachment => {
-                const { hash, ...file } = attachment;
-                draft.attachments[hash] = {
-                    ...file,
-                };
-            });
+            if (reuseOperationResultingState) {
+                lastOperation.resultingState = draft.state[scope];
+            }
+
+            // if the action has attachments then adds them to the document
+            if (!isBaseAction(_action) && _action.attachments) {
+                _action.attachments.forEach(attachment => {
+                    const { hash, ...file } = attachment;
+                    draft.attachments[hash] = {
+                        ...file,
+                    };
+                });
+            }
         }
     });
 }

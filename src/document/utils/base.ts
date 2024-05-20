@@ -1,5 +1,5 @@
 import stringifyJson from 'safe-stable-stringify';
-import { baseReducer } from '../reducer';
+import { baseReducer, updateHeader } from '../reducer';
 import {
     Action,
     BaseAction,
@@ -417,16 +417,30 @@ export function replayDocument<T, A extends Action, L>(
     document.initialState = initialState;
     document.operations = initialOperations;
 
-    // replays the operations
-    const result = operationsToReplay.reduce((document, operation) => {
-        const doc = reducer(document, operation, dispatch, {
-            skip: operation.skip,
-            ignoreSkipOperations: true,
-            reuseHash: !checkHashes,
-        });
+    let result = document;
+    // if there are operations left without resulting state
+    // then replays them
+    if (operationsToReplay.length) {
+        result = operationsToReplay.reduce((document, operation) => {
+            const doc = reducer(document, operation, dispatch, {
+                skip: operation.skip,
+                ignoreSkipOperations: true,
+                reuseHash: !checkHashes,
+            });
 
-        return doc;
-    }, document);
+            return doc;
+        }, document);
+    }
+    // if not then updates the document header according
+    // to the latest operation of each scope
+    else {
+        for (const scopeOperations of Object.values(initialOperations)) {
+            const lastOperation = scopeOperations.at(-1);
+            if (lastOperation) {
+                result = updateHeader(result, lastOperation);
+            }
+        }
+    }
 
     // if hash generation was skipped then checks if the hash
     // of each scope matches the hash of last operation

@@ -1,4 +1,4 @@
-import { BaseAction, Document, Operation } from '../../src/document';
+import { Document } from '../../src/document';
 import { noop } from '../../src/document/actions';
 import { createReducer, replayDocument } from '../../src/document/utils';
 import {
@@ -7,7 +7,6 @@ import {
     CountState,
     baseCountReducer,
     countReducer,
-    decrement,
     increment,
 } from '../helpers';
 
@@ -32,28 +31,28 @@ describe('DocumentModel Class', () => {
         attachments: {},
     };
     const initialDocument: Document<CountState, CountAction, CountLocalState> =
-        {
-            name: '',
-            revision: {
-                global: 0,
-                local: 0,
+    {
+        name: '',
+        revision: {
+            global: 0,
+            local: 0,
+        },
+        documentType: '',
+        created: '',
+        lastModified: '',
+        state: {
+            global: {
+                count: 0,
             },
-            documentType: '',
-            created: '',
-            lastModified: '',
-            state: {
-                global: {
-                    count: 0,
-                },
-                local: {
-                    name: '',
-                },
+            local: {
+                name: '',
             },
-            attachments: {},
-            initialState,
-            operations: { global: [], local: [] },
-            clipboard: [],
-        };
+        },
+        attachments: {},
+        initialState,
+        operations: { global: [], local: [] },
+        clipboard: [],
+    };
 
     it('should call reducer once per operation', () => {
         const mockReducer = vi.fn(baseCountReducer);
@@ -71,32 +70,19 @@ describe('DocumentModel Class', () => {
         const mockReducer = vi.fn(baseCountReducer);
         const reducer = createReducer(mockReducer);
 
-        const operations: Operation[] = [];
-
-        let newDocument = reducer(initialDocument, increment());
-        operations.push({
-            ...newDocument.operations.global.at(-1)!,
-            resultingState: newDocument.state.global,
+        let newDocument = reducer(initialDocument, increment(), undefined, {
+            reuseOperationResultingState: true,
         });
-        newDocument = reducer(newDocument, increment());
-        operations.push({
-            ...newDocument.operations.global.at(-1)!,
-            resultingState: newDocument.state.global,
+        newDocument = reducer(newDocument, increment(), undefined, {
+            reuseOperationResultingState: true,
         });
-        newDocument = reducer(newDocument, increment());
-        operations.push({
-            ...newDocument.operations.global.at(-1)!,
-            resultingState: newDocument.state.global,
+        newDocument = reducer(newDocument, increment(), undefined, {
+            reuseOperationResultingState: true,
         });
-        newDocument = reducer(
-            {
-                ...newDocument,
-                operations: { ...newDocument.operations, global: operations },
-            },
-            noop(),
-            undefined,
-            { skip: 1, reuseOperationResultingState: true },
-        );
+        newDocument = reducer(newDocument, noop(), undefined, {
+            skip: 1,
+            reuseOperationResultingState: true,
+        });
         expect(mockReducer).toHaveBeenCalledTimes(4);
         expect(newDocument.state.global.count).toBe(2);
     });
@@ -105,26 +91,15 @@ describe('DocumentModel Class', () => {
         const mockReducer = vi.fn(baseCountReducer);
         const reducer = createReducer(mockReducer);
 
-        const operations: Operation<CountAction | BaseAction>[] = [];
-
-        let newDocument = reducer(initialDocument, increment());
-        operations.push({
-            ...newDocument.operations.global.at(-1)!,
-            resultingState: newDocument.state.global,
+        let newDocument = reducer(initialDocument, increment(), undefined, {
+            reuseOperationResultingState: true,
         });
         newDocument = reducer(newDocument, increment());
-        operations.push(newDocument.operations.global.at(-1)!);
         newDocument = reducer(newDocument, increment());
-        operations.push(newDocument.operations.global.at(-1)!);
-        newDocument = reducer(
-            {
-                ...newDocument,
-                operations: { ...newDocument.operations, global: operations },
-            },
-            noop(),
-            undefined,
-            { skip: 1, reuseOperationResultingState: true },
-        );
+        newDocument = reducer(newDocument, noop(), undefined, {
+            skip: 1,
+            reuseOperationResultingState: true,
+        });
         expect(mockReducer).toHaveBeenCalledTimes(5);
         expect(newDocument.state.global.count).toBe(2);
     });
@@ -179,24 +154,14 @@ describe('DocumentModel Class', () => {
         const mockReducer = vi.fn(baseCountReducer);
         const reducer = createReducer(mockReducer);
 
-        let newDocument = reducer(initialDocument, increment());
-        newDocument = reducer(
-            {
-                ...newDocument,
-                operations: {
-                    ...newDocument.operations,
-                    global: [
-                        {
-                            ...newDocument.operations.global[0],
-                            resultingState: newDocument.state.global,
-                        },
-                    ],
-                },
-            },
-            increment(),
-        );
-        newDocument = reducer(newDocument, noop(), undefined, { skip: 1 });
-        expect(mockReducer).toHaveBeenCalledTimes(4);
+        let newDocument = reducer(initialDocument, increment(), undefined, {
+            reuseOperationResultingState: true,
+        });
+        newDocument = reducer(newDocument, increment(), undefined, {
+            reuseOperationResultingState: true,
+        });
+        newDocument = reducer(newDocument, noop(), undefined, { skip: 1, reuseOperationResultingState: true });
+        expect(mockReducer).toHaveBeenCalledTimes(3);
         expect(newDocument.state.global.count).toBe(1);
 
         const document = replayDocument<
@@ -213,7 +178,7 @@ describe('DocumentModel Class', () => {
             { reuseOperationResultingState: true },
         );
 
-        expect(mockReducer).toHaveBeenCalledTimes(5);
+        expect(mockReducer).toHaveBeenCalledTimes(3);
         expect(document.state.global.count).toBe(1);
         expect(newDocument).toStrictEqual(document);
     });
