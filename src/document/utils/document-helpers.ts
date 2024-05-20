@@ -543,7 +543,7 @@ export function skipHeaderOperations<A extends OperationIndex>(
     return (clearedOperations || []).slice(0, -1) as A[];
 }
 
-export function grabageCollectDocumentOperations<A extends Action>(
+export function garbageCollectDocumentOperations<A extends Action>(
     documentOperations: DocumentOperations<A>,
 ): DocumentOperations<A> {
     const clearedOperations = Object.entries(documentOperations).reduce(

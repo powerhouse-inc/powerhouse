@@ -391,7 +391,7 @@ describe('skip operations', () => {
             );
 
             const clearedOperations =
-                documentHelpers.grabageCollectDocumentOperations(
+                documentHelpers.garbageCollectDocumentOperations(
                     document.operations,
                 );
 
@@ -447,7 +447,7 @@ describe('skip operations', () => {
             );
 
             const clearedOperations =
-                documentHelpers.grabageCollectDocumentOperations(
+                documentHelpers.garbageCollectDocumentOperations(
                     document.operations,
                 );
 
@@ -510,7 +510,7 @@ describe('skip operations', () => {
             );
 
             const clearedOperations =
-                documentHelpers.grabageCollectDocumentOperations(
+                documentHelpers.garbageCollectDocumentOperations(
                     document.operations,
                 );
 
@@ -577,7 +577,7 @@ describe('skip operations', () => {
             );
 
             const clearedOperations =
-                documentHelpers.grabageCollectDocumentOperations(
+                documentHelpers.garbageCollectDocumentOperations(
                     document.operations,
                 );
 

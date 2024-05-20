@@ -8,6 +8,7 @@ export {
     hashKey,
     isBaseAction,
     mapSkippedOperations,
+    parseResultingState,
     readOnly,
     replayDocument,
     replayOperations,

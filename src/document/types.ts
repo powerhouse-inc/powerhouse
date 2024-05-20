@@ -65,6 +65,10 @@ export type ReducerOptions = {
     ignoreSkipOperations?: boolean;
     /** if true reuses the provided action hash  */
     reuseHash?: boolean;
+    /** if true reuses the provided action resulting state instead of replaying it */
+    reuseOperationResultingState?: boolean;
+    /** Optional parser for the operation resulting state, uses JSON.parse by default */
+    operationResultingStateParser?: (state: unknown) => object;
 };
 
 /**
@@ -132,6 +136,8 @@ export type Operation<A extends Action = Action> = A & {
     skip: number;
     /** Error message for a failed action */
     error?: string;
+    /** The resulting state after the operation */
+    resultingState?: unknown;
 };
 
 /**

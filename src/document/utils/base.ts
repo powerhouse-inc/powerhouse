@@ -18,6 +18,7 @@ import {
     DocumentOperationsIgnoreMap,
     Operation,
     MappedOperation,
+    ReducerOptions,
 } from '../types';
 import { hash } from './node';
 import {
@@ -30,6 +31,7 @@ import {
 } from '../actions/types';
 import { castImmutable, freeze } from 'immer';
 import { SignalDispatch } from '../signal';
+import { ScopeState } from '../../document-model';
 
 export function isNoopOperation(op: Partial<Operation>): boolean {
     return (
@@ -315,9 +317,7 @@ export function replayOperations<T, A extends Action, L>(
     header?: DocumentHeader,
     documentReducer = baseReducer,
     skipHeaderOperations: SkipHeaderOperations = {},
-    options?: {
-        checkHashes?: boolean;
-    },
+    options?: ReducerOptions,
 ): Document<T, A, L> {
     // wraps the provided custom reducer with the
     // base document reducer
@@ -340,6 +340,11 @@ export type ReplayDocumentOptions = {
     // if false then reuses the hash from the operations
     // and only checks the final hash of each scope
     checkHashes?: boolean;
+    // if true then looks for the latest operation with
+    // a resulting state and uses it as a starting point
+    reuseOperationResultingState?: boolean;
+    // Optional parser for the operation resulting state, uses JSON.parse by default
+    operationResultingStateParser?: (state: unknown) => object;
 };
 
 // Runs the operations on the initial data using the
@@ -354,14 +359,66 @@ export function replayDocument<T, A extends Action, L>(
     skipHeaderOperations: SkipHeaderOperations = {},
     options?: ReplayDocumentOptions,
 ): Document<T, A, L> {
-    const checkHashes = options?.checkHashes ?? true;
+    const {
+        checkHashes = true,
+        reuseOperationResultingState,
+        operationResultingStateParser = parseResultingState,
+    } = options || {};
+
+    let documentState = initialState;
+    const operationsToReplay = [] as Operation<A | BaseAction>[];
+    const initialOperations: DocumentOperations<A> = {
+        global: [],
+        local: [],
+    };
+
+    // if operation resulting state is to be used then
+    // looks for the last operation with state of each
+    // scope to use it as the starting point and only
+    // replay operations that follow it
+    if (reuseOperationResultingState) {
+        for (const [scope, scopeOperations] of Object.entries(operations)) {
+            const index = scopeOperations.findLastIndex(
+                s => !!s.resultingState,
+            );
+            if (index < 0) {
+                operationsToReplay.push(...scopeOperations);
+                continue;
+            }
+            const opWithState = scopeOperations[index];
+            try {
+                const scopeState = operationResultingStateParser(
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unnecessary-type-assertion
+                    opWithState.resultingState!,
+                );
+                documentState = {
+                    ...documentState,
+                    state: {
+                        ...documentState.state,
+                        // TODO how to deal with attachments?
+                        [scope]: scopeState,
+                    },
+                };
+                initialOperations[scope as keyof DocumentOperations<A>].push(
+                    ...scopeOperations.slice(0, index + 1),
+                );
+                operationsToReplay.push(...scopeOperations.slice(index + 1));
+            } catch {
+                /* if parsing fails then keeps replays all scope operations */
+                operationsToReplay.push(...scopeOperations);
+            }
+        }
+    } else {
+        operationsToReplay.push(...Object.values(operations).flat());
+    }
 
     // builds a new document from the initial data
-    const document = createDocument<T, A, L>(initialState);
+    const document = createDocument<T, A, L>(documentState);
+    document.initialState = initialState;
+    document.operations = initialOperations;
 
-    const flatOperations = Object.values(operations).flat();
-
-    const result = flatOperations.reduce((document, operation) => {
+    // replays the operations
+    const result = operationsToReplay.reduce((document, operation) => {
         const doc = reducer(document, operation, dispatch, {
             skip: operation.skip,
             ignoreSkipOperations: true,
@@ -375,8 +432,8 @@ export function replayDocument<T, A extends Action, L>(
     // of each scope matches the hash of last operation
     if (!checkHashes) {
         for (const scope of Object.keys(result.state)) {
-            for (let i = flatOperations.length - 1; i >= 0; i--) {
-                const operation = flatOperations[i];
+            for (let i = operationsToReplay.length - 1; i >= 0; i--) {
+                const operation = operationsToReplay[i];
 
                 if (operation.scope !== scope) {
                     continue;
@@ -426,4 +483,15 @@ export function replayDocument<T, A extends Action, L>(
 
 export function isSameDocument(documentA: Document, documentB: Document) {
     return stringifyJson(documentA) === stringifyJson(documentB);
+}
+
+export function parseResultingState(state: unknown) {
+    const stateType = typeof state;
+    if (stateType === 'string') {
+        return JSON.parse(state as string) as object;
+    } else if (stateType === 'object') {
+        return state as object;
+    } else {
+        throw new Error(`Providing resulting state is of type: ${stateType}`);
+    }
 }

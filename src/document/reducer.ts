@@ -33,7 +33,7 @@ import {
     calculateSkipsLeft,
 } from './utils/base';
 import { SignalDispatch } from './signal';
-import { documentHelpers } from './utils';
+import { documentHelpers, parseResultingState } from './utils';
 import {
     OperationIndex,
     SkipHeaderOperationIndex,
@@ -99,15 +99,9 @@ function updateOperations<T extends Document>(
     }
 
     const { scope } = action;
+    const operations = document.operations[scope].slice();
 
-    // removes undone operations from history if there
-    // is a new operation after an UNDO
-    const operations = document.operations[scope].slice(
-        0,
-        document.revision[scope],
-    );
-
-    const latestOperation = [...operations].pop();
+    const latestOperation = operations.at(-1);
     let nextIndex = (latestOperation?.index ?? -1) + 1;
 
     if ('index' in action) {
@@ -225,19 +219,26 @@ export function processUndoRedo<T, A extends Action, L>(
  * @param {number} skipValue - The value to skip.
  * @returns {Document<T, A, L>} - The updated document after processing the skip operation.
  */
-function processSkipOperation<T, A extends Action, L>(
-    document: Document<T, A, L>,
+function processSkipOperation<
+    T,
+    A extends Action,
+    L,
+    D extends Document<T, A, L>,
+>(
+    document: D,
     action: A | BaseAction | Operation,
     customReducer: ImmutableStateReducer<T, A, L>,
     skipValue: number,
-): Document<T, A, L> {
+    reuseOperationResultingState = false,
+    resultingStateParser = parseResultingState,
+): D {
     const scope = action.scope;
 
     const latestOperation = document.operations[scope].at(-1);
 
     if (!latestOperation) return document;
 
-    const documentOperations = documentHelpers.grabageCollectDocumentOperations(
+    const documentOperations = documentHelpers.garbageCollectDocumentOperations(
         {
             ...document.operations,
             [scope]: documentHelpers.skipHeaderOperations(
@@ -247,19 +248,44 @@ function processSkipOperation<T, A extends Action, L>(
         },
     );
 
-    const { state } = replayOperations(
-        document.initialState,
-        documentOperations,
-        customReducer,
-        undefined,
-        undefined,
-        undefined,
-    );
+    let scopeState: T | L | undefined = undefined;
+    const lastRemainingOperation = documentOperations[scope].at(-1);
+
+    // if the last operation has the resulting state and
+    // reuseOperationResultingState is true then reuses it
+    // instead of replaying the operations from the beginning
+    if (
+        reuseOperationResultingState &&
+        lastRemainingOperation?.resultingState
+    ) {
+        scopeState = resultingStateParser(
+            lastRemainingOperation.resultingState,
+        ) as T | L;
+    } else {
+        const { state } = replayOperations(
+            document.initialState,
+            documentOperations,
+            customReducer,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            {
+                reuseHash: true,
+                reuseOperationResultingState,
+                operationResultingStateParser: resultingStateParser,
+            },
+        );
+        scopeState = state[scope];
+    }
 
     return {
         ...document,
-        state,
-        operations: documentHelpers.grabageCollectDocumentOperations({
+        state: {
+            ...document.state,
+            [scope]: scopeState,
+        },
+        operations: documentHelpers.garbageCollectDocumentOperations({
             ...document.operations,
         }),
     };
@@ -284,7 +310,13 @@ export function baseReducer<T, A extends Action, L>(
     dispatch?: SignalDispatch,
     options: ReducerOptions = {},
 ) {
-    const { skip, ignoreSkipOperations = false, reuseHash = false } = options;
+    const {
+        skip,
+        ignoreSkipOperations = false,
+        reuseHash = false,
+        reuseOperationResultingState = false,
+        operationResultingStateParser,
+    } = options;
 
     const _action = { ...action };
     const skipValue = skip || 0;
@@ -326,6 +358,8 @@ export function baseReducer<T, A extends Action, L>(
             _action,
             customReducer,
             skipValue,
+            reuseOperationResultingState,
+            operationResultingStateParser,
         );
     }
 
