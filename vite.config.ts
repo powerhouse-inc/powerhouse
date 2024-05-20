@@ -29,7 +29,7 @@ readdirSync(editorsDir, { withFileTypes: true })
     .forEach(name => {
         const editorPath = resolve(editorsDir, name, 'index.ts');
         if (existsSync(editorPath)) {
-            entry[name] = editorPath;
+            entry[`editors/${name}`] = editorPath;
         }
     });
 
@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => {
                     manualChunks: (id) => {
                         if (id.startsWith(path.join(__dirname, 'editors')) && id.match(/editors\/[^\/]+\/editor.tsx/)) {
                             const editorName = path.basename(path.dirname(id));
-                            return `editors/${editorName}`;
+                            return `editors/${editorName}/editor`;
                         } else if (id.startsWith(path.join(__dirname, 'document-models')) && id.match(/document-models\/[^\/]+\/index.ts/)) {
                             const modelName = path.basename(path.dirname(id));
                             return `document-models/${modelName}`;
