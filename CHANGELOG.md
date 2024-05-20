@@ -1,3 +1,10 @@
+# [1.1.0-experimental.3](https://github.com/powerhouse-inc/document-model/compare/v1.1.0-experimental.2...v1.1.0-experimental.3) (2024-05-20)
+
+
+### Features
+
+* correctly set header and resulting state when replaying document ([3183d06](https://github.com/powerhouse-inc/document-model/commit/3183d06ca30fefd15955b09a3cf63d292ee4dc0a))
+
 # [1.1.0-experimental.2](https://github.com/powerhouse-inc/document-model/compare/v1.1.0-experimental.1...v1.1.0-experimental.2) (2024-05-20)
 
 
