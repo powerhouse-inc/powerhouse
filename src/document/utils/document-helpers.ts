@@ -331,13 +331,18 @@ export function merge(
             getMaxIndex(_mergeOperations),
         );
 
+    const filteredMergeOperations = filterDuplicatedOperations(
+        _mergeOperations,
+        _targetOperations,
+    );
+
     const newOperationHistory = reshuffle(
         {
             index: nextIndex,
             skip: nextIndex - (maxCommonIndex + 1),
         },
         _targetOperations,
-        _mergeOperations,
+        filteredMergeOperations,
     );
 
     return _commonOperations.concat(newOperationHistory);
@@ -561,4 +566,25 @@ export function garbageCollectDocumentOperations<A extends Action>(
     return {
         ...clearedOperations,
     };
+}
+
+/**
+ * Filters out duplicated operations from the target operations array based on their IDs.
+ * If an operation has an ID, it is considered duplicated if there is another operation in the source operations array with the same ID.
+ * If an operation does not have an ID, it is considered unique and will not be filtered out.
+ * @param targetOperations - The array of target operations to filter.
+ * @param sourceOperations - The array of source operations to compare against.
+ * @returns An array of operations with duplicates filtered out.
+ */
+export function filterDuplicatedOperations(
+    targetOperations: Operation[],
+    sourceOperations: Operation[],
+): Operation[] {
+    return targetOperations.filter(op => {
+        if (op.id) {
+            return !sourceOperations.some(targetOp => targetOp.id === op.id);
+        }
+
+        return true;
+    });
 }
