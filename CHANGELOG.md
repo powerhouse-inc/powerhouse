@@ -1,3 +1,10 @@
+# [1.0.0-alpha.113](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.112...v1.0.0-alpha.113) (2024-05-20)
+
+
+### Features
+
+* allow creation of items from forms ([#291](https://github.com/powerhouse-inc/design-system/issues/291)) ([97f4491](https://github.com/powerhouse-inc/design-system/commit/97f44910f7c1be662d8b27e9f0e3d8bae5a5cf39))
+
 # [1.0.0-alpha.112](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.111...v1.0.0-alpha.112) (2024-05-16)
 
 
