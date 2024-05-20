@@ -1,3 +1,10 @@
+# [1.1.0-experimental.2](https://github.com/powerhouse-inc/document-model/compare/v1.1.0-experimental.1...v1.1.0-experimental.2) (2024-05-20)
+
+
+### Features
+
+* support reusing operation resulting state when replaying document ([6dee233](https://github.com/powerhouse-inc/document-model/commit/6dee233641d19dc5d50e18d4b8cee43bdbe3709e))
+
 # [1.1.0-experimental.1](https://github.com/powerhouse-inc/document-model/compare/v1.0.53...v1.1.0-experimental.1) (2024-05-06)
 
 
