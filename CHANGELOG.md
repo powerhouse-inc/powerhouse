@@ -1,3 +1,10 @@
+# [1.53.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.52.0...v1.53.0) (2024-05-20)
+
+
+### Features
+
+* fix document models bundling ([c9fc956](https://github.com/powerhouse-inc/document-model-libs/commit/c9fc9566f90880f67b303125adee30bc8d066ee1))
+
 # [1.52.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.51.0...v1.52.0) (2024-05-17)
 
 
