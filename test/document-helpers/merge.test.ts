@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
     checkCleanedOperationsIntegrity,
     merge,
-    reshuffleByTimestampAndIndex
+    reshuffleByTimestampAndIndex,
+    reshuffleByTimestamp,
 } from '../../src/document/utils/document-helpers';
 import { buildOperations } from './utils';
 
@@ -229,13 +230,13 @@ describe('merge', () => {
     it.each(scenarios)(
         'should merge conlficted operations into a new operations history: $title',
         testInput => {
-            const tergetOperations = buildOperations(
+            const targetOperations = buildOperations(
                 testInput.targetOperations
             );
             const mergeOperations = buildOperations(testInput.mergeOperations);
 
             const result = merge(
-                tergetOperations,
+                targetOperations,
                 mergeOperations,
                 reshuffleByTimestampAndIndex
             );
@@ -247,4 +248,42 @@ describe('merge', () => {
             expect(check).toHaveLength(0);
         }
     );
+
+    it('should not consider duplicated operations when merge operations', () => {
+        const targetOperations = buildOperations([
+            { index: 0, skip: 0, type: 'T_0', timestamp: '2021-01-01T00:00:00.000Z', id: '1' }, // add folder
+            { index: 1, skip: 0, type: 'T_1', timestamp: '2021-01-02T00:00:00.000Z', id: '2' }, // add folder
+            { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-05T00:00:00.000Z', id: '5' }, // 5
+            { index: 3, skip: 0, type: 'T_3', timestamp: '2021-01-06T00:00:00.000Z', id: '6' }, // 6
+            { index: 4, skip: 0, type: 'T_4', timestamp: '2021-01-07T00:00:00.000Z', id: '7' }, // 7
+            { index: 5, skip: 0, type: 'T_5', timestamp: '2021-01-08T00:00:00.000Z', id: '8' }, // 8
+        ]);
+
+        const mergeOperations = buildOperations([
+            { index: 0, skip: 0, type: 'T_0', timestamp: '2021-01-01T00:00:00.000Z', id: '1' }, // add folder
+            { index: 1, skip: 0, type: 'T_1', timestamp: '2021-01-02T00:00:00.000Z', id: '2' }, // add folder
+            { index: 4, skip: 2, type: 'B_4_2', timestamp: '2021-01-03T00:00:00.000Z', id: '3' }, // 3
+            { index: 5, skip: 0, type: 'B_5', timestamp: '2021-01-04T00:00:00.000Z', id: '4' }, // 4
+            { index: 6, skip: 0, type: 'T_2', timestamp: '2021-01-05T00:00:00.000Z', id: '5' }, // 5
+            { index: 7, skip: 0, type: 'T_3', timestamp: '2021-01-06T00:00:00.000Z', id: '6' }, // 6
+        ]);
+
+        const result = merge(
+            targetOperations,
+            mergeOperations,
+            reshuffleByTimestamp
+        );
+
+        expect(result.length).toBe(8);
+        expect(result).toMatchObject([
+            { index: 0, skip: 0, type: 'T_0', timestamp: '2021-01-01T00:00:00.000Z', id: '1' }, // add folder
+            { index: 1, skip: 0, type: 'T_1', timestamp: '2021-01-02T00:00:00.000Z', id: '2' }, // add folder
+            { index: 8, skip: 6, type: 'B_4_2', timestamp: '2021-01-03T00:00:00.000Z', id: '3' }, // 3
+            { index: 9, skip: 0, type: 'B_5', timestamp: '2021-01-04T00:00:00.000Z', id: '4' }, // 4
+            { index: 10, skip: 0, type: 'T_2', timestamp: '2021-01-05T00:00:00.000Z', id: '5' }, // 5
+            { index: 11, skip: 0, type: 'T_3', timestamp: '2021-01-06T00:00:00.000Z', id: '6' }, // 6
+            { index: 12, skip: 0, type: 'T_4', timestamp: '2021-01-07T00:00:00.000Z', id: '7' }, // 7
+            { index: 13, skip: 0, type: 'T_5', timestamp: '2021-01-08T00:00:00.000Z', id: '8' }, // 8
+        ]);
+    });
 });

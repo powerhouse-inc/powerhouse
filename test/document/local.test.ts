@@ -52,7 +52,7 @@ describe('Local reducer', () => {
             scope: 'local',
         });
 
-        expect(newDocument.operations.local).toStrictEqual([
+        expect(newDocument.operations.local).toMatchObject([
             {
                 type: 'TEST',
                 timestamp: new Date().toISOString(),
@@ -76,7 +76,7 @@ describe('Local reducer', () => {
             scope: 'local',
         });
 
-        expect(newDocument.operations.local).toStrictEqual([
+        expect(newDocument.operations.local).toMatchObject([
             {
                 type: 'TEST',
                 timestamp: new Date().toISOString(),
@@ -111,7 +111,7 @@ describe('Local reducer', () => {
             local: { name: '' },
         });
 
-        expect(newDocument.operations).toStrictEqual({
+        expect(newDocument.operations).toMatchObject({
             global: [],
             local: [
                 {
