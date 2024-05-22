@@ -12,6 +12,7 @@
         "noImplicitAny": true,
         "skipLibCheck": true,
         "emitDeclarationOnly": true,
+        "baseUrl": "."
     },
     "include": [
         "src/**/*",
