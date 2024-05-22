@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/powerhouse-inc/document-model/compare/v1.1.0...v1.2.0) (2024-05-22)
+
+
+### Features
+
+* operation id integration in attachBranch helper ([67a36bf](https://github.com/powerhouse-inc/document-model/commit/67a36bf371aada36fa68b5c44eac8dbdabfb98c0))
+
 # [1.1.0](https://github.com/powerhouse-inc/document-model/compare/v1.0.53...v1.1.0) (2024-05-22)
 
 
