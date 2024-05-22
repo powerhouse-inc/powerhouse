@@ -341,4 +341,45 @@ describe('attachBranch', () => {
             expect(checkCleanedOperationsIntegrity(newTrunk)).toHaveLength(0);
         },
     );
+
+    it('should handle duplicated id operations', () => {
+        // target
+        const trunkOperations = buildOperations([
+            { index: 0, skip: 0, type: 'T_0', id: '1' }, // add folder
+            { index: 1, skip: 0, type: 'T_1', id: '2' }, // add folder
+            { index: 2, skip: 0, type: 'T_2', id: '5' }, // 5
+            { index: 3, skip: 0, type: 'T_3', id: '6' }, // 6
+            { index: 4, skip: 0, type: 'T_4', id: '7' }, // 7
+            { index: 5, skip: 0, type: 'T_5', id: '8' }, // 8
+        ]);
+
+        // new operations
+        const branchOperations = buildOperations([
+            { index: 4, skip: 2, type: 'B_4_2', id: '3' }, // 3
+            { index: 5, skip: 0, type: 'B_5', id: '4' }, // 4
+            { index: 6, skip: 0, type: 'T_2', id: '5' }, // 5
+            { index: 7, skip: 0, type: 'T_3', id: '6' }, // 6
+        ]);
+
+        const [newTrunk, tail] = attachBranch(
+            trunkOperations,
+            branchOperations,
+        );
+
+        expect(newTrunk).toMatchObject([
+            { index: 0, skip: 0, type: 'T_0' }, // add folder
+            { index: 1, skip: 0, type: 'T_1' }, // add folder
+            { index: 4, skip: 2, type: 'B_4_2' }, // 3
+            { index: 5, skip: 0, type: 'B_5' }, // 4
+            { index: 6, skip: 0, type: 'T_2' }, // 5
+            { index: 7, skip: 0, type: 'T_3' }, // 6
+        ]);
+
+        expect(tail).toMatchObject([
+            { index: 4, skip: 0, type: 'T_4' }, // 7
+            { index: 5, skip: 0, type: 'T_5' }, // 8
+        ]);
+
+        expect(checkCleanedOperationsIntegrity(newTrunk)).toHaveLength(0);
+    });
 });

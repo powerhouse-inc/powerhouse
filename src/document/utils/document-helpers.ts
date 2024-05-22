@@ -263,7 +263,7 @@ export function attachBranch(
 export function precedes(op1: Operation, op2: Operation) {
     return (
         op1.index < op2.index ||
-        (op1.index === op2.index && op1.skip < op2.skip)
+        (op1.index === op2.index && op1.id === op2.id && op1.skip < op2.skip)
     );
 }
 
