@@ -582,12 +582,13 @@ describe.each(storageLayers)(
                     targetParentFolder: '2'
                 })
             );
+            vi.useRealTimers();
             const result = await server.addDriveOperations(
                 '1',
                 drive.operations.global
             );
 
-            expect(result.status).toBe('SUCCESS');
+            expect(result?.status).toBe('SUCCESS');
 
             drive = await server.getDrive('1');
             const document = await server.getDocument('1', '1.1');

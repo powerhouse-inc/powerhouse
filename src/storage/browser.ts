@@ -5,7 +5,7 @@ import {
     DocumentHeader,
     Operation
 } from 'document-model/document';
-import { applyUpdatedOperations, mergeOperations } from '..';
+import { mergeOperations } from '..';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 export class BrowserStorage implements IDriveStorage {
@@ -25,6 +25,13 @@ export class BrowserStorage implements IDriveStorage {
 
     buildKey(...args: string[]) {
         return args.join(BrowserStorage.SEP);
+    }
+
+    async checkDocumentExists(drive: string, id: string): Promise<boolean> {
+        const document = await (
+            await this.db
+        ).getItem<Document>(this.buildKey(drive, id));
+        return document !== undefined;
     }
 
     async getDocuments(drive: string) {
@@ -62,7 +69,6 @@ export class BrowserStorage implements IDriveStorage {
         id: string,
         operations: Operation[],
         header: DocumentHeader,
-        updatedOperations: Operation[] = []
     ): Promise<void> {
         const document = await this.getDocument(drive, id);
         if (!document) {
@@ -74,16 +80,11 @@ export class BrowserStorage implements IDriveStorage {
             operations
         );
 
-        const mergedUpdatedOperations = applyUpdatedOperations(
-            mergedOperations,
-            updatedOperations
-        );
-
         const db = await this.db;
         await db.setItem(this.buildKey(drive, id), {
             ...document,
             ...header,
-            operations: mergedUpdatedOperations
+            operations: mergedOperations
         });
     }
 

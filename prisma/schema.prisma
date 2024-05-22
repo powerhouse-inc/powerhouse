@@ -20,10 +20,10 @@ model Document {
   driveId             String
   created             DateTime             @default(now())
   lastModified        DateTime             @default(now())
-  revision            Json
+  revision            String
   name                String?
   operations          Operation[]
-  initialState        Json // json object with the scope as keys of the root object
+  initialState        String // json object with the scope as keys of the root object
   documentType        String
   syncronizationUnits SyncronizationUnit[]
 
@@ -47,6 +47,7 @@ model Operation {
   syncId      String?
   clipboard   Boolean?     @default(false)
   context     Json?
+  resultingState String?
 
   SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
 

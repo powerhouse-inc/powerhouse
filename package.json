@@ -1,6 +1,6 @@
 {
     "name": "document-drive",
-    "version": "1.0.0-alpha.55",
+    "version": "1.0.0-experimental.11",
     "license": "AGPL-3.0-only",
     "type": "module",
     "module": "./src/index.ts",
@@ -15,6 +15,8 @@
         "./storage/prisma": "./src/storage/prisma.ts",
         "./cache/redis": "./src/cache/redis.ts",
         "./cache/memory": "./src/cache/memory.ts",
+        "./queue/redis": "./src/queue/redis.ts",
+        "./queue/base": "./src/queue/base.ts",
         "./utils": "./src/utils/index.ts",
         "./utils/graphql": "./src/utils/graphql.ts",
         "./logger": "./src/utils/logger.ts"
@@ -32,11 +34,11 @@
         "test:watch": "vitest watch"
     },
     "peerDependencies": {
-        "document-model": "^1.0.53",
-        "document-model-libs": "^1.37.0"
+        "document-model": "1.2.0",
+        "document-model-libs": "^1.53.1"
     },
     "optionalDependencies": {
-        "@prisma/client": "5.11.0",
+        "@prisma/client": "5.14.0",
         "localforage": "^1.10.0",
         "redis": "^4.6.13",
         "sequelize": "^6.35.2",
@@ -48,7 +50,8 @@
         "graphql-request": "^6.1.0",
         "json-stringify-deterministic": "^1.0.12",
         "nanoevents": "^9.0.0",
-        "sanitize-filename": "^1.6.3"
+        "sanitize-filename": "^1.6.3",
+        "uuid": "^9.0.1"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.6.1",
@@ -58,11 +61,12 @@
         "@semantic-release/git": "^10.0.1",
         "@total-typescript/ts-reset": "^0.5.1",
         "@types/node": "^20.12.7",
+        "@types/uuid": "^9.0.8",
         "@typescript-eslint/eslint-plugin": "^6.21.0",
         "@typescript-eslint/parser": "^6.21.0",
         "@vitest/coverage-v8": "^1.4.0",
-        "document-model": "^1.0.53",
-        "document-model-libs": "^1.37.0",
+        "document-model": "^1.2.0",
+        "document-model-libs": "^1.53.1",
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "fake-indexeddb": "^5.0.2",
@@ -70,7 +74,7 @@
         "msw": "^2.2.13",
         "prettier": "^3.2.5",
         "prettier-plugin-organize-imports": "^3.2.4",
-        "prisma": "^5.12.1",
+        "prisma": "^5.14.0",
         "semantic-release": "^23.0.8",
         "sequelize": "^6.37.2",
         "sqlite3": "^5.1.7",

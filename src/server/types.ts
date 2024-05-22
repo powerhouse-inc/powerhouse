@@ -14,6 +14,7 @@ import type {
     Document,
     Operation,
     OperationScope,
+    ReducerOptions,
     Signal,
     State
 } from 'document-model/document';
@@ -140,7 +141,7 @@ export type PartialRecord<K extends keyof any, T> = {
 
 export type RevisionsFilter = PartialRecord<OperationScope, number>;
 
-export type GetDocumentOptions = {
+export type GetDocumentOptions = ReducerOptions & {
     revisions?: RevisionsFilter;
     checkHashes?: boolean;
 };
@@ -179,13 +180,39 @@ export abstract class BaseDocumentDriveServer {
         forceSync?: boolean
     ): Promise<IOperationResult>;
 
+    abstract queueOperation(
+        drive: string,
+        id: string,
+        operation: Operation,
+        forceSync?: boolean
+    ): Promise<IOperationResult>;
+    abstract queueOperations(
+        drive: string,
+        id: string,
+        operations: Operation[],
+        forceSync?: boolean
+    ): Promise<IOperationResult>;
+
     abstract addDriveOperation(
         drive: string,
-        operation: Operation<DocumentDriveAction | BaseAction>
+        operation: Operation<DocumentDriveAction | BaseAction>,
+        forceSync?: boolean
     ): Promise<IOperationResult<DocumentDriveDocument>>;
     abstract addDriveOperations(
         drive: string,
-        operations: Operation<DocumentDriveAction | BaseAction>[]
+        operations: Operation<DocumentDriveAction | BaseAction>[],
+        forceSync?: boolean
+    ): Promise<IOperationResult<DocumentDriveDocument>>;
+
+    abstract queueDriveOperation(
+        drive: string,
+        operation: Operation<DocumentDriveAction | BaseAction>,
+        forceSync?: boolean
+    ): Promise<IOperationResult<DocumentDriveDocument>>;
+    abstract queueDriveOperations(
+        drive: string,
+        operations: Operation<DocumentDriveAction | BaseAction>[],
+        forceSync?: boolean
     ): Promise<IOperationResult<DocumentDriveDocument>>;
 
     abstract addAction(

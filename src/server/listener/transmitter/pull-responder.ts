@@ -374,9 +374,6 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     static isPullResponderTrigger(
         trigger: Trigger
     ): trigger is PullResponderTrigger {
-        return (
-            trigger.type === 'PullResponder' &&
-            z.PullResponderTriggerDataSchema().safeParse(trigger.data).success
-        );
+        return trigger.type === 'PullResponder';
     }
 }

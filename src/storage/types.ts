@@ -6,17 +6,20 @@ import type {
     BaseAction,
     Document,
     DocumentHeader,
-    Operation
+    ExtendedState,
+    Operation,
+    State
 } from 'document-model/document';
 
 export type DocumentStorage<D extends Document = Document> = Omit<
     D,
-    'state' | 'attachments'
+    'attachments'
 >;
 
 export type DocumentDriveStorage = DocumentStorage<DocumentDriveDocument>;
 
 export interface IStorage {
+    checkDocumentExists(drive: string, id: string): Promise<boolean>;
     getDocuments: (drive: string) => Promise<string[]>;
     getDocument(drive: string, id: string): Promise<DocumentStorage>;
     createDocument(
@@ -29,7 +32,6 @@ export interface IStorage {
         id: string,
         operations: Operation[],
         header: DocumentHeader,
-        updatedOperations?: Operation[]
     ): Promise<void>;
     addDocumentOperationsWithTransaction?(
         drive: string,
@@ -37,7 +39,6 @@ export interface IStorage {
         callback: (document: DocumentStorage) => Promise<{
             operations: Operation[];
             header: DocumentHeader;
-            updatedOperations?: Operation[];
         }>
     ): Promise<void>;
     deleteDocument(drive: string, id: string): Promise<void>;
@@ -60,7 +61,6 @@ export interface IDriveStorage extends IStorage {
         callback: (document: DocumentDriveStorage) => Promise<{
             operations: Operation[];
             header: DocumentHeader;
-            updatedOperations?: Operation[];
         }>
     ): Promise<void>;
 }

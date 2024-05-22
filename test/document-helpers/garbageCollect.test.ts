@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-    IntegrityIssueType,
-    checkCleanedOperationsIntegrity,
     garbageCollect
 } from '../../src/utils/document-helpers';
 import { buildOperation, buildOperations } from './utils';
@@ -128,8 +126,8 @@ describe('garbageCollect', () => {
         const op4_x = buildOperation({ index: 4, skip: 0 });
         const op5_x = buildOperation({ index: 4, skip: 1 });
         const op6_v = buildOperation({ index: 4, skip: 2 });
-    
-        const equivalentSets:Operation[][] = [
+
+        const equivalentSets: Operation[][] = [
             [op0_x, op1_v, op2_x, op3_x, op4_x, op5_x, op6_v],
             [op1_v, op2_x, op3_x, op4_x, op5_x, op6_v],
             [op0_x, op1_v, op3_x, op4_x, op5_x, op6_v],
@@ -147,7 +145,7 @@ describe('garbageCollect', () => {
             [op0_x, op1_v, op6_v],
             [op1_v, op6_v],
         ];
-    
+
         for (const set of equivalentSets) {
             expect(garbageCollect(set)).toEqual([op1_v, op6_v]);
         }

@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import {
     DocumentDriveDocument,
     documentModel as DocumentDriveModel,
@@ -8,9 +9,10 @@ import {
     BaseAction,
     Document,
     DocumentOperations,
-    Operation
+    Operation,
+    OperationScope
 } from 'document-model/document';
-import { ConflictOperationError } from '../server/error';
+import { OperationError } from '../server/error';
 import { DocumentDriveStorage, DocumentStorage } from '../storage';
 
 export function isDocumentDriveStorage(
@@ -25,8 +27,7 @@ export function isDocumentDrive(
     document: Document
 ): document is DocumentDriveDocument {
     return (
-        document.documentType === DocumentDriveModel.id &&
-        z.DocumentDriveStateSchema().safeParse(document.state.global).success
+        document.documentType === DocumentDriveModel.id
     );
 }
 
@@ -34,52 +35,30 @@ export function mergeOperations<A extends Action = Action>(
     currentOperations: DocumentOperations<A>,
     newOperations: Operation<A | BaseAction>[]
 ): DocumentOperations<A> {
-    let existingOperation: Operation<A | BaseAction> | null = null;
-    const conflictOp = newOperations.find(op => {
-        const result = currentOperations[op.scope].find(
-            o => o.index === op.index && o.scope === op.scope
-        );
-        if (result) {
-            existingOperation = result;
-            return true;
-        }
-    });
+    const minIndexByScope = Object.keys(currentOperations).reduce<Partial<Record<OperationScope, number>>>((acc, curr) => {
+        const scope = curr as OperationScope;
+        acc[scope] = currentOperations[scope].at(-1)?.index ?? 0
+        return acc;
+    }, {});
+
+    const conflictOp = newOperations.find(op => op.index < (minIndexByScope[op.scope] ?? 0));
     if (conflictOp) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        throw new ConflictOperationError(existingOperation!, conflictOp);
+        throw new OperationError(
+            "ERROR",
+            conflictOp,
+            `Tried to add operation with index ${conflictOp.index} and document is at index ${minIndexByScope[conflictOp.scope]}`
+        );
     }
 
-    return newOperations.reduce((acc, curr) => {
-        const operations = acc[curr.scope] ?? [];
-        acc[curr.scope] = [...operations, curr].sort(
-            (a, b) => a.index - b.index
-        ) as Operation<A>[];
-        return acc;
+    return newOperations.sort((a, b) => a.index - b.index
+    ).reduce<DocumentOperations<A>>((acc, curr) => {
+        const existingOperations = acc[curr.scope] || [];
+        return { ...acc, [curr.scope]: [...existingOperations, curr] };
     }, currentOperations);
 }
 
 export function generateUUID(): string {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const crypto =
-        typeof window !== 'undefined' ? window.crypto : require('crypto');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return crypto.randomUUID() as string;
-}
-
-export function applyUpdatedOperations<A extends Action = Action>(
-    currentOperations: DocumentOperations<A>,
-    updatedOperations: Operation<A | BaseAction>[]
-): DocumentOperations<A> {
-    return updatedOperations.reduce(
-        (acc, curr) => {
-            const operations = acc[curr.scope] ?? [];
-            acc[curr.scope] = operations.map(op => {
-                return op.index === curr.index ? curr : op;
-            });
-            return acc;
-        },
-        { ...currentOperations }
-    );
+    return uuidv4();
 }
 
 export function isNoopUpdate(

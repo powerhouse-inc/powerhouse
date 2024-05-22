@@ -5,7 +5,7 @@ import {
     DocumentHeader,
     Operation
 } from 'document-model/document';
-import { applyUpdatedOperations, mergeOperations } from '..';
+import { mergeOperations } from '..';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 export class MemoryStorage implements IDriveStorage {
@@ -16,6 +16,10 @@ export class MemoryStorage implements IDriveStorage {
     constructor() {
         this.documents = {};
         this.drives = {};
+    }
+
+    checkDocumentExists(drive: string, id: string): Promise<boolean> {
+        return Promise.resolve(this.documents[drive]?.[id] !== undefined)
     }
 
     async getDocuments(drive: string) {
@@ -55,7 +59,8 @@ export class MemoryStorage implements IDriveStorage {
             documentType,
             created,
             lastModified,
-            clipboard
+            clipboard,
+            state
         } = document;
         this.documents[drive]![id] = {
             operations,
@@ -65,7 +70,8 @@ export class MemoryStorage implements IDriveStorage {
             documentType,
             created,
             lastModified,
-            clipboard
+            clipboard,
+            state
         };
     }
 
@@ -73,8 +79,7 @@ export class MemoryStorage implements IDriveStorage {
         drive: string,
         id: string,
         operations: Operation[],
-        header: DocumentHeader,
-        updatedOperations: Operation[] = []
+        header: DocumentHeader
     ): Promise<void> {
         const document = await this.getDocument(drive, id);
         if (!document) {
@@ -86,15 +91,10 @@ export class MemoryStorage implements IDriveStorage {
             operations
         );
 
-        const mergedUpdatedOperations = applyUpdatedOperations(
-            mergedOperations,
-            updatedOperations
-        );
-
         this.documents[drive]![id] = {
             ...document,
             ...header,
-            operations: mergedUpdatedOperations
+            operations: mergedOperations
         };
     }
 
@@ -127,6 +127,7 @@ export class MemoryStorage implements IDriveStorage {
 
     async createDrive(id: string, drive: DocumentDriveStorage) {
         this.drives[id] = drive;
+        this.documents[id] = {};
         const { slug } = drive.initialState.state.global;
         if (slug) {
             this.slugToDriveId[slug] = id;

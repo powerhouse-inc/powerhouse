@@ -12,7 +12,7 @@ import fs from 'fs/promises';
 import stringify from 'json-stringify-deterministic';
 import path from 'path';
 import sanitize from 'sanitize-filename';
-import { applyUpdatedOperations, mergeOperations } from '..';
+import { mergeOperations } from '..';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 type FSError = {
@@ -77,6 +77,11 @@ export class FilesystemStorage implements IDriveStorage {
         return documents;
     }
 
+    checkDocumentExists(drive: string, id: string): Promise<boolean> {
+        const documentExists = existsSync(this._buildDocumentPath(drive, id));
+        return Promise.resolve(documentExists);
+    }
+
     async getDocument(drive: string, id: string) {
         try {
             const content = readFileSync(this._buildDocumentPath(drive, id), {
@@ -94,6 +99,7 @@ export class FilesystemStorage implements IDriveStorage {
         writeFileSync(documentPath, stringify(document), {
             encoding: 'utf-8'
         });
+        return Promise.resolve();
     }
 
     async clearStorage() {
@@ -142,8 +148,7 @@ export class FilesystemStorage implements IDriveStorage {
         drive: string,
         id: string,
         operations: Operation[],
-        header: DocumentHeader,
-        updatedOperations: Operation[] = []
+        header: DocumentHeader
     ) {
         const document = await this.getDocument(drive, id);
         if (!document) {
@@ -155,20 +160,15 @@ export class FilesystemStorage implements IDriveStorage {
             operations
         );
 
-        const mergedUpdatedOperations = applyUpdatedOperations(
-            mergedOperations,
-            updatedOperations
-        );
-
-        this.createDocument(drive, id, {
+        await this.createDocument(drive, id, {
             ...document,
             ...header,
-            operations: mergedUpdatedOperations
+            operations: mergedOperations
         });
     }
 
     async getDrives() {
-        const files = await readdirSync(this.drivesPath, {
+        const files = readdirSync(this.drivesPath, {
             withFileTypes: true
         });
         const drives: string[] = [];
@@ -229,7 +229,7 @@ export class FilesystemStorage implements IDriveStorage {
         const drive = await this.getDrive(id);
         const mergedOperations = mergeOperations(drive.operations, operations);
 
-        this.createDrive(id, {
+        await this.createDrive(id, {
             ...drive,
             ...header,
             operations: mergedOperations
