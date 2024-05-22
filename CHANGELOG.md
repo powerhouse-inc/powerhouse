@@ -1,3 +1,10 @@
+# [1.0.0-alpha.57](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.56...v1.0.0-alpha.57) (2024-05-22)
+
+
+### Features
+
+* new release ([17796e8](https://github.com/powerhouse-inc/document-drive/commit/17796e8577d16d3095a8adf3c40e7bd7146b6142))
+
 # [1.0.0-alpha.56](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.55...v1.0.0-alpha.56) (2024-05-22)
 
 
