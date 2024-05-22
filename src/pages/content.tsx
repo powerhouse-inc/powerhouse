@@ -81,7 +81,7 @@ const Content = () => {
     )?.state.global.nodes;
 
     const [selectedFileNode, setSelectedFileNode] = useState<
-        { drive: string; id: string } | undefined
+        { drive: string; id: string; parentFolder: string | null } | undefined
     >(undefined);
     const [selectedDocument, setSelectedDocument, addOperation] =
         useFileNodeDocument(decodedDriveID, selectedFileNode?.id);
@@ -144,9 +144,9 @@ const Content = () => {
                             setSelectedFileNode({
                                 drive: drive.state.global.id,
                                 id: node.id,
+                                parentFolder: node.parentFolder,
                             });
                         }
-                        break;
                     }
                     path.push(encodeID(node.id));
 
@@ -200,7 +200,9 @@ const Content = () => {
                 setSelectedFileNode({
                     drive: decodedDriveID,
                     id: fileNode.id,
+                    parentFolder: fileNode.parentFolder,
                 });
+                navigateToItemId(fileNode.id);
             }
         });
     }, [selectedPath]);
@@ -317,7 +319,12 @@ const Content = () => {
                     >
                         <DocumentEditor
                             document={selectedDocument}
-                            onClose={() => setSelectedFileNode(undefined)}
+                            onClose={() => {
+                                navigateToItemId(
+                                    selectedFileNode.parentFolder ?? driveID,
+                                );
+                                setSelectedFileNode(undefined);
+                            }}
                             onChange={onDocumentChangeHandler}
                             onExport={() => exportDocument(selectedDocument)}
                             onAddOperation={handleAddOperation}
@@ -352,9 +359,15 @@ const Content = () => {
                                     drive={decodedDriveID}
                                     path={selectedPath || ''}
                                     onFolderSelected={onFolderSelectedHandler}
-                                    onFileSelected={(drive, id) =>
-                                        setSelectedFileNode({ drive, id })
-                                    }
+                                    onFileSelected={(drive, id) => {
+                                        setSelectedFileNode({
+                                            drive,
+                                            id,
+                                            parentFolder:
+                                                selectedFolder?.id ?? null,
+                                        });
+                                        navigateToItemId(id);
+                                    }}
                                     onFileDeleted={deleteNode}
                                 />
                             </div>

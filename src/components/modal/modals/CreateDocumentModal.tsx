@@ -21,6 +21,7 @@ export interface CreateDocumentModalProps {
             | {
                   drive: string;
                   id: string;
+                  parentFolder: string | null;
               }
             | undefined
         >
@@ -67,6 +68,7 @@ export const CreateDocumentModal: React.FC<
             setSelectedFileNode?.({
                 drive: driveID,
                 id: node.id,
+                parentFolder: node.parentFolder,
             });
         }
     };
