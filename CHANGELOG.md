@@ -1,3 +1,10 @@
+## [1.53.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.53.0...v1.53.1) (2024-05-22)
+
+
+### Bug Fixes
+
+* update doc model libs ([ee714e0](https://github.com/powerhouse-inc/document-model-libs/commit/ee714e04ea779ba19b3f729a44a845c060c7834d))
+
 # [1.53.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.52.0...v1.53.0) (2024-05-20)
 
 
