@@ -121,7 +121,7 @@ export function useDocumentDriveServer(
             {
                 id,
                 name,
-                parentFolder,
+                parentFolder: parentFolder ?? null,
                 documentType,
 
                 document,
