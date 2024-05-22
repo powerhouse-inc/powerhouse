@@ -1,3 +1,10 @@
+# [1.0.0-alpha.56](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.55...v1.0.0-alpha.56) (2024-05-22)
+
+
+### Features
+
+* add queues and append only conflict resolution ([d17abd6](https://github.com/powerhouse-inc/document-drive/commit/d17abd664a7381f80faa6530f83ca9e224282ba1)), closes [#153](https://github.com/powerhouse-inc/document-drive/issues/153)
+
 # 1.0.0-experimental.1 (2024-05-15)
 
 
