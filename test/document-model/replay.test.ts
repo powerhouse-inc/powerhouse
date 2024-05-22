@@ -31,28 +31,28 @@ describe('DocumentModel Class', () => {
         attachments: {},
     };
     const initialDocument: Document<CountState, CountAction, CountLocalState> =
-    {
-        name: '',
-        revision: {
-            global: 0,
-            local: 0,
-        },
-        documentType: '',
-        created: '',
-        lastModified: '',
-        state: {
-            global: {
-                count: 0,
+        {
+            name: '',
+            revision: {
+                global: 0,
+                local: 0,
             },
-            local: {
-                name: '',
+            documentType: '',
+            created: '',
+            lastModified: '',
+            state: {
+                global: {
+                    count: 0,
+                },
+                local: {
+                    name: '',
+                },
             },
-        },
-        attachments: {},
-        initialState,
-        operations: { global: [], local: [] },
-        clipboard: [],
-    };
+            attachments: {},
+            initialState,
+            operations: { global: [], local: [] },
+            clipboard: [],
+        };
 
     it('should call reducer once per operation', () => {
         const mockReducer = vi.fn(baseCountReducer);
@@ -160,7 +160,10 @@ describe('DocumentModel Class', () => {
         newDocument = reducer(newDocument, increment(), undefined, {
             reuseOperationResultingState: true,
         });
-        newDocument = reducer(newDocument, noop(), undefined, { skip: 1, reuseOperationResultingState: true });
+        newDocument = reducer(newDocument, noop(), undefined, {
+            skip: 1,
+            reuseOperationResultingState: true,
+        });
         expect(mockReducer).toHaveBeenCalledTimes(3);
         expect(newDocument.state.global.count).toBe(1);
 

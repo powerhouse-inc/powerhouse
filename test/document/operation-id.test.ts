@@ -115,7 +115,7 @@ describe('Document Operation ID', () => {
         document = countReducer(document, increment());
 
         const clearedOperations =
-            documentHelpers.grabageCollectDocumentOperations(
+            documentHelpers.garbageCollectDocumentOperations(
                 document.operations,
             );
 
@@ -154,7 +154,7 @@ describe('Document Operation ID', () => {
         document = countReducer(document, increment());
 
         const clearedOperations =
-            documentHelpers.grabageCollectDocumentOperations(
+            documentHelpers.garbageCollectDocumentOperations(
                 document.operations,
             );
 
@@ -199,7 +199,7 @@ describe('Document Operation ID', () => {
         document = countReducer(document, increment());
 
         const clearedOperations =
-            documentHelpers.grabageCollectDocumentOperations(
+            documentHelpers.garbageCollectDocumentOperations(
                 document.operations,
             );
 
