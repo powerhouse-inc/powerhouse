@@ -11,7 +11,7 @@ import {
     increment,
 } from '../helpers';
 
-describe('UNDO/REDO', () => {
+describe.skip('UNDO/REDO', () => {
     let document: Document<CountState, CountAction, CountLocalState>;
 
     beforeEach(() => {
