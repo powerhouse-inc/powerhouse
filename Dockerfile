@@ -59,7 +59,7 @@ ENV VITE_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS=${VITE_HIDE_DOCUMENT_MODEL_SELEC
 WORKDIR /opt/app
 COPY . .
 RUN npm install -g husky vite
-RUN npm install --frozen-lockfile
+RUN npm install --frozen-lockfile --force
 RUN npm run build:web -- --base ${BASE_PATH}
 
 # Production image, copy all the files and run next
