@@ -1,5 +1,5 @@
 export const RENOWN_URL =
-    (import.meta.env.VITE_RENOWN_URL as string) || 'https://renown.id';
+    (import.meta.env.VITE_RENOWN_URL as string) || 'https://www.renown.id';
 export const RENOWN_NETWORK_ID =
     (import.meta.env.VITE_RENOWN_NETWORK_ID as string) || 'eip155';
 export const RENOWN_CHAIN_ID =
