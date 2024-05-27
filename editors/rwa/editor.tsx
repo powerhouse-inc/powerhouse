@@ -28,16 +28,24 @@ export type IProps = EditorProps<
     CustomEditorProps;
 
 function Editor(props: IProps) {
-    const { document, dispatch, onClose, onExport, onSwitchboardLinkClick } =
-        props;
+    const {
+        document: {
+            revision: { global, local },
+            clipboard,
+        },
+        dispatch,
+        onClose,
+        onExport,
+        onSwitchboardLinkClick,
+    } = props;
 
     const [activeTab, setActiveTab] = useState<Key>('portfolio');
 
     const undo = () => dispatch(actions.undo());
     const redo = () => dispatch(actions.redo());
 
-    const canUndo = document.revision.global > 0 || document.revision.local > 0;
-    const canRedo = document.clipboard.length > 0;
+    const canUndo = global > 0 || local > 0;
+    const canRedo = clipboard.length > 0;
 
     return (
         <RWATabs

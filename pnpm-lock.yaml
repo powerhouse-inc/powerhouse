@@ -65,8 +65,8 @@ devDependencies:
     specifier: 0.0.15
     version: 0.0.15(graphql@16.8.1)(zod@3.22.4)
   '@powerhousedao/design-system':
-    specifier: 1.0.0-alpha.112
-    version: 1.0.0-alpha.112(@types/react@18.2.57)(react-aria-components@1.2.0)(react-aria@3.33.0)(react-dom@18.2.0)(react@18.2.0)
+    specifier: 1.0.0-alpha.113
+    version: 1.0.0-alpha.113(@types/react@18.2.57)(react-aria-components@1.2.0)(react-aria@3.33.0)(react-dom@18.2.0)(react@18.2.0)
   '@semantic-release/changelog':
     specifier: ^6.0.3
     version: 6.0.3(semantic-release@23.0.2)
@@ -3245,12 +3245,6 @@ packages:
       '@swc/helpers': 0.5.6
     dev: false
 
-  /@internationalized/date@3.5.2:
-    resolution: {integrity: sha512-vo1yOMUt2hzp63IutEaTUxROdvQg1qlMRsbCvbay2AK2Gai7wIgCyK5weEX3nHkiLgo4qCXHijFNC/ILhlRpOQ==}
-    dependencies:
-      '@swc/helpers': 0.5.6
-    dev: true
-
   /@internationalized/date@3.5.3:
     resolution: {integrity: sha512-X9bi8NAEHAjD8yzmPYT2pdJsbe+tYSEBAfowtlxJVJdZR3aK8Vg7ZUT1Fm5M47KLzp/M1p1VwAaeSma3RT7biw==}
     dependencies:
@@ -3809,15 +3803,15 @@ packages:
       - zod
     dev: true
 
-  /@powerhousedao/design-system@1.0.0-alpha.112(@types/react@18.2.57)(react-aria-components@1.2.0)(react-aria@3.33.0)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-jQ1Qu6X+S4Pm1SRAOvqjFjjEidZHAzcxCt2EdToxfYpmANo7xqHs/PBVvj8vTnHvQoUHObSwSnbdnOGUH8K2sA==}
+  /@powerhousedao/design-system@1.0.0-alpha.113(@types/react@18.2.57)(react-aria-components@1.2.0)(react-aria@3.33.0)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-Z5M2eOv4BLc4Hbe2qrBq+nrGGs5FzHcK6YctJw8HL91PhXjEJpSW7pdCOu5w0C1z7oiou2Q5kd+kR36KmBk2pw==}
     peerDependencies:
       react: ^18.2.0
       react-aria: ^3.32.0
       react-aria-components: 1.2.0
       react-dom: ^18.2.0
     dependencies:
-      '@internationalized/date': 3.5.2
+      '@internationalized/date': 3.5.3
       '@radix-ui/react-dialog': 1.0.5(@types/react@18.2.57)(react-dom@18.2.0)(react@18.2.0)
       change-case: 5.4.3
       date-fns: 3.3.1

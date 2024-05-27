@@ -24,10 +24,7 @@ export function ServiceProviderFeeTypes(props: IProps) {
         isAllowedToEditDocuments,
     } = props;
 
-    const serviceProviderFeeTypes =
-        document.state.global.serviceProviderFeeTypes;
-    const accounts = document.state.global.accounts;
-    const transactions = document.state.global.transactions;
+    const state = document.state.global;
 
     const toggleExpandedRow = useCallback(
         (id: string | undefined) => {
@@ -103,11 +100,29 @@ export function ServiceProviderFeeTypes(props: IProps) {
             [dispatch],
         );
 
+    const onSubmitCreateAccount: ServiceProviderFeeTypesTableProps['onSubmitCreateAccount'] =
+        useCallback(
+            data => {
+                const id = utils.hashKey();
+                const reference = data.reference;
+                const label = data.label;
+                if (!reference) throw new Error('Reference is required');
+
+                dispatch(
+                    actions.createAccount({
+                        id,
+                        reference,
+                        label,
+                    }),
+                );
+                setShowNewItemForm(false);
+            },
+            [dispatch],
+        );
+
     return (
         <ServiceProviderFeeTypesTable
-            serviceProviderFeeTypes={serviceProviderFeeTypes}
-            accounts={accounts}
-            transactions={transactions}
+            state={state}
             selectedItem={selectedItem}
             showNewItemForm={showNewItemForm}
             expandedRowId={expandedRowId}
@@ -119,6 +134,7 @@ export function ServiceProviderFeeTypes(props: IProps) {
             onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
             onSubmitDelete={onSubmitDelete}
+            onSubmitCreateAccount={onSubmitCreateAccount}
         />
     );
 }

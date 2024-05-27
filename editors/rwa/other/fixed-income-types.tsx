@@ -7,10 +7,8 @@ import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
 import {
-    FixedIncome,
     actions,
     getDifferences,
-    isFixedIncomeAsset,
 } from '../../../document-models/real-world-assets';
 import { IProps } from '../editor';
 
@@ -26,10 +24,7 @@ export function FixedIncomeTypes(props: IProps) {
         isAllowedToEditDocuments,
     } = props;
 
-    const fixedIncomeTypes = document.state.global.fixedIncomeTypes;
-    const assets = document.state.global.portfolio.filter(a =>
-        isFixedIncomeAsset(a),
-    ) as FixedIncome[];
+    const state = document.state.global;
 
     const toggleExpandedRow = useCallback(
         (id: string | undefined) => {
@@ -92,8 +87,7 @@ export function FixedIncomeTypes(props: IProps) {
 
     return (
         <FixedIncomeTypesTable
-            fixedIncomeTypes={fixedIncomeTypes}
-            assets={assets}
+            state={state}
             selectedItem={selectedItem}
             showNewItemForm={showNewItemForm}
             expandedRowId={expandedRowId}

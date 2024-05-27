@@ -1,18 +1,14 @@
 import {
     AssetsTable,
     AssetsTableProps,
-    CashAsset,
     FixedIncome as UiFixedIncome,
 } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import { useCallback, useState } from 'react';
 import {
-    FixedIncome,
     actions,
     getDifferences,
-    isCashAsset,
-    isFixedIncomeAsset,
 } from '../../document-models/real-world-assets';
 import { IProps } from './editor';
 
@@ -28,21 +24,7 @@ export const Portfolio = (props: IProps) => {
         isAllowedToEditDocuments,
     } = props;
 
-    const spvs = document.state.global.spvs;
-
-    const fixedIncomeTypes = document.state.global.fixedIncomeTypes;
-
-    const fixedIncomeAssets = document.state.global.portfolio.filter(
-        (asset): asset is FixedIncome => isFixedIncomeAsset(asset),
-    );
-
-    const transactions = document.state.global.transactions;
-
-    // there is only one cash asset for v1
-    // this is always defined for every document model
-    const cashAsset = document.state.global.portfolio.find(
-        isCashAsset,
-    ) as CashAsset;
+    const state = document.state.global;
 
     const toggleExpandedRow = useCallback(
         (id: string | undefined) => {
@@ -136,6 +118,39 @@ export const Portfolio = (props: IProps) => {
         [dispatch],
     );
 
+    const onSubmitCreateFixedIncomeType: AssetsTableProps['onSubmitCreateFixedIncomeType'] =
+        useCallback(
+            data => {
+                const id = utils.hashKey();
+                const name = data.name;
+
+                if (!name) throw new Error('Name is required');
+
+                dispatch(actions.createFixedIncomeType({ id, name }));
+                setShowNewItemForm(false);
+            },
+            [dispatch],
+        );
+
+    const onSubmitCreateSpv: AssetsTableProps['onSubmitCreateSpv'] =
+        useCallback(
+            data => {
+                const id = utils.hashKey();
+                const name = data.name;
+
+                if (!name) throw new Error('Name is required');
+
+                dispatch(
+                    actions.createSpv({
+                        id,
+                        name,
+                    }),
+                );
+                setShowNewItemForm(false);
+            },
+            [dispatch],
+        );
+
     return (
         <div>
             <h1 className="text-lg font-bold mb-2">Portfolio</h1>
@@ -144,11 +159,7 @@ export const Portfolio = (props: IProps) => {
                 institutions or investment vehicles.
             </p>
             <AssetsTable
-                assets={fixedIncomeAssets as UiFixedIncome[]}
-                transactions={transactions}
-                cashAsset={cashAsset}
-                fixedIncomeTypes={fixedIncomeTypes}
-                spvs={spvs}
+                state={state}
                 expandedRowId={expandedRowId}
                 selectedItem={selectedItem}
                 showNewItemForm={showNewItemForm}
@@ -160,6 +171,8 @@ export const Portfolio = (props: IProps) => {
                 onSubmitEdit={onSubmitEdit}
                 onSubmitCreate={onSubmitCreate}
                 onSubmitDelete={onSubmitDelete}
+                onSubmitCreateFixedIncomeType={onSubmitCreateFixedIncomeType}
+                onSubmitCreateSpv={onSubmitCreateSpv}
             />
         </div>
     );
