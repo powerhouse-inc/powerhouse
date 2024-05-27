@@ -1,3 +1,10 @@
+# [1.54.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.53.1...v1.54.0) (2024-05-27)
+
+
+### Features
+
+* allow item creation from other forms ([#164](https://github.com/powerhouse-inc/document-model-libs/issues/164)) ([45ad39f](https://github.com/powerhouse-inc/document-model-libs/commit/45ad39f455ede05792403735d7d3aeff08d857af))
+
 ## [1.53.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.53.0...v1.53.1) (2024-05-22)
 
 
