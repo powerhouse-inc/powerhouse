@@ -1,3 +1,10 @@
+# [1.0.0-alpha.115](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.114...v1.0.0-alpha.115) (2024-05-28)
+
+
+### Features
+
+* add ids to form inputs ([6f66adb](https://github.com/powerhouse-inc/design-system/commit/6f66adb16cb1f5b305e6c47723458c7a8e81ba7c))
+
 # [1.0.0-alpha.114](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.113...v1.0.0-alpha.114) (2024-05-28)
 
 
