@@ -1,3 +1,10 @@
+# [1.55.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.54.0...v1.55.0) (2024-05-28)
+
+
+### Features
+
+* bump libs and update props ([#168](https://github.com/powerhouse-inc/document-model-libs/issues/168)) ([1e25d63](https://github.com/powerhouse-inc/document-model-libs/commit/1e25d63a0fe06c43061f65d30cac097ce7afec07))
+
 # [1.54.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.53.1...v1.54.0) (2024-05-27)
 
 
