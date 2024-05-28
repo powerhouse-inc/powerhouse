@@ -1,3 +1,10 @@
+# [1.0.0-alpha.114](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.113...v1.0.0-alpha.114) (2024-05-28)
+
+
+### Features
+
+* fix focus highjacking ([#292](https://github.com/powerhouse-inc/design-system/issues/292)) ([d7806ff](https://github.com/powerhouse-inc/design-system/commit/d7806ff81a8de2935bb9b9d8e87ed0f6fb845680))
+
 # [1.0.0-alpha.113](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.112...v1.0.0-alpha.113) (2024-05-20)
 
 
