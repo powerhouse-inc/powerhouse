@@ -1,3 +1,10 @@
+# [1.0.0-alpha.59](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.58...v1.0.0-alpha.59) (2024-05-28)
+
+
+### Features
+
+* enable operation id ([#174](https://github.com/powerhouse-inc/document-drive/issues/174)) ([1d77fd2](https://github.com/powerhouse-inc/document-drive/commit/1d77fd2f6a4618371c6fc4c072d4eab7d27a662a))
+
 # [1.0.0-alpha.58](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.57...v1.0.0-alpha.58) (2024-05-28)
 
 
