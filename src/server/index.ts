@@ -425,7 +425,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             type: operation.type,
             input: operation.input as object,
             skip: operation.skip,
-            context: operation.context
+            context: operation.context,
+            id: operation.id
         }));
     }
 

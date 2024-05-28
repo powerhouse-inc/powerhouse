@@ -117,6 +117,7 @@ export type OperationUpdate = {
     input: object;
     hash: string;
     context?: ActionContext;
+    id?: string;
 };
 
 export type StrandUpdate = {

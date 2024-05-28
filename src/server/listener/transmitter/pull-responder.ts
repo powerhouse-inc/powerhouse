@@ -1,4 +1,4 @@
-import { ListenerFilter, Trigger, z } from 'document-model-libs/document-drive';
+import { ListenerFilter, Trigger } from 'document-model-libs/document-drive';
 import { Operation, OperationScope } from 'document-model/document';
 import { PULL_DRIVE_INTERVAL } from '../..';
 import { generateUUID } from '../../../utils';
@@ -153,6 +153,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                                 scope
                                 branch
                                 operations {
+                                    id
                                     timestamp
                                     skip
                                     type
@@ -237,13 +238,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             const listenerRevisions: ListenerRevisionWithError[] = [];
 
             for (const strand of strands) {
-                const operations: Operation[] = strand.operations.map(
-                    (op) => ({
-                        ...op,
-                        scope: strand.scope,
-                        branch: strand.branch
-                    })
-                );
+                const operations: Operation[] = strand.operations.map(op => ({
+                    ...op,
+                    scope: strand.scope,
+                    branch: strand.branch
+                }));
 
                 let error: Error | undefined = undefined;
                 try {

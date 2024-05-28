@@ -25,8 +25,8 @@ export class SequelizeStorage implements IDriveStorage {
                 type: DataTypes.STRING,
                 primaryKey: true
             },
-            id: DataTypes.STRING,
-        })
+            id: DataTypes.STRING
+        });
         const Document = this.db.define('document', {
             id: {
                 type: DataTypes.STRING,
@@ -155,7 +155,7 @@ export class SequelizeStorage implements IDriveStorage {
         drive: string,
         id: string,
         operations: Operation[],
-        header: DocumentHeader,
+        header: DocumentHeader
     ): Promise<void> {
         const document = await this.getDocument(drive, id);
         if (!document) {
@@ -177,7 +177,8 @@ export class SequelizeStorage implements IDriveStorage {
                 timestamp: op.timestamp,
                 type: op.type,
                 scope: op.scope,
-                branch: 'main'
+                branch: 'main',
+                opId: op.id
             }))
         );
 
@@ -284,8 +285,8 @@ export class SequelizeStorage implements IDriveStorage {
             where: {
                 id: id,
                 driveId: driveId
-            },
-        })
+            }
+        });
 
         return count > 0;
     }
@@ -323,6 +324,7 @@ export class SequelizeStorage implements IDriveStorage {
                     input: JSON;
                     type: string;
                     scope: string;
+                    opId?: string;
                 }
             ];
             revision: Required<Record<OperationScope, number>>;
@@ -348,13 +350,15 @@ export class SequelizeStorage implements IDriveStorage {
                 input: JSON;
                 type: string;
                 scope: string;
+                opId?: string;
             }) => ({
                 hash: op.hash,
                 index: op.index,
                 timestamp: new Date(op.timestamp).toISOString(),
                 input: op.input,
                 type: op.type,
-                scope: op.scope as OperationScope
+                scope: op.scope as OperationScope,
+                id: op.opId
                 // attachments: fileRegistry
             })
         );

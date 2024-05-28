@@ -1,6 +1,5 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { backOff, IBackOffOptions } from "exponential-backoff";
 import {
     DocumentDriveAction,
     DocumentDriveLocalState,
@@ -15,14 +14,22 @@ import type {
     OperationScope,
     State
 } from 'document-model/document';
+import { IBackOffOptions, backOff } from 'exponential-backoff';
 import { ConflictOperationError } from '../server/error';
 import { logger } from '../utils/logger';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
-type Transaction = Omit<
-    PrismaClient<Prisma.PrismaClientOptions, never>,
-    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
-> | ExtendedPrismaClient;
+type Transaction =
+    | Omit<
+          PrismaClient<Prisma.PrismaClientOptions, never>,
+          | '$connect'
+          | '$disconnect'
+          | '$on'
+          | '$transaction'
+          | '$use'
+          | '$extends'
+      >
+    | ExtendedPrismaClient;
 
 function storageToOperation(
     op: Prisma.$OperationPayload['scalars']
@@ -35,7 +42,8 @@ function storageToOperation(
         input: JSON.parse(op.input),
         type: op.type,
         scope: op.scope as OperationScope,
-        resultingState: op.resultingState ? op.resultingState : undefined
+        resultingState: op.resultingState ? op.resultingState : undefined,
+        id: op.opId || undefined
         // attachments: fileRegistry
     };
     if (op.context) {
@@ -46,27 +54,32 @@ function storageToOperation(
 
 export type PrismaStorageOptions = {
     transactionRetryBackoff?: IBackOffOptions;
-}
+};
 
-function getRetryTransactionsClient<T extends PrismaClient>(prisma: T, backOffOptions?: Partial<IBackOffOptions>) {
+function getRetryTransactionsClient<T extends PrismaClient>(
+    prisma: T,
+    backOffOptions?: Partial<IBackOffOptions>
+) {
     return prisma.$extends({
         client: {
-            $transaction: (...args: Parameters<T["$transaction"]>) => {
+            $transaction: (...args: Parameters<T['$transaction']>) => {
                 // eslint-disable-next-line prefer-spread
                 return backOff(() => prisma.$transaction.apply(prisma, args), {
-                    retry: (e) => {
+                    retry: e => {
                         // Retry the transaction only if the error was due to a write conflict or deadlock
                         // See: https://www.prisma.io/docs/reference/api-reference/error-reference#p2034
-                        return (e as { code: string }).code === "P2034";
+                        return (e as { code: string }).code === 'P2034';
                     },
-                    ...backOffOptions,
+                    ...backOffOptions
                 });
             }
         }
     });
 }
 
-type ExtendedPrismaClient = ReturnType<typeof getRetryTransactionsClient<PrismaClient>>;
+type ExtendedPrismaClient = ReturnType<
+    typeof getRetryTransactionsClient<PrismaClient>
+>;
 
 export class PrismaStorage implements IDriveStorage {
     private db: ExtendedPrismaClient;
@@ -75,9 +88,8 @@ export class PrismaStorage implements IDriveStorage {
         const backOffOptions = options?.transactionRetryBackoff;
         this.db = getRetryTransactionsClient(db, {
             ...backOffOptions,
-            jitter: backOffOptions?.jitter ?? "full"
+            jitter: backOffOptions?.jitter ?? 'full'
         });
-
     }
 
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
@@ -138,7 +150,7 @@ export class PrismaStorage implements IDriveStorage {
                 initialState: JSON.stringify(document.initialState),
                 lastModified: document.lastModified,
                 revision: JSON.stringify(document.revision),
-                id,
+                id
             }
         });
     }
@@ -169,7 +181,10 @@ export class PrismaStorage implements IDriveStorage {
                     branch: 'main',
                     skip: op.skip,
                     context: op.context,
-                    resultingState: op.resultingState ? JSON.stringify(op.resultingState) : undefined
+                    opId: op.id,
+                    resultingState: op.resultingState
+                        ? JSON.stringify(op.resultingState)
+                        : undefined
                 }))
             });
 
@@ -180,7 +195,7 @@ export class PrismaStorage implements IDriveStorage {
                 },
                 data: {
                     lastModified: header.lastModified,
-                    revision: JSON.stringify(header.revision),
+                    revision: JSON.stringify(header.revision)
                 }
             });
         } catch (e) {
@@ -228,7 +243,7 @@ export class PrismaStorage implements IDriveStorage {
         callback: (document: DocumentStorage) => Promise<{
             operations: Operation[];
             header: DocumentHeader;
-            newState?: State<any, any> | undefined
+            newState?: State<any, any> | undefined;
         }>
     ) {
         let result: {
@@ -237,23 +252,25 @@ export class PrismaStorage implements IDriveStorage {
             newState?: State<any, any> | undefined;
         } | null = null;
 
-        await this.db.$transaction(async tx => {
-            const document = await this.getDocument(drive, id, tx);
-            if (!document) {
-                throw new Error(`Document with id ${id} not found`);
-            }
-            result = await callback(document);
+        await this.db.$transaction(
+            async tx => {
+                const document = await this.getDocument(drive, id, tx);
+                if (!document) {
+                    throw new Error(`Document with id ${id} not found`);
+                }
+                result = await callback(document);
 
-            const { operations, header, newState } = result;
-            return this._addDocumentOperations(
-                tx,
-                drive,
-                id,
-                operations,
-                header,
-            );
-        }, { isolationLevel: "Serializable" });
-
+                const { operations, header, newState } = result;
+                return this._addDocumentOperations(
+                    tx,
+                    drive,
+                    id,
+                    operations,
+                    header
+                );
+            },
+            { isolationLevel: 'Serializable' }
+        );
 
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!result) {
@@ -267,14 +284,14 @@ export class PrismaStorage implements IDriveStorage {
         drive: string,
         id: string,
         operations: Operation[],
-        header: DocumentHeader,
+        header: DocumentHeader
     ): Promise<void> {
         return this._addDocumentOperations(
             this.db,
             drive,
             id,
             operations,
-            header,
+            header
         );
     }
 
@@ -298,7 +315,7 @@ export class PrismaStorage implements IDriveStorage {
             where: {
                 id: id,
                 driveId: driveId
-            },
+            }
         });
         return count > 0;
     }
@@ -347,7 +364,10 @@ export class PrismaStorage implements IDriveStorage {
             clipboard: dbDoc.operations
                 .filter(op => op.clipboard)
                 .map(storageToOperation),
-            revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
+            revision: JSON.parse(dbDoc.revision) as Record<
+                OperationScope,
+                number
+            >,
             attachments: {}
         };
 

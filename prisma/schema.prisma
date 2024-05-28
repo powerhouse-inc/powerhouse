@@ -32,6 +32,7 @@ model Document {
 
 model Operation {
   id          String       @id @default(uuid())
+  opId        String?
   driveId     String
   Document    Document?    @relation(fields: [driveId, documentId], references: [driveId, id], onDelete: Cascade)
   documentId  String
