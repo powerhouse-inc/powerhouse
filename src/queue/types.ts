@@ -23,7 +23,6 @@ export interface IServerDelegate {
 
 export interface IQueueManager {
     addJob(job: OperationJob): Promise<JobId>;
-    getResult(driveId: string, documentId: string, jobId: JobId): Promise<IOperationResult | undefined>;
     getQueue(driveId: string, document?: string): IQueue<OperationJob, IOperationResult>;
     removeQueue(driveId: string, documentId?: string): void;
     getQueueByIndex(index: number): IQueue<OperationJob, IOperationResult> | null;
@@ -47,8 +46,6 @@ export interface IQueue<T, R> {
     isBlocked(): Promise<boolean>;
     isDeleted(): Promise<boolean>;
     setDeleted(deleted: boolean): Promise<void>;
-    setResult(jobId: JobId, result: R): Promise<void>;
-    getResult(jobId: JobId): Promise<R | undefined>;
     getJobs(): Promise<IJob<T>[]>;
     addDependencies(job: IJob<OperationJob>): Promise<void>;
     removeDependencies(job: IJob<OperationJob>): Promise<void>;

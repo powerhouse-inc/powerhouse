@@ -13,17 +13,6 @@ export class RedisQueue<T, R> implements IQueue<T, R> {
 
     }
 
-    async setResult(jobId: string, result: any): Promise<void> {
-        await this.client.hSet(this.id + "-results", jobId, JSON.stringify(result));
-    }
-    async getResult(jobId: string): Promise<any> {
-        const results = await this.client.hGet(this.id + "-results", jobId);
-        if (!results) {
-            return null;
-        }
-        return JSON.parse(results);
-    }
-
     async addJob(data: any) {
         await this.client.lPush(this.id + "-jobs", JSON.stringify(data));
     }

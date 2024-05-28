@@ -10,7 +10,6 @@ export class MemoryQueue<T, R> implements IQueue<T, R> {
     private blocked = false;
     private deleted = false;
     private items: IJob<T>[] = [];
-    private results = new Map<JobId, R>();
     private dependencies = new Array<IJob<OperationJob>>();
 
     constructor(id: string) {
@@ -23,15 +22,6 @@ export class MemoryQueue<T, R> implements IQueue<T, R> {
 
     async isDeleted() {
         return this.deleted;
-    }
-
-    async setResult(jobId: string, result: R): Promise<void> {
-        this.results.set(jobId, result);
-        return Promise.resolve();
-    }
-
-    async getResult(jobId: string): Promise<R | undefined> {
-        return Promise.resolve(this.results.get(jobId));
     }
 
     async addJob(data: IJob<T>) {
@@ -157,11 +147,6 @@ export class BaseQueueManager implements IQueueManager {
         return jobId;
     }
 
-    async getResult(driveId: string, documentId: string, jobId: JobId): Promise<IOperationResult | undefined> {
-        const queue = this.getQueue(driveId, documentId);
-        return queue.getResult(jobId);
-    }
-
     getQueue(driveId: string, documentId?: string) {
         const queueId = this.getQueueId(driveId, documentId);
         let queue = this.queues.find((q) => q.getId() === queueId);
@@ -237,7 +222,6 @@ export class BaseQueueManager implements IQueueManager {
 
         try {
             const result = await this.delegate.processOperationJob(nextJob);
-            await queue.setResult(nextJob.jobId, result);
 
             // unblock the document queues of each add_file operation
             const addFileOperations = nextJob.operations.filter((op) => op.type === "ADD_FILE");
