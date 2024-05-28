@@ -34,6 +34,7 @@ export type ItemDetailsProps<
 };
 
 export type AssetFormInputs = {
+    id?: string;
     fixedIncomeTypeId?: string | null;
     spvId?: string | null;
     maturity?: string;
@@ -44,17 +45,20 @@ export type AssetFormInputs = {
 };
 
 export type ServiceProviderFeeTypeFormInputs = {
+    id?: string;
     name?: string | null;
     feeType?: string | null;
     accountId?: string | null;
 };
 
 export type TransactionFeeInput = {
+    id?: string;
     amount?: number | null;
     serviceProviderFeeTypeId?: string | null;
 };
 
 export type GroupTransactionFormInputs = {
+    id?: string;
     type?: GroupTransactionType;
     entryTime?: string;
     fixedIncomeId?: string | null;
@@ -66,15 +70,18 @@ export type GroupTransactionFormInputs = {
 };
 
 export type AccountFormInputs = {
+    id?: string;
     label?: string | null;
     reference?: string | null;
 };
 
 export type SPVFormInputs = {
+    id?: string;
     name?: string | null;
 };
 
 export type FixedIncomeTypeFormInputs = {
+    id?: string;
     name?: string | null;
 };
 
