@@ -1,11 +1,10 @@
 import {
-    Account,
     AccountsTable,
     AccountsTableProps,
 } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import {
     actions,
     getDifferences,
@@ -13,10 +12,6 @@ import {
 import { IProps } from '../editor';
 
 export function Accounts(props: IProps) {
-    const [expandedRowId, setExpandedRowId] = useState<string>();
-    const [selectedItem, setSelectedItem] = useState<Account>();
-    const [showNewItemForm, setShowNewItemForm] = useState(false);
-
     const {
         dispatch,
         document,
@@ -25,17 +20,9 @@ export function Accounts(props: IProps) {
     } = props;
     const state = document.state.global;
 
-    const toggleExpandedRow = useCallback(
-        (id: string | undefined) => {
-            setExpandedRowId(curr =>
-                curr && curr === expandedRowId ? undefined : id,
-            );
-        },
-        [expandedRowId],
-    );
-
     const onSubmitEdit: AccountsTableProps['onSubmitEdit'] = useCallback(
         data => {
+            const selectedItem = state.accounts.find(a => a.id === data.id);
             if (!selectedItem) return;
 
             const update = copy(selectedItem);
@@ -48,7 +35,6 @@ export function Accounts(props: IProps) {
             const changedFields = getDifferences(selectedItem, update);
 
             if (Object.values(changedFields).filter(Boolean).length === 0) {
-                setSelectedItem(undefined);
                 return;
             }
 
@@ -58,9 +44,8 @@ export function Accounts(props: IProps) {
                     id: selectedItem.id,
                 }),
             );
-            setSelectedItem(undefined);
         },
-        [dispatch, selectedItem],
+        [dispatch, state.accounts],
     );
 
     const onSubmitCreate: AccountsTableProps['onSubmitCreate'] = useCallback(
@@ -77,7 +62,6 @@ export function Accounts(props: IProps) {
                     label,
                 }),
             );
-            setShowNewItemForm(false);
         },
         [dispatch],
     );
@@ -92,14 +76,8 @@ export function Accounts(props: IProps) {
     return (
         <AccountsTable
             state={state}
-            selectedItem={selectedItem}
-            showNewItemForm={showNewItemForm}
-            expandedRowId={expandedRowId}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            toggleExpandedRow={toggleExpandedRow}
-            setSelectedItem={setSelectedItem}
-            setShowNewItemForm={setShowNewItemForm}
             onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
             onSubmitDelete={onSubmitDelete}

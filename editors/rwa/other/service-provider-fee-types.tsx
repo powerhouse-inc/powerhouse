@@ -1,11 +1,10 @@
 import {
-    ServiceProviderFeeType,
     ServiceProviderFeeTypesTable,
     ServiceProviderFeeTypesTableProps,
 } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import {
     actions,
     getDifferences,
@@ -13,10 +12,6 @@ import {
 import { IProps } from '../editor';
 
 export function ServiceProviderFeeTypes(props: IProps) {
-    const [expandedRowId, setExpandedRowId] = useState<string>();
-    const [selectedItem, setSelectedItem] = useState<ServiceProviderFeeType>();
-    const [showNewItemForm, setShowNewItemForm] = useState(false);
-
     const {
         dispatch,
         document,
@@ -26,18 +21,12 @@ export function ServiceProviderFeeTypes(props: IProps) {
 
     const state = document.state.global;
 
-    const toggleExpandedRow = useCallback(
-        (id: string | undefined) => {
-            setExpandedRowId(curr =>
-                curr && curr === expandedRowId ? undefined : id,
-            );
-        },
-        [expandedRowId],
-    );
-
     const onSubmitEdit: ServiceProviderFeeTypesTableProps['onSubmitEdit'] =
         useCallback(
             data => {
+                const selectedItem = state.serviceProviderFeeTypes.find(
+                    s => s.id === data.id,
+                );
                 if (!selectedItem) return;
 
                 const update = copy(selectedItem);
@@ -52,7 +41,6 @@ export function ServiceProviderFeeTypes(props: IProps) {
                 const changedFields = getDifferences(selectedItem, update);
 
                 if (Object.values(changedFields).filter(Boolean).length === 0) {
-                    setSelectedItem(undefined);
                     return;
                 }
 
@@ -62,9 +50,8 @@ export function ServiceProviderFeeTypes(props: IProps) {
                         id: selectedItem.id,
                     }),
                 );
-                setSelectedItem(undefined);
             },
-            [dispatch, selectedItem],
+            [dispatch, state.serviceProviderFeeTypes],
         );
 
     const onSubmitCreate: ServiceProviderFeeTypesTableProps['onSubmitCreate'] =
@@ -87,7 +74,6 @@ export function ServiceProviderFeeTypes(props: IProps) {
                         feeType,
                     }),
                 );
-                setShowNewItemForm(false);
             },
             [dispatch],
         );
@@ -115,7 +101,6 @@ export function ServiceProviderFeeTypes(props: IProps) {
                         label,
                     }),
                 );
-                setShowNewItemForm(false);
             },
             [dispatch],
         );
@@ -123,14 +108,8 @@ export function ServiceProviderFeeTypes(props: IProps) {
     return (
         <ServiceProviderFeeTypesTable
             state={state}
-            selectedItem={selectedItem}
-            showNewItemForm={showNewItemForm}
-            expandedRowId={expandedRowId}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            toggleExpandedRow={toggleExpandedRow}
-            setSelectedItem={setSelectedItem}
-            setShowNewItemForm={setShowNewItemForm}
             onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
             onSubmitDelete={onSubmitDelete}

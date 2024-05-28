@@ -4,13 +4,12 @@ import {
     GroupTransactionFormInputs,
     GroupTransactionsTable,
     GroupTransactionsTableProps,
-    GroupTransaction as UiGroupTransaction,
     assetGroupTransactions,
 } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import diff from 'microdiff';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import {
     BaseTransaction,
     BaseTransactionInput,
@@ -51,10 +50,6 @@ export const Transactions = (props: IProps) => {
 
     const principalLenderAccountId =
         document.state.global.principalLenderAccountId;
-
-    const [expandedRowId, setExpandedRowId] = useState<string>();
-    const [selectedItem, setSelectedItem] = useState<UiGroupTransaction>();
-    const [showNewItemForm, setShowNewItemForm] = useState(false);
 
     const createNewGroupTransactionFromFormInputs = useCallback(
         (data: GroupTransactionFormInputs) => {
@@ -143,15 +138,6 @@ export const Transactions = (props: IProps) => {
             return groupTransaction;
         },
         [principalLenderAccountId, cashAsset.id],
-    );
-
-    const toggleExpandedRow = useCallback(
-        (id: string | undefined) => {
-            setExpandedRowId(curr =>
-                curr && curr === expandedRowId ? undefined : id,
-            );
-        },
-        [expandedRowId],
     );
 
     const handleFeeUpdates = useCallback(
@@ -257,6 +243,9 @@ export const Transactions = (props: IProps) => {
     const onSubmitEdit: GroupTransactionsTableProps['onSubmitEdit'] =
         useCallback(
             data => {
+                const selectedItem = state.transactions.find(
+                    t => t.id === data.id,
+                );
                 if (!selectedItem) return;
                 const newEntryTime = data.entryTime
                     ? new Date(data.entryTime).toISOString()
@@ -356,7 +345,7 @@ export const Transactions = (props: IProps) => {
                 }
 
                 if (data.fees) {
-                    handleFeeUpdates(data.fees, update as GroupTransaction);
+                    handleFeeUpdates(data.fees, update);
                 }
 
                 if (Object.keys(changedFields).length !== 0) {
@@ -367,10 +356,8 @@ export const Transactions = (props: IProps) => {
                         } as BaseTransactionInput),
                     );
                 }
-
-                setSelectedItem(undefined);
             },
-            [dispatch, selectedItem, handleFeeUpdates],
+            [dispatch, handleFeeUpdates, state.transactions],
         );
 
     const onSubmitCreate: GroupTransactionsTableProps['onSubmitCreate'] =
@@ -380,7 +367,6 @@ export const Transactions = (props: IProps) => {
                     createNewGroupTransactionFromFormInputs(data);
 
                 dispatch(createGroupTransaction(transaction));
-                setShowNewItemForm(false);
             },
             [createNewGroupTransactionFromFormInputs, dispatch],
         );
@@ -448,7 +434,6 @@ export const Transactions = (props: IProps) => {
                         feeType,
                     }),
                 );
-                setShowNewItemForm(false);
             },
             [dispatch],
         );
@@ -461,16 +446,10 @@ export const Transactions = (props: IProps) => {
             </p>
             <GroupTransactionsTable
                 state={state}
-                expandedRowId={expandedRowId}
-                toggleExpandedRow={toggleExpandedRow}
-                selectedItem={selectedItem}
                 isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                 isAllowedToEditDocuments={isAllowedToEditDocuments}
-                setSelectedItem={setSelectedItem}
                 onSubmitEdit={onSubmitEdit}
                 onSubmitCreate={onSubmitCreate}
-                showNewItemForm={showNewItemForm}
-                setShowNewItemForm={setShowNewItemForm}
                 onSubmitDelete={onSubmitDelete}
                 onSubmitCreateAsset={onSubmitCreateAsset}
                 onSubmitCreateServiceProviderFeeType={

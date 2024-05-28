@@ -1,22 +1,15 @@
-import {
-    AssetsTable,
-    AssetsTableProps,
-    FixedIncome as UiFixedIncome,
-} from '@powerhousedao/design-system';
+import { AssetsTable, AssetsTableProps } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import {
+    FixedIncome,
     actions,
     getDifferences,
 } from '../../document-models/real-world-assets';
 import { IProps } from './editor';
 
 export const Portfolio = (props: IProps) => {
-    const [expandedRowId, setExpandedRowId] = useState<string>();
-    const [selectedItem, setSelectedItem] = useState<UiFixedIncome>();
-    const [showNewItemForm, setShowNewItemForm] = useState(false);
-
     const {
         dispatch,
         document,
@@ -26,17 +19,11 @@ export const Portfolio = (props: IProps) => {
 
     const state = document.state.global;
 
-    const toggleExpandedRow = useCallback(
-        (id: string | undefined) => {
-            setExpandedRowId(curr =>
-                curr && curr === expandedRowId ? undefined : id,
-            );
-        },
-        [expandedRowId],
-    );
-
     const onSubmitEdit: AssetsTableProps['onSubmitEdit'] = useCallback(
         data => {
+            const selectedItem = state.portfolio.find(f => f.id === data.id) as
+                | FixedIncome
+                | undefined;
             if (!selectedItem) return;
             const update = copy(selectedItem);
             const newName = data.name;
@@ -60,7 +47,6 @@ export const Portfolio = (props: IProps) => {
             const changedFields = getDifferences(selectedItem, update);
 
             if (Object.values(changedFields).filter(Boolean).length === 0) {
-                setSelectedItem(undefined);
                 return;
             }
 
@@ -70,9 +56,8 @@ export const Portfolio = (props: IProps) => {
                     id: selectedItem.id,
                 }),
             );
-            setSelectedItem(undefined);
         },
-        [dispatch, selectedItem],
+        [dispatch, state.portfolio],
     );
 
     const onSubmitCreate: AssetsTableProps['onSubmitCreate'] = useCallback(
@@ -106,7 +91,6 @@ export const Portfolio = (props: IProps) => {
                     coupon,
                 }),
             );
-            setShowNewItemForm(false);
         },
         [dispatch],
     );
@@ -127,7 +111,6 @@ export const Portfolio = (props: IProps) => {
                 if (!name) throw new Error('Name is required');
 
                 dispatch(actions.createFixedIncomeType({ id, name }));
-                setShowNewItemForm(false);
             },
             [dispatch],
         );
@@ -146,7 +129,6 @@ export const Portfolio = (props: IProps) => {
                         name,
                     }),
                 );
-                setShowNewItemForm(false);
             },
             [dispatch],
         );
@@ -160,14 +142,8 @@ export const Portfolio = (props: IProps) => {
             </p>
             <AssetsTable
                 state={state}
-                expandedRowId={expandedRowId}
-                selectedItem={selectedItem}
-                showNewItemForm={showNewItemForm}
                 isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                 isAllowedToEditDocuments={isAllowedToEditDocuments}
-                toggleExpandedRow={toggleExpandedRow}
-                setSelectedItem={setSelectedItem}
-                setShowNewItemForm={setShowNewItemForm}
                 onSubmitEdit={onSubmitEdit}
                 onSubmitCreate={onSubmitCreate}
                 onSubmitDelete={onSubmitDelete}

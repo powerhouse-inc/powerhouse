@@ -1,11 +1,10 @@
 import {
-    FixedIncomeType,
     FixedIncomeTypesTable,
     FixedIncomeTypesTableProps,
 } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import {
     actions,
     getDifferences,
@@ -13,10 +12,6 @@ import {
 import { IProps } from '../editor';
 
 export function FixedIncomeTypes(props: IProps) {
-    const [expandedRowId, setExpandedRowId] = useState<string>();
-    const [selectedItem, setSelectedItem] = useState<FixedIncomeType>();
-    const [showNewItemForm, setShowNewItemForm] = useState(false);
-
     const {
         dispatch,
         document,
@@ -26,18 +21,12 @@ export function FixedIncomeTypes(props: IProps) {
 
     const state = document.state.global;
 
-    const toggleExpandedRow = useCallback(
-        (id: string | undefined) => {
-            setExpandedRowId(curr =>
-                curr && curr === expandedRowId ? undefined : id,
-            );
-        },
-        [expandedRowId],
-    );
-
     const onSubmitEdit: FixedIncomeTypesTableProps['onSubmitEdit'] =
         useCallback(
             data => {
+                const selectedItem = state.fixedIncomeTypes.find(
+                    f => f.id === data.id,
+                );
                 if (!selectedItem) return;
 
                 const update = copy(selectedItem);
@@ -48,7 +37,6 @@ export function FixedIncomeTypes(props: IProps) {
                 const changedFields = getDifferences(selectedItem, update);
 
                 if (Object.values(changedFields).filter(Boolean).length === 0) {
-                    setSelectedItem(undefined);
                     return;
                 }
 
@@ -58,9 +46,8 @@ export function FixedIncomeTypes(props: IProps) {
                         id: selectedItem.id,
                     }),
                 );
-                setSelectedItem(undefined);
             },
-            [dispatch, selectedItem],
+            [dispatch, state.fixedIncomeTypes],
         );
 
     const onSubmitCreate: FixedIncomeTypesTableProps['onSubmitCreate'] =
@@ -72,7 +59,6 @@ export function FixedIncomeTypes(props: IProps) {
                 if (!name) throw new Error('Name is required');
 
                 dispatch(actions.createFixedIncomeType({ id, name }));
-                setShowNewItemForm(false);
             },
             [dispatch],
         );
@@ -88,14 +74,8 @@ export function FixedIncomeTypes(props: IProps) {
     return (
         <FixedIncomeTypesTable
             state={state}
-            selectedItem={selectedItem}
-            showNewItemForm={showNewItemForm}
-            expandedRowId={expandedRowId}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            toggleExpandedRow={toggleExpandedRow}
-            setSelectedItem={setSelectedItem}
-            setShowNewItemForm={setShowNewItemForm}
             onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
             onSubmitDelete={onSubmitDelete}
