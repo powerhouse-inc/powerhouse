@@ -1,3 +1,10 @@
+# [1.0.0-alpha.58](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.57...v1.0.0-alpha.58) (2024-05-28)
+
+
+### Features
+
+* don't save queue job result ([efbf239](https://github.com/powerhouse-inc/document-drive/commit/efbf239e5f77592267446d5c11d670a82f1f6e58))
+
 # [1.0.0-alpha.57](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.56...v1.0.0-alpha.57) (2024-05-22)
 
 
