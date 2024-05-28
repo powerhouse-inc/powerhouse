@@ -1,6 +1,7 @@
 import {
     FormattedNumber,
     GroupTransactionType,
+    Item,
     ItemData,
     TableItem,
     TransactionFeeInput,
@@ -8,6 +9,7 @@ import {
     formatDateForDisplay,
 } from '@/rwa';
 import { InputMaybe } from 'document-model/document';
+import { ReactNode } from 'react';
 
 export function isISODate(str: string) {
     if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(str)) return false;
@@ -33,18 +35,28 @@ export function handleTableDatum(datum: ItemData) {
     return handleDateInTable(datum);
 }
 
-export function getItemById<TItem extends TableItem = TableItem>(
+export function getItemById(
     id: string | null | undefined,
-    items: TItem[] | null | undefined,
+    items: TableItem<Item>[] | null | undefined,
 ) {
     return items?.find(item => item.id === id);
 }
 
-export function addItemNumber<TItem extends TableItem>(items: TItem[]) {
+export function makeTableData<
+    TItem extends Item,
+    TTableData extends TableItem<TItem>,
+>(
+    items: TItem[],
+    customTransform?: (
+        itemData: ItemData,
+        columnKey: string,
+    ) => ReactNode | undefined,
+) {
     return items.map((item, index) => ({
         ...item,
         itemNumber: index + 1,
-    }));
+        customTransform,
+    })) as TTableData[];
 }
 
 export function calculateUnitPrice(

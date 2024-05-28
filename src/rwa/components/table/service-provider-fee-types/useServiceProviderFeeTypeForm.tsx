@@ -1,44 +1,57 @@
-import { Account } from '@/rwa/types';
-import { useCallback, useMemo, useState } from 'react';
-import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
-import { RWATableSelect, RWATableTextInput } from '../../inputs';
 import {
-    RealWorldAssetsState,
+    Account,
+    FormHookProps,
+    RWATableSelect,
+    RWATableTextInput,
+    ServiceProviderFeeType,
     ServiceProviderFeeTypeFormInputs,
-} from '../types';
+} from '@/rwa';
+import { useCallback, useMemo, useState } from 'react';
+import { useSubmit } from '../hooks/useSubmit';
 
-type Props = {
-    defaultValues: ServiceProviderFeeTypeFormInputs;
-    state: RealWorldAssetsState;
-    operation: 'create' | 'view' | 'edit';
-    onSubmitForm: (data: FieldValues) => void;
-};
-
-export function useServiceProviderFeeTypeForm(props: Props) {
+export function useServiceProviderFeeTypeForm(
+    props: FormHookProps<
+        ServiceProviderFeeType,
+        ServiceProviderFeeTypeFormInputs
+    >,
+) {
     const [showCreateAccountModal, setShowCreateAccountModal] = useState(false);
 
-    const { state, defaultValues, onSubmitForm, operation } = props;
+    const {
+        item,
+        state,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
+        operation,
+    } = props;
 
     const { accounts } = state;
 
-    const {
-        handleSubmit,
-        reset,
-        register,
-        control,
-        formState: { errors },
-    } = useForm<ServiceProviderFeeTypeFormInputs>({
-        mode: 'onBlur',
-        defaultValues,
+    const createDefaultValues = {
+        name: null,
+        feeType: null,
+        accountId: accounts[0]?.id ?? null,
+    };
+
+    const editDefaultValues = item
+        ? {
+              name: item.name,
+              feeType: item.feeType,
+              accountId: item.accountId,
+          }
+        : createDefaultValues;
+
+    const { submit, reset, register, control, formState } = useSubmit({
+        operation,
+        createDefaultValues,
+        editDefaultValues,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
     });
 
-    const onSubmit: SubmitHandler<ServiceProviderFeeTypeFormInputs> =
-        useCallback(
-            data => {
-                onSubmitForm(data);
-            },
-            [onSubmitForm],
-        );
+    const { errors } = formState;
 
     function makeAccountLabel(account: Account) {
         return `${account.label} (${account.reference})`;
@@ -112,8 +125,6 @@ export function useServiceProviderFeeTypeForm(props: Props) {
             register,
         ],
     );
-
-    const submit = handleSubmit(onSubmit);
 
     return useMemo(() => {
         return {

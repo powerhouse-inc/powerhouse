@@ -1,33 +1,31 @@
+import { FormHookProps, RWATableTextInput, SPV, SPVFormInputs } from '@/rwa';
 import { useMemo } from 'react';
-import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
-import { RWATableTextInput } from '../../inputs';
-import { RealWorldAssetsState, SPVFormInputs } from '../types';
+import { useSubmit } from '../hooks/useSubmit';
 
-type Props = {
-    defaultValues: SPVFormInputs;
-    state: RealWorldAssetsState;
-    operation: 'create' | 'view' | 'edit';
-    onSubmitForm: (data: FieldValues) => void;
-};
+export function useSpvForm(props: FormHookProps<SPV, SPVFormInputs>) {
+    const { item, onSubmitCreate, onSubmitEdit, onSubmitDelete, operation } =
+        props;
 
-export function useSpvForm(props: Props) {
-    const { defaultValues, onSubmitForm, operation } = props;
-
-    const onSubmit: SubmitHandler<SPVFormInputs> = data => {
-        onSubmitForm(data);
+    const createDefaultValues = {
+        name: null,
     };
 
-    const {
-        register,
-        handleSubmit,
-        reset,
-        control,
-        formState: { errors },
-    } = useForm<SPVFormInputs>({
-        defaultValues,
+    const editDefaultValues = item
+        ? {
+              name: item.name,
+          }
+        : createDefaultValues;
+
+    const { submit, reset, register, control, formState } = useSubmit({
+        operation,
+        createDefaultValues,
+        editDefaultValues,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
     });
 
-    const submit = handleSubmit(onSubmit);
+    const { errors } = formState;
 
     const inputs = useMemo(
         () => [
@@ -56,10 +54,9 @@ export function useSpvForm(props: Props) {
             submit,
             reset,
             register,
-            onSubmitForm,
             control,
             inputs,
-            formState: { errors },
+            formState,
         };
-    }, [submit, reset, register, onSubmitForm, control, inputs, errors]);
+    }, [submit, reset, register, control, inputs, formState]);
 }

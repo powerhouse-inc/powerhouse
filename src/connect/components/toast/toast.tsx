@@ -1,5 +1,5 @@
 import {
-    ToastContainer as RToastConatiner,
+    ToastContainer as RToastContainer,
     ToastContainerProps,
     ToastContent,
     ToastOptions,
@@ -102,5 +102,5 @@ const CloseButton: ToastContainerProps['closeButton'] = ({ closeToast }) => (
 );
 
 export const ToastContainer: React.FC<ToastContainerProps> = props => (
-    <RToastConatiner closeButton={CloseButton} {...props} />
+    <RToastContainer closeButton={CloseButton} {...props} />
 );

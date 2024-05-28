@@ -1,33 +1,40 @@
+import {
+    Account,
+    AccountFormInputs,
+    FormHookProps,
+    RWATableTextInput,
+} from '@/rwa';
 import { useMemo } from 'react';
-import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
-import { RWATableTextInput } from '../../inputs';
-import { AccountFormInputs, RealWorldAssetsState } from '../types';
+import { useSubmit } from '../hooks/useSubmit';
 
-type Props = {
-    defaultValues: AccountFormInputs;
-    state: RealWorldAssetsState;
-    operation: 'create' | 'view' | 'edit';
-    onSubmitForm: (data: FieldValues) => void;
-};
+export function useAccountForm(
+    props: FormHookProps<Account, AccountFormInputs>,
+) {
+    const { item, onSubmitCreate, onSubmitEdit, onSubmitDelete, operation } =
+        props;
 
-export function useAccountForm(props: Props) {
-    const { defaultValues, onSubmitForm, operation } = props;
-
-    const onSubmit: SubmitHandler<AccountFormInputs> = data => {
-        onSubmitForm(data);
+    const createDefaultValues = {
+        label: null,
+        reference: null,
     };
 
-    const {
-        register,
-        handleSubmit,
-        reset,
-        control,
-        formState: { errors },
-    } = useForm<AccountFormInputs>({
-        defaultValues,
+    const editDefaultValues = item
+        ? {
+              label: item.label,
+              reference: item.reference,
+          }
+        : createDefaultValues;
+
+    const { submit, reset, register, control, formState } = useSubmit({
+        operation,
+        createDefaultValues,
+        editDefaultValues,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
     });
 
-    const submit = handleSubmit(onSubmit);
+    const { errors } = formState;
 
     const inputs = useMemo(
         () => [
@@ -81,10 +88,9 @@ export function useAccountForm(props: Props) {
             submit,
             reset,
             register,
-            onSubmitForm,
             control,
             inputs,
             formState: { errors },
         };
-    }, [submit, reset, register, onSubmitForm, control, inputs, errors]);
+    }, [submit, reset, register, control, inputs, errors]);
 }

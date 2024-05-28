@@ -1,4 +1,4 @@
-import { RealWorldAssetsState } from '../components';
+import { RealWorldAssetsState } from '../types';
 import {
     mockAccounts,
     mockCashAsset,

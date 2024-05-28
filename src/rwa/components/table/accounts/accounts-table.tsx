@@ -2,26 +2,28 @@ import { Icon } from '@/powerhouse';
 import {
     Account,
     AccountDetails,
-    AccountsTableProps,
+    AccountFormInputs,
     ItemData,
     Table,
-    addItemNumber,
-    getItemById,
+    TableItem,
+    TableWrapperProps,
+    makeTableData,
+    useDocumentOperationState,
 } from '@/rwa';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 const columns = [
     { key: 'label' as const, label: 'Label', allowSorting: true },
     { key: 'reference' as const, label: 'Reference', allowSorting: true },
 ];
 
-function makeAccountsTableData(
+function makeAccountsTableItems(
     accounts: Account[],
     principalLenderAccountId: string,
 ) {
-    const withItemNumber = addItemNumber(accounts);
+    const tableItems = makeTableData(accounts);
 
-    const withCustomTransform = withItemNumber.map(account => {
+    const withCustomTransform = tableItems.map(account => {
         const customTransform = (itemData: ItemData, columnKey: string) => {
             if (
                 account.id === principalLenderAccountId &&
@@ -45,50 +47,45 @@ function makeAccountsTableData(
     return withCustomTransform;
 }
 
+export type AccountsTableProps = TableWrapperProps<AccountFormInputs>;
+
 export function AccountsTable(props: AccountsTableProps) {
-    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { state } = props;
     const { accounts, principalLenderAccountId } = state;
     const itemName = 'Account';
     const tableData = useMemo(
-        () => makeAccountsTableData(accounts, principalLenderAccountId),
+        () => makeAccountsTableItems(accounts, principalLenderAccountId),
         [accounts, principalLenderAccountId],
     );
-
-    const editForm = ({
-        itemId,
-        itemNumber,
-    }: {
-        itemId: string;
-        itemNumber: number;
-    }) => (
-        <AccountDetails
-            {...props}
-            itemName={itemName}
-            item={getItemById(itemId, accounts)}
-            itemNumber={itemNumber}
-            operation={selectedItem?.id === itemId ? 'edit' : 'view'}
-            onSubmitForm={onSubmitEdit}
-        />
-    );
-
-    const createForm = () => (
-        <AccountDetails
-            {...props}
-            itemName={itemName}
-            itemNumber={accounts.length + 1}
-            operation="create"
-            onSubmitForm={onSubmitCreate}
-        />
-    );
+    const [selectedTableItem, setSelectedTableItem] =
+        useState<TableItem<Account>>();
+    const { operation, setOperation, showForm, existingState } =
+        useDocumentOperationState({ state });
 
     return (
-        <Table
-            {...props}
-            itemName={itemName}
-            tableData={tableData}
-            columns={columns}
-            editForm={editForm}
-            createForm={createForm}
-        />
+        <>
+            <Table
+                {...props}
+                itemName={itemName}
+                tableData={tableData}
+                columns={columns}
+                selectedTableItem={selectedTableItem}
+                setSelectedTableItem={setSelectedTableItem}
+                setOperation={setOperation}
+            />
+            {showForm && (
+                <div className="mt-4 rounded-md bg-white">
+                    <AccountDetails
+                        {...props}
+                        itemName={itemName}
+                        state={existingState}
+                        tableItem={selectedTableItem}
+                        operation={operation}
+                        setSelectedTableItem={setSelectedTableItem}
+                        setOperation={setOperation}
+                    />
+                </div>
+            )}
+        </>
     );
 }

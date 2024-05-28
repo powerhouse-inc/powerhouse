@@ -1,5 +1,5 @@
 import { Icon, fixedForwardRef, mergeClassNameProps } from '@/powerhouse';
-import { SortDirection, TableBaseProps, TableColumn, TableItem } from '@/rwa';
+import { Item, SortDirection, TableBaseProps, TableItem } from '@/rwa';
 import { Order } from 'natural-orderby';
 import React, { useState } from 'react';
 import { twMerge } from 'tailwind-merge';
@@ -19,8 +19,12 @@ import { twMerge } from 'tailwind-merge';
  * @param specialFirstRow - Function to render a special first row (like the cash asset for instance), must return a React element
  */
 export const TableBase = fixedForwardRef(function TableBase<
-    TItem extends TableItem,
->(props: TableBaseProps<TItem>, ref: React.ForwardedRef<HTMLDivElement>) {
+    TItem extends Item,
+    TTableData extends TableItem<TItem>,
+>(
+    props: TableBaseProps<TItem, TTableData>,
+    ref: React.ForwardedRef<HTMLDivElement>,
+) {
     const {
         children,
         tableData,
@@ -28,8 +32,9 @@ export const TableBase = fixedForwardRef(function TableBase<
         footer,
         renderRow,
         onClickSort,
-        hasExpandedRow,
         specialFirstRow,
+        maxHeight,
+        tableRef,
         ...containerProps
     } = props;
 
@@ -38,13 +43,6 @@ export const TableBase = fixedForwardRef(function TableBase<
     );
     const [sortKey, setSortKey] = useState<string | null>(null);
 
-    const rowHeight = 34;
-    const headerHeight = 42;
-    const bottomPadding = 8;
-    const heightOf20Rows = rowHeight * 20;
-    const maxHeight = hasExpandedRow
-        ? 'max-content'
-        : `${headerHeight + heightOf20Rows + bottomPadding}px`;
     return (
         <>
             <div
@@ -55,7 +53,7 @@ export const TableBase = fixedForwardRef(function TableBase<
                 ref={ref}
                 style={{ maxHeight }}
             >
-                <table className="w-full">
+                <table className="w-full" ref={tableRef}>
                     <thead className="sticky top-0 isolate select-none text-nowrap border-b border-gray-300 bg-gray-100">
                         <tr>
                             {columns.map(column => (
@@ -111,7 +109,7 @@ export const TableBase = fixedForwardRef(function TableBase<
                     </thead>
                     <tbody>
                         {children}
-                        {specialFirstRow?.(columns as TableColumn<TableItem>[])}
+                        {specialFirstRow?.(columns)}
                         {tableData?.map((item, index) =>
                             renderRow(item, columns, index),
                         )}

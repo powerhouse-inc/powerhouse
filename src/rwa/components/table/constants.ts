@@ -2,11 +2,11 @@ import {
     ASSET_PURCHASE,
     ASSET_SALE,
     FEES_PAYMENT,
+    GroupTransactionType,
     INTEREST_PAYMENT,
     PRINCIPAL_DRAW,
     PRINCIPAL_RETURN,
-} from '@/rwa/constants';
-import { GroupTransactionType } from '@/rwa/types';
+} from '@/rwa';
 
 export const defaultColumnCountByTableWidth = {
     1520: 9,

@@ -1,41 +1,36 @@
 import {
-    AssetDetailsProps,
+    AssetFormInputs,
+    FixedIncome,
+    FixedIncomeTypeFormInputs,
+    FormInputs,
     ItemDetails,
-    convertToDateTimeLocalFormat,
+    ItemDetailsProps,
+    RWACreateItemModal,
+    SPVFormInputs,
+    useAssetForm,
+    useFixedIncomeTypeForm,
+    useSpvForm,
 } from '@/rwa';
-import { FormInputs } from '../../inputs/form-inputs';
-import { CreateFixedIncomeTypeModal } from '../../modal/create-fixed-income-type-modal';
-import { useFixedIncomeTypeForm } from '../fixed-income-types/useFixedIncomeTypeForm';
-import { useSpvForm } from '../spvs/useSpvForm';
-import { useAssetForm } from './useAssetForm';
+import { memo } from 'react';
 
-export function AssetDetails(props: AssetDetailsProps) {
+type AssetDetailsProps = ItemDetailsProps<FixedIncome, AssetFormInputs> & {
+    onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
+    onSubmitCreateSpv: (data: SPVFormInputs) => void;
+};
+
+export function _AssetDetails(props: AssetDetailsProps) {
     const {
         state,
-        onCancel,
-        onSubmitForm,
+        tableItem,
+        operation,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
         onSubmitCreateFixedIncomeType,
         onSubmitCreateSpv,
-        item,
-        operation,
     } = props;
 
-    const { fixedIncomeTypes, spvs, transactions } = state;
-
-    const fixedIncomeType = fixedIncomeTypes.find(
-        ({ id }) => id === item?.fixedIncomeTypeId,
-    );
-    const spv = spvs.find(({ id }) => id === item?.spvId);
-
-    const defaultValues = {
-        fixedIncomeTypeId: fixedIncomeType?.id ?? fixedIncomeTypes[0]?.id,
-        spvId: spv?.id ?? spvs[0]?.id,
-        name: item?.name,
-        maturity: convertToDateTimeLocalFormat(item?.maturity ?? new Date()),
-        ISIN: item?.ISIN,
-        CUSIP: item?.CUSIP,
-        coupon: item?.coupon,
-    };
+    const { transactions } = state;
 
     const {
         submit,
@@ -46,30 +41,29 @@ export function AssetDetails(props: AssetDetailsProps) {
         showCreateSpvModal,
         setShowCreateSpvModal,
     } = useAssetForm({
-        item,
-        defaultValues,
+        item: tableItem,
         state,
-        onSubmitForm,
         operation,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
     });
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
     const createFixedIncomeTypeModalProps = useFixedIncomeTypeForm({
-        defaultValues: {},
         state,
         operation: 'create',
-        onSubmitForm: data => {
+        onSubmitCreate: data => {
             onSubmitCreateFixedIncomeType(data);
             setShowCreateFixedIncomeTypeModal(false);
         },
     });
 
     const createSpvModalProps = useSpvForm({
-        defaultValues: {},
         state,
         operation: 'create',
-        onSubmitForm: data => {
+        onSubmitCreate: data => {
             onSubmitCreateSpv(data);
             setShowCreateSpvModal(false);
         },
@@ -80,7 +74,7 @@ export function AssetDetails(props: AssetDetailsProps) {
             ...t,
             txNumber: index + 1,
         }))
-        .filter(t => t.fixedIncomeTransaction?.assetId === item?.id);
+        .filter(t => t.fixedIncomeTransaction?.assetId === tableItem?.id);
 
     const dependentItemList = dependentTransactions.map(t => (
         <div key={t.id}>Transaction #{t.txNumber}</div>
@@ -91,33 +85,35 @@ export function AssetDetails(props: AssetDetailsProps) {
         dependentItemList,
     };
 
-    const formProps = {
-        formInputs,
-        dependentItemProps,
-        submit,
-        reset,
-        onCancel,
-    };
-
     return (
         <>
-            <ItemDetails {...props} {...formProps} />
+            <ItemDetails
+                {...props}
+                formInputs={formInputs}
+                dependentItemProps={dependentItemProps}
+                submit={submit}
+                reset={reset}
+            />
             {showCreateFixedIncomeTypeModal && (
-                <CreateFixedIncomeTypeModal
+                <RWACreateItemModal
                     {...createFixedIncomeTypeModalProps}
                     state={state}
                     onOpenChange={setShowCreateFixedIncomeTypeModal}
                     open={showCreateFixedIncomeTypeModal}
+                    itemName="Fixed Income Type"
                 />
             )}
             {showCreateSpvModal && (
-                <CreateFixedIncomeTypeModal
+                <RWACreateItemModal
                     {...createSpvModalProps}
                     state={state}
                     onOpenChange={setShowCreateSpvModal}
                     open={showCreateSpvModal}
+                    itemName="SPV"
                 />
             )}
         </>
     );
 }
+
+export const AssetDetails = memo(_AssetDetails);

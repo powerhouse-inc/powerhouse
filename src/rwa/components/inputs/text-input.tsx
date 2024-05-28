@@ -1,4 +1,4 @@
-import { ComponentPropsWithRef, ForwardedRef, forwardRef } from 'react';
+import { ComponentPropsWithRef, ForwardedRef, forwardRef, memo } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 type Props = Omit<ComponentPropsWithRef<'input'>, 'type'> & {
@@ -9,7 +9,7 @@ type Props = Omit<ComponentPropsWithRef<'input'>, 'type'> & {
     errorMessageClassName?: string;
 };
 
-export const RWATableTextInput = forwardRef(function RWATableTextInput(
+export const _RWATableTextInput = forwardRef(function RWATableTextInput(
     props: Props,
     ref: ForwardedRef<HTMLInputElement>,
 ) {
@@ -49,3 +49,5 @@ export const RWATableTextInput = forwardRef(function RWATableTextInput(
         </label>
     );
 });
+
+export const RWATableTextInput = memo(_RWATableTextInput);

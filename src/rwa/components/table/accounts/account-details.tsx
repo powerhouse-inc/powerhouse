@@ -1,23 +1,37 @@
-import { AccountDetailsProps, ItemDetails } from '@/rwa';
-import { FormInputs } from '../../inputs/form-inputs';
-import { useAccountForm } from './useAccountForm';
+import {
+    Account,
+    AccountFormInputs,
+    FormInputs,
+    ItemDetails,
+    ItemDetailsProps,
+    useAccountForm,
+} from '@/rwa';
+import { memo } from 'react';
 
-export function AccountDetails(props: AccountDetailsProps) {
-    const { onSubmitForm, item, operation, state } = props;
+export function _AccountDetails(
+    props: ItemDetailsProps<Account, AccountFormInputs>,
+) {
+    const {
+        state,
+        tableItem,
+        operation,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
+    } = props;
 
     const { serviceProviderFeeTypes, transactions, principalLenderAccountId } =
         state;
 
-    const isPrincipalLenderAccount = item?.id === principalLenderAccountId;
+    const isPrincipalLenderAccount = tableItem?.id === principalLenderAccountId;
 
     const { submit, reset, inputs } = useAccountForm({
-        defaultValues: {
-            label: item?.label,
-            reference: item?.reference,
-        },
+        item: tableItem,
         state,
-        onSubmitForm,
         operation,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
     });
 
     const formInputs = () => <FormInputs inputs={inputs} />;
@@ -25,7 +39,7 @@ export function AccountDetails(props: AccountDetailsProps) {
     const isAllowedToDeleteItem = !isPrincipalLenderAccount;
 
     const dependentServiceProviderFeeTypes = serviceProviderFeeTypes.filter(
-        ({ accountId }) => accountId === item?.id,
+        ({ accountId }) => accountId === tableItem?.id,
     );
 
     const dependentTransactions = transactions
@@ -35,8 +49,8 @@ export function AccountDetails(props: AccountDetailsProps) {
         }))
         .filter(
             t =>
-                t.cashTransaction?.accountId === item?.id ||
-                t.fixedIncomeTransaction?.accountId === item?.id,
+                t.cashTransaction?.accountId === tableItem?.id ||
+                t.fixedIncomeTransaction?.accountId === tableItem?.id,
         );
 
     const dependentItemName =
@@ -88,3 +102,5 @@ export function AccountDetails(props: AccountDetailsProps) {
 
     return <ItemDetails {...props} {...formProps} />;
 }
+
+export const AccountDetails = memo(_AccountDetails);

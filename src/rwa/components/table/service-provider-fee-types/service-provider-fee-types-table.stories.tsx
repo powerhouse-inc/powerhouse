@@ -1,12 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
-import { ServiceProviderFeeType } from '@/rwa';
 import { mockStateInitial, mockStateWithData } from '@/rwa/mocks/state';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { ServiceProviderFeeTypeFormInputs } from '../types';
-import { ServiceProviderFeeTypesTable } from './service-provider-fee-types-table';
+import {
+    ServiceProviderFeeTypesTable,
+    ServiceProviderFeeTypesTableProps,
+} from './service-provider-fee-types-table';
 
 const meta: Meta<typeof ServiceProviderFeeTypesTable> = {
     title: 'RWA/Components/Service Provider Fee Types Table',
@@ -24,27 +26,11 @@ const columnCountByTableWidth = {
     984: 8,
 };
 
-type ServiceProviderFeeTypesTableProps = ComponentPropsWithoutRef<
-    typeof ServiceProviderFeeTypesTable
->;
-
 export const Empty: Story = {
     args: {
         state: mockStateInitial,
     },
     render: function Wrapper(args) {
-        const [expandedRowId, setExpandedRowId] = useState<string>();
-        const [selectedItem, setSelectedItem] =
-            useState<ServiceProviderFeeType>();
-        const [showNewItemForm, setShowNewItemForm] = useState(false);
-
-        const toggleExpandedRow = useCallback(
-            (id: string | undefined) => {
-                setExpandedRowId(id === expandedRowId ? undefined : id);
-            },
-            [expandedRowId],
-        );
-
         function createServiceProviderFeeTypeFromFormInputs(
             data: ServiceProviderFeeTypeFormInputs,
         ) {
@@ -61,7 +47,6 @@ export const Empty: Story = {
                 const serviceProviderFeeType =
                     createServiceProviderFeeTypeFromFormInputs(data);
                 console.log({ serviceProviderFeeType, data });
-                setSelectedItem(undefined);
             }, []);
 
         const onSubmitCreate: ServiceProviderFeeTypesTableProps['onSubmitCreate'] =
@@ -69,23 +54,15 @@ export const Empty: Story = {
                 const serviceProviderFeeType =
                     createServiceProviderFeeTypeFromFormInputs(data);
                 console.log({ serviceProviderFeeType, data });
-                setShowNewItemForm(false);
             }, []);
 
         const onSubmitCreateAccount: ServiceProviderFeeTypesTableProps['onSubmitCreateAccount'] =
             useCallback(data => {
                 console.log({ data });
-                setShowNewItemForm(false);
             }, []);
 
         const argsWithHandlers: ServiceProviderFeeTypesTableProps = {
             ...args,
-            expandedRowId,
-            selectedItem,
-            showNewItemForm,
-            setShowNewItemForm,
-            toggleExpandedRow,
-            setSelectedItem,
             onSubmitCreate,
             onSubmitEdit,
             onSubmitCreateAccount,

@@ -1,4 +1,5 @@
 export * from './breadcrumbs';
+export * from './combobox';
 export * from './date-time-input';
 export * from './disclosure';
 export * from './divider';

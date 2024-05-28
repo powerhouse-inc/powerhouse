@@ -1,19 +1,22 @@
+import { Item, TableItem } from '@/rwa';
 import { Identifier, Order, orderBy } from 'natural-orderby';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { TableItem } from '..';
 
 /**
  * Takes a list of items and returns a sorted list of items and a sort descriptor.
  * @param items - The list of items to sort.
  * @returns An object containing the sorted items and a sort handler func
  */
-export function useSortTableItems<TItem extends TableItem>(items: TItem[]) {
-    const [sortedItems, setSortedItems] = useState<TItem[]>(items);
-    const [column, setColumn] = useState<Identifier<TItem>>();
+export function useSortTableItems<
+    TItem extends Item,
+    TTableData extends TableItem<TItem>,
+>(items: TTableData[] | undefined) {
+    const [sortedItems, setSortedItems] = useState(items);
+    const [column, setColumn] = useState<Identifier<TTableData>>();
     const [direction, setDirection] = useState<Order>('asc');
 
     const sortHandler = useCallback(
-        (column: Identifier<TItem>, direction: Order) => {
+        (column: Identifier<TTableData>, direction: Order) => {
             setColumn(column);
             setDirection(direction);
         },
@@ -21,6 +24,8 @@ export function useSortTableItems<TItem extends TableItem>(items: TItem[]) {
     );
 
     useEffect(() => {
+        if (!items) return;
+
         if (!column) {
             setSortedItems(items);
             return;

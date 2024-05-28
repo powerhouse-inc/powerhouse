@@ -1,5 +1,4 @@
 import { format } from 'date-fns';
-import { RealWorldAssetsState } from '../components';
 import { assetGroupTransactions } from '../constants';
 import {
     Asset,
@@ -7,6 +6,7 @@ import {
     CashAsset,
     FixedIncome,
     GroupTransactionType,
+    RealWorldAssetsState,
 } from '../types';
 
 /**

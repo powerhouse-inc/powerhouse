@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
-import { Account } from '@/rwa';
 import {
     mockAccounts,
     mockGroupTransactions,
@@ -11,7 +10,7 @@ import { mockStateInitial } from '@/rwa/mocks/state';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { AccountFormInputs } from '../types';
-import { AccountsTable } from './accounts-table';
+import { AccountsTable, AccountsTableProps } from './accounts-table';
 
 const meta: Meta<typeof AccountsTable> = {
     title: 'RWA/Components/Accounts Table',
@@ -29,24 +28,11 @@ const columnCountByTableWidth = {
     984: 8,
 };
 
-type AccountsTableProps = ComponentPropsWithoutRef<typeof AccountsTable>;
-
 export const Empty: Story = {
     args: {
         state: mockStateInitial,
     },
     render: function Wrapper(args) {
-        const [expandedRowId, setExpandedRowId] = useState<string>();
-        const [selectedItem, setSelectedItem] = useState<Account>();
-        const [showNewItemForm, setShowNewItemForm] = useState(false);
-
-        const toggleExpandedRow = useCallback(
-            (id: string | undefined) => {
-                setExpandedRowId(id === expandedRowId ? undefined : id);
-            },
-            [expandedRowId],
-        );
-
         function createAccountFromFormInputs(data: AccountFormInputs) {
             const id = utils.hashKey();
 
@@ -60,7 +46,6 @@ export const Empty: Story = {
             data => {
                 const account = createAccountFromFormInputs(data);
                 console.log({ account, data });
-                setSelectedItem(undefined);
             },
             [],
         );
@@ -69,17 +54,10 @@ export const Empty: Story = {
             useCallback(data => {
                 const account = createAccountFromFormInputs(data);
                 console.log({ account, data });
-                setShowNewItemForm(false);
             }, []);
 
         const argsWithHandlers: AccountsTableProps = {
             ...args,
-            expandedRowId,
-            selectedItem,
-            showNewItemForm,
-            setShowNewItemForm,
-            toggleExpandedRow,
-            setSelectedItem,
             onSubmitCreate,
             onSubmitEdit,
         };

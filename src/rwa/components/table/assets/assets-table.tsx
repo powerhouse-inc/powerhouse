@@ -1,17 +1,22 @@
 import {
     AssetDetails,
-    AssetsTableProps,
+    AssetFormInputs,
+    FixedIncome,
+    FixedIncomeTypeFormInputs,
     RWATableCell,
     RWATableRow,
+    SPVFormInputs,
     Table,
-    TableColumn,
-    addItemNumber,
+    TableItem,
+    TableProps,
+    TableWrapperProps,
     getCashAsset,
     getFixedIncomeAssets,
-    getItemById,
     handleTableDatum,
+    makeTableData,
+    useDocumentOperationState,
 } from '@/rwa';
-import { Fragment, useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 const columns = [
@@ -60,14 +65,22 @@ const columns = [
     },
 ];
 
+export type AssetsTableProps = TableWrapperProps<AssetFormInputs> & {
+    onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
+    onSubmitCreateSpv: (data: SPVFormInputs) => void;
+};
+
 export function AssetsTable(props: AssetsTableProps) {
-    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
     const itemName = 'Asset';
-
+    const { state } = props;
     const assets = getFixedIncomeAssets(state);
-    const cashAsset = getCashAsset(state);
+    const tableData = useMemo(() => makeTableData(assets), [assets]);
+    const [selectedTableItem, setSelectedTableItem] =
+        useState<TableItem<FixedIncome>>();
+    const { operation, setOperation, showForm, existingState } =
+        useDocumentOperationState({ state });
 
-    const tableData = useMemo(() => addItemNumber(assets), [assets]);
+    const cashAsset = getCashAsset(state);
 
     const cashAssetFormattedAsTableItem = {
         id: 'special-first-row',
@@ -87,35 +100,11 @@ export function AssetsTable(props: AssetsTableProps) {
         realizedSurplus: '--',
     };
 
-    const editForm = ({
-        itemId,
-        itemNumber,
-    }: {
-        itemId: string;
-        itemNumber: number;
-    }) => (
-        <AssetDetails
-            {...props}
-            itemName={itemName}
-            item={getItemById(itemId, assets)}
-            itemNumber={itemNumber}
-            operation={selectedItem?.id === itemId ? 'edit' : 'view'}
-            onSubmitForm={onSubmitEdit}
-        />
-    );
-
-    const createForm = () => (
-        <AssetDetails
-            {...props}
-            itemName={itemName}
-            itemNumber={assets.length + 1}
-            operation="create"
-            onSubmitForm={onSubmitCreate}
-        />
-    );
-
-    const specialFirstRow = (c: TableColumn<(typeof tableData)[number]>[]) => (
-        <RWATableRow tdProps={{ colSpan: 100 }} accordionContent={undefined}>
+    const specialFirstRow: TableProps<
+        FixedIncome,
+        TableItem<FixedIncome>
+    >['specialFirstRow'] = c => (
+        <RWATableRow tdProps={{ colSpan: 100 }}>
             <tr
                 className={twMerge(
                     '[&>td:not(:first-child)]:border-l [&>td]:border-gray-300',
@@ -148,14 +137,30 @@ export function AssetsTable(props: AssetsTableProps) {
     );
 
     return (
-        <Table
-            {...props}
-            itemName={itemName}
-            tableData={tableData}
-            columns={columns}
-            editForm={editForm}
-            createForm={createForm}
-            specialFirstRow={specialFirstRow}
-        />
+        <>
+            <Table
+                {...props}
+                itemName={itemName}
+                tableData={tableData}
+                columns={columns}
+                selectedTableItem={selectedTableItem}
+                setSelectedTableItem={setSelectedTableItem}
+                setOperation={setOperation}
+                specialFirstRow={specialFirstRow}
+            />
+            {showForm && (
+                <div className="mt-4 rounded-md bg-white">
+                    <AssetDetails
+                        {...props}
+                        itemName={itemName}
+                        state={existingState}
+                        tableItem={selectedTableItem}
+                        operation={operation}
+                        setSelectedTableItem={setSelectedTableItem}
+                        setOperation={setOperation}
+                    />
+                </div>
+            )}
+        </>
     );
 }

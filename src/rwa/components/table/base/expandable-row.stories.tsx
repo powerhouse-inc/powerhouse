@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { useRef } from 'react';
 import { RWATableRow } from './expandable-row';
 import { TableBase } from './table-base';
 
@@ -7,7 +8,6 @@ const meta: Meta<typeof RWATableRow> = {
     component: RWATableRow,
     argTypes: {
         children: { control: 'object' },
-        accordionContent: { control: 'object' },
         isExpanded: { control: 'boolean' },
         tdProps: { control: 'object' },
     },
@@ -18,15 +18,11 @@ type Story = StoryObj<typeof meta>;
 
 export const Primary: Story = {
     args: {
-        accordionContent: (
-            <div className="bg-gray-100 p-4 text-center">
-                <p>Accordion content</p>
-            </div>
-        ),
         isExpanded: true,
     },
     render: args => (
         <TableBase
+            tableRef={useRef(null)}
             onClickSort={() => {}}
             renderRow={row => (
                 <RWATableRow {...args} tdProps={{ colSpan: 4 }}>
@@ -39,6 +35,7 @@ export const Primary: Story = {
             tableData={[
                 {
                     id: '1',
+                    itemNumber: 1,
                     cell1: 'Cell 1-1',
                     cell2: 'Cell 2-1',
                     cell3: 'Cell 3-1',
@@ -46,6 +43,7 @@ export const Primary: Story = {
                 },
                 {
                     id: '2',
+                    itemNumber: 2,
                     cell1: 'Cell 1-2',
                     cell2: 'Cell 2-2',
                     cell3: 'Cell 3-2',

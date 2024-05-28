@@ -1,24 +1,39 @@
-import { ItemDetails, SPVDetailsProps, getFixedIncomeAssets } from '@/rwa';
-import { FormInputs } from '../../inputs/form-inputs';
-import { useSpvForm } from './useSpvForm';
+import {
+    FormInputs,
+    ItemDetails,
+    ItemDetailsProps,
+    SPV,
+    SPVFormInputs,
+    getFixedIncomeAssets,
+    useSpvForm,
+} from '@/rwa';
 
-export function SPVDetails(props: SPVDetailsProps) {
-    const { onCancel, onSubmitForm, item, operation, state } = props;
+export function SPVDetails(props: ItemDetailsProps<SPV, SPVFormInputs>) {
+    const {
+        state,
+        tableItem,
+        operation,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
+    } = props;
 
     const assets = getFixedIncomeAssets(state);
 
     const { submit, reset, inputs } = useSpvForm({
-        defaultValues: {
-            name: item?.name,
-        },
+        item: tableItem,
         state,
         operation,
-        onSubmitForm,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
     });
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
-    const dependentAssets = assets.filter(asset => asset.spvId === item?.id);
+    const dependentAssets = assets.filter(
+        asset => asset.spvId === tableItem?.id,
+    );
 
     const dependentItemProps = {
         dependentItemName: 'assets',
@@ -32,7 +47,6 @@ export function SPVDetails(props: SPVDetailsProps) {
         dependentItemProps,
         submit,
         reset,
-        onCancel,
     };
 
     return <ItemDetails {...props} {...formProps} />;

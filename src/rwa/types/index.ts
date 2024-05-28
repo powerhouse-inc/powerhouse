@@ -4,6 +4,16 @@ import {
     groupTransactionTypeLabels,
 } from '@/rwa';
 
+export type RealWorldAssetsState = {
+    accounts: Account[];
+    fixedIncomeTypes: FixedIncomeType[];
+    portfolio: Asset[];
+    principalLenderAccountId: string;
+    serviceProviderFeeTypes: ServiceProviderFeeType[];
+    spvs: SPV[];
+    transactions: GroupTransaction[];
+};
+
 export type AssetType = 'Cash' | 'FixedIncome';
 
 export type FixedIncome = {

@@ -1,57 +1,56 @@
 import {
+    SPV,
     SPVDetails,
-    SPVsTableProps,
+    SPVFormInputs,
     Table,
-    addItemNumber,
-    getItemById,
+    TableItem,
+    TableWrapperProps,
+    makeTableData,
+    useDocumentOperationState,
 } from '@/rwa';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 const columns = [{ key: 'name' as const, label: 'Name', allowSorting: true }];
 
+export type SPVsTableProps = TableWrapperProps<SPVFormInputs>;
+
 export function SPVsTable(props: SPVsTableProps) {
-    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { state } = props;
     const { spvs } = state;
 
     const itemName = 'SPV';
 
-    const tableData = useMemo(() => addItemNumber(spvs), [spvs]);
+    const tableData = useMemo(() => makeTableData(spvs), [spvs]);
 
-    const editForm = ({
-        itemId,
-        itemNumber,
-    }: {
-        itemId: string;
-        itemNumber: number;
-    }) => (
-        <SPVDetails
-            {...props}
-            itemName={itemName}
-            item={getItemById(itemId, spvs)}
-            itemNumber={itemNumber}
-            operation={selectedItem?.id === itemId ? 'edit' : 'view'}
-            onSubmitForm={onSubmitEdit}
-        />
-    );
-
-    const createForm = () => (
-        <SPVDetails
-            {...props}
-            itemName={itemName}
-            itemNumber={spvs.length + 1}
-            operation="create"
-            onSubmitForm={onSubmitCreate}
-        />
-    );
+    const [selectedTableItem, setSelectedTableItem] =
+        useState<TableItem<SPV>>();
+    const { operation, setOperation, showForm, existingState } =
+        useDocumentOperationState({ state });
 
     return (
-        <Table
-            {...props}
-            itemName={itemName}
-            tableData={tableData}
-            columns={columns}
-            editForm={editForm}
-            createForm={createForm}
-        />
+        <>
+            <Table
+                {...props}
+                itemName={itemName}
+                tableData={tableData}
+                columns={columns}
+                selectedTableItem={selectedTableItem}
+                setSelectedTableItem={setSelectedTableItem}
+                setOperation={setOperation}
+            />
+            {showForm && (
+                <div className="mt-4 rounded-md bg-white">
+                    <SPVDetails
+                        {...props}
+                        itemName={itemName}
+                        state={existingState}
+                        tableItem={selectedTableItem}
+                        operation={operation}
+                        setSelectedTableItem={setSelectedTableItem}
+                        setOperation={setOperation}
+                    />
+                </div>
+            )}
+        </>
     );
 }

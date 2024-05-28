@@ -1,9 +1,14 @@
 import { Icon } from '@/powerhouse';
-import { ItemDetailsProps, RWAButton, TableItem } from '@/rwa';
-import { useState } from 'react';
+import {
+    Item,
+    ItemDetailsFormProps,
+    ItemDetailsProps,
+    RWAButton,
+    RWADeleteItemModal,
+} from '@/rwa';
+import { ComponentType, useState } from 'react';
 import { FieldValues } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
-import { RWADeleteItemModal } from '../../modal';
 
 /**
  * Displays and allows creating or editing an item. Intended to be used with react-hook-form.
@@ -26,26 +31,30 @@ import { RWADeleteItemModal } from '../../modal';
  * @param onCancel - Function to call when the cancel button is clicked if additional logic is required. The form is already reset and the item is deselected by default.
  */
 export function ItemDetails<
-    TItem extends TableItem,
+    TItem extends Item,
     TFieldValues extends FieldValues = FieldValues,
->(props: ItemDetailsProps<TItem, TFieldValues>) {
+>(
+    props: ItemDetailsProps<TItem, TFieldValues> &
+        ItemDetailsFormProps<TFieldValues> & {
+            submit: (e?: React.BaseSyntheticEvent | undefined) => Promise<void>;
+            formInputs: ComponentType;
+        },
+) {
     const {
-        item,
+        tableItem,
         itemName,
-        itemNumber,
         className,
         operation = 'view',
         isAllowedToCreateDocuments,
         isAllowedToEditDocuments,
         isAllowedToDeleteItem = true,
-        formInputs: FormInputs,
         dependentItemProps,
+        formInputs: FormInputs,
+        setOperation,
         submit,
         onSubmitDelete,
         reset,
-        setSelectedItem,
-        setShowNewItemForm,
-        onCancel,
+        setSelectedTableItem,
     } = props;
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -65,22 +74,25 @@ export function ItemDetails<
     const showEditButton = isViewOperation && isAllowedToEditDocuments;
 
     function handleCancel() {
+        if (operation === 'edit') {
+            setOperation('view');
+            return;
+        }
         reset();
-        onCancel?.();
-        if (operation === 'create') setShowNewItemForm?.(false);
-        else setSelectedItem?.(undefined);
+        setSelectedTableItem(undefined);
+        setOperation(null);
     }
 
     function handleDelete() {
-        if (!item) return;
+        if (!tableItem) return;
 
         if (hasDependentItems) {
             setShowDeleteModal(true);
             return;
         }
 
-        onSubmitDelete(item.id);
-        setSelectedItem?.(undefined);
+        onSubmitDelete(tableItem.id);
+        setSelectedTableItem(undefined);
     }
 
     const cancelButton = (
@@ -107,7 +119,10 @@ export function ItemDetails<
 
     const editButton = (
         <RWAButton
-            onClick={() => setSelectedItem?.(item)}
+            onClick={() => {
+                setSelectedTableItem(tableItem);
+                setOperation('edit');
+            }}
             iconPosition="right"
             icon={<Icon name="pencil" size={16} />}
         >
@@ -124,7 +139,7 @@ export function ItemDetails<
         >
             <div className="flex justify-between rounded-t-md border-b border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">
                 <div className="flex items-center">
-                    {itemName} #{itemNumber}
+                    {itemName} #{tableItem?.itemNumber ?? 1}
                 </div>
                 <div className="flex gap-x-2">
                     {showCancelButton && cancelButton}

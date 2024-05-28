@@ -1,54 +1,56 @@
 import {
+    FixedIncomeType,
     FixedIncomeTypeDetails,
-    FixedIncomeTypesTableProps,
+    FixedIncomeTypeFormInputs,
     Table,
-    addItemNumber,
-    getItemById,
+    TableItem,
+    TableWrapperProps,
+    makeTableData,
+    useDocumentOperationState,
 } from '@/rwa';
+import { useMemo, useState } from 'react';
 
 const columns = [{ key: 'name' as const, label: 'Name', allowSorting: true }];
 
+export type FixedIncomeTypesTableProps =
+    TableWrapperProps<FixedIncomeTypeFormInputs>;
 export function FixedIncomeTypesTable(props: FixedIncomeTypesTableProps) {
-    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
+    const { state } = props;
     const { fixedIncomeTypes } = state;
     const itemName = 'Fixed Income Type';
-    const tableData = addItemNumber(fixedIncomeTypes);
-
-    const editForm = ({
-        itemId,
-        itemNumber,
-    }: {
-        itemId: string;
-        itemNumber: number;
-    }) => (
-        <FixedIncomeTypeDetails
-            {...props}
-            itemName={itemName}
-            item={getItemById(itemId, fixedIncomeTypes)}
-            itemNumber={itemNumber}
-            operation={selectedItem?.id === itemId ? 'edit' : 'view'}
-            onSubmitForm={onSubmitEdit}
-        />
+    const tableData = useMemo(
+        () => makeTableData(fixedIncomeTypes),
+        [fixedIncomeTypes],
     );
-
-    const createForm = () => (
-        <FixedIncomeTypeDetails
-            {...props}
-            itemName={itemName}
-            itemNumber={fixedIncomeTypes.length + 1}
-            operation="create"
-            onSubmitForm={onSubmitCreate}
-        />
-    );
+    const [selectedTableItem, setSelectedTableItem] =
+        useState<TableItem<FixedIncomeType>>();
+    const { operation, setOperation, showForm, existingState } =
+        useDocumentOperationState({ state });
 
     return (
-        <Table
-            {...props}
-            itemName={itemName}
-            tableData={tableData}
-            columns={columns}
-            editForm={editForm}
-            createForm={createForm}
-        />
+        <>
+            <Table
+                {...props}
+                itemName={itemName}
+                tableData={tableData}
+                columns={columns}
+                selectedTableItem={selectedTableItem}
+                setSelectedTableItem={setSelectedTableItem}
+                setOperation={setOperation}
+            />
+            {showForm && (
+                <div className="mt-4 rounded-md bg-white">
+                    <FixedIncomeTypeDetails
+                        {...props}
+                        itemName={itemName}
+                        state={existingState}
+                        tableItem={selectedTableItem}
+                        operation={operation}
+                        setSelectedTableItem={setSelectedTableItem}
+                        setOperation={setOperation}
+                    />
+                </div>
+            )}
+        </>
     );
 }

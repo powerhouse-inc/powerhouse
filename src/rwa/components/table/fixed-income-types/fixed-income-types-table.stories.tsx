@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
+import { ComponentPropsWithoutRef, useCallback } from 'react';
 
-import { FixedIncomeType } from '@/rwa';
 import { mockFixedIncomeTypes, mockFixedIncomes } from '@/rwa/mocks';
 import { mockStateInitial } from '@/rwa/mocks/state';
 import { utils } from 'document-model/document';
@@ -25,7 +24,7 @@ const columnCountByTableWidth = {
     984: 8,
 };
 
-type FixedIncomeTypesTableProps = ComponentPropsWithoutRef<
+type FixedIncomeTypesTableWrapperProps = ComponentPropsWithoutRef<
     typeof FixedIncomeTypesTable
 >;
 
@@ -34,17 +33,6 @@ export const Empty: Story = {
         state: mockStateInitial,
     },
     render: function Wrapper(args) {
-        const [expandedRowId, setExpandedRowId] = useState<string>();
-        const [selectedItem, setSelectedItem] = useState<FixedIncomeType>();
-        const [showNewItemForm, setShowNewItemForm] = useState(false);
-
-        const toggleExpandedRow = useCallback(
-            (id: string | undefined) => {
-                setExpandedRowId(id === expandedRowId ? undefined : id);
-            },
-            [expandedRowId],
-        );
-
         function createFixedIncomeTypeFromFormInputs(
             data: FixedIncomeTypeFormInputs,
         ) {
@@ -56,28 +44,20 @@ export const Empty: Story = {
             };
         }
 
-        const onSubmitEdit: FixedIncomeTypesTableProps['onSubmitEdit'] =
+        const onSubmitEdit: FixedIncomeTypesTableWrapperProps['onSubmitEdit'] =
             useCallback(data => {
                 const account = createFixedIncomeTypeFromFormInputs(data);
                 console.log({ account, data });
-                setSelectedItem(undefined);
             }, []);
 
-        const onSubmitCreate: FixedIncomeTypesTableProps['onSubmitCreate'] =
+        const onSubmitCreate: FixedIncomeTypesTableWrapperProps['onSubmitCreate'] =
             useCallback(data => {
                 const account = createFixedIncomeTypeFromFormInputs(data);
                 console.log({ account, data });
-                setShowNewItemForm(false);
             }, []);
 
-        const argsWithHandlers: FixedIncomeTypesTableProps = {
+        const argsWithHandlers: FixedIncomeTypesTableWrapperProps = {
             ...args,
-            expandedRowId,
-            selectedItem,
-            showNewItemForm,
-            setShowNewItemForm,
-            toggleExpandedRow,
-            setSelectedItem,
             onSubmitCreate,
             onSubmitEdit,
         };

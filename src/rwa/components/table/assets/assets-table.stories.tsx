@@ -1,19 +1,20 @@
-import { defaultColumnCountByTableWidth, FixedIncome } from '@/rwa';
-import type { Meta, StoryObj } from '@storybook/react';
-import { utils } from 'document-model/document';
-import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
-
 import {
     mockCashAsset,
-    mockFixedIncomes,
     mockFixedIncomeTypes,
+    mockFixedIncomes,
     mockGroupTransactions,
     mockSPVs,
 } from '@/rwa/mocks';
 import { mockStateInitial } from '@/rwa/mocks/state';
-import { getColumnCount } from '../hooks/useColumnPriority';
+import { useArgs } from '@storybook/preview-api';
+import { Meta, StoryObj } from '@storybook/react';
+import { utils } from 'document-model/document';
+import { useCallback } from 'react';
+import { useInterval } from 'usehooks-ts';
+import { defaultColumnCountByTableWidth } from '../constants';
+import { getColumnCount } from '../hooks';
 import { AssetFormInputs } from '../types';
-import { AssetsTable } from './assets-table';
+import { AssetsTable, AssetsTableProps } from './assets-table';
 
 const meta: Meta<typeof AssetsTable> = {
     title: 'RWA/Components/Assets Table',
@@ -21,9 +22,11 @@ const meta: Meta<typeof AssetsTable> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof meta>;
-
-type FixedIncomesTableProps = ComponentPropsWithoutRef<typeof AssetsTable>;
+type Story = StoryObj<
+    AssetsTableProps & {
+        simulateBackgroundUpdates?: boolean;
+    }
+>;
 
 function createAssetFromFormInputs(data: AssetFormInputs) {
     const id = utils.hashKey();
@@ -39,51 +42,54 @@ function createAssetFromFormInputs(data: AssetFormInputs) {
 export const Empty: Story = {
     args: {
         state: mockStateInitial,
+        simulateBackgroundUpdates: false,
     },
     render: function Wrapper(args) {
-        const [expandedRowId, setExpandedRowId] = useState<string>();
-        const [selectedItem, setSelectedItem] = useState<FixedIncome>();
-        const [showNewItemForm, setShowNewItemForm] = useState(false);
-
-        const toggleExpandedRow = useCallback(
-            (id: string | undefined) => {
-                setExpandedRowId(id === expandedRowId ? undefined : id);
+        const [, setArgs] = useArgs<typeof args>();
+        useInterval(
+            () => {
+                setArgs({
+                    ...args,
+                    state: {
+                        ...args.state,
+                        portfolio: [
+                            ...args.state.portfolio,
+                            { ...mockFixedIncomes[0], id: `new-${Date.now()}` },
+                        ],
+                    },
+                });
             },
-            [expandedRowId],
+            args.simulateBackgroundUpdates ? 3000 : 0,
         );
 
-        const onSubmitEdit: FixedIncomesTableProps['onSubmitEdit'] =
-            useCallback(data => {
+        const onSubmitEdit: AssetsTableProps['onSubmitEdit'] = useCallback(
+            data => {
                 const asset = createAssetFromFormInputs(data);
                 console.log({ asset, data });
-                setSelectedItem(undefined);
-            }, []);
+            },
+            [],
+        );
 
-        const onSubmitCreate: FixedIncomesTableProps['onSubmitCreate'] =
-            useCallback(data => {
+        const onSubmitCreate: AssetsTableProps['onSubmitCreate'] = useCallback(
+            data => {
                 const asset = createAssetFromFormInputs(data);
                 console.log({ asset, data });
-                setShowNewItemForm(false);
-            }, []);
+            },
+            [],
+        );
 
-        const onSubmitCreateFixedIncomeType: FixedIncomesTableProps['onSubmitCreateFixedIncomeType'] =
+        const onSubmitCreateFixedIncomeType: AssetsTableProps['onSubmitCreateFixedIncomeType'] =
             useCallback(data => {
                 console.log({ data });
             }, []);
 
-        const onSubmitCreateSpv: FixedIncomesTableProps['onSubmitCreateSpv'] =
+        const onSubmitCreateSpv: AssetsTableProps['onSubmitCreateSpv'] =
             useCallback(data => {
                 console.log({ data });
             }, []);
 
-        const argsWithHandlers: FixedIncomesTableProps = {
+        const argsWithHandlers: AssetsTableProps = {
             ...args,
-            expandedRowId,
-            selectedItem,
-            showNewItemForm,
-            setShowNewItemForm,
-            toggleExpandedRow,
-            setSelectedItem,
             onSubmitCreate,
             onSubmitEdit,
             onSubmitCreateFixedIncomeType,

@@ -1,8 +1,8 @@
-import { ColumnCountByTableWidth, TableColumn, TableItem } from '@/rwa';
+import { ColumnCountByTableWidth, Item, TableColumn, TableItem } from '@/rwa';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type Props<TItem extends TableItem> = {
-    columns: TableColumn<TItem>[];
+type Props<TItem extends Item, TTableData extends TableItem<TItem>> = {
+    columns: TableColumn<TItem, TTableData>[] | undefined;
     columnCountByTableWidth: ColumnCountByTableWidth;
     tableContainerRef: React.RefObject<HTMLDivElement>;
     hasItemNumberColumn?: boolean;
@@ -18,9 +18,10 @@ type Props<TItem extends TableItem> = {
  * @param hasIndexColumn - When true, adds an "index" column with the index of the row as the _first column_. This column is exempt from being dropped.
  * @param hasMoreDetailsColumn - When true, adds a "more details" column as the _last column_. This column is exempt from being dropped. This column has no header label by default.
  */
-export function useColumnPriority<TItem extends TableItem>(
-    props: Props<TItem>,
-) {
+export function useColumnPriority<
+    TItem extends Item,
+    TTableData extends TableItem<TItem>,
+>(props: Props<TItem, TTableData>) {
     const {
         columnCountByTableWidth,
         tableContainerRef,
@@ -32,7 +33,7 @@ export function useColumnPriority<TItem extends TableItem>(
     const [parentWidth, setParentWidth] = useState(0);
 
     // Define special columns individually for clarity
-    const indexColumn: TableColumn<TItem> | undefined = useMemo(
+    const indexColumn: TableColumn<TItem, TTableData> | undefined = useMemo(
         () =>
             hasItemNumberColumn
                 ? {
@@ -45,21 +46,22 @@ export function useColumnPriority<TItem extends TableItem>(
         [hasItemNumberColumn],
     );
 
-    const moreDetailsColumn: TableColumn<TItem> | undefined = useMemo(
-        () =>
-            hasMoreDetailsColumn
-                ? {
-                      key: 'moreDetails' as keyof TItem & string,
-                      label: '',
-                      isSpecialColumn: true,
-                  }
-                : undefined,
-        [hasMoreDetailsColumn],
-    );
+    const moreDetailsColumn: TableColumn<TItem, TTableData> | undefined =
+        useMemo(
+            () =>
+                hasMoreDetailsColumn
+                    ? {
+                          key: 'moreDetails' as keyof TItem & string,
+                          label: '',
+                          isSpecialColumn: true,
+                      }
+                    : undefined,
+            [hasMoreDetailsColumn],
+        );
 
-    const [columnsToShow, setColumnsToShow] = useState<TableColumn<TItem>[]>(
-        [],
-    );
+    const [columnsToShow, setColumnsToShow] = useState<
+        TableColumn<TItem, TTableData>[]
+    >([]);
 
     const handleResize = useCallback(() => {
         if (tableContainerRef.current?.parentElement) {
@@ -72,7 +74,7 @@ export function useColumnPriority<TItem extends TableItem>(
             parentWidth,
             columnCountByTableWidth,
         );
-        const dynamicColumnsToShow = columns.slice(0, columnCount);
+        const dynamicColumnsToShow = columns?.slice(0, columnCount) ?? [];
         // Ensure the index column is first and the "more details" column is last
         setColumnsToShow(
             [indexColumn, ...dynamicColumnsToShow, moreDetailsColumn].filter(

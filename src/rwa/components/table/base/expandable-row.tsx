@@ -5,18 +5,11 @@ import { twMerge } from 'tailwind-merge';
 export interface RWATableRowProps extends ComponentPropsWithoutRef<'tr'> {
     children: React.ReactNode;
     isExpanded?: boolean;
-    accordionContent: React.ReactNode;
     tdProps?: ComponentPropsWithRef<'td'>;
 }
 
 export const RWATableRow: React.FC<RWATableRowProps> = props => {
-    const {
-        children,
-        accordionContent,
-        isExpanded = false,
-        tdProps = {},
-        ...trProps
-    } = props;
+    const { children, isExpanded = false, tdProps = {}, ...trProps } = props;
 
     return (
         <>
@@ -27,7 +20,7 @@ export const RWATableRow: React.FC<RWATableRowProps> = props => {
                     twMerge('collapse', isExpanded && 'visible'),
                 )}
             >
-                <td {...tdProps}>{accordionContent}</td>
+                <td {...tdProps} />
             </tr>
         </>
     );

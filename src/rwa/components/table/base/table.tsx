@@ -1,10 +1,10 @@
 import { Icon } from '@/powerhouse';
 import {
+    Item,
     ItemNumberCell,
     MoreDetailsCell,
     RWATableCell,
     RWATableRow,
-    SpecialColumns,
     TableBase,
     TableColumn,
     TableItem,
@@ -17,6 +17,7 @@ import {
 import { Fragment, useRef } from 'react';
 import { FieldValues } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
+import { useTableHeight } from './use-table-height';
 
 /**
  * Generic table with standard styles intended to be used for most of the RWA tables in the app.
@@ -38,29 +39,26 @@ import { twMerge } from 'tailwind-merge';
  * @param specialFirstRow - Function to render a special first row (like the cash asset for instance), must return a React element
  */
 export function Table<
-    TItem extends TableItem,
+    TItem extends Item,
+    TTableData extends TableItem<TItem>,
     TFieldValues extends FieldValues = FieldValues,
-    TTableData extends TableItem = TItem,
->(props: TableProps<TItem, TFieldValues, TTableData>) {
+>(props: TableProps<TItem, TTableData, TFieldValues>) {
     const {
         itemName,
         columns,
         tableData,
+        selectedTableItem,
         columnCountByTableWidth = defaultColumnCountByTableWidth,
-        expandedRowId,
-        showNewItemForm,
         isAllowedToCreateDocuments,
-        isAllowedToEditDocuments,
-        setShowNewItemForm,
-        toggleExpandedRow,
-        editForm: EditForm,
-        createForm: CreateForm,
+        setSelectedTableItem,
+        setOperation,
         specialFirstRow,
     } = props;
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
+    const tableRef = useRef<HTMLTableElement>(null);
 
-    const { sortedItems, sortHandler } = useSortTableItems(tableData ?? []);
+    const { sortedItems, sortHandler } = useSortTableItems(tableData);
 
     const { columnsToShow } = useColumnPriority({
         columns,
@@ -68,40 +66,41 @@ export function Table<
         tableContainerRef,
     });
 
+    const maxHeight = useTableHeight({
+        tableRef,
+        selectedRowNumber: selectedTableItem?.itemNumber,
+        hasSpecialFirstRow: !!specialFirstRow,
+    });
+
+    function onCreateItemClick() {
+        setSelectedTableItem(undefined);
+        setOperation('create');
+    }
+
     const renderRow = (
-        item: TTableData,
-        columns: TableColumn<TTableData & SpecialColumns>[],
-        index: number,
+        tableItem: TTableData,
+        columns: TableColumn<TItem, TTableData>[],
     ) => {
-        const maybeModifiedIndex = specialFirstRow ? index + 1 : index;
+        const isSelected = selectedTableItem?.id === tableItem.id;
 
         return (
             <RWATableRow
-                isExpanded={expandedRowId === item.id}
+                isExpanded={selectedTableItem?.id === tableItem.id}
                 tdProps={{ colSpan: 100 }}
-                key={item.id}
-                accordionContent={
-                    expandedRowId === item.id && (
-                        <EditForm
-                            itemId={item.id}
-                            itemNumber={item.itemNumber ?? index}
-                            isAllowedToEditDocuments={isAllowedToEditDocuments}
-                        />
-                    )
-                }
+                key={tableItem.id}
             >
                 <tr
-                    key={item.id}
+                    key={tableItem.id}
                     className={twMerge(
                         '[&>td:not(:first-child)]:border-l [&>td:not(:first-child)]:border-gray-300',
-                        maybeModifiedIndex % 2 !== 0 && 'bg-gray-50',
+                        tableItem.itemNumber % 2 !== 0 && 'bg-gray-50',
                     )}
                 >
                     {columns.map(column => (
                         <Fragment key={column.key}>
                             {column.key === 'itemNumber' && (
                                 <ItemNumberCell
-                                    itemNumber={item.itemNumber ?? index + 1}
+                                    itemNumber={tableItem.itemNumber}
                                 />
                             )}
                             {column.key !== 'itemNumber' &&
@@ -114,17 +113,27 @@ export function Table<
                                                 : ''
                                         }
                                     >
-                                        {item.customTransform?.(
-                                            item[column.key],
+                                        {tableItem.customTransform?.(
+                                            tableItem[column.key],
                                             column.key,
-                                        ) ?? handleTableDatum(item[column.key])}
+                                        ) ??
+                                            handleTableDatum(
+                                                tableItem[column.key],
+                                            )}
                                     </RWATableCell>
                                 )}
                             {column.key === 'moreDetails' && (
                                 <MoreDetailsCell
-                                    id={item.id}
-                                    expandedRowId={expandedRowId}
-                                    toggleExpandedRow={toggleExpandedRow}
+                                    isSelected
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setOperation(null);
+                                            setSelectedTableItem(undefined);
+                                            return;
+                                        }
+                                        setOperation('view');
+                                        setSelectedTableItem(tableItem);
+                                    }}
                                 />
                             )}
                         </Fragment>
@@ -139,25 +148,22 @@ export function Table<
             <TableBase
                 onClickSort={sortHandler}
                 ref={tableContainerRef}
+                tableRef={tableRef}
                 tableData={sortedItems}
                 columns={columnsToShow}
+                maxHeight={maxHeight}
                 renderRow={renderRow}
                 specialFirstRow={specialFirstRow}
             />
             {isAllowedToCreateDocuments && (
                 <>
                     <button
-                        onClick={() => setShowNewItemForm(true)}
+                        onClick={onCreateItemClick}
                         className="mt-4 flex h-11 w-full items-center justify-center gap-x-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900"
                     >
                         <span>Create {itemName}</span>
                         <Icon name="plus" size={14} />
                     </button>
-                    {showNewItemForm && (
-                        <div className="mt-4 rounded-md bg-white">
-                            <CreateForm />
-                        </div>
-                    )}
                 </>
             )}
         </>

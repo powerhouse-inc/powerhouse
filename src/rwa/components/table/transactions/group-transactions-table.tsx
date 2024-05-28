@@ -1,19 +1,24 @@
-import { Combobox } from '@/connect/components/combobox';
+import { Combobox } from '@/connect';
 import {
+    AssetFormInputs,
     FixedIncome,
     GroupTransaction,
     GroupTransactionDetails,
-    GroupTransactionsTableProps,
+    GroupTransactionFormInputs,
+    GroupTransactionsTableItem,
+    ServiceProviderFeeTypeFormInputs,
     Table,
-    addItemNumber,
+    TableItem,
+    TableWrapperProps,
     assetTransactionSignByTransactionType,
     cashTransactionSignByTransactionType,
-    getItemById,
     isAssetGroupTransactionType,
     isFixedIncomeAsset,
     makeFixedIncomeOptionLabel,
+    makeTableData,
+    useDocumentOperationState,
 } from '@/rwa';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const columns = [
     {
@@ -51,10 +56,10 @@ function maybeAddSignToAmount(amount: number | undefined, sign: 1 | -1) {
     return amount * sign;
 }
 
-export function makeGroupTransactionTableData(
+export function makeGroupTransactionsTableItems(
     transactions: GroupTransaction[] | undefined,
     fixedIncomes: FixedIncome[] | undefined,
-) {
+): GroupTransactionsTableItem[] {
     if (!transactions?.length) return [];
 
     const tableData = transactions.map(transaction => {
@@ -79,6 +84,7 @@ export function makeGroupTransactionTableData(
         const cashBalanceChange = transaction.cashBalanceChange;
 
         return {
+            ...transaction,
             id,
             type,
             entryTime,
@@ -89,24 +95,48 @@ export function makeGroupTransactionTableData(
         };
     });
 
-    const withItemNumber = addItemNumber(tableData);
-
-    return withItemNumber;
+    return makeTableData(tableData);
 }
 
+export type GroupTransactionsTableProps =
+    TableWrapperProps<GroupTransactionFormInputs> & {
+        onSubmitCreateAsset: (data: AssetFormInputs) => void;
+        onSubmitCreateServiceProviderFeeType: (
+            data: ServiceProviderFeeTypeFormInputs,
+        ) => void;
+    };
+
 export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
-    const { state, selectedItem, onSubmitCreate, onSubmitEdit } = props;
-
+    const itemName = 'Group Transaction';
+    const { state } = props;
+    const [selectedTableItem, setSelectedTableItem] =
+        useState<TableItem<GroupTransactionsTableItem>>();
     const { transactions, portfolio } = state;
-
+    const { operation, setOperation, showForm, existingState } =
+        useDocumentOperationState({ state });
     const fixedIncomes = portfolio.filter(a =>
         isFixedIncomeAsset(a),
     ) as FixedIncome[];
 
-    const itemName = 'Group Transaction';
-
     const [filteredTransactions, setFilteredTransactions] =
         useState(transactions);
+
+    const [filterAssetId, setFilterAssetId] = useState<string>();
+
+    useEffect(() => {
+        if (!filterAssetId) {
+            setFilteredTransactions(transactions);
+            return;
+        }
+
+        setFilteredTransactions(
+            transactions.filter(
+                transaction =>
+                    transaction.fixedIncomeTransaction?.assetId ===
+                    filterAssetId,
+            ),
+        );
+    }, [filterAssetId, transactions]);
 
     const filterByAssetOptions = useMemo(
         () =>
@@ -118,52 +148,26 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
     );
 
     const tableData = useMemo(
-        () => makeGroupTransactionTableData(filteredTransactions, fixedIncomes),
+        () =>
+            makeTableData(
+                makeGroupTransactionsTableItems(
+                    filteredTransactions,
+                    fixedIncomes,
+                ),
+            ),
         [filteredTransactions, fixedIncomes],
     );
 
     function handleFilterByAssetChange(update: unknown) {
         if (!update || !(typeof update === 'object') || !('value' in update)) {
-            setFilteredTransactions(transactions);
+            setFilterAssetId(undefined);
             return;
         }
 
         const { value: assetId } = update;
 
-        setFilteredTransactions(
-            transactions.filter(
-                transaction =>
-                    transaction.fixedIncomeTransaction?.assetId === assetId,
-            ),
-        );
+        setFilterAssetId(assetId as string);
     }
-
-    const editForm = ({
-        itemId,
-        itemNumber,
-    }: {
-        itemId: string;
-        itemNumber: number;
-    }) => (
-        <GroupTransactionDetails
-            {...props}
-            itemName={itemName}
-            item={getItemById(itemId, transactions)}
-            itemNumber={itemNumber}
-            operation={selectedItem?.id === itemId ? 'edit' : 'view'}
-            onSubmitForm={onSubmitEdit}
-        />
-    );
-
-    const createForm = () => (
-        <GroupTransactionDetails
-            {...props}
-            itemName={itemName}
-            operation="create"
-            itemNumber={transactions.length + 1}
-            onSubmitForm={onSubmitCreate}
-        />
-    );
 
     return (
         <>
@@ -171,17 +175,33 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
                 <Combobox
                     options={filterByAssetOptions}
                     onChange={handleFilterByAssetChange}
+                    isClearable
                     placeholder="Filter by Asset"
                 />
             </div>
             <Table
                 {...props}
+                state={state}
                 itemName={itemName}
                 tableData={tableData}
                 columns={columns}
-                editForm={editForm}
-                createForm={createForm}
+                selectedTableItem={selectedTableItem}
+                setSelectedTableItem={setSelectedTableItem}
+                setOperation={setOperation}
             />
+            {showForm && (
+                <div className="mt-4 rounded-md bg-white">
+                    <GroupTransactionDetails
+                        {...props}
+                        itemName={itemName}
+                        state={existingState}
+                        tableItem={selectedTableItem}
+                        operation={operation}
+                        setSelectedTableItem={setSelectedTableItem}
+                        setOperation={setOperation}
+                    />
+                </div>
+            )}
         </>
     );
 }

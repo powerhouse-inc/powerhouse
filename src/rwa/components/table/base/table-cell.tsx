@@ -16,24 +16,23 @@ export function ItemNumberCell(props: { itemNumber: number }) {
 }
 
 export function MoreDetailsCell(props: {
-    id: string;
-    expandedRowId: string | undefined;
-    toggleExpandedRow: (id: string) => void;
+    isSelected: boolean;
+    onClick: () => void;
 }) {
+    const { isSelected, onClick } = props;
+
     return (
         <RWATableCell className="w-4">
             <button
                 className="flex size-full items-center justify-center"
-                onClick={() => {
-                    props.toggleExpandedRow(props.id);
-                }}
+                onClick={onClick}
             >
                 <Icon
                     name="caret-down"
                     size={16}
                     className={twMerge(
                         'text-gray-600',
-                        props.expandedRowId === props.id && 'rotate-180',
+                        isSelected && 'rotate-180',
                     )}
                 />
             </button>

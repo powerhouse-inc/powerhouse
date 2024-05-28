@@ -1,11 +1,18 @@
-import { GroupTransaction } from '@/rwa';
-import { manyMockGroupTransactions, mockFixedIncomes } from '@/rwa/mocks';
+import {
+    manyMockGroupTransactions,
+    mockFixedIncomes,
+    mockGroupTransaction,
+} from '@/rwa/mocks';
 import { mockStateInitial, mockStateWithData } from '@/rwa/mocks/state';
+import { useArgs } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
+import { useInterval } from 'usehooks-ts';
 import { getColumnCount } from '../hooks/useColumnPriority';
-import { GroupTransactionsTableProps } from '../types';
-import { GroupTransactionsTable } from './group-transactions-table';
+import {
+    GroupTransactionsTable,
+    GroupTransactionsTableProps,
+} from './group-transactions-table';
 
 const meta: Meta<typeof GroupTransactionsTable> = {
     title: 'RWA/Components/Group Transactions Table',
@@ -13,7 +20,11 @@ const meta: Meta<typeof GroupTransactionsTable> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<
+    GroupTransactionsTableProps & {
+        simulateBackgroundUpdates?: boolean;
+    }
+>;
 
 const columnCountByTableWidth = {
     1520: 12,
@@ -26,32 +37,42 @@ const columnCountByTableWidth = {
 export const Empty: Story = {
     args: {
         state: mockStateInitial,
+        simulateBackgroundUpdates: false,
     },
     render: function Wrapper(args) {
-        const [expandedRowId, setExpandedRowId] = useState<string>();
-        const [selectedItem, setSelectedItem] = useState<GroupTransaction>();
-        const [showNewItemForm, setShowNewItemForm] = useState(false);
-
-        const toggleExpandedRow = useCallback((id: string | undefined) => {
-            setExpandedRowId(curr => (id === curr ? undefined : id));
-        }, []);
+        const [, setArgs] = useArgs<typeof args>();
+        useInterval(
+            () => {
+                setArgs({
+                    ...args,
+                    state: {
+                        ...args.state,
+                        transactions: [
+                            ...args.state.transactions,
+                            {
+                                ...mockGroupTransaction,
+                                id: `new-${Date.now()}`,
+                            },
+                        ],
+                    },
+                });
+            },
+            args.simulateBackgroundUpdates ? 3000 : null,
+        );
 
         const onSubmitEdit: GroupTransactionsTableProps['onSubmitEdit'] =
             useCallback(data => {
                 console.log('edit', { data });
-                setSelectedItem(undefined);
             }, []);
 
         const onSubmitCreate: GroupTransactionsTableProps['onSubmitCreate'] =
             useCallback(data => {
                 console.log('create', { data });
-                setShowNewItemForm(false);
             }, []);
 
         const onSubmitDelete: GroupTransactionsTableProps['onSubmitDelete'] =
             useCallback(id => {
                 console.log('delete', { id });
-                setSelectedItem(undefined);
             }, []);
 
         const onSubmitCreateAsset: GroupTransactionsTableProps['onSubmitCreateAsset'] =
@@ -66,12 +87,6 @@ export const Empty: Story = {
 
         const argsWithHandlers: GroupTransactionsTableProps = {
             ...args,
-            expandedRowId,
-            selectedItem,
-            toggleExpandedRow,
-            setSelectedItem,
-            showNewItemForm,
-            setShowNewItemForm,
             onSubmitEdit,
             onSubmitCreate,
             onSubmitDelete,

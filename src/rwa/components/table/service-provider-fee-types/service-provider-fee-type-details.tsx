@@ -1,30 +1,38 @@
-import { ItemDetails, ServiceProviderFeeTypeDetailsProps } from '@/rwa';
-import { FormInputs } from '../../inputs/form-inputs';
-import { CreateAccountModal } from '../../modal/create-account-modal';
-import { useAccountForm } from '../accounts/useAccountForm';
-import { useServiceProviderFeeTypeForm } from './useServiceProviderFeeTypeForm';
+import {
+    AccountFormInputs,
+    FormInputs,
+    ItemDetails,
+    ItemDetailsProps,
+    RWACreateItemModal,
+    ServiceProviderFeeTypeFormInputs,
+    ServiceProviderFeeTypeTableItem,
+    useAccountForm,
+    useServiceProviderFeeTypeForm,
+} from '@/rwa';
+import { memo } from 'react';
 
-export function ServiceProviderFeeTypeDetails(
+export type ServiceProviderFeeTypeDetailsProps = ItemDetailsProps<
+    ServiceProviderFeeTypeTableItem,
+    ServiceProviderFeeTypeFormInputs
+> & {
+    onSubmitCreateAccount: (data: AccountFormInputs) => void;
+};
+
+export function _ServiceProviderFeeTypeDetails(
     props: ServiceProviderFeeTypeDetailsProps,
 ) {
     const {
-        onCancel,
-        onSubmitForm,
-        onSubmitCreateAccount,
-        item,
-        operation,
         state,
+        tableItem,
+        operation,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
+        onSubmitCreateAccount,
     } = props;
 
-    const { accounts, transactions } = state;
+    const { transactions } = state;
 
-    const account = accounts.find(({ id }) => id === item?.accountId);
-
-    const defaultValues = {
-        name: item?.name,
-        feeType: item?.feeType,
-        accountId: account?.id ?? accounts[0]?.id,
-    };
     const {
         inputs,
         submit,
@@ -32,26 +40,27 @@ export function ServiceProviderFeeTypeDetails(
         showCreateAccountModal,
         setShowCreateAccountModal,
     } = useServiceProviderFeeTypeForm({
-        defaultValues,
+        item: tableItem,
         state,
-        onSubmitForm,
         operation,
+        onSubmitCreate,
+        onSubmitEdit,
+        onSubmitDelete,
     });
 
     const formInputs = () => <FormInputs inputs={inputs} />;
 
     const createAccountModalProps = useAccountForm({
-        defaultValues: {},
         state,
         operation: 'create',
-        onSubmitForm: data => {
+        onSubmitCreate: data => {
             onSubmitCreateAccount(data);
             setShowCreateAccountModal(false);
         },
     });
 
     const dependentTransactions = transactions.filter(t =>
-        t.fees?.some(f => f.serviceProviderFeeTypeId === item?.id),
+        t.fees?.some(f => f.serviceProviderFeeTypeId === tableItem?.id),
     );
 
     const dependentItemProps = {
@@ -61,25 +70,31 @@ export function ServiceProviderFeeTypeDetails(
         )),
     };
 
-    const formProps = {
-        formInputs,
-        dependentItemProps,
-        submit,
-        reset,
-        onCancel,
-    };
-
     return (
         <>
-            <ItemDetails {...props} {...formProps} />
+            <ItemDetails
+                {...props}
+                formInputs={formInputs}
+                dependentItemProps={dependentItemProps}
+                submit={submit}
+                reset={reset}
+                onSubmitCreate={onSubmitCreate}
+                onSubmitEdit={onSubmitEdit}
+                onSubmitDelete={onSubmitDelete}
+            />
             {showCreateAccountModal && (
-                <CreateAccountModal
+                <RWACreateItemModal
+                    {...props}
                     {...createAccountModalProps}
                     open={showCreateAccountModal}
                     onOpenChange={setShowCreateAccountModal}
-                    state={state}
+                    itemName="Account"
                 />
             )}
         </>
     );
 }
+
+export const ServiceProviderFeeTypeDetails = memo(
+    _ServiceProviderFeeTypeDetails,
+);

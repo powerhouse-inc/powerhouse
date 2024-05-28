@@ -1,12 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentPropsWithoutRef, useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
-import { SPV } from '@/rwa';
 import { mockStateInitial, mockStateWithData } from '@/rwa/mocks/state';
 import { utils } from 'document-model/document';
 import { getColumnCount } from '../hooks/useColumnPriority';
 import { SPVFormInputs } from '../types';
-import { SPVsTable } from './spvs-table';
+import { SPVsTable, SPVsTableProps } from './spvs-table';
 
 const meta: Meta<typeof SPVsTable> = {
     title: 'RWA/Components/SPVs Table',
@@ -24,24 +23,11 @@ const columnCountByTableWidth = {
     984: 8,
 };
 
-type SPVsTableProps = ComponentPropsWithoutRef<typeof SPVsTable>;
-
 export const Empty: Story = {
     args: {
         state: mockStateInitial,
     },
     render: function Wrapper(args) {
-        const [expandedRowId, setExpandedRowId] = useState<string>();
-        const [selectedItem, setSelectedItem] = useState<SPV>();
-        const [showNewItemForm, setShowNewItemForm] = useState(false);
-
-        const toggleExpandedRow = useCallback(
-            (id: string | undefined) => {
-                setExpandedRowId(id === expandedRowId ? undefined : id);
-            },
-            [expandedRowId],
-        );
-
         function createSPVFromFormInputs(data: SPVFormInputs) {
             const id = utils.hashKey();
 
@@ -55,7 +41,6 @@ export const Empty: Story = {
             data => {
                 const account = createSPVFromFormInputs(data);
                 console.log({ account, data });
-                setSelectedItem(undefined);
             },
             [],
         );
@@ -64,19 +49,12 @@ export const Empty: Story = {
             data => {
                 const account = createSPVFromFormInputs(data);
                 console.log({ account, data });
-                setShowNewItemForm(false);
             },
             [],
         );
 
         const argsWithHandlers: SPVsTableProps = {
             ...args,
-            expandedRowId,
-            selectedItem,
-            showNewItemForm,
-            setShowNewItemForm,
-            toggleExpandedRow,
-            setSelectedItem,
             onSubmitCreate,
             onSubmitEdit,
         };
