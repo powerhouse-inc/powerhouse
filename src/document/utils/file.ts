@@ -35,15 +35,18 @@ export const createZip = async (document: Document) => {
     );
     zip.file('operations.json', JSON.stringify(document.operations, null, 2));
 
-    const attachments = Object.keys(document.attachments);
-    attachments.forEach(key => {
-        const { data, ...attributes } = document.attachments[key];
-        zip.file(key, data, {
-            base64: true,
-            createFolders: true,
-            comment: JSON.stringify(attributes),
+    if (document.attachments) {
+        const attachments = Object.keys(document.attachments);
+        attachments.forEach(key => {
+            const { data, ...attributes } = document.attachments[key];
+            zip.file(key, data, {
+                base64: true,
+                createFolders: true,
+                comment: JSON.stringify(attributes),
+            });
         });
-    });
+    }
+
     return zip;
 };
 
