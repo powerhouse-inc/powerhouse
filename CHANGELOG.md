@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/powerhouse-inc/document-model/compare/v1.2.0...v1.3.0) (2024-05-29)
+
+
+### Features
+
+* fix create zip when there is no attachments ([26d9d81](https://github.com/powerhouse-inc/document-model/commit/26d9d81d99ccc8be74400e69b6141cfa2b2a3899))
+
 # [1.2.0](https://github.com/powerhouse-inc/document-model/compare/v1.1.0...v1.2.0) (2024-05-22)
 
 
