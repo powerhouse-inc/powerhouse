@@ -52,7 +52,7 @@ model Operation {
 
   SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
 
-  @@unique([driveId, documentId, scope, branch, index], name: "unique_operation")
+  @@unique([driveId, documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
 }
 
 model SyncronizationUnit {

@@ -162,11 +162,6 @@ export class PrismaStorage implements IDriveStorage {
         operations: Operation[],
         header: DocumentHeader
     ): Promise<void> {
-        const document = await this.getDocument(drive, id, tx);
-        if (!document) {
-            throw new Error(`Document with id ${id} not found`);
-        }
-
         try {
             await tx.operation.createMany({
                 data: operations.map(op => ({
@@ -321,10 +316,12 @@ export class PrismaStorage implements IDriveStorage {
     }
 
     async getDocument(driveId: string, id: string, tx?: Transaction) {
-        const result = await (tx ?? this.db).document.findFirst({
+        const result = await (tx ?? this.db).document.findUnique({
             where: {
-                id: id,
-                driveId: driveId
+                id_driveId: {
+                    driveId,
+                    id
+                }
             },
             include: {
                 operations: {
