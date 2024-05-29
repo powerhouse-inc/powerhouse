@@ -48,7 +48,7 @@ model Operation {
   syncId      String?
   clipboard   Boolean?     @default(false)
   context     Json?
-  resultingState String?
+  resultingState Bytes?
 
   SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
 
@@ -75,8 +75,8 @@ model Attachment {
 
   mimeType  String
   data      String
-  filename  String
-  extension String
+  filename  String?
+  extension String?
   hash      String
 }
 

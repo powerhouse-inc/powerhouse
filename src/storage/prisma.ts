@@ -6,6 +6,10 @@ import {
     DocumentDriveState
 } from 'document-model-libs/document-drive';
 import type {
+    Action,
+    AttachmentInput,
+    DocumentOperations,
+    FileRegistry,
     BaseAction,
     Document,
     DocumentHeader,
@@ -32,7 +36,9 @@ type Transaction =
     | ExtendedPrismaClient;
 
 function storageToOperation(
-    op: Prisma.$OperationPayload['scalars']
+    op: Prisma.$OperationPayload['scalars'] & {
+        attachments?: AttachmentInput[];
+    }
 ): Operation {
     const operation: Operation = {
         skip: op.skip,
@@ -42,9 +48,10 @@ function storageToOperation(
         input: JSON.parse(op.input),
         type: op.type,
         scope: op.scope as OperationScope,
-        resultingState: op.resultingState ? op.resultingState : undefined,
-        id: op.opId || undefined
-        // attachments: fileRegistry
+        resultingState: op.resultingState
+            ? op.resultingState.toString()
+            : undefined,
+        attachments: op.attachments
     };
     if (op.context) {
         operation.context = op.context as Prisma.JsonObject;
@@ -176,9 +183,8 @@ export class PrismaStorage implements IDriveStorage {
                     branch: 'main',
                     skip: op.skip,
                     context: op.context,
-                    opId: op.id,
                     resultingState: op.resultingState
-                        ? JSON.stringify(op.resultingState)
+                        ? Buffer.from(JSON.stringify(op.resultingState))
                         : undefined
                 }))
             });
@@ -193,6 +199,31 @@ export class PrismaStorage implements IDriveStorage {
                     revision: JSON.stringify(header.revision)
                 }
             });
+
+            await Promise.all(
+                operations
+                    .filter(o => o.attachments?.length)
+                    .map(op => {
+                        return tx.operation.update({
+                            where: {
+                                unique_operation: {
+                                    driveId: drive,
+                                    documentId: id,
+                                    index: op.index,
+                                    scope: op.scope,
+                                    branch: 'main'
+                                }
+                            },
+                            data: {
+                                attachments: {
+                                    createMany: {
+                                        data: op.attachments ?? []
+                                    }
+                                }
+                            }
+                        });
+                    })
+            );
         } catch (e) {
             // P2002: Unique constraint failed
             // Operation with existing index
@@ -219,6 +250,7 @@ export class PrismaStorage implements IDriveStorage {
                 );
 
                 if (!existingOperation || !conflictOp) {
+                    console.error(e);
                     throw e;
                 } else {
                     throw new ConflictOperationError(
@@ -316,21 +348,12 @@ export class PrismaStorage implements IDriveStorage {
     }
 
     async getDocument(driveId: string, id: string, tx?: Transaction) {
-        const result = await (tx ?? this.db).document.findUnique({
+        const prisma = tx ?? this.db;
+        const result = await prisma.document.findUnique({
             where: {
                 id_driveId: {
                     driveId,
                     id
-                }
-            },
-            include: {
-                operations: {
-                    orderBy: {
-                        index: 'asc'
-                    },
-                    include: {
-                        attachments: true
-                    }
                 }
             }
         });
@@ -338,6 +361,69 @@ export class PrismaStorage implements IDriveStorage {
         if (result === null) {
             throw new Error(`Document with id ${id} not found`);
         }
+
+        // retrieves operations with resulting state
+        // for the last operation of each scope
+        const operations = await prisma.$queryRaw<
+            Prisma.$OperationPayload['scalars'][]
+        >`
+            WITH ranked_operations AS (
+            SELECT
+                *,
+                ROW_NUMBER() OVER (PARTITION BY scope ORDER BY index DESC) AS rn
+            FROM "Operation"
+            )
+            SELECT
+            "id",
+            "opId",
+            "scope",
+            "branch",
+            "index",
+            "skip",
+            "hash",
+            "timestamp",
+            "input",
+            "type",
+            "context",
+            CASE
+                WHEN rn = 1 THEN "resultingState"
+                ELSE NULL
+            END AS "resultingState"
+            FROM ranked_operations
+            ORDER BY scope, index;
+        `;
+
+        const operationIds = operations.map(o => o.id);
+        const attachments = await prisma.attachment.findMany({
+            where: {
+                operationId: {
+                    in: operationIds
+                }
+            }
+        });
+
+        const fileRegistry: FileRegistry = {};
+        const operationsByScope = operations.reduce<DocumentOperations<Action>>(
+            (acc, operation) => {
+                const scope = operation.scope as OperationScope;
+                if (!acc[scope]) {
+                    acc[scope] = [];
+                }
+                const result = storageToOperation(operation);
+                result.attachments = attachments.filter(
+                    a => a.operationId === operation.id
+                );
+                result.attachments.forEach(({ hash, ...file }) => {
+                    fileRegistry[hash] = file;
+                });
+                acc[scope].push(result);
+                return acc;
+            },
+            {
+                global: [],
+                local: []
+            }
+        );
 
         const dbDoc = result;
         const doc: Document = {
@@ -350,17 +436,8 @@ export class PrismaStorage implements IDriveStorage {
             >,
             state: undefined,
             lastModified: new Date(dbDoc.lastModified).toISOString(),
-            operations: {
-                global: dbDoc.operations
-                    .filter(op => op.scope === 'global' && !op.clipboard)
-                    .map(storageToOperation),
-                local: dbDoc.operations
-                    .filter(op => op.scope === 'local' && !op.clipboard)
-                    .map(storageToOperation)
-            },
-            clipboard: dbDoc.operations
-                .filter(op => op.clipboard)
-                .map(storageToOperation),
+            operations: operationsByScope,
+            clipboard: [],
             revision: JSON.parse(dbDoc.revision) as Record<
                 OperationScope,
                 number
