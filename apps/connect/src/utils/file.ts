@@ -1,4 +1,22 @@
 import type { Document, DocumentModel } from 'document-model/document';
+import { utils } from 'document-model/document';
+
+const downloadFile = async (document: Document) => {
+    const zip = await utils.createZip(document);
+    zip.generateAsync({ type: 'blob' })
+        .then(blob => {
+            const link = window.document.createElement('a');
+            link.style.display = 'none';
+            link.href = URL.createObjectURL(blob);
+            link.download = `${document.name || 'Untitled'}.zip`;
+
+            window.document.body.appendChild(link);
+            link.click();
+
+            window.document.body.removeChild(link);
+        })
+        .catch(console.error);
+};
 
 export async function exportFile(
     document: Document,
@@ -12,6 +30,13 @@ export async function exportFile(
     }
 
     const extension = documentModel.utils.fileExtension;
+
+    // Fallback for browsers that don't support showSaveFilePicker
+    if (!window.showSaveFilePicker) {
+        await downloadFile(document);
+        return;
+    }
+
     const fileHandle = await window.showSaveFilePicker({
         suggestedName: `${document.name || 'Untitled'}.${
             extension ? `${extension}.` : ''
