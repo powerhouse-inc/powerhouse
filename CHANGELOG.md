@@ -1,3 +1,10 @@
+# [1.0.0-alpha.60](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.59...v1.0.0-alpha.60) (2024-05-29)
+
+
+### Features
+
+* avoid duplicated getDocument call ([c0684bc](https://github.com/powerhouse-inc/document-drive/commit/c0684bc0746d8bafb9393cdaeebfb60b38a8a32f))
+
 # [1.0.0-alpha.59](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.58...v1.0.0-alpha.59) (2024-05-28)
 
 
