@@ -1,3 +1,10 @@
+# [1.0.0-alpha.65](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.64...v1.0.0-alpha.65) (2024-05-30)
+
+
+### Features
+
+* fetch resulting state for last unskipped operation ([8297353](https://github.com/powerhouse-inc/document-drive/commit/8297353dc8eaca107d8134580dee67c3265b05b5))
+
 # [1.0.0-alpha.64](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.63...v1.0.0-alpha.64) (2024-05-30)
 
 
