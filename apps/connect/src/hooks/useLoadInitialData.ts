@@ -27,6 +27,7 @@ export const useLoadInitialData = () => {
     const { driveToBaseItems } = useDrivesContainer();
     const drives = usePathContent();
     const prevDrivesState = useRef([...drives]);
+    const drivesWithError = useRef<string[]>([]);
     const isFirstLoad = useRef(true);
     const navigateToItemId = useNavigateToItemId();
     const getItemById = useGetItemById();
@@ -50,8 +51,13 @@ export const useLoadInitialData = () => {
             if (
                 drive.type !== 'LOCAL_DRIVE' &&
                 drive.syncStatus === 'SUCCESS' &&
-                drive.syncStatus !== prevDrive.syncStatus
+                drivesWithError.current.includes(drive.id)
             ) {
+                // remove the drive from the error list
+                drivesWithError.current = drivesWithError.current.filter(
+                    id => id !== drive.id,
+                );
+
                 return toast(t('notifications.driveSyncSuccess'), {
                     type: 'connect-success',
                 });
@@ -62,6 +68,9 @@ export const useLoadInitialData = () => {
                     drive.syncStatus === 'ERROR') &&
                 drive.syncStatus !== prevDrive.syncStatus
             ) {
+                // add the drive to the error list
+                drivesWithError.current.push(drive.id);
+
                 return toast(
                     t(
                         `notifications.${drive.syncStatus === 'CONFLICT' ? 'driveSyncConflict' : 'driveSyncError'}`,
