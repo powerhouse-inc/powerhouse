@@ -76,8 +76,8 @@ devDependencies:
     specifier: ^1.4.0
     version: 1.4.0(vitest@1.5.0)
   document-model:
-    specifier: ^1.2.0
-    version: 1.2.0
+    specifier: ^1.3.0
+    version: 1.3.0
   document-model-libs:
     specifier: ^1.53.1
     version: 1.53.1(graphql@16.8.1)(react-dom@18.2.0)(react@18.2.0)(vitest@1.5.0)
@@ -4926,8 +4926,8 @@ packages:
       - vitest
     dev: true
 
-  /document-model@1.2.0:
-    resolution: {integrity: sha512-9nG80lQQghlvWndruBZuU8mNSsfwG7SRHczLAPEyy1iatct4mfdxkIck7b5vFAlAz43glqKy7QwAjxXX0oQ/7g==}
+  /document-model@1.3.0:
+    resolution: {integrity: sha512-od/UF1Ovt65/ZdpBaxeQFs1CnPeyblJXa3caUVQJX/wSl8P1OVpHtSb1p4i6tpNOuZcNr5Y5cnz7KyHj9Ajwxg==}
     dependencies:
       change-case: 5.4.4
       immer: 10.0.4
