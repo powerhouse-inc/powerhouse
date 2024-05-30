@@ -1,3 +1,10 @@
+# [1.0.0-alpha.116](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.115...v1.0.0-alpha.116) (2024-05-30)
+
+
+### Features
+
+* fix debounce value from public drive form input ([d2c36e8](https://github.com/powerhouse-inc/design-system/commit/d2c36e8d0bf62dc1fbc20362cb8467dec461345b))
+
 # [1.0.0-alpha.115](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.114...v1.0.0-alpha.115) (2024-05-28)
 
 
