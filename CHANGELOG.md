@@ -1,3 +1,10 @@
+# [1.0.0-alpha.64](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.63...v1.0.0-alpha.64) (2024-05-30)
+
+
+### Features
+
+* update document-model lib version ([#180](https://github.com/powerhouse-inc/document-drive/issues/180)) ([83cec58](https://github.com/powerhouse-inc/document-drive/commit/83cec58cb02388a3b2a643dd5af6c31cd850242d))
+
 # [1.0.0-alpha.63](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.62...v1.0.0-alpha.63) (2024-05-30)
 
 
