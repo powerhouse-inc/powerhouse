@@ -10,7 +10,7 @@ export const BrowserDocumentDriveServer = new DocumentDriveServer(
     documentModels,
     new BrowserStorage(connectConfig.routerBasename),
     new InMemoryCache(),
-    new BaseQueueManager(1),
+    new BaseQueueManager(1, 10),
 );
 
 BrowserDocumentDriveServer.initialize()
