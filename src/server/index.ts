@@ -20,7 +20,7 @@ import {
     DocumentModel,
     Operation,
     OperationScope,
-    State
+    utils as DocumentUtils
 } from 'document-model/document';
 import { createNanoEvents, Unsubscribe } from 'nanoevents';
 import { ICache } from '../cache';
@@ -631,6 +631,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     async _processOperations<T extends Document, A extends Action>(
         drive: string,
+        documentId: string | undefined,
         storageDocument: DocumentStorage<T>,
         operations: Operation<A | BaseAction>[]
     ) {
@@ -690,6 +691,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 try {
                     const appliedResult = await this._performOperation(
                         drive,
+                        documentId,
                         document,
                         nextOperation,
                         skipHashValidation
@@ -739,10 +741,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         ) : documentStorage.operations;
         const operations = baseUtils.documentHelpers.garbageCollectDocumentOperations(revisionOperations);
 
-        if (documentStorage.state && (!options || options.checkHashes === false)) {
-            return documentStorage as T;
-        }
-
         return baseUtils.replayDocument(
             documentStorage.initialState,
             operations,
@@ -760,6 +758,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     private async _performOperation<T extends Document>(
         drive: string,
+        id: string | undefined,
         document: T,
         operation: Operation,
         skipHashValidation = false
@@ -768,6 +767,25 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const signalResults: SignalResult[] = [];
         let newDocument = document;
+
+        const scope = operation.scope;
+        const documentOperations = DocumentUtils.documentHelpers.garbageCollectDocumentOperations(
+            {
+                ...document.operations,
+                [scope]: DocumentUtils.documentHelpers.skipHeaderOperations(
+                    document.operations[scope],
+                    operation,
+                ),
+            },
+        );
+
+        const lastRemainingOperation = documentOperations[scope].at(-1);
+        // if the latest operation doesn't have a resulting state then tries
+        // to retrieve it from the db to avoid rerunning all the operations
+        if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
+            lastRemainingOperation.resultingState = await (id ? this.storage.getOperationResultingState?.(drive, id, lastRemainingOperation.index, lastRemainingOperation.scope, "main") :
+                this.storage.getDriveOperationResultingState?.(drive, lastRemainingOperation.index, lastRemainingOperation.scope, "main"))
+        }
 
         const operationSignals: (() => Promise<SignalResult>)[] = [];
         newDocument = documentModel.reducer(
@@ -924,6 +942,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             await this._addOperations(drive, id, async documentStorage => {
                 const result = await this._processOperations(
                     drive,
+                    id,
                     documentStorage,
                     operations
                 );
@@ -1109,7 +1128,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 const result = await this._processOperations<
                     DocumentDriveDocument,
                     DocumentDriveAction
-                >(drive, documentStorage, operations.slice());
+                >(drive, undefined, documentStorage, operations.slice());
 
                 document = result.document;
                 operationsApplied.push(...result.operationsApplied);

@@ -505,4 +505,23 @@ export class PrismaStorage implements IDriveStorage {
         });
         await this.deleteDocument('drives', id);
     }
+
+    async getOperationResultingState(driveId: string, documentId: string, index: number, scope: string, branch: string): Promise<unknown> {
+        const operation = await this.db.operation.findUnique({
+            where: {
+                unique_operation: {
+                    driveId,
+                    documentId,
+                    index,
+                    scope,
+                    branch
+                }
+            }
+        });
+        return operation?.resultingState?.toString();
+    }
+
+    getDriveOperationResultingState(drive: string, index: number, scope: string, branch: string): Promise<unknown> {
+        return this.getOperationResultingState("drives", drive, index, scope, branch);
+    }
 }

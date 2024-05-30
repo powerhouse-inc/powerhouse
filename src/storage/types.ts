@@ -42,6 +42,7 @@ export interface IStorage {
         }>
     ): Promise<void>;
     deleteDocument(drive: string, id: string): Promise<void>;
+    getOperationResultingState?(drive: string, id: string, index: number, scope: string, branch: string): Promise<unknown>;
 }
 
 export interface IDriveStorage extends IStorage {
@@ -63,4 +64,5 @@ export interface IDriveStorage extends IStorage {
             header: DocumentHeader;
         }>
     ): Promise<void>;
+    getDriveOperationResultingState?(drive: string, index: number, scope: string, branch: string): Promise<unknown>;
 }
