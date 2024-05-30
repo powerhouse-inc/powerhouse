@@ -1,3 +1,10 @@
+# [1.0.0-alpha.61](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.60...v1.0.0-alpha.61) (2024-05-30)
+
+
+### Features
+
+* store resulting state as bytes and only retrieve state for last op of each scope ([c6a5004](https://github.com/powerhouse-inc/document-drive/commit/c6a5004a3dd07ee1ce2f5521bb7a6aa5e970465e))
+
 # [1.0.0-alpha.60](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.59...v1.0.0-alpha.60) (2024-05-29)
 
 
