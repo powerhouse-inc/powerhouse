@@ -42,21 +42,28 @@ export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
     const [isUrlValid, setIsUrlValid] = useState(true);
     const [hasConfirmedUrl, setHasConfirmedUrl] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const [url, setUrl] = useDebounceValue('', 500);
+    const [url, setUrl] = useState('');
+    const [debouncedUrl, setDebouncedUrl] = useDebounceValue(url, 500);
+
     const { register, handleSubmit, setValue } = useForm<Inputs>({
         mode: 'onBlur',
         defaultValues: {
             availableOffline: publicDriveDetails?.availableOffline ?? false,
         },
     });
+
+    useEffect(() => {
+        setDebouncedUrl(url);
+    }, [url]);
+
     useEffect(() => {
         setHasConfirmedUrl(false);
-        if (url === '') return;
+        if (debouncedUrl === '') return;
         fetchPublicDrive().catch(console.error);
 
         async function fetchPublicDrive() {
             try {
-                const { id, name } = await requestPublicDrive(url);
+                const { id, name } = await requestPublicDrive(debouncedUrl);
                 setPublicDriveDetails({
                     id,
                     driveName: name,
@@ -73,11 +80,15 @@ export function AddPublicDriveForm(props: AddPublicDriveFormProps) {
                 setErrorMessage((error as Error).message);
             }
         }
-    }, [url, setValue, sharingType]);
+    }, [debouncedUrl, setValue, sharingType]);
 
     function onSubmit({ availableOffline }: Inputs) {
         if (!publicDriveDetails) return;
-        props.onSubmit({ ...publicDriveDetails, availableOffline, url });
+        props.onSubmit({
+            ...publicDriveDetails,
+            availableOffline,
+            url: debouncedUrl,
+        });
     }
 
     return (
