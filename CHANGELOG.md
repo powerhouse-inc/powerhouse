@@ -1,3 +1,10 @@
+# [1.0.0-alpha.63](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.62...v1.0.0-alpha.63) (2024-05-30)
+
+
+### Bug Fixes
+
+* operations query ([8dd11c7](https://github.com/powerhouse-inc/document-drive/commit/8dd11c72058452f3e8febac472d01ad56d959e17))
+
 # [1.0.0-alpha.62](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.61...v1.0.0-alpha.62) (2024-05-30)
 
 
