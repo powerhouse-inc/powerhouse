@@ -1,3 +1,10 @@
+# [1.0.0-alpha.62](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.61...v1.0.0-alpha.62) (2024-05-30)
+
+
+### Bug Fixes
+
+* added drive and documentId filter ([718405f](https://github.com/powerhouse-inc/document-drive/commit/718405febbe8e53a3fd392cdd4acf2b041347eaf))
+
 # [1.0.0-alpha.61](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.60...v1.0.0-alpha.61) (2024-05-30)
 
 
