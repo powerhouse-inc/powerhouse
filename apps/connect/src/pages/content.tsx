@@ -171,12 +171,15 @@ const Content = () => {
     // preload document editors
     useEffect(() => {
         // waits 1 second to preload editors
-        const id = requestIdleCallback(async () => {
+        const requestIC = window.requestIdleCallback ?? setTimeout;
+        const cancelIC = window.cancelIdleCallback ?? clearTimeout;
+
+        const id = requestIC(async () => {
             for (const documentModel of documentModels) {
                 await preloadEditor(documentModel.documentModel.id);
             }
         });
-        return () => cancelIdleCallback(id);
+        return () => cancelIC(id);
     }, [documentModels, preloadEditor]);
 
     useEffect(() => {
@@ -308,6 +311,7 @@ const Content = () => {
 
     return (
         <div className="flex h-full flex-col overflow-auto bg-gray-100 p-6">
+            hello
             {selectedFileNode && selectedDocument ? (
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
                     <Suspense
