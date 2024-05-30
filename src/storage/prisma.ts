@@ -25,14 +25,14 @@ import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 type Transaction =
     | Omit<
-          PrismaClient<Prisma.PrismaClientOptions, never>,
-          | '$connect'
-          | '$disconnect'
-          | '$on'
-          | '$transaction'
-          | '$use'
-          | '$extends'
-      >
+        PrismaClient<Prisma.PrismaClientOptions, never>,
+        | '$connect'
+        | '$disconnect'
+        | '$on'
+        | '$transaction'
+        | '$use'
+        | '$extends'
+    >
     | ExtendedPrismaClient;
 
 function storageToOperation(
@@ -390,7 +390,7 @@ export class PrismaStorage implements IDriveStorage {
                 ELSE NULL
             END AS "resultingState"
             FROM ranked_operations
-            WHERE "driveId" = '${driveId}' AND "documentId" = '${id}'
+            WHERE "driveId" = ${driveId} AND "documentId" = ${id}
             ORDER BY scope, index;
         `;
 
@@ -445,6 +445,8 @@ export class PrismaStorage implements IDriveStorage {
             >,
             attachments: {}
         };
+
+
 
         return doc;
     }
