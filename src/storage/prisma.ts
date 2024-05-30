@@ -390,6 +390,7 @@ export class PrismaStorage implements IDriveStorage {
                 ELSE NULL
             END AS "resultingState"
             FROM ranked_operations
+            WHERE "driveId" = '${driveId}' AND "documentId" = '${id}'
             ORDER BY scope, index;
         `;
 
