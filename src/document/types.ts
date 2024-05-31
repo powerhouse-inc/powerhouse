@@ -109,6 +109,16 @@ export type ImmutableStateReducer<S, A extends Action, L = unknown> = (
     dispatch?: SignalDispatch,
 ) => State<S, L> | undefined;
 
+export type MutableStateReducer<S, A extends Action, L = unknown> = (
+    state: State<S, L>,
+    action: A,
+    dispatch?: SignalDispatch,
+) => State<S, L> | undefined;
+
+export type StateReducer<S, A extends Action, L = unknown> =
+    | ImmutableStateReducer<S, A, L>
+    | MutableStateReducer<S, A, L>;
+
 /**
  * Scope of an operation.
  * Global: The operation is synchronized everywhere in the network. This is the default document operation.
@@ -260,7 +270,7 @@ export interface DocumentClass<
 > {
     fileExtension: string;
     fromFile: (path: string) => Promise<C>;
-    new (initialState?: ExtendedState<S, L>): C;
+    new(initialState?: ExtendedState<S, L>): C;
 }
 
 export type DocumentModelUtils<

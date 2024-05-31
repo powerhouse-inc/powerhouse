@@ -45,6 +45,8 @@ export default defineConfig(({ mode = 'node' }) => {
                     exports: 'named',
                 },
             },
+            sourcemap: true,
+            minify: false
         },
         optimizeDeps: {
             include: isBrowser ? ['sha.js/sha1', 'sha.js/sha256'] : [],

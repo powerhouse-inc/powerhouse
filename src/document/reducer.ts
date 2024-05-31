@@ -1,4 +1,4 @@
-import { castDraft, produce } from 'immer';
+import { castDraft, Draft, produce } from 'immer';
 import { v4 as uuid } from 'uuid';
 import {
     loadStateOperation,
@@ -461,4 +461,133 @@ export function baseReducer<T, A extends Action, L>(
             }
         }
     });
+}
+
+/**
+ * Base document reducer that wraps a custom document reducer and handles
+ * document-level actions such as undo, redo, prune, and set name.
+ *
+ * @template T - The type of the state of the custom reducer.
+ * @template A - The type of the actions of the custom reducer.
+ * @param state - The current state of the document.
+ * @param action - The action object to apply to the state.
+ * @param customReducer - The custom reducer that implements the application logic
+ * specific to the document's state.
+ * @returns The new state of the document.
+ */
+export function mutableBaseReducer<T, A extends Action, L>(
+    document: Document<T, A, L>,
+    action: A | BaseAction | Operation,
+    customReducer: ImmutableStateReducer<T, A, L>,
+    dispatch?: SignalDispatch,
+    options: ReducerOptions = {},
+) {
+    const {
+        skip,
+        ignoreSkipOperations = false,
+        reuseHash = false,
+        reuseOperationResultingState = false,
+        operationResultingStateParser,
+    } = options;
+
+    const _action = { ...action };
+    const skipValue = skip || 0;
+    let newDocument: Document<T, A, L> = { ...document };
+    // let clipboard = [...document.clipboard];
+
+    const shouldProcessSkipOperation =
+        !ignoreSkipOperations &&
+        (skipValue > 0 || ('index' in _action && _action.skip > 0));
+
+    // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
+    // then runs the base reducer first
+    if (isBaseAction(_action)) {
+        newDocument = _baseReducer(newDocument, _action, customReducer);
+    }
+
+    // updates the document revision number, last modified date
+    // and operation history
+    newDocument = updateDocument(newDocument, _action, skipValue);
+
+    if (shouldProcessSkipOperation) {
+        newDocument = processSkipOperation(
+            newDocument,
+            _action,
+            customReducer,
+            skipValue,
+            reuseOperationResultingState,
+            operationResultingStateParser,
+        );
+    }
+
+    // wraps the custom reducer with Immer to avoid
+    // mutation bugs and allow writing reducers with
+    // mutating code
+    try {
+        const newState = customReducer(
+            newDocument.state as Draft<State<T, L>>,
+            _action as A,
+            dispatch,
+        );
+        if (newState) {
+            newDocument.state = newState;
+        }
+    } catch (error) {
+        // if the reducer throws an error then we should keep the previous state (before replayOperations)
+        // and remove skip number from action/operation
+        const lastOperationIndex =
+            newDocument.operations[_action.scope].length - 1;
+        newDocument.operations[_action.scope][lastOperationIndex].error = (
+            error as Error
+        ).message;
+        newDocument.operations[_action.scope][lastOperationIndex].skip = 0;
+
+        if (shouldProcessSkipOperation) {
+            newDocument.state = { ...document.state };
+            newDocument.operations = {
+                ...document.operations,
+                [_action.scope]: [
+                    ...document.operations[_action.scope],
+                    {
+                        ...newDocument.operations[_action.scope][
+                        lastOperationIndex
+                        ],
+                    },
+                ],
+            };
+        }
+    }
+
+    if ([UNDO, REDO, PRUNE].includes(_action.type)) {
+        return newDocument;
+    }
+
+    // if reuseHash is true, checks if the action has
+    // an hash and uses it instead of generating it
+    const scope = _action.scope || 'global';
+    const hash =
+        reuseHash && Object.prototype.hasOwnProperty.call(_action, 'hash')
+            ? (_action as Operation).hash
+            : hashDocument(newDocument, scope);
+
+    // updates the last operation with the hash of the resulting state
+    const lastOperation = newDocument.operations[scope].at(-1);
+    if (lastOperation) {
+        lastOperation.hash = hash;
+
+        if (reuseOperationResultingState) {
+            lastOperation.resultingState = newDocument.state[scope];
+        }
+
+        // if the action has attachments then adds them to the document
+        if (!isBaseAction(_action) && _action.attachments) {
+            _action.attachments.forEach(attachment => {
+                const { hash, ...file } = attachment;
+                newDocument.attachments[hash] = {
+                    ...file,
+                };
+            });
+        }
+    }
+    return newDocument;
 }

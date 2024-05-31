@@ -7,6 +7,7 @@ import {
     PruneAction,
     RedoAction,
     State,
+    StateReducer,
     UndoAction,
     UndoRedoProcessResult,
 } from '../types';
@@ -98,7 +99,7 @@ export function undoOperation<T, A extends Action, L>(
 
             const preLastOperation =
                 draft.document.operations[scope][
-                    draft.document.operations[scope].length - 2
+                draft.document.operations[scope].length - 2
                 ];
             if (
                 preLastOperation &&
@@ -235,8 +236,8 @@ export function pruneOperation<T, A extends Action, L>(
     const loadStateTimestamp = actionsToKeepStart.length
         ? actionsToKeepStart[actionsToKeepStart.length - 1].timestamp
         : actionsToKeepEnd.length
-          ? actionsToKeepEnd[0].timestamp
-          : new Date().toISOString();
+            ? actionsToKeepEnd[0].timestamp
+            : new Date().toISOString();
 
     // replaces pruned operations with LOAD_STATE
     return replayOperations(

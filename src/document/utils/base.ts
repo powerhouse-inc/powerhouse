@@ -1,5 +1,5 @@
 import stringifyJson from 'safe-stable-stringify';
-import { baseReducer, updateHeader } from '../reducer';
+import { baseReducer, mutableBaseReducer, updateHeader } from '../reducer';
 import {
     Action,
     BaseAction,
@@ -19,6 +19,7 @@ import {
     Operation,
     MappedOperation,
     ReducerOptions,
+    StateReducer,
 } from '../types';
 import { hash } from './node';
 import {
@@ -125,6 +126,19 @@ export function createReducer<
 >(
     reducer: ImmutableStateReducer<S, A, L>,
     documentReducer = baseReducer,
+): Reducer<S, A, L> {
+    return (document, action, dispatch, options) => {
+        return documentReducer(document, action, reducer, dispatch, options);
+    };
+}
+
+export function createUnsafeReducer<
+    S = unknown,
+    A extends Action = Action,
+    L = unknown,
+>(
+    reducer: ImmutableStateReducer<S, A, L>,
+    documentReducer = mutableBaseReducer,
 ): Reducer<S, A, L> {
     return (document, action, dispatch, options) => {
         return documentReducer(document, action, reducer, dispatch, options);
