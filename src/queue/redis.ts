@@ -1,5 +1,5 @@
 import { RedisClientType } from "redis";
-import { IJob, IQueue, IQueueManager, OperationJob } from "./types";
+import { IJob, IQueue, IQueueManager, IServerDelegate, OperationJob } from "./types";
 import { BaseQueueManager } from "./base";
 
 export class RedisQueue<T, R> implements IQueue<T, R> {
@@ -10,7 +10,8 @@ export class RedisQueue<T, R> implements IQueue<T, R> {
         this.client = client;
         this.id = id;
         this.client.hSet("queues", id, "true");
-
+        this.client.hSet(this.id, "deleted", "false");
+        this.client.hSet(this.id, "blocked", "false");
     }
 
     async addJob(data: any) {
@@ -33,13 +34,13 @@ export class RedisQueue<T, R> implements IQueue<T, R> {
         if (blocked) {
             await this.client.hSet(this.id, "blocked", "true");
         } else {
-            await this.client.hDel(this.id, "blocked");
+            await this.client.hSet(this.id, "blocked", "false");
         }
     }
 
     async isBlocked() {
         const blockedResult = await this.client.hGet(this.id, "blocked");
-        if (blockedResult) {
+        if (blockedResult === "true") {
             return true;
         }
 
@@ -69,7 +70,6 @@ export class RedisQueue<T, R> implements IQueue<T, R> {
     }
 
     async removeDependencies(job: IJob<OperationJob>) {
-        const allDeps1 = await this.client.lLen(this.id + "-deps");
         await this.client.lRem(this.id + "-deps", 1, JSON.stringify(job));
         const allDeps = await this.client.lLen(this.id + "-deps");
         if (allDeps > 0) {
@@ -80,15 +80,15 @@ export class RedisQueue<T, R> implements IQueue<T, R> {
     }
 
     async isDeleted() {
-        const deleted = await this.client.hGet(this.id, "deleted");
-        return deleted === "true";
+        const active = await this.client.hGet("queues", this.id);
+        return active === "false";
     }
 
     async setDeleted(deleted: boolean) {
         if (deleted) {
-            await this.client.hSet(this.id, "deleted", "true");
+            await this.client.hSet("queues", this.id, "false");
         } else {
-            await this.client.hDel(this.id, "deleted");
+            await this.client.hSet("queues", this.id, "true");
         }
     }
 }
@@ -104,10 +104,12 @@ export class RedisQueueManager extends BaseQueueManager implements IQueueManager
 
     async init(delegate: IServerDelegate, onError: (error: Error) => void): Promise<void> {
         await super.init(delegate, onError);
-        // load all queues
         const queues = await this.client.hGetAll("queues");
         for (const queueId in queues) {
-            this.queues.push(new RedisQueue(queueId, this.client));
+            const active = await this.client.hGet("queues", queueId);
+            if (active === "true") {
+                this.queues.push(new RedisQueue(queueId, this.client));
+            }
         }
     }
 

@@ -236,7 +236,7 @@ export class BaseQueueManager implements IQueueManager {
         } catch (e) {
             this.emit("jobFailed", nextJob, e as Error);
         } finally {
-            queue.setBlocked(false);
+            await queue.setBlocked(false);
             await this.processNextJob();
         }
     }
