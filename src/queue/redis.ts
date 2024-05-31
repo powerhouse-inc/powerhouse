@@ -10,7 +10,6 @@ export class RedisQueue<T, R> implements IQueue<T, R> {
         this.client = client;
         this.id = id;
         this.client.hSet("queues", id, "true");
-        this.client.hSet(this.id, "deleted", "false");
         this.client.hSet(this.id, "blocked", "false");
     }
 
