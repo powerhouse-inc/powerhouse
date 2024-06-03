@@ -1,3 +1,10 @@
+# [1.56.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.55.0...v1.56.0) (2024-06-03)
+
+
+### Features
+
+* bump deps ([e0f5580](https://github.com/powerhouse-inc/document-model-libs/commit/e0f5580549adc960405ec0ad445aa02b8895190c))
+
 # [1.55.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.54.0...v1.55.0) (2024-05-28)
 
 
