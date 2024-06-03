@@ -1,3 +1,11 @@
+# [1.4.0](https://github.com/powerhouse-inc/document-model/compare/v1.3.0...v1.4.0) (2024-06-03)
+
+
+### Features
+
+* added unsafe reducer (mutable) ([5f417af](https://github.com/powerhouse-inc/document-model/commit/5f417af25f62fd15533306f9ed949087b851c78c))
+* migrated from immer to mutative ([8b50a4f](https://github.com/powerhouse-inc/document-model/commit/8b50a4f70034da0afedec8db697a10f8739c6a3b))
+
 # [1.3.0](https://github.com/powerhouse-inc/document-model/compare/v1.2.0...v1.3.0) (2024-05-29)
 
 
