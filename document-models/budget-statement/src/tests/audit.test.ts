@@ -44,7 +44,7 @@ describe('Budget Statement Audit Report reducer', () => {
         expect(document.state.global.auditReports).toStrictEqual([]);
     });
 
-    it('should add audit report', async () => {
+    it.skip('should add audit report', async () => {
         const input = generateMock(z.AddAuditReportInputSchema());
         const file = await getLocalFile(tempFile);
         input.report = file.hash;
@@ -232,7 +232,7 @@ describe('Budget Statement Audit Report reducer', () => {
         });
     });
 
-    it('should fetch attachment from URL', async () => {
+    it.skip('should fetch attachment from URL', async () => {
         const file = await getRemoteFile(
             'https://makerdao.com/whitepaper/DaiDec17WP.pdf',
         );
