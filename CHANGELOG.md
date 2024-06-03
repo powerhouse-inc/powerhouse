@@ -1,3 +1,10 @@
+# [1.0.0-alpha.117](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.116...v1.0.0-alpha.117) (2024-06-03)
+
+
+### Bug Fixes
+
+* fix bundle error ([8169876](https://github.com/powerhouse-inc/design-system/commit/81698766eef9f6145a649aa8de5d114cff3482c0))
+
 # [1.0.0-alpha.116](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.115...v1.0.0-alpha.116) (2024-05-30)
 
 
