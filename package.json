@@ -15,7 +15,7 @@
         "check-types": "tsc",
         "lint": "eslint . && npm run check-types",
         "lint:fix": "eslint --fix . && npm run check-types",
-        "build": "npm run build:browser && npm run build:node",
+        "build": "NODE_ENV=production npm run build:browser && npm run build:node",
         "build:browser": "vite build --mode browser",
         "build:node": "vite build --mode node",
         "test": "vitest run",
@@ -87,11 +87,12 @@
     },
     "dependencies": {
         "change-case": "^5.4.3",
-        "immer": "^10.0.3",
         "jszip": "^3.10.1",
         "mime": "^4.0.1",
+        "mutative": "^1.0.5",
         "safe-stable-stringify": "^2.4.3",
         "uuid": "^9.0.1",
         "zod": "^3.22.4"
-    }
+    },
+    "packageManager": "pnpm@9.1.4+sha256.30a1801ac4e723779efed13a21f4c39f9eb6c9fbb4ced101bce06b422593d7c9"
 }

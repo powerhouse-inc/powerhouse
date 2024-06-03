@@ -1,4 +1,4 @@
-import type { Draft } from 'immer';
+import type { Draft } from 'mutative';
 import type { FC } from 'react';
 import type { DocumentModelState } from '../document-model/';
 import type { BaseAction } from './actions/types';
@@ -8,8 +8,8 @@ import { SignalDispatch } from './signal';
 export { z } from './schema';
 export type * from './schema/types';
 export type { FileInput } from './utils';
-export type { Immutable } from 'immer';
 export type { BaseAction } from './actions/types';
+export type { Immutable } from 'mutative';
 
 export type ActionSigner = {
     user: {
@@ -89,7 +89,7 @@ export type Reducer<State, A extends Action, LocalState> = (
  * A {@link Reducer} that prevents mutable code from changing the previous state.
  *
  * @remarks
- * This reducer is wrapped with {@link https://immerjs.github.io/immer/ | Immer}.
+ * This reducer is wrapped with {@link https://mutative.js.org/ | Mutative}.
  * This allows the reducer code to be mutable, making it simpler and
  * avoiding unintended changes in the provided state.
  * The returned state will always be a new object.
@@ -270,7 +270,7 @@ export interface DocumentClass<
 > {
     fileExtension: string;
     fromFile: (path: string) => Promise<C>;
-    new(initialState?: ExtendedState<S, L>): C;
+    new (initialState?: ExtendedState<S, L>): C;
 }
 
 export type DocumentModelUtils<

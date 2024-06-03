@@ -22,7 +22,7 @@ const entry = {
 
 export default defineConfig(({ mode = 'node' }) => {
     const isBrowser = mode === 'browser';
-    const external = ['immer', 'jszip', 'mime', 'zod'];
+    const external = ['mutative', 'jszip', 'mime', 'zod'];
 
     // if building for node then don't polyfill node core modules
     if (!isBrowser) {
@@ -46,7 +46,7 @@ export default defineConfig(({ mode = 'node' }) => {
                 },
             },
             sourcemap: true,
-            minify: false
+            minify: false,
         },
         optimizeDeps: {
             include: isBrowser ? ['sha.js/sha1', 'sha.js/sha256'] : [],

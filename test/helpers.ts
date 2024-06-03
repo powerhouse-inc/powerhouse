@@ -84,6 +84,34 @@ export const baseCountReducer: ImmutableStateReducer<
     }
 };
 
+export const mutableCountReducer: ImmutableStateReducer<
+    CountState,
+    CountAction,
+    CountLocalState
+> = (state, action) => {
+    switch (action.type) {
+        case 'INCREMENT':
+            return {
+                ...state,
+                global: { ...state.global, count: state.global.count + 1 },
+            };
+        case 'DECREMENT':
+            return {
+                ...state,
+                global: { ...state.global, count: state.global.count - 1 },
+            };
+        case 'SET_LOCAL_NAME':
+            return {
+                ...state,
+                local: { ...state.local, name: action.input },
+            };
+        case 'ERROR':
+            throw new Error('Error action');
+        default:
+            return state;
+    }
+};
+
 export const countReducer = createReducer<
     CountState,
     CountAction,

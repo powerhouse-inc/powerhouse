@@ -8,7 +8,6 @@ import {
     ExtendedState,
     ImmutableStateReducer,
     Reducer,
-    Immutable,
     OperationScope,
     State,
     CreateState,
@@ -19,7 +18,6 @@ import {
     Operation,
     MappedOperation,
     ReducerOptions,
-    StateReducer,
 } from '../types';
 import { hash } from './node';
 import {
@@ -30,9 +28,7 @@ import {
     UNDO,
     NOOP,
 } from '../actions/types';
-import { castImmutable, freeze } from 'immer';
 import { SignalDispatch } from '../signal';
-import { ScopeState } from '../../document-model';
 
 export function isNoopOperation(op: Partial<Operation>): boolean {
     return (
@@ -195,6 +191,8 @@ export const createDocument = <S, A extends Action, L = unknown>(
     };
 };
 
+// export const stringifyJson = configureStringify
+
 export const hashDocument = (
     document: Pick<Document, 'state'>,
     scope: OperationScope = 'global',
@@ -207,8 +205,8 @@ export const hashKey = (date?: Date, randomLimit = 1000) => {
     return hash(`${(date ?? new Date()).toISOString()}${random}`);
 };
 
-export function readOnly<T>(value: T): Immutable<T> {
-    return castImmutable(freeze(value, true));
+export function readOnly<T>(value: T): Readonly<T> {
+    return Object.freeze(value);
 }
 
 /**

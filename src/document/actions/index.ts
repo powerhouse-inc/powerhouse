@@ -1,4 +1,4 @@
-import { castDraft, produce } from 'immer';
+import { castDraft, create } from 'mutative';
 import {
     Action,
     Document,
@@ -7,7 +7,6 @@ import {
     PruneAction,
     RedoAction,
     State,
-    StateReducer,
     UndoAction,
     UndoRedoProcessResult,
 } from '../types';
@@ -34,7 +33,7 @@ export function noopOperation<T, A extends Action, L>(
     if (!scope) return defaultValues;
     if (action.skip === undefined) return defaultValues;
 
-    return produce(defaultValues, draft => {
+    return create(defaultValues, draft => {
         const lastOperation = draft.document.operations[scope].at(-1);
 
         if (action.skip && action.skip > 0) {
@@ -66,7 +65,7 @@ export function undoOperation<T, A extends Action, L>(
         skip,
     };
 
-    return produce(defaultResult, draft => {
+    return create(defaultResult, draft => {
         if (draft.document.operations[scope].length < 1) {
             throw new Error(
                 `Cannot undo: no operations in history for scope "${scope}"`,
@@ -99,7 +98,7 @@ export function undoOperation<T, A extends Action, L>(
 
             const preLastOperation =
                 draft.document.operations[scope][
-                draft.document.operations[scope].length - 2
+                    draft.document.operations[scope].length - 2
                 ];
             if (
                 preLastOperation &&
@@ -157,7 +156,7 @@ export function redoOperation<T, A extends Action, L>(
         skip,
     };
 
-    return produce(defaultResult, draft => {
+    return create(defaultResult, draft => {
         if (draft.skip > 0) {
             throw new Error(
                 `Cannot redo: skip value from reducer cannot be used with REDO action`,
@@ -236,8 +235,8 @@ export function pruneOperation<T, A extends Action, L>(
     const loadStateTimestamp = actionsToKeepStart.length
         ? actionsToKeepStart[actionsToKeepStart.length - 1].timestamp
         : actionsToKeepEnd.length
-            ? actionsToKeepEnd[0].timestamp
-            : new Date().toISOString();
+          ? actionsToKeepEnd[0].timestamp
+          : new Date().toISOString();
 
     // replaces pruned operations with LOAD_STATE
     return replayOperations(

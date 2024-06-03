@@ -1,8 +1,7 @@
-import { castDraft, Draft, produce } from 'immer';
+import { create, castDraft, Draft, unsafe } from 'mutative';
 import { v4 as uuid } from 'uuid';
 import {
     loadStateOperation,
-    noopOperation,
     pruneOperation,
     redoOperation,
     setNameOperation,
@@ -25,20 +24,9 @@ import {
     ReducerOptions,
     State,
 } from './types';
-import {
-    isBaseAction,
-    isUndoRedo,
-    hashDocument,
-    replayOperations,
-    isNoopOperation,
-    calculateSkipsLeft,
-} from './utils/base';
+import { isBaseAction, hashDocument, replayOperations } from './utils/base';
 import { SignalDispatch } from './signal';
 import { documentHelpers, parseResultingState } from './utils';
-import {
-    OperationIndex,
-    SkipHeaderOperationIndex,
-} from './utils/document-helpers';
 
 /**
  * Gets the next revision number based on the provided action.
@@ -328,7 +316,7 @@ export function baseReducer<T, A extends Action, L>(
 
     const _action = { ...action };
     const skipValue = skip || 0;
-    let newDocument = { ...document };
+    let newDocument: Document<T, A, L> = { ...document };
     // let clipboard = [...document.clipboard];
 
     const shouldProcessSkipOperation =
@@ -371,32 +359,30 @@ export function baseReducer<T, A extends Action, L>(
         );
     }
 
-    // wraps the custom reducer with Immer to avoid
+    // wraps the custom reducer with Mutative to avoid
     // mutation bugs and allow writing reducers with
     // mutating code
-    newDocument = produce(newDocument, draft => {
+    newDocument = create(newDocument, draft => {
         // the reducer runs on a immutable version of
         // provided state
         try {
-            const returnedDraft = customReducer(
-                draft.state,
-                _action as A,
-                dispatch,
-            );
+            const newState = customReducer(draft.state, _action as A, dispatch);
 
             // const clipboardValue = isUndoRedo(action) ? [...clipboard] : [];
 
             // if the reducer creates a new state object instead
             // of mutating the draft then returns the new state
-            if (returnedDraft) {
-                // casts new state as draft to comply with typescript
-                return castDraft<Document<T, A, L>>({
-                    ...newDocument,
+            if (newState) {
+                // Object.assign(draft.state, newState);
+                unsafe(() => {
+                    // casts new state as draft to comply with typescript
+                    draft.state = castDraft(newState);
                     // clipboard: [...clipboardValue],
-                    state: returnedDraft,
                 });
             } else {
+                // unsafe(() => {
                 // draft.clipboard = castDraft([...clipboardValue]);
+                // });
             }
         } catch (error) {
             // if the reducer throws an error then we should keep the previous state (before replayOperations)
@@ -425,42 +411,41 @@ export function baseReducer<T, A extends Action, L>(
             }
         }
     });
-
     // updates the document history
-    return produce(newDocument, draft => {
-        // meta operations are not added to the operations history
-        if ([UNDO, REDO, PRUNE].includes(_action.type)) {
-            return draft;
+    // meta operations are not added to the operations history
+    if ([UNDO, REDO, PRUNE].includes(_action.type)) {
+        return newDocument;
+    }
+
+    // if reuseHash is true, checks if the action has
+    // an hash and uses it instead of generating it
+    const scope = _action.scope || 'global';
+    const hash =
+        reuseHash && Object.prototype.hasOwnProperty.call(_action, 'hash')
+            ? (_action as Operation).hash
+            : hashDocument(newDocument, scope);
+
+    // updates the last operation with the hash of the resulting state
+    const lastOperation = newDocument.operations[scope].at(-1);
+    if (lastOperation) {
+        lastOperation.hash = hash;
+
+        if (reuseOperationResultingState) {
+            lastOperation.resultingState = newDocument.state[scope];
         }
 
-        // if reuseHash is true, checks if the action has
-        // an hash and uses it instead of generating it
-        const scope = _action.scope || 'global';
-        const hash =
-            reuseHash && Object.prototype.hasOwnProperty.call(_action, 'hash')
-                ? (_action as Operation).hash
-                : hashDocument(draft, scope);
-
-        // updates the last operation with the hash of the resulting state
-        const lastOperation = draft.operations[scope].at(-1);
-        if (lastOperation) {
-            lastOperation.hash = hash;
-
-            if (reuseOperationResultingState) {
-                lastOperation.resultingState = draft.state[scope];
-            }
-
-            // if the action has attachments then adds them to the document
-            if (!isBaseAction(_action) && _action.attachments) {
-                _action.attachments.forEach(attachment => {
-                    const { hash, ...file } = attachment;
-                    draft.attachments[hash] = {
-                        ...file,
-                    };
-                });
-            }
+        // if the action has attachments then adds them to the document
+        if (!isBaseAction(_action) && _action.attachments) {
+            _action.attachments.forEach(attachment => {
+                const { hash, ...file } = attachment;
+                newDocument.attachments[hash] = {
+                    ...file,
+                };
+            });
         }
-    });
+    }
+
+    return newDocument;
 }
 
 /**
@@ -520,9 +505,6 @@ export function mutableBaseReducer<T, A extends Action, L>(
         );
     }
 
-    // wraps the custom reducer with Immer to avoid
-    // mutation bugs and allow writing reducers with
-    // mutating code
     try {
         const newState = customReducer(
             newDocument.state as Draft<State<T, L>>,
@@ -550,7 +532,7 @@ export function mutableBaseReducer<T, A extends Action, L>(
                     ...document.operations[_action.scope],
                     {
                         ...newDocument.operations[_action.scope][
-                        lastOperationIndex
+                            lastOperationIndex
                         ],
                     },
                 ],

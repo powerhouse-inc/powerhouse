@@ -2,6 +2,8 @@ import fs from 'fs';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
     createDocument,
+    createReducer,
+    createUnsafeReducer,
     getLocalFile,
     replayDocument,
     validateOperations,
@@ -9,12 +11,17 @@ import {
 import { hash as hashBrowser } from '../../src/document/utils/browser';
 import { hash as hashNode } from '../../src/document/utils/node';
 import {
+    baseCountReducer,
     CountAction,
     CountLocalState,
     countReducer,
     CountState,
+    increment,
+    mutableCountReducer,
     setLocalName,
 } from '../helpers';
+import stringify, { configure } from 'safe-stable-stringify';
+import { n } from 'vitest/dist/reporters-LqC_WI4d.js';
 
 describe('Base utils', () => {
     const tempDir = './test/document/temp/utils/';
@@ -113,5 +120,52 @@ describe('Base utils', () => {
 
         expect(newDocument.state).toStrictEqual(replayedDocument.state);
         expect(newDocument.lastModified).toBe(replayedDocument.lastModified);
+    });
+
+    it('should mutate state on unsafeReducer', () => {
+        const unsafeReducer = createUnsafeReducer(baseCountReducer);
+        const document = createDocument<
+            CountState,
+            CountAction,
+            CountLocalState
+        >({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: { name: '' } },
+        });
+
+        const newDocument = countReducer(document, increment());
+        expect(newDocument.state.global.count).toBe(1);
+        expect(document.state.global.count).toBe(0);
+
+        const unsafeDocument = createDocument<
+            CountState,
+            CountAction,
+            CountLocalState
+        >({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: { name: '' } },
+        });
+        const newUnsafeDocument = unsafeReducer(unsafeDocument, increment());
+        expect(newUnsafeDocument.state.global.count).toBe(1);
+        expect(unsafeDocument.state.global.count).toBe(1);
+    });
+
+    it('should work with mutable reducer', () => {
+        const reducer = createReducer(mutableCountReducer);
+        const document = createDocument<
+            CountState,
+            CountAction,
+            CountLocalState
+        >({
+            documentType: 'powerhouse/counter',
+            state: { global: { count: 0 }, local: { name: '' } },
+        });
+        const newDocument = reducer(document, increment());
+        expect(newDocument.state.global.count).toBe(1);
+        expect(document.state.global.count).toBe(0);
+
+        const finalDocument = reducer(newDocument, setLocalName('test'));
+        expect(newDocument.state.local.name).toBe('');
+        expect(finalDocument.state.local.name).toBe('test');
     });
 });
