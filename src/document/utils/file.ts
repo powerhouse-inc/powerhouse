@@ -13,6 +13,7 @@ import type {
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 import { replayDocument, ReplayDocumentOptions } from './base';
 import { validateOperations } from './validation';
+import { garbageCollectDocumentOperations } from './document-helpers';
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
@@ -158,7 +159,9 @@ async function loadFromZip<S, A extends Action, L>(
         await operationsZip.async('string'),
     ) as DocumentOperations<A>;
 
-    const operationsError = validateOperations(operations);
+    const clearedOperations = garbageCollectDocumentOperations(operations);
+
+    const operationsError = validateOperations(clearedOperations);
     if (operationsError.length) {
         const errorMessages = operationsError.map(err => err.message);
         throw new Error(errorMessages.join('\n'));
@@ -166,7 +169,7 @@ async function loadFromZip<S, A extends Action, L>(
 
     let result = replayDocument(
         initialState,
-        operations,
+        clearedOperations,
         reducer,
         undefined,
         header,
