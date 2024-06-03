@@ -1,7 +1,7 @@
 import { designSystemPreset } from '@powerhousedao/design-system';
 import type { Config } from 'tailwindcss';
 
-const config = {
+const config: Config = {
     important: '#document-editor-context',
     content: [
         './editors/**/*.{html,js,ts,tsx}',
@@ -21,6 +21,6 @@ const config = {
             },
         },
     },
-} satisfies Config;
+}
 
 export default config;
