@@ -1,3 +1,10 @@
+# [1.0.0-alpha.66](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.65...v1.0.0-alpha.66) (2024-06-03)
+
+
+### Features
+
+* updated libs ([5e47758](https://github.com/powerhouse-inc/document-drive/commit/5e477580524a1defd92dd0bef9b160e182436ec9))
+
 # [1.0.0-alpha.65](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.64...v1.0.0-alpha.65) (2024-05-30)
 
 
