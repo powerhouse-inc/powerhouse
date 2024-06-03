@@ -14,8 +14,11 @@ export function validateOperations<A extends Action>(
     for (const scope of scopes) {
         const ops = operations[scope].sort((a, b) => a.index - b.index);
 
+        let opIndex = -1;
+
         for (let i = 0; i < ops.length; i++) {
-            if (ops[i].index !== i) {
+            opIndex = opIndex + 1 + ops[i].skip;
+            if (ops[i].index !== opIndex) {
                 errors.push({
                     message: `Invalid operation index ${ops[i].index} at position ${i}`,
                     details: {

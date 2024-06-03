@@ -99,6 +99,53 @@ describe('Base utils', () => {
         );
     });
 
+    it('should work with garbage collected operations', () => {
+        const errors = validateOperations({
+            global: [
+                {
+                    scope: 'global',
+                    hash: '',
+                    index: 0,
+                    skip: 0,
+                    timestamp: '',
+                    type: 'TEST_ACTION',
+                    input: { id: 'test' },
+                },
+                {
+                    scope: 'global',
+                    hash: '',
+                    index: 1,
+                    skip: 0,
+                    timestamp: '',
+                    type: 'TEST_ACTION',
+                    input: { id: 'test' },
+                },
+                {
+                    scope: 'global',
+                    hash: '',
+                    index: 3,
+                    skip: 1,
+                    timestamp: '',
+                    type: 'TEST_ACTION',
+                    input: { id: 'test' },
+                },
+            ],
+            local: [
+                {
+                    scope: 'local',
+                    hash: '',
+                    index: 0,
+                    skip: 0,
+                    timestamp: '',
+                    type: 'TEST_ACTION',
+                    input: { id: 'test' },
+                },
+            ],
+        });
+
+        expect(errors).toHaveLength(0);
+    });
+
     it('should replay document and keep lastModified timestamp', async () => {
         const document = createDocument<
             CountState,
