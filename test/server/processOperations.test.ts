@@ -111,6 +111,7 @@ describe('processOperations', () => {
 
         const result = await server._processOperations(
             driveId,
+            undefined,
             document,
             operations
         );
@@ -139,6 +140,7 @@ describe('processOperations', () => {
 
         const result = await server._processOperations(
             driveId,
+            undefined,
             document,
             operations
         );
@@ -165,6 +167,7 @@ describe('processOperations', () => {
 
         const result = await server._processOperations(
             driveId,
+            undefined,
             document,
             operations
         );
@@ -202,6 +205,7 @@ describe('processOperations', () => {
 
         const result = await server._processOperations(
             driveId,
+            undefined,
             document,
             operations
         );
@@ -241,6 +245,7 @@ describe('processOperations', () => {
 
         const result = await server._processOperations(
             driveId,
+            undefined,
             document,
             operations
         );
@@ -294,6 +299,7 @@ describe('processOperations', () => {
 
         const result = await server._processOperations(
             driveId,
+            undefined,
             document,
             operations
         );
@@ -329,6 +335,7 @@ describe('processOperations', () => {
 
         const result = await server._processOperations(
             driveId,
+            undefined,
             document,
             operations
         );
@@ -373,6 +380,7 @@ describe('processOperations', () => {
 
         const result = await server._processOperations(
             driveId,
+            undefined,
             document,
             operations
         );

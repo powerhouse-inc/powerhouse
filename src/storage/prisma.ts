@@ -21,7 +21,7 @@ import type {
 import { IBackOffOptions, backOff } from 'exponential-backoff';
 import { ConflictOperationError } from '../server/error';
 import { logger } from '../utils/logger';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
+import { DocumentDriveStorage, DocumentStorage, IDriveStorage, IStorageDelegate } from './types';
 
 type Transaction =
     | Omit<
@@ -90,6 +90,7 @@ type ExtendedPrismaClient = ReturnType<
 
 export class PrismaStorage implements IDriveStorage {
     private db: ExtendedPrismaClient;
+    private delegate: IStorageDelegate | undefined;
 
     constructor(db: PrismaClient, options?: PrismaStorageOptions) {
         const backOffOptions = options?.transactionRetryBackoff;
@@ -97,6 +98,10 @@ export class PrismaStorage implements IDriveStorage {
             ...backOffOptions,
             jitter: backOffOptions?.jitter ?? 'full'
         });
+    }
+
+    setStorageDelegate(delegate: IStorageDelegate): void {
+        this.delegate = delegate;
     }
 
     async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
@@ -362,12 +367,26 @@ export class PrismaStorage implements IDriveStorage {
             throw new Error(`Document with id ${id} not found`);
         }
 
+        const cachedOperations = await this.delegate?.getCachedOperations(driveId, id) ?? {
+            global: [],
+            local: []
+        };
+        const scopeIndex = Object.keys(cachedOperations).reduceRight<Record<OperationScope, number>>((acc, value) => {
+            const scope = value as OperationScope;
+            const lastIndex = cachedOperations[scope]?.at(-1)?.index ?? -1;
+            acc[scope] = lastIndex;
+            return acc;
+        }, { global: -1, local: -1 });
+
+        const conditions = Object.entries(scopeIndex).map(([scope, index]) => `("scope" = '${scope}' AND "index" > ${index})`);
+        conditions.push(`("scope" NOT IN (${Object.keys(cachedOperations).map(s => `'${s}'`).join(", ")}))`);
+
         // retrieves operations with resulting state
         // for the last operation of each scope
-        const operations = await prisma.$queryRaw<
+        // TODO prevent SQL injection
+        const queryOperations = await prisma.$queryRawUnsafe<
             Prisma.$OperationPayload['scalars'][]
-        >`
-            WITH ranked_operations AS (
+        >(`WITH ranked_operations AS (
             SELECT
                 *,
                 ROW_NUMBER() OVER (PARTITION BY scope ORDER BY index DESC) AS rn
@@ -390,21 +409,23 @@ export class PrismaStorage implements IDriveStorage {
                 ELSE NULL
             END AS "resultingState"
             FROM ranked_operations
-            WHERE "driveId" = ${driveId} AND "documentId" = ${id}
+            WHERE "driveId" = $1 AND "documentId" = $2
+            AND (${conditions.join(' OR ')})
             ORDER BY scope, index;
-        `;
-
-        const operationIds = operations.map(o => o.id);
+        `, driveId, id);
+        const operationIds = queryOperations.map(o => o.id)
         const attachments = await prisma.attachment.findMany({
             where: {
                 operationId: {
                     in: operationIds
                 }
-            }
+            },
         });
 
+        // TODO add attachments from cached operations
         const fileRegistry: FileRegistry = {};
-        const operationsByScope = operations.reduce<DocumentOperations<Action>>(
+
+        const operationsByScope = queryOperations.reduce<DocumentOperations<Action>>(
             (acc, operation) => {
                 const scope = operation.scope as OperationScope;
                 if (!acc[scope]) {
@@ -420,10 +441,7 @@ export class PrismaStorage implements IDriveStorage {
                 acc[scope].push(result);
                 return acc;
             },
-            {
-                global: [],
-                local: []
-            }
+            cachedOperations
         );
 
         const dbDoc = result;
@@ -445,9 +463,6 @@ export class PrismaStorage implements IDriveStorage {
             >,
             attachments: {}
         };
-
-
-
         return doc;
     }
 

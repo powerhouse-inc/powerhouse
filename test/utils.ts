@@ -94,7 +94,7 @@ export class BasicClient {
         private document: Document<any, any, any>,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         private reducer: Reducer<any, any, any>
-    ) {}
+    ) { }
 
     getDocument() {
         return this.document;
@@ -132,6 +132,7 @@ export class BasicClient {
 
         const result = await this.server._processOperations(
             this.driveId,
+            this.documentId,
             this.document,
             remoteDocumentOperations
         );
@@ -165,7 +166,7 @@ export class DriveBasicClient {
         private document: Document<any, any, any>,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         private reducer: Reducer<any, any, any>
-    ) {}
+    ) { }
 
     getDocument() {
         return this.document;
@@ -209,6 +210,7 @@ export class DriveBasicClient {
 
         const result = await this.server._processOperations(
             this.driveId,
+            undefined,
             this.document,
             remoteDocumentOperations
         );

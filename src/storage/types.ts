@@ -3,12 +3,12 @@ import type {
     DocumentDriveDocument,
 } from 'document-model-libs/document-drive';
 import type {
+    Action,
     BaseAction,
     Document,
     DocumentHeader,
-    ExtendedState,
+    DocumentOperations,
     Operation,
-    State
 } from 'document-model/document';
 
 export type DocumentStorage<D extends Document = Document> = Omit<
@@ -17,6 +17,10 @@ export type DocumentStorage<D extends Document = Document> = Omit<
 >;
 
 export type DocumentDriveStorage = DocumentStorage<DocumentDriveDocument>;
+
+export interface IStorageDelegate {
+    getCachedOperations(drive: string, id: string): Promise<DocumentOperations<Action> | undefined>;
+}
 
 export interface IStorage {
     checkDocumentExists(drive: string, id: string): Promise<boolean>;
@@ -43,8 +47,8 @@ export interface IStorage {
     ): Promise<void>;
     deleteDocument(drive: string, id: string): Promise<void>;
     getOperationResultingState?(drive: string, id: string, index: number, scope: string, branch: string): Promise<unknown>;
+    setStorageDelegate?(delegate: IStorageDelegate): void;
 }
-
 export interface IDriveStorage extends IStorage {
     getDrives(): Promise<string[]>;
     getDrive(id: string): Promise<DocumentDriveStorage>;

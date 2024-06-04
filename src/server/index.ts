@@ -103,6 +103,18 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         this.storage = storage;
         this.cache = cache;
         this.queueManager = queueManager;
+
+        this.storage.setStorageDelegate?.({
+            getCachedOperations: async (drive, id) => {
+                try {
+                    const document = await this.cache.getDocument(drive, id);
+                    return document?.operations;
+                } catch (error) {
+                    logger.error(error);
+                    return undefined;
+                }
+            }
+        })
     }
 
     private updateSyncStatus(
