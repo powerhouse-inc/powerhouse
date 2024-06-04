@@ -3,7 +3,7 @@ import { openUrl } from 'src/utils/openUrl';
 
 export const PHLogo = () => {
     return (
-        <div className="fixed bottom-4 right-4">
+        <div className="fixed bottom-8 right-8">
             <a
                 onClick={() => openUrl('https://www.powerhouse.inc/')}
                 className="cursor-pointer opacity-45 transition-opacity duration-100 hover:opacity-100"
