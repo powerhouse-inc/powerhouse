@@ -1,3 +1,10 @@
+# [1.0.0-alpha.68](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.67...v1.0.0-alpha.68) (2024-06-04)
+
+
+### Bug Fixes
+
+* redis queue ([e99d1b9](https://github.com/powerhouse-inc/document-drive/commit/e99d1b9f0c704836cc0752e36e0f905dc192e5e1))
+
 # [1.0.0-alpha.67](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.66...v1.0.0-alpha.67) (2024-06-04)
 
 
