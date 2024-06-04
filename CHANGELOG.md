@@ -1,3 +1,10 @@
+# [1.0.0-alpha.67](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.66...v1.0.0-alpha.67) (2024-06-04)
+
+
+### Features
+
+* get operations from cache on storage ([8416464](https://github.com/powerhouse-inc/document-drive/commit/84164646609045b2cd8e9e8747e364c746d9e3ec))
+
 # [1.0.0-alpha.66](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.65...v1.0.0-alpha.66) (2024-06-03)
 
 
