@@ -178,6 +178,7 @@ export abstract class BaseDocumentDriveServer {
         operation: Operation,
         forceSync?: boolean
     ): Promise<IOperationResult>;
+
     abstract addOperations(
         drive: string,
         id: string,
@@ -191,10 +192,25 @@ export abstract class BaseDocumentDriveServer {
         operation: Operation,
         forceSync?: boolean
     ): Promise<IOperationResult>;
+
     abstract queueOperations(
         drive: string,
         id: string,
         operations: Operation[],
+        forceSync?: boolean
+    ): Promise<IOperationResult>;
+
+    abstract queueAction(
+        drive: string,
+        id: string,
+        action: Action,
+        forceSync?: boolean
+    ): Promise<IOperationResult>;
+
+    abstract queueActions(
+        drive: string,
+        id: string,
+        actions: Action[],
         forceSync?: boolean
     ): Promise<IOperationResult>;
 
@@ -217,6 +233,18 @@ export abstract class BaseDocumentDriveServer {
     abstract queueDriveOperations(
         drive: string,
         operations: Operation<DocumentDriveAction | BaseAction>[],
+        forceSync?: boolean
+    ): Promise<IOperationResult<DocumentDriveDocument>>;
+
+    abstract queueDriveAction(
+        drive: string,
+        action: DocumentDriveAction | BaseAction,
+        forceSync?: boolean
+    ): Promise<IOperationResult<DocumentDriveDocument>>;
+
+    abstract queueDriveActions(
+        drive: string,
+        actions: Array<DocumentDriveAction | BaseAction>,
         forceSync?: boolean
     ): Promise<IOperationResult<DocumentDriveDocument>>;
 
