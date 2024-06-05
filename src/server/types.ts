@@ -161,6 +161,10 @@ export abstract class BaseDocumentDriveServer {
         options?: GetDocumentOptions
     ): Promise<DocumentDriveDocument>;
 
+    abstract getDriveBySlug(
+        slug: string,
+    ): Promise<DocumentDriveDocument>;
+
     abstract getDocuments(drive: string): Promise<string[]>;
     abstract getDocument(
         drive: string,
