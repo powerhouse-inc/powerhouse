@@ -244,22 +244,29 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         await this.queueManager.init({
             checkDocumentExists: (driveId: string, documentId: string): Promise<boolean> => this.storage.checkDocumentExists(driveId, documentId),
-            processOperationJob: ({ driveId, documentId, operations, forceSync, actions }) => {
+            processOperationJob: async ({ driveId, documentId, operations, forceSync, actions }) => {
+                let result;
                 if (documentId) {
-                    if (operations) {
-                        return this.addOperations(driveId, documentId, operations, forceSync)
+
+                    if (operations && operations.length > 0) {
+                        result = await this.addOperations(driveId, documentId, operations, forceSync)
                     }
 
-                    if (actions) {
-                        return this.addActions(driveId, documentId, actions ?? []);
+                    if (actions && actions.length > 0) {
+                        result = await this.addActions(driveId, documentId, actions ?? []);
+                    }
+
+                } else {
+                    if (operations && operations.length > 0) {
+                        result = await this.addDriveOperations(driveId, operations as (Operation<DocumentDriveAction | BaseAction>)[], forceSync)
+                    }
+
+                    if (actions && actions.length > 0) {
+                        result = await this.addDriveActions(driveId, actions as (DocumentDriveAction | BaseAction)[] ?? []);
+
                     }
                 }
-
-                if (actions) {
-                    return this.addDriveActions(driveId, actions as (DocumentDriveAction | BaseAction)[] ?? [])
-                }
-
-                return this.addDriveOperations(driveId, operations as (Operation<DocumentDriveAction | BaseAction>)[], forceSync)
+                return result!
 
             }
         }, error => {
@@ -1358,7 +1365,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     ): Promise<IOperationResult> {
         const document = await this.getDocument(drive, id);
         const operations = this._buildOperations(document, actions);
-        return this.queueOperations(drive, id, operations);
+        return this.addOperations(drive, id, operations);
     }
 
     async addDriveAction(
@@ -1374,7 +1381,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     ): Promise<IOperationResult<DocumentDriveDocument>> {
         const document = await this.getDrive(drive);
         const operations = this._buildOperations(document, actions);
-        const result = await this.queueDriveOperations(drive, operations);
+        const result = await this.addDriveOperations(drive, operations);
         return result;
     }
 

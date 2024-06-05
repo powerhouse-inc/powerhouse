@@ -265,6 +265,27 @@ describe.each(queueLayers)(
             }))
             expect(driveResults.flat().filter((f: any) => f.status === "CONFLICT").length).toBe(0);
         });
+
+        it("adds operations with queueDriveAction", async ({ expect }) => {
+            const server = new DocumentDriveServer(
+                documentModels,
+                new MemoryStorage(),
+                new InMemoryCache(),
+                await buildStorage()
+            );
+            await server.initialize();
+            let drive = await createDrive(server);
+            const driveId = drive.state.global.id;
+
+
+            const action = actions.addListener({ listener: { block: true, callInfo: { data: "", name: "test", transmitterType: "Internal" }, filter: { branch: [], documentId: [], documentType: [], scope: [] }, label: "test", listenerId: "123", system: true } })
+
+            await server.queueDriveAction(driveId, action);
+            const drive2 = await server.getDrive(driveId);
+
+            expect(drive2.state.local.listeners.length).toBe(1);
+
+        });
     });
 
 
