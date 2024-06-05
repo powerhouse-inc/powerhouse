@@ -1273,6 +1273,24 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 }
             }
 
+            const syncUnits = await this.getSynchronizationUnits(drive);
+
+            const addedNodes = syncUnits
+                .filter(syncUnit => syncUnit.documentId !== '')
+                .filter(syncUnit => !this.syncStatus.has(syncUnit.documentId))
+                .map(syncUnit => syncUnit.documentId);
+
+            const deletedNodes = Array.from(this.syncStatus.keys()).filter(
+                syncId => {
+                    const syncUnit = syncUnits.find(
+                        unit =>
+                            unit.documentId === syncId ||
+                            unit.driveId === syncId
+                    );
+                    return !syncUnit;
+                }
+            );
+
             // update listener cache
             const lastOperation = operationsApplied
                 .filter(op => op.scope === 'global')
@@ -1294,21 +1312,49 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                                 revision: lastOperation.index
                             }
                         ],
-                        () => this.updateSyncStatus(drive, 'SYNCING'),
+                        () => {
+                            this.updateSyncStatus(drive, 'SYNCING');
+
+                            for (const fileNode of [
+                                ...addedNodes,
+                                ...deletedNodes
+                            ]) {
+                                this.updateSyncStatus(fileNode, 'SYNCING');
+                            }
+                        },
                         this.handleListenerError.bind(this),
                         forceSync
                     )
-                    .then(
-                        updates =>
-                            updates.length &&
-                            this.updateSyncStatus(drive, 'SUCCESS')
-                    )
+                    .then(updates => {
+                        if (updates.length) {
+                            this.updateSyncStatus(drive, 'SUCCESS');
+
+                            for (const addedNode of addedNodes) {
+                                this.updateSyncStatus(addedNode, 'SUCCESS');
+                            }
+
+                            for (const deletedNode of deletedNodes) {
+                                this.updateSyncStatus(deletedNode, null);
+                            }
+                        }
+                    })
                     .catch(error => {
                         logger.error(
                             'Non handled error updating sync revision',
                             error
                         );
                         this.updateSyncStatus(drive, 'ERROR', error as Error);
+
+                        for (const fileNode of [
+                            ...addedNodes,
+                            ...deletedNodes
+                        ]) {
+                            this.updateSyncStatus(
+                                fileNode,
+                                'ERROR',
+                                error as Error
+                            );
+                        }
                     });
             }
 
