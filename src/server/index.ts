@@ -249,9 +249,18 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     private async stopSyncRemoteDrive(driveId: string) {
+        const syncUnits = await this.getSynchronizationUnits(driveId);
+        const fileNodes = syncUnits
+            .filter(syncUnit => syncUnit.documentId !== '')
+            .map(syncUnit => syncUnit.documentId);
+
         const triggers = this.triggerMap.get(driveId);
         triggers?.forEach(cancel => cancel());
         this.updateSyncStatus(driveId, null);
+
+        for (const fileNode of fileNodes) {
+            this.updateSyncStatus(fileNode, null);
+        }
         return this.triggerMap.delete(driveId);
     }
 
