@@ -513,11 +513,21 @@ export class PrismaStorage implements IDriveStorage {
     }
 
     async deleteDrive(id: string) {
+        // delete drive documents and operations
         await this.db.document.deleteMany({
             where: {
                 driveId: id
             }
         });
+
+        // delete drive and associated slug
+        await this.db.drive.deleteMany({
+            where: {
+                id
+            }
+        })
+
+        // delete drive itself
         await this.deleteDocument('drives', id);
     }
 
