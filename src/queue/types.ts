@@ -1,4 +1,4 @@
-import { Operation } from "document-model/document";
+import { Action, Operation } from "document-model/document";
 import { IOperationResult } from "../server";
 import type { Unsubscribe } from "nanoevents";
 
@@ -6,6 +6,7 @@ export type OperationJob = {
     driveId: string;
     documentId?: string
     operations: Operation[]
+    actions?: Action[]
     forceSync?: boolean
 }
 
