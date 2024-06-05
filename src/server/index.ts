@@ -87,7 +87,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         DocumentDriveState['id'],
         Map<Trigger['id'], CancelPullLoop>
     >();
-    private syncStatus = new Map<DocumentDriveState['id'], SyncStatus>();
+    private syncStatus = new Map<string, SyncStatus>();
 
     private queueManager: IQueueManager;
 
@@ -186,6 +186,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const drive = await this.getDrive(driveId);
         let driveTriggers = this.triggerMap.get(driveId);
 
+        const fileNodes = drive.state.global.nodes.filter(isFileNode);
+
         for (const trigger of drive.state.local.triggers) {
             if (driveTriggers?.get(trigger.id)) {
                 continue;
@@ -196,6 +198,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             }
 
             this.updateSyncStatus(driveId, 'SYNCING');
+
+            for (const fileNode of fileNodes) {
+                this.updateSyncStatus(fileNode.id, 'SYNCING');
+            }
+
             if (PullResponderTransmitter.isPullResponderTrigger(trigger)) {
                 const cancelPullLoop = PullResponderTransmitter.setupPull(
                     driveId,
@@ -211,11 +218,27 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                         );
                     },
                     revisions => {
-                        const errorRevision = revisions.find(
+                        const errorRevision = revisions.filter(
                             r => r.status !== 'SUCCESS'
                         );
-                        if (!errorRevision) {
+                        if (errorRevision.length < 1) {
                             this.updateSyncStatus(driveId, 'SUCCESS');
+                        }
+
+                        for (const fileNode of fileNodes) {
+                            const fileErrorRevision = errorRevision.find(
+                                r => r.documentId === fileNode.id
+                            );
+
+                            if (fileErrorRevision) {
+                                this.updateSyncStatus(
+                                    fileNode.id,
+                                    fileErrorRevision.status,
+                                    fileErrorRevision.error
+                                );
+                            } else {
+                                this.updateSyncStatus(fileNode.id, 'SUCCESS');
+                            }
                         }
                     }
                 );
@@ -1075,21 +1098,24 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 .updateSynchronizationRevisions(
                     drive,
                     syncUnits,
-                    () => this.updateSyncStatus(drive, 'SYNCING'),
+                    () => {
+                        this.updateSyncStatus(drive, 'SYNCING');
+                        this.updateSyncStatus(id, 'SYNCING');
+                    },
                     this.handleListenerError.bind(this),
                     forceSync
                 )
-                .then(
-                    updates =>
-                        updates.length &&
-                        this.updateSyncStatus(drive, 'SUCCESS')
-                )
+                .then(updates => {
+                    updates.length && this.updateSyncStatus(drive, 'SUCCESS');
+                    updates.length && this.updateSyncStatus(id, 'SUCCESS');
+                })
                 .catch(error => {
                     logger.error(
                         'Non handled error updating sync revision',
                         error
                     );
                     this.updateSyncStatus(drive, 'ERROR', error as Error);
+                    this.updateSyncStatus(id, 'ERROR', error as Error);
                 });
 
             // after applying all the valid operations,throws
