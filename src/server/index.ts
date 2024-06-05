@@ -244,10 +244,24 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         await this.queueManager.init({
             checkDocumentExists: (driveId: string, documentId: string): Promise<boolean> => this.storage.checkDocumentExists(driveId, documentId),
-            processOperationJob: ({ driveId, documentId, operations, forceSync }) => documentId ?
-                this.addOperations(driveId, documentId, operations, forceSync)
-                : this.addDriveOperations(driveId, operations as Operation<DocumentDriveAction | BaseAction>[], forceSync)
+            processOperationJob: ({ driveId, documentId, operations, forceSync, actions }) => {
+                if (documentId) {
+                    if (operations) {
+                        return this.addOperations(driveId, documentId, operations, forceSync)
+                    }
 
+                    if (actions) {
+                        return this.addActions(driveId, documentId, actions ?? []);
+                    }
+                }
+
+                if (actions) {
+                    return this.addDriveActions(driveId, actions as (DocumentDriveAction | BaseAction)[] ?? [])
+                }
+
+                return this.addDriveOperations(driveId, operations as (Operation<DocumentDriveAction | BaseAction>)[], forceSync)
+
+            }
         }, error => {
             logger.error(`Error initializing queue manager`, error);
             errors.push(error);
@@ -942,6 +956,61 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             logger.error('Error adding job', error);
             throw error;
         }
+    }
+
+    async queueAction(drive: string, id: string, action: Action, forceSync?: boolean | undefined): Promise<IOperationResult<Document>> {
+        return this.queueActions(drive, id, [action], forceSync);
+    }
+
+    async queueActions(drive: string, id: string, actions: Action[], forceSync?: boolean | undefined): Promise<IOperationResult<Document>> {
+        try {
+            const jobId = await this.queueManager.addJob({ driveId: drive, documentId: id, operations: [], actions, forceSync });
+
+            return new Promise<IOperationResult>((resolve, reject) => {
+                const unsubscribe = this.queueManager.on('jobCompleted', (job, result) => {
+                    if (job.jobId === jobId) {
+                        unsubscribe();
+                        unsubscribeError();
+                        resolve(result);
+                    }
+                });
+                const unsubscribeError = this.queueManager.on('jobFailed', (job, error) => {
+                    if (job.jobId === jobId) {
+                        unsubscribe();
+                        unsubscribeError();
+                        reject(error);
+                    }
+                });
+            })
+        } catch (error) {
+            logger.error('Error adding job', error);
+            throw error;
+        }
+    }
+
+    async queueDriveAction(drive: string, action: DocumentDriveAction | BaseAction, forceSync?: boolean | undefined): Promise<IOperationResult<DocumentDriveDocument>> {
+        return this.queueDriveActions(drive, [action], forceSync);
+    }
+
+    async queueDriveActions(drive: string, actions: (DocumentDriveAction | BaseAction)[], forceSync?: boolean | undefined): Promise<IOperationResult<DocumentDriveDocument>> {
+        const jobId = await this.queueManager.addJob({ driveId: drive, operations: [], actions, forceSync });
+        return new Promise<IOperationResult<DocumentDriveDocument>>((resolve, reject) => {
+            const unsubscribe = this.queueManager.on('jobCompleted', (job, result) => {
+                if (job.jobId === jobId) {
+                    unsubscribe();
+                    unsubscribeError();
+                    resolve(result as IOperationResult<DocumentDriveDocument>);
+                }
+            });
+            const unsubscribeError = this.queueManager.on('jobFailed', (job, error) => {
+                if (job.jobId === jobId) {
+                    unsubscribe();
+                    unsubscribeError();
+                    reject(error);
+                }
+            });
+
+        })
     }
 
     async addOperations(
