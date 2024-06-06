@@ -243,7 +243,7 @@ export class ListenerManager extends BaseListenerManager {
 
                     const opData: OperationUpdate[] = [];
                     try {
-                        const data = await this.drive.getOperationData(
+                        const data = await this.drive.getOperationData( // DEAL WITH INVALID SYNC ID ERROR
                             driveId,
                             syncUnit.syncId,
                             {
@@ -426,7 +426,7 @@ export class ListenerManager extends BaseListenerManager {
             }
 
             const { documentId, driveId, scope, branch } = syncUnit;
-            const operations = await this.drive.getOperationData(
+            const operations = await this.drive.getOperationData( // DEAL WITH INVALID SYNC ID ERROR
                 driveId,
                 syncUnit.syncId,
                 {

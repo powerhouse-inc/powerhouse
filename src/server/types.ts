@@ -286,7 +286,7 @@ export abstract class BaseDocumentDriveServer {
     abstract getSynchronizationUnit(
         driveId: string,
         syncId: string
-    ): Promise<SynchronizationUnit>;
+    ): Promise<SynchronizationUnit | undefined>;
 
     abstract getOperationData(
         driveId: string,

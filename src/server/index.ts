@@ -371,8 +371,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             });
         }
 
-        const synchronizationUnits: SynchronizationUnit[] = [];
-
+        const synchronizationUnitsQuery: Omit<SynchronizationUnit, "revision" | "lastUpdated">[] = [];
         for (const node of nodes) {
             const nodeUnits =
                 scope?.length || branch?.length
@@ -389,35 +388,45 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             if (!nodeUnits.length) {
                 continue;
             }
+            synchronizationUnitsQuery.push(...nodeUnits.map(n => ({
+                driveId,
+                documentId: node.id,
+                syncId: n.syncId,
+                documentType: node.documentType,
+                scope: n.scope,
+                branch: n.branch
+            })));
+        }
 
-            const document = await (node.id
-                ? this.getDocument(driveId, node.id)
-                : this.getDrive(driveId));
+        const revisions = await this.storage.getSynchronizationUnitsRevision(synchronizationUnitsQuery);
 
-            for (const { syncId, scope, branch } of nodeUnits) {
-                const operations =
-                    document.operations[scope as OperationScope] ?? [];
-                const lastOperation = operations[operations.length - 1];
-                synchronizationUnits.push({
-                    syncId,
-                    scope,
-                    branch,
-                    driveId,
-                    documentId: node.id,
-                    documentType: node.documentType,
-                    lastUpdated:
-                        lastOperation?.timestamp ?? document.lastModified,
-                    revision: lastOperation?.index ?? 0
-                });
-            }
+        const synchronizationUnits: SynchronizationUnit[] = [];
+        for (const query of synchronizationUnitsQuery) {
+            const result = revisions.find(r =>
+                r.driveId === query.driveId &&
+                r.documentId === query.documentId &&
+                r.scope === query.scope &&
+                r.branch === query.branch
+            );
+
+            synchronizationUnits.push({
+                syncId: query.syncId,
+                scope: query.scope,
+                branch: query.branch,
+                driveId: query.driveId,
+                documentId: query.documentId,
+                documentType: query.documentType,
+                lastUpdated: result?.lastUpdated ?? drive.created,
+                revision: result?.revision ?? 0
+            });
         }
         return synchronizationUnits;
     }
 
-    public async getSynchronizationUnit(
+    public async getSynchronizationUnitIdInfo(
         driveId: string,
         syncId: string
-    ): Promise<SynchronizationUnit> {
+    ): Promise<Omit<SynchronizationUnit, "revision" | "lastUpdated"> | undefined> {
         const drive = await this.getDrive(driveId);
         const node = drive.state.global.nodes.find(
             node =>
@@ -426,14 +435,40 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         );
 
         if (!node || !isFileNode(node)) {
-            throw new Error('Synchronization unit not found');
+            return undefined;
         }
 
-        const { scope, branch } = node.synchronizationUnits.find(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const syncUnit = node.synchronizationUnits.find(
             unit => unit.syncId === syncId
-        )!;
+        );
+        if (!syncUnit) {
+            return undefined;
+        }
 
-        const documentId = node.id;
+        return {
+            syncId,
+            scope: syncUnit.scope,
+            branch: syncUnit.branch,
+            driveId,
+            documentId: node.id,
+            documentType: node.documentType,
+        };
+    }
+
+    public async getSynchronizationUnit(
+        driveId: string,
+        syncId: string
+    ): Promise<SynchronizationUnit | undefined> {
+        const syncUnit = await this.getSynchronizationUnitIdInfo(driveId, syncId);
+
+        if (!syncUnit) {
+            return undefined;
+        }
+
+        const { scope, branch, documentId, documentType } = syncUnit;
+
+        // TODO: REPLACE WITH GET DOCUMENT OPERATIONS
         const document = await this.getDocument(driveId, documentId);
         const operations = document.operations[scope as OperationScope] ?? [];
         const lastOperation = operations[operations.length - 1];
@@ -444,7 +479,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             branch,
             driveId,
             documentId,
-            documentType: node.documentType,
+            documentType,
             lastUpdated: lastOperation?.timestamp ?? document.lastModified,
             revision: lastOperation?.index ?? 0
         };
@@ -458,17 +493,21 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             fromRevision?: number | undefined;
         }
     ): Promise<OperationUpdate[]> {
-        const { documentId, scope } =
+        const syncUnit =
             syncId === '0'
                 ? { documentId: '', scope: 'global' }
-                : await this.getSynchronizationUnit(driveId, syncId);
+                : await this.getSynchronizationUnitIdInfo(driveId, syncId);
+
+        if (!syncUnit) {
+            throw new Error(`Invalid Sync Id ${syncId} in drive ${driveId}`);
+        }
 
         const document =
             syncId === '0'
                 ? await this.getDrive(driveId)
-                : await this.getDocument(driveId, documentId); // TODO replace with getDocumentOperations
+                : await this.getDocument(driveId, syncUnit.documentId); // TODO replace with getDocumentOperations
 
-        const operations = document.operations[scope as OperationScope] ?? []; // TODO filter by branch also
+        const operations = document.operations[syncUnit.scope as OperationScope] ?? []; // TODO filter by branch also
         const filteredOperations = operations.filter(
             operation =>
                 Object.keys(filter).length === 0 ||

@@ -3,10 +3,16 @@ import {
     BaseAction,
     Document,
     DocumentHeader,
-    Operation
+    Operation,
+    OperationScope
 } from 'document-model/document';
 import { mergeOperations } from '..';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
+import {
+    DocumentDriveStorage,
+    DocumentStorage,
+    IDriveStorage,
+    SynchronizationUnitQuery
+} from './types';
 
 export class MemoryStorage implements IDriveStorage {
     private documents: Record<string, Record<string, DocumentStorage>>;
@@ -19,7 +25,7 @@ export class MemoryStorage implements IDriveStorage {
     }
 
     checkDocumentExists(drive: string, id: string): Promise<boolean> {
-        return Promise.resolve(this.documents[drive]?.[id] !== undefined)
+        return Promise.resolve(this.documents[drive]?.[id] !== undefined);
     }
 
     async getDocuments(drive: string) {
@@ -152,5 +158,51 @@ export class MemoryStorage implements IDriveStorage {
     async deleteDrive(id: string) {
         delete this.documents[id];
         delete this.drives[id];
+    }
+
+    async getSynchronizationUnitsRevision(
+        units: SynchronizationUnitQuery[]
+    ): Promise<
+        {
+            driveId: string;
+            documentId: string;
+            scope: string;
+            branch: string;
+            lastUpdated: string;
+            revision: number;
+        }[]
+    > {
+        const result: {
+            driveId: string;
+            documentId: string;
+            scope: string;
+            branch: string;
+            lastUpdated: string;
+            revision: number;
+        }[] = [];
+
+        for (const unit of units) {
+            try {
+                const document = await this.getDocument(
+                    unit.driveId,
+                    unit.documentId
+                );
+                const operation =
+                    document.operations[unit.scope as OperationScope]?.at(-1);
+                if (operation) {
+                    result.push({
+                        driveId: unit.driveId,
+                        documentId: unit.documentId,
+                        scope: unit.scope,
+                        branch: unit.branch,
+                        lastUpdated: operation.timestamp,
+                        revision: operation.index
+                    });
+                }
+            } catch {
+                continue;
+            }
+        }
+        return result;
     }
 }
