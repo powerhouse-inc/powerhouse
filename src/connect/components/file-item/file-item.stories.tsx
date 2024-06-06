@@ -44,6 +44,7 @@ export const ReadMode: Story = {
             availableOffline: false,
             path: '',
             type: 'FILE',
+            syncStatus: 'SUCCESS',
         },
     },
 };

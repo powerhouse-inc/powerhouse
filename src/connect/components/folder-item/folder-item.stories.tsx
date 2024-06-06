@@ -36,6 +36,7 @@ export const ReadMode: Story = {
             availableOffline: false,
             path: '',
             type: 'FOLDER',
+            syncStatus: 'SYNCING',
         },
     },
 };

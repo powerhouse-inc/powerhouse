@@ -16,6 +16,7 @@ import {
 } from '@/powerhouse/components/tree-view-input';
 import React, { useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
+import { SyncStatusIcon } from '../status-icon';
 
 type FolderItem = object;
 
@@ -95,7 +96,16 @@ export const FolderItem: React.FC<FolderItemProps> = ({
             >
                 <div className="relative flex flex-1 flex-row items-center overflow-hidden">
                     <div className="p-1">
-                        <Icon name="folder-close" size={24} />
+                        <div className="relative">
+                            <Icon name="folder-close" size={24} />
+                            {isReadMode && item.syncStatus && (
+                                <div className="absolute bottom-[-5px] right-[-4px] rounded-full bg-white">
+                                    <SyncStatusIcon
+                                        syncStatus={item.syncStatus}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
                     {content}
                 </div>

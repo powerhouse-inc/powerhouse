@@ -19,6 +19,7 @@ import {
 } from '@/powerhouse';
 import React, { useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
+import { SyncStatusIcon } from '../status-icon';
 
 const iconMap = {
     legal: LegalImg,
@@ -80,13 +81,20 @@ export const FileItem: React.FC<FileItemProps> = ({
     );
 
     const iconNode = customIcon || (
-        <img
-            src={iconMap[icon]}
-            alt="file icon"
-            className="max-w-none"
-            width={32}
-            height={34}
-        />
+        <div className="relative">
+            <img
+                src={iconMap[icon]}
+                alt="file icon"
+                className="max-w-none"
+                width={32}
+                height={34}
+            />
+            {isReadMode && item.syncStatus && (
+                <div className="absolute bottom-[-3px] right-0 rounded-full bg-white">
+                    <SyncStatusIcon syncStatus={item.syncStatus} />
+                </div>
+            )}
+        </div>
     );
 
     const content = isReadMode ? (

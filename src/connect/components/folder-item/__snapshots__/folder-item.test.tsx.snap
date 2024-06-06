@@ -16,13 +16,17 @@ exports[`FolderItem Component > should match read snapshot 1`] = `
         <div
           class="p-1"
         >
-          <svg
-            style="width: 24px; height: 24px;"
+          <div
+            class="relative"
           >
-            <use
-              href="icons.svg#folder-close"
-            />
-          </svg>
+            <svg
+              style="width: 24px; height: 24px;"
+            >
+              <use
+                href="icons.svg#folder-close"
+              />
+            </svg>
+          </div>
         </div>
         <div
           class="ml-3 max-h-6 truncate font-medium text-slate-200"
@@ -61,13 +65,17 @@ exports[`FolderItem Component > should match write snapshot 1`] = `
         <div
           class="p-1"
         >
-          <svg
-            style="width: 24px; height: 24px;"
+          <div
+            class="relative"
           >
-            <use
-              href="icons.svg#folder-close"
-            />
-          </svg>
+            <svg
+              style="width: 24px; height: 24px;"
+            >
+              <use
+                href="icons.svg#folder-close"
+              />
+            </svg>
+          </div>
         </div>
         <div
           class="flex items-center ml-3 flex-1 font-medium"

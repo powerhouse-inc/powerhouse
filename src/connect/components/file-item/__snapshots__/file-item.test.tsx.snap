@@ -16,13 +16,17 @@ exports[`FileItem Component > should match snapshot 1`] = `
         <div
           class="mr-1.5"
         >
-          <img
-            alt="file icon"
-            class="max-w-none"
-            height="34"
-            src="/src/assets/icons/profile.png"
-            width="32"
-          />
+          <div
+            class="relative"
+          >
+            <img
+              alt="file icon"
+              class="max-w-none"
+              height="34"
+              src="/src/assets/icons/profile.png"
+              width="32"
+            />
+          </div>
         </div>
         <div
           class="overflow-hidden text-gray-800"

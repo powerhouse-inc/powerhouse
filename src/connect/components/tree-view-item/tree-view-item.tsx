@@ -12,6 +12,7 @@ import {
     TreeItem,
     defaultDropdownMenuOptions,
     getIsMouseInsideContainer,
+    useGetDriveParent,
 } from '@/connect';
 import {
     DivProps,
@@ -79,6 +80,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     const [mouseIsWithinItemContainer, setMouseIsWithinItemContainer] =
         useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const getDriveParent = useGetDriveParent();
 
     const { dragProps, dropProps, isDropTarget, isDragging } =
         useDraggableTarget<TreeItem>({
@@ -106,11 +108,13 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         };
     }, []);
 
+    const driveItem = getDriveParent(item.path);
     const isSelected = item.isSelected;
     const isWriteMode = props.mode === 'write';
     const showDropdownMenuButton = mouseIsWithinItemContainer && !isWriteMode;
     const isDrive = getIsDrive(item);
-    const isCloudDrive = getIsCloudDrive(item);
+    const isParentCloudDrive = driveItem ? getIsCloudDrive(driveItem) : false;
+    const isParentPublicDrive = driveItem ? getIsPublicDrive(driveItem) : false;
     const isPublicDrive = getIsPublicDrive(item);
     const itemOptions =
         item.options ?? (defaultOptions as ConnectDropdownMenuItem[]);
@@ -305,7 +309,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     function statusIconOrDropdownMenuButton() {
         if (showDropdownMenuButton && isAllowedToCreateDocuments)
             return dropdownMenuButton;
-        if ((isCloudDrive || isPublicDrive) && item.syncStatus) {
+        if ((isParentCloudDrive || isParentPublicDrive) && item.syncStatus) {
             return (
                 <SyncStatusIcon
                     syncStatus={item.syncStatus}
