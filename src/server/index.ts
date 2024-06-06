@@ -70,7 +70,7 @@ import {
 } from './types';
 import { filterOperationsByRevision } from './utils';
 import { BaseQueueManager } from '../queue/base';
-import { IQueueManager } from '../queue/types';
+import { ActionJob, IQueueManager, isActionJob, isOperationJob, Job, OperationJob } from '../queue/types';
 
 export * from './listener';
 export type * from './types';
@@ -232,6 +232,25 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         return this.triggerMap.delete(driveId);
     }
 
+    private queueDelegate = {
+        checkDocumentExists: (driveId: string, documentId: string): Promise<boolean> => this.storage.checkDocumentExists(driveId, documentId),
+        processOperationJob: async ({ driveId, documentId, operations, forceSync }: OperationJob) => {
+            return documentId ? this.addOperations(driveId, documentId, operations, forceSync) : this.addDriveOperations(driveId, operations as (Operation<DocumentDriveAction | BaseAction>)[], forceSync)
+        },
+        processActionJob: async ({ driveId, documentId, actions, forceSync }: ActionJob) => {
+            return documentId ? this.addActions(driveId, documentId, actions, forceSync) : this.addDriveActions(driveId, actions as (Operation<DocumentDriveAction | BaseAction>)[], forceSync)
+        },
+        processJob: async (job: Job) => {
+            if (isOperationJob(job)) {
+                return this.queueDelegate.processOperationJob(job);
+            } else if (isActionJob(job)) {
+                return this.queueDelegate.processActionJob(job);
+            } else {
+                throw new Error("Unknown job type", job);
+            }
+        }
+    };
+
     async initialize() {
         const errors: Error[] = [];
         const drives = await this.getDrives();
@@ -242,37 +261,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             });
         }
 
-        await this.queueManager.init({
-            checkDocumentExists: (driveId: string, documentId: string): Promise<boolean> => this.storage.checkDocumentExists(driveId, documentId),
-            processJob: async ({ driveId, documentId, operations, forceSync, actions }) => {
-                let result = {};
-                if (documentId) {
-                    if (operations && operations.length > 0) {
-                        result = await this.addOperations(driveId, documentId, operations, forceSync)
-                    }
-
-                    if (actions && actions.length > 0) {
-                        let actionResult = await this.addActions(driveId, documentId, actions as (DocumentDriveAction | BaseAction)[] ?? []);
-
-                        result = { ...result, ...actionResult }
-                    }
-
-                } else {
-                    if (operations && operations.length > 0) {
-                        result = await this.addDriveOperations(driveId, operations as (Operation<DocumentDriveAction | BaseAction>)[], forceSync)
-                    }
-
-                    if (actions && actions.length > 0) {
-                        let actionResult = await this.addDriveActions(driveId, actions as (DocumentDriveAction | BaseAction)[] ?? []);
-
-                        result = { ...result ?? {}, ...actionResult }
-
-                    }
-                }
-                return result as IOperationResult
-
-            }
-        }, error => {
+        await this.queueManager.init(this.queueDelegate, error => {
             logger.error(`Error initializing queue manager`, error);
             errors.push(error);
         })
@@ -968,13 +957,13 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }
     }
 
-    async queueAction(drive: string, id: string, action: Action, forceSync?: boolean | undefined): Promise<IOperationResult<Document>> {
+    async queueAction(drive: string, id: string, action: Action, forceSync?: boolean | undefined): Promise<IOperationResult> {
         return this.queueActions(drive, id, [action], forceSync);
     }
 
-    async queueActions(drive: string, id: string, actions: Action[], forceSync?: boolean | undefined): Promise<IOperationResult<Document>> {
+    async queueActions(drive: string, id: string, actions: Action[], forceSync?: boolean | undefined): Promise<IOperationResult> {
         try {
-            const jobId = await this.queueManager.addJob({ driveId: drive, documentId: id, operations: [], actions, forceSync });
+            const jobId = await this.queueManager.addJob({ driveId: drive, documentId: id, actions, forceSync });
 
             return new Promise<IOperationResult>((resolve, reject) => {
                 const unsubscribe = this.queueManager.on('jobCompleted', (job, result) => {
@@ -1003,7 +992,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     async queueDriveActions(drive: string, actions: (DocumentDriveAction | BaseAction)[], forceSync?: boolean | undefined): Promise<IOperationResult<DocumentDriveDocument>> {
-        const jobId = await this.queueManager.addJob({ driveId: drive, operations: [], actions, forceSync });
+        const jobId = await this.queueManager.addJob({ driveId: drive, actions, forceSync });
         return new Promise<IOperationResult<DocumentDriveDocument>>((resolve, reject) => {
             const unsubscribe = this.queueManager.on('jobCompleted', (job, result) => {
                 if (job.jobId === jobId) {
@@ -1356,35 +1345,39 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async addAction(
         drive: string,
         id: string,
-        action: Action
+        action: Action,
+        forceSync = true
     ): Promise<IOperationResult> {
-        return this.addActions(drive, id, [action]);
+        return this.addActions(drive, id, [action], forceSync);
     }
 
     async addActions(
         drive: string,
         id: string,
-        actions: Action[]
+        actions: Action[],
+        forceSync = true
     ): Promise<IOperationResult> {
         const document = await this.getDocument(drive, id);
         const operations = this._buildOperations(document, actions);
-        return this.addOperations(drive, id, operations);
+        return this.addOperations(drive, id, operations, forceSync);
     }
 
     async addDriveAction(
         drive: string,
-        action: DocumentDriveAction | BaseAction
+        action: DocumentDriveAction | BaseAction,
+        forceSync = true
     ): Promise<IOperationResult<DocumentDriveDocument>> {
-        return this.addDriveActions(drive, [action]);
+        return this.addDriveActions(drive, [action], forceSync);
     }
 
     async addDriveActions(
         drive: string,
-        actions: (DocumentDriveAction | BaseAction)[]
+        actions: (DocumentDriveAction | BaseAction)[],
+        forceSync = true
     ): Promise<IOperationResult<DocumentDriveDocument>> {
         const document = await this.getDrive(drive);
         const operations = this._buildOperations(document, actions);
-        const result = await this.addDriveOperations(drive, operations);
+        const result = await this.addDriveOperations(drive, operations, forceSync);
         return result;
     }
 

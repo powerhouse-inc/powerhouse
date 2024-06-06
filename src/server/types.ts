@@ -44,7 +44,6 @@ export type IOperationResult<T extends Document = Document> = {
     status: UpdateStatus;
     error?: OperationError;
     operations: Operation[];
-    actions?: Action;
     document: T | undefined;
     signals: SignalResult[];
 };
@@ -252,21 +251,25 @@ export abstract class BaseDocumentDriveServer {
     abstract addAction(
         drive: string,
         id: string,
-        action: Action
+        action: Action,
+        forceSync?: boolean
     ): Promise<IOperationResult>;
     abstract addActions(
         drive: string,
         id: string,
-        actions: Action[]
+        actions: Action[],
+        forceSync?: boolean
     ): Promise<IOperationResult>;
 
     abstract addDriveAction(
         drive: string,
-        action: DocumentDriveAction | BaseAction
+        action: DocumentDriveAction | BaseAction,
+        forceSync?: boolean
     ): Promise<IOperationResult<DocumentDriveDocument>>;
     abstract addDriveActions(
         drive: string,
-        actions: (DocumentDriveAction | BaseAction)[]
+        actions: (DocumentDriveAction | BaseAction)[],
+        forceSync?: boolean
     ): Promise<IOperationResult<DocumentDriveDocument>>;
 
     abstract getSyncStatus(drive: string): SyncStatus;

@@ -20,9 +20,9 @@ export class RedisQueue<T, R> implements IQueue<T, R> {
     async getNextJob() {
         const job = await this.client.rPop(this.id + "-jobs");
         if (!job) {
-            return null;
+            return undefined;
         }
-        return JSON.parse(job);
+        return JSON.parse(job) as IJob<T>;
     }
 
     async amountOfJobs() {
@@ -52,7 +52,7 @@ export class RedisQueue<T, R> implements IQueue<T, R> {
 
     async getJobs() {
         const entries = await this.client.lRange(this.id + "-jobs", 0, -1)
-        return entries.map(e => JSON.parse(e));
+        return entries.map(e => JSON.parse(e) as IJob<T>);
     }
 
     async addDependencies(job: IJob<OperationJob>) {

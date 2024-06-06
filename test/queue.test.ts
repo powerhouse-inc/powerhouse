@@ -42,8 +42,8 @@ describe.each(queueLayers)(
     'Document Drive Server queuing with %s',
     (storageName, buildStorage) => {
 
-        let CREATE_DRIVES = 10;
-        let ADD_OPERATIONS_TO_DRIVE = 10;
+        const CREATE_DRIVES = 10;
+        const ADD_OPERATIONS_TO_DRIVE = 10;
 
         const createDrive = async (server: DocumentDriveServer) => {
             const driveState = await server.addDrive({
@@ -107,7 +107,7 @@ describe.each(queueLayers)(
             await expect(server.getDocument(driveId, "file 1")).rejects.toThrowError("Document with id file 1 not found");
             const results = await server.queueDriveOperations(driveId, driveOperations);
 
-            const errors = [results, await documentResult].filter(r => !!(r as IOperationResult).error);
+            const errors = [results, await documentResult].filter(r => !!r.error);
             if (errors.length) {
                 errors.forEach(error => console.error(error));
             }
@@ -126,7 +126,6 @@ describe.each(queueLayers)(
         });
 
         it("orders strands correctly", async ({ expect }) => {
-
             const server = new DocumentDriveServer(
                 documentModels,
                 new MemoryStorage(),
@@ -146,9 +145,9 @@ describe.each(queueLayers)(
             }));
 
             const results = await Promise.all([
-                server.queueDriveOperations(driveId, [buildOperation(reducer, drive, actions.addFolder({ id: "folder 2", name: "folder 2" }))]),
+                server.queueOperations(driveId, "file 1", [budgetOperation]),
                 server.queueDriveOperations(driveId, driveOperations),
-                server.queueOperations(driveId, "file 1", [budgetOperation])
+                server.queueDriveOperations(driveId, [buildOperation(reducer, drive, actions.addFolder({ id: "folder 2", name: "folder 2" }))]),
             ]);
 
             const errors = results.flat().filter(r => !!(r as IOperationResult).error);
@@ -181,7 +180,7 @@ describe.each(queueLayers)(
             let drive = await createDrive(server);
             const driveId = drive.state.global.id;
 
-            let budget = BudgetStatement.utils.createDocument();
+            const budget = BudgetStatement.utils.createDocument();
 
             // first doc op
             const budgetOperation = buildOperation(BudgetStatement.reducer, budget, BudgetStatement.actions.addAccount({
@@ -197,8 +196,6 @@ describe.each(queueLayers)(
             const driveOperations = buildOperations(reducer, drive, [
                 actions.addFile({ id: "file 1", name: "file 1", parentFolder: "folder 1", documentType: "powerhouse/budget-statement", synchronizationUnits: [{ syncId: "1", scope: "global", branch: "main" }] })]
             );
-
-
 
             // queue addFile and first doc op
             const results1 = await Promise.all([
@@ -221,14 +218,13 @@ describe.each(queueLayers)(
             await server.queueDriveOperations(driveId, deleteNode)
             // ==> receives deleteNode and addFile operation?
 
-
             await expect(server.queueOperations(driveId, "file 1", [budgetOperation2])).rejects.toThrowError("Queue is deleted");
 
             drive = await server.getDrive(driveId);
             expect(drive.state.global.nodes).toStrictEqual([]);
         });
 
-        it("produces conflicts on addDriveOperations", async ({ expect }) => {
+        it("produces error on addDriveOperations with wrong index", async ({ expect }) => {
             const server = new DocumentDriveServer(
                 documentModels,
                 new MemoryStorage(),
@@ -241,13 +237,13 @@ describe.each(queueLayers)(
             }));
             const driveResults = await Promise.all(drives.map((drive) => {
                 expect(drive).toBeDefined();
-                return addOperationsToDrive(server, drive!, false);
+                return addOperationsToDrive(server, drive, false);
             }))
 
-            expect(driveResults.flat().filter((f: any) => f.status === "CONFLICT").length).toBeGreaterThan(0);
+            expect(driveResults.flat().filter(f => f.status === "ERROR").length).toBeGreaterThan(0);
         });
 
-        it("produces no conflicts on queueDriveOperations", async ({ expect }) => {
+        it("produces no errors on queueDriveOperations", async ({ expect }) => {
             const server = new DocumentDriveServer(
                 documentModels,
                 new MemoryStorage(),
@@ -263,7 +259,7 @@ describe.each(queueLayers)(
                 expect(drive).toBeDefined();
                 return addOperationsToDrive(server, drive);
             }))
-            expect(driveResults.flat().filter((f: any) => f.status === "CONFLICT").length).toBe(0);
+            expect(driveResults.flat().filter(f => f.status !== "SUCCESS").length).toBe(0);
         });
 
         it("adds operations with queueDriveAction", async ({ expect }) => {
@@ -274,13 +270,10 @@ describe.each(queueLayers)(
                 await buildStorage()
             );
             await server.initialize();
-            let drive = await createDrive(server);
+            const drive = await createDrive(server);
             const driveId = drive.state.global.id;
-
-
-            const action = actions.addListener({ listener: { block: true, callInfo: { data: "", name: "test", transmitterType: "Internal" }, filter: { branch: [], documentId: [], documentType: [], scope: [] }, label: "test", listenerId: "123", system: true } })
-
-            await server.queueDriveAction(driveId, action);
+            const action = actions.addListener({ listener: { block: true, callInfo: { data: "", name: "test", transmitterType: "Internal" }, filter: { branch: [], documentId: [], documentType: [], scope: [] }, label: "test", listenerId: "123", system: true } });
+            const result = await server.queueDriveAction(driveId, action);
             const drive2 = await server.getDrive(driveId);
 
             expect(drive2.state.local.listeners.length).toBe(1);
