@@ -19,7 +19,7 @@ export interface QueueEvents {
 
 export interface IServerDelegate {
     checkDocumentExists: (driveId: string, documentId: string) => Promise<boolean>;
-    processOperationJob: (job: OperationJob) => Promise<IOperationResult>;
+    processJob: (job: OperationJob) => Promise<IOperationResult>;
 }
 
 export interface IQueueManager {

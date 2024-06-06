@@ -221,7 +221,7 @@ export class BaseQueueManager implements IQueueManager {
         }
 
         try {
-            const result = await this.delegate.processOperationJob(nextJob);
+            const result = await this.delegate.processJob(nextJob);
 
             // unblock the document queues of each add_file operation
             const addFileOperations = nextJob.operations.filter((op) => op.type === "ADD_FILE");

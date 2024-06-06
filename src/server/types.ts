@@ -44,6 +44,7 @@ export type IOperationResult<T extends Document = Document> = {
     status: UpdateStatus;
     error?: OperationError;
     operations: Operation[];
+    actions?: Action;
     document: T | undefined;
     signals: SignalResult[];
 };
