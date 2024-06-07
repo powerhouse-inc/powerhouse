@@ -9,12 +9,17 @@ import {
     SharingType as TreeItemSharingType,
     decodeID,
     encodeID,
+    getFolderStatus,
     getRootPath,
+    removeSuccessFiles,
+    sortFilesByStatus,
     toast,
     useItemActions,
 } from '@powerhousedao/design-system';
 import {
     DocumentDriveDocument,
+    FileNode,
+    FolderNode,
     Node,
 } from 'document-model-libs/document-drive';
 import path from 'path';
@@ -270,17 +275,66 @@ export function useDrivesContainer() {
             syncStatus: await getSyncStatus(driveID, driveBaseItemType),
         };
 
-        const nodes: Array<BaseTreeItem> = drive.state.global.nodes.map(
-            (node, _i, nodes) => ({
+        const { files, folders } = drive.state.global.nodes.reduce(
+            (acc, node) => {
+                if (node.kind === 'folder') {
+                    acc.folders.push(node);
+                } else {
+                    acc.files.push(node as FileNode);
+                }
+
+                return acc;
+            },
+            {
+                files: [] as FileNode[],
+                folders: [] as FolderNode[],
+            },
+        );
+
+        const driveNodes = drive.state.global.nodes;
+
+        const fileItems: Array<BaseTreeItem> = await Promise.all(
+            files.map(async node => ({
                 id: node.id,
                 label: node.name,
-                path: path.join(driveID, getNodePath(node, nodes)),
+                path: path.join(driveID, getNodePath(node, driveNodes)),
                 type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
                 sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
                 availableOffline,
-            }),
+                syncStatus: await getSyncStatus(
+                    node.synchronizationUnits[0].syncId,
+                    driveBaseItemType,
+                ),
+            })),
         );
-        return [driveNode, ...nodes];
+
+        const filesStatus = sortFilesByStatus(
+            removeSuccessFiles(
+                fileItems.map(file => ({
+                    path: file.path,
+                    status: file.syncStatus,
+                })),
+            ),
+        );
+
+        const folderItems: Array<BaseTreeItem> = folders.map(node => {
+            const folderPath = path.join(
+                driveID,
+                getNodePath(node, driveNodes),
+            );
+
+            return {
+                id: node.id,
+                label: node.name,
+                path: folderPath,
+                type: 'FOLDER',
+                sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
+                availableOffline,
+                syncStatus: getFolderStatus(folderPath, filesStatus),
+            };
+        });
+
+        return [driveNode, ...fileItems, ...folderItems];
     }
 
     return {

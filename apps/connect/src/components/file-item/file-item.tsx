@@ -92,6 +92,7 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
 
     return (
         <ConnectFileItem
+            displaySyncIcon
             key={file.id}
             title={file.label}
             subTitle={getReadableItemPath(file.id)}
