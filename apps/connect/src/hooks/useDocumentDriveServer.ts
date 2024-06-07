@@ -442,12 +442,12 @@ export function useDocumentDriveServer(
     }
 
     async function getSyncStatus(
-        driveId: string,
+        syncId: string,
         type: DriveType,
     ): Promise<SyncStatus | undefined> {
         if (type === 'LOCAL_DRIVE') return;
         try {
-            return server.getSyncStatus(driveId);
+            return server.getSyncStatus(syncId);
         } catch (error) {
             console.error(error);
             return ERROR;
