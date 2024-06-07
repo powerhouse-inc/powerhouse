@@ -1,3 +1,13 @@
+# [1.0.0-alpha.72](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.71...v1.0.0-alpha.72) (2024-06-07)
+
+
+### Features
+
+* add sync status to file when add drive operations ([a6c5380](https://github.com/powerhouse-inc/document-drive/commit/a6c5380aafb383c467fc765ee2c2690bdc20cd7c))
+* added sync status to files when add document operations ([c89b02c](https://github.com/powerhouse-inc/document-drive/commit/c89b02c01c3589c725ffa700fbf38812ea700259))
+* remove related sync status when stopSyncRemoteDrive ([c6577e2](https://github.com/powerhouse-inc/document-drive/commit/c6577e2df3846f15248bacbc8b42f358949db3c8))
+* use syncId instead of documentId ([bd4073a](https://github.com/powerhouse-inc/document-drive/commit/bd4073a3d741e03bf99ae9651ef57c5192a1a204))
+
 # [1.0.0-alpha.71](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.70...v1.0.0-alpha.71) (2024-06-07)
 
 
