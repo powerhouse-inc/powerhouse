@@ -329,6 +329,9 @@ export class PrismaStorage implements IDriveStorage {
 
     async getDocuments(drive: string) {
         const docs = await this.db.document.findMany({
+            select: {
+                id: true
+            },
             where: {
                 AND: {
                     driveId: drive,
