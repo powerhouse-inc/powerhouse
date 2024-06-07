@@ -468,7 +468,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         });
 
         await this.storage.createDrive(id, document);
-        const storageDrive = await this.getDrive(id)
+
+        if (drive.global.slug) {
+            await this.cache.deleteDocument("drives-slug", drive.global.slug)
+        }
+
         await this._initializeDrive(id);
 
         return document;
