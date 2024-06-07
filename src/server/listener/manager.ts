@@ -420,32 +420,40 @@ export class ListenerManager extends BaseListenerManager {
         const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
 
         for (const syncUnit of syncUnits) {
+            if (syncUnit.revision < 0) {
+                continue;
+            }
             const entry = listener.syncUnits.get(syncUnit.syncId);
             if (entry && entry.listenerRev >= syncUnit.revision) {
                 continue;
             }
 
             const { documentId, driveId, scope, branch } = syncUnit;
-            const operations = await this.drive.getOperationData( // DEAL WITH INVALID SYNC ID ERROR
-                driveId,
-                syncUnit.syncId,
-                {
-                    since,
-                    fromRevision: entry?.listenerRev
-                }
-            );
+            try {
+                const operations = await this.drive.getOperationData( // DEAL WITH INVALID SYNC ID ERROR
+                    driveId,
+                    syncUnit.syncId,
+                    {
+                        since,
+                        fromRevision: entry?.listenerRev
+                    }
+                );
 
-            if (!operations.length) {
+                if (!operations.length) {
+                    continue;
+                }
+
+                strands.push({
+                    driveId,
+                    documentId,
+                    scope: scope as OperationScope,
+                    branch,
+                    operations
+                });
+            } catch (error) {
+                logger.error(error);
                 continue;
             }
-
-            strands.push({
-                driveId,
-                documentId,
-                scope: scope as OperationScope,
-                branch,
-                operations
-            });
         }
 
         return strands;

@@ -3,10 +3,16 @@ import {
     BaseAction,
     Document,
     DocumentHeader,
-    Operation
+    Operation,
+    OperationScope
 } from 'document-model/document';
 import { mergeOperations } from '..';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
+import {
+    DocumentDriveStorage,
+    DocumentStorage,
+    IDriveStorage,
+    SynchronizationUnitQuery
+} from './types';
 
 export class BrowserStorage implements IDriveStorage {
     private db: Promise<LocalForage>;
@@ -18,7 +24,9 @@ export class BrowserStorage implements IDriveStorage {
     constructor(namespace?: string) {
         this.db = import('localforage').then(localForage =>
             localForage.default.createInstance({
-                name: namespace ? `${namespace}:${BrowserStorage.DBName}` : BrowserStorage.DBName
+                name: namespace
+                    ? `${namespace}:${BrowserStorage.DBName}`
+                    : BrowserStorage.DBName
             })
         );
     }
@@ -68,7 +76,7 @@ export class BrowserStorage implements IDriveStorage {
         drive: string,
         id: string,
         operations: Operation[],
-        header: DocumentHeader,
+        header: DocumentHeader
     ): Promise<void> {
         const document = await this.getDocument(drive, id);
         if (!document) {
@@ -153,5 +161,62 @@ export class BrowserStorage implements IDriveStorage {
             operations: mergedOperations
         });
         return;
+    }
+
+    async getSynchronizationUnitsRevision(
+        units: SynchronizationUnitQuery[]
+    ): Promise<
+        {
+            driveId: string;
+            documentId: string;
+            scope: string;
+            branch: string;
+            lastUpdated: string;
+            revision: number;
+        }[]
+    > {
+        const results = await Promise.allSettled(
+            units.map(async unit => {
+                try {
+                    const document = await (unit.documentId
+                        ? this.getDocument(unit.driveId, unit.documentId)
+                        : this.getDrive(unit.driveId));
+                    if (!document) {
+                        return undefined;
+                    }
+                    const operation =
+                        document.operations[unit.scope as OperationScope]?.at(
+                            -1
+                        );
+                    if (operation) {
+                        return {
+                            driveId: unit.driveId,
+                            documentId: unit.documentId,
+                            scope: unit.scope,
+                            branch: unit.branch,
+                            lastUpdated: operation.timestamp,
+                            revision: operation.index
+                        };
+                    }
+                } catch {
+                    return undefined;
+                }
+            })
+        );
+        return results.reduce<
+            {
+                driveId: string;
+                documentId: string;
+                scope: string;
+                branch: string;
+                lastUpdated: string;
+                revision: number;
+            }[]
+        >((acc, curr) => {
+            if (curr.status === 'fulfilled' && curr.value !== undefined) {
+                acc.push(curr.value);
+            }
+            return acc;
+        }, []);
     }
 }

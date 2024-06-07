@@ -21,7 +21,7 @@ import type {
 import { IBackOffOptions, backOff } from 'exponential-backoff';
 import { ConflictOperationError } from '../server/error';
 import { logger } from '../utils/logger';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage, IStorageDelegate } from './types';
+import { DocumentDriveStorage, DocumentStorage, IDriveStorage, IStorageDelegate, SynchronizationUnitQuery } from './types';
 
 type Transaction =
     | Omit<
@@ -551,5 +551,38 @@ export class PrismaStorage implements IDriveStorage {
 
     getDriveOperationResultingState(drive: string, index: number, scope: string, branch: string): Promise<unknown> {
         return this.getOperationResultingState("drives", drive, index, scope, branch);
+    }
+
+    async getSynchronizationUnitsRevision(
+        units: SynchronizationUnitQuery[]
+    ): Promise<
+        {
+            driveId: string;
+            documentId: string;
+            scope: string;
+            branch: string;
+            lastUpdated: string;
+            revision: number;
+        }[]
+    > {
+        // TODO add branch condition
+        const whereClauses = units.map((_, index) => {
+            return `("driveId" = $${index * 3 + 1} AND "documentId" = $${index * 3 + 2} AND "scope" = $${index * 3 + 3})`;
+        }).join(' OR ');
+
+        const query = `
+            SELECT "driveId", "documentId", "scope", "branch", MAX("timestamp") as "lastUpdated", MAX("index") as revision FROM "Operation"
+            WHERE ${whereClauses}
+            GROUP BY "driveId", "documentId", "scope", "branch"
+        `;
+
+        const params = units.map(unit => [unit.documentId ? unit.driveId : "drives", unit.documentId || unit.driveId, unit.scope]).flat();
+        const results = await this.db.$queryRawUnsafe<{ driveId: string, documentId: string, lastUpdated: string, scope: OperationScope, branch: string, revision: number }[]>(query, ...params);
+        return results.map(row => ({
+            ...row,
+            driveId: row.driveId === "drives" ? row.documentId : row.driveId,
+            documentId: row.driveId === "drives" ? '' : row.documentId,
+            lastUpdated: new Date(row.lastUpdated).toISOString(),
+        }));
     }
 }

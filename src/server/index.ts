@@ -400,25 +400,18 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const revisions = await this.storage.getSynchronizationUnitsRevision(synchronizationUnitsQuery);
 
-        const synchronizationUnits: SynchronizationUnit[] = [];
-        for (const query of synchronizationUnitsQuery) {
-            const result = revisions.find(r =>
-                r.driveId === query.driveId &&
-                r.documentId === query.documentId &&
-                r.scope === query.scope &&
-                r.branch === query.branch
+        const synchronizationUnits: SynchronizationUnit[] = synchronizationUnitsQuery.map(s => ({ ...s, lastUpdated: drive.created, revision: -1 }));
+        for (const revision of revisions) {
+            const syncUnit = synchronizationUnits.find(s =>
+                revision.driveId === s.driveId &&
+                revision.documentId === s.documentId &&
+                revision.scope === s.scope &&
+                revision.branch === s.branch
             );
-
-            synchronizationUnits.push({
-                syncId: query.syncId,
-                scope: query.scope,
-                branch: query.branch,
-                driveId: query.driveId,
-                documentId: query.documentId,
-                documentType: query.documentType,
-                lastUpdated: result?.lastUpdated ?? drive.created,
-                revision: result?.revision ?? 0
-            });
+            if (syncUnit) {
+                syncUnit.revision = revision.revision;
+                syncUnit.lastUpdated = revision.lastUpdated
+            }
         }
         return synchronizationUnits;
     }

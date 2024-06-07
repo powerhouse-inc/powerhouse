@@ -172,37 +172,48 @@ export class MemoryStorage implements IDriveStorage {
             revision: number;
         }[]
     > {
-        const result: {
-            driveId: string;
-            documentId: string;
-            scope: string;
-            branch: string;
-            lastUpdated: string;
-            revision: number;
-        }[] = [];
-
-        for (const unit of units) {
-            try {
-                const document = await this.getDocument(
-                    unit.driveId,
-                    unit.documentId
-                );
-                const operation =
-                    document.operations[unit.scope as OperationScope]?.at(-1);
-                if (operation) {
-                    result.push({
-                        driveId: unit.driveId,
-                        documentId: unit.documentId,
-                        scope: unit.scope,
-                        branch: unit.branch,
-                        lastUpdated: operation.timestamp,
-                        revision: operation.index
-                    });
+        const results = await Promise.allSettled(
+            units.map(async unit => {
+                try {
+                    const document = await (unit.documentId
+                        ? this.getDocument(unit.driveId, unit.documentId)
+                        : this.getDrive(unit.driveId));
+                    if (!document) {
+                        return undefined;
+                    }
+                    const operation =
+                        document.operations[unit.scope as OperationScope]?.at(
+                            -1
+                        );
+                    if (operation) {
+                        return {
+                            driveId: unit.driveId,
+                            documentId: unit.documentId,
+                            scope: unit.scope,
+                            branch: unit.branch,
+                            lastUpdated: operation.timestamp,
+                            revision: operation.index
+                        };
+                    }
+                } catch {
+                    return undefined;
                 }
-            } catch {
-                continue;
+            })
+        );
+        return results.reduce<
+            {
+                driveId: string;
+                documentId: string;
+                scope: string;
+                branch: string;
+                lastUpdated: string;
+                revision: number;
+            }[]
+        >((acc, curr) => {
+            if (curr.status === 'fulfilled' && curr.value !== undefined) {
+                acc.push(curr.value);
             }
-        }
-        return result;
+            return acc;
+        }, []);
     }
 }

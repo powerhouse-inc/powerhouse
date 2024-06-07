@@ -1,5 +1,5 @@
 import { DocumentDriveAction } from 'document-model-libs/document-drive';
-import { BaseAction, DocumentHeader, Operation } from 'document-model/document';
+import { BaseAction, DocumentHeader, Operation, OperationScope } from 'document-model/document';
 import type { Dirent } from 'fs';
 import {
     existsSync,
@@ -13,7 +13,7 @@ import stringify from 'json-stringify-deterministic';
 import path from 'path';
 import sanitize from 'sanitize-filename';
 import { mergeOperations } from '..';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
+import { DocumentDriveStorage, DocumentStorage, IDriveStorage, SynchronizationUnitQuery } from './types';
 
 type FSError = {
     errno: number;
@@ -234,5 +234,62 @@ export class FilesystemStorage implements IDriveStorage {
             ...header,
             operations: mergedOperations
         });
+    }
+
+    async getSynchronizationUnitsRevision(
+        units: SynchronizationUnitQuery[]
+    ): Promise<
+        {
+            driveId: string;
+            documentId: string;
+            scope: string;
+            branch: string;
+            lastUpdated: string;
+            revision: number;
+        }[]
+    > {
+        const results = await Promise.allSettled(
+            units.map(async unit => {
+                try {
+                    const document = await (unit.documentId
+                        ? this.getDocument(unit.driveId, unit.documentId)
+                        : this.getDrive(unit.driveId));
+                    if (!document) {
+                        return undefined;
+                    }
+                    const operation =
+                        document.operations[unit.scope as OperationScope]?.at(
+                            -1
+                        );
+                    if (operation) {
+                        return {
+                            driveId: unit.driveId,
+                            documentId: unit.documentId,
+                            scope: unit.scope,
+                            branch: unit.branch,
+                            lastUpdated: operation.timestamp,
+                            revision: operation.index
+                        };
+                    }
+                } catch {
+                    return undefined;
+                }
+            })
+        );
+        return results.reduce<
+            {
+                driveId: string;
+                documentId: string;
+                scope: string;
+                branch: string;
+                lastUpdated: string;
+                revision: number;
+            }[]
+        >((acc, curr) => {
+            if (curr.status === 'fulfilled' && curr.value !== undefined) {
+                acc.push(curr.value);
+            }
+            return acc;
+        }, []);
     }
 }
