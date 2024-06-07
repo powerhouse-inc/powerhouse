@@ -1,3 +1,11 @@
+# [1.0.0-alpha.70](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.69...v1.0.0-alpha.70) (2024-06-07)
+
+
+### Bug Fixes
+
+* slug caching ([1465ef0](https://github.com/powerhouse-inc/document-drive/commit/1465ef028d825ed2dfe50126c6dc64e8ba4445d5))
+* slug caching ([1134dc6](https://github.com/powerhouse-inc/document-drive/commit/1134dc6c1384648f6af5c871d0e51e6acb4e63fb))
+
 # [1.0.0-alpha.69](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.68...v1.0.0-alpha.69) (2024-06-07)
 
 
