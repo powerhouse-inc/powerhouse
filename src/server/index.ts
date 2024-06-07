@@ -468,6 +468,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         });
 
         await this.storage.createDrive(id, document);
+        const storageDrive = await this.getDrive(id)
         await this._initializeDrive(id);
 
         return document;
@@ -541,7 +542,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     async getDriveBySlug(slug: string, options?: GetDocumentOptions) {
         try {
-            const document = await this.cache.getDocument('drives', slug);
+            const document = await this.cache.getDocument('drives-slug', slug);
             if (document && isDocumentDrive(document)) {
                 return document;
             }
@@ -557,7 +558,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             );
         } else {
             this.cache
-                .setDocument('drives', slug, document)
+                .setDocument('drives-slug', slug, document)
                 .catch(logger.error);
             return document;
         }
