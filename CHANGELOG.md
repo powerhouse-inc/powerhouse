@@ -1,3 +1,11 @@
+# [1.0.0-alpha.71](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.70...v1.0.0-alpha.71) (2024-06-07)
+
+
+### Features
+
+* added queue actions implementations ([6741a59](https://github.com/powerhouse-inc/document-drive/commit/6741a59d191c5cdd1bfb253c3d5ee28d7f2a0779))
+* support operation and action jobs ([7e6c878](https://github.com/powerhouse-inc/document-drive/commit/7e6c878560ce3132d8dc1a71913a83ad5d138da9))
+
 # [1.0.0-alpha.70](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.69...v1.0.0-alpha.70) (2024-06-07)
 
 
