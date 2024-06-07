@@ -13,6 +13,7 @@ const meta: Meta<typeof FileItem> = {
         onSubmitInput: { action: 'onSubmitInput' },
         mode: { control: { type: 'select' }, options: ['read', 'write'] },
         item: { control: { type: 'object' } },
+        displaySyncIcon: { control: { type: 'boolean' } },
         icon: {
             control: { type: 'select' },
             options: ['legal', 'global', 'profile', 'budget', 'template'],
@@ -34,6 +35,7 @@ type Story = StoryObj<typeof meta>;
 export const ReadMode: Story = {
     args: {
         mode: 'read',
+        displaySyncIcon: true,
         title: 'Legal Contract #1',
         subTitle:
             'MakerDAO/Ecosystem Actors/Powerhouse/Chronicle Labs/Legal Contract 1',

@@ -33,6 +33,7 @@ export interface FolderItemProps
     onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
     onDropEvent?: UseDraggableTargetProps<TreeItem>['onDropEvent'];
     isAllowedToCreateDocuments?: boolean;
+    displaySyncIcon?: boolean;
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({
@@ -47,6 +48,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
     onDragStart,
     onDropEvent,
     isAllowedToCreateDocuments = true,
+    displaySyncIcon = false,
     ...divProps
 }) => {
     const containerRef = useRef(null);
@@ -98,13 +100,17 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                     <div className="p-1">
                         <div className="relative">
                             <Icon name="folder-close" size={24} />
-                            {isReadMode && item.syncStatus && (
-                                <div className="absolute bottom-[-5px] right-[-4px] rounded-full bg-white">
-                                    <SyncStatusIcon
-                                        syncStatus={item.syncStatus}
-                                    />
-                                </div>
-                            )}
+                            {isReadMode &&
+                                displaySyncIcon &&
+                                item.syncStatus && (
+                                    <div className="absolute bottom-[-3px] right-[-2px] size-3 rounded-full bg-white">
+                                        <div className="absolute left-[-2px] top-[-2px]">
+                                            <SyncStatusIcon
+                                                syncStatus={item.syncStatus}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                         </div>
                     </div>
                     {content}

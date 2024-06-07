@@ -169,6 +169,7 @@ const meta: Meta<typeof DriveView> = {
         onDropActivate: { control: { type: 'action' } },
         disableHighlightStyles: { control: { type: 'boolean' } },
         disableAddDrives: { control: { type: 'boolean' } },
+        displaySyncFolderIcons: { control: { type: 'boolean' } },
     },
 };
 

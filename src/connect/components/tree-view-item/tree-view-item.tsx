@@ -50,6 +50,7 @@ export type ConnectTreeViewItemProps = {
     disableHighlightStyles?: boolean;
     isAllowedToCreateDocuments?: boolean;
     isChildOfPublicDrive?: boolean;
+    displaySyncFolderIcons?: boolean;
 };
 
 export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
@@ -71,6 +72,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
         defaultOptions = defaultDropdownMenuOptions,
         isAllowedToCreateDocuments = true,
         isChildOfPublicDrive = false,
+        displaySyncFolderIcons = false,
         ...divProps
     } = props;
 
@@ -309,7 +311,12 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     function statusIconOrDropdownMenuButton() {
         if (showDropdownMenuButton && isAllowedToCreateDocuments)
             return dropdownMenuButton;
-        if ((isParentCloudDrive || isParentPublicDrive) && item.syncStatus) {
+        if (
+            item.syncStatus &&
+            (isDrive ||
+                (displaySyncFolderIcons &&
+                    (isParentCloudDrive || isParentPublicDrive)))
+        ) {
             return (
                 <SyncStatusIcon
                     syncStatus={item.syncStatus}

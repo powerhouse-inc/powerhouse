@@ -13,6 +13,7 @@ const meta: Meta<typeof FolderItem> = {
         onDragEnd: { action: 'onDragEnd' },
         onDropEvent: { action: 'onDropEvent' },
         item: { control: { type: 'object' } },
+        displaySyncIcon: { control: { type: 'boolean' } },
     },
     decorators: [
         Story => (
@@ -30,6 +31,7 @@ type Story = StoryObj<typeof meta>;
 export const ReadMode: Story = {
     args: {
         title: 'Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs',
+        displaySyncIcon: true,
         item: {
             id: '1',
             label: 'Test Folder',

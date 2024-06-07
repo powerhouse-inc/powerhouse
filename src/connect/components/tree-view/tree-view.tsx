@@ -31,6 +31,7 @@ export interface ConnectTreeViewProps
     allowedTypes?: TreeItemType[];
     isAllowedToCreateDocuments?: boolean;
     isChildOfPublicDrive?: boolean;
+    displaySyncFolderIcons?: boolean;
 }
 
 export function ConnectTreeView(props: ConnectTreeViewProps) {

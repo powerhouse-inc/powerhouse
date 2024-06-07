@@ -46,6 +46,7 @@ export interface FileItemProps
     item: TreeItem;
     onDragStart?: UseDraggableTargetProps<TreeItem>['onDragStart'];
     onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
+    displaySyncIcon?: boolean;
 }
 
 export const FileItem: React.FC<FileItemProps> = ({
@@ -62,6 +63,7 @@ export const FileItem: React.FC<FileItemProps> = ({
     onDragStart,
     onCancelInput = () => {},
     onSubmitInput = () => {},
+    displaySyncIcon = false,
     ...divProps
 }) => {
     const containerRef = useRef(null);
@@ -89,9 +91,11 @@ export const FileItem: React.FC<FileItemProps> = ({
                 width={32}
                 height={34}
             />
-            {isReadMode && item.syncStatus && (
-                <div className="absolute bottom-[-3px] right-0 rounded-full bg-white">
-                    <SyncStatusIcon syncStatus={item.syncStatus} />
+            {isReadMode && displaySyncIcon && item.syncStatus && (
+                <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
+                    <div className="absolute left-[-2px] top-[-2px]">
+                        <SyncStatusIcon syncStatus={item.syncStatus} />
+                    </div>
                 </div>
             )}
         </div>

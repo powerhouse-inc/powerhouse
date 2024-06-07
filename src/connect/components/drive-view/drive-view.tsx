@@ -44,6 +44,7 @@ export interface DriveViewProps
     onDragEnd?: ConnectTreeViewProps['onDragEnd'];
     onCreateDrive?: (drive: AddDriveInput | AddPublicDriveInput) => void;
     disableAddDrives?: boolean;
+    displaySyncFolderIcons?: boolean;
 }
 
 const filterDriveByType = (drive: DriveTreeItem, type: DriveType) => {
@@ -78,6 +79,7 @@ export function DriveView(props: DriveViewProps) {
         onCreateDrive,
         disableAddDrives,
         isAllowedToCreateDocuments = true,
+        displaySyncFolderIcons = false,
         ...restProps
     } = props;
     const [showAddModal, setShowAddModal] = useState(false);
@@ -147,6 +149,7 @@ export function DriveView(props: DriveViewProps) {
                     allowedTypes={allowedTypes}
                     isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                     isChildOfPublicDrive={isPublicDrive}
+                    displaySyncFolderIcons={displaySyncFolderIcons}
                 />
             </>
             {isLocalDrive && isAllowedToCreateDocuments && (
