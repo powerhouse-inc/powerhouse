@@ -1,3 +1,10 @@
+# [1.0.0-alpha.69](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.68...v1.0.0-alpha.69) (2024-06-07)
+
+
+### Bug Fixes
+
+* optimize get documents ([f6f13ab](https://github.com/powerhouse-inc/document-drive/commit/f6f13abb65d8c34a7ba64787fa4ae4ee024956fa))
+
 # [1.0.0-alpha.68](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.67...v1.0.0-alpha.68) (2024-06-04)
 
 
