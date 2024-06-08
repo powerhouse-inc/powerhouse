@@ -6,12 +6,11 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
-import { mergeOperations } from '..';
+import { mergeOperations, type SynchronizationUnitQuery } from '..';
 import {
     DocumentDriveStorage,
     DocumentStorage,
     IDriveStorage,
-    SynchronizationUnitQuery
 } from './types';
 
 export class BrowserStorage implements IDriveStorage {

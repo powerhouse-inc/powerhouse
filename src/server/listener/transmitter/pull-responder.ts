@@ -72,7 +72,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         listenerId: string,
         revisions: ListenerRevision[]
     ): Promise<boolean> {
-        const syncUnits = await this.manager.getListenerSyncUnits(
+        const syncUnits = await this.manager.getListenerSyncUnitIds(
             driveId,
             listenerId
         );

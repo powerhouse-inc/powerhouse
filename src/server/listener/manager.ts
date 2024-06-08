@@ -373,6 +373,21 @@ export class ListenerManager extends BaseListenerManager {
         );
     }
 
+    getListenerSyncUnitIds(driveId: string, listenerId: string) {
+        const listener = this.listenerState.get(driveId)?.get(listenerId);
+        if (!listener) {
+            return [];
+        }
+        const filter = listener.listener.filter;
+        return this.drive.getSynchronizationUnitsIds(
+            driveId,
+            filter.documentId ?? ['*'],
+            filter.scope ?? ['*'],
+            filter.branch ?? ['*'],
+            filter.documentType ?? ['*']
+        );
+    }
+
     async initDrive(drive: DocumentDriveDocument) {
         const {
             state: {

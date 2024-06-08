@@ -12,8 +12,9 @@ import fs from 'fs/promises';
 import stringify from 'json-stringify-deterministic';
 import path from 'path';
 import sanitize from 'sanitize-filename';
-import { mergeOperations } from '..';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage, SynchronizationUnitQuery } from './types';
+import type { SynchronizationUnitQuery } from '../server/types';
+import { mergeOperations } from '../utils';
+import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 type FSError = {
     errno: number;

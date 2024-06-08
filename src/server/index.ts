@@ -61,6 +61,7 @@ import {
     ListenerState,
     RemoteDriveOptions,
     StrandUpdate,
+    SynchronizationUnitQuery,
     SyncStatus,
     type CreateDocumentInput,
     type DriveInput,
@@ -364,7 +365,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         branch?: string[],
         documentType?: string[],
         loadedDrive?: DocumentDriveDocument
-    ): Promise<Omit<SynchronizationUnit, "revision" | "lastUpdated">[]> {
+    ): Promise<SynchronizationUnitQuery[]> {
         const drive = loadedDrive ?? await this.getDrive(driveId);
         const nodes = drive.state.global.nodes.filter(
             node =>

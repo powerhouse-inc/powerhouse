@@ -21,7 +21,8 @@ import type {
 import { IBackOffOptions, backOff } from 'exponential-backoff';
 import { ConflictOperationError } from '../server/error';
 import { logger } from '../utils/logger';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage, IStorageDelegate, SynchronizationUnitQuery } from './types';
+import { DocumentDriveStorage, DocumentStorage, IDriveStorage, IStorageDelegate } from './types';
+import type { SynchronizationUnitQuery } from '../server/types';
 
 type Transaction =
     | Omit<

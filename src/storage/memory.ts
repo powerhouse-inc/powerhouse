@@ -6,13 +6,13 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
-import { mergeOperations } from '..';
 import {
     DocumentDriveStorage,
     DocumentStorage,
     IDriveStorage,
-    SynchronizationUnitQuery
 } from './types';
+import type { SynchronizationUnitQuery } from '../server/types';
+import { mergeOperations } from '../utils';
 
 export class MemoryStorage implements IDriveStorage {
     private documents: Record<string, Record<string, DocumentStorage>>;

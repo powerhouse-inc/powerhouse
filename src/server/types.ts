@@ -59,6 +59,8 @@ export type SynchronizationUnit = {
     revision: number;
 };
 
+export type SynchronizationUnitQuery = Omit<SynchronizationUnit, "revision" | "lastUpdated">;
+
 export type Listener = {
     driveId: string;
     listenerId: string;
@@ -287,6 +289,14 @@ export abstract class BaseDocumentDriveServer {
         driveId: string,
         syncId: string
     ): Promise<SynchronizationUnit | undefined>;
+
+    abstract getSynchronizationUnitsIds(
+        driveId: string,
+        documentId?: string[],
+        scope?: string[],
+        branch?: string[],
+        documentType?: string[]
+    ): Promise<SynchronizationUnitQuery[]>;
 
     abstract getOperationData(
         driveId: string,

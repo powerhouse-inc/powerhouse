@@ -10,6 +10,7 @@ import type {
     DocumentOperations,
     Operation,
 } from 'document-model/document';
+import type { SynchronizationUnitQuery } from '../server/types';
 
 export type DocumentStorage<D extends Document = Document> = Omit<
     D,
@@ -21,8 +22,6 @@ export type DocumentDriveStorage = DocumentStorage<DocumentDriveDocument>;
 export interface IStorageDelegate {
     getCachedOperations(drive: string, id: string): Promise<DocumentOperations<Action> | undefined>;
 }
-
-export type SynchronizationUnitQuery = { driveId: string, documentId: string, scope: string, branch: string };
 
 export interface IStorage {
     checkDocumentExists(drive: string, id: string): Promise<boolean>;
