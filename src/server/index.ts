@@ -186,7 +186,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const drive = await this.getDrive(driveId);
         let driveTriggers = this.triggerMap.get(driveId);
 
-        const syncUnits = await this.getSynchronizationUnits(driveId);
+        const syncUnits = await this.getSynchronizationUnitsIds(driveId);
 
         for (const trigger of drive.state.local.triggers) {
             if (driveTriggers?.get(trigger.id)) {
@@ -252,7 +252,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     private async stopSyncRemoteDrive(driveId: string) {
-        const syncUnits = await this.getSynchronizationUnits(driveId);
+        const syncUnits = await this.getSynchronizationUnitsIds(driveId);
         const fileNodes = syncUnits
             .filter(syncUnit => syncUnit.documentId !== '')
             .map(syncUnit => syncUnit.documentId);
@@ -338,6 +338,34 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     ) {
         const drive = await this.getDrive(driveId);
 
+        const synchronizationUnitsQuery = await this.getSynchronizationUnitsIds(driveId, documentId, scope, branch, documentType, drive);
+        const revisions = await this.storage.getSynchronizationUnitsRevision(synchronizationUnitsQuery);
+
+        const synchronizationUnits: SynchronizationUnit[] = synchronizationUnitsQuery.map(s => ({ ...s, lastUpdated: drive.created, revision: -1 }));
+        for (const revision of revisions) {
+            const syncUnit = synchronizationUnits.find(s =>
+                revision.driveId === s.driveId &&
+                revision.documentId === s.documentId &&
+                revision.scope === s.scope &&
+                revision.branch === s.branch
+            );
+            if (syncUnit) {
+                syncUnit.revision = revision.revision;
+                syncUnit.lastUpdated = revision.lastUpdated
+            }
+        }
+        return synchronizationUnits;
+    }
+
+    public async getSynchronizationUnitsIds(
+        driveId: string,
+        documentId?: string[],
+        scope?: string[],
+        branch?: string[],
+        documentType?: string[],
+        loadedDrive?: DocumentDriveDocument
+    ): Promise<Omit<SynchronizationUnit, "revision" | "lastUpdated">[]> {
+        const drive = loadedDrive ?? await this.getDrive(driveId);
         const nodes = drive.state.global.nodes.filter(
             node =>
                 isFileNode(node) &&
@@ -397,23 +425,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 branch: n.branch
             })));
         }
-
-        const revisions = await this.storage.getSynchronizationUnitsRevision(synchronizationUnitsQuery);
-
-        const synchronizationUnits: SynchronizationUnit[] = synchronizationUnitsQuery.map(s => ({ ...s, lastUpdated: drive.created, revision: -1 }));
-        for (const revision of revisions) {
-            const syncUnit = synchronizationUnits.find(s =>
-                revision.driveId === s.driveId &&
-                revision.documentId === s.documentId &&
-                revision.scope === s.scope &&
-                revision.branch === s.branch
-            );
-            if (syncUnit) {
-                syncUnit.revision = revision.revision;
-                syncUnit.lastUpdated = revision.lastUpdated
-            }
-        }
-        return synchronizationUnits;
+        return synchronizationUnitsQuery;
     }
 
     public async getSynchronizationUnitIdInfo(
@@ -717,7 +729,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     async deleteDocument(driveId: string, id: string) {
         try {
-            const syncUnits = await this.getSynchronizationUnits(driveId, [id]);
+            const syncUnits = await this.getSynchronizationUnitsIds(driveId, [id]);
             await this.listenerStateManager.removeSyncUnits(driveId, syncUnits);
         } catch (error) {
             logger.warn('Error deleting document', error);
@@ -1291,7 +1303,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const signals: SignalResult[] = [];
         let error: Error | undefined;
 
-        const prevSyncUnits = await this.getSynchronizationUnits(drive);
+        const prevSyncUnits = await this.getSynchronizationUnitsIds(drive);
 
         try {
             await this._addDriveOperations(drive, async documentStorage => {
@@ -1332,7 +1344,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 }
             }
 
-            const syncUnits = await this.getSynchronizationUnits(drive);
+            const syncUnits = await this.getSynchronizationUnitsIds(drive);
 
             const prevSyncUnitsIds = prevSyncUnits.map(unit => unit.syncId);
             const syncUnitsIds = syncUnits.map(unit => unit.syncId);

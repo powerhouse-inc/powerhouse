@@ -118,7 +118,7 @@ export class ListenerManager extends BaseListenerManager {
         return driveMap.delete(listenerId);
     }
 
-    async removeSyncUnits(driveId: string, syncUnits: SynchronizationUnit[]) {
+    async removeSyncUnits(driveId: string, syncUnits: Pick<SynchronizationUnit, "syncId">[]) {
         const listeners = this.listenerState.get(driveId);
         if (!listeners) {
             return;

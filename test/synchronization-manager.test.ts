@@ -206,7 +206,7 @@ describe('Synchronization Units', () => {
                 }
             ]);
             expect(getDocumentSpy).toHaveBeenCalledTimes(6);
-            expect(cacheSpy).toHaveBeenCalledTimes(3);
+            expect(cacheSpy).toHaveBeenCalledTimes(6);
         });
 
         it('should return transmitter strands', async () => {
@@ -524,7 +524,7 @@ describe('Synchronization Units', () => {
                 }
             ]);
             expect(getDocumentSpy).toHaveBeenCalledTimes(1);
-            expect(cacheSpy).toHaveBeenCalledTimes(4);
+            expect(cacheSpy).toHaveBeenCalledTimes(7);
         });
 
         it('should return transmitter strands', async () => {
