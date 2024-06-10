@@ -1,3 +1,13 @@
+# [1.0.0-alpha.73](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.72...v1.0.0-alpha.73) (2024-06-10)
+
+
+### Features
+
+* add storage method to fetch sync units revision ([aa9c16f](https://github.com/powerhouse-inc/document-drive/commit/aa9c16f6b8b90273dc6df007e806274fa2d30f76))
+* implemented getSynchronizationUnitsRevision ([4e8f899](https://github.com/powerhouse-inc/document-drive/commit/4e8f89919d1098dbb4376a9e3be137f581b565d2))
+* removed unnecessary sync units call on pullResponder ([972d2ec](https://github.com/powerhouse-inc/document-drive/commit/972d2ec15cf0f150a4e2b6e88a09e6df6cb7dbc7))
+* removed unnecessary sync units queries ([1c0d98f](https://github.com/powerhouse-inc/document-drive/commit/1c0d98f65dd0e7a52fbb7ad1ad394c256419dc68))
+
 # [1.0.0-alpha.72](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.71...v1.0.0-alpha.72) (2024-06-07)
 
 
