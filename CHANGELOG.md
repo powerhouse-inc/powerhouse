@@ -1,3 +1,11 @@
+# [1.0.0-alpha.118](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.117...v1.0.0-alpha.118) (2024-06-10)
+
+
+### Features
+
+* enabled sync icon for files and folders ([2522389](https://github.com/powerhouse-inc/design-system/commit/2522389d3aad215c64688e524f316ec84b66aef6))
+* fix sync icons styles ([aacb209](https://github.com/powerhouse-inc/design-system/commit/aacb2097d6bf0068c0ea6ea9b182a2ea6bad9fb5))
+
 # [1.0.0-alpha.117](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.116...v1.0.0-alpha.117) (2024-06-03)
 
 
