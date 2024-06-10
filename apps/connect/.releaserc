@@ -1,8 +1,12 @@
 {
     "branches": [
-        "production",
+        "main",
         {
-            "name": "main",
+            "name": "staging",
+            "prerelease": "next"
+        },
+        {
+            "name": "develop",
             "prerelease": "alpha"
         }
     ],
