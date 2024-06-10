@@ -432,7 +432,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     public async getSynchronizationUnitIdInfo(
         driveId: string,
         syncId: string
-    ): Promise<Omit<SynchronizationUnit, "revision" | "lastUpdated"> | undefined> {
+    ): Promise<SynchronizationUnitQuery | undefined> {
         const drive = await this.getDrive(driveId);
         const node = drive.state.global.nodes.find(
             node =>
