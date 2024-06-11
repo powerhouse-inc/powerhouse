@@ -1,0 +1,27 @@
+name: End-to-end tests
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+jobs:
+  cypress-run:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        containers: [1, 2]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          # record: true # record tests in the Dashboard
+          parallel: true
+          start: npm run dev:web
+          wait-on: 'http://localhost:5173/'
+        # env:
+        #   CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }} // setup Cypress Dashboard record key
+        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
