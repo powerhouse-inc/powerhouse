@@ -1,3 +1,10 @@
+# [1.0.0-alpha.119](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.118...v1.0.0-alpha.119) (2024-06-11)
+
+
+### Features
+
+* use checkmark icon for success sync status in folders and files ([284977c](https://github.com/powerhouse-inc/design-system/commit/284977c22436da9e032ca08a006ca8d89baf58d3))
+
 # [1.0.0-alpha.118](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.117...v1.0.0-alpha.118) (2024-06-10)
 
 
