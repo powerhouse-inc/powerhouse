@@ -30,19 +30,43 @@ export const clearIndexDB = async () => {
     }
 };
 
-export const newFolder = (driveName: string, folderName: string) => {
+export const newFolder = (parent: string, folderName: string) => {
     cy.get('article')
-        .contains(driveName)
+        .contains(parent)
         .then(el => {
             hoverElement(el[0]);
         });
 
     cy.get('article')
-        .contains(driveName)
+        .contains(parent)
         .closest('article')
         .children('button')
         .click();
 
     cy.contains('New Folder').click();
     cy.get('input[value="New Folder"]').clear().type(`${folderName}{enter}`);
+};
+
+export const selectSidebarItem = (item: string) => {
+    cy.get('article').contains(item).click();
+};
+
+export const addPublicDrive = (url: string) => {
+    cy.intercept('POST', url, req => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (req.body.operationName === 'getDrive') {
+            req.alias = 'graphqlQuery';
+        }
+    });
+
+    cy.get('p').contains('Public Drives').parent().find('button').click();
+    cy.get('input[placeholder="Drive URL"]').clear().type(url);
+    cy.contains('Add existing drive').click();
+
+    cy.wait('@graphqlQuery');
+    cy.get('button').contains('Confirm URL').should('not.be.disabled');
+    cy.get('button').contains('Confirm URL').click();
+
+    cy.get('button').contains('Add drive').should('not.be.disabled');
+    cy.get('button').contains('Add drive').click();
 };
