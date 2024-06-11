@@ -605,9 +605,18 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     async deleteDrive(id: string) {
-        this.stopSyncRemoteDrive(id);
-        await this.cache.deleteDocument('drives', id);
-        return this.storage.deleteDrive(id);
+        const result = await Promise.allSettled([
+            this.stopSyncRemoteDrive(id),
+            this.listenerStateManager.removeDrive(id),
+            this.cache.deleteDocument('drives', id),
+            this.storage.deleteDrive(id)
+        ]);
+
+        result.forEach(r => {
+            if (r.status === "rejected") {
+                throw r.reason;
+            }
+        });
     }
 
     getDrives() {

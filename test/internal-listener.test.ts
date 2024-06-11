@@ -12,6 +12,7 @@ import {
     vitest
 } from 'vitest';
 import { DocumentDriveServer, IReceiver } from '../src';
+import { expectUUID } from './utils';
 
 describe('Internal Listener', () => {
     const documentModels = [
@@ -62,7 +63,7 @@ describe('Internal Listener', () => {
     test('should call transmit function of listener and acknowledge', async () => {
         const transmitFn = vitest.fn(() => Promise.resolve());
 
-        const server = await buildServer({ transmit: transmitFn });
+        const server = await buildServer({ transmit: transmitFn, disconnect: () => Promise.resolve() });
         const drive = await server.getDrive('drive');
 
 
@@ -89,6 +90,8 @@ describe('Internal Listener', () => {
                 operations: [
                     {
                         hash: expect.any(String) as string,
+                        context: undefined,
+                        id: expectUUID(expect),
                         index: 0,
                         input: action.input,
                         skip: 0,
@@ -142,6 +145,8 @@ describe('Internal Listener', () => {
                 operations: [
                     {
                         hash: 'nWKpqR6ns0l8C/Khwrl+SyKy0sA=',
+                        context: undefined,
+                        id: expectUUID(expect),
                         index: 0,
                         input: {
                             name: 'test'
@@ -199,6 +204,8 @@ describe('Internal Listener', () => {
                 operations: [
                     {
                         hash: 's7RBcer0JqjSGvNb12gqpeeJGRY=',
+                        context: undefined,
+                        id: expectUUID(expect),
                         index: 1,
                         input: {
                             name: 'test 2'
@@ -240,5 +247,13 @@ describe('Internal Listener', () => {
                 scope: 'global'
             }
         ]);
+    });
+
+    test('should call disconnect function of lreceiver', async () => {
+        const disconnectFn = vitest.fn(() => Promise.resolve());
+
+        const server = await buildServer({ transmit: () => Promise.resolve(), disconnect: disconnectFn });
+        await server.deleteDrive("drive");
+        expect(disconnectFn).toHaveBeenCalled();
     });
 });

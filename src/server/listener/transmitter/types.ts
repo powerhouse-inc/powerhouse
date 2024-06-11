@@ -6,6 +6,7 @@ import { ListenerRevision, StrandUpdate } from '../..';
 
 export interface ITransmitter {
     transmit(strands: StrandUpdate[]): Promise<ListenerRevision[]>;
+    disconnect?(): Promise<void>;
 }
 
 export interface InternalTransmitterService extends ITransmitter {

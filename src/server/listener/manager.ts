@@ -53,7 +53,7 @@ export class ListenerManager extends BaseListenerManager {
         driveId: string,
         listenerId: string
     ): Promise<ITransmitter | undefined> {
-        return this.transmitters[driveId]?.[listenerId];
+        return Promise.resolve(this.transmitters[driveId]?.[listenerId]);
     }
 
     async addListener(listener: Listener) {
@@ -106,7 +106,7 @@ export class ListenerManager extends BaseListenerManager {
         const driveTransmitters = this.transmitters[drive] || {};
         driveTransmitters[listener.listenerId] = transmitter;
         this.transmitters[drive] = driveTransmitters;
-        return transmitter;
+        return Promise.resolve(transmitter);
     }
 
     async removeListener(driveId: string, listenerId: string) {
@@ -115,7 +115,7 @@ export class ListenerManager extends BaseListenerManager {
             return false;
         }
 
-        return driveMap.delete(listenerId);
+        return Promise.resolve(driveMap.delete(listenerId));
     }
 
     async removeSyncUnits(driveId: string, syncUnits: Pick<SynchronizationUnit, "syncId">[]) {
@@ -128,6 +128,7 @@ export class ListenerManager extends BaseListenerManager {
                 listener.syncUnits.delete(syncUnit.syncId);
             }
         }
+        return Promise.resolve();
     }
 
     async updateSynchronizationRevisions(
@@ -203,6 +204,8 @@ export class ListenerManager extends BaseListenerManager {
         } else {
             listener.syncUnits.set(syncId, { listenerRev, lastUpdated });
         }
+
+        return Promise.resolve();
     }
 
     triggerUpdate = debounce(
@@ -410,6 +413,14 @@ export class ListenerManager extends BaseListenerManager {
                 callInfo: listener.callInfo ?? undefined,
                 label: listener.label ?? ''
             });
+        }
+    }
+
+    async removeDrive(driveId: string): Promise<void> {
+        this.listenerState.delete(driveId);
+        const transmitters = this.transmitters[driveId];
+        if (transmitters) {
+            await Promise.all(Object.values(transmitters).map(t => t.disconnect?.()));
         }
     }
 

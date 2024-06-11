@@ -12,6 +12,7 @@ import { logger } from '../../../utils/logger';
 
 export interface IReceiver {
     transmit: (strands: InternalTransmitterUpdate[]) => Promise<void>;
+    disconnect: () => Promise<void>;
 }
 
 export type InternalTransmitterUpdate<
@@ -87,5 +88,9 @@ export class InternalTransmitter implements ITransmitter {
 
     setReceiver(receiver: IReceiver) {
         this.receiver = receiver;
+    }
+
+    async disconnect(): Promise<void> {
+        await this.receiver?.disconnect();
     }
 }
