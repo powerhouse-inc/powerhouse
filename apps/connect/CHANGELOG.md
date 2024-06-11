@@ -1,3 +1,10 @@
+# [1.0.0-dev.2](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2024-06-11)
+
+
+### Performance Improvements
+
+* decode id only one when getting readable item path ([5c019b9](https://github.com/powerhouse-inc/document-model-electron/commit/5c019b951db04c31e8f2f163fd32a4e465eb3264))
+
 # 1.0.0-dev.1 (2024-06-11)
 
 
