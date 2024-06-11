@@ -7,7 +7,7 @@
         },
         {
             "name": "develop",
-            "prerelease": "alpha"
+            "prerelease": "dev"
         }
     ],
     "plugins": [
