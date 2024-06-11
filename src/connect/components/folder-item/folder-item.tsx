@@ -107,6 +107,10 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                                         <div className="absolute left-[-2px] top-[-2px]">
                                             <SyncStatusIcon
                                                 syncStatus={item.syncStatus}
+                                                overrideSyncIcons={{
+                                                    SUCCESS:
+                                                        'check-circle-fill',
+                                                }}
                                             />
                                         </div>
                                     </div>

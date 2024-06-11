@@ -6,25 +6,43 @@ import {
     SYNCING,
     SyncStatus,
 } from '@/connect';
-import { Icon } from '@/powerhouse';
+import { Icon, IconName } from '@/powerhouse';
+
 import { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
+
+const syncIcons: Record<SyncStatus, IconName> = {
+    SYNCING: 'syncing',
+    SUCCESS: 'synced',
+    CONFLICT: 'error',
+    MISSING: 'circle',
+    ERROR: 'error',
+};
 
 export type SyncStatusIconProps = Omit<
     ComponentPropsWithoutRef<typeof Icon>,
     'name'
 > & {
     syncStatus: SyncStatus;
+    overrideSyncIcons?: Partial<Record<SyncStatus, IconName>>;
 };
 export function SyncStatusIcon(props: SyncStatusIconProps) {
-    const { syncStatus, className, ...iconProps } = props;
+    const {
+        syncStatus,
+        className,
+        overrideSyncIcons = {},
+        ...iconProps
+    } = props;
+
+    const icons = { ...syncIcons, ...overrideSyncIcons };
+
     const syncStatusIcons = {
         [SYNCING]: (
             <Icon
                 size={16}
                 {...iconProps}
                 className={twMerge('text-blue-900', className)}
-                name="syncing"
+                name={icons[SYNCING]}
             />
         ),
         [SUCCESS]: (
@@ -32,7 +50,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
                 size={16}
                 {...iconProps}
                 className={twMerge('text-green-900', className)}
-                name="synced"
+                name={icons[SUCCESS]}
             />
         ),
         [CONFLICT]: (
@@ -40,7 +58,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
                 size={16}
                 {...iconProps}
                 className={twMerge('text-orange-900', className)}
-                name="error"
+                name={icons[CONFLICT]}
             />
         ),
         [MISSING]: (
@@ -48,7 +66,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
                 size={16}
                 {...iconProps}
                 className={twMerge('text-red-900', className)}
-                name="circle"
+                name={icons[MISSING]}
             />
         ),
         [ERROR]: (
@@ -56,7 +74,7 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
                 size={16}
                 {...iconProps}
                 className={twMerge('text-red-900', className)}
-                name="error"
+                name={icons[ERROR]}
             />
         ),
     } as const;

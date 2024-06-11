@@ -115,6 +115,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     const isWriteMode = props.mode === 'write';
     const showDropdownMenuButton = mouseIsWithinItemContainer && !isWriteMode;
     const isDrive = getIsDrive(item);
+    const isCloudDrive = getIsCloudDrive(item);
     const isParentCloudDrive = driveItem ? getIsCloudDrive(driveItem) : false;
     const isParentPublicDrive = driveItem ? getIsPublicDrive(driveItem) : false;
     const isPublicDrive = getIsPublicDrive(item);
@@ -311,12 +312,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
     function statusIconOrDropdownMenuButton() {
         if (showDropdownMenuButton && isAllowedToCreateDocuments)
             return dropdownMenuButton;
-        if (
-            item.syncStatus &&
-            (isDrive ||
-                (displaySyncFolderIcons &&
-                    (isParentCloudDrive || isParentPublicDrive)))
-        ) {
+        if ((isCloudDrive || isPublicDrive) && item.syncStatus) {
             return (
                 <SyncStatusIcon
                     syncStatus={item.syncStatus}
@@ -325,6 +321,23 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
             );
         }
     }
+
+    const syncIcon =
+        !isDrive &&
+        displaySyncFolderIcons &&
+        (isParentCloudDrive || isParentPublicDrive) &&
+        item.syncStatus ? (
+            <div className="absolute bottom-[-3px] right-[-25px] size-3 rounded-full bg-white">
+                <div className="absolute left-[-2px] top-[-2px]">
+                    <SyncStatusIcon
+                        syncStatus={item.syncStatus}
+                        overrideSyncIcons={{
+                            SUCCESS: 'check-circle-fill',
+                        }}
+                    />
+                </div>
+            </div>
+        ) : null;
 
     return (
         <article className="relative">
@@ -337,6 +350,7 @@ export function ConnectTreeViewItem(props: ConnectTreeViewItemProps) {
                 onCancelInput={onCancelHandler}
                 label={item.label}
                 open={item.expanded}
+                syncIcon={syncIcon}
                 itemContainerProps={getItemContainerProps()}
                 {...getItemIcon()}
                 {...divProps}

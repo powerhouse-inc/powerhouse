@@ -94,7 +94,10 @@ export const FileItem: React.FC<FileItemProps> = ({
             {isReadMode && displaySyncIcon && item.syncStatus && (
                 <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
                     <div className="absolute left-[-2px] top-[-2px]">
-                        <SyncStatusIcon syncStatus={item.syncStatus} />
+                        <SyncStatusIcon
+                            syncStatus={item.syncStatus}
+                            overrideSyncIcons={{ SUCCESS: 'check-circle-fill' }}
+                        />
                     </div>
                 </div>
             )}

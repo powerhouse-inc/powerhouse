@@ -16,6 +16,7 @@ export type TreeViewItemProps = DivProps &
         itemContainerProps?: DivProps;
         topIndicator?: React.ReactNode;
         bottomIndicator?: React.ReactNode;
+        syncIcon?: React.ReactNode;
     };
 
 export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
@@ -28,6 +29,7 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
         onCancelInput,
         children,
         icon,
+        syncIcon,
         expandedIcon,
         topIndicator,
         bottomIndicator,
@@ -72,13 +74,16 @@ export const TreeViewItem: React.FC<TreeViewItemProps> = props => {
                     style={{ paddingLeft: `${levelPadding}px` }}
                 >
                     {mode === 'read' ? (
-                        <Icon
-                            name="caret"
-                            className={twMerge(
-                                open && 'rotate-90',
-                                'ease pointer-events-none transition delay-75',
-                            )}
-                        />
+                        <div className="relative">
+                            <Icon
+                                name="caret"
+                                className={twMerge(
+                                    open && 'rotate-90',
+                                    'ease pointer-events-none transition delay-75',
+                                )}
+                            />
+                            {syncIcon}
+                        </div>
                     ) : (
                         <span className="inline-block size-6" />
                     )}
