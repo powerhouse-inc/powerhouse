@@ -31,7 +31,8 @@
         "release": "semantic-release",
         "prepare": "npm run prepare:scripts",
         "prepare:scripts": "node scripts/index.js",
-        "e2e": "playwright test"
+        "e2e": "playwright test",
+        "cy:open": "cypress open"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.3",
@@ -59,6 +60,7 @@
         "@vitejs/plugin-react": "^4.2.1",
         "asar": "^3.2.0",
         "autoprefixer": "^10.4.14",
+        "cypress": "^13.11.0",
         "electron": "30.0.0",
         "electron-playwright-helpers": "^1.7.1",
         "eslint": "^8.56.0",
