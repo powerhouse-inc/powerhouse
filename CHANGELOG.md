@@ -1,3 +1,13 @@
+# [1.0.0-dev.3](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2024-06-12)
+
+
+### Features
+
+* enabled sync icons for folders and files ([9336e8a](https://github.com/powerhouse-inc/document-model-electron/commit/9336e8a3d1c818a962b5c0d0ef108ab07c2d3872))
+* updated design-system alpha 119 ([c27a968](https://github.com/powerhouse-inc/document-model-electron/commit/c27a968f2bfd745d48a7a69a451d4c18e72acdf9))
+* updated document-drive ([cce5625](https://github.com/powerhouse-inc/document-model-electron/commit/cce5625d5392f3860a2f5b71ad144dd99d98ebda))
+* updated libs ([5edef9d](https://github.com/powerhouse-inc/document-model-electron/commit/5edef9d1d1936f3bb7c9006c180c7a352f8d6bb9))
+
 # [1.0.0-dev.2](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2024-06-11)
 
 
