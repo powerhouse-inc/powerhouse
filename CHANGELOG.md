@@ -1,3 +1,10 @@
+# [1.0.0-alpha.74](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.73...v1.0.0-alpha.74) (2024-06-12)
+
+
+### Features
+
+* cleanup listeners when drive is removed ([7c33166](https://github.com/powerhouse-inc/document-drive/commit/7c33166141ee65d7776e5281be0e808bd8936563))
+
 # [1.0.0-alpha.73](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.72...v1.0.0-alpha.73) (2024-06-10)
 
 
