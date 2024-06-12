@@ -2,7 +2,7 @@ name: End-to-end tests
 
 on:
   push:
-    branches: [staging]
+    branches: [develop]
   workflow_dispatch:
 jobs:
   cypress-run:
@@ -18,10 +18,10 @@ jobs:
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
-          # record: true # record tests in the Dashboard
+          record: true
           parallel: true
           start: npm run dev:web
           wait-on: 'http://localhost:5173/'
-        # env:
-        #   CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }} // setup Cypress Dashboard record key
-        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

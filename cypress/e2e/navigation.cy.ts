@@ -2,7 +2,7 @@
 
 import { clearIndexDB, newFolder } from './utils';
 
-describe('example to-do app', () => {
+describe('Navigation', () => {
     before(async () => {
         cy.clearAllSessionStorage();
         await clearIndexDB();
@@ -34,4 +34,12 @@ describe('example to-do app', () => {
         cy.contains('Global State Schema').click();
         cy.contains('Close').click();
     });
+
+    // it.only('should add public drive', () => {
+    //     addPublicDrive(
+    //         'https://apps.powerhouse.io/powerhouse/switchboard/d/powerhouse',
+    //     );
+    //     cy.contains('article', 'Powerhouse').should('be.visible');
+    //     selectSidebarItem('Powerhouse');
+    // });
 });
