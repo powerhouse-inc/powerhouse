@@ -2,6 +2,7 @@ import { TreeItem, useDraggableTarget } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
 import { FileItem } from 'src/components/file-item';
 import { FolderItem } from 'src/components/folder-item';
+import { useUserPermissions } from 'src/hooks/useUserPermissions';
 
 import { useFolderContent } from 'src/hooks/useFolderContent';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
@@ -27,6 +28,7 @@ export const FolderView: React.FC<IProps> = ({
 }) => {
     const { t } = useTranslation();
     const { folders, files } = useFolderContent(path);
+    const { isAllowedToCreateDocuments } = useUserPermissions();
     const onDropEvent = useOnDropEvent();
 
     const { dropProps, isDropTarget } = useDraggableTarget({
@@ -53,6 +55,9 @@ export const FolderView: React.FC<IProps> = ({
                             folder={folder}
                             decodedDriveID={decodedDriveID}
                             onFolderSelected={onFolderSelected}
+                            isAllowedToCreateDocuments={
+                                isAllowedToCreateDocuments
+                            }
                         />
                     ))
                 ) : (
@@ -70,6 +75,9 @@ export const FolderView: React.FC<IProps> = ({
                             decodedDriveID={decodedDriveID}
                             onFileDeleted={onFileDeleted}
                             onFileSelected={onFileSelected}
+                            isAllowedToCreateDocuments={
+                                isAllowedToCreateDocuments
+                            }
                         />
                     ))
                 ) : (
