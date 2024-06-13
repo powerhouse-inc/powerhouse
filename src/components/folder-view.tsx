@@ -4,6 +4,7 @@ import { FileItem } from 'src/components/file-item';
 import { FolderItem } from 'src/components/folder-item';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 
+import { useFileOptions } from 'src/hooks/useFileOptions';
 import { useFolderContent } from 'src/hooks/useFolderContent';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 import { twMerge } from 'tailwind-merge';
@@ -29,6 +30,8 @@ export const FolderView: React.FC<IProps> = ({
     const { t } = useTranslation();
     const { folders, files } = useFolderContent(path);
     const { isAllowedToCreateDocuments } = useUserPermissions();
+    const { fileItemOptions, onFileOptionsClick } =
+        useFileOptions(decodedDriveID);
     const onDropEvent = useOnDropEvent();
 
     const { dropProps, isDropTarget } = useDraggableTarget({
@@ -75,6 +78,8 @@ export const FolderView: React.FC<IProps> = ({
                             decodedDriveID={decodedDriveID}
                             onFileDeleted={onFileDeleted}
                             onFileSelected={onFileSelected}
+                            itemOptions={fileItemOptions}
+                            onFileOptionsClick={onFileOptionsClick}
                             isAllowedToCreateDocuments={
                                 isAllowedToCreateDocuments
                             }
