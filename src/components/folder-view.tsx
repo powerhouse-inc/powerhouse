@@ -6,6 +6,7 @@ import { useUserPermissions } from 'src/hooks/useUserPermissions';
 
 import { useFileOptions } from 'src/hooks/useFileOptions';
 import { useFolderContent } from 'src/hooks/useFolderContent';
+import { useFolderOptions } from 'src/hooks/useFolderOptions';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
@@ -30,6 +31,8 @@ export const FolderView: React.FC<IProps> = ({
     const { t } = useTranslation();
     const { folders, files } = useFolderContent(path);
     const { isAllowedToCreateDocuments } = useUserPermissions();
+    const { folderItemOptions, onFolderOptionsClick } =
+        useFolderOptions(decodedDriveID);
     const { fileItemOptions, onFileOptionsClick } =
         useFileOptions(decodedDriveID);
     const onDropEvent = useOnDropEvent();
@@ -58,6 +61,8 @@ export const FolderView: React.FC<IProps> = ({
                             folder={folder}
                             decodedDriveID={decodedDriveID}
                             onFolderSelected={onFolderSelected}
+                            folderItemOptions={folderItemOptions}
+                            onFolderOptionsClick={onFolderOptionsClick}
                             isAllowedToCreateDocuments={
                                 isAllowedToCreateDocuments
                             }
