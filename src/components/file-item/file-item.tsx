@@ -3,7 +3,6 @@ import {
     FileItemProps,
     Icon,
     TreeItem,
-    decodeID,
     defaultDropdownMenuOptions,
 } from '@powerhousedao/design-system';
 import { useState } from 'react';
@@ -24,24 +23,30 @@ const defaultItemOptions = defaultDropdownMenuOptions.filter(option =>
 
 interface IProps {
     file: TreeItem;
-    drive: string;
+    decodedDriveID: string;
     onFileSelected: (drive: string, id: string) => void;
     onFileDeleted: (drive: string, id: string) => void;
 }
 
-export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
+export const FileItem: React.FC<IProps> = ({
+    file,
+    decodedDriveID,
+    onFileSelected,
+}) => {
     const { t } = useTranslation();
     const [isWriteMode, setIsWriteMode] = useState(false);
     const getReadableItemPath = useGetReadableItemPath();
     const getDocumentById = useGetDocumentById();
     const { updateNodeName, onSubmitInput } = useDrivesContainer();
     const { showModal } = useModal();
+
+    // TODO: move this to folder-view
     const { isAllowedToCreateDocuments } = useUserPermissions();
 
-    const decodedDriveID = decodeID(drive);
     const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);
     const { isRemoteDrive } = useDocumentDriveById(decodedDriveID);
 
+    // TODO: move this to folder-view
     const onFileOptionsClick = async (optionId: string, fileNode: TreeItem) => {
         if (optionId === 'delete') {
             showModal('deleteItem', {
@@ -69,6 +74,7 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
         }
     };
 
+    // TODO: move this to folder-view
     const itemOptions: FileItemProps['itemOptions'] = isRemoteDrive
         ? [
               {
