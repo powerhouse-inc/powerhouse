@@ -1,3 +1,10 @@
+# [1.0.0-alpha.120](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.119...v1.0.0-alpha.120) (2024-06-13)
+
+
+### Features
+
+* add income transaction types ([#303](https://github.com/powerhouse-inc/design-system/issues/303)) ([028c18f](https://github.com/powerhouse-inc/design-system/commit/028c18f026034459701fa4f98a28232cc9f9b972))
+
 # [1.0.0-alpha.119](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.118...v1.0.0-alpha.119) (2024-06-11)
 
 
