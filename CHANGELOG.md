@@ -1,3 +1,10 @@
+# [1.0.0-alpha.121](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.120...v1.0.0-alpha.121) (2024-06-13)
+
+
+### Features
+
+* add type field and service provider input ([#304](https://github.com/powerhouse-inc/design-system/issues/304)) ([2281ddc](https://github.com/powerhouse-inc/design-system/commit/2281ddc0aab0601124672dfc3b10f809a283ab19))
+
 # [1.0.0-alpha.120](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.119...v1.0.0-alpha.120) (2024-06-13)
 
 
