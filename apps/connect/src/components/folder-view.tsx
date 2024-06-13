@@ -1,8 +1,4 @@
-import {
-    decodeID,
-    useDraggableTarget,
-    useGetItemByPath,
-} from '@powerhousedao/design-system';
+import { TreeItem, useDraggableTarget } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
 import { FileItem } from 'src/components/file-item';
 import { FolderItem } from 'src/components/folder-item';
@@ -13,8 +9,9 @@ import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
 
 interface IProps {
-    drive: string;
+    decodedDriveID: string;
     path: string;
+    folderItem: TreeItem;
     onFolderSelected: (itemId: string) => void;
     onFileSelected: (drive: string, id: string) => void;
     onFileDeleted: (drive: string, id: string) => void;
@@ -22,22 +19,18 @@ interface IProps {
 
 export const FolderView: React.FC<IProps> = ({
     path,
-    drive,
+    folderItem,
+    decodedDriveID,
     onFileDeleted,
     onFileSelected,
     onFolderSelected,
 }) => {
     const { t } = useTranslation();
     const { folders, files } = useFolderContent(path);
-    const decodedDriveID = decodeID(drive);
-    const getItemByPath = useGetItemByPath();
     const onDropEvent = useOnDropEvent();
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const item = getItemByPath(path)!;
-
     const { dropProps, isDropTarget } = useDraggableTarget({
-        data: item,
+        data: folderItem,
         onDropEvent,
     });
 
@@ -74,7 +67,7 @@ export const FolderView: React.FC<IProps> = ({
                         <FileItem
                             key={file.id}
                             file={file}
-                            drive={drive}
+                            decodedDriveID={decodedDriveID}
                             onFileDeleted={onFileDeleted}
                             onFileSelected={onFileSelected}
                         />
