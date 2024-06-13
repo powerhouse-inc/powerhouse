@@ -10,6 +10,7 @@ import {
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ReloadConnectToast } from 'src/components/toast';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useSelectedPath } from 'src/store/document-drive';
@@ -70,6 +71,14 @@ export const useLoadInitialData = () => {
             ) {
                 // add the drive to the error list
                 drivesWithError.current.push(drive.id);
+
+                const shouldReloadApp = false;
+
+                if (shouldReloadApp) {
+                    return toast(<ReloadConnectToast />, {
+                        type: 'connect-warning',
+                    });
+                }
 
                 return toast(
                     t(
