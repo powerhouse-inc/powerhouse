@@ -35,6 +35,7 @@ export function FixedIncomeTypesTable(props: FixedIncomeTypesTableProps) {
                 tableData={tableData}
                 columns={columns}
                 selectedTableItem={selectedTableItem}
+                operation={operation}
                 setSelectedTableItem={setSelectedTableItem}
                 setOperation={setOperation}
             />

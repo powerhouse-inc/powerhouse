@@ -65,7 +65,7 @@ export type GroupTransactionFormInputs = {
     fees?: TransactionFeeInput[] | null;
     cashAmount?: number | null;
     fixedIncomeAmount?: number | null;
-    unitPrice: number | null;
+    serviceProviderFeeTypeId?: string | null;
 };
 
 export type AccountFormInputs = {

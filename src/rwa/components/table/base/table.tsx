@@ -50,6 +50,7 @@ export function Table<
         selectedTableItem,
         columnCountByTableWidth = defaultColumnCountByTableWidth,
         isAllowedToCreateDocuments,
+        operation,
         setSelectedTableItem,
         setOperation,
         specialFirstRow,
@@ -155,7 +156,7 @@ export function Table<
                 renderRow={renderRow}
                 specialFirstRow={specialFirstRow}
             />
-            {isAllowedToCreateDocuments && (
+            {isAllowedToCreateDocuments && !operation && (
                 <>
                     <button
                         onClick={onCreateItemClick}

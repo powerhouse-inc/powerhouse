@@ -1,6 +1,5 @@
 import { Icon } from '@/powerhouse';
 import {
-    Account,
     GroupTransactionFormInputs,
     RWANumberInput,
     RWATableSelect,
@@ -21,7 +20,7 @@ import { twMerge } from 'tailwind-merge';
 type Props = {
     feeInputs: FieldArrayWithId<GroupTransactionFormInputs, 'fees'>[];
     serviceProviderFeeTypes: ServiceProviderFeeType[];
-    accounts: Account[];
+    serviceProviderFeeTypeOptions: { label: string; value: string }[];
     setShowServiceProviderFeeTypeModal: (show: boolean) => void;
     register: UseFormRegister<GroupTransactionFormInputs>;
     control: Control<GroupTransactionFormInputs>;
@@ -34,13 +33,6 @@ type Props = {
 
 export function FeeTransactionsTable(props: Props) {
     const headings = ['Fees', 'Service Provider', 'Amount', ''] as const;
-
-    const serviceProviderFeeTypeOptions = props.serviceProviderFeeTypes.map(
-        spft => ({
-            label: `${spft.name} — ${spft.feeType} — ${props.accounts.find(account => account.id === spft.accountId)?.reference}`,
-            value: spft.id,
-        }),
-    );
 
     return (
         <>
@@ -76,7 +68,7 @@ export function FeeTransactionsTable(props: Props) {
                                                 name={`fees.${index}.serviceProviderFeeTypeId`}
                                                 disabled={props.isViewOnly}
                                                 options={
-                                                    serviceProviderFeeTypeOptions
+                                                    props.serviceProviderFeeTypeOptions
                                                 }
                                                 addItemButtonProps={{
                                                     onClick: () =>

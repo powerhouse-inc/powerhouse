@@ -79,6 +79,7 @@ export function ServiceProviderFeeTypesTable(
                 tableData={tableData}
                 columns={columns}
                 selectedTableItem={selectedTableItem}
+                operation={operation}
                 setSelectedTableItem={setSelectedTableItem}
                 setOperation={setOperation}
             />

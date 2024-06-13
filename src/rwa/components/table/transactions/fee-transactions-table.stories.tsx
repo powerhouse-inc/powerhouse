@@ -14,6 +14,7 @@ export default meta;
 
 type Story = StoryObj<{
     serviceProviderFeeTypes: ServiceProviderFeeType[];
+    serviceProviderFeeTypeOptions: { label: string; value: string }[];
     accounts: Account[];
     isViewOnly: boolean;
     feeInputs: TransactionFeeInput[];
@@ -22,6 +23,7 @@ type Story = StoryObj<{
 export const Empty: Story = {
     args: {
         serviceProviderFeeTypes: [],
+        serviceProviderFeeTypeOptions: [],
         accounts: [],
         isViewOnly: false,
         feeInputs: [],

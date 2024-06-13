@@ -7,15 +7,17 @@ type Props = {
 };
 export function useTableHeight(props: Props) {
     const { selectedRowNumber, tableRef, hasSpecialFirstRow = false } = props;
-    const [maxHeight, setMaxHeight] = useState('max-content');
     const rowHeight = 34;
     const headerHeight = 42;
+    const [maxHeight, setMaxHeight] = useState('unset');
 
     useEffect(() => {
         if (!tableRef.current) return;
 
-        if (selectedRowNumber === undefined) {
-            setMaxHeight('max-content');
+        const twentyRowsAndHeaderHeight = 20 * rowHeight + headerHeight;
+
+        if (selectedRowNumber === undefined || selectedRowNumber > 20) {
+            setMaxHeight(twentyRowsAndHeaderHeight + 'px');
             return;
         }
 

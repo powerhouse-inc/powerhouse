@@ -68,7 +68,7 @@ export function _GroupTransactionDetails(props: GroupTransactionDetailsProps) {
         onSubmitCreateServiceProviderFeeType,
     } = props;
 
-    const { serviceProviderFeeTypes, accounts } = state;
+    const { serviceProviderFeeTypes } = state;
 
     const {
         submit,
@@ -81,6 +81,7 @@ export function _GroupTransactionDetails(props: GroupTransactionDetailsProps) {
         append,
         remove,
         fields,
+        serviceProviderFeeTypeOptions,
         showCreateAssetModal,
         setShowCreateAssetModal,
         setShowCreateServiceProviderFeeTypeModal,
@@ -123,10 +124,12 @@ export function _GroupTransactionDetails(props: GroupTransactionDetailsProps) {
                     register={register}
                     feeInputs={fields}
                     serviceProviderFeeTypes={serviceProviderFeeTypes}
+                    serviceProviderFeeTypeOptions={
+                        serviceProviderFeeTypeOptions
+                    }
                     setShowServiceProviderFeeTypeModal={
                         setShowCreateServiceProviderFeeTypeModal
                     }
-                    accounts={accounts}
                     control={control}
                     watch={watch}
                     remove={remove}

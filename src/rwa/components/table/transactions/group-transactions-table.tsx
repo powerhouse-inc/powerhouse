@@ -12,6 +12,7 @@ import {
     TableWrapperProps,
     assetTransactionSignByTransactionType,
     cashTransactionSignByTransactionType,
+    groupTransactionTypeLabels,
     isAssetGroupTransactionType,
     isFixedIncomeAsset,
     makeFixedIncomeOptionLabel,
@@ -21,6 +22,11 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 
 const columns = [
+    {
+        key: 'typeLabel' as const,
+        label: 'Type',
+        allowSorting: true,
+    },
     {
         key: 'entryTime' as const,
         label: 'Entry Time',
@@ -69,6 +75,7 @@ export function makeGroupTransactionsTableItems(
             asset => asset.id === transaction.fixedIncomeTransaction?.assetId,
         )?.name;
         const type = transaction.type;
+        const typeLabel = groupTransactionTypeLabels[type];
         const cashTransactionSign = cashTransactionSignByTransactionType[type];
         const assetTransactionSign = isAssetGroupTransactionType(type)
             ? assetTransactionSignByTransactionType[type]
@@ -87,6 +94,7 @@ export function makeGroupTransactionsTableItems(
             ...transaction,
             id,
             type,
+            typeLabel,
             entryTime,
             asset,
             quantity,
@@ -186,6 +194,7 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
                 tableData={tableData}
                 columns={columns}
                 selectedTableItem={selectedTableItem}
+                operation={operation}
                 setSelectedTableItem={setSelectedTableItem}
                 setOperation={setOperation}
             />

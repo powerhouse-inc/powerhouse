@@ -67,6 +67,7 @@ export type TableProps<
     itemName: string;
     columnCountByTableWidth?: ColumnCountByTableWidth;
     selectedTableItem: TTableData | undefined;
+    operation: Operation;
     setOperation: (operation: Operation) => void;
     setSelectedTableItem: (item: TTableData | undefined) => void;
     specialFirstRow?: (
@@ -86,6 +87,7 @@ export type TableWrapperProps<TFormInputs extends FieldValues> = {
 export type Operation = 'view' | 'create' | 'edit' | null;
 
 export type GroupTransactionsTableItem = GroupTransaction & {
+    typeLabel: string;
     asset: string | undefined;
     quantity: number | undefined;
     cashAmount: number | undefined;

@@ -52,7 +52,8 @@ export const mockGroupTransaction = {
     fixedIncomeTransaction: mockFixedIncomeTransaction,
     feeTransactions: [],
     interestTransaction: null,
-    cashBalanceChange: 1,
+    serviceProviderFeeTypeId: null,
+    cashBalanceChange: 10,
 };
 
 export const mockGroupTransactions: GroupTransaction[] =

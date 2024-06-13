@@ -35,6 +35,7 @@ export function SPVsTable(props: SPVsTableProps) {
                 tableData={tableData}
                 columns={columns}
                 selectedTableItem={selectedTableItem}
+                operation={operation}
                 setSelectedTableItem={setSelectedTableItem}
                 setOperation={setOperation}
             />

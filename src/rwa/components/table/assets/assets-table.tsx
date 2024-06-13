@@ -144,6 +144,7 @@ export function AssetsTable(props: AssetsTableProps) {
                 tableData={tableData}
                 columns={columns}
                 selectedTableItem={selectedTableItem}
+                operation={operation}
                 setSelectedTableItem={setSelectedTableItem}
                 setOperation={setOperation}
                 specialFirstRow={specialFirstRow}

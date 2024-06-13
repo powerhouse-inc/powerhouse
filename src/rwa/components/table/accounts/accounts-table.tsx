@@ -70,6 +70,7 @@ export function AccountsTable(props: AccountsTableProps) {
                 tableData={tableData}
                 columns={columns}
                 selectedTableItem={selectedTableItem}
+                operation={operation}
                 setSelectedTableItem={setSelectedTableItem}
                 setOperation={setOperation}
             />
