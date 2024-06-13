@@ -7,7 +7,6 @@ import React, { useState } from 'react';
 import { useModal } from 'src/components/modal';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
 
 const allowedItemOptions = ['delete', 'rename', 'duplicate'];
 
@@ -19,12 +18,16 @@ export interface FolderItemProps {
     folder: TreeItem;
     decodedDriveID: string;
     onFolderSelected: (itemId: string) => void;
+    isAllowedToCreateDocuments: boolean;
 }
 
 export const FolderItem: React.FC<FolderItemProps> = props => {
-    const { folder, decodedDriveID, onFolderSelected } = props;
-    // TODO: move this to folder-view
-    const { isAllowedToCreateDocuments } = useUserPermissions();
+    const {
+        folder,
+        decodedDriveID,
+        onFolderSelected,
+        isAllowedToCreateDocuments,
+    } = props;
 
     const { showModal } = useModal();
     const { updateNodeName, onSubmitInput } = useDrivesContainer();
