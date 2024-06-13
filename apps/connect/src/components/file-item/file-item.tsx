@@ -3,7 +3,7 @@ import {
     FileItem as ConnectFileItem,
     TreeItem,
 } from '@powerhousedao/design-system';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { SetIsWriteMode } from 'src/hooks/useFileOptions';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
@@ -63,4 +63,10 @@ export const FileItem: React.FC<IProps> = ({
     );
 };
 
-export default FileItem;
+export default React.memo(FileItem, (prevProps, nextProps) => {
+    return (
+        prevProps.decodedDriveID === nextProps.decodedDriveID &&
+        prevProps.file.id === nextProps.file.id &&
+        prevProps.file.label === nextProps.file.label
+    );
+});
