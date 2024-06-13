@@ -66,7 +66,6 @@ export type GroupTransactionFormInputs = {
     cashAmount?: number | null;
     fixedIncomeAmount?: number | null;
     unitPrice: number | null;
-    cashBalanceChange: number | null;
 };
 
 export type AccountFormInputs = {

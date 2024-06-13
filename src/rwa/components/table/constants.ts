@@ -1,7 +1,9 @@
 import {
     ASSET_PURCHASE,
     ASSET_SALE,
+    FEES_INCOME,
     FEES_PAYMENT,
+    INTEREST_INCOME,
     INTEREST_PAYMENT,
     PRINCIPAL_DRAW,
     PRINCIPAL_RETURN,
@@ -24,7 +26,9 @@ export const cashTransactionSignByTransactionType: Record<
     [PRINCIPAL_DRAW]: 1,
     [ASSET_PURCHASE]: -1,
     [PRINCIPAL_RETURN]: -1,
+    [FEES_INCOME]: 1,
     [FEES_PAYMENT]: -1,
+    [INTEREST_INCOME]: 1,
     [INTEREST_PAYMENT]: -1,
 } as const;
 

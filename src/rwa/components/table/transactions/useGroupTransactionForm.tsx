@@ -9,7 +9,6 @@ import {
     RWATableSelect,
     allGroupTransactionTypes,
     assetGroupTransactions,
-    calculateCashBalanceChange,
     calculateUnitPrice,
     convertToDateTimeLocalFormat,
     getFixedIncomeAssets,
@@ -121,11 +120,6 @@ export function useGroupTransactionForm(
             ? data.fixedIncomeAmount
             : null;
         const fees = canHaveTransactionFees ? data.fees : null;
-        const cashBalanceChange = calculateCashBalanceChange(
-            data.type,
-            data.cashAmount,
-            data.fees,
-        );
         const unitPrice = calculateUnitPrice(
             data.cashAmount,
             data.fixedIncomeAmount,
@@ -144,7 +138,6 @@ export function useGroupTransactionForm(
             fixedIncomeId,
             fixedIncomeAmount,
             fees,
-            cashBalanceChange,
             unitPrice,
         });
     }
