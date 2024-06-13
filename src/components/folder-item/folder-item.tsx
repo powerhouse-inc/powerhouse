@@ -23,6 +23,7 @@ export interface FolderItemProps {
 
 export const FolderItem: React.FC<FolderItemProps> = props => {
     const { folder, decodedDriveID, onFolderSelected } = props;
+    // TODO: move this to folder-view
     const { isAllowedToCreateDocuments } = useUserPermissions();
 
     const { showModal } = useModal();
@@ -30,6 +31,7 @@ export const FolderItem: React.FC<FolderItemProps> = props => {
     const [isWriteMode, setIsWriteMode] = useState(false);
     const onDropEvent = useOnDropEvent();
 
+    // TODO: move this to folder-view
     const onFolderOptionsClick = async (
         optionId: string,
         folderNode: TreeItem,
