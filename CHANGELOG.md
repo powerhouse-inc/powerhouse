@@ -1,3 +1,13 @@
+# [1.0.0-dev.4](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2024-06-13)
+
+
+### Features
+
+* added addpublicdrive util ([123ed8b](https://github.com/powerhouse-inc/document-model-electron/commit/123ed8be07321eafcac2521f4ae7452e86a6895f))
+* added cypress CI config ([e50fb06](https://github.com/powerhouse-inc/document-model-electron/commit/e50fb062eccf6387399bad9403f59a20bc478d89))
+* added Cypress Cloud Config ([3439c54](https://github.com/powerhouse-inc/document-model-electron/commit/3439c5493098d66a6e7563068f35afcae255b142))
+* added cypress setup ([be8e1b6](https://github.com/powerhouse-inc/document-model-electron/commit/be8e1b6e702f3f9209d694d5642ee82465a6bb9b))
+
 # [1.0.0-dev.3](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2024-06-12)
 
 
