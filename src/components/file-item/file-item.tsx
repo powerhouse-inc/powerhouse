@@ -12,7 +12,6 @@ import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { useModal } from '../modal';
 
 const allowedItemOptions = ['delete', 'rename', 'duplicate'];
@@ -26,12 +25,14 @@ interface IProps {
     decodedDriveID: string;
     onFileSelected: (drive: string, id: string) => void;
     onFileDeleted: (drive: string, id: string) => void;
+    isAllowedToCreateDocuments: boolean;
 }
 
 export const FileItem: React.FC<IProps> = ({
     file,
     decodedDriveID,
     onFileSelected,
+    isAllowedToCreateDocuments,
 }) => {
     const { t } = useTranslation();
     const [isWriteMode, setIsWriteMode] = useState(false);
@@ -39,9 +40,6 @@ export const FileItem: React.FC<IProps> = ({
     const getDocumentById = useGetDocumentById();
     const { updateNodeName, onSubmitInput } = useDrivesContainer();
     const { showModal } = useModal();
-
-    // TODO: move this to folder-view
-    const { isAllowedToCreateDocuments } = useUserPermissions();
 
     const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);
     const { isRemoteDrive } = useDocumentDriveById(decodedDriveID);
