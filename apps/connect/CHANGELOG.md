@@ -1,3 +1,11 @@
+# [1.0.0-dev.5](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2024-06-13)
+
+
+### Features
+
+* added reload Connect toast ([944b086](https://github.com/powerhouse-inc/document-model-electron/commit/944b0866bf7ca830581a21ed828f81c880891922))
+* added version comparison ([85661ea](https://github.com/powerhouse-inc/document-model-electron/commit/85661eaa9aac0a8f38ce465adf1c0c227a442846))
+
 # [1.0.0-dev.4](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2024-06-13)
 
 
