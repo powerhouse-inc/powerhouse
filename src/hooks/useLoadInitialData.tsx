@@ -18,6 +18,7 @@ import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-s
 import { useDocumentDrives } from './useDocumentDrives';
 import { useLoadDefaultDrive } from './useLoadDefaultDrive';
 import { useNavigateToItemId } from './useNavigateToItemId';
+import { isLatestVersion } from './utils';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
@@ -72,13 +73,13 @@ export const useLoadInitialData = () => {
                 // add the drive to the error list
                 drivesWithError.current.push(drive.id);
 
-                const shouldReloadApp = false;
-
-                if (shouldReloadApp) {
-                    return toast(<ReloadConnectToast />, {
-                        type: 'connect-warning',
-                    });
-                }
+                isLatestVersion().then(result => {
+                    if (!result) {
+                        return toast(<ReloadConnectToast />, {
+                            type: 'connect-warning',
+                        });
+                    }
+                });
 
                 return toast(
                     t(
