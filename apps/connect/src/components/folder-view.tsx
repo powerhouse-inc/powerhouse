@@ -1,6 +1,6 @@
 import { TreeItem, useDraggableTarget } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import { FileItem } from 'src/components/file-item';
+import FileItem from 'src/components/file-item/file-item';
 import { FolderItem } from 'src/components/folder-item';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 
