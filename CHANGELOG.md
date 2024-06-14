@@ -1,3 +1,15 @@
+# [1.0.0-dev.7](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.6...v1.0.0-dev.7) (2024-06-14)
+
+
+### Features
+
+* avoid recreate fileOptions and clickOptionsHandler for each file node ([0a0ef3a](https://github.com/powerhouse-inc/document-model-electron/commit/0a0ef3a181489ec91a8c8439f25dcb9f3713f9a9))
+* avoid recreate folderOptions and clickFolderOptionsHandler for each folder node ([6329b29](https://github.com/powerhouse-inc/document-model-electron/commit/6329b291adee5895070f3b2192f84c36c86406a8))
+* moved isAllowedToCreateDocuments to folderView ([8af8020](https://github.com/powerhouse-inc/document-model-electron/commit/8af8020109d85cd1d6cae167cd51ddf722d2bb46))
+* re-use decodedDriveID ([1a82d60](https://github.com/powerhouse-inc/document-model-electron/commit/1a82d60b5bbfc5f99f99d38e3909da4364325817))
+* removed debug code ([4aa9c4c](https://github.com/powerhouse-inc/document-model-electron/commit/4aa9c4c2fa205a2f2823d2816b64e420efe2cf2a))
+* use memoized version of FileItem component ([040c2b6](https://github.com/powerhouse-inc/document-model-electron/commit/040c2b6ca0cdd8c87d313d27169213a50cffb4cd))
+
 # [1.0.0-dev.6](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.5...v1.0.0-dev.6) (2024-06-14)
 
 
