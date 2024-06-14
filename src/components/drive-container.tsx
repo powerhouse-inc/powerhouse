@@ -138,6 +138,7 @@ export default function DriveContainer(props: DriveContainerProps) {
                         key={key}
                         name={name}
                         type={type}
+                        displaySyncFolderIcons
                         disableAddDrives={disableAddDrives}
                         defaultItemOptions={defaultItemOptions}
                         onItemClick={onItemClick}

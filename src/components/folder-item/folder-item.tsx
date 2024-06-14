@@ -64,6 +64,7 @@ export const FolderItem: React.FC<FolderItemProps> = props => {
     return (
         <ConnectFolderItem
             className="w-64"
+            displaySyncIcon
             title={folder.label}
             itemOptions={itemOptions}
             onCancelInput={cancelInputHandler}

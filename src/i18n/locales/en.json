@@ -6,7 +6,9 @@
         "empty": "Empty",
         "create": "Create",
         "save": "Save",
-        "export": "Export"
+        "export": "Export",
+        "reload": "Reload",
+        "reloadConnect": "Click here to reload Connect"
     },
     "searchbar": {
         "placeholder": "Search Powerhouse",
@@ -83,6 +85,7 @@
         "addDriveSuccess": "New drive successfully added",
         "driveSyncSuccess": "Drive synced successfully",
         "driveSyncError": "Error synchronizing drive {{drive}}",
-        "driveSyncConflict": "Conflict error detected in {{drive}}"
+        "driveSyncConflict": "Conflict error detected in {{drive}}",
+        "reloadApp": "It seems like you're running an outdated version of the app. Please reload Connect to get the latest version."
     }
 }
