@@ -21,7 +21,6 @@ import FolderView from 'src/components/folder-view';
 import { useModal } from 'src/components/modal';
 import { SearchBar } from 'src/components/search-bar';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
-import { useCreateDocuments } from 'src/hooks/useCreateDocuments';
 import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
@@ -76,7 +75,6 @@ const Content = () => {
     const { onSubmitInput } = useDrivesContainer();
     const navigateToItemId = useNavigateToItemId();
     const { isAllowedToCreateDocuments } = useUserPermissions();
-    const createDocuments = useCreateDocuments();
 
     const driveNodes = documentDrives.find(
         drive => drive.state.global.id === decodedDriveID,
@@ -313,10 +311,6 @@ const Content = () => {
 
     return (
         <div className="flex h-full flex-col overflow-auto bg-gray-100 p-6">
-            {/* TODO: remove this button */}
-            <button onClick={() => createDocuments(100)}>
-                Create Documents
-            </button>
             {selectedFileNode && selectedDocument ? (
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
                     <Suspense
