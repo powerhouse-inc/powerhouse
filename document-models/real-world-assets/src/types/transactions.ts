@@ -1,10 +1,13 @@
-import { PRINCIPAL_RETURN } from '@powerhousedao/design-system';
 import { BaseTransaction, GroupTransaction, TransactionFee } from '../../gen';
 import {
     ASSET_PURCHASE,
     ASSET_SALE,
+    FEES_INCOME,
+    FEES_PAYMENT,
+    INTEREST_INCOME,
     INTEREST_PAYMENT,
     PRINCIPAL_DRAW,
+    PRINCIPAL_RETURN,
 } from '../constants';
 
 export type BaseTransactionCommonFields = Pick<
@@ -51,13 +54,14 @@ export type PrincipalGroupTransaction = GroupTransactionCommonFields & {
     cashTransaction: CashBaseTransaction;
 };
 
-export type InterestPaymentGroupTransaction = GroupTransactionCommonFields & {
-    type: typeof INTEREST_PAYMENT;
+export type InterestGroupTransaction = GroupTransactionCommonFields & {
+    type: typeof INTEREST_PAYMENT | typeof INTEREST_INCOME;
     fees: TransactionFee[];
     cashTransaction: InterestBaseTransaction;
 };
 
-export type FeesPaymentGroupTransaction = GroupTransactionCommonFields & {
-    type: typeof INTEREST_PAYMENT;
+export type FeesGroupTransaction = GroupTransactionCommonFields & {
+    type: typeof FEES_PAYMENT | typeof FEES_INCOME;
     cashTransaction: FeesBaseTransaction;
+    serviceProviderFeeTypeId: string;
 };

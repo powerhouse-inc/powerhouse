@@ -1,8 +1,14 @@
 import {
     GroupTransaction,
     GroupTransactionType,
-} from '@powerhousedao/design-system';
-import { ASSET_PURCHASE, ASSET_SALE } from '../constants';
+    InputMaybe,
+    TransactionFee,
+} from 'document-models/real-world-assets';
+import {
+    ASSET_PURCHASE,
+    ASSET_SALE,
+    cashTransactionSignByTransactionType,
+} from '../constants';
 
 /**
  * Compute derived fields for fixed income assets
@@ -250,4 +256,28 @@ export function roundToNearestDay(date: Date) {
     }
 
     return roundedDate;
+}
+
+export function calculateCashBalanceChange(
+    transactionType: InputMaybe<GroupTransactionType>,
+    cashAmount: InputMaybe<number>,
+    fees: InputMaybe<TransactionFee[]>,
+) {
+    if (!cashAmount || !transactionType) return 0;
+
+    const sign = cashTransactionSignByTransactionType[transactionType];
+
+    const feeAmounts = fees?.map(fee => fee.amount).filter(Boolean) ?? [];
+
+    const totalFees = feeAmounts.reduce((acc, fee) => acc + fee, 0);
+
+    return cashAmount * sign - totalFees;
+}
+
+export function calculateUnitPrice(
+    cashAmount: InputMaybe<number>,
+    fixedIncomeAmount: InputMaybe<number>,
+) {
+    if (!cashAmount || !fixedIncomeAmount) return 0;
+    return cashAmount / fixedIncomeAmount;
 }

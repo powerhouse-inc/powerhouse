@@ -4,7 +4,6 @@ import {
     GroupTransactionFormInputs,
     GroupTransactionsTable,
     GroupTransactionsTableProps,
-    assetGroupTransactions,
 } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
@@ -53,26 +52,11 @@ export const Transactions = (props: IProps) => {
 
     const createNewGroupTransactionFromFormInputs = useCallback(
         (data: GroupTransactionFormInputs) => {
-            const {
-                cashAmount,
-                fixedIncomeId,
-                fixedIncomeAmount,
-                type,
-                cashBalanceChange,
-                unitPrice,
-            } = data;
+            const { cashAmount, fixedIncomeId, fixedIncomeAmount, type } = data;
             if (!type) throw new Error('Type is required');
             if (!data.entryTime) throw new Error('Entry time is required');
-            if (!cashBalanceChange) {
-                throw new Error('Cash balance change is required');
-            }
             if (!cashAmount) {
                 throw new Error('Cash amount is required');
-            }
-            if (!unitPrice && assetGroupTransactions.includes(type)) {
-                throw new Error(
-                    'Unit price is required for asset transactions',
-                );
             }
 
             const entryTime = new Date(data.entryTime).toISOString();
@@ -127,8 +111,6 @@ export const Transactions = (props: IProps) => {
                 id: utils.hashKey(),
                 type,
                 cashTransaction,
-                cashBalanceChange,
-                unitPrice,
                 entryTime,
                 fees,
                 fixedIncomeTransaction,
@@ -254,7 +236,6 @@ export const Transactions = (props: IProps) => {
                 const newFixedIncomeAssetId = data.fixedIncomeId;
                 const newFixedIncomeAssetAmount = data.fixedIncomeAmount;
                 const newCashAmount = data.cashAmount;
-                const newCashBalanceChange = data.cashBalanceChange;
 
                 const existingCashTransaction = selectedItem.cashTransaction;
 
@@ -298,10 +279,6 @@ export const Transactions = (props: IProps) => {
                     }
                     update.fixedIncomeTransaction.amount =
                         newFixedIncomeAssetAmount;
-                }
-
-                if (newCashBalanceChange) {
-                    update.cashBalanceChange = newCashBalanceChange;
                 }
 
                 let changedFields = getDifferences(selectedItem, update);

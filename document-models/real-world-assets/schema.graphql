@@ -87,6 +87,7 @@ type GroupTransaction {
     fees: [TransactionFee!]
     cashTransaction: BaseTransaction!
     fixedIncomeTransaction: BaseTransaction
+    serviceProviderFeeTypeId: ID
 }
 
 enum GroupTransactionType {
@@ -94,7 +95,9 @@ enum GroupTransactionType {
     PrincipalReturn
     AssetPurchase
     AssetSale
+    InterestIncome
     InterestPayment
+    FeesIncome
     FeesPayment
 }
 
@@ -235,21 +238,19 @@ input CreateGroupTransactionInput {
     id: ID!
     type: GroupTransactionType!
     entryTime: DateTime!
-    cashBalanceChange: Float!
     cashTransaction: BaseTransaction!
     fees: [TransactionFee!]
-    unitPrice: Float
     fixedIncomeTransaction: BaseTransaction
+    serviceProviderFeeTypeId: ID
 }
 
 input EditGroupTransactionInput {
     id: ID!
     type: GroupTransactionType
     entryTime: DateTime
-    cashBalanceChange: Float
-    unitPrice: Float
     cashTransaction: BaseTransactionInput
     fixedIncomeTransaction: BaseTransactionInput
+    serviceProviderFeeTypeId: ID
 }
 
 input DeleteGroupTransactionInput {
