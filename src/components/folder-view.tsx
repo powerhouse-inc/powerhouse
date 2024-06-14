@@ -1,20 +1,20 @@
-import {
-    decodeID,
-    useDraggableTarget,
-    useGetItemByPath,
-} from '@powerhousedao/design-system';
+import { TreeItem, useDraggableTarget } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import { FileItem } from 'src/components/file-item';
+import FileItem from 'src/components/file-item/file-item';
 import { FolderItem } from 'src/components/folder-item';
+import { useUserPermissions } from 'src/hooks/useUserPermissions';
 
+import { useFileOptions } from 'src/hooks/useFileOptions';
 import { useFolderContent } from 'src/hooks/useFolderContent';
+import { useFolderOptions } from 'src/hooks/useFolderOptions';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
 
 interface IProps {
-    drive: string;
+    decodedDriveID: string;
     path: string;
+    folderItem: TreeItem;
     onFolderSelected: (itemId: string) => void;
     onFileSelected: (drive: string, id: string) => void;
     onFileDeleted: (drive: string, id: string) => void;
@@ -22,22 +22,23 @@ interface IProps {
 
 export const FolderView: React.FC<IProps> = ({
     path,
-    drive,
+    folderItem,
+    decodedDriveID,
     onFileDeleted,
     onFileSelected,
     onFolderSelected,
 }) => {
     const { t } = useTranslation();
     const { folders, files } = useFolderContent(path);
-    const decodedDriveID = decodeID(drive);
-    const getItemByPath = useGetItemByPath();
+    const { isAllowedToCreateDocuments } = useUserPermissions();
+    const { folderItemOptions, onFolderOptionsClick } =
+        useFolderOptions(decodedDriveID);
+    const { fileItemOptions, onFileOptionsClick } =
+        useFileOptions(decodedDriveID);
     const onDropEvent = useOnDropEvent();
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const item = getItemByPath(path)!;
-
     const { dropProps, isDropTarget } = useDraggableTarget({
-        data: item,
+        data: folderItem,
         onDropEvent,
     });
 
@@ -60,6 +61,11 @@ export const FolderView: React.FC<IProps> = ({
                             folder={folder}
                             decodedDriveID={decodedDriveID}
                             onFolderSelected={onFolderSelected}
+                            folderItemOptions={folderItemOptions}
+                            onFolderOptionsClick={onFolderOptionsClick}
+                            isAllowedToCreateDocuments={
+                                isAllowedToCreateDocuments
+                            }
                         />
                     ))
                 ) : (
@@ -74,9 +80,14 @@ export const FolderView: React.FC<IProps> = ({
                         <FileItem
                             key={file.id}
                             file={file}
-                            drive={drive}
+                            decodedDriveID={decodedDriveID}
                             onFileDeleted={onFileDeleted}
                             onFileSelected={onFileSelected}
+                            itemOptions={fileItemOptions}
+                            onFileOptionsClick={onFileOptionsClick}
+                            isAllowedToCreateDocuments={
+                                isAllowedToCreateDocuments
+                            }
                         />
                     ))
                 ) : (
