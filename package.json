@@ -53,6 +53,7 @@
         "@total-typescript/ts-reset": "^0.5.1",
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.18",
+        "@types/react-window": "^1.8.8",
         "@types/uuid": "^9.0.7",
         "@types/wicg-file-system-access": "^2020.9.6",
         "@typescript-eslint/eslint-plugin": "^6.18.1",
@@ -111,6 +112,8 @@
         "react-i18next": "^13.5.0",
         "react-router-dom": "^6.11.2",
         "react-stately": "^3.31.0",
+        "react-virtualized-auto-sizer": "^1.0.24",
+        "react-window": "^1.8.10",
         "tailwind-merge": "^1.14.0",
         "uuid": "^9.0.1",
         "viem": "^2.8.13"
