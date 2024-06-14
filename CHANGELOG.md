@@ -1,3 +1,10 @@
+# [1.59.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.58.0...v1.59.0) (2024-06-14)
+
+
+### Features
+
+* add income transaction types ([#179](https://github.com/powerhouse-inc/document-model-libs/issues/179)) ([ea472d9](https://github.com/powerhouse-inc/document-model-libs/commit/ea472d91631a9ecdee559300e53a2f2e3f303a22))
+
 # [1.58.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.57.0...v1.58.0) (2024-06-03)
 
 
