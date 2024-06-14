@@ -358,21 +358,26 @@ const Content = () => {
                         {connectConfig.content.showSearchBar && <SearchBar />}
                         <div className="px-4">
                             <div className="mb-5">
-                                <FolderView
-                                    drive={decodedDriveID}
-                                    path={selectedPath || ''}
-                                    onFolderSelected={onFolderSelectedHandler}
-                                    onFileSelected={(drive, id) => {
-                                        setSelectedFileNode({
-                                            drive,
-                                            id,
-                                            parentFolder:
-                                                selectedFolder?.id ?? null,
-                                        });
-                                        navigateToItemId(id);
-                                    }}
-                                    onFileDeleted={deleteNode}
-                                />
+                                {selectedFolder && (
+                                    <FolderView
+                                        path={selectedPath || ''}
+                                        folderItem={selectedFolder}
+                                        decodedDriveID={decodedDriveID}
+                                        onFolderSelected={
+                                            onFolderSelectedHandler
+                                        }
+                                        onFileSelected={(drive, id) => {
+                                            setSelectedFileNode({
+                                                drive,
+                                                id,
+                                                parentFolder:
+                                                    selectedFolder?.id ?? null,
+                                            });
+                                            navigateToItemId(id);
+                                        }}
+                                        onFileDeleted={deleteNode}
+                                    />
+                                )}
                             </div>
                             {isAllowedToCreateDocuments && (
                                 <>

@@ -1,88 +1,38 @@
 import {
+    ConnectDropdownMenuItem,
     FileItem as ConnectFileItem,
-    FileItemProps,
-    Icon,
     TreeItem,
-    decodeID,
-    defaultDropdownMenuOptions,
 } from '@powerhousedao/design-system';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
+import React, { useState } from 'react';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
-import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
+import { SetIsWriteMode } from 'src/hooks/useFileOptions';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
-import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { useModal } from '../modal';
-
-const allowedItemOptions = ['delete', 'rename', 'duplicate'];
-
-const defaultItemOptions = defaultDropdownMenuOptions.filter(option =>
-    allowedItemOptions.includes(option.id),
-);
 
 interface IProps {
     file: TreeItem;
-    drive: string;
+    decodedDriveID: string;
     onFileSelected: (drive: string, id: string) => void;
     onFileDeleted: (drive: string, id: string) => void;
+    isAllowedToCreateDocuments: boolean;
+    itemOptions?: ConnectDropdownMenuItem[];
+    onFileOptionsClick?: (
+        optionId: string,
+        fileNode: TreeItem,
+        setIsWriteMode: SetIsWriteMode,
+    ) => Promise<void>;
 }
 
-export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
-    const { t } = useTranslation();
+export const FileItem: React.FC<IProps> = ({
+    file,
+    decodedDriveID,
+    onFileSelected,
+    itemOptions = [],
+    isAllowedToCreateDocuments,
+    onFileOptionsClick = () => {},
+}) => {
     const [isWriteMode, setIsWriteMode] = useState(false);
     const getReadableItemPath = useGetReadableItemPath();
-    const getDocumentById = useGetDocumentById();
-    const { updateNodeName, onSubmitInput } = useDrivesContainer();
-    const { showModal } = useModal();
-    const { isAllowedToCreateDocuments } = useUserPermissions();
-
-    const decodedDriveID = decodeID(drive);
-    const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);
-    const { isRemoteDrive } = useDocumentDriveById(decodedDriveID);
-
-    const onFileOptionsClick = async (optionId: string, fileNode: TreeItem) => {
-        if (optionId === 'delete') {
-            showModal('deleteItem', {
-                driveId: decodedDriveID,
-                itemId: fileNode.id,
-                itemName: file.label,
-                type: 'file',
-            });
-        }
-        if (optionId === 'duplicate') {
-            await onSubmitInput({
-                ...file,
-                action: 'UPDATE_AND_COPY',
-            });
-        }
-
-        if (optionId === 'rename') {
-            setIsWriteMode(true);
-        }
-
-        if (optionId === 'switchboard-link') {
-            const document = getDocumentById(decodedDriveID, fileNode.id);
-
-            await openSwitchboardLink(document);
-        }
-    };
-
-    const itemOptions: FileItemProps['itemOptions'] = isRemoteDrive
-        ? [
-              {
-                  id: 'switchboard-link',
-                  label: t('files.options.switchboardLink'),
-                  icon: (
-                      <div className="flex w-6 justify-center">
-                          <Icon name="drive" size={16} />
-                      </div>
-                  ),
-              },
-              ...defaultItemOptions,
-          ]
-        : defaultItemOptions;
+    const { updateNodeName } = useDrivesContainer();
 
     const cancelInputHandler = () => setIsWriteMode(false);
     const submitInputHandler = (value: string) => {
@@ -101,7 +51,9 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
             onCancelInput={cancelInputHandler}
             onSubmitInput={submitInputHandler}
             mode={isWriteMode ? 'write' : 'read'}
-            onOptionsClick={optionId => onFileOptionsClick(optionId, file)}
+            onOptionsClick={optionId =>
+                onFileOptionsClick(optionId, file, setIsWriteMode)
+            }
             item={file}
             onClick={() =>
                 !isWriteMode && onFileSelected(decodedDriveID, file.id)
@@ -111,4 +63,10 @@ export const FileItem: React.FC<IProps> = ({ file, drive, onFileSelected }) => {
     );
 };
 
-export default FileItem;
+export default React.memo(FileItem, (prevProps, nextProps) => {
+    return (
+        prevProps.decodedDriveID === nextProps.decodedDriveID &&
+        prevProps.file.id === nextProps.file.id &&
+        prevProps.file.label === nextProps.file.label
+    );
+});
