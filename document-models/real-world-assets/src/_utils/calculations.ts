@@ -263,15 +263,24 @@ export function calculateCashBalanceChange(
     cashAmount: InputMaybe<number>,
     fees: InputMaybe<TransactionFee[]>,
 ) {
-    if (!cashAmount || !transactionType) return 0;
+    if (!cashAmount || !transactionType)
+        throw new Error(
+            `Missing required fields: cashAmount: ${cashAmount}, transactionType: ${transactionType}`,
+        );
 
     const sign = cashTransactionSignByTransactionType[transactionType];
 
+    const totalFees = calculateTotalFees(fees);
+
+    return cashAmount * sign - totalFees;
+}
+
+export function calculateTotalFees(fees: InputMaybe<TransactionFee[]>) {
     const feeAmounts = fees?.map(fee => fee.amount).filter(Boolean) ?? [];
 
     const totalFees = feeAmounts.reduce((acc, fee) => acc + fee, 0);
 
-    return cashAmount * sign - totalFees;
+    return totalFees;
 }
 
 export function calculateUnitPrice(

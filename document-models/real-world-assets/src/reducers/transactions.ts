@@ -8,6 +8,7 @@ import { copy } from 'copy-anything';
 import {
     Cash,
     calculateCashBalanceChange,
+    calculateTotalFees,
     calculateUnitPrice,
     isCashAsset,
     makeFixedIncomeAssetWithDerivedFields,
@@ -73,12 +74,6 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
         state.transactions.push(newGroupTransaction);
 
         const cashAsset = state.portfolio.find(a => isCashAsset(a)) as Cash;
-
-        console.log({
-            balance: cashAsset.balance,
-            cashBalanceChange,
-            newBalance: cashAsset.balance + cashBalanceChange,
-        });
 
         const updatedCashAsset = {
             ...cashAsset,
@@ -182,15 +177,6 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
         // if cash amount has changed, update the cash asset in state
         if (cashTransaction?.amount || type) {
             const cashAsset = state.portfolio.find(a => isCashAsset(a)) as Cash;
-
-            console.log({
-                balance: cashAsset.balance,
-                cashBalanceChange: newTransaction.cashBalanceChange,
-                newBalance:
-                    newTransaction.cashBalanceChange -
-                    oldTransaction.cashBalanceChange,
-            });
-
             cashAsset.balance +=
                 newTransaction.cashBalanceChange -
                 oldTransaction.cashBalanceChange;
@@ -249,6 +235,17 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             transaction => transaction.id !== id,
         );
 
+        const cashAsset = state.portfolio.find(a => isCashAsset(a)) as Cash;
+
+        const updatedCashAsset = {
+            ...cashAsset,
+            balance: cashAsset.balance - transactionToRemove.cashBalanceChange,
+        };
+
+        state.portfolio = state.portfolio.map(a =>
+            a.id === cashAsset.id ? updatedCashAsset : a,
+        );
+
         const fixedIncomeAssetId =
             transactionToRemove.fixedIncomeTransaction?.assetId;
 
@@ -261,17 +258,6 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         state.portfolio = state.portfolio.map(a =>
             a.id === fixedIncomeAssetId ? updatedFixedIncomeAsset : a,
-        );
-
-        const cashAsset = state.portfolio.find(a => isCashAsset(a)) as Cash;
-
-        const updatedCashAsset = {
-            ...cashAsset,
-            balance: cashAsset.balance - transactionToRemove.cashBalanceChange,
-        };
-
-        state.portfolio = state.portfolio.map(a =>
-            a.id === cashAsset.id ? updatedCashAsset : a,
         );
     },
     addFeesToGroupTransactionOperation(state, action, dispatch) {
@@ -287,11 +273,16 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         validateTransactionFees(state, action.input.fees);
 
+        const oldFees = copy(transaction.fees ?? []);
+        const oldTotalFees = calculateTotalFees(oldFees);
+
         if (!transaction.fees) {
             transaction.fees = [];
         }
 
         transaction.fees.push(...action.input.fees);
+
+        const newTotalFees = calculateTotalFees(transaction.fees);
 
         transaction.cashBalanceChange = calculateCashBalanceChange(
             transaction.type,
@@ -307,7 +298,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         const updatedCashAsset = {
             ...cashAsset,
-            balance: cashAsset.balance + transaction.cashBalanceChange,
+            balance: cashAsset.balance + oldTotalFees - newTotalFees,
         };
 
         state.portfolio = state.portfolio.map(a =>
@@ -330,6 +321,8 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             throw new Error('Transaction has no fees to remove');
         }
 
+        const oldTotalFees = calculateTotalFees(transaction.fees);
+
         transaction.fees = transaction.fees.filter(
             fee => !feeIdsToRemove?.includes(fee.id),
         );
@@ -348,7 +341,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         const updatedCashAsset = {
             ...cashAsset,
-            balance: cashAsset.balance + transaction.cashBalanceChange,
+            balance: cashAsset.balance + oldTotalFees,
         };
 
         state.portfolio = state.portfolio.map(a =>
@@ -374,6 +367,8 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             throw new Error('This transaction has no fees to update');
         }
 
+        const oldTotalFees = calculateTotalFees(transaction.fees);
+
         transaction.fees = transaction.fees
             .map(fee => {
                 const feeToUpdate = fees.find(f => f.id === fee.id);
@@ -382,6 +377,8 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
                 return { ...fee, ...feeToUpdate };
             })
             .filter(Boolean);
+
+        const newTotalFees = calculateTotalFees(transaction.fees);
 
         transaction.cashBalanceChange = calculateCashBalanceChange(
             transaction.type,
@@ -397,7 +394,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         const updatedCashAsset = {
             ...cashAsset,
-            balance: cashAsset.balance + transaction.cashBalanceChange,
+            balance: cashAsset.balance + oldTotalFees - newTotalFees,
         };
 
         state.portfolio = state.portfolio.map(a =>
