@@ -11,6 +11,14 @@ export type { FileInput } from './utils';
 export type { BaseAction } from './actions/types';
 export type { Immutable } from 'mutative';
 
+//  [
+//     signerAddress,
+//     hash (docID, scope, operationID, operationName, operationInput),
+//     prevStateHash,
+//     signature bytes
+//  ]
+export type Signature = [string, string, string, string, string];
+
 export type ActionSigner = {
     user: {
         address: string;
@@ -21,7 +29,7 @@ export type ActionSigner = {
         name: string; // Connect
         key: string;
     };
-    signature: string;
+    signatures: Signature[];
 };
 
 export type ActionContext = {
@@ -229,6 +237,23 @@ export type MappedOperation<A extends Action> = {
 export type DocumentOperationsIgnoreMap<A extends Action> = Required<
     Record<OperationScope, MappedOperation<A>[]>
 >;
+
+export type OperationSignatureContext = {
+    documentId: string;
+    signer: Omit<ActionSigner, 'signatures'> & { signatures?: Signature[] };
+    operation: Operation;
+    previousStateHash: string;
+};
+
+export type OperationSigningHandler = (
+    message: Uint8Array,
+) => Promise<Uint8Array>;
+
+export type OperationVerificationHandler = (
+    publicKey: string,
+    signature: Uint8Array,
+    data: Uint8Array,
+) => Promise<boolean>;
 
 /**
  * The base type of a document model.

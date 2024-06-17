@@ -107,7 +107,7 @@ function updateOperations<T extends Document>(
         nextIndex = action.index;
         operationId = action.id;
     } else {
-        operationId = uuid();
+        operationId = 'id' in action ? (action.id as string) : uuid();
     }
 
     operations.push({

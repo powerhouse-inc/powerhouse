@@ -56,6 +56,6 @@ export const getFile = async (file: string) => {
     return readFile(file);
 };
 
-export const hash = (data: string, algorithm = 'sha1') => {
+export const hash = (data: crypto.BinaryLike, algorithm = 'sha1') => {
     return crypto.createHash(algorithm).update(data).digest('base64');
 };

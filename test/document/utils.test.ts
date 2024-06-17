@@ -20,8 +20,6 @@ import {
     mutableCountReducer,
     setLocalName,
 } from '../helpers';
-import stringify, { configure } from 'safe-stable-stringify';
-import { n } from 'vitest/dist/reporters-LqC_WI4d.js';
 
 describe('Base utils', () => {
     const tempDir = './test/document/temp/utils/';
