@@ -1,3 +1,10 @@
+# [1.60.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.59.0...v1.60.0) (2024-06-17)
+
+
+### Features
+
+* update fee calculation logic ([#181](https://github.com/powerhouse-inc/document-model-libs/issues/181)) ([e05d95f](https://github.com/powerhouse-inc/document-model-libs/commit/e05d95f384b3b5c289022f8f9ab76b34c300ae54))
+
 # [1.59.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.58.0...v1.59.0) (2024-06-14)
 
 
