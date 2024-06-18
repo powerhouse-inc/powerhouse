@@ -1,3 +1,10 @@
+# [1.0.0-alpha.75](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.74...v1.0.0-alpha.75) (2024-06-18)
+
+
+### Features
+
+* check if operations being added are already stored ([5de4d74](https://github.com/powerhouse-inc/document-drive/commit/5de4d7482e2e6fa60a4e2ca43734771ff501f4d6))
+
 # [1.0.0-alpha.74](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.73...v1.0.0-alpha.74) (2024-06-12)
 
 
