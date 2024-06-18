@@ -52,7 +52,13 @@ export const Transactions = (props: IProps) => {
 
     const createNewGroupTransactionFromFormInputs = useCallback(
         (data: GroupTransactionFormInputs) => {
-            const { cashAmount, fixedIncomeId, fixedIncomeAmount, type } = data;
+            const {
+                cashAmount,
+                fixedIncomeId,
+                fixedIncomeAmount,
+                type,
+                txRef,
+            } = data;
             if (!type) throw new Error('Type is required');
             if (!data.entryTime) throw new Error('Entry time is required');
             if (!cashAmount) {
@@ -82,7 +88,6 @@ export const Transactions = (props: IProps) => {
                 accountId: null,
                 settlementTime: null,
                 tradeTime: null,
-                txRef: null,
             };
 
             if (fixedIncomeId && !fixedIncomeAmount) {
@@ -103,16 +108,16 @@ export const Transactions = (props: IProps) => {
                           counterPartyAccountId: null,
                           settlementTime: null,
                           tradeTime: null,
-                          txRef: null,
                       }
                     : null;
 
             const groupTransaction = {
                 id: utils.hashKey(),
                 type,
-                cashTransaction,
                 entryTime,
                 fees,
+                txRef,
+                cashTransaction,
                 fixedIncomeTransaction,
                 interestTransaction: null,
                 feeTransactions: null,
@@ -236,6 +241,7 @@ export const Transactions = (props: IProps) => {
                 const newFixedIncomeAssetId = data.fixedIncomeId;
                 const newFixedIncomeAssetAmount = data.fixedIncomeAmount;
                 const newCashAmount = data.cashAmount;
+                const newTxRef = data.txRef;
 
                 const existingCashTransaction = selectedItem.cashTransaction;
 
@@ -250,6 +256,10 @@ export const Transactions = (props: IProps) => {
 
                 if (newEntryTime) {
                     update.entryTime = newEntryTime;
+                }
+
+                if (newTxRef) {
+                    update.txRef = newTxRef;
                 }
 
                 // use type comparison to avoid false positives on zero

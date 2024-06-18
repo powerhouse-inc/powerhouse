@@ -61,7 +61,6 @@ type BaseTransaction {
     entryTime: DateTime!
     tradeTime: DateTime
     settlementTime: DateTime
-    txRef: String
     accountId: ID
     counterPartyAccountId: ID
 }
@@ -88,6 +87,7 @@ type GroupTransaction {
     cashTransaction: BaseTransaction!
     fixedIncomeTransaction: BaseTransaction
     serviceProviderFeeTypeId: ID
+    txRef: String
 }
 
 enum GroupTransactionType {
@@ -223,7 +223,6 @@ input BaseTransactionInput {
     entryTime: DateTime
     tradeTime: DateTime
     settlementTime: DateTime
-    txRef: String
     accountId: ID
     counterPartyAccountId: ID
 }
@@ -242,6 +241,7 @@ input CreateGroupTransactionInput {
     fees: [TransactionFee!]
     fixedIncomeTransaction: BaseTransaction
     serviceProviderFeeTypeId: ID
+    txRef: String
 }
 
 input EditGroupTransactionInput {
@@ -251,6 +251,7 @@ input EditGroupTransactionInput {
     cashTransaction: BaseTransactionInput
     fixedIncomeTransaction: BaseTransactionInput
     serviceProviderFeeTypeId: ID
+    txRef: String
 }
 
 input DeleteGroupTransactionInput {

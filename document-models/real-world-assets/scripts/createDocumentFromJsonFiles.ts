@@ -1,6 +1,13 @@
 // import { copy } from 'copy-anything';
-// import { Cash, calculateTotalFees, isCashAsset, reducer, utils } from '..';
-// import operations from './operations-original.json';
+// import {
+//     Cash,
+//     calculateTotalFees,
+//     isCashAsset,
+//     math,
+//     reducer,
+//     utils,
+// } from '..';
+// import operations from './operations.json';
 
 // main();
 
@@ -35,7 +42,9 @@
 //                 ID: newTransaction?.id,
 //                 'Transaction type': newTransaction?.type,
 //                 'Cash amount': newTransaction?.cashTransaction?.amount,
-//                 'Total fees': calculateTotalFees(newTransaction?.fees),
+//                 'Total fees': calculateTotalFees(
+//                     newTransaction?.fees,
+//                 ).toNumber(),
 //                 'Cash balance change': newTransaction?.cashBalanceChange,
 //                 'Old cash balance': oldCashAsset?.balance,
 //                 'New cash balance': newCashAsset?.balance,
@@ -55,11 +64,15 @@
 //                 'Cash amount changed':
 //                     oldTransaction?.cashTransaction?.amount !==
 //                     newTransaction?.cashTransaction?.amount,
-//                 'Old total fees': calculateTotalFees(oldTransaction?.fees),
-//                 'New total fees': calculateTotalFees(newTransaction?.fees),
+//                 'Old total fees': calculateTotalFees(
+//                     oldTransaction?.fees,
+//                 ).toNumber(),
+//                 'New total fees': calculateTotalFees(
+//                     newTransaction?.fees,
+//                 ).toNumber(),
 //                 'Total fees changed':
-//                     calculateTotalFees(oldTransaction?.fees) !==
-//                     calculateTotalFees(newTransaction?.fees),
+//                     calculateTotalFees(oldTransaction?.fees).toNumber() !==
+//                     calculateTotalFees(newTransaction?.fees).toNumber(),
 //                 'Old cash balance change': oldTransaction?.cashBalanceChange,
 //                 'New cash balance change': newTransaction?.cashBalanceChange,
 //                 'Cash balance change changed':
@@ -76,7 +89,9 @@
 //                 ID: oldTransaction?.id,
 //                 'Transaction type': oldTransaction?.type,
 //                 'Cash amount': oldTransaction?.cashTransaction?.amount,
-//                 'Total fees': calculateTotalFees(oldTransaction?.fees),
+//                 'Total fees': calculateTotalFees(
+//                     oldTransaction?.fees,
+//                 ).toNumber(),
 //                 'Cash balance change': oldTransaction?.cashBalanceChange,
 //                 'Old cash balance': oldCashAsset?.balance,
 //                 'New cash balance': newCashAsset?.balance,
@@ -95,8 +110,12 @@
 //                 ID: newTransaction?.id,
 //                 'Transaction type': newTransaction?.type,
 //                 'Cash amount': newTransaction?.cashTransaction?.amount,
-//                 'Old total fees': calculateTotalFees(oldTransaction?.fees),
-//                 'New total fees': calculateTotalFees(newTransaction?.fees),
+//                 'Old total fees': calculateTotalFees(
+//                     oldTransaction?.fees,
+//                 ).toNumber(),
+//                 'New total fees': calculateTotalFees(
+//                     newTransaction?.fees,
+//                 ).toNumber(),
 //                 'Old cash balance change': oldTransaction?.cashBalanceChange,
 //                 'New cash balance change': newTransaction?.cashBalanceChange,
 //                 'Old cash balance': oldCashAsset?.balance,
@@ -110,13 +129,13 @@
 //     ).balance;
 
 //     const finalCashBalanceChange = document.state.global.transactions.reduce(
-//         (acc, tx) => acc + tx.cashBalanceChange,
-//         0,
+//         (acc, tx) => acc.add(math.bignumber(tx.cashBalanceChange)),
+//         math.bignumber(0),
 //     );
 
 //     console.table({
 //         'Final cash balance': finalCashBalance,
-//         'Final cash balance change': finalCashBalanceChange,
+//         'Final cash balance change': finalCashBalanceChange.toString(),
 //     });
 
 //     utils.saveToFile(document, './', 'output');

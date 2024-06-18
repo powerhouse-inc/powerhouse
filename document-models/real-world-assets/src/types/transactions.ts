@@ -20,7 +20,6 @@ export type BaseTransactionCommonFields = Pick<
     | 'accountId'
     | 'settlementTime'
     | 'tradeTime'
-    | 'txRef'
 >;
 
 export type FixedIncomeBaseTransaction = BaseTransactionCommonFields;

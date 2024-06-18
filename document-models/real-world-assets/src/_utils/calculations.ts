@@ -4,11 +4,16 @@ import {
     InputMaybe,
     TransactionFee,
 } from 'document-models/real-world-assets';
+import { all, create } from 'mathjs';
 import {
     ASSET_PURCHASE,
     ASSET_SALE,
     cashTransactionSignByTransactionType,
 } from '../constants';
+
+export const math = create(all, {
+    number: 'BigNumber',
+});
 
 /**
  * Compute derived fields for fixed income assets
@@ -19,13 +24,13 @@ export function computeFixedIncomeAssetDerivedFields(
     transactions: GroupTransaction[],
 ) {
     const purchaseDate = calculatePurchaseDate(transactions);
-    const notional = calculateNotional(transactions);
-    const assetProceeds = calculateAssetProceeds(transactions);
-    const purchaseProceeds = calculatePurchaseProceeds(transactions);
-    const salesProceeds = calculateSalesProceeds(transactions);
-    const purchasePrice = calculatePurchasePrice(transactions);
-    const totalDiscount = calculateTotalDiscount(transactions);
-    const realizedSurplus = calculateRealizedSurplus(transactions);
+    const notional = calculateNotional(transactions).toNumber();
+    const assetProceeds = calculateAssetProceeds(transactions).toNumber();
+    const purchaseProceeds = calculatePurchaseProceeds(transactions).toNumber();
+    const salesProceeds = calculateSalesProceeds(transactions).toNumber();
+    const purchasePrice = calculatePurchasePrice(transactions).toNumber();
+    const totalDiscount = calculateTotalDiscount(transactions).toNumber();
+    const realizedSurplus = calculateRealizedSurplus(transactions).toNumber();
 
     return {
         purchaseDate,
@@ -56,9 +61,9 @@ export function calculatePurchaseDate(transactions: GroupTransaction[]) {
     const sumQuantity = purchaseTransactions.reduce(
         (sum, { fixedIncomeTransaction }) => {
             if (!fixedIncomeTransaction) return sum;
-            return sum + fixedIncomeTransaction.amount;
+            return sum.add(math.bignumber(fixedIncomeTransaction.amount));
         },
-        0,
+        math.bignumber(0),
     );
 
     const sumQuantityTimesDate = purchaseTransactions.reduce(
@@ -66,16 +71,16 @@ export function calculatePurchaseDate(transactions: GroupTransaction[]) {
             if (!fixedIncomeTransaction) return sum;
             const { entryTime, amount } = fixedIncomeTransaction;
             // Convert to milliseconds since the epoch
-            const time = new Date(entryTime).getTime();
-            return sum + time * amount;
+            const time = math.bignumber(new Date(entryTime).getTime());
+            return sum.add(time.mul(math.bignumber(amount)));
         },
-        0,
+        math.bignumber(0),
     );
 
     // Calculate the weighted average in milliseconds
-    const purchaseDateMs = sumQuantityTimesDate / sumQuantity;
+    const purchaseDateMs = sumQuantityTimesDate.div(sumQuantity);
     // Convert back to a Date object
-    const purchaseDate = new Date(purchaseDateMs);
+    const purchaseDate = new Date(purchaseDateMs.toNumber());
     // Round to the nearest day
     return roundToNearestDay(purchaseDate).toISOString();
 }
@@ -98,7 +103,11 @@ export function calculateNotional(transactions: GroupTransaction[]) {
         ASSET_SALE,
     );
 
-    return purchasePrice * (assetAmountPurchase - assetAmountSale);
+    return purchasePrice.add(
+        math
+            .bignumber(assetAmountPurchase)
+            .sub(math.bignumber(assetAmountSale)),
+    );
 }
 
 /**
@@ -108,9 +117,8 @@ export function calculateNotional(transactions: GroupTransaction[]) {
  * Asset Proceeds = SUM(Cost to acquire or dispose of an asset without fees)
  */
 export function calculateAssetProceeds(transactions: GroupTransaction[]) {
-    return (
-        sumCashTransactionsForType(transactions, ASSET_SALE) -
-        sumCashTransactionsForType(transactions, ASSET_PURCHASE)
+    return sumCashTransactionsForType(transactions, ASSET_SALE).sub(
+        sumCashTransactionsForType(transactions, ASSET_PURCHASE),
     );
 }
 
@@ -128,7 +136,7 @@ export function calculatePurchaseProceeds(transactions: GroupTransaction[]) {
 
     const sumFees = sumGroupTransactionFees(transactions, ASSET_PURCHASE);
 
-    return sumPurchaseTransactions + sumFees;
+    return sumPurchaseTransactions.add(sumFees);
 }
 
 /**
@@ -145,7 +153,7 @@ export function calculateSalesProceeds(transactions: GroupTransaction[]) {
 
     const sumFees = sumGroupTransactionFees(transactions, ASSET_SALE);
 
-    return sumSaleTransactions - sumFees;
+    return sumSaleTransactions.sub(sumFees);
 }
 
 /**
@@ -166,9 +174,11 @@ export function calculatePurchasePrice(transactions: GroupTransaction[]) {
     );
 
     // avoid divide by zero
-    if (sumAssetPurchaseAssetTransactions === 0) return 0;
+    if (sumAssetPurchaseAssetTransactions.equals(0)) return math.bignumber(0);
 
-    return sumAssetPurchaseCashTransactions / sumAssetPurchaseAssetTransactions;
+    return sumAssetPurchaseCashTransactions.div(
+        sumAssetPurchaseAssetTransactions,
+    );
 }
 
 /**
@@ -182,7 +192,7 @@ export function calculateTotalDiscount(transactions: GroupTransaction[]) {
     const purchaseProceeds = calculatePurchaseProceeds(transactions);
     const salesProceeds = calculateSalesProceeds(transactions);
 
-    return notional - (purchaseProceeds - salesProceeds);
+    return notional.sub(purchaseProceeds.sub(salesProceeds));
 }
 
 /**
@@ -196,9 +206,9 @@ export function calculateRealizedSurplus(transactions: GroupTransaction[]) {
     const salesProceeds = calculateSalesProceeds(transactions);
     const purchaseProceeds = calculatePurchaseProceeds(transactions);
 
-    const realizedSurplus = salesProceeds - purchaseProceeds;
+    const realizedSurplus = salesProceeds.sub(purchaseProceeds);
 
-    return realizedSurplus > 0 ? realizedSurplus : 0;
+    return realizedSurplus.greaterThan(0) ? realizedSurplus : math.bignumber(0);
 }
 
 /**
@@ -211,8 +221,14 @@ export function sumGroupTransactionFees(
     return transactions.reduce((sum, { type, fees }) => {
         if (!fees) return sum;
         if (typeFilter && type !== typeFilter) return sum;
-        return sum + fees.reduce((feeSum, { amount }) => feeSum + amount, 0);
-    }, 0);
+        return sum.add(
+            fees.reduce(
+                (feeSum, { amount }) =>
+                    math.bignumber(feeSum).add(math.bignumber(amount)),
+                math.bignumber(0),
+            ),
+        );
+    }, math.bignumber(0));
 }
 
 export function sumCashTransactionsForType(
@@ -221,9 +237,9 @@ export function sumCashTransactionsForType(
 ) {
     return transactions.reduce((sum, transaction) => {
         if (transaction.type !== type) return sum;
-        const { amount } = transaction.cashTransaction ?? { amount: 0 };
-        return sum + amount;
-    }, 0);
+        const amount = math.bignumber(transaction.cashTransaction.amount);
+        return sum.add(amount);
+    }, math.bignumber(0));
 }
 
 export function sumAssetTransactionsForType(
@@ -232,9 +248,11 @@ export function sumAssetTransactionsForType(
 ) {
     return transactions.reduce((sum, transaction) => {
         if (transaction.type !== type) return sum;
-        const { amount } = transaction.fixedIncomeTransaction ?? { amount: 0 };
-        return sum + amount;
-    }, 0);
+        const amount = math.bignumber(
+            transaction.fixedIncomeTransaction?.amount ?? 0,
+        );
+        return sum.add(amount);
+    }, math.bignumber(0));
 }
 
 /**
@@ -272,13 +290,16 @@ export function calculateCashBalanceChange(
 
     const totalFees = calculateTotalFees(fees);
 
-    return cashAmount * sign - totalFees;
+    return math.bignumber(cashAmount * sign).sub(totalFees);
 }
 
 export function calculateTotalFees(fees: InputMaybe<TransactionFee[]>) {
     const feeAmounts = fees?.map(fee => fee.amount).filter(Boolean) ?? [];
 
-    const totalFees = feeAmounts.reduce((acc, fee) => acc + fee, 0);
+    const totalFees = feeAmounts.reduce(
+        (acc, fee) => acc.add(math.bignumber(fee)),
+        math.bignumber(0),
+    );
 
     return totalFees;
 }
@@ -287,6 +308,6 @@ export function calculateUnitPrice(
     cashAmount: InputMaybe<number>,
     fixedIncomeAmount: InputMaybe<number>,
 ) {
-    if (!cashAmount || !fixedIncomeAmount) return 0;
-    return cashAmount / fixedIncomeAmount;
+    if (!cashAmount || !fixedIncomeAmount) return math.bignumber(0);
+    return math.bignumber(cashAmount).div(math.bignumber(fixedIncomeAmount));
 }

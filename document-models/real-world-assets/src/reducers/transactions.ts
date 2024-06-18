@@ -12,6 +12,7 @@ import {
     calculateUnitPrice,
     isCashAsset,
     makeFixedIncomeAssetWithDerivedFields,
+    math,
     validateGroupTransaction,
     validateTransactionFee,
     validateTransactionFees,
@@ -30,6 +31,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
         const fees = action.input.fees ?? null;
         const serviceProviderFeeTypeId =
             action.input.serviceProviderFeeTypeId ?? null;
+        const txRef = action.input.txRef ?? null;
         let cashTransaction = action.input.cashTransaction;
         let fixedIncomeTransaction =
             action.input.fixedIncomeTransaction ?? null;
@@ -37,12 +39,12 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             type,
             cashTransaction.amount,
             fees,
-        );
+        ).toNumber();
         const unitPrice = fixedIncomeTransaction
             ? calculateUnitPrice(
                   cashTransaction.amount,
                   fixedIncomeTransaction.amount,
-              )
+              ).toNumber()
             : null;
 
         cashTransaction = {
@@ -64,6 +66,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             cashBalanceChange,
             unitPrice,
             serviceProviderFeeTypeId,
+            txRef,
             fees,
             cashTransaction,
             fixedIncomeTransaction,
@@ -121,6 +124,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             type,
             entryTime,
             serviceProviderFeeTypeId,
+            txRef,
             cashTransaction,
             fixedIncomeTransaction,
         } = action.input;
@@ -138,6 +142,10 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             newTransaction.serviceProviderFeeTypeId = serviceProviderFeeTypeId;
         }
 
+        if (txRef) {
+            newTransaction.txRef = txRef;
+        }
+
         if (cashTransaction?.amount) {
             newTransaction.cashTransaction.amount = cashTransaction.amount;
         }
@@ -147,7 +155,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
                 newTransaction.type,
                 newTransaction.cashTransaction.amount,
                 newTransaction.fees,
-            );
+            ).toNumber();
         }
 
         if (newTransaction.fixedIncomeTransaction) {
@@ -288,7 +296,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             transaction.type,
             transaction.cashTransaction.amount,
             transaction.fees,
-        );
+        ).toNumber();
 
         state.transactions = state.transactions.map(t =>
             t.id === action.input.id ? transaction : t,
@@ -298,7 +306,10 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         const updatedCashAsset = {
             ...cashAsset,
-            balance: cashAsset.balance + oldTotalFees - newTotalFees,
+            balance: math
+                .bignumber(cashAsset.balance)
+                .add(oldTotalFees.sub(newTotalFees))
+                .toNumber(),
         };
 
         state.portfolio = state.portfolio.map(a =>
@@ -331,7 +342,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             transaction.type,
             transaction.cashTransaction.amount,
             transaction.fees,
-        );
+        ).toNumber();
 
         state.transactions = state.transactions.map(t =>
             t.id === id ? transaction : t,
@@ -341,7 +352,10 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         const updatedCashAsset = {
             ...cashAsset,
-            balance: cashAsset.balance + oldTotalFees,
+            balance: math
+                .bignumber(cashAsset.balance)
+                .add(oldTotalFees)
+                .toNumber(),
         };
 
         state.portfolio = state.portfolio.map(a =>
@@ -384,7 +398,7 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
             transaction.type,
             transaction.cashTransaction.amount,
             transaction.fees,
-        );
+        ).toNumber();
 
         state.transactions = state.transactions.map(t =>
             t.id === id ? transaction : t,
@@ -394,7 +408,10 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         const updatedCashAsset = {
             ...cashAsset,
-            balance: cashAsset.balance + oldTotalFees - newTotalFees,
+            balance: math
+                .bignumber(cashAsset.balance)
+                .add(oldTotalFees.sub(newTotalFees))
+                .toNumber(),
         };
 
         state.portfolio = state.portfolio.map(a =>
