@@ -10,6 +10,7 @@ import {
     Table,
     TableItem,
     TableWrapperProps,
+    allGroupTransactionTypes,
     assetTransactionSignByTransactionType,
     cashTransactionSignByTransactionType,
     groupTransactionTypeLabels,
@@ -46,6 +47,12 @@ const columns = [
     {
         key: 'cashAmount' as const,
         label: 'Cash Amount ($)',
+        allowSorting: true,
+        isNumberColumn: true,
+    },
+    {
+        key: 'totalFees' as const,
+        label: 'Total Fees ($)',
         allowSorting: true,
         isNumberColumn: true,
     },
@@ -88,6 +95,8 @@ export function makeGroupTransactionsTableItems(
             transaction.cashTransaction?.amount,
             cashTransactionSign,
         );
+        const totalFees =
+            transaction.fees?.reduce((acc, fee) => acc + fee.amount, 0) ?? 0;
         const cashBalanceChange = transaction.cashBalanceChange;
 
         return {
@@ -99,6 +108,7 @@ export function makeGroupTransactionsTableItems(
             asset,
             quantity,
             cashAmount,
+            totalFees,
             cashBalanceChange,
         };
     });
@@ -130,21 +140,39 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
         useState(transactions);
 
     const [filterAssetId, setFilterAssetId] = useState<string>();
+    const [filterTypes, setFilterTypes] = useState<
+        (keyof typeof allGroupTransactionTypes)[]
+    >([]);
 
     useEffect(() => {
-        if (!filterAssetId) {
+        if (!filterAssetId && !filterTypes.length) {
             setFilteredTransactions(transactions);
             return;
         }
 
         setFilteredTransactions(
-            transactions.filter(
-                transaction =>
-                    transaction.fixedIncomeTransaction?.assetId ===
-                    filterAssetId,
-            ),
+            transactions.filter(transaction => {
+                if (filterAssetId && filterTypes.length) {
+                    return (
+                        transaction.fixedIncomeTransaction?.assetId ===
+                            filterAssetId &&
+                        filterTypes.includes(transaction.type)
+                    );
+                }
+
+                if (filterAssetId) {
+                    return (
+                        transaction.fixedIncomeTransaction?.assetId ===
+                        filterAssetId
+                    );
+                }
+
+                if (filterTypes.length) {
+                    return filterTypes.includes(transaction.type);
+                }
+            }),
         );
-    }, [filterAssetId, transactions]);
+    }, [filterAssetId, filterTypes, transactions]);
 
     const filterByAssetOptions = useMemo(
         () =>
@@ -153,6 +181,15 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
                 value: asset.id,
             })),
         [fixedIncomes],
+    );
+
+    const filterByTypeOptions = useMemo(
+        () =>
+            allGroupTransactionTypes.map(type => ({
+                label: groupTransactionTypeLabels[type],
+                value: type,
+            })),
+        [],
     );
 
     const tableData = useMemo(
@@ -177,15 +214,39 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
         setFilterAssetId(assetId as string);
     }
 
+    function handleFilterByTypeChange(update: unknown) {
+        if (!update || !Array.isArray(update)) {
+            setFilterTypes([]);
+            return;
+        }
+
+        const _update = update as {
+            value: keyof typeof allGroupTransactionTypes;
+        }[];
+
+        setFilterTypes(_update.map(({ value }) => value));
+    }
+
     return (
         <>
-            <div className="mb-4 max-w-96">
-                <Combobox
-                    options={filterByAssetOptions}
-                    onChange={handleFilterByAssetChange}
-                    isClearable
-                    placeholder="Filter by Asset"
-                />
+            <div className="mb-2 flex gap-2">
+                <div className="min-w-72 max-w-96">
+                    <Combobox
+                        options={filterByAssetOptions}
+                        onChange={handleFilterByAssetChange}
+                        isClearable
+                        placeholder="Filter by Asset"
+                    />
+                </div>
+                <div className="min-w-72 max-w-96">
+                    <Combobox
+                        options={filterByTypeOptions}
+                        onChange={handleFilterByTypeChange}
+                        isClearable
+                        isMulti
+                        placeholder="Filter by Type"
+                    />
+                </div>
             </div>
             <Table
                 {...props}

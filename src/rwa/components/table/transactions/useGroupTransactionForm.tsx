@@ -6,6 +6,7 @@ import {
     GroupTransactionsTableItem,
     RWANumberInput,
     RWATableSelect,
+    RWATableTextInput,
     allGroupTransactionTypes,
     assetGroupTransactions,
     calculateUnitPrice,
@@ -36,7 +37,7 @@ function UnitPrice(props: {
         <div className={twMerge('mt-1 w-fit', !props.isViewOnly && 'ml-auto')}>
             <span className="text-gray-600">Unit Price</span>{' '}
             <span className="text-gray-900">
-                <FormattedNumber value={unitPrice} />
+                <FormattedNumber value={unitPrice} decimalScale={6} />
             </span>
         </div>
     );
@@ -83,17 +84,20 @@ export function useGroupTransactionForm(
         fixedIncomeAmount: null,
         serviceProviderFeeTypeId: serviceProviderFeeTypes[0]?.id ?? null,
         fees: null,
+        txRef: null,
     };
 
     const editDefaultValues = item
         ? {
+              id: item.id,
               type: item.type,
               entryTime: convertToDateTimeLocalFormat(item.entryTime),
               cashAmount: item.cashTransaction?.amount ?? null,
               fixedIncomeId: fixedIncomes[0]?.id ?? null,
               fixedIncomeAmount: item.fixedIncomeTransaction?.amount ?? null,
               serviceProviderFeeTypeId: item.serviceProviderFeeTypeId ?? null,
-              fees: item.fees,
+              fees: item.fees ?? null,
+              txRef: item.txRef ?? null,
           }
         : createDefaultValues;
 
@@ -115,6 +119,7 @@ export function useGroupTransactionForm(
 
     function customSubmitHandler(data: GroupTransactionFormInputs) {
         if (!operation || operation === 'view') return;
+        const id = data.id;
         const type = data.type;
         const entryTime = data.entryTime;
         const cashAmount = data.cashAmount;
@@ -123,6 +128,7 @@ export function useGroupTransactionForm(
         const fixedIncomeAmount = isAssetTransaction
             ? data.fixedIncomeAmount
             : null;
+        const txRef = data.txRef ?? null;
         const fees = canHaveTransactionFees ? data.fees : null;
         const formActions = {
             create: onSubmitCreate,
@@ -132,6 +138,7 @@ export function useGroupTransactionForm(
         const onSubmitForm = formActions[operation];
 
         onSubmitForm?.({
+            id,
             type,
             entryTime,
             cashAmount,
@@ -139,6 +146,7 @@ export function useGroupTransactionForm(
             fixedIncomeAmount,
             serviceProviderFeeTypeId,
             fees,
+            txRef,
         });
     }
 
@@ -163,11 +171,13 @@ export function useGroupTransactionForm(
             label: 'Transaction Type',
             Input: () => (
                 <RWATableSelect
-                    required
                     control={control}
                     name="type"
                     disabled={operation === 'view'}
                     options={transactionTypeOptions}
+                    required="Transaction type is required"
+                    aria-invalid={errors.type ? 'true' : 'false'}
+                    errorMessage={errors.type?.message}
                 />
             ),
         },
@@ -210,7 +220,6 @@ export function useGroupTransactionForm(
                   Input: () => (
                       <RWATableSelect
                           control={control}
-                          required
                           name="fixedIncomeId"
                           disabled={operation === 'view'}
                           options={fixedIncomeOptions}
@@ -218,6 +227,9 @@ export function useGroupTransactionForm(
                               onClick: () => setShowCreateAssetModal(true),
                               label: 'Create Asset',
                           }}
+                          required="Asset name is required"
+                          aria-invalid={errors.type ? 'true' : 'false'}
+                          errorMessage={errors.type?.message}
                       />
                   ),
               }
@@ -267,6 +279,19 @@ export function useGroupTransactionForm(
                         />
                     )}
                 </>
+            ),
+        },
+        {
+            label: 'Transaction reference',
+            Input: () => (
+                <RWATableTextInput
+                    {...register('txRef', {
+                        disabled: operation === 'view',
+                    })}
+                    aria-invalid={errors.txRef ? 'true' : 'false'}
+                    errorMessage={errors.txRef?.message}
+                    placeholder="E.g. 0x123..."
+                />
             ),
         },
     ].filter(Boolean);

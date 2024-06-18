@@ -33,6 +33,7 @@ export const TableBase = fixedForwardRef(function TableBase<
         renderRow,
         onClickSort,
         specialFirstRow,
+        specialLastRow,
         maxHeight,
         tableRef,
         ...containerProps
@@ -113,6 +114,7 @@ export const TableBase = fixedForwardRef(function TableBase<
                         {tableData?.map((item, index) =>
                             renderRow(item, columns, index),
                         )}
+                        {specialLastRow?.(columns)}
                     </tbody>
                 </table>
             </div>

@@ -24,7 +24,7 @@ export const mockFixedIncomes: Asset[] = [
         maturity: '2023-06-01T00:00:00.000Z',
         purchaseDate: '2021-03-28',
         notional: 43247.76,
-        purchasePrice: 97.24,
+        purchasePrice: 97.24456777,
         purchaseProceeds: 42054.12,
         totalDiscount: 1193.64,
         ISIN: undefined,

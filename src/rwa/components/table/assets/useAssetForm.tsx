@@ -40,6 +40,7 @@ export function useAssetForm(
 
     const editDefaultValues = item
         ? {
+              id: item.id,
               fixedIncomeTypeId: item.fixedIncomeTypeId,
               spvId: item.spvId,
               name: item.name,
@@ -78,7 +79,7 @@ export function useAssetForm(
                       {
                           label: 'Purchase Price',
                           Input: () => (
-                              <>{handleTableDatum(item?.purchasePrice)}</>
+                              <>{handleTableDatum(item?.purchasePrice, 6)}</>
                           ),
                       },
                       {
@@ -111,6 +112,7 @@ export function useAssetForm(
                         aria-invalid={errors.name ? 'true' : 'false'}
                         errorMessage={errors.name?.message}
                         placeholder="E.g. My Asset"
+                        inputClassName="text-left"
                     />
                 ),
             },
@@ -201,6 +203,11 @@ export function useAssetForm(
                                 setShowCreateFixedIncomeTypeModal(true),
                             label: 'Create Fixed Income Type',
                         }}
+                        required="Asset type is required"
+                        aria-invalid={
+                            errors.fixedIncomeTypeId ? 'true' : 'false'
+                        }
+                        errorMessage={errors.fixedIncomeTypeId?.message}
                     />
                 ),
             },
@@ -220,22 +227,27 @@ export function useAssetForm(
                             onClick: () => setShowCreateSpvModal(true),
                             label: 'Create SPV',
                         }}
+                        required="SPV is required"
+                        aria-invalid={errors.spvId ? 'true' : 'false'}
+                        errorMessage={errors.spvId?.message}
                     />
                 ),
             },
             ...derivedInputsToDisplay,
         ],
         [
-            control,
             derivedInputsToDisplay,
+            register,
+            operation,
+            errors.name,
             errors.CUSIP,
             errors.ISIN,
-            errors.name,
-            fixedIncomeTypes,
+            errors.fixedIncomeTypeId,
+            errors.spvId,
             item?.CUSIP,
             item?.ISIN,
-            operation,
-            register,
+            control,
+            fixedIncomeTypes,
             spvs,
         ],
     );

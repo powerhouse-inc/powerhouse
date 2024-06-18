@@ -58,8 +58,8 @@ function MenuList(
 }
 
 export function Combobox(props: Props) {
+    const invalid = props['aria-invalid'] === 'true';
     const { addItemButtonProps, ...rest } = props;
-
     return (
         <Select
             {...rest}
@@ -93,6 +93,12 @@ export function Combobox(props: Props) {
                         fontSize: 12,
                     };
                 },
+                placeholder: baseStyles => {
+                    return {
+                        ...baseStyles,
+                        color: invalid ? 'var(--red-800)' : 'var(--gray-500)',
+                    };
+                },
                 control: () => {
                     return {
                         label: 'control',
@@ -106,7 +112,9 @@ export function Combobox(props: Props) {
                         position: 'relative',
                         transition: 'all 100ms',
                         backgroundColor: 'var(--white)',
-                        borderColor: 'var(--gray-200)',
+                        borderColor: invalid
+                            ? 'var(--red-900)'
+                            : 'var(--gray-200)',
                         borderStyle: 'solid',
                         borderWidth: 1,
                         borderRadius: '6px',

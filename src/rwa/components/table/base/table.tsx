@@ -54,6 +54,7 @@ export function Table<
         setSelectedTableItem,
         setOperation,
         specialFirstRow,
+        specialLastRow,
     } = props;
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -120,12 +121,13 @@ export function Table<
                                         ) ??
                                             handleTableDatum(
                                                 tableItem[column.key],
+                                                column.decimalScale,
                                             )}
                                     </RWATableCell>
                                 )}
                             {column.key === 'moreDetails' && (
                                 <MoreDetailsCell
-                                    isSelected
+                                    isSelected={isSelected}
                                     onClick={() => {
                                         if (isSelected) {
                                             setOperation(null);
@@ -155,6 +157,7 @@ export function Table<
                 maxHeight={maxHeight}
                 renderRow={renderRow}
                 specialFirstRow={specialFirstRow}
+                specialLastRow={specialLastRow}
             />
             {isAllowedToCreateDocuments && !operation && (
                 <>

@@ -117,6 +117,15 @@ export const Empty: Story = {
     },
 };
 
+export const EmptyIsAllowedToCreateDocuments: Story = {
+    ...Empty,
+    args: {
+        ...Empty.args,
+        isAllowedToCreateDocuments: true,
+        isAllowedToEditDocuments: true,
+    },
+};
+
 export const WithDataReadyOnly: Story = {
     ...Empty,
     args: {

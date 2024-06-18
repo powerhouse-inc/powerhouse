@@ -20,6 +20,7 @@ export function useAccountForm(
 
     const editDefaultValues = item
         ? {
+              id: item.id,
               label: item.label,
               reference: item.reference,
           }

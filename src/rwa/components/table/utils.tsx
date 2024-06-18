@@ -27,10 +27,11 @@ export function handleDateInTable(maybeDate: string | Date) {
     return maybeDate;
 }
 
-export function handleTableDatum(datum: ItemData) {
+export function handleTableDatum(datum: ItemData, decimalScale = 2) {
     if (datum === null || datum === undefined) return '--';
 
-    if (typeof datum === 'number') return <FormattedNumber value={datum} />;
+    if (typeof datum === 'number')
+        return <FormattedNumber value={datum} decimalScale={decimalScale} />;
 
     return handleDateInTable(datum);
 }

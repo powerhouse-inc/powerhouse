@@ -69,12 +69,11 @@ export type GroupTransaction = {
     type: GroupTransactionType;
     cashBalanceChange: number;
     entryTime: string;
-    serviceProviderFeeTypeId: string | null;
+    serviceProviderFeeTypeId?: string | null;
+    txRef?: string | null;
     fees?: TransactionFee[] | null;
     fixedIncomeTransaction?: BaseTransaction | null;
     cashTransaction?: BaseTransaction | null;
-    feeTransactions?: BaseTransaction[] | null;
-    interestTransaction?: BaseTransaction | null;
 };
 
 export type TransactionFee = {
@@ -90,7 +89,6 @@ export type BaseTransaction = {
     entryTime: string;
     tradeTime?: string | null;
     settlementTime?: string | null;
-    txRef?: string | null;
     accountId?: string | null;
     counterPartyAccountId?: string | null;
 };

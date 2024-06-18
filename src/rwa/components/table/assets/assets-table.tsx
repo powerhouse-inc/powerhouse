@@ -18,6 +18,7 @@ import {
 } from '@/rwa';
 import { Fragment, useMemo, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
+import { sumTotalForProperty } from './utils';
 
 const columns = [
     { key: 'name' as const, label: 'Name', allowSorting: true },
@@ -38,6 +39,7 @@ const columns = [
         label: 'Purchase Price',
         allowSorting: true,
         isNumberColumn: true,
+        decimalScale: 6,
     },
     {
         key: 'purchaseProceeds' as const,
@@ -82,6 +84,15 @@ export function AssetsTable(props: AssetsTableProps) {
 
     const cashAsset = getCashAsset(state);
 
+    const totalPurchasePrice = sumTotalForProperty(assets, 'purchasePrice');
+    const totalPurchaseProceeds = sumTotalForProperty(
+        assets,
+        'purchaseProceeds',
+    );
+    const totalSalesProceeds = sumTotalForProperty(assets, 'salesProceeds');
+    const totalTotalDiscount = sumTotalForProperty(assets, 'totalDiscount');
+    const totalRealizedSurplus = sumTotalForProperty(assets, 'realizedSurplus');
+
     const cashAssetFormattedAsTableItem = {
         id: 'special-first-row',
         name: 'Cash $USD',
@@ -118,9 +129,7 @@ export function AssetsTable(props: AssetsTableProps) {
                         {column.key === 'notional' && (
                             <RWATableCell
                                 key={column.key}
-                                className={
-                                    column.isNumberColumn ? 'text-right' : ''
-                                }
+                                className="text-right"
                             >
                                 {handleTableDatum(
                                     cashAssetFormattedAsTableItem[column.key],
@@ -130,6 +139,75 @@ export function AssetsTable(props: AssetsTableProps) {
                         {column.key !== 'name' && column.key !== 'notional' && (
                             <RWATableCell></RWATableCell>
                         )}
+                    </Fragment>
+                ))}
+            </tr>
+        </RWATableRow>
+    );
+
+    const specialLastRow: TableProps<
+        FixedIncome,
+        TableItem<FixedIncome>
+    >['specialFirstRow'] = c => (
+        <RWATableRow tdProps={{ colSpan: 100 }}>
+            <tr
+                className={twMerge(
+                    'sticky bottom-0 bg-white [&>td:not(:first-child)]:border-l [&>td]:border-gray-300',
+                )}
+            >
+                {c.map(column => (
+                    <Fragment key={column.key}>
+                        {column.key === 'name' && (
+                            <RWATableCell>Totals</RWATableCell>
+                        )}
+                        {column.key === 'purchasePrice' && (
+                            <RWATableCell
+                                key={column.key}
+                                className="text-right"
+                            >
+                                {handleTableDatum(totalPurchasePrice)}
+                            </RWATableCell>
+                        )}
+                        {column.key === 'purchaseProceeds' && (
+                            <RWATableCell
+                                key={column.key}
+                                className="text-right"
+                            >
+                                {handleTableDatum(totalPurchaseProceeds)}
+                            </RWATableCell>
+                        )}
+                        {column.key === 'salesProceeds' && (
+                            <RWATableCell
+                                key={column.key}
+                                className="text-right"
+                            >
+                                {handleTableDatum(totalSalesProceeds)}
+                            </RWATableCell>
+                        )}
+                        {column.key === 'totalDiscount' && (
+                            <RWATableCell
+                                key={column.key}
+                                className="text-right"
+                            >
+                                {handleTableDatum(totalTotalDiscount)}
+                            </RWATableCell>
+                        )}
+                        {column.key === 'realizedSurplus' && (
+                            <RWATableCell
+                                key={column.key}
+                                className="text-right"
+                            >
+                                {handleTableDatum(totalRealizedSurplus)}
+                            </RWATableCell>
+                        )}
+                        {column.key !== 'name' &&
+                            column.key !== 'purchasePrice' &&
+                            column.key !== 'purchaseProceeds' &&
+                            column.key !== 'salesProceeds' &&
+                            column.key !== 'totalDiscount' &&
+                            column.key !== 'realizedSurplus' && (
+                                <RWATableCell></RWATableCell>
+                            )}
                     </Fragment>
                 ))}
             </tr>
@@ -148,6 +226,7 @@ export function AssetsTable(props: AssetsTableProps) {
                 setSelectedTableItem={setSelectedTableItem}
                 setOperation={setOperation}
                 specialFirstRow={specialFirstRow}
+                specialLastRow={specialLastRow}
             />
             {showForm && (
                 <div className="mt-4 rounded-md bg-white">

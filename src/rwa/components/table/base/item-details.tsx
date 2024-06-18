@@ -139,7 +139,9 @@ export function ItemDetails<
         >
             <div className="flex justify-between rounded-t-md border-b border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">
                 <div className="flex items-center">
-                    {itemName} #{tableItem?.itemNumber ?? 1}
+                    {tableItem?.itemNumber
+                        ? `${itemName} #${tableItem.itemNumber}`
+                        : `New ${itemName}`}
                 </div>
                 <div className="flex gap-x-2">
                     {showCancelButton && cancelButton}

@@ -19,6 +19,7 @@ export function useFixedIncomeTypeForm(
 
     const editDefaultValues = item
         ? {
+              id: item.id,
               name: item.name,
           }
         : createDefaultValues;

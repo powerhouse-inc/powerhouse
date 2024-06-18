@@ -17,7 +17,7 @@ export function convertToDateTimeLocalFormat(date: Date | string = new Date()) {
 }
 
 export function formatDateForDisplay(date: Date | string) {
-    return format(date, 'yyyy-MM-dd HH:mm');
+    return format(date, 'yyyy/MM/dd, HH:mm:ss');
 }
 
 export function isAssetGroupTransactionType(

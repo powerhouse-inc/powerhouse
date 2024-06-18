@@ -59,7 +59,7 @@ export const Empty: Story = {
                     },
                 });
             },
-            args.simulateBackgroundUpdates ? 3000 : 0,
+            args.simulateBackgroundUpdates ? 3000 : null,
         );
 
         const onSubmitEdit: AssetsTableProps['onSubmitEdit'] = useCallback(
@@ -122,6 +122,15 @@ export const Empty: Story = {
     },
 };
 
+export const EmptyAllowedToCreateDocuments: Story = {
+    ...Empty,
+    args: {
+        ...Empty.args,
+        isAllowedToCreateDocuments: true,
+        isAllowedToEditDocuments: true,
+    },
+};
+
 export const WithDataReadOnly: Story = {
     ...Empty,
     args: {
@@ -142,5 +151,26 @@ export const WithDataAllowedToCreateDocuments: Story = {
         ...WithDataReadOnly.args,
         isAllowedToCreateDocuments: true,
         isAllowedToEditDocuments: true,
+    },
+};
+
+export const WithManyItems: Story = {
+    ...WithDataAllowedToCreateDocuments,
+    args: {
+        ...WithDataAllowedToCreateDocuments.args,
+        state: {
+            ...mockStateInitial,
+            portfolio: [
+                mockCashAsset,
+                ...mockFixedIncomes,
+                ...Array.from({ length: 100 }, (_, i) => ({
+                    ...mockFixedIncomes[0],
+                    id: `fixed-income-${i + 1}`,
+                })),
+            ],
+            fixedIncomeTypes: mockFixedIncomeTypes,
+            spvs: mockSPVs,
+            transactions: mockGroupTransactions,
+        },
     },
 };

@@ -36,6 +36,7 @@ export function useServiceProviderFeeTypeForm(
 
     const editDefaultValues = item
         ? {
+              id: item.id,
               name: item.name,
               feeType: item.feeType,
               accountId: item.accountId,
@@ -111,6 +112,9 @@ export function useServiceProviderFeeTypeForm(
                             onClick: () => setShowCreateAccountModal(true),
                             label: 'Create Account',
                         }}
+                        required="Account is required"
+                        aria-invalid={errors.accountId ? 'true' : 'false'}
+                        errorMessage={errors.accountId?.message}
                     />
                 ),
             },

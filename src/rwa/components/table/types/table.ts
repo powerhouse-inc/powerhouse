@@ -34,6 +34,7 @@ export interface TableColumn<
     allowSorting?: boolean;
     isSpecialColumn?: boolean; // Used to identify index or more details columns
     isNumberColumn?: boolean; // Used to right-align numbers
+    decimalScale?: number; // Used to format numbers
 }
 
 export type TableBaseProps<
@@ -55,6 +56,7 @@ export type TableBaseProps<
     specialFirstRow?: (
         columns: TableColumn<TItem, TTableData>[],
     ) => JSX.Element;
+    specialLastRow?: (columns: TableColumn<TItem, TTableData>[]) => JSX.Element;
 };
 
 export type TableProps<
@@ -73,6 +75,7 @@ export type TableProps<
     specialFirstRow?: (
         columns: TableColumn<TItem, TTableData>[],
     ) => JSX.Element;
+    specialLastRow?: (columns: TableColumn<TItem, TTableData>[]) => JSX.Element;
 };
 
 export type TableWrapperProps<TFormInputs extends FieldValues> = {
@@ -91,6 +94,7 @@ export type GroupTransactionsTableItem = GroupTransaction & {
     asset: string | undefined;
     quantity: number | undefined;
     cashAmount: number | undefined;
+    totalFees: number;
     cashBalanceChange: number;
 };
 

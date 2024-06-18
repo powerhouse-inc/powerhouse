@@ -16,21 +16,21 @@ export const mockFixedIncomeTransaction = {
     assetId: mockFixedIncomes[0].id,
     accountId: mockAccounts[1].id,
     amount: 1000,
-    entryTime: '2021-10-01',
+    entryTime: '2023-06-01T00:00:00.000Z',
 };
 
 export const mockCashTransaction = {
     id: 'cash-transaction-1',
     assetId: 'cash-asset-1',
     amount: 1000,
-    entryTime: '2021-10-01',
+    entryTime: '2023-06-01T00:00:00.000Z',
     counterPartyAccountId: mockPrincipalLenderAccountId,
 };
 
 export const mockGroupTransaction = {
     id: 'group-transaction-0',
     type: allGroupTransactionTypes[0],
-    entryTime: '2021-10-01 00:00:00',
+    entryTime: '2023-06-01T00:00:00.000Z',
     fees: [
         {
             id: 'fee-transaction-1',

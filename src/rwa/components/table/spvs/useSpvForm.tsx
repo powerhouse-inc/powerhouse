@@ -12,6 +12,7 @@ export function useSpvForm(props: FormHookProps<SPV, SPVFormInputs>) {
 
     const editDefaultValues = item
         ? {
+              id: item.id,
               name: item.name,
           }
         : createDefaultValues;

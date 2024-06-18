@@ -66,6 +66,7 @@ export type GroupTransactionFormInputs = {
     cashAmount?: number | null;
     fixedIncomeAmount?: number | null;
     serviceProviderFeeTypeId?: string | null;
+    txRef?: string | null;
 };
 
 export type AccountFormInputs = {
