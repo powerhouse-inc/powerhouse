@@ -1,3 +1,10 @@
+# [1.61.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.60.0...v1.61.0) (2024-06-18)
+
+
+### Features
+
+* use math lib for calculations ([#182](https://github.com/powerhouse-inc/document-model-libs/issues/182)) ([ce1b133](https://github.com/powerhouse-inc/document-model-libs/commit/ce1b1333698af35948358e0cfeab63b36841755e))
+
 # [1.60.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.59.0...v1.60.0) (2024-06-17)
 
 
