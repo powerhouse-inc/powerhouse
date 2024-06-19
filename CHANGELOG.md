@@ -1,3 +1,10 @@
+# [1.0.0-alpha.76](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.75...v1.0.0-alpha.76) (2024-06-19)
+
+
+### Bug Fixes
+
+* added op id ([8652431](https://github.com/powerhouse-inc/document-drive/commit/86524310ce4234e94db3447d1777081d0351fa3e))
+
 # [1.0.0-alpha.75](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.74...v1.0.0-alpha.75) (2024-06-18)
 
 
