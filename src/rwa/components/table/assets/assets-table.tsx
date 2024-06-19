@@ -115,33 +115,24 @@ export function AssetsTable(props: AssetsTableProps) {
         FixedIncome,
         TableItem<FixedIncome>
     >['specialFirstRow'] = c => (
-        <RWATableRow tdProps={{ colSpan: 100 }}>
-            <tr
-                className={twMerge(
-                    '[&>td:not(:first-child)]:border-l [&>td]:border-gray-300',
-                )}
-            >
-                {c.map(column => (
-                    <Fragment key={column.key}>
-                        {column.key === 'name' && (
-                            <RWATableCell>Cash $USD</RWATableCell>
-                        )}
-                        {column.key === 'notional' && (
-                            <RWATableCell
-                                key={column.key}
-                                className="text-right"
-                            >
-                                {handleTableDatum(
-                                    cashAssetFormattedAsTableItem[column.key],
-                                )}
-                            </RWATableCell>
-                        )}
-                        {column.key !== 'name' && column.key !== 'notional' && (
-                            <RWATableCell></RWATableCell>
-                        )}
-                    </Fragment>
-                ))}
-            </tr>
+        <RWATableRow>
+            {c.map(column => (
+                <Fragment key={column.key}>
+                    {column.key === 'name' && (
+                        <RWATableCell>Cash $USD</RWATableCell>
+                    )}
+                    {column.key === 'notional' && (
+                        <RWATableCell key={column.key} className="text-right">
+                            {handleTableDatum(
+                                cashAssetFormattedAsTableItem[column.key],
+                            )}
+                        </RWATableCell>
+                    )}
+                    {column.key !== 'name' && column.key !== 'notional' && (
+                        <RWATableCell></RWATableCell>
+                    )}
+                </Fragment>
+            ))}
         </RWATableRow>
     );
 
@@ -149,68 +140,52 @@ export function AssetsTable(props: AssetsTableProps) {
         FixedIncome,
         TableItem<FixedIncome>
     >['specialFirstRow'] = c => (
-        <RWATableRow tdProps={{ colSpan: 100 }}>
-            <tr
-                className={twMerge(
-                    'sticky bottom-0 bg-white [&>td:not(:first-child)]:border-l [&>td]:border-gray-300',
-                )}
-            >
-                {c.map(column => (
-                    <Fragment key={column.key}>
-                        {column.key === 'name' && (
-                            <RWATableCell>Totals</RWATableCell>
+        <RWATableRow
+            className={twMerge(
+                'sticky bottom-0',
+                selectedTableItem !== undefined && 'hidden',
+            )}
+        >
+            {c.map(column => (
+                <Fragment key={column.key}>
+                    {column.key === 'name' && (
+                        <RWATableCell>Totals</RWATableCell>
+                    )}
+                    {column.key === 'purchasePrice' && (
+                        <RWATableCell key={column.key} className="text-right">
+                            {handleTableDatum(totalPurchasePrice)}
+                        </RWATableCell>
+                    )}
+                    {column.key === 'purchaseProceeds' && (
+                        <RWATableCell key={column.key} className="text-right">
+                            {handleTableDatum(totalPurchaseProceeds)}
+                        </RWATableCell>
+                    )}
+                    {column.key === 'salesProceeds' && (
+                        <RWATableCell key={column.key} className="text-right">
+                            {handleTableDatum(totalSalesProceeds)}
+                        </RWATableCell>
+                    )}
+                    {column.key === 'totalDiscount' && (
+                        <RWATableCell key={column.key} className="text-right">
+                            {handleTableDatum(totalTotalDiscount)}
+                        </RWATableCell>
+                    )}
+                    {column.key === 'realizedSurplus' && (
+                        <RWATableCell key={column.key} className="text-right">
+                            {handleTableDatum(totalRealizedSurplus)}
+                        </RWATableCell>
+                    )}
+                    {column.key !== 'name' &&
+                        column.key !== 'purchasePrice' &&
+                        column.key !== 'purchaseProceeds' &&
+                        column.key !== 'salesProceeds' &&
+                        column.key !== 'totalDiscount' &&
+                        column.key !== 'realizedSurplus' && (
+                            <RWATableCell></RWATableCell>
                         )}
-                        {column.key === 'purchasePrice' && (
-                            <RWATableCell
-                                key={column.key}
-                                className="text-right"
-                            >
-                                {handleTableDatum(totalPurchasePrice)}
-                            </RWATableCell>
-                        )}
-                        {column.key === 'purchaseProceeds' && (
-                            <RWATableCell
-                                key={column.key}
-                                className="text-right"
-                            >
-                                {handleTableDatum(totalPurchaseProceeds)}
-                            </RWATableCell>
-                        )}
-                        {column.key === 'salesProceeds' && (
-                            <RWATableCell
-                                key={column.key}
-                                className="text-right"
-                            >
-                                {handleTableDatum(totalSalesProceeds)}
-                            </RWATableCell>
-                        )}
-                        {column.key === 'totalDiscount' && (
-                            <RWATableCell
-                                key={column.key}
-                                className="text-right"
-                            >
-                                {handleTableDatum(totalTotalDiscount)}
-                            </RWATableCell>
-                        )}
-                        {column.key === 'realizedSurplus' && (
-                            <RWATableCell
-                                key={column.key}
-                                className="text-right"
-                            >
-                                {handleTableDatum(totalRealizedSurplus)}
-                            </RWATableCell>
-                        )}
-                        {column.key !== 'name' &&
-                            column.key !== 'purchasePrice' &&
-                            column.key !== 'purchaseProceeds' &&
-                            column.key !== 'salesProceeds' &&
-                            column.key !== 'totalDiscount' &&
-                            column.key !== 'realizedSurplus' && (
-                                <RWATableCell></RWATableCell>
-                            )}
-                    </Fragment>
-                ))}
-            </tr>
+                </Fragment>
+            ))}
         </RWATableRow>
     );
 

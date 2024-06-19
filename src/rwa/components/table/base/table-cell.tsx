@@ -1,12 +1,13 @@
-import { Icon, mergeClassNameProps } from '@/powerhouse';
+import { Icon } from '@/powerhouse';
 import React, { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export const RWATableCell: React.FC<ComponentPropsWithoutRef<'td'>> = props => (
     <td
-        {...mergeClassNameProps(
-            props,
-            'truncate px-3 py-2 text-xs font-medium text-gray-900',
+        {...props}
+        className={twMerge(
+            'truncate border-l border-gray-300 px-3 py-2 text-xs font-medium text-gray-900 first:border-l-0',
+            props.className,
         )}
     />
 );

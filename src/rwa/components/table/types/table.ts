@@ -51,7 +51,7 @@ export type TableBaseProps<
     onClickSort: (key: string, direction: SortDirection) => void;
     children?: ReactNode;
     footer?: ReactNode;
-    tableRef: RefObject<HTMLTableElement>;
+    headerRef: RefObject<HTMLTableSectionElement>;
     maxHeight?: string;
     specialFirstRow?: (
         columns: TableColumn<TItem, TTableData>[],

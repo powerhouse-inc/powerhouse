@@ -4,7 +4,6 @@ import {
     ItemNumberCell,
     MoreDetailsCell,
     RWATableCell,
-    RWATableRow,
     TableBase,
     TableColumn,
     TableItem,
@@ -14,9 +13,9 @@ import {
     useColumnPriority,
     useSortTableItems,
 } from '@/rwa';
-import { Fragment, useRef } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { FieldValues } from 'react-hook-form';
-import { twMerge } from 'tailwind-merge';
+import { RWATableRow } from './table-row';
 import { useTableHeight } from './use-table-height';
 
 /**
@@ -58,7 +57,9 @@ export function Table<
     } = props;
 
     const tableContainerRef = useRef<HTMLDivElement>(null);
-    const tableRef = useRef<HTMLTableElement>(null);
+    const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
+    const headerRef = useRef<HTMLTableSectionElement>(null);
+    const [selectedRowNumber, setSelectedRowNumber] = useState<number>();
 
     const { sortedItems, sortHandler } = useSortTableItems(tableData);
 
@@ -69,9 +70,10 @@ export function Table<
     });
 
     const maxHeight = useTableHeight({
-        tableRef,
-        selectedRowNumber: selectedTableItem?.itemNumber,
-        hasSpecialFirstRow: !!specialFirstRow,
+        tableContainerRef,
+        rowRefs,
+        headerRef,
+        selectedRowNumber,
     });
 
     function onCreateItemClick() {
@@ -82,66 +84,58 @@ export function Table<
     const renderRow = (
         tableItem: TTableData,
         columns: TableColumn<TItem, TTableData>[],
+        index: number,
     ) => {
         const isSelected = selectedTableItem?.id === tableItem.id;
 
         return (
             <RWATableRow
-                isExpanded={selectedTableItem?.id === tableItem.id}
-                tdProps={{ colSpan: 100 }}
                 key={tableItem.id}
+                ref={el => (rowRefs.current[index] = el)}
             >
-                <tr
-                    key={tableItem.id}
-                    className={twMerge(
-                        '[&>td:not(:first-child)]:border-l [&>td:not(:first-child)]:border-gray-300',
-                        tableItem.itemNumber % 2 !== 0 && 'bg-gray-50',
-                    )}
-                >
-                    {columns.map(column => (
-                        <Fragment key={column.key}>
-                            {column.key === 'itemNumber' && (
-                                <ItemNumberCell
-                                    itemNumber={tableItem.itemNumber}
-                                />
-                            )}
-                            {column.key !== 'itemNumber' &&
-                                column.key !== 'moreDetails' && (
-                                    <RWATableCell
-                                        key={column.key}
-                                        className={
-                                            column.isNumberColumn
-                                                ? 'text-right'
-                                                : ''
-                                        }
-                                    >
-                                        {tableItem.customTransform?.(
+                {columns.map(column => (
+                    <Fragment key={column.key}>
+                        {column.key === 'itemNumber' && (
+                            <ItemNumberCell itemNumber={tableItem.itemNumber} />
+                        )}
+                        {column.key !== 'itemNumber' &&
+                            column.key !== 'moreDetails' && (
+                                <RWATableCell
+                                    key={column.key}
+                                    className={
+                                        column.isNumberColumn
+                                            ? 'text-right'
+                                            : ''
+                                    }
+                                >
+                                    {tableItem.customTransform?.(
+                                        tableItem[column.key],
+                                        column.key,
+                                    ) ??
+                                        handleTableDatum(
                                             tableItem[column.key],
-                                            column.key,
-                                        ) ??
-                                            handleTableDatum(
-                                                tableItem[column.key],
-                                                column.decimalScale,
-                                            )}
-                                    </RWATableCell>
-                                )}
-                            {column.key === 'moreDetails' && (
-                                <MoreDetailsCell
-                                    isSelected={isSelected}
-                                    onClick={() => {
-                                        if (isSelected) {
-                                            setOperation(null);
-                                            setSelectedTableItem(undefined);
-                                            return;
-                                        }
-                                        setOperation('view');
-                                        setSelectedTableItem(tableItem);
-                                    }}
-                                />
+                                            column.decimalScale,
+                                        )}
+                                </RWATableCell>
                             )}
-                        </Fragment>
-                    ))}
-                </tr>
+                        {column.key === 'moreDetails' && (
+                            <MoreDetailsCell
+                                isSelected={isSelected}
+                                onClick={() => {
+                                    if (isSelected) {
+                                        setOperation(null);
+                                        setSelectedTableItem(undefined);
+                                        setSelectedRowNumber(undefined);
+                                        return;
+                                    }
+                                    setOperation('view');
+                                    setSelectedTableItem(tableItem);
+                                    setSelectedRowNumber(index);
+                                }}
+                            />
+                        )}
+                    </Fragment>
+                ))}
             </RWATableRow>
         );
     };
@@ -151,7 +145,7 @@ export function Table<
             <TableBase
                 onClickSort={sortHandler}
                 ref={tableContainerRef}
-                tableRef={tableRef}
+                headerRef={headerRef}
                 tableData={sortedItems}
                 columns={columnsToShow}
                 maxHeight={maxHeight}

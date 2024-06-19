@@ -35,7 +35,7 @@ export const TableBase = fixedForwardRef(function TableBase<
         specialFirstRow,
         specialLastRow,
         maxHeight,
-        tableRef,
+        headerRef,
         ...containerProps
     } = props;
 
@@ -49,13 +49,16 @@ export const TableBase = fixedForwardRef(function TableBase<
             <div
                 {...mergeClassNameProps(
                     containerProps,
-                    'relative overflow-auto rounded-lg border border-gray-300 bg-white',
+                    'relative overflow-scroll rounded-lg border border-gray-300 bg-white',
                 )}
                 ref={ref}
                 style={{ maxHeight }}
             >
-                <table className="w-full" ref={tableRef}>
-                    <thead className="sticky top-0 isolate select-none text-nowrap border-b border-gray-300 bg-gray-100">
+                <table className="w-full">
+                    <thead
+                        ref={headerRef}
+                        className="sticky top-0 isolate select-none text-nowrap border-b border-gray-300 bg-gray-100"
+                    >
                         <tr>
                             {columns.map(column => (
                                 <th
