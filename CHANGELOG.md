@@ -1,3 +1,10 @@
+# [1.0.0-alpha.123](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.122...v1.0.0-alpha.123) (2024-06-19)
+
+
+### Features
+
+* improve table height algorithm ([#306](https://github.com/powerhouse-inc/design-system/issues/306)) ([f25561e](https://github.com/powerhouse-inc/design-system/commit/f25561eba4dbc5cfbc6d59daa987a77d29a86ed8))
+
 # [1.0.0-alpha.122](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.121...v1.0.0-alpha.122) (2024-06-18)
 
 
