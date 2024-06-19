@@ -120,7 +120,7 @@ const Content = () => {
             // builds the path from the url checking if the nodes exist
             const path = [encodeID(drive.state.global.id)];
             let currentNodes = drive.state.global.nodes.filter(
-                node => node.parentFolder === null,
+                node => !node.parentFolder,
             );
             if (params['*']) {
                 const nodeNames = decodeURIComponent(params['*']).split('/');
@@ -324,7 +324,7 @@ const Content = () => {
                             document={selectedDocument}
                             onClose={() => {
                                 navigateToItemId(
-                                    selectedFileNode.parentFolder ?? driveID,
+                                    selectedFileNode.parentFolder || driveID,
                                 );
                                 setSelectedFileNode(undefined);
                             }}
