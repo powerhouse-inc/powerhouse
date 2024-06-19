@@ -193,6 +193,7 @@ export class PrismaStorage implements IDriveStorage {
                     type: op.type,
                     scope: op.scope,
                     branch: 'main',
+                    opId: op.id,
                     skip: op.skip,
                     context: op.context,
                     resultingState: op.resultingState
