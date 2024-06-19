@@ -13,7 +13,7 @@ import { isAssetGroupTransactionType } from '../utils';
 
 export const mockFixedIncomeTransaction = {
     id: 'fixed-income-transaction-1',
-    assetId: mockFixedIncomes[0].id,
+    assetId: mockFixedIncomes[1].id,
     accountId: mockAccounts[1].id,
     amount: 1000,
     entryTime: '2023-06-01T00:00:00.000Z',

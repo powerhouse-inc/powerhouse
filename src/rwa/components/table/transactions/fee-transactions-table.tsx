@@ -63,7 +63,10 @@ export function FeeTransactionsTable(props: Props) {
                                         <td className="w-52"></td>
                                         <td className="w-96">
                                             <RWATableSelect
-                                                required="Service provider is required"
+                                                rules={{
+                                                    required:
+                                                        'Service provider is required',
+                                                }}
                                                 control={props.control}
                                                 name={`fees.${index}.serviceProviderFeeTypeId`}
                                                 disabled={props.isViewOnly}
@@ -87,7 +90,17 @@ export function FeeTransactionsTable(props: Props) {
                                         </td>
                                         <td className="w-52">
                                             <RWANumberInput
-                                                required
+                                                rules={{
+                                                    required:
+                                                        'Amount is required',
+                                                    validate: {
+                                                        positive: value =>
+                                                            (!!value &&
+                                                                Number(value) >
+                                                                    0) ||
+                                                            'Fee amount must be greater than zero',
+                                                    },
+                                                }}
                                                 name={
                                                     `fees.${index}.amount` as Path<GroupTransactionFormInputs>
                                                 }

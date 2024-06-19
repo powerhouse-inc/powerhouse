@@ -1,7 +1,14 @@
 import { RWATableTextInput } from '@/rwa';
 import { ComponentPropsWithRef } from 'react';
-import { Control, Controller, FieldValues, Path } from 'react-hook-form';
+import {
+    Control,
+    Controller,
+    ControllerProps,
+    FieldValues,
+    Path,
+} from 'react-hook-form';
 import { NumericFormat } from 'react-number-format';
+import { twMerge } from 'tailwind-merge';
 
 type Props<ControlInputs extends FieldValues> = ComponentPropsWithRef<
     typeof RWATableTextInput
@@ -9,9 +16,11 @@ type Props<ControlInputs extends FieldValues> = ComponentPropsWithRef<
     name: Path<ControlInputs>;
     control: Control<ControlInputs>;
     disabled?: boolean;
-    requiredErrorMessage?: string;
     currency?: 'USD';
     numericFormatProps?: ComponentPropsWithRef<typeof NumericFormat>;
+    rules?: ControllerProps<ControlInputs>['rules'];
+    errorMessage?: string;
+    errorMessageClassName?: string;
 };
 
 export function RWANumberInput<ControlInputs extends FieldValues>(
@@ -20,11 +29,13 @@ export function RWANumberInput<ControlInputs extends FieldValues>(
     const {
         name,
         control,
-        requiredErrorMessage,
         currency,
+        rules,
+        errorMessage,
+        errorMessageClassName,
+        numericFormatProps,
         value: _,
         onChange: __,
-        numericFormatProps,
         ...inputProps
     } = props;
 
@@ -37,24 +48,39 @@ export function RWANumberInput<ControlInputs extends FieldValues>(
 
     const prefix = currency === 'USD' ? '$' : undefined;
 
+    const invalid = props['aria-invalid'] === 'true';
+
     return (
         <Controller
             name={name}
             control={control}
-            rules={{ required: requiredErrorMessage ?? props.required }}
+            rules={rules}
             render={({ field: { onChange, value, ref } }) => (
-                <NumericFormat
-                    {...inputProps}
-                    getInputRef={ref}
-                    prefix={prefix}
-                    allowNegative={allowNegative}
-                    decimalScale={decimalScale}
-                    onValueChange={({ floatValue }) => onChange(floatValue)}
-                    value={value}
-                    customInput={RWATableTextInput}
-                    thousandSeparator={thousandSeparator}
-                    fixedDecimalScale={fixedDecimalScale}
-                />
+                <>
+                    <NumericFormat
+                        {...inputProps}
+                        getInputRef={ref}
+                        prefix={prefix}
+                        allowNegative={allowNegative}
+                        decimalScale={decimalScale}
+                        onValueChange={({ floatValue }) => onChange(floatValue)}
+                        value={value}
+                        customInput={RWATableTextInput}
+                        thousandSeparator={thousandSeparator}
+                        fixedDecimalScale={fixedDecimalScale}
+                    />
+                    {invalid && !!errorMessage && (
+                        <p
+                            role="alert"
+                            className={twMerge(
+                                'text-sm text-red-900',
+                                errorMessageClassName,
+                            )}
+                        >
+                            {errorMessage}
+                        </p>
+                    )}
+                </>
             )}
         />
     );

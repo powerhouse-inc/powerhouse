@@ -70,8 +70,8 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
 
     const { className: tabPropsClassName, ...restTabProps } = tabProps;
 
-    const buttonClass =
-        'w-8 h-8 tab-shadow rounded-lg flex justify-center items-center';
+    // const buttonClass =
+    //     'w-8 h-8 tab-shadow rounded-lg flex justify-center items-center';
 
     return (
         <Tabs {...tabsProps}>
@@ -82,7 +82,7 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
                 )}
             >
                 <div className="flex w-48 gap-x-2">
-                    <button
+                    {/* <button
                         className={buttonClass}
                         onClick={onUndo}
                         disabled={!canUndo}
@@ -108,7 +108,7 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
                                 canRedo ? 'active:opacity-50' : 'text-gray-500',
                             )}
                         />
-                    </button>
+                    </button> */}
                 </div>
                 <TabList
                     {...mergeClassNameProps(

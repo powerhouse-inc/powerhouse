@@ -203,7 +203,7 @@ export function useAssetForm(
                                 setShowCreateFixedIncomeTypeModal(true),
                             label: 'Create Fixed Income Type',
                         }}
-                        required="Asset type is required"
+                        rules={{ required: 'Asset type is required' }}
                         aria-invalid={
                             errors.fixedIncomeTypeId ? 'true' : 'false'
                         }
@@ -227,7 +227,7 @@ export function useAssetForm(
                             onClick: () => setShowCreateSpvModal(true),
                             label: 'Create SPV',
                         }}
-                        required="SPV is required"
+                        rules={{ required: 'SPV is required' }}
                         aria-invalid={errors.spvId ? 'true' : 'false'}
                         errorMessage={errors.spvId?.message}
                     />

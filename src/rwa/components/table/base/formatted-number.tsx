@@ -14,7 +14,7 @@ export function FormattedNumber(props: Props) {
         currency,
         decimalScale = 2,
         thousandSeparator = ',',
-        fixedDecimalScale = false,
+        fixedDecimalScale = true,
     } = props;
 
     const prefix = currency === 'USD' ? '$' : undefined;

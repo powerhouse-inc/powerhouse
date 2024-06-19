@@ -3,9 +3,9 @@ import { ComponentPropsWithoutRef } from 'react';
 import {
     Control,
     Controller,
+    ControllerProps,
     FieldValues,
     Path,
-    ValidationRule,
 } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
 
@@ -17,7 +17,7 @@ export type RWATableSelectProps<ControlInputs extends FieldValues> = Omit<
     disabled?: boolean;
     name: Path<ControlInputs>;
     control: Control<ControlInputs>;
-    required?: string | ValidationRule<boolean> | undefined;
+    rules?: ControllerProps<ControlInputs>['rules'];
     errorMessage?: string;
     errorMessageClassName?: string;
 };
@@ -29,7 +29,7 @@ export function RWATableSelect<ControlInputs extends FieldValues>(
         options,
         name,
         control,
-        required,
+        rules,
         errorMessage,
         errorMessageClassName,
         disabled = false,
@@ -42,7 +42,7 @@ export function RWATableSelect<ControlInputs extends FieldValues>(
         <Controller
             name={name}
             control={control}
-            rules={{ required }}
+            rules={rules}
             render={({ field: { onChange, onBlur, value } }) =>
                 disabled ? (
                     <>{options.find(option => option.value === value)?.label}</>

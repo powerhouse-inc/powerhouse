@@ -84,15 +84,6 @@ export function AssetsTable(props: AssetsTableProps) {
 
     const cashAsset = getCashAsset(state);
 
-    const totalPurchasePrice = sumTotalForProperty(assets, 'purchasePrice');
-    const totalPurchaseProceeds = sumTotalForProperty(
-        assets,
-        'purchaseProceeds',
-    );
-    const totalSalesProceeds = sumTotalForProperty(assets, 'salesProceeds');
-    const totalTotalDiscount = sumTotalForProperty(assets, 'totalDiscount');
-    const totalRealizedSurplus = sumTotalForProperty(assets, 'realizedSurplus');
-
     const cashAssetFormattedAsTableItem = {
         id: 'special-first-row',
         name: 'Cash $USD',
@@ -110,6 +101,18 @@ export function AssetsTable(props: AssetsTableProps) {
         totalDiscount: '--',
         realizedSurplus: '--',
     };
+
+    const totalNotional = sumTotalForProperty(
+        [...assets, cashAssetFormattedAsTableItem],
+        'notional',
+    );
+    const totalPurchaseProceeds = sumTotalForProperty(
+        assets,
+        'purchaseProceeds',
+    );
+    const totalSalesProceeds = sumTotalForProperty(assets, 'salesProceeds');
+    const totalTotalDiscount = sumTotalForProperty(assets, 'totalDiscount');
+    const totalRealizedSurplus = sumTotalForProperty(assets, 'realizedSurplus');
 
     const specialFirstRow: TableProps<
         FixedIncome,
@@ -151,9 +154,9 @@ export function AssetsTable(props: AssetsTableProps) {
                     {column.key === 'name' && (
                         <RWATableCell>Totals</RWATableCell>
                     )}
-                    {column.key === 'purchasePrice' && (
+                    {column.key === 'notional' && (
                         <RWATableCell key={column.key} className="text-right">
-                            {handleTableDatum(totalPurchasePrice)}
+                            {handleTableDatum(totalNotional)}
                         </RWATableCell>
                     )}
                     {column.key === 'purchaseProceeds' && (
@@ -177,7 +180,7 @@ export function AssetsTable(props: AssetsTableProps) {
                         </RWATableCell>
                     )}
                     {column.key !== 'name' &&
-                        column.key !== 'purchasePrice' &&
+                        column.key !== 'notional' &&
                         column.key !== 'purchaseProceeds' &&
                         column.key !== 'salesProceeds' &&
                         column.key !== 'totalDiscount' &&
