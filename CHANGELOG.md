@@ -1,3 +1,10 @@
+# [1.0.0-alpha.77](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.76...v1.0.0-alpha.77) (2024-06-19)
+
+
+### Features
+
+* added readme ([50484e8](https://github.com/powerhouse-inc/document-drive/commit/50484e86b4e39d326893629ea0a4c5227afb1e63))
+
 # [1.0.0-alpha.76](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.75...v1.0.0-alpha.76) (2024-06-19)
 
 
