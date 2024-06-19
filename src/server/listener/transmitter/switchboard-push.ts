@@ -1,13 +1,13 @@
 import stringify from 'json-stringify-deterministic';
 import { gql, requestGraphql } from '../../../utils/graphql';
+import { logger } from '../../../utils/logger';
 import {
     BaseDocumentDriveServer,
     Listener,
     ListenerRevision,
     StrandUpdate
 } from '../../types';
-import { ITransmitter } from './types';
-import { logger } from '../../../utils/logger';
+import { ITransmitter, StrandUpdateSource } from './types';
 
 export class SwitchboardPushTransmitter implements ITransmitter {
     private drive: BaseDocumentDriveServer;
@@ -20,7 +20,24 @@ export class SwitchboardPushTransmitter implements ITransmitter {
         this.targetURL = listener.callInfo!.data!;
     }
 
-    async transmit(strands: StrandUpdate[]): Promise<ListenerRevision[]> {
+    async transmit(
+        strands: StrandUpdate[],
+        source: StrandUpdateSource
+    ): Promise<ListenerRevision[]> {
+        if (
+            source.type === 'trigger' &&
+            source.trigger.data?.url === this.targetURL
+        ) {
+            return strands.map(strand => ({
+                driveId: strand.driveId,
+                documentId: strand.documentId,
+                scope: strand.scope,
+                branch: strand.branch,
+                status: 'SUCCESS',
+                revision: strand.operations.at(-1)?.index ?? -1
+            }));
+        }
+
         // Send Graphql mutation to switchboard
         try {
             const { pushUpdates } = await requestGraphql<{

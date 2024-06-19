@@ -60,9 +60,11 @@ import {
     InternalTransmitter,
     IReceiver,
     ITransmitter,
-    PullResponderTransmitter
+    PullResponderTransmitter,
+    StrandUpdateSource
 } from './listener/transmitter';
 import {
+    AddOperationOptions,
     BaseDocumentDriveServer,
     DriveEvents,
     GetDocumentOptions,
@@ -138,7 +140,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }
     }
 
-    private async saveStrand(strand: StrandUpdate) {
+    private async saveStrand(strand: StrandUpdate, source: StrandUpdateSource) {
         const operations: Operation[] = strand.operations.map(op => ({
             ...op,
             scope: strand.scope,
@@ -149,13 +151,13 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             ? this.queueDriveOperations(
                   strand.driveId,
                   operations as Operation<DocumentDriveAction | BaseAction>[],
-                  false
+                  { source }
               )
             : this.queueOperations(
                   strand.driveId,
                   strand.documentId,
                   operations,
-                  false
+                  { source }
               ));
 
         if (result.status === 'ERROR') {
@@ -283,30 +285,30 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             driveId,
             documentId,
             operations,
-            forceSync
+            options
         }: OperationJob) => {
             return documentId
-                ? this.addOperations(driveId, documentId, operations, forceSync)
+                ? this.addOperations(driveId, documentId, operations, options)
                 : this.addDriveOperations(
                       driveId,
                       operations as Operation<
                           DocumentDriveAction | BaseAction
                       >[],
-                      forceSync
+                      options
                   );
         },
         processActionJob: async ({
             driveId,
             documentId,
             actions,
-            forceSync
+            options
         }: ActionJob) => {
             return documentId
-                ? this.addActions(driveId, documentId, actions, forceSync)
+                ? this.addActions(driveId, documentId, actions, options)
                 : this.addDriveActions(
                       driveId,
                       actions as Operation<DocumentDriveAction | BaseAction>[],
-                      forceSync
+                      options
                   );
         },
         processJob: async (job: Job) => {
@@ -335,12 +337,16 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             errors.push(error);
         });
 
-        // if network connect comes online then
-        // triggers the listeners update
+        // if network connect comes back online
+        // then triggers the listeners update
         if (typeof window !== 'undefined') {
             window.addEventListener('online', () => {
                 this.listenerStateManager
-                    .triggerUpdate(false, this.handleListenerError.bind(this))
+                    .triggerUpdate(
+                        false,
+                        { type: 'local' },
+                        this.handleListenerError.bind(this)
+                    )
                     .catch(error => {
                         logger.error(
                             'Non handled error updating listeners',
@@ -1072,9 +1078,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         drive: string,
         id: string,
         operation: Operation,
-        forceSync = true
+        options?: AddOperationOptions
     ): Promise<IOperationResult> {
-        return this.addOperations(drive, id, [operation], forceSync);
+        return this.addOperations(drive, id, [operation], options);
     }
 
     private async _addOperations(
@@ -1110,9 +1116,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         drive: string,
         id: string,
         operation: Operation,
-        forceSync = true
+        options?: AddOperationOptions
     ): Promise<IOperationResult> {
-        return this.queueOperations(drive, id, [operation], forceSync);
+        return this.queueOperations(drive, id, [operation], options);
     }
 
     private async resultIfExistingOperations(
@@ -1153,7 +1159,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         drive: string,
         id: string,
         operations: Operation[],
-        forceSync = true
+        options?: AddOperationOptions
     ) {
         // if operations are already stored then returns cached document
         const result = await this.resultIfExistingOperations(
@@ -1162,7 +1168,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             operations
         );
         if (result) {
-            console.log('Duplicated operations!');
             return result;
         }
         try {
@@ -1170,7 +1175,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 driveId: drive,
                 documentId: id,
                 operations,
-                forceSync
+                options
             });
 
             return new Promise<IOperationResult>((resolve, reject) => {
@@ -1205,23 +1210,23 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         drive: string,
         id: string,
         action: Action,
-        forceSync?: boolean | undefined
+        options?: AddOperationOptions
     ): Promise<IOperationResult> {
-        return this.queueActions(drive, id, [action], forceSync);
+        return this.queueActions(drive, id, [action], options);
     }
 
     async queueActions(
         drive: string,
         id: string,
         actions: Action[],
-        forceSync?: boolean | undefined
+        options?: AddOperationOptions
     ): Promise<IOperationResult> {
         try {
             const jobId = await this.queueManager.addJob({
                 driveId: drive,
                 documentId: id,
                 actions,
-                forceSync
+                options
             });
 
             return new Promise<IOperationResult>((resolve, reject) => {
@@ -1255,20 +1260,20 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async queueDriveAction(
         drive: string,
         action: DocumentDriveAction | BaseAction,
-        forceSync?: boolean | undefined
+        options?: AddOperationOptions
     ): Promise<IOperationResult<DocumentDriveDocument>> {
-        return this.queueDriveActions(drive, [action], forceSync);
+        return this.queueDriveActions(drive, [action], options);
     }
 
     async queueDriveActions(
         drive: string,
         actions: (DocumentDriveAction | BaseAction)[],
-        forceSync?: boolean | undefined
+        options?: AddOperationOptions
     ): Promise<IOperationResult<DocumentDriveDocument>> {
         const jobId = await this.queueManager.addJob({
             driveId: drive,
             actions,
-            forceSync
+            options
         });
         return new Promise<IOperationResult<DocumentDriveDocument>>(
             (resolve, reject) => {
@@ -1302,7 +1307,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         drive: string,
         id: string,
         operations: Operation[],
-        forceSync = true
+        options?: AddOperationOptions
     ) {
         // if operations are already stored then returns the result
         const result = await this.resultIfExistingOperations(
@@ -1365,11 +1370,32 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 scopes,
                 branches
             );
+
+            // checks if any of the provided operations where reshufled
+            const newOp = operationsApplied.find(
+                appliedOp =>
+                    !operations.find(
+                        o =>
+                            o.id === appliedOp.id &&
+                            o.index === appliedOp.index &&
+                            o.skip === appliedOp.skip &&
+                            o.hash === appliedOp.hash
+                    )
+            );
+
+            // if there are no new operations then reuses the provided source
+            // otherwise sets it to local so listeners know that there were
+            // new changes originating from this document drive server
+            const source: StrandUpdateSource = newOp
+                ? { type: 'local' }
+                : options?.source ?? { type: 'local' };
+
             // update listener cache
             this.listenerStateManager
                 .updateSynchronizationRevisions(
                     drive,
                     syncUnits,
+                    source,
                     () => {
                         this.updateSyncStatus(drive, 'SYNCING');
 
@@ -1378,7 +1404,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                         }
                     },
                     this.handleListenerError.bind(this),
-                    forceSync
+                    options?.forceSync ?? source.type === 'local'
                 )
                 .then(updates => {
                     updates.length && this.updateSyncStatus(drive, 'SUCCESS');
@@ -1439,9 +1465,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     addDriveOperation(
         drive: string,
         operation: Operation<DocumentDriveAction | BaseAction>,
-        forceSync = true
+        options?: AddOperationOptions
     ) {
-        return this.addDriveOperations(drive, [operation], forceSync);
+        return this.addDriveOperations(drive, [operation], options);
     }
 
     async clearStorage() {
@@ -1482,9 +1508,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     queueDriveOperation(
         drive: string,
         operation: Operation<DocumentDriveAction | BaseAction>,
-        forceSync = true
+        options?: AddOperationOptions
     ): Promise<IOperationResult<DocumentDriveDocument>> {
-        return this.queueDriveOperations(drive, [operation], forceSync);
+        return this.queueDriveOperations(drive, [operation], options);
     }
 
     private async resultIfExistingDriveOperations(
@@ -1523,7 +1549,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async queueDriveOperations(
         drive: string,
         operations: Operation<DocumentDriveAction | BaseAction>[],
-        forceSync = true
+        options?: AddOperationOptions
     ): Promise<IOperationResult<DocumentDriveDocument>> {
         // if operations are already stored then returns cached document
         const result = await this.resultIfExistingDriveOperations(
@@ -1537,7 +1563,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const jobId = await this.queueManager.addJob({
             driveId: drive,
             operations,
-            forceSync
+            options
         });
         return new Promise<IOperationResult<DocumentDriveDocument>>(
             (resolve, reject) => {
@@ -1570,7 +1596,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async addDriveOperations(
         drive: string,
         operations: Operation<DocumentDriveAction | BaseAction>[],
-        forceSync = true
+        options?: AddOperationOptions
     ) {
         let document: DocumentDriveDocument | undefined;
         const operationsApplied: Operation<DocumentDriveAction | BaseAction>[] =
@@ -1646,7 +1672,27 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 .filter(op => op.scope === 'global')
                 .slice()
                 .pop();
+
             if (lastOperation) {
+                // checks if any of the provided operations where reshufled
+                const newOp = operationsApplied.find(
+                    appliedOp =>
+                        !operations.find(
+                            o =>
+                                o.id === appliedOp.id &&
+                                o.index === appliedOp.index &&
+                                o.skip === appliedOp.skip &&
+                                o.hash === appliedOp.hash
+                        )
+                );
+
+                // if there are no new operations then reuses the provided source
+                // otherwise sets it to local so listeners know that there were
+                // new changes originating from this document drive server
+                const source: StrandUpdateSource = newOp
+                    ? { type: 'local' }
+                    : options?.source ?? { type: 'local' };
+
                 this.listenerStateManager
                     .updateSynchronizationRevisions(
                         drive,
@@ -1662,6 +1708,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                                 revision: lastOperation.index
                             }
                         ],
+                        source,
                         () => {
                             this.updateSyncStatus(drive, 'SYNCING');
 
@@ -1673,7 +1720,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                             }
                         },
                         this.handleListenerError.bind(this),
-                        forceSync
+                        options?.forceSync ?? source.type === 'local'
                     )
                     .then(updates => {
                         if (updates.length) {
@@ -1768,41 +1815,41 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         drive: string,
         id: string,
         action: Action,
-        forceSync = true
+        options?: AddOperationOptions
     ): Promise<IOperationResult> {
-        return this.addActions(drive, id, [action], forceSync);
+        return this.addActions(drive, id, [action], options);
     }
 
     async addActions(
         drive: string,
         id: string,
         actions: Action[],
-        forceSync = true
+        options?: AddOperationOptions
     ): Promise<IOperationResult> {
         const document = await this.getDocument(drive, id);
         const operations = this._buildOperations(document, actions);
-        return this.addOperations(drive, id, operations, forceSync);
+        return this.addOperations(drive, id, operations, options);
     }
 
     async addDriveAction(
         drive: string,
         action: DocumentDriveAction | BaseAction,
-        forceSync = true
+        options?: AddOperationOptions
     ): Promise<IOperationResult<DocumentDriveDocument>> {
-        return this.addDriveActions(drive, [action], forceSync);
+        return this.addDriveActions(drive, [action], options);
     }
 
     async addDriveActions(
         drive: string,
         actions: (DocumentDriveAction | BaseAction)[],
-        forceSync = true
+        options?: AddOperationOptions
     ): Promise<IOperationResult<DocumentDriveDocument>> {
         const document = await this.getDrive(drive);
         const operations = this._buildOperations(document, actions);
         const result = await this.addDriveOperations(
             drive,
             operations,
-            forceSync
+            options
         );
         return result;
     }

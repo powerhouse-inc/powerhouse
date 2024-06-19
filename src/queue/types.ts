@@ -1,12 +1,12 @@
 import { Action, Operation } from "document-model/document";
-import { IOperationResult } from "../server";
+import { AddOperationOptions, IOperationResult } from "../server";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {
     driveId: string;
     documentId?: string
     actions?: Action[]
-    forceSync?: boolean
+    options?: AddOperationOptions;    
 }
 
 export interface OperationJob extends BaseJob {

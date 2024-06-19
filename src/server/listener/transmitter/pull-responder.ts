@@ -16,7 +16,11 @@ import {
     StrandUpdate
 } from '../../types';
 import { ListenerManager } from '../manager';
-import { ITransmitter, PullResponderTrigger } from './types';
+import {
+    ITransmitter,
+    PullResponderTrigger,
+    StrandUpdateSource
+} from './types';
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, 'input'> & {
     input: string;
@@ -215,7 +219,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     private static async executePull(
         driveId: string,
         trigger: PullResponderTrigger,
-        onStrandUpdate: (strand: StrandUpdate) => Promise<IOperationResult>,
+        onStrandUpdate: (
+            strand: StrandUpdate,
+            source: StrandUpdateSource
+        ) => Promise<IOperationResult>,
         onError: (error: Error) => void,
         onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
         onAcknowledge?: (success: boolean) => void
@@ -246,7 +253,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
                 let error: Error | undefined = undefined;
                 try {
-                    const result = await onStrandUpdate(strand);
+                    const result = await onStrandUpdate(strand, {
+                        type: 'trigger',
+                        trigger
+                    });
                     if (result.error) {
                         throw result.error;
                     }
@@ -291,7 +301,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     static setupPull(
         driveId: string,
         trigger: PullResponderTrigger,
-        onStrandUpdate: (strand: StrandUpdate) => Promise<IOperationResult>,
+        onStrandUpdate: (
+            strand: StrandUpdate,
+            source: StrandUpdateSource
+        ) => Promise<IOperationResult>,
         onError: (error: Error) => void,
         onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
         onAcknowledge?: (success: boolean) => void

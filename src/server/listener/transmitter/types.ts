@@ -4,11 +4,19 @@ import {
 } from 'document-model-libs/document-drive';
 import { ListenerRevision, StrandUpdate } from '../..';
 
+export type StrandUpdateSource =
+    | {
+          type: 'local';
+      }
+    | { type: 'trigger'; trigger: Trigger };
+
 export interface ITransmitter {
-    transmit(strands: StrandUpdate[]): Promise<ListenerRevision[]>;
+    transmit(
+        strands: StrandUpdate[],
+        source: StrandUpdateSource
+    ): Promise<ListenerRevision[]>;
     disconnect?(): Promise<void>;
 }
-
 export interface InternalTransmitterService extends ITransmitter {
     getName(): string;
 }

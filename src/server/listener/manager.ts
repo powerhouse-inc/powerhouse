@@ -3,6 +3,7 @@ import {
     ListenerFilter
 } from 'document-model-libs/document-drive';
 import { OperationScope } from 'document-model/document';
+import { logger } from '../../utils/logger';
 import { OperationError } from '../error';
 import {
     BaseListenerManager,
@@ -17,8 +18,7 @@ import {
 import { PullResponderTransmitter } from './transmitter';
 import { InternalTransmitter } from './transmitter/internal';
 import { SwitchboardPushTransmitter } from './transmitter/switchboard-push';
-import { ITransmitter } from './transmitter/types';
-import { logger } from '../../utils/logger';
+import { ITransmitter, StrandUpdateSource } from './transmitter/types';
 
 function debounce<T extends unknown[], R>(
     func: (...args: T) => Promise<R>,
@@ -118,7 +118,10 @@ export class ListenerManager extends BaseListenerManager {
         return Promise.resolve(driveMap.delete(listenerId));
     }
 
-    async removeSyncUnits(driveId: string, syncUnits: Pick<SynchronizationUnit, "syncId">[]) {
+    async removeSyncUnits(
+        driveId: string,
+        syncUnits: Pick<SynchronizationUnit, 'syncId'>[]
+    ) {
         const listeners = this.listenerState.get(driveId);
         if (!listeners) {
             return;
@@ -134,6 +137,7 @@ export class ListenerManager extends BaseListenerManager {
     async updateSynchronizationRevisions(
         driveId: string,
         syncUnits: SynchronizationUnit[],
+        source: StrandUpdateSource,
         willUpdate?: (listeners: Listener[]) => void,
         onError?: (
             error: Error,
@@ -175,7 +179,7 @@ export class ListenerManager extends BaseListenerManager {
 
         if (outdatedListeners.length) {
             willUpdate?.(outdatedListeners);
-            return this.triggerUpdate(forceSync, onError);
+            return this.triggerUpdate(forceSync, source, onError);
         }
         return [];
     }
@@ -214,6 +218,7 @@ export class ListenerManager extends BaseListenerManager {
     );
 
     private async _triggerUpdate(
+        source: StrandUpdateSource,
         onError?: (
             error: Error,
             driveId: string,
@@ -246,7 +251,8 @@ export class ListenerManager extends BaseListenerManager {
 
                     const opData: OperationUpdate[] = [];
                     try {
-                        const data = await this.drive.getOperationData( // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
+                        const data = await this.drive.getOperationData(
+                            // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
                             driveId,
                             syncUnit.syncId,
                             {
@@ -282,8 +288,10 @@ export class ListenerManager extends BaseListenerManager {
 
                 // TODO update listeners in parallel, blocking for listeners with block=true
                 try {
-                    const listenerRevisions =
-                        await transmitter?.transmit(strandUpdates);
+                    const listenerRevisions = await transmitter?.transmit(
+                        strandUpdates,
+                        source
+                    );
 
                     listener.pendingTimeout = '0';
                     listener.listenerStatus = 'PENDING';
@@ -420,7 +428,9 @@ export class ListenerManager extends BaseListenerManager {
         this.listenerState.delete(driveId);
         const transmitters = this.transmitters[driveId];
         if (transmitters) {
-            await Promise.all(Object.values(transmitters).map(t => t.disconnect?.()));
+            await Promise.all(
+                Object.values(transmitters).map(t => t.disconnect?.())
+            );
         }
     }
 
@@ -456,7 +466,8 @@ export class ListenerManager extends BaseListenerManager {
 
             const { documentId, driveId, scope, branch } = syncUnit;
             try {
-                const operations = await this.drive.getOperationData( // DEAL WITH INVALID SYNC ID ERROR
+                const operations = await this.drive.getOperationData(
+                    // DEAL WITH INVALID SYNC ID ERROR
                     driveId,
                     syncUnit.syncId,
                     {

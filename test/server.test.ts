@@ -6,7 +6,11 @@ import {
     reducer
 } from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
-import { ActionContext, DocumentModel, Document } from 'document-model/document';
+import {
+    ActionContext,
+    Document,
+    DocumentModel
+} from 'document-model/document';
 import {
     actions as DocumentModelActions,
     DocumentModelDocument,
@@ -23,8 +27,8 @@ import { MemoryStorage } from '../src/storage/memory';
 import { PrismaStorage } from '../src/storage/prisma';
 import { SequelizeStorage } from '../src/storage/sequelize';
 import { IDriveStorage } from '../src/storage/types';
-import { expectUUID } from './utils';
 import { generateUUID } from '../src/utils';
+import { expectUUID } from './utils';
 
 const documentModels = [
     DocumentModelLib,
@@ -54,8 +58,12 @@ const storageLayers = [
 
 let file: Document | undefined = undefined;
 try {
-    file = await DocumentModelsLibs.RealWorldAssets.utils.loadFromFile("./test/rwa-document.zip");
-} catch { /* empty */ }
+    file = await DocumentModelsLibs.RealWorldAssets.utils.loadFromFile(
+        './test/rwa-document.zip'
+    );
+} catch {
+    /* empty */
+}
 
 describe.each(storageLayers)(
     'Document Drive Server with %s',
@@ -69,7 +77,7 @@ describe.each(storageLayers)(
 
             if (storageName === 'FilesystemStorage') {
                 return fs.rm(FileStorageDir, { recursive: true, force: true });
-            } else if (storageName === "BrowserStorage") {
+            } else if (storageName === 'BrowserStorage') {
                 return (await buildStorage()).clearStorage?.();
             } else if (storageName === 'PrismaStorage') {
                 await prismaClient.$executeRawUnsafe(
@@ -79,9 +87,7 @@ describe.each(storageLayers)(
                     'DELETE FROM "Operation";'
                 );
                 await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
-                await prismaClient.$executeRawUnsafe(
-                    'DELETE FROM "Drive";'
-                );
+                await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
             }
         });
 
@@ -647,7 +653,9 @@ describe.each(storageLayers)(
             const result = await server.addOperation('1', '1.1', operation);
             expect(result.error).toBeUndefined();
             expect(result.status).toBe('SUCCESS');
-            expect(result.operations[0]).toStrictEqual(expect.objectContaining(operation));
+            expect(result.operations[0]).toStrictEqual(
+                expect.objectContaining(operation)
+            );
 
             const storedDocument = await server.getDocument('1', '1.1');
             expect(storedDocument.state).toStrictEqual(document.state);
@@ -688,25 +696,22 @@ describe.each(storageLayers)(
                         name: 'name',
                         key: 'key'
                     },
-                    signature: "test"
+                    signature: 'test'
                 }
-            }
+            };
 
-            drive = reducer(
-                drive,
-                {
-                    ...DocumentDriveUtils.generateAddNodeAction(
-                        drive.state.global,
-                        {
-                            id: '1.1',
-                            name: 'document 1',
-                            documentType: 'powerhouse/document-model'
-                        },
-                        ['global', 'local'],
-
-                    ), context
-                }
-            );
+            drive = reducer(drive, {
+                ...DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                ),
+                context
+            });
 
             // dispatches operation to server
             const operation = drive.operations.global[0]!;
@@ -720,33 +725,31 @@ describe.each(storageLayers)(
             expect(drive.operations.global[0]?.context).toStrictEqual(context);
         });
 
-
         it('get drives by slug', async ({ expect }) => {
             const server = new DocumentDriveServer(
                 documentModels,
                 await buildStorage()
             );
-            const addDrive = (driveId: string, slug: string) => server.addDrive({
-                global: {
-                    id: driveId,
-                    name: 'name',
-                    icon: 'icon',
-                    slug: slug
-                },
-                local: {
-                    availableOffline: false,
-                    sharingType: 'public',
-                    listeners: [],
-                    triggers: []
-                }
-            });
-
+            const addDrive = (driveId: string, slug: string) =>
+                server.addDrive({
+                    global: {
+                        id: driveId,
+                        name: 'name',
+                        icon: 'icon',
+                        slug: slug
+                    },
+                    local: {
+                        availableOffline: false,
+                        sharingType: 'public',
+                        listeners: [],
+                        triggers: []
+                    }
+                });
 
             await addDrive('1', 'slug1');
             await addDrive('2', 'slug2');
             await addDrive('3', 'slug3');
             await addDrive('4', 'slug1');
-
 
             let drive = await server.getDriveBySlug('slug1');
             expect(drive.state.global.id).toBe('4');
@@ -758,11 +761,9 @@ describe.each(storageLayers)(
             expect(drive.state.global.id).toBe('3');
         });
 
-        it.skipIf(!file)("import document from zip", async ({ expect }) => {
+        it.skipIf(!file)('import document from zip', async ({ expect }) => {
             const storage = await buildStorage();
-            const server = new DocumentDriveServer(
-                documentModels, storage
-            );
+            const server = new DocumentDriveServer(documentModels, storage);
             const drive = await server.addDrive({
                 global: {
                     id: '1',
@@ -782,26 +783,23 @@ describe.each(storageLayers)(
                 drive.state.global,
                 {
                     id,
-                    name: "name",
+                    name: 'name',
                     parentFolder: null,
                     documentType: file.documentType,
 
-                    document: file,
+                    document: file
                 },
-                ['global'],
+                ['global']
             );
-            const result = await server.addDriveAction("1", action);
-            expect(result.status).toBe("SUCCESS");
-            const document = await server.getDocument("1", id);
+            const result = await server.addDriveAction('1', action);
+            expect(result.status).toBe('SUCCESS');
+            const document = await server.getDocument('1', id);
             expect(document).toStrictEqual(file);
         });
 
-        it("should get synchronization units revision", async ({ expect }) => {
+        it('should get synchronization units revision', async ({ expect }) => {
             const storage = await buildStorage();
-            const server = new DocumentDriveServer(
-                documentModels,
-                storage
-            );
+            const server = new DocumentDriveServer(documentModels, storage);
             await server.addDrive({
                 global: {
                     id: '1',
@@ -850,7 +848,7 @@ describe.each(storageLayers)(
                 {
                     driveId: '1',
                     documentId: '',
-                    documentType: "powerhouse/document-drive",
+                    documentType: 'powerhouse/document-drive',
                     scope: 'global',
                     branch: 'main',
                     lastUpdated: '2024-01-01T00:00:00.000Z',
@@ -860,7 +858,7 @@ describe.each(storageLayers)(
                 {
                     driveId: '1',
                     documentId: '1.1',
-                    documentType: "powerhouse/document-model",
+                    documentType: 'powerhouse/document-model',
                     scope: 'global',
                     branch: 'main',
                     lastUpdated: '2024-01-01T00:00:00.000Z',
@@ -870,7 +868,7 @@ describe.each(storageLayers)(
                 {
                     driveId: '1',
                     documentId: '1.1',
-                    documentType: "powerhouse/document-model",
+                    documentType: 'powerhouse/document-model',
                     scope: 'local',
                     branch: 'main',
                     lastUpdated: '2024-01-01T00:00:00.000Z',
@@ -879,8 +877,64 @@ describe.each(storageLayers)(
                 }
             ]);
         });
+
+        it('should store all operation attributes', async ({ expect }) => {
+            const storage = await buildStorage();
+            const server = new DocumentDriveServer(documentModels, storage);
+            await server.addDrive({
+                global: {
+                    id: '1',
+                    name: 'name',
+                    icon: 'icon',
+                    slug: 'slug'
+                },
+                local: {
+                    availableOffline: false,
+                    sharingType: 'public',
+                    listeners: [],
+                    triggers: []
+                }
+            });
+            let drive = await server.getDrive('1');
+
+            const context: ActionContext = {
+                signer: {
+                    user: {
+                        address: '123',
+                        networkId: '1',
+                        chainId: 1
+                    },
+                    app: {
+                        name: 'name',
+                        key: 'key'
+                    },
+                    signature: 'test'
+                }
+            };
+
+            // adds file
+            drive = reducer(drive, {
+                ...DocumentDriveUtils.generateAddNodeAction(
+                    drive.state.global,
+                    {
+                        id: '1.1',
+                        name: 'document 1',
+                        documentType: 'powerhouse/document-model'
+                    },
+                    ['global', 'local']
+                ),
+                context
+            });
+
+            await server.addDriveOperation(
+                '1',
+                drive.operations.global[0]!,
+                false
+            );
+            const storedDrive = await server.getDrive('1');
+            expect(storedDrive.operations.global[0]).toMatchObject(
+                drive.operations.global[0]!
+            );
+        });
     }
 );
-
-
-
