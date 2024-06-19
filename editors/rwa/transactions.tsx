@@ -58,6 +58,7 @@ export const Transactions = (props: IProps) => {
                 fixedIncomeAmount,
                 type,
                 txRef,
+                serviceProviderFeeTypeId,
             } = data;
             if (!type) throw new Error('Type is required');
             if (!data.entryTime) throw new Error('Entry time is required');
@@ -117,6 +118,7 @@ export const Transactions = (props: IProps) => {
                 entryTime,
                 fees,
                 txRef,
+                serviceProviderFeeTypeId,
                 cashTransaction,
                 fixedIncomeTransaction,
                 interestTransaction: null,
@@ -242,6 +244,8 @@ export const Transactions = (props: IProps) => {
                 const newFixedIncomeAssetAmount = data.fixedIncomeAmount;
                 const newCashAmount = data.cashAmount;
                 const newTxRef = data.txRef;
+                const newServiceProviderFeeTypeId =
+                    data.serviceProviderFeeTypeId;
 
                 const existingCashTransaction = selectedItem.cashTransaction;
 
@@ -260,6 +264,11 @@ export const Transactions = (props: IProps) => {
 
                 if (newTxRef) {
                     update.txRef = newTxRef;
+                }
+
+                if (newServiceProviderFeeTypeId) {
+                    update.serviceProviderFeeTypeId =
+                        newServiceProviderFeeTypeId;
                 }
 
                 // use type comparison to avoid false positives on zero
