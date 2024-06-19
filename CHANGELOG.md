@@ -1,3 +1,10 @@
+# [1.0.0-dev.10](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.9...v1.0.0-dev.10) (2024-06-19)
+
+
+### Features
+
+* handle empty string as parent folder ([3260ccb](https://github.com/powerhouse-inc/document-model-electron/commit/3260ccbcd0b1b4b188a7881d8881fae604bbf8f3))
+
 # [1.0.0-dev.9](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.8...v1.0.0-dev.9) (2024-06-18)
 
 
