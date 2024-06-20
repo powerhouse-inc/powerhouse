@@ -1,3 +1,10 @@
+# [1.0.0-alpha.78](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.77...v1.0.0-alpha.78) (2024-06-20)
+
+
+### Features
+
+* prevent pushing strands when they come from the same url ([e92a207](https://github.com/powerhouse-inc/document-drive/commit/e92a20709f54917e4fe814368ed0b0fda5aa8528))
+
 # [1.0.0-alpha.77](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.76...v1.0.0-alpha.77) (2024-06-19)
 
 
