@@ -96,7 +96,7 @@
         "@powerhousedao/design-system": "1.0.0-alpha.124",
         "@sentry/react": "^7.109.0",
         "did-key-creator": "^1.2.0",
-        "document-drive": "^1.0.0-alpha.73",
+        "document-drive": "1.0.0-alpha.78",
         "document-model": "1.5.0",
         "document-model-libs": "^1.62.0",
         "electron-is-dev": "^3.0.1",
