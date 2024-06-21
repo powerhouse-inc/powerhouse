@@ -1,3 +1,10 @@
+# [1.0.0-dev.13](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.12...v1.0.0-dev.13) (2024-06-21)
+
+
+### Features
+
+* added virtualization for files content ([f8e9093](https://github.com/powerhouse-inc/document-model-electron/commit/f8e9093d72a8db79338c68220f09a83d4e7ea2be))
+
 # [1.0.0-dev.12](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.11...v1.0.0-dev.12) (2024-06-21)
 
 
