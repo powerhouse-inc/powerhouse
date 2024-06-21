@@ -1,7 +1,5 @@
 import { TreeItem, useDraggableTarget } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import FileItem from 'src/components/file-item/file-item';
-import { FolderItem } from 'src/components/folder-item';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 
 import { useFileOptions } from 'src/hooks/useFileOptions';
@@ -10,6 +8,8 @@ import { useFolderOptions } from 'src/hooks/useFolderOptions';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
+import FileContentView from './file-content-view';
+import { FolderItem } from './folder-item';
 
 interface IProps {
     decodedDriveID: string;
@@ -75,26 +75,23 @@ export const FolderView: React.FC<IProps> = ({
                 )}
             </ContentSection>
             <ContentSection title={t('folderView.sections.documents.title')}>
-                {files.length > 0 ? (
-                    files.map(file => (
-                        <FileItem
-                            key={file.id}
-                            file={file}
-                            decodedDriveID={decodedDriveID}
-                            onFileDeleted={onFileDeleted}
-                            onFileSelected={onFileSelected}
-                            itemOptions={fileItemOptions}
-                            onFileOptionsClick={onFileOptionsClick}
-                            isAllowedToCreateDocuments={
-                                isAllowedToCreateDocuments
-                            }
-                        />
-                    ))
-                ) : (
-                    <div className="mb-8 text-sm text-gray-400">
-                        {t('folderView.sections.documents.empty')}
-                    </div>
-                )}
+                <div
+                    // eslint-disable-next-line tailwindcss/no-arbitrary-value
+                    className={twMerge(
+                        'w-full',
+                        files.length > 0 ? 'min-h-[400px]' : 'min-h-14',
+                    )}
+                >
+                    <FileContentView
+                        files={files}
+                        onFileDeleted={onFileDeleted}
+                        decodedDriveID={decodedDriveID}
+                        onFileSelected={onFileSelected}
+                        fileItemOptions={fileItemOptions}
+                        onFileOptionsClick={onFileOptionsClick}
+                        isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                    />
+                </div>
             </ContentSection>
         </div>
     );
