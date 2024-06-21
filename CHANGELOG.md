@@ -1,3 +1,10 @@
+# [1.63.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.62.0...v1.63.0) (2024-06-21)
+
+
+### Features
+
+* add calculation unit tests ([#185](https://github.com/powerhouse-inc/document-model-libs/issues/185)) ([830403b](https://github.com/powerhouse-inc/document-model-libs/commit/830403bde410c05d5af6cb70ff17757233813e21))
+
 # [1.62.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.61.0...v1.62.0) (2024-06-19)
 
 
