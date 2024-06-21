@@ -259,7 +259,7 @@ export function useGroupTransactionForm(
               }
             : undefined,
         {
-            label: 'Asset Proceeds',
+            label: isAssetTransaction ? 'Asset Proceeds' : 'Cash Amount',
             Input: () => (
                 <>
                     <RWANumberInput

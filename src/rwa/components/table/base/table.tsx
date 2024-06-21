@@ -149,6 +149,7 @@ export function Table<
                 tableData={sortedItems}
                 columns={columnsToShow}
                 maxHeight={maxHeight}
+                hasSelectedItem={!!selectedTableItem}
                 renderRow={renderRow}
                 specialFirstRow={specialFirstRow}
                 specialLastRow={specialLastRow}

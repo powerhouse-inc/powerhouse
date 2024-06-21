@@ -53,6 +53,7 @@ export type TableBaseProps<
     footer?: ReactNode;
     headerRef: RefObject<HTMLTableSectionElement>;
     maxHeight?: string;
+    hasSelectedItem?: boolean;
     specialFirstRow?: (
         columns: TableColumn<TItem, TTableData>[],
     ) => JSX.Element;

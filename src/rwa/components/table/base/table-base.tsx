@@ -1,4 +1,4 @@
-import { Icon, fixedForwardRef, mergeClassNameProps } from '@/powerhouse';
+import { Icon, fixedForwardRef } from '@/powerhouse';
 import { Item, SortDirection, TableBaseProps, TableItem } from '@/rwa';
 import { Order } from 'natural-orderby';
 import React, { useState } from 'react';
@@ -36,6 +36,7 @@ export const TableBase = fixedForwardRef(function TableBase<
         specialLastRow,
         maxHeight,
         headerRef,
+        hasSelectedItem,
         ...containerProps
     } = props;
 
@@ -47,9 +48,11 @@ export const TableBase = fixedForwardRef(function TableBase<
     return (
         <>
             <div
-                {...mergeClassNameProps(
-                    containerProps,
-                    'relative overflow-scroll rounded-lg border border-gray-300 bg-white',
+                {...containerProps}
+                className={twMerge(
+                    'relative rounded-lg border border-gray-300 bg-white',
+                    hasSelectedItem ? 'overflow-hidden' : 'overflow-scroll',
+                    containerProps.className,
                 )}
                 ref={ref}
                 style={{ maxHeight }}
