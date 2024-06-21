@@ -1,3 +1,10 @@
+# [1.0.0-alpha.125](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.124...v1.0.0-alpha.125) (2024-06-21)
+
+
+### Features
+
+* qa updates 7 ([#308](https://github.com/powerhouse-inc/design-system/issues/308)) ([8664c31](https://github.com/powerhouse-inc/design-system/commit/8664c316cf83a46db087f056425ca12e4a43686c))
+
 # [1.0.0-alpha.124](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.123...v1.0.0-alpha.124) (2024-06-19)
 
 
