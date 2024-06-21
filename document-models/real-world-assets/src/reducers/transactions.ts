@@ -18,6 +18,7 @@ import {
     validateTransactionFees,
 } from '../..';
 import { RealWorldAssetsTransactionsOperations } from '../../gen/transactions/operations';
+import { feeGroupTransactionTypes } from '../constants';
 export const reducer: RealWorldAssetsTransactionsOperations = {
     createGroupTransactionOperation(state, action, dispatch) {
         const id = action.input.id;
@@ -277,6 +278,12 @@ export const reducer: RealWorldAssetsTransactionsOperations = {
 
         if (!transaction) {
             throw new Error(`Group transaction with id ${id} does not exist!`);
+        }
+
+        if (feeGroupTransactionTypes.includes(transaction.type)) {
+            throw new Error(
+                `Cannot add fees to a transaction of type ${transaction.type}`,
+            );
         }
 
         validateTransactionFees(state, action.input.fees);

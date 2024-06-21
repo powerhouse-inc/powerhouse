@@ -100,21 +100,21 @@ export function validateGroupTransaction(
 
 export function validatePrincipalGroupTransaction(
     state: RealWorldAssetsState,
-    transaction: PrincipalGroupTransaction,
+    transaction: GroupTransaction,
 ) {
     validateTransactionFees(state, transaction.fees);
 }
 
 export function validateAssetGroupTransaction(
     state: RealWorldAssetsState,
-    transaction: AssetGroupTransaction,
+    transaction: GroupTransaction,
 ) {
-    if (!('fixedIncomeTransaction' in transaction)) {
+    if (!transaction.fixedIncomeTransaction) {
         throw new Error(
             `Asset transaction must have a fixed income transaction`,
         );
     }
-    if (!('unitPrice' in transaction)) {
+    if (transaction.unitPrice === null) {
         throw new Error(`Asset transaction must have a unit price`);
     }
     validateFixedIncomeTransaction(state, transaction.fixedIncomeTransaction);
@@ -129,7 +129,7 @@ export function validateAssetGroupTransaction(
 
 export function validateInterestGroupTransaction(
     state: RealWorldAssetsState,
-    transaction: InterestGroupTransaction,
+    transaction: GroupTransaction,
 ) {
     const counterPartyAccountId =
         transaction.cashTransaction.counterPartyAccountId;
@@ -159,7 +159,7 @@ export function validateInterestGroupTransaction(
 
 export function validateFeesGroupTransaction(
     state: RealWorldAssetsState,
-    transaction: FeesGroupTransaction,
+    transaction: GroupTransaction,
 ) {
     if (!transaction.serviceProviderFeeTypeId) {
         return;
