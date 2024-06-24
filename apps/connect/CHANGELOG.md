@@ -1,3 +1,10 @@
+# [1.0.0-dev.14](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.13...v1.0.0-dev.14) (2024-06-24)
+
+
+### Bug Fixes
+
+* remove resulting state from cache ([4d8c6fe](https://github.com/powerhouse-inc/document-model-electron/commit/4d8c6feef417c9254e12a9aac0c58d7769d34d84))
+
 # [1.0.0-dev.13](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.12...v1.0.0-dev.13) (2024-06-21)
 
 
