@@ -12,7 +12,16 @@ class RedisCache implements ICache {
     }
 
     async setDocument(drive: string, id: string, document: Document) {
-        return (await this.redis.hSet(drive, id, JSON.stringify(document))) > 0;
+        const global = document.operations.global.map(e => {
+            delete e.resultingState;
+            return e;
+        });
+        const local = document.operations.local.map(e => {
+            delete e.resultingState;
+            return e;
+        });
+        const doc = { ...document, operations: { global, local } }
+        return (await this.redis.hSet(drive, id, JSON.stringify(doc))) > 0;
     }
 
     async getDocument(drive: string, id: string) {
