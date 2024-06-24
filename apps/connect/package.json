@@ -1,7 +1,7 @@
 {
-    "name": "document-model-electron",
+    "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-alpha.6",
+    "version": "1.0.0-next.2",
     "description": "Powerhouse Connect",
     "main": ".vite/build/main.js",
     "license": "AGPL-3.0-only",
@@ -31,7 +31,8 @@
         "release": "semantic-release",
         "prepare": "npm run prepare:scripts",
         "prepare:scripts": "node scripts/index.js",
-        "e2e": "playwright test"
+        "e2e": "playwright test",
+        "cy:open": "cypress open"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.3",
@@ -52,6 +53,7 @@
         "@total-typescript/ts-reset": "^0.5.1",
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.18",
+        "@types/react-window": "^1.8.8",
         "@types/uuid": "^9.0.7",
         "@types/wicg-file-system-access": "^2020.9.6",
         "@typescript-eslint/eslint-plugin": "^6.18.1",
@@ -59,6 +61,7 @@
         "@vitejs/plugin-react": "^4.2.1",
         "asar": "^3.2.0",
         "autoprefixer": "^10.4.14",
+        "cypress": "^13.11.0",
         "electron": "30.0.0",
         "electron-playwright-helpers": "^1.7.1",
         "eslint": "^8.56.0",
@@ -91,12 +94,12 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.112",
+        "@powerhousedao/design-system": "1.0.0-alpha.125",
         "@sentry/react": "^7.109.0",
         "did-key-creator": "^1.2.0",
-        "document-drive": "^1.0.0-experimental.7",
-        "document-model": "1.1.0-experimental.1",
-        "document-model-libs": "^1.51.0",
+        "document-drive": "1.0.0-alpha.79",
+        "document-model": "1.5.0",
+        "document-model-libs": "^1.63.0",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
@@ -109,11 +112,14 @@
         "react-i18next": "^13.5.0",
         "react-router-dom": "^6.11.2",
         "react-stately": "^3.31.0",
+        "react-virtualized-auto-sizer": "^1.0.24",
+        "react-window": "^1.8.10",
         "tailwind-merge": "^1.14.0",
         "uuid": "^9.0.1",
         "viem": "^2.8.13"
     },
     "optionalDependencies": {
+        "@esbuild/linux-x64": "^0.21.4",
         "@rollup/rollup-linux-x64-musl": "4.14.3"
     }
 }

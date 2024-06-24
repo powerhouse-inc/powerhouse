@@ -81,7 +81,7 @@ const Content = () => {
     )?.state.global.nodes;
 
     const [selectedFileNode, setSelectedFileNode] = useState<
-        { drive: string; id: string } | undefined
+        { drive: string; id: string; parentFolder: string | null } | undefined
     >(undefined);
     const [selectedDocument, setSelectedDocument, addOperation] =
         useFileNodeDocument(decodedDriveID, selectedFileNode?.id);
@@ -120,7 +120,7 @@ const Content = () => {
             // builds the path from the url checking if the nodes exist
             const path = [encodeID(drive.state.global.id)];
             let currentNodes = drive.state.global.nodes.filter(
-                node => node.parentFolder === null,
+                node => !node.parentFolder,
             );
             if (params['*']) {
                 const nodeNames = decodeURIComponent(params['*']).split('/');
@@ -144,9 +144,9 @@ const Content = () => {
                             setSelectedFileNode({
                                 drive: drive.state.global.id,
                                 id: node.id,
+                                parentFolder: node.parentFolder,
                             });
                         }
-                        break;
                     }
                     path.push(encodeID(node.id));
 
@@ -171,12 +171,15 @@ const Content = () => {
     // preload document editors
     useEffect(() => {
         // waits 1 second to preload editors
-        const id = requestIdleCallback(async () => {
+        const requestIC = window.requestIdleCallback ?? setTimeout;
+        const cancelIC = window.cancelIdleCallback ?? clearTimeout;
+
+        const id = requestIC(async () => {
             for (const documentModel of documentModels) {
                 await preloadEditor(documentModel.documentModel.id);
             }
         });
-        return () => cancelIdleCallback(id);
+        return () => cancelIC(id);
     }, [documentModels, preloadEditor]);
 
     useEffect(() => {
@@ -200,7 +203,9 @@ const Content = () => {
                 setSelectedFileNode({
                     drive: decodedDriveID,
                     id: fileNode.id,
+                    parentFolder: fileNode.parentFolder,
                 });
+                navigateToItemId(fileNode.id);
             }
         });
     }, [selectedPath]);
@@ -317,7 +322,12 @@ const Content = () => {
                     >
                         <DocumentEditor
                             document={selectedDocument}
-                            onClose={() => setSelectedFileNode(undefined)}
+                            onClose={() => {
+                                navigateToItemId(
+                                    selectedFileNode.parentFolder || driveID,
+                                );
+                                setSelectedFileNode(undefined);
+                            }}
                             onChange={onDocumentChangeHandler}
                             onExport={() => exportDocument(selectedDocument)}
                             onAddOperation={handleAddOperation}
@@ -348,15 +358,26 @@ const Content = () => {
                         {connectConfig.content.showSearchBar && <SearchBar />}
                         <div className="px-4">
                             <div className="mb-5">
-                                <FolderView
-                                    drive={decodedDriveID}
-                                    path={selectedPath || ''}
-                                    onFolderSelected={onFolderSelectedHandler}
-                                    onFileSelected={(drive, id) =>
-                                        setSelectedFileNode({ drive, id })
-                                    }
-                                    onFileDeleted={deleteNode}
-                                />
+                                {selectedFolder && (
+                                    <FolderView
+                                        path={selectedPath || ''}
+                                        folderItem={selectedFolder}
+                                        decodedDriveID={decodedDriveID}
+                                        onFolderSelected={
+                                            onFolderSelectedHandler
+                                        }
+                                        onFileSelected={(drive, id) => {
+                                            setSelectedFileNode({
+                                                drive,
+                                                id,
+                                                parentFolder:
+                                                    selectedFolder.id ?? null,
+                                            });
+                                            navigateToItemId(id);
+                                        }}
+                                        onFileDeleted={deleteNode}
+                                    />
+                                )}
                             </div>
                             {isAllowedToCreateDocuments && (
                                 <>

@@ -1,5 +1,6 @@
 import type { IDocumentDriveServer } from 'document-drive/server';
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
+import { OperationScope } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
@@ -9,6 +10,19 @@ const documentDrivesAtom = atom(
     new Map<IDocumentDriveServer, DocumentDriveDocument[]>(),
 );
 
+function driveToHash(drive: DocumentDriveDocument): string {
+    return Object.keys(drive.operations)
+        .map(
+            key =>
+                `${key}:d${drive.operations[key as OperationScope].at(-1)?.hash}`,
+        )
+        .join(':');
+}
+
+function drivesToHash(drives: DocumentDriveDocument[]): string {
+    return drives.map(driveToHash).join('&');
+}
+
 // creates a derived atom that encapsulates the Map of Document Drives
 const readWriteDocumentDrivesAtom = (server: IDocumentDriveServer) => () =>
     atom(
@@ -17,7 +31,8 @@ const readWriteDocumentDrivesAtom = (server: IDocumentDriveServer) => () =>
             set(documentDrivesAtom, map => {
                 const currentDrives = map.get(server) ?? [];
                 if (
-                    JSON.stringify(currentDrives) !== JSON.stringify(newDrives)
+                    currentDrives.length !== newDrives.length ||
+                    drivesToHash(currentDrives) !== drivesToHash(newDrives)
                 ) {
                     return new Map(map).set(server, newDrives);
                 } else {
