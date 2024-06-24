@@ -1,3 +1,16 @@
+# [1.0.0-next.3](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-next.2...v1.0.0-next.3) (2024-06-24)
+
+
+### Bug Fixes
+
+* remove resulting state from cache ([4d8c6fe](https://github.com/powerhouse-inc/document-model-electron/commit/4d8c6feef417c9254e12a9aac0c58d7769d34d84))
+
+
+### Features
+
+* added virtualization for files content ([f8e9093](https://github.com/powerhouse-inc/document-model-electron/commit/f8e9093d72a8db79338c68220f09a83d4e7ea2be))
+* bump libs ([b3d7fa9](https://github.com/powerhouse-inc/document-model-electron/commit/b3d7fa9e0e9c52b12d5671f3db77425a6b343e9e))
+
 # [1.0.0-next.2](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-next.1...v1.0.0-next.2) (2024-06-20)
 
 
