@@ -1,3 +1,10 @@
+# [1.0.0-alpha.79](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.78...v1.0.0-alpha.79) (2024-06-24)
+
+
+### Bug Fixes
+
+* do not store resulting state in cache ([f5ca275](https://github.com/powerhouse-inc/document-drive/commit/f5ca27549a1ef36cbb7600b47ae27e3d53a94c33))
+
 # [1.0.0-alpha.78](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.77...v1.0.0-alpha.78) (2024-06-20)
 
 
