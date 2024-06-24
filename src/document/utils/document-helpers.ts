@@ -588,3 +588,25 @@ export function filterDuplicatedOperations(
         return true;
     });
 }
+
+export function filterDocumentOperationsResultingState<A extends Action>(
+    documentOperations?: DocumentOperations<A>,
+) {
+    if (!documentOperations) {
+        return {};
+    }
+
+    const entries = Object.entries(documentOperations);
+
+    return entries.reduce(
+        (acc, [scope, operations]) => ({
+            ...acc,
+            [scope]: operations.map(op => {
+                const { resultingState, ...restProps } = op;
+
+                return restProps;
+            }),
+        }),
+        {} as DocumentOperations<A>,
+    );
+}

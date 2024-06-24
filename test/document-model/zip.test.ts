@@ -49,6 +49,48 @@ describe('DocumentModel Class', () => {
         ]);
     });
 
+    it('should not include resultingState param in operations when exporting to zip', async () => {
+        let documentModel = utils.createDocument();
+        documentModel = reducer(
+            documentModel,
+            actions.setModelId({ id: 'powerhouse/test' }),
+            undefined,
+            { reuseOperationResultingState: true },
+        );
+        documentModel = reducer(
+            documentModel,
+            actions.setModelDescription({ description: 'desc-test' }),
+            undefined,
+            { reuseOperationResultingState: true },
+        );
+        documentModel = reducer(
+            documentModel,
+            actions.setModelName({ name: 'name-test' }),
+            undefined,
+            { reuseOperationResultingState: true },
+        );
+
+        expect(documentModel.operations.global).toHaveLength(3);
+        for (const operation of documentModel.operations.global) {
+            expect(operation.resultingState).toBeDefined();
+        }
+
+        await utils.saveToFile(
+            documentModel,
+            tempDir,
+            'test-document-resulting-state',
+        );
+
+        const loadedDocumentModel = await utils.loadFromFile(
+            `${tempDir}/test-document-resulting-state.phdm.zip`,
+        );
+
+        expect(loadedDocumentModel.operations.global).toHaveLength(3);
+        for (const operation of loadedDocumentModel.operations.global) {
+            expect(operation.resultingState).toBeUndefined();
+        }
+    });
+
     it.skip('should keep undo state when loading from zip', async () => {
         let documentModel = utils.createDocument();
         documentModel = reducer(
