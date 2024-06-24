@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.14",
+    "version": "1.0.0-dev.15",
     "description": "Powerhouse Connect",
     "main": ".vite/build/main.js",
     "license": "AGPL-3.0-only",

@@ -1,3 +1,10 @@
+# [1.0.0-dev.15](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.14...v1.0.0-dev.15) (2024-06-24)
+
+
+### Features
+
+* added user tracking for sentry ([2a98795](https://github.com/powerhouse-inc/document-model-electron/commit/2a987956c6d77705b73a32090adb34799325f847))
+
 # [1.0.0-dev.14](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.13...v1.0.0-dev.14) (2024-06-24)
 
 
