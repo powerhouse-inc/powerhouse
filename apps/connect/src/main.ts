@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
+import * as Sentry from '@sentry/browser';
 import {
     BrowserWindow,
     Menu,
@@ -23,7 +24,6 @@ import {
 import { initRenownElectron } from './services/renown/electron';
 import { Theme, isTheme } from './store/';
 import { documentModels } from './store/document-model';
-
 const isMac = process.platform === 'darwin';
 
 async function initApp() {
@@ -54,10 +54,12 @@ async function initApp() {
         });
 
         ipcMain.handle('renown:login', (_e, did: string) => {
+            Sentry.setUser({ id: did });
             return renown.login(did);
         });
 
         ipcMain.handle('renown:logout', () => {
+            Sentry.setUser(null);
             return renown.logout();
         });
 
