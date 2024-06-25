@@ -1,3 +1,10 @@
+# [1.0.0-alpha.126](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.125...v1.0.0-alpha.126) (2024-06-25)
+
+
+### Features
+
+* add signature UI row component ([#310](https://github.com/powerhouse-inc/design-system/issues/310)) ([7a97647](https://github.com/powerhouse-inc/design-system/commit/7a97647376bbd569adfb0b8b697d97da155249d1))
+
 # [1.0.0-alpha.125](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.124...v1.0.0-alpha.125) (2024-06-21)
 
 
