@@ -1,3 +1,10 @@
+# [1.0.0-alpha.128](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.127...v1.0.0-alpha.128) (2024-06-25)
+
+
+### Features
+
+* add revision timeline component ([#312](https://github.com/powerhouse-inc/design-system/issues/312)) ([1e917e1](https://github.com/powerhouse-inc/design-system/commit/1e917e15904b59866bbcde82dcf69decc8fe899a))
+
 # [1.0.0-alpha.127](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.126...v1.0.0-alpha.127) (2024-06-25)
 
 
