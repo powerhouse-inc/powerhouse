@@ -5,11 +5,12 @@ export type SkipProps = {
 
 export function Skip(props: SkipProps) {
     const { operationIndex, skipCount } = props;
+    const revisionNumber = operationIndex + 1;
 
     const skippedRevisions =
         skipCount === 1
-            ? `${operationIndex}`
-            : `${operationIndex} - ${operationIndex + skipCount - 1}`;
+            ? `${revisionNumber}`
+            : `${revisionNumber} - ${revisionNumber + skipCount - 1}`;
 
     return (
         <article className="grid grid-cols-[1fr,auto,1fr] items-center">

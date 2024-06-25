@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
     args: {
-        operationName: 'APPROVE_BUDGET',
+        operationType: 'APPROVE_BUDGET',
         operationInput: {
             id: 'eByxUvWzZtNOPbdH8JZIZI/beoO-',
             reference: 'OC303687',

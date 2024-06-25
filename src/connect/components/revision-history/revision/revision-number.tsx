@@ -4,16 +4,15 @@ import { useId } from 'react';
 import { useCopyToClipboard } from 'usehooks-ts';
 
 export type RevisionNumberProps = {
-    revisionNumber: number;
+    operationIndex: number;
     eventId: string;
     stateHash: string;
 };
 export function RevisionNumber(props: RevisionNumberProps) {
-    const { revisionNumber, eventId, stateHash } = props;
+    const { operationIndex, eventId, stateHash } = props;
     const tooltipId = useId().replace(/:/g, '');
-
     const [, copy] = useCopyToClipboard();
-
+    const revisionNumber = operationIndex + 1;
     function handleCopy(text: string) {
         return () => {
             copy(text).catch(error => {

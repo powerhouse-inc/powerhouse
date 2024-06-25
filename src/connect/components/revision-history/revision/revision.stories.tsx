@@ -12,10 +12,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Verified: Story = {
     args: {
-        revisionNumber: 1,
+        operationIndex: 0,
         eventId: '123',
         stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
-        operationName: 'APPROVE_BUDGET',
+        operationType: 'APPROVE_BUDGET',
         operationInput: {
             id: 'eByxUvWzZtNOPbdH8JZIZI/beoO-',
             reference: 'OC303687',
@@ -48,10 +48,10 @@ export const Verified: Story = {
 
 export const PartiallyVerified: Story = {
     args: {
-        revisionNumber: 1,
+        operationIndex: 0,
         eventId: '123',
         stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
-        operationName: 'APPROVE_BUDGET',
+        operationType: 'APPROVE_BUDGET',
         operationInput: {
             id: 'eByxUvWzZtNOPbdH8JZIZI/beoO-',
             reference: 'OC303687',
@@ -84,10 +84,10 @@ export const PartiallyVerified: Story = {
 
 export const NotVerified: Story = {
     args: {
-        revisionNumber: 1,
+        operationIndex: 0,
         eventId: '123',
         stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
-        operationName: 'APPROVE_BUDGET',
+        operationType: 'APPROVE_BUDGET',
         operationInput: {
             id: 'eByxUvWzZtNOPbdH8JZIZI/beoO-',
             reference: 'OC303687',

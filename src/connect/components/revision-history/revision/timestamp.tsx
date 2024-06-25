@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { useId } from 'react';
 
 export type TimestampProps = {
-    timestamp: number;
+    timestamp: number | string;
 };
 
 export function Timestamp(props: TimestampProps) {

@@ -12,7 +12,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
     args: {
-        revisionNumber: 1,
+        operationIndex: 0,
         eventId: '21',
         stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
     },

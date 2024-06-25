@@ -1,14 +1,7 @@
 import { Tooltip } from '@/connect';
 import { Icon } from '@/powerhouse';
 import { useId } from 'react';
-
-type Signature = {
-    timestamp: number;
-    signerAddress: string;
-    hash: string;
-    signatureBytes: string;
-    isVerified: boolean;
-};
+import { type Signature } from '../types';
 
 export type SignatureProps = {
     signatures: Signature[];

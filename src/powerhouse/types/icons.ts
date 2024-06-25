@@ -43,6 +43,7 @@ export type IconName =
     | 'redo-arrow'
     | 'renown'
     | 'renown_hover'
+    | 'ring'
     | 'save'
     | 'search'
     | 'server'
