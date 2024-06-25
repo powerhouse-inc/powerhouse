@@ -35,6 +35,12 @@ dependencies:
   react-toastify:
     specifier: ^10.0.4
     version: 10.0.4(react-dom@18.2.0)(react@18.2.0)
+  react-tooltip:
+    specifier: ^5.27.0
+    version: 5.27.0(react-dom@18.2.0)(react@18.2.0)
+  viem:
+    specifier: ^2.16.1
+    version: 2.16.1(typescript@5.3.3)
 
 devDependencies:
   '@commitlint/cli':
@@ -266,6 +272,10 @@ packages:
   /@adobe/css-tools@4.3.3:
     resolution: {integrity: sha512-rE0Pygv0sEZ4vBWHlAgJLGDU7Pm8xoO6p3wsEceb7GYAjScrOHpEo8KK/eVkAcnSM+slAEtXjA2JpdjLp4fJQQ==}
     dev: true
+
+  /@adraffy/ens-normalize@1.10.0:
+    resolution: {integrity: sha512-nA9XHtlAkYfJxY7bce8DcN7eKxWWCWkU+1GR9d+U6MbNpfwQp8TI7vqOsBsMcHoT4mBu2kypKoSKnghEzOOq5Q==}
+    dev: false
 
   /@alloc/quick-lru@5.2.0:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -2791,6 +2801,17 @@ packages:
       tar-fs: 2.1.1
     dev: true
 
+  /@noble/curves@1.2.0:
+    resolution: {integrity: sha512-oYclrNgRaM9SsBUBVbb8M6DTV7ZHRTKugureoYEncY5c65HOmRzvSiTE3y5CYaPYJA/GVkrhXEoF0M3Ya9PMnw==}
+    dependencies:
+      '@noble/hashes': 1.3.2
+    dev: false
+
+  /@noble/hashes@1.3.2:
+    resolution: {integrity: sha512-MVC8EAQp7MvEcm30KWENFjgR+Mkmf+D189XJTkFIlwohU5hcBbn1ZkKq7KVTi2Hme3PMGF390DaL52beVrIihQ==}
+    engines: {node: '>= 16'}
+    dev: false
+
   /@nodelib/fs.scandir@2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -4659,6 +4680,25 @@ packages:
       string-argv: 0.3.2
     dev: true
 
+  /@scure/base@1.1.7:
+    resolution: {integrity: sha512-PPNYBslrLNNUQ/Yad37MHYsNQtK67EhWb6WtSvNLLPo7SdVZgkUjD6Dg+5On7zNwmskf8OX7I7Nx5oN+MIWE0g==}
+    dev: false
+
+  /@scure/bip32@1.3.2:
+    resolution: {integrity: sha512-N1ZhksgwD3OBlwTv3R6KFEcPojl/W4ElJOeCZdi+vuI5QmTFwLq3OFf2zd2ROpKvxFdgZ6hUpb0dx9bVNEwYCA==}
+    dependencies:
+      '@noble/curves': 1.2.0
+      '@noble/hashes': 1.3.2
+      '@scure/base': 1.1.7
+    dev: false
+
+  /@scure/bip39@1.2.1:
+    resolution: {integrity: sha512-Z3/Fsz1yr904dduJD0NpiyRHhRYHdcnyh73FZWiV+/qhWi83wNJ3NWolYqCEN+ZWsUz2TWwajJggcRE9r1zUYg==}
+    dependencies:
+      '@noble/hashes': 1.3.2
+      '@scure/base': 1.1.7
+    dev: false
+
   /@semantic-release/changelog@6.0.3(semantic-release@23.0.2):
     resolution: {integrity: sha512-dZuR5qByyfe3Y03TpmCvAxCyTnp7r5XwtHRf/8vD9EAn4ZWbavUX8adMtXYzE86EVh0gyLA7lm5yW4IV30XUag==}
     engines: {node: '>=14.17'}
@@ -6339,6 +6379,20 @@ packages:
     dev: true
     optional: true
 
+  /abitype@1.0.4(typescript@5.3.3):
+    resolution: {integrity: sha512-UivtYZOGJGE8rsrM/N5vdRkUpqEZVmuTumfTuolm7m/6O09wprd958rx8kUBwVAAAhQDveGAgD0GJdBuR8s6tw==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+      zod: ^3 >=3.22.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      zod:
+        optional: true
+    dependencies:
+      typescript: 5.3.3
+    dev: false
+
   /accepts@1.3.8:
     resolution: {integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==}
     engines: {node: '>= 0.6'}
@@ -6518,6 +6572,7 @@ packages:
   /are-we-there-yet@3.0.1:
     resolution: {integrity: sha512-QZW4EDmGwlYur0Yyf/b2uGucHQMa8aFUP7eu9ddR73vvhFyt4V0Vl3QHPcTNJ8l6qYOBdxgXdnBXQrHilfRQBg==}
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
+    deprecated: This package is no longer supported.
     requiresBuild: true
     dependencies:
       delegates: 1.0.0
@@ -7195,6 +7250,10 @@ packages:
     dependencies:
       consola: 3.2.3
     dev: true
+
+  /classnames@2.5.1:
+    resolution: {integrity: sha512-saHYOzhIQs6wy2sVxTM6bUDsQO4F50V9RQ22qBpEdCW+I+/Wmke2HOl6lS6dTpdxVhb88/I6+Hs+438c3lfUow==}
+    dev: false
 
   /clean-stack@2.2.0:
     resolution: {integrity: sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==}
@@ -9120,6 +9179,7 @@ packages:
   /gauge@4.0.4:
     resolution: {integrity: sha512-f9m+BEN5jkg6a0fZjleidjN51VE1X+mPFQ2DJ0uv1V39oCLCbsGe6yjbBnp7eK7z/+GAon99a3nHuqbuuthyPg==}
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
+    deprecated: This package is no longer supported.
     requiresBuild: true
     dependencies:
       aproba: 2.0.0
@@ -10155,6 +10215,14 @@ packages:
     resolution: {integrity: sha512-WhB9zCku7EGTj/HQQRz5aUQEUeoQZH2bWcltRErOpymJ4boYE6wL9Tbr23krRPSZ+C5zqNSrSw+Cc7sZZ4b7vg==}
     engines: {node: '>=0.10.0'}
     dev: true
+
+  /isows@1.0.4(ws@8.17.1):
+    resolution: {integrity: sha512-hEzjY+x9u9hPmBom9IIAqdJCwNLax+xrPb51vEPpERoFlIxgmZcHzsT5jKG06nvInKOBGvReAVz80Umed5CczQ==}
+    peerDependencies:
+      ws: '*'
+    dependencies:
+      ws: 8.17.1
+    dev: false
 
   /issue-parser@6.0.0:
     resolution: {integrity: sha512-zKa/Dxq2lGsBIXQ7CUZWTHfvxPC2ej0KfO7fIPqLlHB9J2hJ7rGhZ5rilhuufylr4RXYPzJUeFjKxz305OsNlA==}
@@ -11392,6 +11460,7 @@ packages:
   /npmlog@6.0.2:
     resolution: {integrity: sha512-/vBvz5Jfr9dT/aFWd0FIRf+T/Q2WBsLENygUaFUqstqsycmZAP/t5BvFJTK0viFmSUxiUKTUplWy5vt+rvKIxg==}
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
+    deprecated: This package is no longer supported.
     requiresBuild: true
     dependencies:
       are-we-there-yet: 3.0.1
@@ -12580,6 +12649,18 @@ packages:
       react-dom: '>=16'
     dependencies:
       clsx: 2.1.0
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+    dev: false
+
+  /react-tooltip@5.27.0(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-JXROcdfCEbCqkAkh8LyTSP3guQ0dG53iY2E2o4fw3D8clKzziMpE6QG6CclDaHELEKTzpMSeAOsdtg0ahoQosw==}
+    peerDependencies:
+      react: '>=16.14.0'
+      react-dom: '>=16.14.0'
+    dependencies:
+      '@floating-ui/dom': 1.6.5
+      classnames: 2.5.1
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     dev: false
@@ -14170,7 +14251,6 @@ packages:
     resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}
     engines: {node: '>=14.17'}
     hasBin: true
-    dev: true
 
   /ua-parser-js@1.0.37:
     resolution: {integrity: sha512-bhTyI94tZofjo+Dn8SN6Zv8nBDvyXTymAdM3LDI/0IboIUwTu1rEhW7v2TfiVsoYWgkQ4kOVqnI8APUFbIQIFQ==}
@@ -14496,6 +14576,29 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
     dev: true
+
+  /viem@2.16.1(typescript@5.3.3):
+    resolution: {integrity: sha512-rmgXcxif740m2ARqPFoiXRHkljXhsruCZgRXf6XuS6n+Lymy7X2ma5vuzBw3mDKiA2BmxjbyJC4Wxi7kaIwHhw==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      '@adraffy/ens-normalize': 1.10.0
+      '@noble/curves': 1.2.0
+      '@noble/hashes': 1.3.2
+      '@scure/bip32': 1.3.2
+      '@scure/bip39': 1.2.1
+      abitype: 1.0.4(typescript@5.3.3)
+      isows: 1.0.4(ws@8.17.1)
+      typescript: 5.3.3
+      ws: 8.17.1
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
+    dev: false
 
   /vite-node@1.4.0(@types/node@20.11.16):
     resolution: {integrity: sha512-VZDAseqjrHgNd4Kh8icYHWzTKSCZMhia7GyHfhtzLW33fZlG9SwsB6CEhgyVOWkJfJ2pFLrp/Gj1FSfAiqH9Lw==}
@@ -14858,6 +14961,19 @@ packages:
       utf-8-validate:
         optional: true
     dev: true
+
+  /ws@8.17.1:
+    resolution: {integrity: sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+    dev: false
 
   /xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}

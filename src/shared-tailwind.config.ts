@@ -94,6 +94,7 @@ const theme = {
     boxShadow: {
         ...defaultTheme.boxShadow,
         sidebar: 'var(--shadow-sidebar)',
+        tooltip: 'var(--shadow-tooltip)',
         DEFAULT:
             '0px 4px 8px -4px rgba(0, 0, 0, 0.02), 0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset',
     },

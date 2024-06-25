@@ -15,5 +15,6 @@ export * from './select';
 export * from './sidebar';
 export * from './toast';
 export * from './toggle';
+export * from './tooltip';
 export * from './tree-view';
 export * from './tree-view-item';
