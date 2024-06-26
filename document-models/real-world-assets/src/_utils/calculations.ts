@@ -4,7 +4,7 @@ import {
     InputMaybe,
     TransactionFee,
 } from 'document-models/real-world-assets';
-import { all, create } from 'mathjs';
+import { all, BigNumber, create } from 'mathjs';
 import {
     ASSET_PURCHASE,
     ASSET_SALE,
@@ -51,7 +51,9 @@ export function computeFixedIncomeAssetDerivedFields(
  * Weighted Average Purchase Date = (SUM( Quantity * Date )) / SUM( Quantity)
  * Where Quantity is the amount of each asset purchase transaction
  */
-export function calculatePurchaseDate(transactions: GroupTransaction[]) {
+export function calculatePurchaseDate(
+    transactions: GroupTransaction[],
+): string {
     const purchaseTransactions = transactions.filter(
         ({ type }) => type === ASSET_PURCHASE,
     );
@@ -92,7 +94,7 @@ export function calculatePurchaseDate(transactions: GroupTransaction[]) {
  * Notional = Purchase Price * (assetAmountPurchase - assetAmountSale)
  * Where Asset Proceeds is the amount of each cash transaction
  */
-export function calculateNotional(transactions: GroupTransaction[]) {
+export function calculateNotional(transactions: GroupTransaction[]): BigNumber {
     const purchasePrice = calculatePurchasePrice(transactions);
     const assetAmountPurchase = sumAssetTransactionsForType(
         transactions,
@@ -116,7 +118,9 @@ export function calculateNotional(transactions: GroupTransaction[]) {
  *
  * Asset Proceeds = SUM(Cost to acquire or dispose of an asset without fees)
  */
-export function calculateAssetProceeds(transactions: GroupTransaction[]) {
+export function calculateAssetProceeds(
+    transactions: GroupTransaction[],
+): BigNumber {
     return sumCashTransactionsForType(transactions, ASSET_SALE).sub(
         sumCashTransactionsForType(transactions, ASSET_PURCHASE),
     );
@@ -128,7 +132,9 @@ export function calculateAssetProceeds(transactions: GroupTransaction[]) {
  * Cost to acquire asset _with_ fees
  * Purchase Proceeds = SUM(Cash Balance Change of Purchase Txs)
  */
-export function calculatePurchaseProceeds(transactions: GroupTransaction[]) {
+export function calculatePurchaseProceeds(
+    transactions: GroupTransaction[],
+): BigNumber {
     const sumPurchaseTransactions = sumCashTransactionsForType(
         transactions,
         ASSET_PURCHASE,
@@ -145,7 +151,9 @@ export function calculatePurchaseProceeds(transactions: GroupTransaction[]) {
  * Amount received for the disposal of asset with fees
  * Sale Proceeds = SUM(Cash Balance Change of Sale Txs)
  */
-export function calculateSalesProceeds(transactions: GroupTransaction[]) {
+export function calculateSalesProceeds(
+    transactions: GroupTransaction[],
+): BigNumber {
     const sumSaleTransactions = sumCashTransactionsForType(
         transactions,
         ASSET_SALE,
@@ -163,7 +171,9 @@ export function calculateSalesProceeds(transactions: GroupTransaction[]) {
  *
  * Purchase price = Purchase proceeds / Quantity
  */
-export function calculatePurchasePrice(transactions: GroupTransaction[]) {
+export function calculatePurchasePrice(
+    transactions: GroupTransaction[],
+): BigNumber {
     const sumAssetPurchaseAssetTransactions = sumAssetTransactionsForType(
         transactions,
         ASSET_PURCHASE,
@@ -187,7 +197,9 @@ export function calculatePurchasePrice(transactions: GroupTransaction[]) {
  * Notional minus purchase proceeds
  * Total discount = Notional - SUM(Purchase proceeds - Sale Proceeds)
  */
-export function calculateTotalDiscount(transactions: GroupTransaction[]) {
+export function calculateTotalDiscount(
+    transactions: GroupTransaction[],
+): BigNumber {
     const notional = calculateNotional(transactions);
     const purchaseProceeds = calculatePurchaseProceeds(transactions);
     const salesProceeds = calculateSalesProceeds(transactions);
@@ -202,7 +214,9 @@ export function calculateTotalDiscount(transactions: GroupTransaction[]) {
  *
  * Realized Surplus = only give value if >0 -> Sale Proceeds - Purchase Proceeds
  */
-export function calculateRealizedSurplus(transactions: GroupTransaction[]) {
+export function calculateRealizedSurplus(
+    transactions: GroupTransaction[],
+): BigNumber {
     const salesProceeds = calculateSalesProceeds(transactions);
     const purchaseProceeds = calculatePurchaseProceeds(transactions);
 
@@ -217,7 +231,7 @@ export function calculateRealizedSurplus(transactions: GroupTransaction[]) {
 export function sumGroupTransactionFees(
     transactions: GroupTransaction[],
     typeFilter?: GroupTransactionType,
-) {
+): BigNumber {
     return transactions.reduce((sum, { type, fees }) => {
         if (!fees) return sum;
         if (typeFilter && type !== typeFilter) return sum;
@@ -234,7 +248,7 @@ export function sumGroupTransactionFees(
 export function sumCashTransactionsForType(
     transactions: GroupTransaction[],
     type: GroupTransactionType,
-) {
+): BigNumber {
     return transactions.reduce((sum, transaction) => {
         if (transaction.type !== type) return sum;
         const amount = math.bignumber(transaction.cashTransaction.amount);
@@ -245,7 +259,7 @@ export function sumCashTransactionsForType(
 export function sumAssetTransactionsForType(
     transactions: GroupTransaction[],
     type: GroupTransactionType,
-) {
+): BigNumber {
     return transactions.reduce((sum, transaction) => {
         if (transaction.type !== type) return sum;
         const amount = math.bignumber(
@@ -258,7 +272,7 @@ export function sumAssetTransactionsForType(
 /**
  * Round a date to the nearest day
  */
-export function roundToNearestDay(date: Date) {
+export function roundToNearestDay(date: Date): Date {
     // Convert to UTC date components
     const year = date.getUTCFullYear();
     const month = date.getUTCMonth();
@@ -280,7 +294,7 @@ export function calculateCashBalanceChange(
     transactionType: InputMaybe<GroupTransactionType>,
     cashAmount: InputMaybe<number>,
     fees: InputMaybe<TransactionFee[]>,
-) {
+): BigNumber {
     if (!cashAmount || !transactionType)
         throw new Error(
             `Missing required fields: cashAmount: ${cashAmount}, transactionType: ${transactionType}`,
@@ -293,7 +307,9 @@ export function calculateCashBalanceChange(
     return math.bignumber(cashAmount * sign).sub(totalFees);
 }
 
-export function calculateTotalFees(fees: InputMaybe<TransactionFee[]>) {
+export function calculateTotalFees(
+    fees: InputMaybe<TransactionFee[]>,
+): BigNumber {
     const feeAmounts = fees?.map(fee => fee.amount).filter(Boolean) ?? [];
 
     const totalFees = feeAmounts.reduce(
@@ -307,7 +323,7 @@ export function calculateTotalFees(fees: InputMaybe<TransactionFee[]>) {
 export function calculateUnitPrice(
     cashAmount: InputMaybe<number>,
     fixedIncomeAmount: InputMaybe<number>,
-) {
+): BigNumber {
     if (!cashAmount || !fixedIncomeAmount) return math.bignumber(0);
     return math.bignumber(cashAmount).div(math.bignumber(fixedIncomeAmount));
 }
