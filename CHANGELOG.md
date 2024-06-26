@@ -1,3 +1,10 @@
+# [1.0.0-alpha.134](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.133...v1.0.0-alpha.134) (2024-06-26)
+
+
+### Features
+
+* revision history updates ([#316](https://github.com/powerhouse-inc/design-system/issues/316)) ([0e7ea5f](https://github.com/powerhouse-inc/design-system/commit/0e7ea5f20217a3c76ac62453e60882bd482c9af8))
+
 # [1.0.0-alpha.133](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.132...v1.0.0-alpha.133) (2024-06-26)
 
 
