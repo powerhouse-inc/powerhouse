@@ -3,7 +3,7 @@ import { globalOperations, localOperations } from './mocks';
 import { RevisionHistory } from './revision-history';
 
 const meta = {
-    title: 'Connect/Components/Revision History/RevisionHistory',
+    title: 'Connect/Components/Revision History/Revision History',
     component: RevisionHistory,
 } satisfies Meta<typeof RevisionHistory>;
 

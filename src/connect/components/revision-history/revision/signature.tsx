@@ -4,11 +4,14 @@ import { useId } from 'react';
 import { type Signature } from '../types';
 
 export type SignatureProps = {
-    signatures: Signature[];
+    signatures: Signature[] | undefined;
 };
 export function Signature(props: SignatureProps) {
     const { signatures } = props;
     const tooltipId = useId().replace(/:/g, '');
+
+    if (!signatures?.length) return null;
+
     const signatureCount = signatures.length;
     const verifiedSignaturesCount = signatures.filter(
         signature => signature.isVerified,

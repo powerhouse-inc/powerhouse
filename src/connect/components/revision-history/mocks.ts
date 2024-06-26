@@ -44,6 +44,8 @@ export const mockOperations = [
     mockOperation,
     mockOperation,
     mockOperation,
+    { ...mockOperation, context: undefined },
+    mockOperation,
     {
         ...mockOperation,
         timestamp: '2024-06-14T14:39:12.936Z',
@@ -56,7 +58,11 @@ export const mockOperations = [
     { ...mockOperation, timestamp: '2024-06-14T14:39:12.936Z', skip: 2 },
     { ...mockOperation, timestamp: '2024-06-14T14:39:12.936Z' },
     { ...mockOperation, timestamp: '2024-06-14T14:39:12.936Z' },
-    { ...mockOperation, timestamp: '2024-06-14T14:39:12.936Z' },
+    {
+        ...mockOperation,
+        timestamp: '2024-06-14T14:39:12.936Z',
+        signatures: undefined,
+    },
     { ...mockOperation, timestamp: '2024-06-15T14:39:12.936Z', skip: 1 },
     {
         ...mockOperation,

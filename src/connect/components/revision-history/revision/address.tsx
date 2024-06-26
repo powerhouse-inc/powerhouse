@@ -2,12 +2,15 @@ import { formatEthAddress } from '@/connect/utils';
 import { ENSAvatar } from '../../ens-avatar';
 
 export type AddressProps = {
-    address: `0x${string}`;
-    chainId: number;
+    address: `0x${string}` | undefined;
+    chainId: number | undefined;
 };
 
 export function Address(props: AddressProps) {
     const { address, chainId } = props;
+
+    if (!address) return null;
+
     const shortenedAddress = formatEthAddress(address);
 
     return (

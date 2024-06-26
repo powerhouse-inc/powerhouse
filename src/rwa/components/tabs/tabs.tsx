@@ -42,6 +42,7 @@ export interface RWATabsProps extends TabsProps {
     onRedo: () => void;
     onExport: () => void;
     onClose: () => void;
+    onShowRevisionHistory: () => void;
     onSwitchboardLinkClick?: () => void;
     canUndo: boolean;
     canRedo: boolean;
@@ -64,6 +65,7 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
         canUndo,
         onExport,
         onClose,
+        onShowRevisionHistory,
         onSwitchboardLinkClick,
         ...tabsProps
     } = props;
@@ -78,10 +80,10 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
             <div
                 {...mergeClassNameProps(
                     tabListContainerProps,
-                    'flex items-center justify-between',
+                    'grid grid-cols-3 items-center',
                 )}
             >
-                <div className="flex w-48 gap-x-2">
+                <div className="flex gap-x-2 text-gray-500">
                     {/* <button
                         className={buttonClass}
                         onClick={onUndo}
@@ -136,7 +138,7 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
                         </Tab>
                     ))}
                 </TabList>
-                <div className="flex w-48 justify-end gap-x-2">
+                <div className="flex justify-end gap-x-2">
                     {onSwitchboardLinkClick && (
                         <button
                             className="flex h-8 items-center gap-x-2 rounded border border-gray-200 px-3 text-sm font-semibold text-gray-900 active:opacity-50"
@@ -152,7 +154,13 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
                         {labels.export} <Icon name="save" size={16} />
                     </button>
                     <button
-                        className="flex size-8 items-center justify-center rounded border border-gray-200 active:opacity-50"
+                        className="flex h-8 items-center gap-x-2 whitespace-nowrap rounded border border-gray-200 px-3 text-sm font-semibold text-gray-900 active:opacity-50"
+                        onClick={onShowRevisionHistory}
+                    >
+                        Revision history <Icon name="history" size={16} />
+                    </button>
+                    <button
+                        className="grid size-8 place-items-center rounded border border-gray-200 active:opacity-50"
                         onClick={onClose}
                     >
                         <Icon name="xmark" />

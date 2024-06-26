@@ -32,6 +32,7 @@ export type IconName =
     | 'gear'
     | 'globe'
     | 'hdd'
+    | 'history'
     | 'info-square'
     | 'link'
     | 'lock'
