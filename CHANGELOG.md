@@ -1,3 +1,10 @@
+# [1.0.0-dev.17](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.16...v1.0.0-dev.17) (2024-06-26)
+
+
+### Features
+
+* integrate revision history ([3edb50a](https://github.com/powerhouse-inc/document-model-electron/commit/3edb50ac4d93693c1caa9adc2a0167d16a1fadb0))
+
 # [1.0.0-dev.16](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.15...v1.0.0-dev.16) (2024-06-25)
 
 
