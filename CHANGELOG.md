@@ -1,3 +1,10 @@
+# [1.0.0-alpha.131](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.130...v1.0.0-alpha.131) (2024-06-26)
+
+
+### Features
+
+* fix context shape ([dbf486f](https://github.com/powerhouse-inc/design-system/commit/dbf486fdd5a7ad561fedba328f29995e598a788e))
+
 # [1.0.0-alpha.130](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.129...v1.0.0-alpha.130) (2024-06-26)
 
 
