@@ -30,11 +30,11 @@ export function makeRevisionsByDate(operations: Operation[]) {
                 stateHash: operation.hash,
                 operationType: operation.type,
                 operationInput: operation.input,
-                address: operation.context?.signer.user.address,
-                chainId: operation.context?.signer.user.chainId,
+                address: operation.context?.signer?.user?.address,
+                chainId: operation.context?.signer?.user?.chainId,
                 timestamp: operation.timestamp,
                 signatures: makeSignatures(
-                    operation.context?.signer.signatures,
+                    operation.context?.signer?.signatures,
                 ),
                 errors: operation.error ? [operation.error] : undefined,
             });

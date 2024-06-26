@@ -11,10 +11,10 @@ export type Operation = {
     skip: number;
     error: string | undefined;
     context?: {
-        signer: {
-            user: {
-                address: `0x${string}`;
-                chainId: number;
+        signer?: {
+            user?: {
+                address?: `0x${string}`;
+                chainId?: number;
             };
             signatures?: SignatureArray[];
         };

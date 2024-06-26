@@ -20,3 +20,23 @@ export const Default: Story = {
         onClose: () => {},
     },
 };
+
+export const WithNoItems: Story = {
+    args: {
+        documentTitle: ' MakerDAO/Monetalis RWA Report 050724',
+        documentId: '6wYLICDhX5w1Hq7mIo6CRbXUV1I=',
+        globalOperations: [],
+        localOperations: [],
+        onClose: () => {},
+    },
+};
+
+export const WithOneItem: Story = {
+    args: {
+        documentTitle: ' MakerDAO/Monetalis RWA Report 050724',
+        documentId: '6wYLICDhX5w1Hq7mIo6CRbXUV1I=',
+        globalOperations: [globalOperations[0]],
+        localOperations: [localOperations[0]],
+        onClose: () => {},
+    },
+};

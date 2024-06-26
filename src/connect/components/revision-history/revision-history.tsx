@@ -26,7 +26,7 @@ export function RevisionHistory(props: Props) {
     }
 
     return (
-        <div className="grid gap-9">
+        <div className="h-[calc(100vh-86px)]">
             <Header
                 title={documentTitle}
                 docId={documentId}
@@ -34,7 +34,7 @@ export function RevisionHistory(props: Props) {
                 onChangeScope={onChangeScope}
                 onClose={onClose}
             />
-            <div className="flex justify-center rounded-md bg-slate-50 py-4">
+            <div className="mt-9 flex h-full justify-center rounded-md bg-slate-50 py-4">
                 <div className="min-w-[1018px]">
                     <Timeline
                         scope={scope}
