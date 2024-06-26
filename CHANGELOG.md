@@ -1,3 +1,10 @@
+# [1.0.0-alpha.135](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.134...v1.0.0-alpha.135) (2024-06-26)
+
+
+### Features
+
+* fix type ([b17f499](https://github.com/powerhouse-inc/design-system/commit/b17f4992d3afdea76385b4a11f0338eb95ba1265))
+
 # [1.0.0-alpha.134](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.133...v1.0.0-alpha.134) (2024-06-26)
 
 
