@@ -31,9 +31,14 @@ const hashAlgorithms = {
     sha256: Sha256,
 } as const;
 
-export const hash = (data: string, algorithm = 'sha1') => {
+export const hash = (
+    data: string | ArrayBuffer | DataView,
+    algorithm = 'sha1',
+) => {
     if (!['sha1', 'sha256'].includes(algorithm)) {
-        throw new Error('Hashing algorithm not supported: Available: sha1, sha256');
+        throw new Error(
+            'Hashing algorithm not supported: Available: sha1, sha256',
+        );
     }
 
     const Algorithm = hashAlgorithms[algorithm as keyof typeof hashAlgorithms];
