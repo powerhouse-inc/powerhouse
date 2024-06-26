@@ -1,3 +1,10 @@
+# [1.0.0-alpha.133](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.132...v1.0.0-alpha.133) (2024-06-26)
+
+
+### Features
+
+* update signature object sahpe ([#315](https://github.com/powerhouse-inc/design-system/issues/315)) ([18b387d](https://github.com/powerhouse-inc/design-system/commit/18b387d379d311f9215ee190d0f69be1db81bea5))
+
 # [1.0.0-alpha.132](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.131...v1.0.0-alpha.132) (2024-06-26)
 
 
