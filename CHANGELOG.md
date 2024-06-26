@@ -1,3 +1,10 @@
+# [1.0.0-alpha.132](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.131...v1.0.0-alpha.132) (2024-06-26)
+
+
+### Features
+
+* add show revision history button ([#314](https://github.com/powerhouse-inc/design-system/issues/314)) ([107a937](https://github.com/powerhouse-inc/design-system/commit/107a937957ec4021058a6466914a94c65e9e96d5))
+
 # [1.0.0-alpha.131](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.130...v1.0.0-alpha.131) (2024-06-26)
 
 
