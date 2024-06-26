@@ -28,6 +28,7 @@ export const Default: Story = {
                     },
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+                chainId: 1,
                 timestamp: 1719232415114,
                 signatures: [
                     {
@@ -63,6 +64,7 @@ export const Default: Story = {
                     },
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+                chainId: 1,
                 timestamp: 1719232415114,
                 signatures: [
                     {
@@ -98,6 +100,7 @@ export const Default: Story = {
                     },
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+                chainId: 1,
                 timestamp: 1719232415114,
                 signatures: [
                     {
@@ -137,6 +140,7 @@ export const Default: Story = {
                     },
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+                chainId: 1,
                 timestamp: 1719232415114,
                 signatures: [
                     {
@@ -172,6 +176,7 @@ export const Default: Story = {
                     },
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+                chainId: 1,
                 timestamp: 1719232415114,
                 signatures: [
                     {
@@ -207,6 +212,7 @@ export const Default: Story = {
                     },
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+                chainId: 1,
                 timestamp: 1719232415114,
                 signatures: [
                     {

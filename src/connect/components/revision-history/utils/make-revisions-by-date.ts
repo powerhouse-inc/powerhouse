@@ -26,11 +26,12 @@ export function makeRevisionsByDate(operations: Operation[]) {
         } else {
             revisionsByDate[date].push({
                 operationIndex: operation.index,
-                eventId: operation.index.toString(),
+                eventId: operation.id,
                 stateHash: operation.hash,
                 operationType: operation.type,
                 operationInput: operation.input,
-                address: operation.address,
+                address: operation.context.user.address,
+                chainId: operation.context.user.chainId,
                 timestamp: operation.timestamp,
                 signatures: operation.signatures,
                 errors: operation.error ? [operation.error] : undefined,

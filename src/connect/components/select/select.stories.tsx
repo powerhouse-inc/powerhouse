@@ -12,7 +12,7 @@ export default meta;
 
 type Story = StoryObj<{
     id: string;
-    items: SelectItem[];
+    items: SelectItem<string>[];
 }>;
 
 const Template: Story = {
