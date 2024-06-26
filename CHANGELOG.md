@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/powerhouse-inc/document-model/compare/v1.6.0...v1.7.0) (2024-06-26)
+
+
+### Features
+
+* added utility methods to sign and verify operations ([c9bd48a](https://github.com/powerhouse-inc/document-model/commit/c9bd48a4cdeae67d9869faee279dec6aa3cd783b))
+
 # [1.6.0](https://github.com/powerhouse-inc/document-model/compare/v1.5.0...v1.6.0) (2024-06-26)
 
 
