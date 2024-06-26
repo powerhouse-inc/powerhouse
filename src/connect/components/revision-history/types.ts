@@ -12,9 +12,11 @@ export type Operation = {
     error: string | undefined;
     signatures: Signature[];
     context: {
-        user: {
-            address: `0x${string}`;
-            chainId: number;
+        signer: {
+            user: {
+                address: `0x${string}`;
+                chainId: number;
+            };
         };
     };
 };
