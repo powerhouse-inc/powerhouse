@@ -1,3 +1,10 @@
+# [1.65.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.64.0...v1.65.0) (2024-06-26)
+
+
+### Features
+
+* integrate revision history button ([#188](https://github.com/powerhouse-inc/document-model-libs/issues/188)) ([6d1aab9](https://github.com/powerhouse-inc/document-model-libs/commit/6d1aab9a382acf51c61c5ea377de1f7efdb7a971))
+
 # [1.64.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.63.0...v1.64.0) (2024-06-21)
 
 
