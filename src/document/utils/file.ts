@@ -13,7 +13,10 @@ import type {
 import { fetchFile, getFile, hash, readFile, writeFile } from './node';
 import { replayDocument, ReplayDocumentOptions } from './base';
 import { validateOperations } from './validation';
-import { garbageCollectDocumentOperations } from './document-helpers';
+import {
+    filterDocumentOperationsResultingState,
+    garbageCollectDocumentOperations,
+} from './document-helpers';
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
@@ -34,7 +37,14 @@ export const createZip = async (document: Document) => {
         'state.json',
         JSON.stringify(document.initialState || {}, null, 2),
     );
-    zip.file('operations.json', JSON.stringify(document.operations, null, 2));
+    zip.file(
+        'operations.json',
+        JSON.stringify(
+            filterDocumentOperationsResultingState(document.operations),
+            null,
+            2,
+        ),
+    );
 
     if (document.attachments) {
         const attachments = Object.keys(document.attachments);
