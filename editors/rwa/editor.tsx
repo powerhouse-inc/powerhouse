@@ -14,7 +14,7 @@ import { Transactions } from './transactions';
 
 export type CustomEditorProps = Pick<
     RWATabsProps,
-    'onClose' | 'onExport' | 'onSwitchboardLinkClick'
+    'onClose' | 'onExport' | 'onSwitchboardLinkClick' | 'onShowRevisionHistory'
 > & {
     isAllowedToCreateDocuments: boolean;
     isAllowedToEditDocuments: boolean;
@@ -36,6 +36,7 @@ function Editor(props: IProps) {
         dispatch,
         onClose,
         onExport,
+        onShowRevisionHistory,
         onSwitchboardLinkClick,
     } = props;
 
@@ -56,6 +57,7 @@ function Editor(props: IProps) {
             canUndo={canUndo}
             canRedo={canRedo}
             selectedKey={activeTab}
+            onShowRevisionHistory={onShowRevisionHistory}
             onSwitchboardLinkClick={onSwitchboardLinkClick}
             onSelectionChange={key => setActiveTab(key)}
             disabledKeys={['attachments']}
