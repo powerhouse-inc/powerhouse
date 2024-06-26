@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/powerhouse-inc/document-model/compare/v1.5.0...v1.6.0) (2024-06-26)
+
+
+### Features
+
+* do not include resultingState when exporting document zip ([a7fae8e](https://github.com/powerhouse-inc/document-model/commit/a7fae8eb40880f6605300d9f63163601c850ef0d))
+
 # [1.5.0](https://github.com/powerhouse-inc/document-model/compare/v1.4.0...v1.5.0) (2024-06-03)
 
 
