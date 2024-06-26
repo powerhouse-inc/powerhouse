@@ -15,7 +15,6 @@ export const mockOperation: Operation = {
         id: '6wYLICDhX5w1Hq7mIo6CRbXUV1I=',
         name: 'Example input',
     },
-    scope: 'global',
     skip: 0,
     timestamp: '2024-06-13T14:39:12.936Z',
     type: 'EXAMPLE_OPERATION',

@@ -29,7 +29,7 @@ export function makeRevisionsByDate(operations: Operation[]) {
                 eventId: operation.id ?? 'EVENT_ID_NOT_FOUND',
                 stateHash: operation.hash,
                 operationType: operation.type,
-                operationInput: operation.input,
+                operationInput: operation.input ?? {},
                 address: operation.context?.signer?.user?.address,
                 chainId: operation.context?.signer?.user?.chainId,
                 timestamp: operation.timestamp,
