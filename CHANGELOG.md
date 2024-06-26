@@ -1,3 +1,10 @@
+# [1.0.0-alpha.130](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.129...v1.0.0-alpha.130) (2024-06-26)
+
+
+### Features
+
+* add revision history export ([a7c6fb7](https://github.com/powerhouse-inc/design-system/commit/a7c6fb76cc3833a480988095e23586904c5efc3f))
+
 # [1.0.0-alpha.129](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.128...v1.0.0-alpha.129) (2024-06-26)
 
 
