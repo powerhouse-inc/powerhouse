@@ -34,7 +34,7 @@ export function Signature(props: SignatureProps) {
 
     const tooltipContent = signatures.map((signature, index) => {
         return (
-            <div key={signature.timestamp} className="mb-2 last:mb-0">
+            <div key={signature.hash} className="mb-2 last:mb-0">
                 <h4>
                     Signature #{index + 1} -{' '}
                     {signature.isVerified ? 'verified' : 'unverified'}

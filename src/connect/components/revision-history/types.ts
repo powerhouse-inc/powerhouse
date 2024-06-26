@@ -10,13 +10,13 @@ export type Operation = {
     hash: string;
     skip: number;
     error: string | undefined;
-    signatures?: Signature[];
     context?: {
         signer: {
             user: {
                 address: `0x${string}`;
                 chainId: number;
             };
+            signatures?: SignatureArray[];
         };
     };
 };
@@ -26,10 +26,18 @@ export type Skip = {
     skipCount: number;
 };
 
+//  [
+//     signerAddress,
+//     hash (docID, scope, operationID, operationName, operationInput),
+//     prevStateHash,
+//     signature bytes
+//  ]
+export type SignatureArray = [string, string, string, string];
+
 export type Signature = {
-    timestamp: number;
     signerAddress: string;
     hash: string;
+    prevStateHash: string;
     signatureBytes: string;
     isVerified: boolean;
 };

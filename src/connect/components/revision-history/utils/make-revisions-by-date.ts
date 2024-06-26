@@ -1,4 +1,4 @@
-import { Operation, Revision, Skip } from '../types';
+import { Operation, Revision, Signature, SignatureArray, Skip } from '../types';
 
 export type RevisionsByDate = Record<string, (Revision | Skip)[]>;
 export function makeRevisionsByDate(operations: Operation[]) {
@@ -33,7 +33,9 @@ export function makeRevisionsByDate(operations: Operation[]) {
                 address: operation.context?.signer.user.address,
                 chainId: operation.context?.signer.user.chainId,
                 timestamp: operation.timestamp,
-                signatures: operation.signatures,
+                signatures: makeSignatures(
+                    operation.context?.signer.signatures,
+                ),
                 errors: operation.error ? [operation.error] : undefined,
             });
             revisionsByDate[date]
@@ -45,4 +47,22 @@ export function makeRevisionsByDate(operations: Operation[]) {
     }
 
     return revisionsByDate;
+}
+
+function makeSignatureFromSignatureArray(
+    signatureArray: SignatureArray,
+): Signature {
+    const [signerAddress, hash, prevStateHash, signatureBytes] = signatureArray;
+
+    return {
+        signerAddress,
+        hash,
+        prevStateHash,
+        signatureBytes,
+        isVerified: true,
+    };
+}
+
+function makeSignatures(signaturesArray: SignatureArray[] | undefined) {
+    return signaturesArray?.map(makeSignatureFromSignatureArray);
 }

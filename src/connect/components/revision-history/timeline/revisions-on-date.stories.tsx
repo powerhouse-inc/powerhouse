@@ -32,18 +32,18 @@ export const Default: Story = {
                 timestamp: 1719232415114,
                 signatures: [
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: true,
                     },
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: true,
                     },
@@ -68,18 +68,18 @@ export const Default: Story = {
                 timestamp: 1719232415114,
                 signatures: [
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: false,
                     },
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: true,
                     },
@@ -104,18 +104,18 @@ export const Default: Story = {
                 timestamp: 1719232415114,
                 signatures: [
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: false,
                     },
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: false,
                     },
@@ -144,18 +144,18 @@ export const Default: Story = {
                 timestamp: 1719232415114,
                 signatures: [
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: true,
                     },
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: true,
                     },
@@ -180,18 +180,18 @@ export const Default: Story = {
                 timestamp: 1719232415114,
                 signatures: [
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: false,
                     },
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: true,
                     },
@@ -216,18 +216,18 @@ export const Default: Story = {
                 timestamp: 1719232415114,
                 signatures: [
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: false,
                     },
                     {
-                        timestamp: 1719232415114,
                         signerAddress:
                             '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                         hash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+                        prevStateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
                         signatureBytes: '0x1234',
                         isVerified: false,
                     },
