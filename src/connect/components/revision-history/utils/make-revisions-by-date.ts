@@ -26,7 +26,7 @@ export function makeRevisionsByDate(operations: Operation[]) {
         } else {
             revisionsByDate[date].push({
                 operationIndex: operation.index,
-                eventId: operation.id,
+                eventId: operation.id ?? 'EVENT_ID_NOT_FOUND',
                 stateHash: operation.hash,
                 operationType: operation.type,
                 operationInput: operation.input,

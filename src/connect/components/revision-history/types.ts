@@ -1,7 +1,7 @@
 export type Scope = 'global' | 'local';
 
 export type Operation = {
-    id: string;
+    id: string | undefined;
     type: string;
     input: Record<string, any>;
     scope: Scope;
