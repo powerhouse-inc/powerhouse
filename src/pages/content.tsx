@@ -322,6 +322,7 @@ const Content = () => {
                     >
                         <DocumentEditor
                             document={selectedDocument}
+                            fileNodeId={selectedFileNode.id}
                             onClose={() => {
                                 navigateToItemId(
                                     selectedFileNode.parentFolder || driveID,
@@ -371,7 +372,7 @@ const Content = () => {
                                                 drive,
                                                 id,
                                                 parentFolder:
-                                                    selectedFolder?.id ?? null,
+                                                    selectedFolder.id ?? null,
                                             });
                                             navigateToItemId(id);
                                         }}
