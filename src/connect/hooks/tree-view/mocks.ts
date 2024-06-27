@@ -3,6 +3,7 @@ import { MISSING, TreeItem } from '@/connect';
 export const driveItem: TreeItem = {
     id: 'drive',
     path: 'drive',
+    parentFolder: null,
     label: 'Local Drive',
     type: 'LOCAL_DRIVE',
     expanded: false,
@@ -14,7 +15,8 @@ export const driveItem: TreeItem = {
 export const treeItems: Array<TreeItem> = [
     driveItem,
     {
-        id: 'drive/folder1',
+        id: 'folder1',
+        parentFolder: null,
         path: 'drive/folder1',
         label: 'Folder 1',
         type: 'FOLDER',
@@ -24,7 +26,8 @@ export const treeItems: Array<TreeItem> = [
         isSelected: false,
     },
     {
-        id: 'drive/folder1/folder1.1',
+        id: 'folder1.1',
+        parentFolder: 'folder1',
         path: 'drive/folder1/folder1.1',
         label: 'Folder 1.1',
         type: 'FOLDER',
@@ -34,7 +37,8 @@ export const treeItems: Array<TreeItem> = [
         isSelected: false,
     },
     {
-        id: 'drive/folder1/folder1.2',
+        id: 'folder1.2',
+        parentFolder: 'folder1',
         path: 'drive/folder1/folder1.2',
         label: 'Folder 1.2',
         type: 'FOLDER',
@@ -44,7 +48,8 @@ export const treeItems: Array<TreeItem> = [
         isSelected: false,
     },
     {
-        id: 'drive/folder1/folder1.2/folder1.2.1',
+        id: 'folder1.2.1',
+        parentFolder: 'folder1.2',
         path: 'drive/folder1/folder1.2/folder1.2.1',
         label: 'Folder 1.2.1',
         type: 'FOLDER',
@@ -54,7 +59,8 @@ export const treeItems: Array<TreeItem> = [
         isSelected: false,
     },
     {
-        id: 'drive/folder2',
+        id: 'folder2',
+        parentFolder: null,
         path: 'drive/folder2',
         label: 'Folder 2',
         type: 'FOLDER',
@@ -64,7 +70,8 @@ export const treeItems: Array<TreeItem> = [
         isSelected: false,
     },
     {
-        id: 'drive/folder2/folder2.1',
+        id: 'folder2.1',
+        parentFolder: 'folder2',
         path: 'drive/folder2/folder2.1',
         label: 'Folder 2.1',
         type: 'FOLDER',
@@ -74,7 +81,8 @@ export const treeItems: Array<TreeItem> = [
         isSelected: false,
     },
     {
-        id: 'drive/folder3',
+        id: 'folder3',
+        parentFolder: null,
         path: 'drive/folder3',
         label: 'Folder 3',
         type: 'FOLDER',

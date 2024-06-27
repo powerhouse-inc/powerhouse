@@ -3,7 +3,6 @@ import {
     ItemsContextProvider,
     SUCCESS,
     generateMockDriveData,
-    randomId,
     useGetItemByPath,
     useItemActions,
     useItemsContext,
@@ -82,7 +81,8 @@ export const Default: Story = {
             args.onSubmitInput(basepath, label);
 
             const newItem: BaseTreeItem = {
-                id: randomId(),
+                id: 'new-item-id',
+                parentFolder: basepath,
                 path: `${basepath}/${label}`,
                 label,
                 type: 'FOLDER',
@@ -102,7 +102,8 @@ export const Default: Story = {
             args.onAddNewItem(basePath, option);
 
             actions.newVirtualItem({
-                id: randomId(),
+                id: 'new-folder',
+                parentFolder: basePath,
                 path: `${basePath}/new-folder`,
                 label: option,
                 type: 'FOLDER',

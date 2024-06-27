@@ -32,6 +32,7 @@ export const TreeViewItem: Story = {
         item: {
             id: 'drive/folder1',
             path: 'drive/folder1',
+            parentFolder: null,
             label: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua',
             type: 'FOLDER',
             expanded: false,

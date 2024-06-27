@@ -4,6 +4,7 @@ import { FileItem } from './file-item';
 
 const item: TreeItem = {
     id: '1',
+    parentFolder: null,
     label: 'Test Folder',
     availableOffline: false,
     path: '',

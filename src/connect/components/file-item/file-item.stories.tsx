@@ -42,6 +42,7 @@ export const ReadMode: Story = {
         icon: 'profile',
         item: {
             id: '1',
+            parentFolder: null,
             label: 'Test Folder',
             availableOffline: false,
             path: '',

@@ -11,25 +11,30 @@ export const randomId = function (length = 10) {
  * @param driveItem - The drive item to generate mock data for.
  * @returns An array of tree items representing the mock drive data.
  */
-export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
+export const generateMockDriveData = (
+    driveItem: Omit<TreeItem, 'id' | 'parentFolder'>,
+) => {
     const drive = driveItem.path;
 
     const treeItems: Array<TreeItem> = [
         {
             ...driveItem,
-            id: randomId(),
+            id: 'drive',
+            parentFolder: null,
             path: drive,
         },
         {
-            id: randomId(),
+            id: 'folder1',
             path: `${drive}/folder1`,
+            parentFolder: 'drive',
             label: 'Folder 1',
             type: 'FOLDER',
             availableOffline: false,
             syncStatus: 'SYNCING',
         },
         {
-            id: randomId(),
+            id: 'folder1.1',
+            parentFolder: 'folder1',
             path: `${drive}/folder1/folder1.1`,
             label: 'Folder 1.1',
             type: 'FOLDER',
@@ -37,7 +42,8 @@ export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
             syncStatus: 'SYNCING',
         },
         {
-            id: randomId(),
+            id: 'folder1.2',
+            parentFolder: 'folder1',
             path: `${drive}/folder1/folder1.2`,
             label: 'Folder 1.2',
             type: 'FOLDER',
@@ -45,7 +51,8 @@ export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
             syncStatus: 'SYNCING',
         },
         {
-            id: randomId(),
+            id: 'folder1.2.1',
+            parentFolder: 'folder1.2',
             path: `${drive}/folder1/folder1.2/folder1.2.1`,
             label: 'Folder 1.2.1',
             type: 'FOLDER',
@@ -53,7 +60,8 @@ export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
             syncStatus: 'SYNCING',
         },
         {
-            id: randomId(),
+            id: 'folder2',
+            parentFolder: 'drive',
             path: `${drive}/folder2`,
             label: 'Folder 2',
             type: 'FOLDER',
@@ -61,7 +69,8 @@ export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
             syncStatus: 'SYNCING',
         },
         {
-            id: randomId(),
+            id: 'folder2.1',
+            parentFolder: 'folder2',
             path: `${drive}/folder2/folder2.1`,
             label: 'Folder 2.1',
             type: 'FOLDER',
@@ -69,7 +78,8 @@ export const generateMockDriveData = (driveItem: Omit<TreeItem, 'id'>) => {
             syncStatus: 'SYNCING',
         },
         {
-            id: randomId(),
+            id: 'folder3',
+            parentFolder: 'drive',
             path: `${drive}/folder3`,
             label: 'Folder 3 Folder 3 Folder 3 Folder 3 Folder 3',
             type: 'FOLDER',

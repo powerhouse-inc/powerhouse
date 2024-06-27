@@ -81,6 +81,7 @@ const TreeViewImpl = (args: ConnectTreeViewProps) => {
                 actions.setExpandedItem(item.id, true);
                 actions.newVirtualItem({
                     id: `${item.id}/new-folder`,
+                    parentFolder: item.id,
                     path: `${item.path}/new-folder`,
                     label: 'New Folder',
                     type: 'FOLDER',

@@ -34,6 +34,7 @@ export const ReadMode: Story = {
         displaySyncIcon: true,
         item: {
             id: '1',
+            parentFolder: null,
             label: 'Test Folder',
             availableOffline: false,
             path: '',

@@ -8,6 +8,7 @@ import { useItemActions } from './useItemActions';
 const baseItem = {
     id: 'base-item',
     expanded: true,
+    parentFolder: null,
     path: 'drive-id/base-item',
     label: 'Base Item',
     type: FOLDER,

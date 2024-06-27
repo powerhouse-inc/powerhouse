@@ -31,6 +31,7 @@ export type BaseTreeItem = {
     label: string;
     type: TreeItemType;
     availableOffline: boolean;
+    parentFolder: string | null | undefined;
     syncStatus?: SyncStatus;
     error?: Error;
     options?: ConnectDropdownMenuItem[];

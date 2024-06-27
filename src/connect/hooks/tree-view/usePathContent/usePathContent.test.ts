@@ -25,13 +25,13 @@ describe('TreeView hooks', () => {
             );
 
             expect(driveNodes.result.current.length).toEqual(3);
-            expect(driveNodes.result.current[0].id).toEqual('drive/folder1');
-            expect(driveNodes.result.current[1].id).toEqual('drive/folder2');
-            expect(driveNodes.result.current[2].id).toEqual('drive/folder3');
+            expect(driveNodes.result.current[0].id).toEqual('folder1');
+            expect(driveNodes.result.current[1].id).toEqual('folder2');
+            expect(driveNodes.result.current[2].id).toEqual('folder3');
 
             expect(folderNodes.result.current.length).toEqual(1);
             expect(folderNodes.result.current[0].id).toEqual(
-                'drive/folder1/folder1.2/folder1.2.1',
+                'folder1.2.1',
             );
         });
 

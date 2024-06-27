@@ -15,12 +15,13 @@ describe('TreeView hooks', () => {
             const { result } = renderHook(() => useGetItemById());
             const getItemById = result.current;
 
-            const item = getItemById('drive/folder1/folder1.2');
+            const item = getItemById('folder1.2');
 
             expect(item).toEqual({
-                id: 'drive/folder1/folder1.2',
+                id: 'folder1.2',
                 path: 'drive/folder1/folder1.2',
                 label: 'Folder 1.2',
+                parentFolder: 'folder1',
                 type: 'FOLDER',
                 syncStatus: 'SYNCING',
                 expanded: false,
