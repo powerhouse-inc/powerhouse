@@ -175,7 +175,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                                                 name
                                                 key
                                             }
-                                            signature
+                                            signatures
                                         }
                                     }
                                 }
