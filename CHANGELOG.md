@@ -1,3 +1,10 @@
+# [1.0.0-dev.19](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.18...v1.0.0-dev.19) (2024-06-27)
+
+
+### Features
+
+* disable sync icon for local folders ([9996fa3](https://github.com/powerhouse-inc/document-model-electron/commit/9996fa3f8b11edd5da0d16185c44822ddfec9233))
+
 # [1.0.0-dev.18](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.17...v1.0.0-dev.18) (2024-06-27)
 
 
