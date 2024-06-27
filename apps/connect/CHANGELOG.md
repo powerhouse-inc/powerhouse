@@ -1,3 +1,45 @@
+# [1.0.0-dev.18](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.17...v1.0.0-dev.18) (2024-06-27)
+
+
+### Features
+
+* bump libs ([3db0a2b](https://github.com/powerhouse-inc/document-model-electron/commit/3db0a2baaf3e8739782ff7c7800147d5fcd13e07))
+
+# [1.0.0-dev.17](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.16...v1.0.0-dev.17) (2024-06-26)
+
+
+### Features
+
+* integrate revision history ([3edb50a](https://github.com/powerhouse-inc/document-model-electron/commit/3edb50ac4d93693c1caa9adc2a0167d16a1fadb0))
+
+# [1.0.0-dev.16](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.15...v1.0.0-dev.16) (2024-06-25)
+
+
+### Features
+
+* bump libs ([415ca8e](https://github.com/powerhouse-inc/document-model-electron/commit/415ca8e37fe56ee2c8c654cc1380cd7586610ca8))
+
+# [1.0.0-dev.15](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.14...v1.0.0-dev.15) (2024-06-24)
+
+
+### Features
+
+* added user tracking for sentry ([2a98795](https://github.com/powerhouse-inc/document-model-electron/commit/2a987956c6d77705b73a32090adb34799325f847))
+
+# [1.0.0-dev.14](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.13...v1.0.0-dev.14) (2024-06-24)
+
+
+### Bug Fixes
+
+* remove resulting state from cache ([4d8c6fe](https://github.com/powerhouse-inc/document-model-electron/commit/4d8c6feef417c9254e12a9aac0c58d7769d34d84))
+
+# [1.0.0-dev.13](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.12...v1.0.0-dev.13) (2024-06-21)
+
+
+### Features
+
+* added virtualization for files content ([f8e9093](https://github.com/powerhouse-inc/document-model-electron/commit/f8e9093d72a8db79338c68220f09a83d4e7ea2be))
+
 # [1.0.0-dev.12](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.11...v1.0.0-dev.12) (2024-06-21)
 
 

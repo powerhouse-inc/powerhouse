@@ -1,3 +1,4 @@
+import { RevisionHistory } from '@powerhousedao/design-system';
 import {
     Action,
     ActionErrorCallback,
@@ -10,7 +11,7 @@ import {
 } from 'document-model/document';
 import { Action as HistoryAction } from 'history';
 import { useAtomValue } from 'jotai';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useConnectDid } from 'src/hooks/useConnectCrypto';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
@@ -38,6 +39,8 @@ export type EditorComponent<
 > = (props: EditorProps<T, A, LocalState>) => JSX.Element;
 
 export interface IProps extends EditorProps {
+    // todo: check that this is equivalent to the document ID
+    fileNodeId: string;
     onClose: () => void;
     onExport: () => void;
     onAddOperation: (operation: Operation) => Promise<void>;
@@ -45,6 +48,7 @@ export interface IProps extends EditorProps {
 }
 
 export const DocumentEditor: React.FC<IProps> = ({
+    fileNodeId,
     document: initialDocument,
     onChange,
     onClose,
@@ -52,6 +56,7 @@ export const DocumentEditor: React.FC<IProps> = ({
     onAddOperation,
     onOpenSwitchboardLink,
 }) => {
+    const [showRevisionHistory, setShowRevisionHistory] = useState(false);
     const user = useUser();
     const connectDid = useConnectDid();
     const documentModel = useDocumentModel(initialDocument.documentType);
@@ -177,17 +182,32 @@ export const DocumentEditor: React.FC<IProps> = ({
                     </div>
                 </div>
             )}
-            <EditorComponent
-                error={error}
-                context={context}
-                document={document}
-                dispatch={dispatch}
-                onClose={onClose}
-                onExport={onExport}
-                onSwitchboardLinkClick={onOpenSwitchboardLink}
-                isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-                isAllowedToEditDocuments={isAllowedToEditDocuments}
-            />
+            <>
+                {showRevisionHistory ? (
+                    <RevisionHistory
+                        documentTitle={document.name}
+                        documentId={fileNodeId}
+                        globalOperations={document.operations.global}
+                        localOperations={document.operations.local}
+                        onClose={() => setShowRevisionHistory(false)}
+                    />
+                ) : (
+                    <EditorComponent
+                        error={error}
+                        context={context}
+                        document={document}
+                        dispatch={dispatch}
+                        onClose={onClose}
+                        onExport={onExport}
+                        onSwitchboardLinkClick={onOpenSwitchboardLink}
+                        onShowRevisionHistory={() =>
+                            setShowRevisionHistory(true)
+                        }
+                        isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                        isAllowedToEditDocuments={isAllowedToEditDocuments}
+                    />
+                )}
+            </>
         </div>
     );
 };
