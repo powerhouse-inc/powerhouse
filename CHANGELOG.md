@@ -1,3 +1,10 @@
+# [1.66.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.65.0...v1.66.0) (2024-06-27)
+
+
+### Features
+
+* make maturity optional ([#190](https://github.com/powerhouse-inc/document-model-libs/issues/190)) ([74b6c88](https://github.com/powerhouse-inc/document-model-libs/commit/74b6c8809c92d9caff7e4f69c63c1a4c7990805f))
+
 # [1.65.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.64.0...v1.65.0) (2024-06-26)
 
 
