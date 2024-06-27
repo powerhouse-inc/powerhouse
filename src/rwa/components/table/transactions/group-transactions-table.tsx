@@ -1,6 +1,7 @@
 import { Combobox } from '@/connect';
 import {
     AssetFormInputs,
+    FEES_INCOME,
     FixedIncome,
     GroupTransaction,
     GroupTransactionDetails,
@@ -13,6 +14,7 @@ import {
     allGroupTransactionTypes,
     assetTransactionSignByTransactionType,
     cashTransactionSignByTransactionType,
+    feesTransactions,
     groupTransactionTypeLabels,
     isAssetGroupTransactionType,
     isFixedIncomeAsset,
@@ -95,8 +97,12 @@ export function makeGroupTransactionsTableItems(
             transaction.cashTransaction?.amount,
             cashTransactionSign,
         );
-        const totalFees =
-            transaction.fees?.reduce((acc, fee) => acc + fee.amount, 0) ?? 0;
+        const totalFees = feesTransactions.includes(transaction.type)
+            ? maybeAddSignToAmount(
+                  transaction.cashTransaction?.amount,
+                  transaction.type === FEES_INCOME ? -1 : 1,
+              ) ?? 0
+            : transaction.fees?.reduce((acc, fee) => acc + fee.amount, 0) ?? 0;
         const cashBalanceChange = transaction.cashBalanceChange;
 
         return {

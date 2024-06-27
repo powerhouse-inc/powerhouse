@@ -1,4 +1,4 @@
-import { DateTimeLocalInput } from '@/connect';
+import { DateTimeLocalInput, Tooltip } from '@/connect';
 import {
     FormHookProps,
     FormattedNumber,
@@ -17,10 +17,62 @@ import {
     makeFixedIncomeOptionLabel,
 } from '@/rwa';
 
-import { useMemo, useState } from 'react';
+import { getIsTransaction } from '@/services/viem';
+import {
+    ComponentPropsWithRef,
+    ForwardedRef,
+    forwardRef,
+    useId,
+    useMemo,
+    useState,
+} from 'react';
 import { Control, useFieldArray, useWatch } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
 import { useSubmit } from '../hooks/useSubmit';
+
+const TransactionReference = forwardRef(function TransactionReference(
+    props: ComponentPropsWithRef<typeof RWATableTextInput> & {
+        control: Control<GroupTransactionFormInputs>;
+    },
+    ref: ForwardedRef<HTMLInputElement>,
+) {
+    const { control, disabled } = props;
+    const value = useWatch({ control, name: 'txRef' });
+    const tooltipId = useId().replace(/:/g, '');
+    const maxLength = 46;
+    const shouldShortenValue =
+        typeof value === 'string' && value.length >= maxLength;
+    const maybeShortedValue = shouldShortenValue
+        ? `${value.slice(0, maxLength)}...`
+        : value;
+    const isTransaction = getIsTransaction(value);
+
+    if (disabled)
+        return (
+            <span>
+                <a id={tooltipId} className="cursor-pointer">
+                    {maybeShortedValue}
+                </a>
+                {shouldShortenValue && (
+                    <Tooltip anchorSelect={`#${tooltipId}`}>
+                        <p>{value}</p>
+                        {isTransaction && (
+                            <p className="mt-2 text-center">
+                                <a
+                                    className="text-blue-900 underline"
+                                    href={`https://etherscan.io/tx/${value}`}
+                                >
+                                    View on Etherscan
+                                </a>
+                            </p>
+                        )}
+                    </Tooltip>
+                )}
+            </span>
+        );
+
+    return <RWATableTextInput {...props} ref={ref} />;
+});
 
 function UnitPrice(props: {
     control: Control<GroupTransactionFormInputs>;
@@ -291,10 +343,11 @@ export function useGroupTransactionForm(
         {
             label: 'Transaction reference',
             Input: () => (
-                <RWATableTextInput
+                <TransactionReference
                     {...register('txRef', {
                         disabled: operation === 'view',
                     })}
+                    control={control}
                     aria-invalid={errors.txRef ? 'true' : 'false'}
                     errorMessage={errors.txRef?.message}
                     placeholder="E.g. 0x123..."

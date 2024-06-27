@@ -15,6 +15,7 @@ export const _RWATableTextInput = forwardRef(function RWATableTextInput(
 ) {
     const invalid = props['aria-invalid'] === 'true';
     const {
+        name,
         errorMessage,
         labelClassName,
         inputClassName,

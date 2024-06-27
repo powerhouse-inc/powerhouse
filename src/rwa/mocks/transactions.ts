@@ -31,6 +31,7 @@ export const mockGroupTransaction = {
     id: 'group-transaction-0',
     type: allGroupTransactionTypes[0],
     entryTime: '2023-06-01T00:00:00.000Z',
+    txRef: '0x99f19e36b83f59159b917fa67282f913f6c85ecdee5f49d427048d5ed9508b0b',
     fees: [
         {
             id: 'fee-transaction-1',

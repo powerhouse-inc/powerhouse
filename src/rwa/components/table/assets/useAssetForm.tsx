@@ -32,7 +32,7 @@ export function useAssetForm(
         fixedIncomeTypeId: fixedIncomeTypes[0]?.id ?? null,
         spvId: spvs[0]?.id ?? null,
         name: null,
-        maturity: convertToDateTimeLocalFormat(new Date()),
+        maturity: null,
         ISIN: null,
         CUSIP: null,
         coupon: null,
@@ -44,7 +44,9 @@ export function useAssetForm(
               fixedIncomeTypeId: item.fixedIncomeTypeId,
               spvId: item.spvId,
               name: item.name,
-              maturity: convertToDateTimeLocalFormat(item.maturity),
+              maturity: item.maturity
+                  ? convertToDateTimeLocalFormat(item.maturity)
+                  : null,
               ISIN: item.ISIN,
               CUSIP: item.CUSIP,
               coupon: item.coupon,
@@ -179,8 +181,11 @@ export function useAssetForm(
                 Input: () => (
                     <DateTimeLocalInput
                         {...register('maturity', {
-                            required: true,
                             disabled: operation === 'view',
+                            setValueAs: value => {
+                                if (value === '') return null;
+                                return value as string;
+                            },
                         })}
                         name="maturity"
                     />

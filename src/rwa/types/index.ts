@@ -22,7 +22,7 @@ export type FixedIncome = {
     name: string;
     fixedIncomeTypeId: string;
     spvId: string;
-    maturity: string;
+    maturity: string | null;
     ISIN?: string | null;
     CUSIP?: string | null;
     coupon?: number | null;

@@ -37,7 +37,7 @@ export type AssetFormInputs = {
     id?: string;
     fixedIncomeTypeId?: string | null;
     spvId?: string | null;
-    maturity?: string;
+    maturity?: string | null;
     name?: string | null;
     ISIN?: string | null;
     CUSIP?: string | null;
