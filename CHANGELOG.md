@@ -1,3 +1,10 @@
+## [1.66.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.66.0...v1.66.1) (2024-06-27)
+
+
+### Bug Fixes
+
+* missing rwa exports ([332d67c](https://github.com/powerhouse-inc/document-model-libs/commit/332d67c95740cd577444d87cb8aa2ef1200bcac8))
+
 # [1.66.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.65.0...v1.66.0) (2024-06-27)
 
 
