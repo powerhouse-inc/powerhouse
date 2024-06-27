@@ -1,3 +1,10 @@
+# [1.0.0-alpha.140](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.139...v1.0.0-alpha.140) (2024-06-27)
+
+
+### Features
+
+* fix drag and drop accidental rename ([#318](https://github.com/powerhouse-inc/design-system/issues/318)) ([0e8c8e0](https://github.com/powerhouse-inc/design-system/commit/0e8c8e0ff4261956855f14cf93dad9f2f439adc2))
+
 # [1.0.0-alpha.139](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.138...v1.0.0-alpha.139) (2024-06-27)
 
 
