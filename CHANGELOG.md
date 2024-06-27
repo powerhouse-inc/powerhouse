@@ -1,3 +1,10 @@
+# [1.0.0-alpha.80](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.79...v1.0.0-alpha.80) (2024-06-27)
+
+
+### Features
+
+* update strands query ([#217](https://github.com/powerhouse-inc/document-drive/issues/217)) ([0c849b8](https://github.com/powerhouse-inc/document-drive/commit/0c849b8c870a48a3bccb4d600d5ccca958242e68))
+
 # [1.0.0-alpha.79](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.78...v1.0.0-alpha.79) (2024-06-24)
 
 
