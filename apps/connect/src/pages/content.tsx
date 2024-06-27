@@ -364,6 +364,7 @@ const Content = () => {
                                         path={selectedPath || ''}
                                         folderItem={selectedFolder}
                                         decodedDriveID={decodedDriveID}
+                                        isRemoteDrive={isRemoteDrive}
                                         onFolderSelected={
                                             onFolderSelectedHandler
                                         }

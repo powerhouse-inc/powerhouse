@@ -18,6 +18,7 @@ interface IProps {
     onFolderSelected: (itemId: string) => void;
     onFileSelected: (drive: string, id: string) => void;
     onFileDeleted: (drive: string, id: string) => void;
+    isRemoteDrive?: boolean;
 }
 
 export const FolderView: React.FC<IProps> = ({
@@ -27,6 +28,7 @@ export const FolderView: React.FC<IProps> = ({
     onFileDeleted,
     onFileSelected,
     onFolderSelected,
+    isRemoteDrive = false,
 }) => {
     const { t } = useTranslation();
     const { folders, files } = useFolderContent(path);
@@ -59,6 +61,7 @@ export const FolderView: React.FC<IProps> = ({
                         <FolderItem
                             key={folder.id}
                             folder={folder}
+                            isRemoteDrive={isRemoteDrive}
                             decodedDriveID={decodedDriveID}
                             onFolderSelected={onFolderSelected}
                             folderItemOptions={folderItemOptions}
