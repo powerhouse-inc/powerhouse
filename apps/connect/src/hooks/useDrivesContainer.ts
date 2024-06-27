@@ -105,6 +105,7 @@ export function useDrivesContainer() {
         actions.newVirtualItem({
             id: uuid(),
             label: virtualFolderName,
+            parentFolder,
             path: path.join(item.path, virtualPathName),
             type: 'FOLDER',
             action: 'NEW',
@@ -114,9 +115,8 @@ export function useDrivesContainer() {
     }
 
     async function addNewFolder(item: TreeItem, driveID: string) {
-        const basePathComponents = item.path.split('/').slice(1, -1);
-
         const decodedDriveID = decodeID(driveID);
+        const basePathComponents = item.path.split('/').slice(1, -1);
         const parentFolder = basePathComponents.pop();
         await addFolder(
             decodedDriveID,
@@ -268,6 +268,7 @@ export function useDrivesContainer() {
             id: id,
             label: name,
             path: driveID,
+            parentFolder: null,
             type: driveBaseItemType,
             icon,
             sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
@@ -298,6 +299,7 @@ export function useDrivesContainer() {
                 id: node.id,
                 label: node.name,
                 path: path.join(driveID, getNodePath(node, driveNodes)),
+                parentFolder: node.parentFolder,
                 type: node.kind === 'folder' ? 'FOLDER' : 'FILE',
                 sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
                 availableOffline,
@@ -327,6 +329,7 @@ export function useDrivesContainer() {
                 id: node.id,
                 label: node.name,
                 path: folderPath,
+                parentFolder: node.parentFolder,
                 type: 'FOLDER',
                 sharingType: sharingType?.toUpperCase() as TreeItemSharingType,
                 availableOffline,
