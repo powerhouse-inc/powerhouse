@@ -85,13 +85,11 @@ export const reducer: RealWorldAssetsPortfolioOperations = {
         if (!action.input.spvId) {
             throw new Error(`Fixed income asset must have an SPV`);
         }
-        if (!action.input.maturity) {
-            throw new Error(`Fixed income asset must have a maturity`);
-        }
         validateFixedIncomeAsset(state, action.input as FixedIncome);
         const asset = {
             ...action.input,
             type: 'FixedIncome' as const,
+            maturity: action.input.maturity ?? null,
             ISIN: action.input.ISIN ?? null,
             CUSIP: action.input.CUSIP ?? null,
             coupon: action.input.coupon ?? null,

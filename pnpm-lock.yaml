@@ -68,8 +68,8 @@ devDependencies:
     specifier: 0.0.15
     version: 0.0.15(graphql@16.8.1)(zod@3.22.4)
   '@powerhousedao/design-system':
-    specifier: 1.0.0-alpha.133
-    version: 1.0.0-alpha.133(@types/react@18.2.57)(react-aria-components@1.2.0)(react-aria@3.33.0)(react-dom@18.2.0)(react@18.2.0)(typescript@5.4.5)(zod@3.22.4)
+    specifier: 1.0.0-alpha.138
+    version: 1.0.0-alpha.138(@types/react@18.2.57)(react-aria-components@1.2.0)(react-aria@3.33.0)(react-dom@18.2.0)(react@18.2.0)(typescript@5.4.5)(zod@3.22.4)
   '@semantic-release/changelog':
     specifier: ^6.0.3
     version: 6.0.3(semantic-release@23.0.2)
@@ -3812,8 +3812,8 @@ packages:
       - zod
     dev: true
 
-  /@powerhousedao/design-system@1.0.0-alpha.133(@types/react@18.2.57)(react-aria-components@1.2.0)(react-aria@3.33.0)(react-dom@18.2.0)(react@18.2.0)(typescript@5.4.5)(zod@3.22.4):
-    resolution: {integrity: sha512-cxRTK2bQ4bW4wsH3aFeD3hq2FR9LiPdL9Tk70m6Z2QU8B1vnCaSp3NKLlzTVrwOTx2xRjiqPoLvjYXnDOwHoUg==}
+  /@powerhousedao/design-system@1.0.0-alpha.138(@types/react@18.2.57)(react-aria-components@1.2.0)(react-aria@3.33.0)(react-dom@18.2.0)(react@18.2.0)(typescript@5.4.5)(zod@3.22.4):
+    resolution: {integrity: sha512-VoMW+GoDPgqopGZJ/btPLqhTn332wYSLrzprW1eHQ30LVWL9ZJK/HO+QwXHC9Fl1ozYGGZCuo4+Kpmq5UF0tDQ==}
     peerDependencies:
       react: ^18.2.0
       react-aria: ^3.32.0

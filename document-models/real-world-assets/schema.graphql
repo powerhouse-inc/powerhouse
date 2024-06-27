@@ -16,7 +16,6 @@ type FixedIncome {
     fixedIncomeTypeId: ID!
     name: String!
     spvId: ID!
-    maturity: DateTime!
     purchaseDate: DateTime!
     notional: Float!
     assetProceeds: Float!
@@ -25,6 +24,7 @@ type FixedIncome {
     purchasePrice: Float!
     totalDiscount: Float!
     realizedSurplus: Float!
+    maturity: DateTime
     ISIN: String
     CUSIP: String
     coupon: Float
@@ -161,7 +161,7 @@ input CreateFixedIncomeAssetInput {
     fixedIncomeTypeId: ID!
     spvId: ID!
     name: String!
-    maturity: DateTime!
+    maturity: DateTime
     ISIN: String
     CUSIP: String
     coupon: Float

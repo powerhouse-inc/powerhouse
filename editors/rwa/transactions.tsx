@@ -389,7 +389,6 @@ export const Transactions = (props: IProps) => {
             const coupon = data.coupon;
 
             if (!name) throw new Error('Name is required');
-            if (!maturity) throw new Error('Maturity is required');
             if (!fixedIncomeTypeId)
                 throw new Error('Fixed income type is required');
             if (!spvId) throw new Error('SPV is required');
