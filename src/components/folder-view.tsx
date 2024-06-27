@@ -6,6 +6,7 @@ import { useFileOptions } from 'src/hooks/useFileOptions';
 import { useFolderContent } from 'src/hooks/useFolderContent';
 import { useFolderOptions } from 'src/hooks/useFolderOptions';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
+import { sortTreeItemsByLabel } from 'src/utils';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
 import FileContentView from './file-content-view';
@@ -86,7 +87,7 @@ export const FolderView: React.FC<IProps> = ({
                     )}
                 >
                     <FileContentView
-                        files={files}
+                        files={files.sort(sortTreeItemsByLabel)}
                         onFileDeleted={onFileDeleted}
                         decodedDriveID={decodedDriveID}
                         onFileSelected={onFileSelected}
