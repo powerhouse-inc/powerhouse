@@ -1,3 +1,10 @@
+# [1.0.0-alpha.139](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.138...v1.0.0-alpha.139) (2024-06-27)
+
+
+### Features
+
+* fix name prop ([edd4152](https://github.com/powerhouse-inc/design-system/commit/edd4152cb287d2ed3f0d58e52fa274bb9b792431))
+
 # [1.0.0-alpha.138](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.137...v1.0.0-alpha.138) (2024-06-27)
 
 
