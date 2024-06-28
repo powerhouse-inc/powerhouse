@@ -14,6 +14,7 @@ export interface FolderItemProps {
     onFolderSelected: (itemId: string) => void;
     isAllowedToCreateDocuments: boolean;
     folderItemOptions: ConnectDropdownMenuItem[];
+    isRemoteDrive?: boolean;
     onFolderOptionsClick?: (
         optionId: string,
         fileNode: TreeItem,
@@ -27,6 +28,7 @@ export const FolderItem: React.FC<FolderItemProps> = props => {
         decodedDriveID,
         onFolderSelected,
         folderItemOptions,
+        isRemoteDrive = false,
         onFolderOptionsClick = () => {},
         isAllowedToCreateDocuments,
     } = props;
@@ -44,7 +46,7 @@ export const FolderItem: React.FC<FolderItemProps> = props => {
     return (
         <ConnectFolderItem
             className="w-64"
-            displaySyncIcon
+            displaySyncIcon={isRemoteDrive}
             title={folder.label}
             itemOptions={folderItemOptions}
             onCancelInput={cancelInputHandler}
