@@ -1,3 +1,10 @@
+# [1.68.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.67.0...v1.68.0) (2024-06-28)
+
+
+### Features
+
+* add update operations script ([#191](https://github.com/powerhouse-inc/document-model-libs/issues/191)) ([3f39f35](https://github.com/powerhouse-inc/document-model-libs/commit/3f39f35741071dee2aacb66a3670d5b1c1214fbf))
+
 # [1.67.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.66.1...v1.67.0) (2024-06-27)
 
 
