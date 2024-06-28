@@ -1,3 +1,14 @@
+# [1.0.0-dev.20](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.19...v1.0.0-dev.20) (2024-06-28)
+
+
+### Features
+
+* bump design system ([8d322c1](https://github.com/powerhouse-inc/document-model-electron/commit/8d322c1e1096c0ceb0be787dbd186e6f19ac2a54))
+* handle back button clicked when editor open ([99b58e1](https://github.com/powerhouse-inc/document-model-electron/commit/99b58e1a2fc286b3258e8c0232f7d21deb5516f3))
+* make sure move target is not existing parent ([f96a9e3](https://github.com/powerhouse-inc/document-model-electron/commit/f96a9e37a4318aee2dc93690d3288e0b3e2ab4f1))
+* regenerate lockfile ([0095c6b](https://github.com/powerhouse-inc/document-model-electron/commit/0095c6b5159f8c768566778454e0286069fed1e5))
+* use node parent folder in tree item ([8513783](https://github.com/powerhouse-inc/document-model-electron/commit/851378308a8d4cd49ffb1ec462e8e6ac546ed04a))
+
 # [1.0.0-dev.19](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.18...v1.0.0-dev.19) (2024-06-27)
 
 
