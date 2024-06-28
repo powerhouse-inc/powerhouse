@@ -1,6 +1,8 @@
-import { utils } from 'document-model/document';
-import { writeFileSync } from 'fs';
-import operations from './operations.json';
+import { utils as docUtils } from 'document-model/document';
+import { readdir, rename, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { RealWorldAssetsAction, reducer, utils } from '..';
+import { readFileSync } from 'node:fs';
 
 function updateOperations(
     operations: {
@@ -25,15 +27,15 @@ function updateOperations(
             }
         }
     }
-
-    writeFileSync(
-        './operations-updated.json',
-        JSON.stringify(operations, null, 2),
-    );
 }
 
+const srcDir = 'documents';
+const targetDir = 'documents-updated';
+
+const documentDirNames = await readdir(srcDir);
+
 const fieldsToChange = {
-    id: () => utils.hashKey(),
+    id: () => docUtils.hashKey(),
     context: {
         signer: {
             user: {
@@ -46,4 +48,26 @@ const fieldsToChange = {
 
 const fieldsToRemove = ['resultingState'];
 
-updateOperations(operations, 'global', fieldsToChange, fieldsToRemove);
+for (const name of documentDirNames) {
+    const path = join(srcDir, name, 'operations.json');
+    const file = readFileSync(path);
+    const operations = (JSON.parse(file.toString())) as {
+        global: Record<string, any>[];
+        local: Record<string, any>[];
+    };
+    updateOperations(operations, 'global', fieldsToChange, fieldsToRemove);
+    let document = utils.createDocument();
+    for (const operation of operations.global) {
+        document = reducer(document, operation as RealWorldAssetsAction);
+    }
+    await utils.saveToFile(document, targetDir, `${name}-updated`);
+}
+
+const updatedDocumentFileNames = await readdir(targetDir);
+
+for (const name of updatedDocumentFileNames) {
+    const path = join(targetDir, name);
+    const fixedName = name.replace('..zip', '.zip');
+    const fixedNamePath = join(targetDir, fixedName);
+    await rename(path, fixedNamePath);
+}
