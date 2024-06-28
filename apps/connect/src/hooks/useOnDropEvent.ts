@@ -54,9 +54,20 @@ export const useOnDropEvent = () => {
 
             const isMoveOperation = event.dropOperation === 'move';
             const srcId = item.data.id;
-            const srcName = item.data.label
+            const srcName = item.data.label;
+            const itemParentIsDrive =
+                item.data.parentFolder === '' ||
+                item.data.parentFolder === undefined ||
+                item.data.parentFolder === null;
+            const targetIsDrive = decodedTargetId === '';
 
             if (isMoveOperation) {
+                if (itemParentIsDrive && targetIsDrive) {
+                    return;
+                }
+                if (item.data.parentFolder === decodedTargetId) {
+                    return;
+                }
                 await moveNode({
                     decodedDriveId,
                     srcId,

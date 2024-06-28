@@ -9,6 +9,7 @@ import {
     Operation,
     actions,
 } from 'document-model/document';
+import { Action as HistoryAction } from 'history';
 import { useAtomValue } from 'jotai';
 import { useEffect, useMemo, useState } from 'react';
 import { useConnectDid } from 'src/hooks/useConnectCrypto';
@@ -20,6 +21,7 @@ import { themeAtom } from 'src/store/theme';
 import { useUser } from 'src/store/user';
 import { useDocumentDispatch } from 'src/utils/document-model';
 import Button from './button';
+import history from './history';
 
 export interface EditorProps<
     T = unknown,
@@ -117,6 +119,14 @@ export const DocumentEditor: React.FC<IProps> = ({
         window.documentEditorDebugTools?.setDocument(document);
         onChange?.(document);
     }, [document]);
+
+    useEffect(() => {
+        history.listen(update => {
+            if (update.action === HistoryAction.Pop) {
+                onClose();
+            }
+        });
+    }, [onClose]);
 
     function undo() {
         dispatch(actions.undo());
