@@ -25,6 +25,7 @@ function ab2hex(ab: ArrayBuffer) {
 export interface IConnectCrypto {
     did: () => Promise<DID>;
     regenerateDid(): Promise<void>;
+    sign: (data: Uint8Array) => Promise<Uint8Array>;
 }
 
 export type DID = `did:key:${string}`;
@@ -39,6 +40,12 @@ export class ConnectCrypto implements IConnectCrypto {
     static algorithm: EcKeyAlgorithm = {
         name: 'ECDSA',
         namedCurve: 'P-256',
+    };
+
+    static signAlgorithm = {
+        name: 'ECDSA',
+        namedCurve: 'P-256',
+        hash: 'SHA-256',
     };
 
     constructor(keyPairStorage: JsonWebKeyPairStorage) {
@@ -170,4 +177,20 @@ export class ConnectCrypto implements IConnectCrypto {
     ): Promise<boolean> => {
         return (await this.#subtleCrypto).verify(...args);
     };
+
+    async sign(data: Uint8Array): Promise<Uint8Array> {
+        if (this.#keyPair?.privateKey) {
+            const subtleCrypto = await this.#subtleCrypto;
+
+            const arrayBuffer = await subtleCrypto.sign(
+                ConnectCrypto.signAlgorithm,
+                this.#keyPair.privateKey,
+                data.buffer,
+            );
+
+            return new Uint8Array(arrayBuffer);
+        } else {
+            throw new Error('No private key available');
+        }
+    }
 }
