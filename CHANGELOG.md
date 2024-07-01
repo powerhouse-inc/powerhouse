@@ -1,3 +1,10 @@
+# [1.0.0-alpha.142](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.141...v1.0.0-alpha.142) (2024-07-01)
+
+
+### Features
+
+* add rwa report file icon ([#321](https://github.com/powerhouse-inc/design-system/issues/321)) ([5a243b4](https://github.com/powerhouse-inc/design-system/commit/5a243b47d1b539925a0e8114f4d3e1fd6ec132f0))
+
 # [1.0.0-alpha.141](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.140...v1.0.0-alpha.141) (2024-07-01)
 
 
