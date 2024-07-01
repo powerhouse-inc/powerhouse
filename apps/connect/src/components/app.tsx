@@ -5,6 +5,7 @@ import {
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { ModalManager } from 'src/components/modal';
+import { PHLogo } from 'src/components/ph-logo';
 import atoms from 'src/store';
 
 const Router = React.lazy(async () => {
@@ -29,6 +30,7 @@ export default (
                 <ToastContainer position="bottom-right" />
                 <ModalManager>
                     <Router />
+                    <PHLogo />
                 </ModalManager>
             </ItemsContextProvider>
         </Suspense>

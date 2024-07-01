@@ -10,6 +10,7 @@ import {
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ReloadConnectToast } from 'src/components/toast';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useSelectedPath } from 'src/store/document-drive';
@@ -17,6 +18,7 @@ import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-s
 import { useDocumentDrives } from './useDocumentDrives';
 import { useLoadDefaultDrive } from './useLoadDefaultDrive';
 import { useNavigateToItemId } from './useNavigateToItemId';
+import { isLatestVersion } from './utils';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
@@ -27,6 +29,7 @@ export const useLoadInitialData = () => {
     const { driveToBaseItems } = useDrivesContainer();
     const drives = usePathContent();
     const prevDrivesState = useRef([...drives]);
+    const drivesWithError = useRef<string[]>([]);
     const isFirstLoad = useRef(true);
     const navigateToItemId = useNavigateToItemId();
     const getItemById = useGetItemById();
@@ -50,8 +53,13 @@ export const useLoadInitialData = () => {
             if (
                 drive.type !== 'LOCAL_DRIVE' &&
                 drive.syncStatus === 'SUCCESS' &&
-                drive.syncStatus !== prevDrive.syncStatus
+                drivesWithError.current.includes(drive.id)
             ) {
+                // remove the drive from the error list
+                drivesWithError.current = drivesWithError.current.filter(
+                    id => id !== drive.id,
+                );
+
                 return toast(t('notifications.driveSyncSuccess'), {
                     type: 'connect-success',
                 });
@@ -62,6 +70,17 @@ export const useLoadInitialData = () => {
                     drive.syncStatus === 'ERROR') &&
                 drive.syncStatus !== prevDrive.syncStatus
             ) {
+                // add the drive to the error list
+                drivesWithError.current.push(drive.id);
+
+                isLatestVersion().then(result => {
+                    if (!result) {
+                        return toast(<ReloadConnectToast />, {
+                            type: 'connect-warning',
+                        });
+                    }
+                });
+
                 return toast(
                     t(
                         `notifications.${drive.syncStatus === 'CONFLICT' ? 'driveSyncConflict' : 'driveSyncError'}`,
