@@ -1,3 +1,10 @@
+# [1.0.0-dev.21](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.20...v1.0.0-dev.21) (2024-07-01)
+
+
+### Features
+
+* bump design system ([09079b6](https://github.com/powerhouse-inc/document-model-electron/commit/09079b6534eed29bdacf6017675e720078ff0e80))
+
 # [1.0.0-dev.20](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.19...v1.0.0-dev.20) (2024-06-28)
 
 
