@@ -24,13 +24,6 @@ const treeItems = generateMockDriveData({
 const meta: Meta<typeof Breadcrumbs> = {
     title: 'Connect/Components/Breadcrumbs',
     component: Breadcrumbs,
-    argTypes: {
-        filterPath: { control: { type: 'string' } },
-        onItemClick: { control: { type: 'action' } },
-        onAddNewItem: { control: { type: 'action' } },
-        onSubmitInput: { control: { type: 'action' } },
-        onCancelInput: { control: { type: 'action' } },
-    },
     decorators: [
         Story => (
             <ItemsContextProvider items={treeItems}>

@@ -4,18 +4,6 @@ import { ConnectUpgradeDriveModal } from './upgrade-drive-modal';
 const meta: Meta<typeof ConnectUpgradeDriveModal> = {
     title: 'Connect/Components/Modal/UpgradeDriveModal',
     component: ConnectUpgradeDriveModal,
-    argTypes: {
-        open: { control: { type: 'boolean' } },
-        children: { control: { type: 'text' } },
-        onOpenChange: { control: { type: 'action' } },
-        contentProps: { control: { type: 'object' } },
-        overlayProps: { control: { type: 'object' } },
-        body: { control: { type: 'text' } },
-        header: { control: { type: 'text' } },
-        onContinue: { control: { type: 'action' } },
-        cancelLabel: { control: { type: 'text' } },
-        continueLabel: { control: { type: 'text' } },
-    },
 };
 
 export default meta;

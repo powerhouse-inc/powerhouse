@@ -5,23 +5,6 @@ import { RWATabs } from './tabs';
 const meta: Meta<typeof RWATabs> = {
     title: 'RWA/Components/RWATabs',
     component: RWATabs,
-    argTypes: {
-        onSelectionChange: { control: { type: 'action' } },
-        selectedKey: {
-            control: { type: 'select' },
-            options: ['portfolio', 'transactions', 'attachments'],
-        },
-        tabs: { control: { type: 'object' } },
-        disabledKeys: { control: { type: 'array' } },
-        labels: { control: { type: 'object' } },
-        onUndo: { control: { type: 'action' } },
-        onRedo: { control: { type: 'action' } },
-        canUndo: { control: { type: 'boolean' } },
-        canRedo: { control: { type: 'boolean' } },
-        onExport: { control: { type: 'action' } },
-        onClose: { control: { type: 'action' } },
-        onSwitchboardLinkClick: { control: { type: 'action' } },
-    },
 };
 
 export default meta;

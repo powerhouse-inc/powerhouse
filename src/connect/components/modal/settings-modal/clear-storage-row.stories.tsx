@@ -4,13 +4,6 @@ import { ClearStorageSettingsRow } from './clear-storage-row';
 const meta: Meta<typeof ClearStorageSettingsRow> = {
     title: 'Connect/Components/Modal/SettingsModal/ClearStorageSettingsRow',
     component: ClearStorageSettingsRow,
-    argTypes: {
-        title: { control: { type: 'text' } },
-        description: { control: { type: 'text' } },
-        children: { control: { type: 'object' } },
-        buttonLabel: { control: { type: 'text' } },
-        onClearStorage: { control: { type: 'action' } },
-    },
 };
 
 export default meta;

@@ -14,12 +14,6 @@ const meta: Meta<typeof TreeViewItem> = {
             </div>
         ),
     ],
-    argTypes: {
-        children: { control: { type: 'text' } },
-        label: { control: { type: 'text' } },
-        onClick: { control: { type: 'action' } },
-        level: { control: { type: 'number' } },
-    },
 };
 
 export default meta;

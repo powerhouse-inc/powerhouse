@@ -2,7 +2,9 @@ import BudgetImg from '@/assets/icons/budget.png';
 import GlobalImg from '@/assets/icons/global.png';
 import LegalImg from '@/assets/icons/legal.png';
 import ProfileImg from '@/assets/icons/profile.png';
+import RWAReportImg from '@/assets/icons/rwa-report.png';
 import TemplateImg from '@/assets/icons/template.png';
+
 import {
     ConnectDropdownMenu,
     ConnectDropdownMenuProps,
@@ -27,6 +29,7 @@ const iconMap = {
     profile: ProfileImg,
     budget: BudgetImg,
     template: TemplateImg,
+    rwaReport: RWAReportImg,
 };
 
 export type FileItemIconType = keyof typeof iconMap;

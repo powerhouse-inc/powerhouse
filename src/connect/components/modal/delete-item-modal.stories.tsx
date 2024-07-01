@@ -4,15 +4,6 @@ import { ConnectDeleteItemModal } from './delete-item-modal';
 const meta: Meta<typeof ConnectDeleteItemModal> = {
     title: 'Connect/Components/Modal/DeleteItemModal',
     component: ConnectDeleteItemModal,
-    argTypes: {
-        open: { control: { type: 'boolean' } },
-        body: { control: { type: 'text' } },
-        header: { control: { type: 'text' } },
-        onDelete: { control: { type: 'action' } },
-        onCancel: { control: { type: 'action' } },
-        cancelLabel: { control: { type: 'text' } },
-        deleteLabel: { control: { type: 'text' } },
-    },
 };
 
 export default meta;

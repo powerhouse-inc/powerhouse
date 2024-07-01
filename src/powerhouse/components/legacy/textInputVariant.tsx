@@ -64,7 +64,7 @@ export function TextInputVariant(props: TextInputProps) {
             const target = e.target as HTMLTextAreaElement;
             setState({ ...state, value: target.value });
             target.style.height = '1px';
-            target.style.height = target.scrollHeight + 'px';
+            target.style.height = `${target.scrollHeight}px`;
         }
     };
 
@@ -86,7 +86,7 @@ export function TextInputVariant(props: TextInputProps) {
         const resizeTextArea = () => {
             if (ref.current) {
                 ref.current.style.height = '1px';
-                ref.current.style.height = ref.current.scrollHeight + 'px';
+                ref.current.style.height = `${ref.current.scrollHeight}px`;
             }
         };
 

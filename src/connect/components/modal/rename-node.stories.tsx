@@ -4,18 +4,6 @@ import { RenameNodeModal } from './rename-node';
 const meta: Meta<typeof RenameNodeModal> = {
     title: 'Connect/Components/Modal/RenameNode',
     component: RenameNodeModal,
-    argTypes: {
-        open: { control: { type: 'boolean' } },
-        children: { control: { type: 'text' } },
-        onOpenChange: { control: { type: 'action' } },
-        contentProps: { control: { type: 'object' } },
-        overlayProps: { control: { type: 'object' } },
-        placeholder: { control: { type: 'text' } },
-        header: { control: { type: 'text' } },
-        onContinue: { control: { type: 'action' } },
-        cancelLabel: { control: { type: 'text' } },
-        continueLabel: { control: { type: 'text' } },
-    },
 };
 
 export default meta;

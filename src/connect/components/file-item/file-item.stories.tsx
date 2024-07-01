@@ -39,7 +39,7 @@ export const ReadMode: Story = {
         title: 'Legal Contract #1',
         subTitle:
             'MakerDAO/Ecosystem Actors/Powerhouse/Chronicle Labs/Legal Contract 1',
-        icon: 'profile',
+        icon: 'rwaReport',
         item: {
             id: '1',
             parentFolder: null,

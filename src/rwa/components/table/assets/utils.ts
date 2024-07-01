@@ -6,5 +6,5 @@ export function sumTotalForProperty<T extends Record<string, any>>(
     items: T[],
     property: NumericKeys<T>,
 ): number {
-    return items.reduce((acc, item) => acc + item[property], 0);
+    return items.reduce((acc, item) => acc + Number(item[property]), 0);
 }

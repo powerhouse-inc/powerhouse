@@ -22,6 +22,10 @@
     },
     "plugins": ["react", "@typescript-eslint"],
     "rules": {
+        "@typescript-eslint/use-unknown-in-catch-callback-variable": "warn",
+        "@typescript-eslint/restrict-plus-operands": "warn",
+        "@typescript-eslint/restrict-template-expressions": "warn",
+        "@typescript-eslint/no-unnecessary-type-assertion": "warn",
         "@typescript-eslint/no-unused-vars": "warn",
         "react/prop-types": "off",
         "react/react-in-jsx-scope": "off",

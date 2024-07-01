@@ -4,21 +4,6 @@ import { ConnectDeleteDriveModal } from './delete-drive-modal';
 const meta: Meta<typeof ConnectDeleteDriveModal> = {
     title: 'Connect/Components/Modal/ConnectDeleteDriveModal',
     component: ConnectDeleteDriveModal,
-    argTypes: {
-        open: { control: { type: 'boolean' } },
-        children: { control: { type: 'text' } },
-        onOpenChange: { control: { type: 'action' } },
-        contentProps: { control: { type: 'object' } },
-        overlayProps: { control: { type: 'object' } },
-        body: { control: { type: 'text' } },
-        header: { control: { type: 'text' } },
-        onContinue: { control: { type: 'action' } },
-        cancelLabel: { control: { type: 'text' } },
-        continueLabel: { control: { type: 'text' } },
-        onCancel: { control: { type: 'action' } },
-        inputPlaceholder: { control: { type: 'text' } },
-        driveName: { control: { type: 'text' } },
-    },
 };
 
 export default meta;

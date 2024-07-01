@@ -12,15 +12,6 @@ const meta: Meta<typeof ConnectTreeViewItem> = {
             </div>
         ),
     ],
-    argTypes: {
-        onClick: { control: { type: 'action' } },
-        onOptionsClick: { control: { type: 'action' } },
-        level: { control: { type: 'number' } },
-        item: { control: { type: 'object' } },
-        defaultOptions: { control: { type: 'object' } },
-        onDropEvent: { control: { type: 'action' } },
-        onDropActivate: { control: { type: 'action' } },
-    },
 };
 
 export default meta;

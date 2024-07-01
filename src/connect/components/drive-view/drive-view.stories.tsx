@@ -27,7 +27,7 @@ const drives = [
         expanded: false,
         availableOffline: false,
         syncStatus: SUCCESS,
-        // @ts-expect-error mock
+        // @ts-expect-error - mockCustomDriveIcon is not a valid icon
         icon: mockCustomDriveIcon,
     }),
     ...generateMockDriveData({
@@ -152,25 +152,6 @@ const meta: Meta<typeof DriveView> = {
             </ItemsContextProvider>
         ),
     ],
-    argTypes: {
-        type: {
-            control: {
-                type: 'select',
-            },
-            options: ['PUBLIC', 'LOCAL', 'CLOUD'],
-        },
-        name: { control: { type: 'string' } },
-        onItemClick: { control: { type: 'action' } },
-        onDropEvent: { control: { type: 'action' } },
-        onItemOptionsClick: { control: { type: 'action' } },
-        defaultItemOptions: { control: { type: 'object' } },
-        onDragStart: { control: { type: 'action' } },
-        onDragEnd: { control: { type: 'action' } },
-        onDropActivate: { control: { type: 'action' } },
-        disableHighlightStyles: { control: { type: 'boolean' } },
-        disableAddDrives: { control: { type: 'boolean' } },
-        displaySyncFolderIcons: { control: { type: 'boolean' } },
-    },
 };
 
 export default meta;

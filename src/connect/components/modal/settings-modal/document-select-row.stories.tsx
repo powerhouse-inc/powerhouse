@@ -4,12 +4,6 @@ import { DocumentSelectSettingsRow } from './document-select-row';
 const meta: Meta<typeof DocumentSelectSettingsRow> = {
     title: 'Connect/Components/Modal/SettingsModal/DocumentSelectSettingsRow',
     component: DocumentSelectSettingsRow,
-    argTypes: {
-        options: { control: { type: 'object' } },
-        selected: { control: { type: 'object' } },
-        onChange: { control: { type: 'action' } },
-        selectProps: { control: { type: 'object' } },
-    },
 };
 
 export default meta;

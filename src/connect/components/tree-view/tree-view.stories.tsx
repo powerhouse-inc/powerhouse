@@ -29,17 +29,6 @@ const meta: Meta<typeof ConnectTreeView> = {
             </ItemsContextProvider>
         ),
     ],
-    argTypes: {
-        onItemClick: { control: { type: 'action' } },
-        onDropEvent: { control: { type: 'action' } },
-        onItemOptionsClick: { control: { type: 'action' } },
-        defaultItemOptions: { control: { type: 'object' } },
-        onSubmitInput: { control: { type: 'action' } },
-        onCancelInput: { control: { type: 'action' } },
-        onDropActivate: { control: { type: 'action' } },
-        onDragStart: { control: { type: 'action' } },
-        onDragEnd: { control: { type: 'action' } },
-    },
 };
 
 export default meta;

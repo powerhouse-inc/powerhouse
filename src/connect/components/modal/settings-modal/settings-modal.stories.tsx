@@ -8,18 +8,6 @@ import { SettingsModal } from './settings-modal';
 const meta: Meta<typeof SettingsModal> = {
     title: 'Connect/Components/Modal/SettingsModal',
     component: SettingsModal,
-    argTypes: {
-        open: { control: { type: 'boolean' } },
-        children: { control: { type: 'text' } },
-        onOpenChange: { control: { type: 'action' } },
-        contentProps: { control: { type: 'object' } },
-        overlayProps: { control: { type: 'object' } },
-        title: { control: { type: 'text' } },
-        body: { control: { type: 'text' } },
-        cancelLabel: { control: { type: 'text' } },
-        saveLabel: { control: { type: 'text' } },
-        onSave: { control: { type: 'action' } },
-    },
 };
 
 export default meta;
