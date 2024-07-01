@@ -1,7 +1,7 @@
 import ImgPowerhouse from '@/assets/powerhouse-rounded.png';
 import { useENSInfo } from '@/connect/hooks';
 import { CSSProperties, useState } from 'react';
-import { twJoin, twMerge } from 'tailwind-merge';
+import { twMerge } from 'tailwind-merge';
 
 type Props = {
     address: `0x${string}`;
@@ -20,27 +20,27 @@ export function ENSAvatar(props: Props) {
     };
 
     function getImage() {
-        if (!avatarUrl || imageError) {
-            return <SidebarImage src={ImgPowerhouse} alt="ENS avatar" />;
-        }
+        // if (!avatarUrl || imageError) {
+        return <EnsAvatar src={ImgPowerhouse} alt="ENS avatar" />;
+        // }
 
-        return (
-            <>
-                <div
-                    className={twJoin(
-                        'flex-none rounded-full bg-gray-400',
-                        !loadingImage && 'hidden',
-                    )}
-                    style={style}
-                ></div>
-                <SidebarImage src={avatarUrl} alt="ENS avatar" />
-            </>
-        );
+        // return (
+        //     <>
+        //         <div
+        //             className={twJoin(
+        //                 'flex-none rounded-full bg-gray-400',
+        //                 !loadingImage && 'hidden',
+        //             )}
+        //             style={style}
+        //         ></div>
+        //         <EnsAvatar src={avatarUrl} alt="ENS avatar" />
+        //     </>
+        // );
     }
 
     const image = getImage();
 
-    function SidebarImage(props: { src: string; alt: string }) {
+    function EnsAvatar(props: { src: string; alt: string }) {
         return (
             <img
                 {...props}
