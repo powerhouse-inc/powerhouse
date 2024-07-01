@@ -1,3 +1,14 @@
+# [1.0.0-dev.22](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.21...v1.0.0-dev.22) (2024-07-01)
+
+
+### Features
+
+* added sign operation ([0427a11](https://github.com/powerhouse-inc/document-model-electron/commit/0427a11283e675c2c16dca4fd1cccffbeeecb420))
+* regenerate lockfile ([1cda4b3](https://github.com/powerhouse-inc/document-model-electron/commit/1cda4b33f8174ad9b447973a5f074a4cab131bd1))
+* regenerate lockfile ([184a379](https://github.com/powerhouse-inc/document-model-electron/commit/184a379d04c60e2f1404639ad1cd76185bb589e6))
+* update document-drive ([2b95857](https://github.com/powerhouse-inc/document-model-electron/commit/2b958573b812147f09e006025f465879c894ca02))
+* update document-model 1.7.0 ([02e8083](https://github.com/powerhouse-inc/document-model-electron/commit/02e80837c097fc339933a74907647c9547156b53))
+
 # [1.0.0-dev.21](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.20...v1.0.0-dev.21) (2024-07-01)
 
 
