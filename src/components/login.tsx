@@ -30,7 +30,7 @@ export const Login: React.FC = () => {
                         onClick={() => openRenown()}
                         className="mb-3 w-full p-0 text-white shadow-none transition-colors"
                     >
-                        <p className="block h-10 px-7 leading-10">
+                        <p className="block h-10 px-7 leading-10 text-slate-50">
                             Authorize Connect
                         </p>
                     </Button>

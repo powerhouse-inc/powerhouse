@@ -120,7 +120,7 @@ const Content = () => {
             // builds the path from the url checking if the nodes exist
             const path = [encodeID(drive.state.global.id)];
             let currentNodes = drive.state.global.nodes.filter(
-                node => node.parentFolder === null,
+                node => !node.parentFolder,
             );
             if (params['*']) {
                 const nodeNames = decodeURIComponent(params['*']).split('/');
@@ -171,12 +171,15 @@ const Content = () => {
     // preload document editors
     useEffect(() => {
         // waits 1 second to preload editors
-        const id = requestIdleCallback(async () => {
+        const requestIC = window.requestIdleCallback ?? setTimeout;
+        const cancelIC = window.cancelIdleCallback ?? clearTimeout;
+
+        const id = requestIC(async () => {
             for (const documentModel of documentModels) {
                 await preloadEditor(documentModel.documentModel.id);
             }
         });
-        return () => cancelIdleCallback(id);
+        return () => cancelIC(id);
     }, [documentModels, preloadEditor]);
 
     useEffect(() => {
@@ -319,12 +322,14 @@ const Content = () => {
                     >
                         <DocumentEditor
                             document={selectedDocument}
+                            fileNodeId={selectedFileNode.id}
                             onClose={() => {
                                 navigateToItemId(
-                                    selectedFileNode.parentFolder ?? driveID,
+                                    selectedFileNode.parentFolder || driveID,
                                 );
                                 setSelectedFileNode(undefined);
                             }}
+                            fileId={selectedFileNode.id}
                             onChange={onDocumentChangeHandler}
                             onExport={() => exportDocument(selectedDocument)}
                             onAddOperation={handleAddOperation}
@@ -355,21 +360,27 @@ const Content = () => {
                         {connectConfig.content.showSearchBar && <SearchBar />}
                         <div className="px-4">
                             <div className="mb-5">
-                                <FolderView
-                                    drive={decodedDriveID}
-                                    path={selectedPath || ''}
-                                    onFolderSelected={onFolderSelectedHandler}
-                                    onFileSelected={(drive, id) => {
-                                        setSelectedFileNode({
-                                            drive,
-                                            id,
-                                            parentFolder:
-                                                selectedFolder?.id ?? null,
-                                        });
-                                        navigateToItemId(id);
-                                    }}
-                                    onFileDeleted={deleteNode}
-                                />
+                                {selectedFolder && (
+                                    <FolderView
+                                        path={selectedPath || ''}
+                                        folderItem={selectedFolder}
+                                        decodedDriveID={decodedDriveID}
+                                        isRemoteDrive={isRemoteDrive}
+                                        onFolderSelected={
+                                            onFolderSelectedHandler
+                                        }
+                                        onFileSelected={(drive, id) => {
+                                            setSelectedFileNode({
+                                                drive,
+                                                id,
+                                                parentFolder:
+                                                    selectedFolder.id ?? null,
+                                            });
+                                            navigateToItemId(id);
+                                        }}
+                                        onFileDeleted={deleteNode}
+                                    />
+                                )}
                             </div>
                             {isAllowedToCreateDocuments && (
                                 <>

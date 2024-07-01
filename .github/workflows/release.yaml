@@ -1,10 +1,12 @@
 name: Release
 
 on:
-  workflow_dispatch:
+    push:
+        branches: [main, staging, develop]
+    workflow_dispatch:
 
 env:
-  HUSKY: 0
+    HUSKY: 0
 
 jobs:
   release:
