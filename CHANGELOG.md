@@ -1,3 +1,10 @@
+# [1.0.0-alpha.141](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.140...v1.0.0-alpha.141) (2024-07-01)
+
+
+### Features
+
+* temp disable ens avatar in revision history ([3e18289](https://github.com/powerhouse-inc/design-system/commit/3e18289f6ac7dca939a7214ec94e81fa2acd9087))
+
 # [1.0.0-alpha.140](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.139...v1.0.0-alpha.140) (2024-06-27)
 
 
