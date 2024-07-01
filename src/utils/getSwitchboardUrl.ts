@@ -1,50 +1,55 @@
 const rwaQuery = `... on RealWorldAssets {
-    state {
-        accounts {
-        id
-        reference
-        label
-        }
-        principalLenderAccountId
-        spvs {
-        id
-        name
-        }
-        serviceProviderFeeTypes {
-        id
-        name
-        feeType
-        accountId
-        }
-        fixedIncomeTypes {
-        id
-        name
-        }
-        portfolio {
-        ... on FixedIncome {
-            id
-            spvId
-            ISIN
-            CUSIP
-            coupon
-        }
-        ... on Cash {
-            id
-            spvId
-            currency
-        }
-        }
-        transactions {
-            type
-            entryTime
-            cashBalanceChange
-            feeTransactions {
-            id
-            amount
-            tradeTime
-            }
-        }
-    }
+  state {
+      portfolio {
+          __typename
+          ... on FixedIncome {
+              name
+              CUSIP
+              purchaseDate
+              purchasePrice
+              purchaseProceeds
+              salesProceeds
+              totalDiscount
+              spvId
+          }
+          ... on Cash {
+              id
+              balance
+          }
+      }
+      transactions {
+          id
+          type
+          entryTime
+          cashBalanceChange
+          fees {
+              id
+              serviceProviderFeeTypeId
+              amount
+          }
+          txRef
+          cashTransaction {
+              id
+              assetId
+              amount
+              entryTime
+              tradeTime
+              settlementTime
+              accountId
+              counterPartyAccountId
+          }
+          fixedIncomeTransaction {
+              id
+              assetId
+              amount
+              entryTime
+              tradeTime
+              settlementTime
+              accountId
+              counterPartyAccountId
+          }
+      }
+  }
 }`;
 
 const accountSnapshot = `... on AccountSnapshot {
