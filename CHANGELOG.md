@@ -1,3 +1,10 @@
+# [1.0.0-dev.23](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.22...v1.0.0-dev.23) (2024-07-01)
+
+
+### Features
+
+* update query ([3ca3f2a](https://github.com/powerhouse-inc/document-model-electron/commit/3ca3f2a4e25f8ab1a650630ae8e67f500097da09))
+
 # [1.0.0-dev.22](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.21...v1.0.0-dev.22) (2024-07-01)
 
 
