@@ -1,3 +1,12 @@
+# [1.0.0-dev.25](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.24...v1.0.0-dev.25) (2024-07-02)
+
+
+### Features
+
+* add file icon logic ([3ba0aae](https://github.com/powerhouse-inc/document-model-electron/commit/3ba0aae6d692a2368b19e1defeb655d582c5c220))
+* add wagmi context ([7f638be](https://github.com/powerhouse-inc/document-model-electron/commit/7f638be54fc5b778c7abd9f991d0b01f6606cf59))
+* regenerate lockfile ([4048486](https://github.com/powerhouse-inc/document-model-electron/commit/404848647c21309a9dd9f0a4a28583a9640c9bd8))
+
 # [1.0.0-dev.24](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.23...v1.0.0-dev.24) (2024-07-02)
 
 
