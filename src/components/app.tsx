@@ -1,6 +1,7 @@
 import {
     ItemsContextProvider,
     ToastContainer,
+    WagmiContext,
 } from '@powerhousedao/design-system';
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
@@ -26,13 +27,15 @@ export default (
     <React.StrictMode>
         <Suspense fallback={<>{/* TODO loading */}</>}>
             <Preloader />
-            <ItemsContextProvider>
-                <ToastContainer position="bottom-right" />
-                <ModalManager>
-                    <Router />
-                    <PHLogo />
-                </ModalManager>
-            </ItemsContextProvider>
+            <WagmiContext>
+                <ItemsContextProvider>
+                    <ToastContainer position="bottom-right" />
+                    <ModalManager>
+                        <Router />
+                        <PHLogo />
+                    </ModalManager>
+                </ItemsContextProvider>
+            </WagmiContext>
         </Suspense>
     </React.StrictMode>
 );
