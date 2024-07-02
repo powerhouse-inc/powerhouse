@@ -1,3 +1,4 @@
+import { addDays } from 'date-fns';
 import { Operation, SignatureArray } from './types';
 
 export const mockSignature: SignatureArray = [
@@ -66,6 +67,12 @@ export const mockOperations = [
         timestamp: '2024-06-15T14:39:12.936Z',
     },
     { ...mockOperation, timestamp: '2024-06-15T14:39:12.936Z' },
+    ...Array.from({ length: 100 }, (_, index) =>
+        Array.from({ length: 5 }, () => ({
+            ...mockOperation,
+            timestamp: addDays(`2024-06-15T14:39:12.936Z`, index).toISOString(),
+        })),
+    ).flat(),
 ].map((op, index) => ({
     ...op,
     index,

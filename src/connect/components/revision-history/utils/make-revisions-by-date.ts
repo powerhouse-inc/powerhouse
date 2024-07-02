@@ -1,30 +1,23 @@
 import { Operation, Revision, Signature, SignatureArray, Skip } from '../types';
 
 export type RevisionsByDate = Record<string, (Revision | Skip)[]>;
-export function makeRevisionsByDate(operations: Operation[]) {
-    const revisionsByDate: RevisionsByDate = {};
+export function makeRevisionsAndSkips(operations: Operation[]) {
+    const revisionsAndSkips: (Revision | Skip)[] = [];
     let index = 0;
 
     while (index < operations.length) {
         const operation = operations[index];
-        const date = operation.timestamp.split('T')[0];
-
-        if (!revisionsByDate[date]) {
-            revisionsByDate[date] = [];
-        }
 
         if (operation.skip > 0) {
-            revisionsByDate[date].push({
+            revisionsAndSkips.push({
                 operationIndex: operation.index,
                 skipCount: operation.skip,
+                timestamp: operation.timestamp,
             });
             index += operation.skip;
-            revisionsByDate[date]
-                .sort((a, b) => a.operationIndex - b.operationIndex)
-                .reverse();
             continue;
         } else {
-            revisionsByDate[date].push({
+            revisionsAndSkips.push({
                 operationIndex: operation.index,
                 eventId: operation.id ?? 'EVENT_ID_NOT_FOUND',
                 stateHash: operation.hash,
@@ -38,15 +31,27 @@ export function makeRevisionsByDate(operations: Operation[]) {
                 ),
                 errors: operation.error ? [operation.error] : undefined,
             });
-            revisionsByDate[date]
-                .sort((a, b) => a.operationIndex - b.operationIndex)
-                .reverse();
         }
 
         index += 1;
     }
 
-    return revisionsByDate;
+    return revisionsAndSkips.sort(
+        (a, b) => b.operationIndex - a.operationIndex,
+    );
+}
+
+export function getUniqueDatesInOrder(operations: Operation[]) {
+    const dates = new Set<string>();
+
+    for (const operation of operations) {
+        const date = operation.timestamp.split('T')[0];
+        dates.add(date);
+    }
+
+    return Array.from(dates).sort(
+        (a, b) => new Date(b).getTime() - new Date(a).getTime(),
+    );
 }
 
 function makeSignatureFromSignatureArray(

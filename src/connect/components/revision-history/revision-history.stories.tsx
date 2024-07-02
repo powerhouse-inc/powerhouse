@@ -1,6 +1,8 @@
 import { Meta, StoryObj } from '@storybook/react';
 import { globalOperations, localOperations } from './mocks';
+import nsOperations from './ns-operations.json';
 import { RevisionHistory } from './revision-history';
+import { Operation } from './types';
 
 const meta = {
     title: 'Connect/Components/Revision History/Revision History',
@@ -11,11 +13,16 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+const operations = nsOperations as unknown as {
+    global: Operation[];
+    local: Operation[];
+};
+
 export const Default: Story = {
     args: {
         documentTitle: ' MakerDAO/Monetalis RWA Report 050724',
         documentId: '6wYLICDhX5w1Hq7mIo6CRbXUV1I=',
-        globalOperations,
+        globalOperations: operations.global,
         localOperations,
         onClose: () => {},
     },

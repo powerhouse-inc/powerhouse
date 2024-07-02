@@ -29,7 +29,7 @@ export const Default: Story = {
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                 chainId: 1,
-                timestamp: 1719232415114,
+                timestamp: '1719232415114',
                 signatures: [
                     {
                         signerAddress:
@@ -65,7 +65,7 @@ export const Default: Story = {
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                 chainId: 1,
-                timestamp: 1719232415114,
+                timestamp: '1719232415114',
                 signatures: [
                     {
                         signerAddress:
@@ -101,7 +101,7 @@ export const Default: Story = {
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                 chainId: 1,
-                timestamp: 1719232415114,
+                timestamp: '1719232415114',
                 signatures: [
                     {
                         signerAddress:
@@ -123,10 +123,6 @@ export const Default: Story = {
                 errors: ['Data mismatch detected'],
             },
             {
-                operationIndex: 4,
-                skipCount: 1,
-            },
-            {
                 operationIndex: 6,
                 eventId: '123',
                 stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
@@ -141,7 +137,7 @@ export const Default: Story = {
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                 chainId: 1,
-                timestamp: 1719232415114,
+                timestamp: '1719232415114',
                 signatures: [
                     {
                         signerAddress:
@@ -177,7 +173,7 @@ export const Default: Story = {
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                 chainId: 1,
-                timestamp: 1719232415114,
+                timestamp: '1719232415114',
                 signatures: [
                     {
                         signerAddress:
@@ -213,7 +209,7 @@ export const Default: Story = {
                 },
                 address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
                 chainId: 1,
-                timestamp: 1719232415114,
+                timestamp: '1719232415114',
                 signatures: [
                     {
                         signerAddress:
@@ -233,10 +229,6 @@ export const Default: Story = {
                     },
                 ],
                 errors: ['Data mismatch detected'],
-            },
-            {
-                operationIndex: 9,
-                skipCount: 3,
             },
         ],
     },

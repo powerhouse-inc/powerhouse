@@ -23,6 +23,7 @@ export type Operation = {
 export type Skip = {
     operationIndex: number;
     skipCount: number;
+    timestamp: string;
 };
 
 //  [
@@ -49,7 +50,7 @@ export type Revision = {
     operationInput: Record<string, any>;
     address: `0x${string}` | undefined;
     chainId: number | undefined;
-    timestamp: number | string;
+    timestamp: string;
     signatures: Signature[] | undefined;
     errors: string[] | undefined;
 };
