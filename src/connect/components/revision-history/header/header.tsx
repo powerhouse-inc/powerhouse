@@ -16,7 +16,7 @@ type Props = {
 export function Header(props: Props) {
     const { title, docId, scope, onChangeScope, onClose } = props;
     return (
-        <header className="flex items-center justify-between bg-slate-50">
+        <header className="flex items-center justify-between bg-transparent">
             <div className="flex items-center gap-3">
                 <button
                     onClick={onClose}

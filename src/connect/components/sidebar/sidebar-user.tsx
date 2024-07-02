@@ -1,59 +1,16 @@
-import ImgPowerhouse from '@/assets/powerhouse-rounded.png';
-import { useState } from 'react';
-import { twJoin, twMerge } from 'tailwind-merge';
+import { formatEthAddress } from '@/connect/utils';
+import { useEnsName } from 'wagmi';
+import { ENSAvatar } from '../ens-avatar';
 
 export interface SidebarUserProps {
-    username: string;
-    address: string;
-    avatarUrl?: string;
-    loadingUser?: boolean;
+    address: `0x${string}`;
 }
 
-export const SidebarUser: React.FC<SidebarUserProps> = ({
-    username,
-    address,
-    avatarUrl,
-    loadingUser,
-}) => {
-    const [loadingImage, setLoadingImage] = useState(Boolean(avatarUrl));
-    const [imageError, setImageError] = useState(false);
-
-    function getImage() {
-        if (!avatarUrl || imageError) {
-            return <SidebarImage src={ImgPowerhouse} alt={username} />;
-        }
-
-        return (
-            <>
-                <div
-                    className={twJoin(
-                        'size-10 flex-none animate-pulse rounded-full bg-gray-400 fade-out',
-                        !loadingImage && 'hidden',
-                    )}
-                ></div>
-                <SidebarImage src={avatarUrl} alt={username} />
-            </>
-        );
-    }
-
-    const image = getImage();
-
-    function SidebarImage(props: { src: string; alt: string }) {
-        return (
-            <img
-                {...props}
-                className={twMerge(
-                    'size-10 flex-none rounded-full object-contain transition-opacity duration-1000 animate-in fade-in',
-                    loadingImage && 'hidden',
-                )}
-                onLoad={() => setLoadingImage(false)}
-                onError={() => {
-                    setLoadingImage(false);
-                    setImageError(true);
-                }}
-            />
-        );
-    }
+export const SidebarUser: React.FC<SidebarUserProps> = ({ address }) => {
+    const ensNameResult = useEnsName({ address });
+    const loadingUser = ensNameResult.isLoading;
+    const ensName = ensNameResult.data ?? undefined;
+    const formattedAddress = formatEthAddress(address);
 
     const usernameAndAddressLoader = (
         <>
@@ -62,20 +19,20 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
         </>
     );
 
-    const usernameAndAddress = (
+    const ensNameAndAddress = (
         <>
             <p className="mb-2 h-4 text-sm text-gray-800 duration-1000 animate-in fade-in">
-                {username}
+                {ensName}
             </p>
             <p className="h-3 text-xs text-gray-600 duration-1000 animate-in fade-in">
-                {address}
+                {formattedAddress}
             </p>
         </>
     );
 
     const addressOnly = (
         <p className="text-sm text-gray-800 duration-1000 animate-in fade-in">
-            {address}
+            {formattedAddress}
         </p>
     );
 
@@ -84,11 +41,11 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({
             className="flex gap-2 rounded-sm py-2.5 collapsed:justify-center
             collapsed:px-1 expanding:justify-center expanding:px-1"
         >
-            {image}
+            <ENSAvatar address={address} size="40px" />
             <div className="grid w-full items-center font-semibold collapsed:hidden expanding:hidden">
                 {loadingUser && usernameAndAddressLoader}
-                {!loadingUser && !!username && usernameAndAddress}
-                {!loadingUser && !username && addressOnly}
+                {!loadingUser && !!ensName && ensNameAndAddress}
+                {!loadingUser && !ensName && addressOnly}
             </div>
         </div>
     );

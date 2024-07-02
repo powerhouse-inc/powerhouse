@@ -53,24 +53,19 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           class="flex gap-2 rounded-sm py-2.5 collapsed:justify-center
             collapsed:px-1 expanding:justify-center expanding:px-1"
         >
-          <img
-            alt="Willow"
-            class="size-10 flex-none rounded-full object-contain transition-opacity duration-1000 animate-in fade-in"
-            src="/src/assets/powerhouse-rounded.png"
+          <div
+            class="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
+            style="width: 40px; height: 40px;"
           />
           <div
             class="grid w-full items-center font-semibold collapsed:hidden expanding:hidden"
           >
             <p
-              class="mb-2 h-4 text-sm text-gray-800 duration-1000 animate-in fade-in"
-            >
-              Willow
-            </p>
+              class="mb-2 h-4 w-4/5 animate-pulse rounded bg-gray-400"
+            />
             <p
-              class="h-3 text-xs text-gray-600 duration-1000 animate-in fade-in"
-            >
-              0x123
-            </p>
+              class="h-3 w-4/5 animate-pulse rounded bg-gray-400"
+            />
           </div>
         </div>
       </div>

@@ -2,22 +2,18 @@ import { Icon, SidebarFooter, SidebarFooterProps } from '@/powerhouse';
 import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 import { SidebarLogin } from './sidebar-login';
-import { SidebarUser, SidebarUserProps } from './sidebar-user';
+import { SidebarUser } from './sidebar-user';
 
-export interface ConnectSidebarFooterProps
-    extends SidebarFooterProps,
-        SidebarUserProps {
+export interface ConnectSidebarFooterProps extends SidebarFooterProps {
+    address: `0x${string}` | undefined;
     onClickSettings?: () => void;
     onLogin: () => void;
 }
 
 export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
-    username,
     address,
-    avatarUrl,
     className,
     onLogin,
-    loadingUser,
     onClickSettings,
     ...props
 }) => {
@@ -30,13 +26,8 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
             )}
         >
             <div className="collapsed:bg-transparent collapsing:bg-transparent expanding:bg-transparent">
-                {address || loadingUser ? (
-                    <SidebarUser
-                        username={username}
-                        address={address}
-                        avatarUrl={avatarUrl}
-                        loadingUser={loadingUser}
-                    />
+                {address ? (
+                    <SidebarUser address={address} />
                 ) : (
                     <SidebarLogin onLogin={onLogin} />
                 )}

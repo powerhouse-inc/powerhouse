@@ -21,15 +21,12 @@ export interface ConnectSidebarProps
 
 export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
     onToggle,
-    username,
     address,
-    avatarUrl,
     headerContent,
     onClickSettings,
     collapsed = false,
     maxWidth = '304px',
     minWidth = '58px',
-    loadingUser,
     onLogin,
     ...props
 }) => {
@@ -47,10 +44,7 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
                 <div className="hidden expanded:block">{props.children}</div>
             </SidebarPanel>
             <ConnectSidebarFooter
-                username={username}
                 address={address}
-                avatarUrl={avatarUrl}
-                loadingUser={loadingUser}
                 onLogin={onLogin}
                 onClickSettings={onClickSettings}
             />

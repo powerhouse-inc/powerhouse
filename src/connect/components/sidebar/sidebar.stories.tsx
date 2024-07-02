@@ -106,23 +106,8 @@ const children = (
 );
 
 const user = {
-    address: '0x8343...3u432u32',
-};
-
-const userWithName = {
-    ...user,
-    username: 'Willow.eth',
-};
-
-const userWithAvatar = {
-    ...user,
-    avatarUrl: 'https://euc.li/sepolia/acaldas-powerhouse.eth',
-};
-
-const userWithAvatarAndName = {
-    ...userWithAvatar,
-    ...userWithName,
-};
+    address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+} as const;
 
 export const Expanded: Story = {
     decorators: [
@@ -158,40 +143,6 @@ export const ExpandedWithUser: Story = {
         ...user,
     },
 };
-
-export const ExpandedWithUserAndAvatar: Story = {
-    ...Expanded,
-    args: {
-        ...Expanded.args,
-        ...userWithAvatar,
-    },
-};
-
-export const ExpandedWithUserAndName: Story = {
-    ...Expanded,
-    args: {
-        ...Expanded.args,
-        ...userWithName,
-    },
-};
-
-export const ExpandedWithUserAndAvatarAndName: Story = {
-    ...Expanded,
-    args: {
-        ...Expanded.args,
-        ...userWithAvatarAndName,
-    },
-};
-
-export const ExpandedWithUserAndAvatarAndNameLoading: Story = {
-    ...Expanded,
-    args: {
-        ...Expanded.args,
-        ...userWithAvatarAndName,
-        loadingUser: true,
-    },
-};
-
 export const ExpandedWithDrives: Story = {
     ...Expanded,
     args: {
@@ -206,24 +157,6 @@ export const ExpandedWithDrivesAndUser: Story = {
         ...Expanded.args,
         drives,
         ...user,
-    },
-};
-
-export const ExpandedWithDrivesAndUserAndAvatar: Story = {
-    ...Expanded,
-    args: {
-        ...Expanded.args,
-        drives,
-        ...userWithAvatar,
-    },
-};
-
-export const ExpandedWithDrivesAndUserAndAvatarAndName: Story = {
-    ...Expanded,
-    args: {
-        ...Expanded.args,
-        drives,
-        ...userWithAvatarAndName,
     },
 };
 
@@ -243,30 +176,6 @@ export const CollapsedWithUser: Story = {
     },
 };
 
-export const CollapsedWithUserAndName: Story = {
-    ...Collapsed,
-    args: {
-        ...Collapsed.args,
-        ...userWithName,
-    },
-};
-
-export const CollapsedWithUserAndAvatar: Story = {
-    ...Collapsed,
-    args: {
-        ...Collapsed.args,
-        ...userWithAvatar,
-    },
-};
-
-export const CollapsedWithUserAndAvatarAndName: Story = {
-    ...Collapsed,
-    args: {
-        ...Collapsed.args,
-        ...userWithAvatarAndName,
-    },
-};
-
 export const CollapsedWithDrives: Story = {
     ...Collapsed,
     args: {
@@ -281,23 +190,5 @@ export const CollapsedWithDrivesAndUser: Story = {
         ...Collapsed.args,
         drives,
         ...user,
-    },
-};
-
-export const CollapsedWithDrivesAndUserAndAvatar: Story = {
-    ...Collapsed,
-    args: {
-        ...Collapsed.args,
-        drives,
-        ...userWithAvatar,
-    },
-};
-
-export const CollapsedWithDrivesAndUserAndAvatarAndName: Story = {
-    ...Collapsed,
-    args: {
-        ...Collapsed.args,
-        drives,
-        ...userWithAvatarAndName,
     },
 };

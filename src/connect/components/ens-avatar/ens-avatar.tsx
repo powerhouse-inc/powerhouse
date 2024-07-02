@@ -1,7 +1,6 @@
 import ImgPowerhouse from '@/assets/powerhouse-rounded.png';
-import { useENSInfo } from '@/connect/hooks';
-import { CSSProperties, useState } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { CSSProperties } from 'react';
+import { useEnsAvatar, useEnsName } from 'wagmi';
 
 type Props = {
     address: `0x${string}`;
@@ -10,53 +9,30 @@ type Props = {
 };
 export function ENSAvatar(props: Props) {
     const { address, chainId = 1, size = '14px' } = props;
-    const { info } = useENSInfo(address, chainId);
-    const avatarUrl = info?.avatarUrl;
-    const [loadingImage, setLoadingImage] = useState(Boolean(avatarUrl));
-    const [imageError, setImageError] = useState(false);
     const style = {
         width: size,
         height: size,
     };
+    const ensNameResult = useEnsName({ address, chainId });
+    const name = ensNameResult.data ?? undefined;
+    const ensAvatarResult = useEnsAvatar({ name });
+    const avatarUrl = ensAvatarResult.data ?? ImgPowerhouse;
+    const isLoading = ensNameResult.isLoading || ensAvatarResult.isLoading;
 
-    function getImage() {
-        // if (!avatarUrl || imageError) {
-        return <EnsAvatar src={ImgPowerhouse} alt="ENS avatar" />;
-        // }
-
-        // return (
-        //     <>
-        //         <div
-        //             className={twJoin(
-        //                 'flex-none rounded-full bg-gray-400',
-        //                 !loadingImage && 'hidden',
-        //             )}
-        //             style={style}
-        //         ></div>
-        //         <EnsAvatar src={avatarUrl} alt="ENS avatar" />
-        //     </>
-        // );
-    }
-
-    const image = getImage();
-
-    function EnsAvatar(props: { src: string; alt: string }) {
+    if (isLoading)
         return (
-            <img
-                {...props}
+            <div
                 style={style}
-                className={twMerge(
-                    'flex-none rounded-full object-contain',
-                    loadingImage && 'hidden',
-                )}
-                onLoad={() => setLoadingImage(false)}
-                onError={() => {
-                    setLoadingImage(false);
-                    setImageError(true);
-                }}
-            />
+                className="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
+            ></div>
         );
-    }
 
-    return image;
+    return (
+        <img
+            src={avatarUrl}
+            style={style}
+            className="flex-none rounded-full object-contain"
+            alt="ENS Avatar"
+        />
+    );
 }
