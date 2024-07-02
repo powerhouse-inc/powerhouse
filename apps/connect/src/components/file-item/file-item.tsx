@@ -6,6 +6,7 @@ import {
 import React, { useState } from 'react';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { SetIsWriteMode } from 'src/hooks/useFileOptions';
+import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
 import { useGetReadableItemPath } from 'src/hooks/useGetReadableItemPath';
 
 interface IProps {
@@ -33,12 +34,19 @@ export const FileItem: React.FC<IProps> = ({
     const [isWriteMode, setIsWriteMode] = useState(false);
     const getReadableItemPath = useGetReadableItemPath();
     const { updateNodeName } = useDrivesContainer();
-
+    const getDocumentById = useGetDocumentById();
     const cancelInputHandler = () => setIsWriteMode(false);
     const submitInputHandler = (value: string) => {
         setIsWriteMode(false);
         updateNodeName({ ...file, label: value }, decodedDriveID);
     };
+    const document = getDocumentById(decodedDriveID, file.id);
+    const icon =
+        document &&
+        'documentType' in document &&
+        document.documentType === 'makerdao/rwa-portfolio'
+            ? 'rwaReport'
+            : 'global';
 
     return (
         <ConnectFileItem
@@ -59,6 +67,7 @@ export const FileItem: React.FC<IProps> = ({
                 !isWriteMode && onFileSelected(decodedDriveID, file.id)
             }
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            icon={icon}
         />
     );
 };
