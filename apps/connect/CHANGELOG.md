@@ -1,3 +1,10 @@
+# [1.0.0-dev.27](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.26...v1.0.0-dev.27) (2024-07-02)
+
+
+### Features
+
+* split file creation and operations push ([ce1ede8](https://github.com/powerhouse-inc/document-model-electron/commit/ce1ede8b3df3a13dc12ac89d8106cbfc8ee1efc7))
+
 # [1.0.0-dev.26](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.25...v1.0.0-dev.26) (2024-07-02)
 
 
