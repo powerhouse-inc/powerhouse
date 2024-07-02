@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.23",
+    "version": "1.0.0-dev.25",
     "description": "Powerhouse Connect",
     "main": ".vite/build/main.js",
     "license": "AGPL-3.0-only",
@@ -53,7 +53,6 @@
         "@total-typescript/ts-reset": "^0.5.1",
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.18",
-        "@types/react-window": "^1.8.8",
         "@types/uuid": "^9.0.7",
         "@types/wicg-file-system-access": "^2020.9.6",
         "@typescript-eslint/eslint-plugin": "^6.18.1",
@@ -94,12 +93,13 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.141",
+        "@powerhousedao/design-system": "1.0.0-alpha.143",
         "@sentry/react": "^7.109.0",
+        "@tanstack/react-virtual": "^3.8.1",
         "did-key-creator": "^1.2.0",
         "document-drive": "1.0.0-alpha.80",
         "document-model": "1.7.0",
-        "document-model-libs": "^1.67.0",
+        "document-model-libs": "^1.68.0",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
@@ -113,8 +113,6 @@
         "react-i18next": "^13.5.0",
         "react-router-dom": "^6.11.2",
         "react-stately": "^3.31.0",
-        "react-virtualized-auto-sizer": "^1.0.24",
-        "react-window": "^1.8.10",
         "tailwind-merge": "^1.14.0",
         "uuid": "^9.0.1",
         "viem": "^2.8.13"
