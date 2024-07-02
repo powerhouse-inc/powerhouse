@@ -1,3 +1,24 @@
+# [1.0.0-dev.28](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.27...v1.0.0-dev.28) (2024-07-02)
+
+
+### Features
+
+* bump libs ([e431ef5](https://github.com/powerhouse-inc/document-model-electron/commit/e431ef529c7e2c6ff3e016b22ef4c1573c8e480e))
+
+# [1.0.0-dev.27](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.26...v1.0.0-dev.27) (2024-07-02)
+
+
+### Features
+
+* split file creation and operations push ([ce1ede8](https://github.com/powerhouse-inc/document-model-electron/commit/ce1ede8b3df3a13dc12ac89d8106cbfc8ee1efc7))
+
+# [1.0.0-dev.26](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.25...v1.0.0-dev.26) (2024-07-02)
+
+
+### Features
+
+* fix sidebar props ([11b50b4](https://github.com/powerhouse-inc/document-model-electron/commit/11b50b453b802cc97dde620df4b6e1b1ad97cd6a))
+
 # [1.0.0-dev.25](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.24...v1.0.0-dev.25) (2024-07-02)
 
 
