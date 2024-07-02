@@ -1,3 +1,10 @@
+# [1.0.0-dev.26](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.25...v1.0.0-dev.26) (2024-07-02)
+
+
+### Features
+
+* fix sidebar props ([11b50b4](https://github.com/powerhouse-inc/document-model-electron/commit/11b50b453b802cc97dde620df4b6e1b1ad97cd6a))
+
 # [1.0.0-dev.25](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.24...v1.0.0-dev.25) (2024-07-02)
 
 
