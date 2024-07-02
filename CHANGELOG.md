@@ -1,3 +1,17 @@
+# [1.0.0-dev.29](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.28...v1.0.0-dev.29) (2024-07-02)
+
+
+### Features
+
+* allow renown.id ([63fda39](https://github.com/powerhouse-inc/document-model-electron/commit/63fda3999ab7d5748783c89da909ef30d7794407))
+* allow url for file ([d7b762d](https://github.com/powerhouse-inc/document-model-electron/commit/d7b762d7c79c679acb212f4bfc3da50c010d397a))
+* fix renown url ([b46dd75](https://github.com/powerhouse-inc/document-model-electron/commit/b46dd750eaf0fb01f1c25fd63ff150fab8f79484))
+* fixed file import ([b5d4d72](https://github.com/powerhouse-inc/document-model-electron/commit/b5d4d72fbed6f7540b0a33849e829311b4e4af92))
+* merge branch 'staging' into deployments/staging/makerdao ([bc2bd10](https://github.com/powerhouse-inc/document-model-electron/commit/bc2bd10b75865d8b6104be80a464d44375fe3e5a))
+* remove csp ([fdff1c6](https://github.com/powerhouse-inc/document-model-electron/commit/fdff1c653a0dd744ea5db01561d029ef466bb600))
+* set VITE_RWA_ALLOW_LIST ([34c5dad](https://github.com/powerhouse-inc/document-model-electron/commit/34c5dad0e6c384c81980bd7f6622842d922c9da8))
+* updated renown url ([b2ddc9d](https://github.com/powerhouse-inc/document-model-electron/commit/b2ddc9dda69791a75047afd4ad8436ad6e3cc327))
+
 # [1.0.0-dev.28](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.27...v1.0.0-dev.28) (2024-07-02)
 
 
