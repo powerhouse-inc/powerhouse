@@ -1,3 +1,10 @@
+# [1.0.0-alpha.145](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.144...v1.0.0-alpha.145) (2024-07-02)
+
+
+### Features
+
+* remove placeholder space ([#324](https://github.com/powerhouse-inc/design-system/issues/324)) ([6ab7493](https://github.com/powerhouse-inc/design-system/commit/6ab74936b72df04ab78a2811afcbe0efa8dfbbbe))
+
 # [1.0.0-alpha.144](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.143...v1.0.0-alpha.144) (2024-07-02)
 
 
