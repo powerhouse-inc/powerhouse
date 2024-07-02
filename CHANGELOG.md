@@ -1,3 +1,10 @@
+# [1.0.0-alpha.143](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.142...v1.0.0-alpha.143) (2024-07-02)
+
+
+### Features
+
+* use wagmi for ens avatars ([#320](https://github.com/powerhouse-inc/design-system/issues/320)) ([5105d6f](https://github.com/powerhouse-inc/design-system/commit/5105d6fc8473fa25a57dcdc1bbc0b6146aae9e31))
+
 # [1.0.0-alpha.142](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.141...v1.0.0-alpha.142) (2024-07-01)
 
 
