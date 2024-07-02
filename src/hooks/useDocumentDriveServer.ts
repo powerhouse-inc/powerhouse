@@ -24,6 +24,9 @@ import { loadFile } from 'src/utils/file';
 import { useDocumentDrives } from './useDocumentDrives';
 import { useUserPermissions } from './useUserPermissions';
 
+export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE =
+    parseInt(import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE as string) || 50;
+
 // TODO this should be added to the document model
 export interface SortOptions {
     afterNodePath?: string;
@@ -123,7 +126,6 @@ export function useDocumentDriveServer(
                 name,
                 parentFolder: parentFolder ?? null,
                 documentType,
-
                 document,
             },
             ['global'],
@@ -169,8 +171,43 @@ export function useDocumentDriveServer(
         );
 
         // then add all the operations
+        const operationsLimit = FILE_UPLOAD_OPERATIONS_CHUNK_SIZE;
         for (const operations of Object.values(document.operations)) {
-            await addOperations(drive, fileNode.id, operations);
+            for (let i = 0; i < operations.length; i += operationsLimit) {
+                const chunk = operations.slice(i, i + operationsLimit);
+                const operation = chunk.at(-1);
+                if (!operation) {
+                    break;
+                }
+                const { scope } = operation;
+
+                await addOperations(drive, fileNode.id, chunk);
+                await new Promise<void>(resolve =>
+                    server.on('strandUpdate', update => {
+                        const sameScope =
+                            update.documentId === fileNode.id &&
+                            update.scope == scope;
+                        if (!sameScope) {
+                            return;
+                        }
+
+                        // if all pushed operations are found in the strand
+                        // update then moves on to the next chunk
+                        const operationNotFound = chunk.find(
+                            op =>
+                                !update.operations.find(strandOp =>
+                                    op.id
+                                        ? op.id === strandOp.id
+                                        : op.index === strandOp.index &&
+                                          op.hash === strandOp.hash,
+                                ),
+                        );
+                        if (!operationNotFound) {
+                            resolve();
+                        }
+                    }),
+                );
+            }
         }
     }
 
