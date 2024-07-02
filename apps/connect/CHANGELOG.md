@@ -1,3 +1,10 @@
+# [1.0.0-dev.24](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.23...v1.0.0-dev.24) (2024-07-02)
+
+
+### Features
+
+* replaced react-window by tanstack/react-virtual ([7e9b024](https://github.com/powerhouse-inc/document-model-electron/commit/7e9b024fefbadcb36640e5757f33b9f83ed369be))
+
 # [1.0.0-dev.23](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.22...v1.0.0-dev.23) (2024-07-01)
 
 
