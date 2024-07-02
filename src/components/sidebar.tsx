@@ -41,12 +41,9 @@ export default function Sidebar() {
         <ConnectSidebar
             collapsed={collapsed}
             onToggle={toggleCollapse}
-            username={user?.ens?.name || ''}
-            avatarUrl={user?.ens?.avatarUrl}
             onClickSettings={onClickSettings}
             headerContent={headerContent}
-            address={user?.address ? shortAddress(user.address) : ''}
-            loadingUser={status === 'checking'}
+            address={user?.address}
             onLogin={openRenown}
         >
             <ErrorBoundary
