@@ -1,3 +1,10 @@
+# [1.0.0-dev.30](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.29...v1.0.0-dev.30) (2024-07-02)
+
+
+### Features
+
+* push operations by chunks ([ec6c80b](https://github.com/powerhouse-inc/document-model-electron/commit/ec6c80b42fbb08b07d8bbd4ed2aad936da647680))
+
 # [1.0.0-dev.29](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.28...v1.0.0-dev.29) (2024-07-02)
 
 
