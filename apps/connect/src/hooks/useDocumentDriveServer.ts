@@ -149,13 +149,29 @@ export function useDocumentDriveServer(
             throw new Error('User is not allowed to create files');
         }
         const document = await loadFile(file, getDocumentModel);
-        return addDocument(
+
+        // first create the file with the initial state of document
+        const initialDocument: Document = {
+            ...document.initialState,
+            initialState: document.initialState,
+            operations: {
+                global: [],
+                local: [],
+            },
+            clipboard: [],
+        };
+        const fileNode = await addDocument(
             drive,
             name || (typeof file === 'string' ? document.name : file.name),
             document.documentType,
             parentFolder,
-            document,
+            initialDocument,
         );
+
+        // then add all the operations
+        for (const operations of Object.values(document.operations)) {
+            await addOperations(drive, fileNode.id, operations);
+        }
     }
 
     async function updateFile(
