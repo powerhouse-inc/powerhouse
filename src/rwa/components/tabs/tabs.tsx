@@ -80,11 +80,11 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
             <div
                 {...mergeClassNameProps(
                     tabListContainerProps,
-                    'grid grid-cols-3 items-center',
+                    'flex items-center justify-between',
                 )}
             >
-                <div className="flex gap-x-2 text-gray-500">
-                    {/* <button
+                {/* <div className="flex gap-x-2 text-gray-500"> */}
+                {/* <button
                         className={buttonClass}
                         onClick={onUndo}
                         disabled={!canUndo}
@@ -111,7 +111,7 @@ export const RWATabs: React.FC<RWATabsProps> = props => {
                             )}
                         />
                     </button> */}
-                </div>
+                {/* </div> */}
                 <TabList
                     {...mergeClassNameProps(
                         tabListProps,
