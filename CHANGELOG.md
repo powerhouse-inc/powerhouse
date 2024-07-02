@@ -1,3 +1,10 @@
+# [1.0.0-alpha.144](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.143...v1.0.0-alpha.144) (2024-07-02)
+
+
+### Features
+
+* add infinite scroll for revision history ([#323](https://github.com/powerhouse-inc/design-system/issues/323)) ([cf932bb](https://github.com/powerhouse-inc/design-system/commit/cf932bbddf077f93b9d6ddddcc6b8f81f8c1c63b))
+
 # [1.0.0-alpha.143](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.142...v1.0.0-alpha.143) (2024-07-02)
 
 
