@@ -549,6 +549,11 @@ export function useDocumentDriveServer(
             onSyncStatus,
             clearStorage,
         }),
-        [documentDrives, documentDrivesStatus],
+        [
+            documentDrives,
+            documentDrivesStatus,
+            isAllowedToCreateDocuments,
+            isAllowedToEditDocuments,
+        ],
     );
 }
