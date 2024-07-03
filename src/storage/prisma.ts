@@ -31,14 +31,14 @@ import {
 
 type Transaction =
     | Omit<
-          PrismaClient<Prisma.PrismaClientOptions, never>,
-          | '$connect'
-          | '$disconnect'
-          | '$on'
-          | '$transaction'
-          | '$use'
-          | '$extends'
-      >
+        PrismaClient<Prisma.PrismaClientOptions, never>,
+        | '$connect'
+        | '$disconnect'
+        | '$on'
+        | '$transaction'
+        | '$use'
+        | '$extends'
+    >
     | ExtendedPrismaClient;
 
 function storageToOperation(
@@ -495,21 +495,16 @@ export class PrismaStorage implements IDriveStorage {
     }
 
     async deleteDocument(drive: string, id: string) {
-        await this.db.document.delete({
-            where: {
-                id_driveId: {
+        try {
+            await this.db.document.deleteMany({
+                where: {
                     driveId: drive,
                     id: id
                 }
-            },
-            include: {
-                operations: {
-                    include: {
-                        attachments: true
-                    }
-                }
-            }
-        });
+            });
+        } catch (e) {
+            // do nothing
+        }
     }
 
     async getDrives() {
