@@ -73,7 +73,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                             name: 'storybook',
                             key: 'storybook',
                         },
-                        signature: '',
+                        signatures: [],
                     };
                 }
                 return _dispatch({
