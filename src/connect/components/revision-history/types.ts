@@ -21,8 +21,16 @@ export type Operation = {
 };
 
 export type Skip = {
+    type: 'skip';
+    height: number;
     operationIndex: number;
     skipCount: number;
+    timestamp: string;
+};
+
+export type Day = {
+    type: 'day';
+    height: number;
     timestamp: string;
 };
 
@@ -43,6 +51,8 @@ export type Signature = {
 };
 
 export type Revision = {
+    type: 'revision';
+    height: number;
     operationIndex: number;
     eventId: string;
     stateHash: string;

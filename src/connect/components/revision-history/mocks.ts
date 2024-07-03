@@ -79,7 +79,6 @@ export const mockOperations = [
 }));
 
 export const globalOperations = mockOperations;
-
 export const localOperations: Operation[] = mockOperations.map(op => ({
     ...op,
     scope: 'local',

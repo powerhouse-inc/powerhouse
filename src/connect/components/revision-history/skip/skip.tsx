@@ -13,7 +13,7 @@ export function Skip(props: SkipProps) {
             : `${revisionNumber} - ${revisionNumber + skipCount - 1}`;
 
     return (
-        <article className="grid grid-cols-[1fr,auto,1fr] items-center">
+        <article className="grid grid-cols-[1fr,auto,1fr] items-center py-2">
             <div className="h-px rounded-full bg-slate-100" />
             <div className="mx-3 text-xs text-slate-100">
                 [Skipped Revision {skippedRevisions}]

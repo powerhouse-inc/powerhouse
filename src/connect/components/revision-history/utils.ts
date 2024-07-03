@@ -1,15 +1,37 @@
-import { Operation, Revision, Signature, SignatureArray, Skip } from '../types';
+import {
+    Day,
+    Operation,
+    Revision,
+    Signature,
+    SignatureArray,
+    Skip,
+} from './types';
 
-export type RevisionsByDate = Record<string, (Revision | Skip)[]>;
-export function makeRevisionsAndSkips(operations: Operation[]) {
-    const revisionsAndSkips: (Revision | Skip)[] = [];
+export function makeRows(operations: Operation[]) {
+    const revisionsAndSkips: (Revision | Skip | Day)[] = [];
     let index = 0;
+    let currentDay = '';
+    const seenDays = new Set<string>();
 
     while (index < operations.length) {
         const operation = operations[index];
+        const day = operation.timestamp.split('T')[0];
+
+        if (day !== currentDay && !seenDays.has(day)) {
+            seenDays.add(day);
+            revisionsAndSkips.push({
+                type: 'day',
+                height: 32,
+                timestamp: day,
+            });
+            currentDay = day;
+            continue;
+        }
 
         if (operation.skip > 0) {
             revisionsAndSkips.push({
+                type: 'skip',
+                height: 18,
                 operationIndex: operation.index,
                 skipCount: operation.skip,
                 timestamp: operation.timestamp,
@@ -18,6 +40,8 @@ export function makeRevisionsAndSkips(operations: Operation[]) {
             continue;
         } else {
             revisionsAndSkips.push({
+                type: 'revision',
+                height: 46,
                 operationIndex: operation.index,
                 eventId: operation.id ?? 'EVENT_ID_NOT_FOUND',
                 stateHash: operation.hash,
@@ -36,9 +60,7 @@ export function makeRevisionsAndSkips(operations: Operation[]) {
         index += 1;
     }
 
-    return revisionsAndSkips.sort(
-        (a, b) => b.operationIndex - a.operationIndex,
-    );
+    return revisionsAndSkips;
 }
 
 export function getUniqueDatesInOrder(operations: Operation[]) {

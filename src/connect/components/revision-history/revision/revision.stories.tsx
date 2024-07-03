@@ -14,6 +14,8 @@ export const Verified: Story = {
     args: {
         operationIndex: 0,
         eventId: '123',
+        type: 'revision',
+        height: 46,
         stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
         operationType: 'APPROVE_BUDGET',
         operationInput: {
@@ -51,6 +53,8 @@ export const PartiallyVerified: Story = {
     args: {
         operationIndex: 0,
         eventId: '123',
+        type: 'revision',
+        height: 46,
         stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
         operationType: 'APPROVE_BUDGET',
         operationInput: {
@@ -88,6 +92,8 @@ export const NotVerified: Story = {
     args: {
         operationIndex: 0,
         eventId: '123',
+        type: 'revision',
+        height: 46,
         stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
         operationType: 'APPROVE_BUDGET',
         operationInput: {

@@ -1,7 +1,10 @@
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Revision } from '../revision';
+import { Skip } from '../skip';
 import { Operation, Scope } from '../types';
-import { getUniqueDatesInOrder, makeRevisionsAndSkips } from '../utils';
-import { RevisionsOnDate } from './revisions-on-date';
+import { makeRows } from '../utils';
+import { Day } from './day';
 
 export type TimelineProps = {
     localOperations: Operation[];
@@ -11,24 +14,39 @@ export type TimelineProps = {
 
 export function Timeline(props: TimelineProps) {
     const { localOperations, globalOperations, scope } = props;
-    const ref = useRef<HTMLDivElement>(null);
-    const [scrollAmount, setScrollAmount] = useState(0);
-    const [numRevisionsToShow, setNumRevisionsToShow] = useState(20);
     const operations = scope === 'local' ? localOperations : globalOperations;
-    const dates = getUniqueDatesInOrder(operations);
-    const revisionsAndSkips = useMemo(
-        () => makeRevisionsAndSkips(operations),
+    const initialNumRowsToShow = 100;
+    const allRows = useMemo(
+        () => makeRows(operations.sort((a, b) => b.index - a.index)),
         [operations],
     );
-    const itemsToShow = revisionsAndSkips.slice(0, numRevisionsToShow);
+    const [scrollAmount, setScrollAmount] = useState(0);
+    const [numRowsToShow, setNumRowsToShow] = useState(initialNumRowsToShow);
+    const [rows, setRows] = useState(() => allRows.slice(0, numRowsToShow));
+
+    const parentRef = useRef<HTMLDivElement>(null);
+
+    const hasNextPage = rows.length < allRows.length;
+
+    const rowVirtualizer = useVirtualizer({
+        count: rows.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: i => allRows[i].height,
+        gap: 8,
+    });
 
     useEffect(() => {
+        if (!hasNextPage) return;
         const ratio = Math.floor(scrollAmount / 46);
-        const newNumRevisions = 20 + ratio;
-        setNumRevisionsToShow(prev =>
+        const newNumRevisions = initialNumRowsToShow + ratio;
+        setNumRowsToShow(prev =>
             newNumRevisions > prev ? newNumRevisions : prev,
         );
-    }, [scrollAmount]);
+    }, [scrollAmount, hasNextPage]);
+
+    useEffect(() => {
+        setRows(allRows.slice(0, numRowsToShow));
+    }, [allRows, numRowsToShow]);
 
     const handleScroll = (e: WheelEvent) => {
         setScrollAmount(prev => {
@@ -48,14 +66,44 @@ export function Timeline(props: TimelineProps) {
     }, []);
 
     return (
-        <div ref={ref} className="grid gap-2">
-            {dates.map(date => (
-                <RevisionsOnDate
-                    key={date}
-                    date={date}
-                    revisionsAndSkips={itemsToShow}
-                />
-            ))}
+        <div
+            ref={parentRef}
+            style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+            }}
+            className="border-l border-slate-100 px-4"
+        >
+            {rowVirtualizer.getVirtualItems().map(virtualRow => {
+                const row = rows[virtualRow.index];
+
+                return (
+                    <div
+                        key={virtualRow.index}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 16,
+                            width: '100%',
+                            height: `${virtualRow.size}px`,
+                            transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                    >
+                        <>
+                            {row.type === 'revision' && (
+                                <Revision {...row} key={virtualRow.key} />
+                            )}
+                            {row.type === 'skip' && (
+                                <Skip key={virtualRow.key} {...row} />
+                            )}
+                            {row.type === 'day' && (
+                                <Day key={virtualRow.key} {...row} />
+                            )}
+                        </>
+                    </div>
+                );
+            })}
         </div>
     );
 }
