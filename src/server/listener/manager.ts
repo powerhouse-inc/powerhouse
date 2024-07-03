@@ -369,7 +369,11 @@ export class ListenerManager extends BaseListenerManager {
         return false;
     }
 
-    getListenerSyncUnits(driveId: string, listenerId: string) {
+    getListenerSyncUnits(
+        driveId: string,
+        listenerId: string,
+        loadedDrive?: DocumentDriveDocument
+    ) {
         const listener = this.listenerState.get(driveId)?.get(listenerId);
         if (!listener) {
             return [];
@@ -380,7 +384,8 @@ export class ListenerManager extends BaseListenerManager {
             filter.documentId ?? ['*'],
             filter.scope ?? ['*'],
             filter.branch ?? ['*'],
-            filter.documentType ?? ['*']
+            filter.documentType ?? ['*'],
+            loadedDrive
         );
     }
 
@@ -453,7 +458,12 @@ export class ListenerManager extends BaseListenerManager {
         // fetch operations from drive  and prepare strands
         const strands: StrandUpdate[] = [];
 
-        const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
+        const drive = await this.drive.getDrive(driveId);
+        const syncUnits = await this.getListenerSyncUnits(
+            driveId,
+            listenerId,
+            drive
+        );
 
         for (const syncUnit of syncUnits) {
             if (syncUnit.revision < 0) {
@@ -473,7 +483,8 @@ export class ListenerManager extends BaseListenerManager {
                     {
                         since,
                         fromRevision: entry?.listenerRev
-                    }
+                    },
+                    drive
                 );
 
                 if (!operations.length) {

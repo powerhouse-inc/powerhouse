@@ -289,12 +289,14 @@ export abstract class BaseDocumentDriveServer {
         documentId?: string[],
         scope?: string[],
         branch?: string[],
-        documentType?: string[]
+        documentType?: string[],
+        loadedDrive?: DocumentDriveDocument
     ): Promise<SynchronizationUnit[]>;
 
     abstract getSynchronizationUnit(
         driveId: string,
-        syncId: string
+        syncId: string,
+        loadedDrive?: DocumentDriveDocument
     ): Promise<SynchronizationUnit | undefined>;
 
     abstract getSynchronizationUnitsIds(
@@ -311,7 +313,8 @@ export abstract class BaseDocumentDriveServer {
         filter: {
             since?: string;
             fromRevision?: number;
-        }
+        },
+        loadedDrive?: DocumentDriveDocument
     ): Promise<OperationUpdate[]>;
 
     /** Internal methods **/

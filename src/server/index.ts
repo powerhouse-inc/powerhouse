@@ -194,7 +194,14 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         const drive = await this.getDrive(driveId);
         let driveTriggers = this.triggerMap.get(driveId);
 
-        const syncUnits = await this.getSynchronizationUnitsIds(driveId);
+        const syncUnits = await this.getSynchronizationUnitsIds(
+            driveId,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            drive
+        );
 
         for (const trigger of drive.state.local.triggers) {
             if (driveTriggers?.get(trigger.id)) {
@@ -374,9 +381,10 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         documentId?: string[],
         scope?: string[],
         branch?: string[],
-        documentType?: string[]
+        documentType?: string[],
+        loadedDrive?: DocumentDriveDocument
     ) {
-        const drive = await this.getDrive(driveId);
+        const drive = loadedDrive || (await this.getDrive(driveId));
 
         const synchronizationUnitsQuery = await this.getSynchronizationUnitsIds(
             driveId,
@@ -490,9 +498,10 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     public async getSynchronizationUnitIdInfo(
         driveId: string,
-        syncId: string
+        syncId: string,
+        loadedDrive?: DocumentDriveDocument
     ): Promise<SynchronizationUnitQuery | undefined> {
-        const drive = await this.getDrive(driveId);
+        const drive = loadedDrive || (await this.getDrive(driveId));
         const node = drive.state.global.nodes.find(
             node =>
                 isFileNode(node) &&
@@ -523,11 +532,13 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     public async getSynchronizationUnit(
         driveId: string,
-        syncId: string
+        syncId: string,
+        loadedDrive?: DocumentDriveDocument
     ): Promise<SynchronizationUnit | undefined> {
         const syncUnit = await this.getSynchronizationUnitIdInfo(
             driveId,
-            syncId
+            syncId,
+            loadedDrive
         );
 
         if (!syncUnit) {
@@ -559,12 +570,17 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         filter: {
             since?: string | undefined;
             fromRevision?: number | undefined;
-        }
+        },
+        loadedDrive?: DocumentDriveDocument
     ): Promise<OperationUpdate[]> {
         const syncUnit =
             syncId === '0'
                 ? { documentId: '', scope: 'global' }
-                : await this.getSynchronizationUnitIdInfo(driveId, syncId);
+                : await this.getSynchronizationUnitIdInfo(
+                      driveId,
+                      syncId,
+                      loadedDrive
+                  );
 
         if (!syncUnit) {
             throw new Error(`Invalid Sync Id ${syncId} in drive ${driveId}`);
@@ -572,7 +588,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const document =
             syncId === '0'
-                ? await this.getDrive(driveId)
+                ? loadedDrive || (await this.getDrive(driveId))
                 : await this.getDocument(driveId, syncUnit.documentId); // TODO replace with getDocumentOperations
 
         const operations =
@@ -1654,7 +1670,14 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 }
             }
 
-            const syncUnits = await this.getSynchronizationUnitsIds(drive);
+            const syncUnits = await this.getSynchronizationUnitsIds(
+                drive,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                document
+            );
 
             const prevSyncUnitsIds = prevSyncUnits.map(unit => unit.syncId);
             const syncUnitsIds = syncUnits.map(unit => unit.syncId);

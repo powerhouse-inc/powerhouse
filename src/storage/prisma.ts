@@ -309,7 +309,7 @@ export class PrismaStorage implements IDriveStorage {
                     header
                 );
             },
-            { isolationLevel: 'Serializable' }
+            { isolationLevel: 'Serializable', maxWait: 10000, timeout: 20000 }
         );
 
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
