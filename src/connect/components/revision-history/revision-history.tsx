@@ -35,7 +35,7 @@ export function RevisionHistory(props: Props) {
                 onClose={onClose}
             />
             <div className="mt-9 flex h-full justify-center rounded-md bg-slate-50 py-4">
-                <div className="min-w-[1018px]">
+                <div className="grid grid-cols-[minmax(min-content,1018px)]">
                     <Timeline
                         scope={scope}
                         globalOperations={globalOperations}
