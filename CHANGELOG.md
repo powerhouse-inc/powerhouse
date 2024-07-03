@@ -1,3 +1,10 @@
+# [1.0.0-dev.33](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.32...v1.0.0-dev.33) (2024-07-03)
+
+
+### Features
+
+* bump libs ([2837f01](https://github.com/powerhouse-inc/document-model-electron/commit/2837f01af47c38bb132e887cc5717f52bab71731))
+
 # [1.0.0-dev.32](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.31...v1.0.0-dev.32) (2024-07-03)
 
 
