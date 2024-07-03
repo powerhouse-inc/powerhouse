@@ -1,3 +1,10 @@
+# [1.0.0-alpha.147](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.146...v1.0.0-alpha.147) (2024-07-03)
+
+
+### Features
+
+* revision history optimization ([#327](https://github.com/powerhouse-inc/design-system/issues/327)) ([4f6ab9a](https://github.com/powerhouse-inc/design-system/commit/4f6ab9a6617ab3004eb0d5cf5c1fba71285d0f01))
+
 # [1.0.0-alpha.146](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.145...v1.0.0-alpha.146) (2024-07-03)
 
 
