@@ -1,3 +1,10 @@
+# [1.0.0-alpha.146](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.145...v1.0.0-alpha.146) (2024-07-03)
+
+
+### Features
+
+* make timeline width flexible ([#326](https://github.com/powerhouse-inc/design-system/issues/326)) ([c415b65](https://github.com/powerhouse-inc/design-system/commit/c415b6535ca908321701c8b96d693fd53b035fd9))
+
 # [1.0.0-alpha.145](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.144...v1.0.0-alpha.145) (2024-07-02)
 
 
