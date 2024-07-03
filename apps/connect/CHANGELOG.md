@@ -1,3 +1,10 @@
+# [1.0.0-dev.32](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.31...v1.0.0-dev.32) (2024-07-03)
+
+
+### Bug Fixes
+
+* release ([387a9ed](https://github.com/powerhouse-inc/document-model-electron/commit/387a9edcdfb7de801ed83209a9fa1d127f61c305))
+
 # [1.0.0-dev.31](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.30...v1.0.0-dev.31) (2024-07-03)
 
 
