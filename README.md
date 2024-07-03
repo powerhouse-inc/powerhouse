@@ -2,7 +2,6 @@
 
 Demo Electron app to interact with Budget Statement documents.
 
-
 ## Usage
 
 Install dependencies:
