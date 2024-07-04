@@ -25,7 +25,7 @@ import {
 import path from 'path';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
-import { getLastIndexFromPath } from 'src/utils';
+import { getLastIndexFromPath, sortTreeItemsByLabel } from 'src/utils';
 import { v4 as uuid } from 'uuid';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useNavigateToItemId } from './useNavigateToItemId';
@@ -337,7 +337,11 @@ export function useDrivesContainer() {
             };
         });
 
-        return [driveNode, ...fileItems, ...folderItems];
+        return [
+            driveNode,
+            ...fileItems,
+            ...folderItems.sort(sortTreeItemsByLabel),
+        ];
     }
 
     return {
