@@ -1,8 +1,20 @@
 import {
     ConnectDropdownMenuItem,
-    defaultDropdownMenuOptions,
+    defaultDropdownMenuOptions as defOptions,
 } from '@powerhousedao/design-system';
 import connectConfig from 'connect-config';
+
+// Enables debug options for the drive
+const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
+const debugOptions = connectDebug
+    ? [
+          { id: 'remove-trigger', label: 'Remove Trigger' },
+          { id: 'add-invalid-trigger', label: 'Add Invalid Trigger' },
+          { id: 'add-trigger', label: 'Add Trigger' },
+      ]
+    : [];
+
+const defaultDropdownMenuOptions = [...defOptions, ...debugOptions];
 
 type DriveSectionKey = 'public' | 'cloud' | 'local';
 

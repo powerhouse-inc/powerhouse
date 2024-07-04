@@ -9,6 +9,7 @@ import {
 import { isDocumentDrive } from 'document-drive/utils';
 import {
     DocumentDriveAction,
+    Trigger,
     actions,
     utils as documentDriveUtils,
     generateAddNodeAction,
@@ -522,6 +523,52 @@ export function useDocumentDriveServer(
         await refreshDocumentDrives();
     }
 
+    async function removeTrigger(driveId: string, triggerId: string) {
+        const drive = await _addDriveOperation(
+            driveId,
+            actions.removeTrigger({ triggerId }),
+        );
+
+        const trigger = drive?.state.local.triggers.find(
+            trigger => trigger.id === triggerId,
+        );
+
+        if (trigger) {
+            throw new Error(`There was an error removing trigger ${triggerId}`);
+        }
+    }
+
+    async function registerNewPullResponderTrigger(
+        driveId: string,
+        url: string,
+        options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
+    ) {
+        const pullResponderTrigger = await server.registerPullResponderTrigger(
+            driveId,
+            url,
+            options,
+        );
+
+        return pullResponderTrigger;
+    }
+
+    async function addTrigger(driveId: string, trigger: Trigger) {
+        const drive = await _addDriveOperation(
+            driveId,
+            actions.addTrigger({ trigger }),
+        );
+
+        const newTrigger = drive?.state.local.triggers.find(
+            trigger => trigger.id === trigger.id,
+        );
+
+        if (!newTrigger) {
+            throw new Error(
+                `There was an error adding the trigger ${trigger.id}`,
+            );
+        }
+    }
+
     return useMemo(
         () => ({
             documentDrives,
@@ -548,6 +595,9 @@ export function useDocumentDriveServer(
             onStrandUpdate,
             onSyncStatus,
             clearStorage,
+            removeTrigger,
+            addTrigger,
+            registerNewPullResponderTrigger,
         }),
         [
             documentDrives,

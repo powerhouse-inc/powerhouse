@@ -4,6 +4,7 @@ import { OperationScope } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
+import { ClientErrorHandler } from './useClientErrorHandler';
 
 // map of DocumentDriveServer objects and their Document Drives
 const documentDrivesAtom = atom(
@@ -87,22 +88,33 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
             .catch(() => setStatus('ERROR'));
     }
 
-    const serverSubscribeUpdates = useCallback(() => {
-        const unsub1 = server.on(
-            'syncStatus',
-            async (_event, _status, error) => {
-                if (error) {
-                    console.error(error);
-                }
-                await refreshDocumentDrives();
-            },
-        );
-        const unsub2 = server.on('strandUpdate', () => refreshDocumentDrives());
-        return () => {
-            unsub1();
-            unsub2();
-        };
-    }, [server, refreshDocumentDrives]);
+    const serverSubscribeUpdates = useCallback(
+        (clientErrorhandler: ClientErrorHandler) => {
+            const unsub1 = server.on(
+                'syncStatus',
+                async (_event, _status, error) => {
+                    if (error) {
+                        console.error(error);
+                    }
+                    await refreshDocumentDrives();
+                },
+            );
+            const unsub2 = server.on('strandUpdate', () =>
+                refreshDocumentDrives(),
+            );
+            const unsubOnSyncError = server.on(
+                'clientStrandsError',
+                clientErrorhandler.strandsErrorHandler,
+            );
+
+            return () => {
+                unsub1();
+                unsub2();
+                unsubOnSyncError();
+            };
+        },
+        [server, refreshDocumentDrives],
+    );
 
     return useMemo(
         () =>
