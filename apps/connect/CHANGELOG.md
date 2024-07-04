@@ -1,3 +1,10 @@
+# [1.0.0-dev.34](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.33...v1.0.0-dev.34) (2024-07-04)
+
+
+### Bug Fixes
+
+* refresh drive methods when user permissions change ([a9677cd](https://github.com/powerhouse-inc/document-model-electron/commit/a9677cd087bcc4655623aa224cf6bc5d07e99ee3))
+
 # [1.0.0-dev.33](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.32...v1.0.0-dev.33) (2024-07-03)
 
 
