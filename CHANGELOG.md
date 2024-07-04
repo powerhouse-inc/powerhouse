@@ -1,3 +1,10 @@
+# [1.0.0-dev.35](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.34...v1.0.0-dev.35) (2024-07-04)
+
+
+### Features
+
+* sort folders and files alphabetically ([74aa081](https://github.com/powerhouse-inc/document-model-electron/commit/74aa081a2b01325101321f5baffe14b523e9b53b))
+
 # [1.0.0-dev.34](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.33...v1.0.0-dev.34) (2024-07-04)
 
 
