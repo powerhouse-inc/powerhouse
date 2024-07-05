@@ -1,3 +1,11 @@
+# [1.0.0-alpha.81](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.80...v1.0.0-alpha.81) (2024-07-05)
+
+
+### Features
+
+* getResultingState before building document ([ad09a33](https://github.com/powerhouse-inc/document-drive/commit/ad09a3385853fcaedb93ec1c72ed40784f4f20d9))
+* improves getStrands performance by reusing drive state ([be56f3a](https://github.com/powerhouse-inc/document-drive/commit/be56f3ae54e45f5b1461f5392b76737f700843f2))
+
 # [1.0.0-alpha.80](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.79...v1.0.0-alpha.80) (2024-06-27)
 
 
