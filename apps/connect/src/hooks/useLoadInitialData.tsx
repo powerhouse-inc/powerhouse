@@ -17,7 +17,7 @@ import { useSelectedPath } from 'src/store/document-drive';
 import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-server';
 import { useClientErrorHandler } from './useClientErrorHandler';
 import { useDocumentDrives } from './useDocumentDrives';
-import { useLoadDefaultDrive } from './useLoadDefaultDrive';
+import { useLoadDefaultDrives } from './useLoadDefaultDrives';
 import { useNavigateToItemId } from './useNavigateToItemId';
 import { isLatestVersion } from './utils';
 
@@ -37,7 +37,7 @@ export const useLoadInitialData = () => {
     const [, , serverSubscribeUpdates] = useDocumentDrives(server);
     const clientErrorHandler = useClientErrorHandler();
 
-    useLoadDefaultDrive();
+    useLoadDefaultDrives();
 
     useEffect(() => {
         const unsubscribe = serverSubscribeUpdates(clientErrorHandler);

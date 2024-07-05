@@ -4,14 +4,14 @@ const ENABLED_EDITORS = import.meta.env.VITE_ENABLED_EDITORS || undefined;
 const enabledEditors = ENABLED_EDITORS?.split(',');
 
 const DISABLED_EDITORS = import.meta.env.VITE_DISABLED_EDITORS || undefined;
-const DEFAULT_DRIVE_URL = import.meta.env.VITE_DEFAULT_DRIVE_URL || undefined;
+const DEFAULT_DRIVES_URL = import.meta.env.VITE_DEFAULT_DRIVES_URL || undefined;
 const disabledEditors = DISABLED_EDITORS?.split(',');
 
 export interface FeatureFlag {
-    defaultDrive?: {
+    defaultDrives?: {
         url: string;
         loaded: boolean;
-    };
+    }[];
     editors: {
         enabledEditors?: '*' | string[];
         disabledEditors?: '*' | string[];
@@ -19,11 +19,11 @@ export interface FeatureFlag {
 }
 
 const defaultConfig: FeatureFlag = {
-    defaultDrive: DEFAULT_DRIVE_URL
-        ? {
-              url: DEFAULT_DRIVE_URL,
+    defaultDrives: DEFAULT_DRIVES_URL
+        ? DEFAULT_DRIVES_URL.split(',').map(url => ({
+              url,
               loaded: false,
-          }
+          }))
         : undefined,
     editors: {
         enabledEditors: ENABLED_EDITORS === '*' ? '*' : enabledEditors,

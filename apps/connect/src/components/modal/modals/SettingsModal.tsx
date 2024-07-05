@@ -76,8 +76,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                         // resets the default drive to unloaded if it is defined
                         setConfig(conf => ({
                             ...conf,
-                            defaultDrive: conf.defaultDrive
-                                ? { ...conf.defaultDrive, loaded: false }
+                            defaultDrives: conf.defaultDrives
+                                ? conf.defaultDrives.map(drive => ({
+                                      ...drive,
+                                      loaded: false,
+                                  }))
                                 : undefined,
                         }));
 
