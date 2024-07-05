@@ -22,6 +22,7 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
+import { ClientError } from 'graphql-request';
 import { createNanoEvents, Unsubscribe } from 'nanoevents';
 import { ICache } from '../cache';
 import InMemoryCache from '../cache/memory';
@@ -231,6 +232,16 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                                 : 'ERROR',
                             error
                         );
+
+                        if (error instanceof ClientError) {
+                            this.emit(
+                                'clientStrandsError',
+                                driveId,
+                                trigger,
+                                error.response.status,
+                                error.message
+                            );
+                        }
                     },
                     revisions => {
                         const errorRevision = revisions.filter(
@@ -684,6 +695,21 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 sharingType
             }
         });
+    }
+
+    public async registerPullResponderTrigger(
+        id: string,
+        url: string,
+        options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>
+    ) {
+        const pullTrigger =
+            await PullResponderTransmitter.createPullResponderTrigger(
+                id,
+                url,
+                options
+            );
+
+        return pullTrigger;
     }
 
     async deleteDrive(id: string) {

@@ -4,7 +4,8 @@ import type {
     DocumentDriveLocalState,
     DocumentDriveState,
     ListenerCallInfo,
-    ListenerFilter
+    ListenerFilter,
+    Trigger
 } from 'document-model-libs/document-drive';
 import type {
     Action,
@@ -20,7 +21,11 @@ import type {
 } from 'document-model/document';
 import { Unsubscribe } from 'nanoevents';
 import { OperationError } from './error';
-import { ITransmitter, StrandUpdateSource } from './listener/transmitter/types';
+import {
+    ITransmitter,
+    PullResponderTrigger,
+    StrandUpdateSource
+} from './listener/transmitter/types';
 
 export type DriveInput = State<
     Omit<DocumentDriveState, '__typename' | 'id' | 'nodes'> & { id?: string },
@@ -138,6 +143,12 @@ export type SyncStatus = 'SYNCING' | UpdateStatus;
 export interface DriveEvents {
     syncStatus: (driveId: string, status: SyncStatus, error?: Error) => void;
     strandUpdate: (update: StrandUpdate) => void;
+    clientStrandsError: (
+        driveId: string,
+        trigger: Trigger,
+        status: number,
+        errorMessage: string
+    ) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -342,6 +353,12 @@ export abstract class BaseDocumentDriveServer {
     ): Promise<ITransmitter | undefined>;
 
     abstract clearStorage(): Promise<void>;
+
+    abstract registerPullResponderTrigger(
+        id: string,
+        url: string,
+        options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>
+    ): Promise<PullResponderTrigger>;
 }
 
 export abstract class BaseListenerManager {
