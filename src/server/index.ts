@@ -846,19 +846,24 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async _processOperations<T extends Document, A extends Action>(
         drive: string,
         documentId: string | undefined,
-        storageDocument: DocumentStorage<T>,
+        documentStorage: DocumentStorage<T>,
         operations: Operation<A | BaseAction>[]
     ) {
         const operationsApplied: Operation<A | BaseAction>[] = [];
         const signals: SignalResult[] = [];
-        let document: T = this._buildDocument(storageDocument);
+        const documentStorageWithState = await this._addDocumentResultingStage(
+            documentStorage,
+            drive,
+            documentId
+        );
 
+        let document: T = this._buildDocument(documentStorageWithState);
         let error: OperationError | undefined; // TODO: replace with an array of errors/consistency issues
         const operationsByScope = groupOperationsByScope(operations);
 
         for (const scope of Object.keys(operationsByScope)) {
             const storageDocumentOperations =
-                storageDocument.operations[scope as OperationScope];
+                documentStorage.operations[scope as OperationScope];
 
             // TODO two equal operations done by two clients will be considered the same, ie: { type: "INCREMENT" }
             const branch = removeExistingOperations(
@@ -936,6 +941,57 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             signals,
             error
         } as const;
+    }
+
+    private async _addDocumentResultingStage<T extends Document>(
+        document: DocumentStorage<T>,
+        drive: string,
+        documentId?: string,
+        options?: GetDocumentOptions
+    ): Promise<DocumentStorage<T>> {
+        // apply skip header operations to all scopes
+        const operations =
+            options?.revisions !== undefined
+                ? filterOperationsByRevision(
+                      document.operations,
+                      options.revisions
+                  )
+                : document.operations;
+        const documentOperations =
+            DocumentUtils.documentHelpers.garbageCollectDocumentOperations(
+                operations
+            );
+
+        for (const scope of Object.keys(documentOperations)) {
+            const lastRemainingOperation =
+                documentOperations[scope as OperationScope].at(-1);
+            // if the latest operation doesn't have a resulting state then tries
+            // to retrieve it from the db to avoid rerunning all the operations
+            if (
+                lastRemainingOperation &&
+                !lastRemainingOperation.resultingState
+            ) {
+                lastRemainingOperation.resultingState = await (documentId
+                    ? this.storage.getOperationResultingState?.(
+                          drive,
+                          documentId,
+                          lastRemainingOperation.index,
+                          lastRemainingOperation.scope,
+                          'main'
+                      )
+                    : this.storage.getDriveOperationResultingState?.(
+                          drive,
+                          lastRemainingOperation.index,
+                          lastRemainingOperation.scope,
+                          'main'
+                      ));
+            }
+        }
+
+        return {
+            ...document,
+            operations: documentOperations
+        };
     }
 
     private _buildDocument<T extends Document>(
@@ -1630,14 +1686,12 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }
 
         const prevSyncUnits = await this.getSynchronizationUnitsIds(drive);
-
         try {
             await this._addDriveOperations(drive, async documentStorage => {
                 const result = await this._processOperations<
                     DocumentDriveDocument,
                     DocumentDriveAction
                 >(drive, undefined, documentStorage, operations.slice());
-
                 document = result.document;
                 operationsApplied.push(...result.operationsApplied);
                 signals.push(...result.signals);
