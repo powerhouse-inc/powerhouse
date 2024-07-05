@@ -1,3 +1,10 @@
+# [1.0.0-dev.37](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.36...v1.0.0-dev.37) (2024-07-05)
+
+
+### Features
+
+* enabled support for multiple default drives ([8f6386b](https://github.com/powerhouse-inc/document-model-electron/commit/8f6386bec7a6e0f5c241baaf8fe153b06dfa33c4))
+
 # [1.0.0-dev.36](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.35...v1.0.0-dev.36) (2024-07-05)
 
 
