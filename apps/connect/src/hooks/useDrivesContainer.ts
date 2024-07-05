@@ -83,6 +83,9 @@ export function useDrivesContainer() {
         copyNode,
         moveNode,
         getSyncStatus,
+        removeTrigger,
+        addTrigger,
+        registerNewPullResponderTrigger,
     } = useDocumentDriveServer();
 
     function addVirtualNewFolder(item: TreeItem, driveID: string) {
@@ -195,6 +198,45 @@ export function useDrivesContainer() {
                     ...item,
                     action: 'UPDATE_AND_COPY',
                 });
+                break;
+            case 'remove-trigger': {
+                // ONLY AVAILABLE FOR DEBUGGING
+                const triggerId = window.prompt('triggerId:');
+
+                if (triggerId) {
+                    await removeTrigger(decodeID(driveID), triggerId);
+                }
+                break;
+            }
+            case 'add-trigger': {
+                // ONLY AVAILABLE FOR DEBUGGING
+                const url = window.prompt('url') || '';
+
+                const pullResponderTrigger =
+                    await registerNewPullResponderTrigger(
+                        decodeID(driveID),
+                        url,
+                        { pullInterval: 6000 },
+                    );
+                await addTrigger(decodeID(driveID), pullResponderTrigger);
+
+                break;
+            }
+            case 'add-invalid-trigger': {
+                // ONLY AVAILABLE FOR DEBUGGING
+                const url = window.prompt('url') || '';
+
+                await addTrigger(decodeID(driveID), {
+                    id: 'some-invalid-id',
+                    type: 'PullResponder',
+                    data: {
+                        interval: '3000',
+                        listenerId: 'invalid-listener-id',
+                        url,
+                    },
+                });
+                break;
+            }
         }
     };
 

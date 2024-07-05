@@ -177,6 +177,16 @@ export default (
         documentDrive.getSyncStatus(drive),
     );
 
+    ipcMain.handle(
+        'documentDrive:registerPullResponderTrigger',
+        (
+            _e,
+            drive: string,
+            url: string,
+            options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
+        ) => documentDrive.registerPullResponderTrigger(drive, url, options),
+    );
+
     function bindEvents(drive: DocumentDriveServer) {
         drive.on('strandUpdate', update => {
             webContents

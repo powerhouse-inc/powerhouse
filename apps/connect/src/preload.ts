@@ -3,6 +3,7 @@
 import type {
     DriveInput,
     IDocumentDriveServer,
+    RemoteDriveOptions,
     SyncStatus,
 } from 'document-drive/server';
 import {
@@ -193,6 +194,18 @@ const electronApi = {
             ipcRenderer.on(`documentDrive:event:${event}`, listener);
             return () =>
                 ipcRenderer.off(`documentDrive:event:${event}`, listener);
+        },
+        registerPullResponderTrigger: (
+            drive: string,
+            url: string,
+            options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
+        ) => {
+            return ipcRenderer.invoke(
+                'documentDrive:registerPullResponderTrigger',
+                drive,
+                url,
+                options,
+            );
         },
     } satisfies Omit<IDocumentDriveServer, 'getSyncStatus'> & {
         getSyncStatus: (drive: string) => Promise<SyncStatus>;

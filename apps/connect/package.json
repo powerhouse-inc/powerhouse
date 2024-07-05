@@ -97,7 +97,7 @@
         "@sentry/react": "^7.109.0",
         "@tanstack/react-virtual": "^3.8.1",
         "did-key-creator": "^1.2.0",
-        "document-drive": "1.0.0-alpha.80",
+        "document-drive": "1.0.0-alpha.82",
         "document-model": "1.7.0",
         "document-model-libs": "^1.69.0",
         "electron-is-dev": "^3.0.1",
