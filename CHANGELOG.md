@@ -1,3 +1,10 @@
+# [1.0.0-alpha.82](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.81...v1.0.0-alpha.82) (2024-07-05)
+
+
+### Features
+
+* enabled clientStrandsError event ([#229](https://github.com/powerhouse-inc/document-drive/issues/229)) ([d887cdd](https://github.com/powerhouse-inc/document-drive/commit/d887cdd7424edebe63e311f95ebf0fbcb73c5929))
+
 # [1.0.0-alpha.81](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.80...v1.0.0-alpha.81) (2024-07-05)
 
 
