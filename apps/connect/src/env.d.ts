@@ -3,7 +3,7 @@
 interface ImportMetaEnv {
     VITE_ENABLED_EDITORS: string;
     VITE_DISABLED_EDITORS: string;
-    VITE_DEFAULT_DRIVE_URL: string;
+    VITE_DEFAULT_DRIVES_URL: string;
     VITE_DISABLE_ADD_PUBLIC_DRIVES: string;
     VITE_DISABLE_ADD_CLOUD_DRIVES: string;
     VITE_DISABLE_ADD_LOCAL_DRIVES: string;

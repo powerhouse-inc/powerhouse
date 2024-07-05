@@ -26,5 +26,5 @@ jobs:
             --build-arg BASE_PATH=/develop/powerhouse/connect
             --build-arg VITE_BASE_HREF=/develop/powerhouse/connect/
             --build-arg VITE_ROUTER_BASENAME=/develop/powerhouse/connect
-            --build-arg VITE_DEFAULT_DRIVE_URL=https://apps.powerhouse.io/develop/powerhouse/switchboard/d/core-dev
+            --build-arg VITE_DEFAULT_DRIVES_URL=https://apps.powerhouse.io/develop/powerhouse/switchboard/d/core-dev
           process_type: web

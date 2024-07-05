@@ -28,6 +28,6 @@ jobs:
             --build-arg VITE_ROUTER_BASENAME=/alpha/makerdao/connect
             --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
             --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
-            --build-arg VITE_DEFAULT_DRIVE_URL=https://apps.powerhouse.io/alpha/makerdao/switchboard/d/280dd289-ec51-40f0-adad-c154967fc2b2
+            --build-arg VITE_DEFAULT_DRIVES_URL=https://apps.powerhouse.io/alpha/makerdao/switchboard/d/280dd289-ec51-40f0-adad-c154967fc2b2
             --build-arg VITE_RWA_ALLOW_LIST=${{secrets.VITE_RWA_ALLOW_LIST}}
           process_type: web

@@ -34,7 +34,7 @@ jobs:
             --build-arg VITE_DISABLE_DELETE_CLOUD_DRIVES=true
             --build-arg VITE_DISABLE_DELETE_LOCAL_DRIVES=true
             --build-arg VITE_LOCAL_DRIVES_ENABLED=false
-            --build-arg VITE_DEFAULT_DRIVE_URL=https://apps.powerhouse.io/alpha/arbitrum/switchboard/d/arbitrum
+            --build-arg VITE_DEFAULT_DRIVES_URL=https://apps.powerhouse.io/alpha/arbitrum/switchboard/d/arbitrum
             --build-arg VITE_RENOWN_CHAIN_ID=42161
             --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
             --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
