@@ -1,3 +1,10 @@
+# [1.0.0-dev.36](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.35...v1.0.0-dev.36) (2024-07-05)
+
+
+### Features
+
+* register new pullResponderTrigger when the current one is not longer valid ([1a96a4d](https://github.com/powerhouse-inc/document-model-electron/commit/1a96a4d291ccb430f8f960ea7450c90dd1e0ae43))
+
 # [1.0.0-dev.35](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.34...v1.0.0-dev.35) (2024-07-04)
 
 
