@@ -253,6 +253,6 @@ export class BaseQueueManager implements IQueueManager {
     }
 
     protected getQueueId(driveId: string, documentId?: string) {
-        return `${driveId}${documentId ? `:${documentId}` : ''}`;
+        return `queue:${driveId}${documentId ? `:${documentId}` : ''}`;
     }
 }
