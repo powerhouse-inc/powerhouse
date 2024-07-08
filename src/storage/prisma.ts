@@ -503,10 +503,12 @@ export class PrismaStorage implements IDriveStorage {
                 }
             });
         } catch (e: any) {
-            // do nothing
-            if (!(e.code && e.code === "P2025") && !(e.message && e.message.includes("An operation failed because it depends on one or more records that were required but not found."))) {
-                throw e;
+            // Ignore Error: P2025: An operation failed because it depends on one or more records that were required but not found.
+            if ((e.code && e.code === "P2025") || (e.message && e.message.includes("An operation failed because it depends on one or more records that were required but not found."))) {
+                return;
             }
+
+            throw e;
         }
     }
 
