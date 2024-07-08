@@ -1,5 +1,5 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 import {
     DocumentDriveAction,
     DocumentDriveLocalState,
@@ -502,8 +502,11 @@ export class PrismaStorage implements IDriveStorage {
                     id: id
                 }
             });
-        } catch (e) {
+        } catch (e: any) {
             // do nothing
+            if (!(e.code && e.code === "P2025") && !(e.message && e.message.includes("An operation failed because it depends on one or more records that were required but not found."))) {
+                throw e;
+            }
         }
     }
 
@@ -536,13 +539,6 @@ export class PrismaStorage implements IDriveStorage {
     }
 
     async deleteDrive(id: string) {
-        // delete drive documents and operations
-        await this.db.document.deleteMany({
-            where: {
-                driveId: id
-            }
-        });
-
         // delete drive and associated slug
         await this.db.drive.deleteMany({
             where: {
@@ -550,7 +546,7 @@ export class PrismaStorage implements IDriveStorage {
             }
         });
 
-        // delete drive itself
+        // delete drive document and its operations
         await this.deleteDocument('drives', id);
     }
 
