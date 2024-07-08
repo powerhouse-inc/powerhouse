@@ -1,3 +1,15 @@
+# [1.0.0-alpha.83](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.82...v1.0.0-alpha.83) (2024-07-08)
+
+
+### Bug Fixes
+
+* ignore record does not exist error ([fe79163](https://github.com/powerhouse-inc/document-drive/commit/fe79163c141d2ea2ab66013749bd1545fa2393c9))
+
+
+### Features
+
+* added expiry to redis cache ([2bec3a4](https://github.com/powerhouse-inc/document-drive/commit/2bec3a4e855536ca3e0a65902271fbf75dcf8bd5))
+
 # [1.0.0-alpha.82](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.81...v1.0.0-alpha.82) (2024-07-05)
 
 
