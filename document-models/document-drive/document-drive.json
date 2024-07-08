@@ -125,6 +125,17 @@
                             "scope": "global"
                         },
                         {
+                            "id": "qGCiPGpTt/cyz3HzyrBn92z30dsU=",
+                            "name": "SET_DRIVE_ICON",
+                            "description": "",
+                            "schema": "input SetDriveIconInput {\n    icon: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
                             "id": "qGCiPGpTt/cyz3HzyrBn92z2dsU=",
                             "name": "SET_SHARING_TYPE",
                             "description": "",

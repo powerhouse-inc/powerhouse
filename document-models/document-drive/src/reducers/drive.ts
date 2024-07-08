@@ -10,6 +10,9 @@ export const reducer: DocumentDriveDriveOperations = {
     setDriveNameOperation(state, action, dispatch) {
         state.name = action.input.name;
     },
+    setDriveIconOperation(state, action, dispatch) {
+        state.icon = action.input.icon;
+    },
     setSharingTypeOperation(state, action, dispatch) {
         state.sharingType = action.input.type;
     },

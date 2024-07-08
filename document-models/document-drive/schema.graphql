@@ -145,6 +145,10 @@ input SetSharingTypeInput {
     type: String!
 }
 
+input SetDriveIconInput {
+    icon: String!
+}
+
 input SetAvailableOfflineInput {
     availableOffline: Boolean!
 }
