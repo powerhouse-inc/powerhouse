@@ -1,18 +1,64 @@
 import { useEffect, useRef } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useFeatureFlag } from './useFeatureFlags';
+import defaultConfig from './useFeatureFlags/default-config';
+
+type DefaultDrive = {
+    url: string;
+    loaded: boolean;
+};
+
+const areLoadedDrivesUpToDate = (
+    defaultDrivesConfig: DefaultDrive[],
+    loadedDrives: DefaultDrive[],
+) => {
+    for (const defaultDrive of defaultDrivesConfig) {
+        const loadedDrive = loadedDrives.find(
+            loadedDrive => loadedDrive.url === defaultDrive.url,
+        );
+
+        if (!loadedDrive) {
+            return false;
+        }
+    }
+
+    return true;
+};
 
 export const useLoadDefaultDrives = () => {
     const loadingDrives = useRef<string[]>([]);
-    const { addRemoteDrive, documentDrives, documentDrivesStatus } =
-        useDocumentDriveServer();
+    const {
+        addRemoteDrive,
+        documentDrives,
+        documentDrivesStatus,
+        clearStorage,
+    } = useDocumentDriveServer();
     const {
         setConfig,
         config: { defaultDrives },
     } = useFeatureFlag();
 
+    async function resetDefaultDrive() {
+        await clearStorage();
+        setConfig(defaultConfig);
+        location.reload();
+        loadingDrives.current = [];
+    }
+
     useEffect(() => {
         if (!defaultDrives) return;
+
+        // reset default drives if config has been updated
+        if (
+            loadingDrives.current.length <= 0 &&
+            defaultDrives.every(drive => drive.loaded) &&
+            defaultConfig.defaultDrives &&
+            defaultConfig.defaultDrives.length > 0 &&
+            !areLoadedDrivesUpToDate(defaultConfig.defaultDrives, defaultDrives)
+        ) {
+            void resetDefaultDrive();
+            return;
+        }
 
         for (const defaultDrive of defaultDrives) {
             if (
@@ -26,7 +72,19 @@ export const useLoadDefaultDrives = () => {
                     );
                 });
 
-                if (isDriveAlreadyAdded) return;
+                if (isDriveAlreadyAdded) {
+                    setConfig(conf => ({
+                        ...conf,
+                        defaultDrives: [
+                            ...(conf.defaultDrives || []).filter(
+                                drive => drive.url !== defaultDrive.url,
+                            ),
+                            { ...defaultDrive, loaded: true },
+                        ],
+                    }));
+
+                    return;
+                }
 
                 loadingDrives.current.push(defaultDrive.url);
 
