@@ -1,3 +1,11 @@
+# [1.0.0-dev.38](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.37...v1.0.0-dev.38) (2024-07-08)
+
+
+### Features
+
+* check status code and error message when handling invalid listenerId ([86982ff](https://github.com/powerhouse-inc/document-model-electron/commit/86982ffa16aea9667f6083263ecea8c8ac49ad43))
+* handle invalid listener id with status error 400 instead of 404 ([febbe2d](https://github.com/powerhouse-inc/document-model-electron/commit/febbe2d2499fe68704044ef145cd3fa77c1196a5))
+
 # [1.0.0-dev.37](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.36...v1.0.0-dev.37) (2024-07-05)
 
 
