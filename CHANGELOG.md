@@ -1,3 +1,10 @@
+# [1.70.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.69.0...v1.70.0) (2024-07-08)
+
+
+### Features
+
+* added set drive icon operation ([c704f69](https://github.com/powerhouse-inc/document-model-libs/commit/c704f697537af01349585e7785e7507e70f1b9a0))
+
 # [1.69.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.68.0...v1.69.0) (2024-07-03)
 
 
