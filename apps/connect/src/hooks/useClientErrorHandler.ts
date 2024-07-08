@@ -26,7 +26,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
 
     const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 
-    const handleStrands404 = useCallback(
+    const handleStrands400 = useCallback(
         async (driveId: string, trigger: Trigger, handlerCode: string) => {
             setHandlingInProgress(state => [...state, handlerCode]);
 
@@ -86,7 +86,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
     const strandsErrorHandler: ClientErrorHandler['strandsErrorHandler'] =
         async (driveId, trigger, status) => {
             switch (status) {
-                case 404: {
+                case 400: {
                     const handlerCode = `strands:${driveId}:${status}`;
 
                     if (handlingInProgress.includes(handlerCode)) return;
@@ -97,7 +97,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                         0;
 
                     setTimeout(
-                        () => handleStrands404(driveId, trigger, handlerCode),
+                        () => handleStrands400(driveId, trigger, handlerCode),
                         delay,
                     );
 
