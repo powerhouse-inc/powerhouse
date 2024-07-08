@@ -11,10 +11,19 @@ export type ClientErrorHandler = {
         driveId: string,
         trigger: Trigger,
         status: number,
+        errorMessage: string,
     ) => Promise<void>;
 };
 
 const DELAY_LIMIT = 100000;
+
+const isListenerIdNotFound = (errorMessage: string, listenerId?: string) => {
+    if (!listenerId) return false;
+
+    return errorMessage
+        .toLocaleLowerCase()
+        .includes(`transmitter ${listenerId} not found`);
+};
 
 export const useClientErrorHandler = (): ClientErrorHandler => {
     const [handlingInProgress, setHandlingInProgress] = useState<string[]>([]);
@@ -26,7 +35,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
 
     const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 
-    const handleStrands404 = useCallback(
+    const handleStrands400 = useCallback(
         async (driveId: string, trigger: Trigger, handlerCode: string) => {
             setHandlingInProgress(state => [...state, handlerCode]);
 
@@ -84,22 +93,31 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
     );
 
     const strandsErrorHandler: ClientErrorHandler['strandsErrorHandler'] =
-        async (driveId, trigger, status) => {
+        async (driveId, trigger, status, errorMessage) => {
             switch (status) {
-                case 404: {
-                    const handlerCode = `strands:${driveId}:${status}`;
+                case 400: {
+                    if (
+                        isListenerIdNotFound(
+                            errorMessage,
+                            trigger.data?.listenerId,
+                        )
+                    ) {
+                        const handlerCode = `strands:${driveId}:${status}`;
 
-                    if (handlingInProgress.includes(handlerCode)) return;
-                    if (!trigger.data) return;
+                        if (handlingInProgress.includes(handlerCode)) return;
+                        if (!trigger.data) return;
 
-                    const delay =
-                        pullResponderRegisterDelay.current.get(handlerCode) ||
-                        0;
+                        const delay =
+                            pullResponderRegisterDelay.current.get(
+                                handlerCode,
+                            ) || 0;
 
-                    setTimeout(
-                        () => handleStrands404(driveId, trigger, handlerCode),
-                        delay,
-                    );
+                        setTimeout(
+                            () =>
+                                handleStrands400(driveId, trigger, handlerCode),
+                            delay,
+                        );
+                    }
 
                     break;
                 }
