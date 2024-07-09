@@ -113,13 +113,6 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                 if (!drive) return;
                 await removeTrigger(driveId, trigger.id);
 
-                // rename the drive old name (old)
-                // check how many drives with the same name and old tag exist
-                const amountOfCopies = documentDrives.filter(d => {
-                    return d.state.global.name.includes(
-                        drive.state.global.name,
-                    );
-                }).length;
                 await renameDrive(
                     driveId,
                     drive.state.global.name + ` (${drive.state.global.id})`,
@@ -132,7 +125,6 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                         trigger.data.url,
                         drive.state.global.slug,
                     );
-                    // if newId provided add new remote drive
                     if (newId) {
                         const urlParts = trigger.data.url.split('/');
                         urlParts[urlParts.length - 1] = newId;
