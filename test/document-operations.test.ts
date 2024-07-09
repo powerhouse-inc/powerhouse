@@ -8,7 +8,7 @@ import {
     actions,
     reducer
 } from 'document-model/document-model';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { DocumentDriveServer } from '../src';
 import { buildOperation, buildOperations } from './utils';
 

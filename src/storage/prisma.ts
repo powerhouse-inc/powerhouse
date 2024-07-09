@@ -31,14 +31,14 @@ import {
 
 type Transaction =
     | Omit<
-        PrismaClient<Prisma.PrismaClientOptions, never>,
-        | '$connect'
-        | '$disconnect'
-        | '$on'
-        | '$transaction'
-        | '$use'
-        | '$extends'
-    >
+          PrismaClient<Prisma.PrismaClientOptions, never>,
+          | '$connect'
+          | '$disconnect'
+          | '$on'
+          | '$transaction'
+          | '$use'
+          | '$extends'
+      >
     | ExtendedPrismaClient;
 
 function storageToOperation(
@@ -504,7 +504,13 @@ export class PrismaStorage implements IDriveStorage {
             });
         } catch (e: any) {
             // Ignore Error: P2025: An operation failed because it depends on one or more records that were required but not found.
-            if ((e.code && e.code === "P2025") || (e.message && e.message.includes("An operation failed because it depends on one or more records that were required but not found."))) {
+            if (
+                (e.code && e.code === 'P2025') ||
+                (e.message &&
+                    e.message.includes(
+                        'An operation failed because it depends on one or more records that were required but not found.'
+                    ))
+            ) {
                 return;
             }
 

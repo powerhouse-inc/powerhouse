@@ -1,6 +1,7 @@
 import { utils } from 'document-model/document';
 
-export const { attachBranch,
+export const {
+    attachBranch,
     garbageCollect,
     groupOperationsByScope,
     merge,

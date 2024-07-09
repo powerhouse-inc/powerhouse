@@ -1,12 +1,15 @@
-import { Document } from "document-model/document";
-import { ICache } from "./types";
-import type { RedisClientType } from "redis";
+import { Document } from 'document-model/document';
+import type { RedisClientType } from 'redis';
+import { ICache } from './types';
 
 class RedisCache implements ICache {
     private redis: RedisClientType;
     private timeoutInSeconds: number;
 
-    constructor(redis: RedisClientType, timeoutInSeconds: number | undefined = 5 * 60) {
+    constructor(
+        redis: RedisClientType,
+        timeoutInSeconds: number | undefined = 5 * 60
+    ) {
         this.redis = redis;
         this.timeoutInSeconds = timeoutInSeconds;
     }
@@ -24,7 +27,7 @@ class RedisCache implements ICache {
             delete e.resultingState;
             return e;
         });
-        const doc = { ...document, operations: { global, local } }
+        const doc = { ...document, operations: { global, local } };
         const redisId = RedisCache._getId(drive, id);
         const result = await this.redis.set(redisId, JSON.stringify(doc), {
             EX: this.timeoutInSeconds ? this.timeoutInSeconds : undefined
@@ -41,7 +44,7 @@ class RedisCache implements ICache {
         const redisId = RedisCache._getId(drive, id);
         const doc = await this.redis.get(redisId);
 
-        return doc ? JSON.parse(doc) as Document : undefined;
+        return doc ? (JSON.parse(doc) as Document) : undefined;
     }
 
     async deleteDocument(drive: string, id: string) {

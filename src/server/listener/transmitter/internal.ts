@@ -1,4 +1,5 @@
 import { Document, OperationScope } from 'document-model/document';
+import { logger } from '../../../utils/logger';
 import {
     BaseDocumentDriveServer,
     Listener,
@@ -8,7 +9,6 @@ import {
 } from '../../types';
 import { buildRevisionsFilter } from '../../utils';
 import { ITransmitter } from './types';
-import { logger } from '../../../utils/logger';
 
 export interface IReceiver {
     transmit: (strands: InternalTransmitterUpdate[]) => Promise<void>;
@@ -56,10 +56,10 @@ export class InternalTransmitter implements ITransmitter {
                 );
                 document = await (strand.documentId
                     ? this.drive.getDocument(
-                        strand.driveId,
-                        strand.documentId,
-                        { revisions }
-                    )
+                          strand.driveId,
+                          strand.documentId,
+                          { revisions }
+                      )
                     : this.drive.getDrive(strand.driveId, { revisions }));
                 retrievedDocuments.set(
                     `${strand.driveId}:${strand.documentId}`,

@@ -1,20 +1,20 @@
-import { Action, Operation } from "document-model/document";
-import { AddOperationOptions, IOperationResult } from "../server";
-import type { Unsubscribe } from "nanoevents";
+import { Action, Operation } from 'document-model/document';
+import type { Unsubscribe } from 'nanoevents';
+import { AddOperationOptions, IOperationResult } from '../server';
 
 export interface BaseJob {
     driveId: string;
-    documentId?: string
-    actions?: Action[]
-    options?: AddOperationOptions;    
+    documentId?: string;
+    actions?: Action[];
+    options?: AddOperationOptions;
 }
 
 export interface OperationJob extends BaseJob {
-    operations: Operation[]
+    operations: Operation[];
 }
 
 export interface ActionJob extends BaseJob {
-    actions: Action[]
+    actions: Action[];
 }
 
 export type Job = OperationJob | ActionJob;
@@ -28,9 +28,12 @@ export interface QueueEvents {
 }
 
 export interface IServerDelegate {
-    checkDocumentExists: (driveId: string, documentId: string) => Promise<boolean>;
+    checkDocumentExists: (
+        driveId: string,
+        documentId: string
+    ) => Promise<boolean>;
     processJob: (job: Job) => Promise<IOperationResult>;
-};
+}
 
 export interface IQueueManager {
     addJob(job: Job): Promise<JobId>;
@@ -38,7 +41,10 @@ export interface IQueueManager {
     removeQueue(driveId: string, documentId?: string): void;
     getQueueByIndex(index: number): IQueue<Job, IOperationResult> | null;
     getQueues(): string[];
-    init(delegate: IServerDelegate, onError: (error: Error) => void): Promise<void>;
+    init(
+        delegate: IServerDelegate,
+        onError: (error: Error) => void
+    ): Promise<void>;
     on<K extends keyof QueueEvents>(
         this: this,
         event: K,
@@ -65,9 +71,9 @@ export interface IQueue<T, R> {
 export type IJobQueue = IQueue<Job, IOperationResult>;
 
 export function isOperationJob(job: Job): job is OperationJob {
-    return "operations" in job;
+    return 'operations' in job;
 }
 
 export function isActionJob(job: Job): job is ActionJob {
-    return "actions" in job;
+    return 'actions' in job;
 }

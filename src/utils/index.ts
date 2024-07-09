@@ -1,8 +1,6 @@
-import { v4 as uuidv4 } from 'uuid';
 import {
     DocumentDriveDocument,
-    documentModel as DocumentDriveModel,
-    z
+    documentModel as DocumentDriveModel
 } from 'document-model-libs/document-drive';
 import {
     Action,
@@ -12,49 +10,51 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
+import { v4 as uuidv4 } from 'uuid';
 import { OperationError } from '../server/error';
 import { DocumentDriveStorage, DocumentStorage } from '../storage';
 
 export function isDocumentDriveStorage(
     document: DocumentStorage
 ): document is DocumentDriveStorage {
-    return (
-        document.documentType === DocumentDriveModel.id
-    );
+    return document.documentType === DocumentDriveModel.id;
 }
 
 export function isDocumentDrive(
     document: Document
 ): document is DocumentDriveDocument {
-    return (
-        document.documentType === DocumentDriveModel.id
-    );
+    return document.documentType === DocumentDriveModel.id;
 }
 
 export function mergeOperations<A extends Action = Action>(
     currentOperations: DocumentOperations<A>,
     newOperations: Operation<A | BaseAction>[]
 ): DocumentOperations<A> {
-    const minIndexByScope = Object.keys(currentOperations).reduce<Partial<Record<OperationScope, number>>>((acc, curr) => {
+    const minIndexByScope = Object.keys(currentOperations).reduce<
+        Partial<Record<OperationScope, number>>
+    >((acc, curr) => {
         const scope = curr as OperationScope;
-        acc[scope] = currentOperations[scope].at(-1)?.index ?? 0
+        acc[scope] = currentOperations[scope].at(-1)?.index ?? 0;
         return acc;
     }, {});
 
-    const conflictOp = newOperations.find(op => op.index < (minIndexByScope[op.scope] ?? 0));
+    const conflictOp = newOperations.find(
+        op => op.index < (minIndexByScope[op.scope] ?? 0)
+    );
     if (conflictOp) {
         throw new OperationError(
-            "ERROR",
+            'ERROR',
             conflictOp,
             `Tried to add operation with index ${conflictOp.index} and document is at index ${minIndexByScope[conflictOp.scope]}`
         );
     }
 
-    return newOperations.sort((a, b) => a.index - b.index
-    ).reduce<DocumentOperations<A>>((acc, curr) => {
-        const existingOperations = acc[curr.scope] || [];
-        return { ...acc, [curr.scope]: [...existingOperations, curr] };
-    }, currentOperations);
+    return newOperations
+        .sort((a, b) => a.index - b.index)
+        .reduce<DocumentOperations<A>>((acc, curr) => {
+            const existingOperations = acc[curr.scope] || [];
+            return { ...acc, [curr.scope]: [...existingOperations, curr] };
+        }, currentOperations);
 }
 
 export function generateUUID(): string {
@@ -86,4 +86,3 @@ export function isNoopUpdate(
 export function isBefore(dateA: Date | string, dateB: Date | string) {
     return new Date(dateA) < new Date(dateB);
 }
-

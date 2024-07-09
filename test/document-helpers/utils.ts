@@ -5,8 +5,10 @@ export type InputOperation = Partial<Omit<Operation, 'index' | 'skip'>> & {
     skip: number;
 };
 
-export const buildOperation = (input: InputOperation, shuffled = false): Operation => {
-
+export const buildOperation = (
+    input: InputOperation,
+    shuffled = false
+): Operation => {
     if (shuffled) {
         return {
             scope: 'global',
@@ -28,5 +30,7 @@ export const buildOperation = (input: InputOperation, shuffled = false): Operati
     };
 };
 
-export const buildOperations = (inputs: InputOperation[], shuffled = false): Operation[] =>
-    inputs.map(i => buildOperation(i, shuffled));
+export const buildOperations = (
+    inputs: InputOperation[],
+    shuffled = false
+): Operation[] => inputs.map(i => buildOperation(i, shuffled));

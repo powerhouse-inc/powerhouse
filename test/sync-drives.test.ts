@@ -48,51 +48,52 @@ describe('Document Drive Server interaction', () => {
                     if (strands.length) {
                         const sortedStrands = strands.reduce<typeof strands>(
                             (acc, curr) =>
-                                curr.documentId ? [...acc, curr] : [curr, ...acc],
+                                curr.documentId
+                                    ? [...acc, curr]
+                                    : [curr, ...acc],
                             []
-                          );
-                    
-                          for (const s of sortedStrands) {
+                        );
+
+                        for (const s of sortedStrands) {
                             const operations =
-                              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                              s.operations?.map((o) => ({
-                                  ...o,
-                                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                                  input: JSON.parse(o.input.toString()),
-                                  skip: o.skip ?? 0,
-                                  scope: s.scope as OperationScope,
-                                  branch: "main",
-                              })) ?? [];
-
-                                const result = await (!s.documentId
-                                    ? server.addDriveOperations(
-                                          s.driveId,
-                                          operations as Operation<DocumentDriveAction>[]
-                                      )
-                                    : server.addOperations(
-                                          s.driveId,
-                                          s.documentId,
-                                          operations
-                                      ));
-
-                                if (result.status !== 'SUCCESS')
-                                    console.error(result.error);
-
-                                const revision =
-                                    result.document?.operations[s.scope]
-                                        .slice()
-                                        .pop()?.index ?? -1;
-                                listenerRevisions.push({
-                                    revision,
-                                    branch: s.branch,
-                                    documentId: s.documentId,
-                                    driveId: s.driveId,
+                                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                                s.operations?.map(o => ({
+                                    ...o,
+                                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                                    input: JSON.parse(o.input.toString()),
+                                    skip: o.skip ?? 0,
                                     scope: s.scope as OperationScope,
-                                    status: result.status,
-                                    error: result.error?.message
-                                });
-                            }
+                                    branch: 'main'
+                                })) ?? [];
 
+                            const result = await (!s.documentId
+                                ? server.addDriveOperations(
+                                      s.driveId,
+                                      operations as Operation<DocumentDriveAction>[]
+                                  )
+                                : server.addOperations(
+                                      s.driveId,
+                                      s.documentId,
+                                      operations
+                                  ));
+
+                            if (result.status !== 'SUCCESS')
+                                console.error(result.error);
+
+                            const revision =
+                                result.document?.operations[s.scope]
+                                    .slice()
+                                    .pop()?.index ?? -1;
+                            listenerRevisions.push({
+                                revision,
+                                branch: s.branch,
+                                documentId: s.documentId,
+                                driveId: s.driveId,
+                                scope: s.scope as OperationScope,
+                                status: result.status,
+                                error: result.error?.message
+                            });
+                        }
                     }
                     return HttpResponse.json({
                         data: { pushUpdates: listenerRevisions }
@@ -359,16 +360,16 @@ describe('Document Drive Server interaction', () => {
                     documentType: 'powerhouse/document-model',
                     synchronizationUnits: [
                         {
-                            syncId: "1",
-                            scope: "global",
+                            syncId: '1',
+                            scope: 'global',
                             branch: 'main'
                         },
                         {
-                            syncId: "2",
-                            scope: "local",
+                            syncId: '2',
+                            scope: 'local',
                             branch: 'main'
                         }
-                    ],
+                    ]
                 })
             )
         );
@@ -438,16 +439,16 @@ describe('Document Drive Server interaction', () => {
                     documentType: 'powerhouse/document-model',
                     synchronizationUnits: [
                         {
-                            syncId: "1",
-                            scope: "global",
+                            syncId: '1',
+                            scope: 'global',
                             branch: 'main'
                         },
                         {
-                            syncId: "2",
-                            scope: "local",
+                            syncId: '2',
+                            scope: 'local',
                             branch: 'main'
                         }
-                    ],
+                    ]
                 })
             ])
         );
@@ -515,16 +516,16 @@ describe('Document Drive Server interaction', () => {
                     documentType: 'powerhouse/document-model',
                     synchronizationUnits: [
                         {
-                            syncId: "1",
-                            scope: "global",
+                            syncId: '1',
+                            scope: 'global',
                             branch: 'main'
                         },
                         {
-                            syncId: "2",
-                            scope: "local",
+                            syncId: '2',
+                            scope: 'local',
                             branch: 'main'
                         }
-                    ],
+                    ]
                 })
             ])
         );
@@ -638,16 +639,16 @@ describe('Document Drive Server interaction', () => {
                     documentType: 'powerhouse/document-model',
                     synchronizationUnits: [
                         {
-                            syncId: "1",
-                            scope: "global",
+                            syncId: '1',
+                            scope: 'global',
                             branch: 'main'
                         },
                         {
-                            syncId: "2",
-                            scope: "local",
+                            syncId: '2',
+                            scope: 'local',
                             branch: 'main'
                         }
-                    ],
+                    ]
                 })
             ])
         );

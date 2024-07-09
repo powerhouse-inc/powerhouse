@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export type ILogger = Pick<Console, 'log' | 'info' | 'warn' | 'error' | 'debug' | 'trace'>;
+export type ILogger = Pick<
+    Console,
+    'log' | 'info' | 'warn' | 'error' | 'debug' | 'trace'
+>;
 class Logger implements ILogger {
     #logger: ILogger = console;
 

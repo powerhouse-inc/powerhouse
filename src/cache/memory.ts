@@ -1,5 +1,5 @@
-import { Document } from "document-model/document";
-import { ICache } from "./types";
+import { Document } from 'document-model/document';
+import { ICache } from './types';
 
 class InMemoryCache implements ICache {
     private cache = new Map<string, Map<string, Document>>();
@@ -13,7 +13,7 @@ class InMemoryCache implements ICache {
             delete e.resultingState;
             return e;
         });
-        const doc = { ...document, operations: { global, local } }
+        const doc = { ...document, operations: { global, local } };
         if (!this.cache.has(drive)) {
             this.cache.set(drive, new Map());
         }

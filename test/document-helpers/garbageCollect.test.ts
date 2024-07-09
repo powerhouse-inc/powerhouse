@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    garbageCollect
-} from '../../src/utils/document-helpers';
-import { buildOperation, buildOperations } from './utils';
 import { Operation } from 'document-model/document';
+import { garbageCollect } from '../../src/utils/document-helpers';
+import { buildOperation, buildOperations } from './utils';
 
 describe('garbageCollect', () => {
     it('should return the same list of operations if there is no issues or removals', () => {
@@ -143,7 +141,7 @@ describe('garbageCollect', () => {
             [op0_x, op1_v, op4_x, op6_v],
             [op1_v, op5_x, op6_v],
             [op0_x, op1_v, op6_v],
-            [op1_v, op6_v],
+            [op1_v, op6_v]
         ];
 
         for (const set of equivalentSets) {

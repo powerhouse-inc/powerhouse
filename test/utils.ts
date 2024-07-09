@@ -100,7 +100,7 @@ export class BasicClient {
         private document: Document<any, any, any>,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         private reducer: Reducer<any, any, any>
-    ) { }
+    ) {}
 
     getDocument() {
         return this.document;
@@ -172,7 +172,7 @@ export class DriveBasicClient {
         private document: Document<any, any, any>,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         private reducer: Reducer<any, any, any>
-    ) { }
+    ) {}
 
     getDocument() {
         return this.document;

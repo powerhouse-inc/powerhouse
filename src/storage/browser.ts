@@ -7,11 +7,7 @@ import {
     OperationScope
 } from 'document-model/document';
 import { mergeOperations, type SynchronizationUnitQuery } from '..';
-import {
-    DocumentDriveStorage,
-    DocumentStorage,
-    IDriveStorage,
-} from './types';
+import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 export class BrowserStorage implements IDriveStorage {
     private db: Promise<LocalForage>;

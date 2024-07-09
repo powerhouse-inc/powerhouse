@@ -1,5 +1,10 @@
 import { DocumentDriveAction } from 'document-model-libs/document-drive';
-import { BaseAction, DocumentHeader, Operation, OperationScope } from 'document-model/document';
+import {
+    BaseAction,
+    DocumentHeader,
+    Operation,
+    OperationScope
+} from 'document-model/document';
 import type { Dirent } from 'fs';
 import {
     existsSync,
@@ -202,7 +207,13 @@ export class FilesystemStorage implements IDriveStorage {
         // get oldes drives first
         const drives = (await this.getDrives()).reverse();
         for (const drive of drives) {
-            const { initialState: { state: { global: { slug: driveSlug } } } } = await this.getDrive(drive);
+            const {
+                initialState: {
+                    state: {
+                        global: { slug: driveSlug }
+                    }
+                }
+            } = await this.getDrive(drive);
             if (driveSlug === slug) {
                 return this.getDrive(drive);
             }

@@ -1,16 +1,23 @@
+import { Operation, PrismaClient } from '@prisma/client';
 import * as DocumentDrive from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { DocumentModel } from 'document-model/document';
-import {
-    module as DocumentModelLib
-} from 'document-model/document-model';
+import { module as DocumentModelLib } from 'document-model/document-model';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DocumentDriveServer, generateUUID, PullResponderTransmitter } from '../src';
+import {
+    DocumentDriveServer,
+    PullResponderTransmitter,
+    generateUUID
+} from '../src';
 import InMemoryCache from '../src/cache/memory';
 import { MemoryStorage } from '../src/storage/memory';
-import { buildOperation, buildOperations, expectUTCTimestamp, expectUUID } from './utils';
 import { PrismaStorage } from '../src/storage/prisma';
-import { Operation, PrismaClient } from '@prisma/client';
+import {
+    buildOperation,
+    buildOperations,
+    expectUTCTimestamp,
+    expectUUID
+} from './utils';
 
 describe('Synchronization Units', () => {
     const documentModels = [
@@ -30,7 +37,11 @@ describe('Synchronization Units', () => {
         it('should return drive synchronizationUnit', async () => {
             const storage = new MemoryStorage();
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
 
             await server.addDrive({
@@ -65,7 +76,11 @@ describe('Synchronization Units', () => {
         it('should return all synchronizationUnits', async () => {
             const storage = new MemoryStorage();
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
 
             await server.addDrive({
@@ -212,7 +227,11 @@ describe('Synchronization Units', () => {
         it('should return transmitter strands', async () => {
             const storage = new MemoryStorage();
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
 
             await server.addDrive({
@@ -340,7 +359,11 @@ describe('Synchronization Units', () => {
         it('should db query for each document', async () => {
             const storage = new MemoryStorage();
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
 
             await server.addDrive({
@@ -353,15 +376,25 @@ describe('Synchronization Units', () => {
                 }
             });
             const drive = await server.getDrive('1');
-            const operations = buildOperations(DocumentDrive.reducer, drive, new Array(100).fill("").map((_, i) => DocumentDrive.actions.addFile({
-                id: `file-${i}`, name: `test-${i}`, documentType: 'powerhouse/document-model',
-                synchronizationUnits: [{
-                    syncId: generateUUID(),
-                    branch: 'main',
-                    scope: "global"
-                }]
-            })));
-            const result = await server.addDriveOperations('1', operations)
+            const operations = buildOperations(
+                DocumentDrive.reducer,
+                drive,
+                new Array(100).fill('').map((_, i) =>
+                    DocumentDrive.actions.addFile({
+                        id: `file-${i}`,
+                        name: `test-${i}`,
+                        documentType: 'powerhouse/document-model',
+                        synchronizationUnits: [
+                            {
+                                syncId: generateUUID(),
+                                branch: 'main',
+                                scope: 'global'
+                            }
+                        ]
+                    })
+                )
+            );
+            const result = await server.addDriveOperations('1', operations);
             expect(result.status).toBe('SUCCESS');
 
             await server.addDriveOperation(
@@ -426,7 +459,13 @@ describe('Synchronization Units', () => {
                     documentId: '',
                     driveId: '1',
                     scope: 'global',
-                    operations: new Array(100).fill(null).map((_, i) => expect.objectContaining({ index: i, type: 'ADD_FILE' }) as Operation)
+                    operations: new Array(100).fill(null).map(
+                        (_, i) =>
+                            expect.objectContaining({
+                                index: i,
+                                type: 'ADD_FILE'
+                            }) as Operation
+                    )
                 }
             ]);
             expect(storageSpy).toHaveBeenCalledTimes(100);
@@ -438,7 +477,11 @@ describe('Synchronization Units', () => {
         beforeEach(async () => {
             const storage = new PrismaStorage(new PrismaClient());
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
             if ((await server.getDrives()).includes('1')) {
                 await server.deleteDrive('1');
@@ -448,7 +491,11 @@ describe('Synchronization Units', () => {
         it('should return drive synchronizationUnit', async () => {
             const storage = new PrismaStorage(new PrismaClient());
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
 
             await server.addDrive({
@@ -483,7 +530,11 @@ describe('Synchronization Units', () => {
         it('should return all synchronizationUnits', async () => {
             const storage = new PrismaStorage(new PrismaClient());
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
 
             await server.addDrive({
@@ -630,7 +681,11 @@ describe('Synchronization Units', () => {
         it('should return transmitter strands', async () => {
             const storage = new PrismaStorage(new PrismaClient());
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
 
             await server.addDrive({
@@ -758,7 +813,11 @@ describe('Synchronization Units', () => {
         it('should make single db query for all documents', async () => {
             const storage = new PrismaStorage(new PrismaClient());
             const cache = new InMemoryCache();
-            const server = new DocumentDriveServer(documentModels, storage, cache);
+            const server = new DocumentDriveServer(
+                documentModels,
+                storage,
+                cache
+            );
             await server.initialize();
 
             await server.addDrive({
@@ -771,15 +830,25 @@ describe('Synchronization Units', () => {
                 }
             });
             const drive = await server.getDrive('1');
-            const operations = buildOperations(DocumentDrive.reducer, drive, new Array(100).fill("").map((_, i) => DocumentDrive.actions.addFile({
-                id: `file-${i}`, name: `test-${i}`, documentType: 'powerhouse/document-model',
-                synchronizationUnits: [{
-                    syncId: generateUUID(),
-                    branch: 'main',
-                    scope: "global"
-                }]
-            })));
-            const result = await server.addDriveOperations('1', operations)
+            const operations = buildOperations(
+                DocumentDrive.reducer,
+                drive,
+                new Array(100).fill('').map((_, i) =>
+                    DocumentDrive.actions.addFile({
+                        id: `file-${i}`,
+                        name: `test-${i}`,
+                        documentType: 'powerhouse/document-model',
+                        synchronizationUnits: [
+                            {
+                                syncId: generateUUID(),
+                                branch: 'main',
+                                scope: 'global'
+                            }
+                        ]
+                    })
+                )
+            );
+            const result = await server.addDriveOperations('1', operations);
             expect(result.status).toBe('SUCCESS');
 
             await server.addDriveOperation(
@@ -844,7 +913,13 @@ describe('Synchronization Units', () => {
                     documentId: '',
                     driveId: '1',
                     scope: 'global',
-                    operations: new Array(100).fill(null).map((_, i) => expect.objectContaining({ index: i, type: 'ADD_FILE' }) as Operation)
+                    operations: new Array(100).fill(null).map(
+                        (_, i) =>
+                            expect.objectContaining({
+                                index: i,
+                                type: 'ADD_FILE'
+                            }) as Operation
+                    )
                 }
             ]);
             expect(storageSpy).toHaveBeenCalledTimes(0);

@@ -10,8 +10,8 @@ import {
     OperationScope
 } from 'document-model/document';
 import { DataTypes, Options, Sequelize } from 'sequelize';
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 import type { SynchronizationUnitQuery } from '../server/types';
+import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 export class SequelizeStorage implements IDriveStorage {
     private db: Sequelize;

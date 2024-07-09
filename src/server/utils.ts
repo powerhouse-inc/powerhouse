@@ -32,4 +32,3 @@ export function filterOperationsByRevision(
         return acc;
     }, operations);
 }
-

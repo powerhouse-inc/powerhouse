@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     attachBranch,
-    checkCleanedOperationsIntegrity,
+    checkCleanedOperationsIntegrity
 } from '../../src/utils/document-helpers';
 import { buildOperations } from './utils';
 
@@ -15,14 +15,14 @@ describe('attachBranch', () => {
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
                 { index: 2, skip: 0, type: 'T_2' },
-                { index: 3, skip: 0, type: 'T_3' },
+                { index: 3, skip: 0, type: 'T_3' }
             ],
             branch: [],
             newTrunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
                 { index: 2, skip: 0, type: 'T_2' },
-                { index: 3, skip: 0, type: 'T_3' },
+                { index: 3, skip: 0, type: 'T_3' }
             ],
             tail: []
         },
@@ -33,12 +33,12 @@ describe('attachBranch', () => {
             branch: [
                 { index: 0, skip: 0, type: 'B_0' },
                 { index: 1, skip: 0, type: 'B_1' },
-                { index: 2, skip: 0, type: 'B_2' },
+                { index: 2, skip: 0, type: 'B_2' }
             ],
             newTrunk: [
                 { index: 0, skip: 0, type: 'B_0' },
                 { index: 1, skip: 0, type: 'B_1' },
-                { index: 2, skip: 0, type: 'B_2' },
+                { index: 2, skip: 0, type: 'B_2' }
             ],
             tail: []
         },
@@ -49,12 +49,12 @@ describe('attachBranch', () => {
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
                 { index: 2, skip: 0, type: 'T_2' },
-                { index: 3, skip: 0, type: 'T_3' },
+                { index: 3, skip: 0, type: 'T_3' }
             ],
             branch: [
                 { index: 4, skip: 0, type: 'B_4' },
                 { index: 5, skip: 0, type: 'B_5' },
-                { index: 6, skip: 0, type: 'B_6' },
+                { index: 6, skip: 0, type: 'B_6' }
             ],
             newTrunk: [
                 { index: 0, skip: 0, type: 'T_0' },
@@ -63,7 +63,7 @@ describe('attachBranch', () => {
                 { index: 3, skip: 0, type: 'T_3' },
                 { index: 4, skip: 0, type: 'B_4' },
                 { index: 5, skip: 0, type: 'B_5' },
-                { index: 6, skip: 0, type: 'B_6' },
+                { index: 6, skip: 0, type: 'B_6' }
             ],
             tail: []
         },
@@ -74,22 +74,20 @@ describe('attachBranch', () => {
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
                 { index: 2, skip: 0, type: 'T_2' },
-                { index: 3, skip: 0, type: 'T_3' },
+                { index: 3, skip: 0, type: 'T_3' }
             ],
             branch: [
                 { index: 3, skip: 0, type: 'B_3' },
-                { index: 4, skip: 0, type: 'B_4' },
+                { index: 4, skip: 0, type: 'B_4' }
             ],
             newTrunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
                 { index: 2, skip: 0, type: 'T_2' },
                 { index: 3, skip: 0, type: 'B_3' },
-                { index: 4, skip: 0, type: 'B_4' },
+                { index: 4, skip: 0, type: 'B_4' }
             ],
-            tail: [
-                { index: 3, skip: 0, type: 'T_3' },
-            ]
+            tail: [{ index: 3, skip: 0, type: 'T_3' }]
         },
         {
             // [T0:0 T1:0 T2:0 T3:0] + [B1:0] = [T0:0 B1:0] + [T1:0 T2:0 T3:0]
@@ -98,19 +96,17 @@ describe('attachBranch', () => {
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
                 { index: 2, skip: 0, type: 'T_2' },
-                { index: 3, skip: 0, type: 'T_3' },
+                { index: 3, skip: 0, type: 'T_3' }
             ],
-            branch: [
-                { index: 1, skip: 0, type: 'B_1' },
-            ],
+            branch: [{ index: 1, skip: 0, type: 'B_1' }],
             newTrunk: [
                 { index: 0, skip: 0, type: 'T_0' },
-                { index: 1, skip: 0, type: 'B_1' },
+                { index: 1, skip: 0, type: 'B_1' }
             ],
             tail: [
                 { index: 1, skip: 0, type: 'T_1' },
                 { index: 2, skip: 0, type: 'T_2' },
-                { index: 3, skip: 0, type: 'T_3' },
+                { index: 3, skip: 0, type: 'T_3' }
             ]
         },
         {
@@ -118,26 +114,56 @@ describe('attachBranch', () => {
             trunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
-                { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-01T00:00:00.000Z' },
-                { index: 3, skip: 0, type: 'T_3', timestamp: '2021-01-02T00:00:00.000Z' },
+                {
+                    index: 2,
+                    skip: 0,
+                    type: 'T_2',
+                    timestamp: '2021-01-01T00:00:00.000Z'
+                },
+                {
+                    index: 3,
+                    skip: 0,
+                    type: 'T_3',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
                 { index: 4, skip: 0, type: 'T_4' },
-                { index: 5, skip: 0, type: 'T_5' },
+                { index: 5, skip: 0, type: 'T_5' }
             ],
             branch: [
-                { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-01T00:00:00.000Z' },
-                { index: 3, skip: 0, type: 'T_3', timestamp: '2021-01-02T00:00:00.000Z' },
-                { index: 4, skip: 0, type: 'B_4' },
+                {
+                    index: 2,
+                    skip: 0,
+                    type: 'T_2',
+                    timestamp: '2021-01-01T00:00:00.000Z'
+                },
+                {
+                    index: 3,
+                    skip: 0,
+                    type: 'T_3',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
+                { index: 4, skip: 0, type: 'B_4' }
             ],
             newTrunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
-                { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-01T00:00:00.000Z' },
-                { index: 3, skip: 0, type: 'T_3', timestamp: '2021-01-02T00:00:00.000Z' },
-                { index: 4, skip: 0, type: 'B_4' },
+                {
+                    index: 2,
+                    skip: 0,
+                    type: 'T_2',
+                    timestamp: '2021-01-01T00:00:00.000Z'
+                },
+                {
+                    index: 3,
+                    skip: 0,
+                    type: 'T_3',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
+                { index: 4, skip: 0, type: 'B_4' }
             ],
             tail: [
                 { index: 4, skip: 0, type: 'T_4' },
-                { index: 5, skip: 0, type: 'T_5' },
+                { index: 5, skip: 0, type: 'T_5' }
             ]
         },
         {
@@ -145,20 +171,50 @@ describe('attachBranch', () => {
             trunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
-                { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-01T00:00:00.000Z' },
-                { index: 3, skip: 0, type: 'T_3', timestamp: '2021-01-02T00:00:00.000Z' },
+                {
+                    index: 2,
+                    skip: 0,
+                    type: 'T_2',
+                    timestamp: '2021-01-01T00:00:00.000Z'
+                },
+                {
+                    index: 3,
+                    skip: 0,
+                    type: 'T_3',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                }
             ],
             branch: [
-                { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-01T00:00:00.000Z' },
-                { index: 3, skip: 0, type: 'T_3', timestamp: '2021-01-02T00:00:00.000Z' },
-                { index: 4, skip: 0, type: 'B_4' },
+                {
+                    index: 2,
+                    skip: 0,
+                    type: 'T_2',
+                    timestamp: '2021-01-01T00:00:00.000Z'
+                },
+                {
+                    index: 3,
+                    skip: 0,
+                    type: 'T_3',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
+                { index: 4, skip: 0, type: 'B_4' }
             ],
             newTrunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
-                { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-01T00:00:00.000Z' },
-                { index: 3, skip: 0, type: 'T_3', timestamp: '2021-01-02T00:00:00.000Z' },
-                { index: 4, skip: 0, type: 'B_4' },
+                {
+                    index: 2,
+                    skip: 0,
+                    type: 'T_2',
+                    timestamp: '2021-01-01T00:00:00.000Z'
+                },
+                {
+                    index: 3,
+                    skip: 0,
+                    type: 'T_3',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
+                { index: 4, skip: 0, type: 'B_4' }
             ],
             tail: []
         },
@@ -168,17 +224,37 @@ describe('attachBranch', () => {
             trunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
-                { index: 2, skip: 2, type: 'T_2', timestamp: '2021-01-03T00:00:00.000Z' },
-                { index: 3, skip: 0, type: 'T_3' },
+                {
+                    index: 2,
+                    skip: 2,
+                    type: 'T_2',
+                    timestamp: '2021-01-03T00:00:00.000Z'
+                },
+                { index: 3, skip: 0, type: 'T_3' }
             ],
             branch: [
-                { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-01T00:00:00.000Z' },
-                { index: 2, skip: 1, type: 'T_2', timestamp: '2021-01-02T00:00:00.000Z' },
-                { index: 2, skip: 2, type: 'T_2', timestamp: '2021-01-03T00:00:00.000Z' },
+                {
+                    index: 2,
+                    skip: 0,
+                    type: 'T_2',
+                    timestamp: '2021-01-01T00:00:00.000Z'
+                },
+                {
+                    index: 2,
+                    skip: 1,
+                    type: 'T_2',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
+                {
+                    index: 2,
+                    skip: 2,
+                    type: 'T_2',
+                    timestamp: '2021-01-03T00:00:00.000Z'
+                }
             ],
             newTrunk: [
                 { index: 2, skip: 2, type: 'T_2' },
-                { index: 3, skip: 0, type: 'T_3' },
+                { index: 3, skip: 0, type: 'T_3' }
             ],
             tail: []
         },
@@ -188,24 +264,44 @@ describe('attachBranch', () => {
             trunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
-                { index: 2, skip: 1, type: 'T_2', timestamp: '2021-01-02T00:00:00.000Z' },
+                {
+                    index: 2,
+                    skip: 1,
+                    type: 'T_2',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
                 { index: 3, skip: 0, type: 'T_3' },
-                { index: 4, skip: 0, type: 'T_4' },
+                { index: 4, skip: 0, type: 'T_4' }
             ],
             branch: [
-                { index: 2, skip: 0, type: 'T_2', timestamp: '2021-01-02T00:00:00.000Z' },
-                { index: 2, skip: 2, type: 'T_2', timestamp: '2021-01-02T00:00:00.000Z' },
+                {
+                    index: 2,
+                    skip: 0,
+                    type: 'T_2',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
+                {
+                    index: 2,
+                    skip: 2,
+                    type: 'T_2',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
                 { index: 3, skip: 0, type: 'B_3' },
-                { index: 4, skip: 0, type: 'B_4' },
+                { index: 4, skip: 0, type: 'B_4' }
             ],
             newTrunk: [
-                { index: 2, skip: 2, type: 'T_2', timestamp: '2021-01-02T00:00:00.000Z' },
+                {
+                    index: 2,
+                    skip: 2,
+                    type: 'T_2',
+                    timestamp: '2021-01-02T00:00:00.000Z'
+                },
                 { index: 3, skip: 0, type: 'B_3' },
-                { index: 4, skip: 0, type: 'B_4' },
+                { index: 4, skip: 0, type: 'B_4' }
             ],
             tail: [
                 { index: 3, skip: 0, type: 'T_3' },
-                { index: 4, skip: 0, type: 'T_4' },
+                { index: 4, skip: 0, type: 'T_4' }
             ]
         },
         {
@@ -215,19 +311,19 @@ describe('attachBranch', () => {
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
                 { index: 2, skip: 0, type: 'T_2' },
-                { index: 3, skip: 0, type: 'T_3' },
+                { index: 3, skip: 0, type: 'T_3' }
             ],
             branch: [
                 { index: 4, skip: 0, type: 'B_4_0' },
-                { index: 4, skip: 2, type: 'B_4_2' },
+                { index: 4, skip: 2, type: 'B_4_2' }
             ],
             newTrunk: [
                 { index: 0, skip: 0, type: 'T_0' },
                 { index: 1, skip: 0, type: 'T_1' },
-                { index: 4, skip: 2, type: 'B_4_2' },
+                { index: 4, skip: 2, type: 'B_4_2' }
             ],
             tail: []
-        },
+        }
     ];
 
     it.each(scenarios)(
@@ -235,7 +331,10 @@ describe('attachBranch', () => {
         testInput => {
             const trunkOperations = buildOperations(testInput.trunk);
             const branchOperations = buildOperations(testInput.branch);
-            const [newTrunk, tail] = attachBranch(trunkOperations, branchOperations);
+            const [newTrunk, tail] = attachBranch(
+                trunkOperations,
+                branchOperations
+            );
 
             expect(newTrunk).toMatchObject(testInput.newTrunk);
             expect(tail).toMatchObject(testInput.tail);

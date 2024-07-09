@@ -3,8 +3,7 @@ import {
     DocumentDriveAction,
     Trigger,
     actions,
-    reducer,
-    utils
+    reducer
 } from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { DocumentModel, Operation } from 'document-model/document';
@@ -63,13 +62,13 @@ describe('Document Drive Server with %s', () => {
                         documentType: 'powerhouse/document-model',
                         synchronizationUnits: [
                             {
-                                syncId: "1",
-                                scope: "global",
+                                syncId: '1',
+                                scope: 'global',
                                 branch: 'main'
                             },
                             {
-                                syncId: "2",
-                                scope: "local",
+                                syncId: '2',
+                                scope: 'local',
                                 branch: 'main'
                             }
                         ]
@@ -281,17 +280,18 @@ describe('Document Drive Server with %s', () => {
                 documentType: 'powerhouse/document-model',
                 synchronizationUnits: [
                     {
-                        syncId: "1",
-                        scope: "global",
+                        syncId: '1',
+                        scope: 'global',
                         branch: 'main'
                     },
                     {
-                        syncId: "2",
-                        scope: "local",
+                        syncId: '2',
+                        scope: 'local',
                         branch: 'main'
                     }
                 ]
-        }));
+            })
+        );
         await server.addDriveOperation('1', drive.operations.global[0]!);
         expect(server.getSyncStatus('1')).toBe('SYNCING');
 
@@ -310,7 +310,9 @@ describe('Document Drive Server with %s', () => {
         expect(addFileBody).toEqual(
             expect.objectContaining({
                 operationName: 'pushUpdates',
-                query: expect.stringContaining('mutation pushUpdates') as string,
+                query: expect.stringContaining(
+                    'mutation pushUpdates'
+                ) as string,
                 variables: {
                     strands: [
                         {
@@ -378,7 +380,9 @@ describe('Document Drive Server with %s', () => {
         expect(setNameBody).toEqual(
             expect.objectContaining({
                 operationName: 'pushUpdates',
-                query: expect.stringContaining('mutation pushUpdates') as string,
+                query: expect.stringContaining(
+                    'mutation pushUpdates'
+                ) as string,
                 variables: {
                     strands: [
                         {
@@ -462,13 +466,13 @@ describe('Document Drive Server with %s', () => {
                 documentType: 'powerhouse/document-model',
                 synchronizationUnits: [
                     {
-                        syncId: "1",
-                        scope: "global",
+                        syncId: '1',
+                        scope: 'global',
                         branch: 'main'
                     },
                     {
-                        syncId: "2",
-                        scope: "local",
+                        syncId: '2',
+                        scope: 'local',
                         branch: 'main'
                     }
                 ]
@@ -479,7 +483,9 @@ describe('Document Drive Server with %s', () => {
         expect(ackRequest).toEqual(
             expect.objectContaining({
                 operationName: 'acknowledge',
-                query: expect.stringContaining('mutation acknowledge') as string,
+                query: expect.stringContaining(
+                    'mutation acknowledge'
+                ) as string,
                 variables: {
                     listenerId: 'listener-1',
                     revisions: [
@@ -543,13 +549,13 @@ describe('Document Drive Server with %s', () => {
                 documentType: 'powerhouse/document-model',
                 synchronizationUnits: [
                     {
-                        syncId: "1",
-                        scope: "global",
+                        syncId: '1',
+                        scope: 'global',
                         branch: 'main'
                     },
                     {
-                        syncId: "2",
-                        scope: "local",
+                        syncId: '2',
+                        scope: 'local',
                         branch: 'main'
                     }
                 ]
@@ -576,13 +582,13 @@ describe('Document Drive Server with %s', () => {
                     documentType: 'powerhouse/document-model',
                     synchronizationUnits: [
                         {
-                            syncId: "1",
-                            scope: "global",
+                            syncId: '1',
+                            scope: 'global',
                             branch: 'main'
                         },
                         {
-                            syncId: "2",
-                            scope: "local",
+                            syncId: '2',
+                            scope: 'local',
                             branch: 'main'
                         }
                     ]
@@ -635,13 +641,13 @@ describe('Document Drive Server with %s', () => {
                 documentType: 'powerhouse/document-model',
                 synchronizationUnits: [
                     {
-                        syncId: "1",
-                        scope: "global",
+                        syncId: '1',
+                        scope: 'global',
                         branch: 'main'
                     },
                     {
-                        syncId: "2",
-                        scope: "local",
+                        syncId: '2',
+                        scope: 'local',
                         branch: 'main'
                     }
                 ]
@@ -751,13 +757,13 @@ describe('Document Drive Server with %s', () => {
                 documentType: 'powerhouse/document-model',
                 synchronizationUnits: [
                     {
-                        syncId: "1",
-                        scope: "global",
+                        syncId: '1',
+                        scope: 'global',
                         branch: 'main'
                     },
                     {
-                        syncId: "2",
-                        scope: "local",
+                        syncId: '2',
+                        scope: 'local',
                         branch: 'main'
                     }
                 ]
@@ -806,13 +812,13 @@ describe('Document Drive Server with %s', () => {
                 documentType: 'powerhouse/document-model',
                 synchronizationUnits: [
                     {
-                        syncId: "1",
-                        scope: "global",
+                        syncId: '1',
+                        scope: 'global',
                         branch: 'main'
                     },
                     {
-                        syncId: "2",
-                        scope: "local",
+                        syncId: '2',
+                        scope: 'local',
                         branch: 'main'
                     }
                 ],
