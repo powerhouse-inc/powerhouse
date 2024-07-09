@@ -38,6 +38,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
         renameDrive,
         addRemoteDrive,
         documentDrives,
+        setDriveSharingType,
     } = useDocumentDriveServer();
 
     const { getDriveIdBySlug } = useSwitchboard();
@@ -125,6 +126,8 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                         ` (old${amountOfCopies > 0 ? ` ${amountOfCopies}` : ''})`,
                 );
 
+                await setDriveSharingType(driveId, 'PRIVATE');
+
                 if (trigger.data?.url && drive.state.global.slug) {
                     // TODO: fetch drive id by slug
 
@@ -139,7 +142,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
 
                     await addRemoteDrive(newUrl, {
                         availableOffline: true,
-                        sharingType: 'private',
+                        sharingType: 'PUBLIC',
                         listeners: [],
                         triggers: [],
                     });
