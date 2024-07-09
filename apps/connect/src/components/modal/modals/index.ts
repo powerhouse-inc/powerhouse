@@ -1,5 +1,6 @@
 import { ConfirmationModal } from './ConfirmationModal';
 import { CreateDocumentModal } from './CreateDocumentModal';
+import { DebugSettingsModal } from './DebugSettingsModal';
 import { DeleteDriveModal } from './DeleteDriveModal';
 import { DeleteItemModal } from './DeleteItemModal';
 import { SettingsModal } from './SettingsModal';
@@ -12,6 +13,7 @@ export const modals = {
     settingsModal: SettingsModal,
     confirmationModal: ConfirmationModal,
     deleteDriveModal: DeleteDriveModal,
+    debugSettingsModal: DebugSettingsModal,
 } as const;
 
 export type Modals = typeof modals;
