@@ -1,3 +1,16 @@
+# [1.0.0-dev.39](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.38...v1.0.0-dev.39) (2024-07-09)
+
+
+### Bug Fixes
+
+* set old drive private and new drive public ([fa29b90](https://github.com/powerhouse-inc/document-model-electron/commit/fa29b9042e764cd58f96073f2967478372b289ce))
+* switchboard graphql query ([8d354d3](https://github.com/powerhouse-inc/document-model-electron/commit/8d354d33b8cf63cf4d2b34800b8ff2a77bb79646))
+
+
+### Features
+
+* readd drive by slug ([631bcc3](https://github.com/powerhouse-inc/document-model-electron/commit/631bcc36fafaa9fe8502820d9ac872563377d32a))
+
 # [1.0.0-dev.38](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.37...v1.0.0-dev.38) (2024-07-08)
 
 
