@@ -122,30 +122,29 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                 }).length;
                 await renameDrive(
                     driveId,
-                    drive.state.global.name +
-                        ` (old${amountOfCopies > 0 ? ` ${amountOfCopies}` : ''})`,
+                    drive.state.global.name + ` (${drive.state.global.id})`,
                 );
 
                 await setDriveSharingType(driveId, 'PRIVATE');
 
                 if (trigger.data?.url && drive.state.global.slug) {
-                    // TODO: fetch drive id by slug
-
                     const newId = await getDriveIdBySlug(
                         trigger.data.url,
                         drive.state.global.slug,
                     );
-                    // generate new drive url
-                    const urlParts = trigger.data.url.split('/');
-                    urlParts[urlParts.length - 1] = newId;
-                    const newUrl = urlParts.join('/');
+                    // if newId provided add new remote drive
+                    if (newId) {
+                        const urlParts = trigger.data.url.split('/');
+                        urlParts[urlParts.length - 1] = newId;
+                        const newUrl = urlParts.join('/');
 
-                    await addRemoteDrive(newUrl, {
-                        availableOffline: true,
-                        sharingType: 'PUBLIC',
-                        listeners: [],
-                        triggers: [],
-                    });
+                        await addRemoteDrive(newUrl, {
+                            availableOffline: true,
+                            sharingType: 'PUBLIC',
+                            listeners: [],
+                            triggers: [],
+                        });
+                    }
                 }
             } catch (e: any) {
                 console.error(e);
