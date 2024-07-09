@@ -18,9 +18,7 @@ export function useSwitchboard() {
                 body: JSON.stringify({
                     query: `
                         query getDriveIdBySlug($slug: String!) {
-                            driveBySlug(slug: $slug) {
-                                id
-                            }
+                            driveIdBySlug(slug: $slug)
                         }
                     `,
                     variables: {
@@ -30,9 +28,10 @@ export function useSwitchboard() {
             });
 
             const data = (await result.json()) as {
-                data: { driveBySlug: { id: string } };
+                data: { driveIdBySlug: string };
             };
-            return data.data.driveBySlug.id;
+
+            return data.data.driveIdBySlug;
         },
     };
 }
