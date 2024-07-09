@@ -1,3 +1,10 @@
+# [1.0.0-dev.41](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.40...v1.0.0-dev.41) (2024-07-09)
+
+
+### Features
+
+* reload default drives when config has been updated ([edd9bfc](https://github.com/powerhouse-inc/document-model-electron/commit/edd9bfc1f1914c13855343d77b6fc8029df6f737))
+
 # [1.0.0-dev.40](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.39...v1.0.0-dev.40) (2024-07-09)
 
 
