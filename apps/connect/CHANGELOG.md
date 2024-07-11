@@ -1,3 +1,10 @@
+# [1.0.0-dev.42](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.41...v1.0.0-dev.42) (2024-07-11)
+
+
+### Features
+
+* added debug tools modal ([c88989b](https://github.com/powerhouse-inc/document-model-electron/commit/c88989b3b29f501089234dcfc3a03ae94cc6d009))
+
 # [1.0.0-dev.41](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.40...v1.0.0-dev.41) (2024-07-09)
 
 
