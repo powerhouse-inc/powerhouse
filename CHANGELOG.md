@@ -1,3 +1,10 @@
+# [1.0.0-alpha.84](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.83...v1.0.0-alpha.84) (2024-07-11)
+
+
+### Features
+
+* added logging to error when adding drive jobs ([6175311](https://github.com/powerhouse-inc/document-drive/commit/61753112c16b8c21969147018cbc4c978feb7b87))
+
 # [1.0.0-alpha.83](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.82...v1.0.0-alpha.83) (2024-07-08)
 
 ### Bug Fixes
