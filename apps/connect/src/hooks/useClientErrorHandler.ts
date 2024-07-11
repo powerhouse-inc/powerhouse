@@ -165,6 +165,12 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                             trigger.data?.listenerId,
                         )
                     ) {
+                        const autoRegisterPullResponder =
+                            localStorage.getItem(
+                                'AUTO_REGISTER_PULL_RESPONDER',
+                            ) !== 'false';
+
+                        if (!autoRegisterPullResponder) return;
                         const handlerCode = `strands:${driveId}:${status}`;
 
                         if (handlingInProgress.includes(handlerCode)) return;
