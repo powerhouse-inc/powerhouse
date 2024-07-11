@@ -1368,37 +1368,42 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         actions: (DocumentDriveAction | BaseAction)[],
         options?: AddOperationOptions
     ): Promise<IOperationResult<DocumentDriveDocument>> {
-        const jobId = await this.queueManager.addJob({
-            driveId: drive,
-            actions,
-            options
-        });
-        return new Promise<IOperationResult<DocumentDriveDocument>>(
-            (resolve, reject) => {
-                const unsubscribe = this.queueManager.on(
-                    'jobCompleted',
-                    (job, result) => {
-                        if (job.jobId === jobId) {
-                            unsubscribe();
-                            unsubscribeError();
-                            resolve(
-                                result as IOperationResult<DocumentDriveDocument>
-                            );
+        try {
+            const jobId = await this.queueManager.addJob({
+                driveId: drive,
+                actions,
+                options
+            });
+            return new Promise<IOperationResult<DocumentDriveDocument>>(
+                (resolve, reject) => {
+                    const unsubscribe = this.queueManager.on(
+                        'jobCompleted',
+                        (job, result) => {
+                            if (job.jobId === jobId) {
+                                unsubscribe();
+                                unsubscribeError();
+                                resolve(
+                                    result as IOperationResult<DocumentDriveDocument>
+                                );
+                            }
                         }
-                    }
-                );
-                const unsubscribeError = this.queueManager.on(
-                    'jobFailed',
-                    (job, error) => {
-                        if (job.jobId === jobId) {
-                            unsubscribe();
-                            unsubscribeError();
-                            reject(error);
+                    );
+                    const unsubscribeError = this.queueManager.on(
+                        'jobFailed',
+                        (job, error) => {
+                            if (job.jobId === jobId) {
+                                unsubscribe();
+                                unsubscribeError();
+                                reject(error);
+                            }
                         }
-                    }
-                );
-            }
-        );
+                    );
+                }
+            );
+        } catch (error) {
+            logger.error('Error adding drive job', error);
+            throw error;
+        }
     }
 
     async addOperations(
@@ -1657,38 +1662,42 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         if (result) {
             return result;
         }
-
-        const jobId = await this.queueManager.addJob({
-            driveId: drive,
-            operations,
-            options
-        });
-        return new Promise<IOperationResult<DocumentDriveDocument>>(
-            (resolve, reject) => {
-                const unsubscribe = this.queueManager.on(
-                    'jobCompleted',
-                    (job, result) => {
-                        if (job.jobId === jobId) {
-                            unsubscribe();
-                            unsubscribeError();
-                            resolve(
-                                result as IOperationResult<DocumentDriveDocument>
-                            );
+        try {
+            const jobId = await this.queueManager.addJob({
+                driveId: drive,
+                operations,
+                options
+            });
+            return new Promise<IOperationResult<DocumentDriveDocument>>(
+                (resolve, reject) => {
+                    const unsubscribe = this.queueManager.on(
+                        'jobCompleted',
+                        (job, result) => {
+                            if (job.jobId === jobId) {
+                                unsubscribe();
+                                unsubscribeError();
+                                resolve(
+                                    result as IOperationResult<DocumentDriveDocument>
+                                );
+                            }
                         }
-                    }
-                );
-                const unsubscribeError = this.queueManager.on(
-                    'jobFailed',
-                    (job, error) => {
-                        if (job.jobId === jobId) {
-                            unsubscribe();
-                            unsubscribeError();
-                            reject(error);
+                    );
+                    const unsubscribeError = this.queueManager.on(
+                        'jobFailed',
+                        (job, error) => {
+                            if (job.jobId === jobId) {
+                                unsubscribe();
+                                unsubscribeError();
+                                reject(error);
+                            }
                         }
-                    }
-                );
-            }
-        );
+                    );
+                }
+            );
+        } catch (error) {
+            logger.error('Error adding drive job', error);
+            throw error;
+        }
     }
 
     async addDriveOperations(

@@ -206,7 +206,7 @@ export class BaseQueueManager implements IQueueManager {
     }
 
     getQueues() {
-        return Object.keys(new Array(this.queues));
+        return this.queues.map(q => q.getId());
     }
 
     private retryNextJob() {
