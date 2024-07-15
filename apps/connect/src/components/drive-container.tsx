@@ -1,6 +1,8 @@
 import {
     AddDriveInput,
+    AddLocalDriveInput,
     AddPublicDriveInput,
+    AddRemoteDriveInput,
     DriveView,
     DriveViewProps,
     toast,
@@ -55,80 +57,66 @@ export default function DriveContainer(props: DriveContainerProps) {
             actions.setExpandedItem(droptarget.id, true);
         };
 
-    const onCreateDriveHandler: DriveViewProps['onCreateDrive'] =
-        async input => {
-            try {
-                if (isRemoteDriveInput(input)) {
-                    await addRemoteDrive(input.url, {
-                        sharingType: input.sharingType,
-                        availableOffline: input.availableOffline,
-                        listeners: [
-                            {
-                                block: true,
-                                callInfo: {
-                                    data: input.url,
-                                    name: 'switchboard-push',
-                                    transmitterType: 'SwitchboardPush',
-                                },
-                                filter: {
-                                    branch: ['main'],
-                                    documentId: ['*'],
-                                    documentType: ['*'],
-                                    scope: ['global'],
-                                },
-                                label: 'Switchboard Sync',
-                                listenerId: '1',
-                                system: true,
-                            },
-                        ],
-                        triggers: [],
-                        pullInterval: 3000,
-                    });
-                } else {
-                    await addDrive({
-                        global: {
-                            id: isRemoteDriveInput(input) ? input.id : '',
-                            icon: null,
-                            name: input.driveName,
-                            slug: null,
-                        },
-                        local: {
-                            availableOffline: input.availableOffline,
-                            sharingType: input.sharingType.toLowerCase(),
-                            listeners: isRemoteDriveInput(input)
-                                ? [
-                                      {
-                                          block: true,
-                                          callInfo: {
-                                              data: input.url,
-                                              name: 'switchboard-push',
-                                              transmitterType:
-                                                  'SwitchboardPush',
-                                          },
-                                          filter: {
-                                              branch: ['main'],
-                                              documentId: ['*'],
-                                              documentType: ['*'],
-                                              scope: ['global'],
-                                          },
-                                          label: 'Switchboard Sync',
-                                          listenerId: '1',
-                                          system: true,
-                                      },
-                                  ]
-                                : [],
-                            triggers: [],
-                        },
-                    });
-                }
+    async function onAddLocalDrive(data: AddLocalDriveInput) {
+        try {
+            await addDrive({
+                global: {
+                    name: data.name,
+                    id: undefined,
+                    icon: null,
+                    slug: null,
+                },
+                local: {
+                    availableOffline: data.availableOffline,
+                    sharingType: data.sharingType.toLowerCase(),
+                    listeners: [],
+                    triggers: [],
+                },
+            });
 
-                toast(t('notifications.addDriveSuccess'), {
-                    type: 'connect-success',
-                });
-            } catch (e) {
-                console.error(e);
-            }
-        };
+            toast(t('notifications.addDriveSuccess'), {
+                type: 'connect-success',
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function onAddRemoteDrive(data: AddRemoteDriveInput) {
+        try {
+            await addRemoteDrive(data.url, {
+                sharingType: data.sharingType,
+                availableOffline: data.availableOffline,
+                listeners: [
+                    {
+                        block: true,
+                        callInfo: {
+                            data: data.url,
+                            name: 'switchboard-push',
+                            transmitterType: 'SwitchboardPush',
+                        },
+                        filter: {
+                            branch: ['main'],
+                            documentId: ['*'],
+                            documentType: ['*'],
+                            scope: ['global'],
+                        },
+                        label: 'Switchboard Sync',
+                        listenerId: '1',
+                        system: true,
+                    },
+                ],
+                triggers: [],
+                pullInterval: 3000,
+            });
+
+            toast(t('notifications.addDriveSuccess'), {
+                type: 'connect-success',
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
 
     return (
         <>

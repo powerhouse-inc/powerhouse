@@ -5,11 +5,13 @@ import { DeleteDriveModal } from './DeleteDriveModal';
 import { DeleteItemModal } from './DeleteItemModal';
 import { SettingsModal } from './SettingsModal';
 import { UpgradeDriveModal } from './UpgradeDriveModal';
+import { AddLocalDriveModal } from './AddLocalDriveModal';
 
 export const modals = {
     deleteItem: DeleteItemModal,
     upgradeDrive: UpgradeDriveModal,
     createDocument: CreateDocumentModal,
+    addLocalDrive: AddLocalDriveModal,
     settingsModal: SettingsModal,
     confirmationModal: ConfirmationModal,
     deleteDriveModal: DeleteDriveModal,
