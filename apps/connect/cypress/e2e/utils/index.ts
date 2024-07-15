@@ -30,6 +30,59 @@ export const clearIndexDB = async () => {
     }
 };
 
+type SidebarItemOption = 'duplicate' | 'new-folder' | 'delete' | 'rename';
+type ContentViewItemOption =
+    | 'duplicate'
+    | 'delete'
+    | 'rename'
+    | 'switchboard-link';
+
+const getOptionName = (option: SidebarItemOption) => {
+    switch (option) {
+        case 'duplicate':
+            return 'Duplicate';
+        case 'new-folder':
+            return 'New Folder';
+        case 'delete':
+            return 'Delete';
+        case 'rename':
+            return 'Rename';
+    }
+};
+
+const getContentViewOptionName = (option: ContentViewItemOption) => {
+    switch (option) {
+        case 'duplicate':
+            return 'Duplicate';
+        case 'delete':
+            return 'Delete';
+        case 'rename':
+            return 'Rename';
+        case 'switchboard-link':
+            return 'Switchboard Link';
+    }
+};
+
+export const clickSidebarItemOption = (
+    folderName: string,
+    option: SidebarItemOption,
+) => {
+    cy.get('article')
+        .contains(folderName)
+        .then(el => {
+            hoverElement(el[0]);
+        });
+
+    cy.get('article')
+        .contains(folderName)
+        .closest('article')
+        .children('button')
+        .click();
+
+    const optionName = getOptionName(option);
+    cy.contains(optionName).click();
+};
+
 export const newFolder = (parent: string, folderName: string) => {
     cy.get('article')
         .contains(parent)
@@ -69,4 +122,43 @@ export const addPublicDrive = (url: string) => {
 
     cy.get('button').contains('Add drive').should('not.be.disabled');
     cy.get('button').contains('Add drive').click();
+};
+
+export const connectDebugMenu = (on = true) => {
+    cy.window().then(window => {
+        window.localStorage.setItem('CONNECT_DEBUG', on ? 'true' : 'false');
+    });
+
+    cy.reload();
+};
+
+export const clickContentViewItem = (title: string) => {
+    cy.get('#content-view').contains(title).should('be.visible').click();
+};
+
+export const clickContentViewItemOption = (
+    itemName: string,
+    option: ContentViewItemOption,
+) => {
+    cy.get('#content-view')
+        .contains(itemName)
+        .parent()
+        .parent()
+        .next()
+        .children('svg')
+        .invoke('attr', 'style', 'display: inline-block; width: 24px')
+        .click();
+
+    const optionName = getContentViewOptionName(option);
+    cy.contains(optionName).click();
+};
+
+export const getBreadcrumbItem = (title: string) => {
+    return cy
+        .get('#content-view')
+        .children()
+        .first()
+        .children()
+        .first()
+        .contains(title);
 };
