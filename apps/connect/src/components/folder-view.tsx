@@ -1,49 +1,46 @@
-import { TreeItem, useDraggableTarget } from '@powerhousedao/design-system';
+import {
+    FILE,
+    FOLDER,
+    FolderItem,
+    UiDriveNode,
+    UiFolderNode,
+    useDraggableTarget,
+} from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
-
-import { useFileOptions } from 'src/hooks/useFileOptions';
-import { useFolderContent } from 'src/hooks/useFolderContent';
-import { useFolderOptions } from 'src/hooks/useFolderOptions';
+import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
-import { sortTreeItemsByLabel } from 'src/utils';
+import { sortUiNodesByName } from 'src/utils';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
 import FileContentView from './file-content-view';
-import { FolderItem } from './folder-item';
 
 interface IProps {
-    decodedDriveID: string;
-    path: string;
-    folderItem: TreeItem;
-    onFolderSelected: (itemId: string) => void;
-    onFileSelected: (drive: string, id: string) => void;
-    onFileDeleted: (drive: string, id: string) => void;
-    isRemoteDrive?: boolean;
+    selectedParentNode: UiDriveNode | UiFolderNode;
+    isAllowedToCreateDocuments: boolean;
+    isRemoteDrive: boolean;
 }
 
 export const FolderView: React.FC<IProps> = ({
-    path,
-    folderItem,
-    decodedDriveID,
-    onFileDeleted,
-    onFileSelected,
-    onFolderSelected,
-    isRemoteDrive = false,
+    selectedParentNode,
+    isAllowedToCreateDocuments,
+    isRemoteDrive,
 }) => {
     const { t } = useTranslation();
-    const { folders, files } = useFolderContent(path);
-    const { isAllowedToCreateDocuments } = useUserPermissions();
-    const { folderItemOptions, onFolderOptionsClick } =
-        useFolderOptions(decodedDriveID);
-    const { fileItemOptions, onFileOptionsClick } =
-        useFileOptions(decodedDriveID);
+    const { allowedDropdownMenuOptions, nodeHandlers, dragAndDropHandlers } =
+        useDrivesContainer();
     const onDropEvent = useOnDropEvent();
-
     const { dropProps, isDropTarget } = useDraggableTarget({
-        data: folderItem,
+        data: selectedParentNode,
         onDropEvent,
     });
+
+    const folderNodes = selectedParentNode.children
+        .filter(node => node.kind === FOLDER)
+        .sort(sortUiNodesByName);
+
+    const fileNodes = selectedParentNode.children
+        .filter(node => node.kind === FILE)
+        .sort(sortUiNodesByName);
 
     return (
         <div
@@ -57,19 +54,20 @@ export const FolderView: React.FC<IProps> = ({
                 title={t('folderView.sections.folders.title')}
                 className="mb-4"
             >
-                {folders.length > 0 ? (
-                    folders.map(folder => (
+                {folderNodes.length > 0 ? (
+                    folderNodes.map(folderNode => (
                         <FolderItem
-                            key={folder.id}
-                            folder={folder}
-                            isRemoteDrive={isRemoteDrive}
-                            decodedDriveID={decodedDriveID}
-                            onFolderSelected={onFolderSelected}
-                            folderItemOptions={folderItemOptions}
-                            onFolderOptionsClick={onFolderOptionsClick}
+                            {...nodeHandlers}
+                            {...dragAndDropHandlers}
+                            key={folderNode.id}
+                            uiFolderNode={folderNode}
+                            allowedDropdownMenuOptions={
+                                allowedDropdownMenuOptions[FOLDER]
+                            }
                             isAllowedToCreateDocuments={
                                 isAllowedToCreateDocuments
                             }
+                            displaySyncIcon={isRemoteDrive}
                         />
                     ))
                 ) : (
@@ -83,16 +81,12 @@ export const FolderView: React.FC<IProps> = ({
                     // eslint-disable-next-line tailwindcss/no-arbitrary-value
                     className={twMerge(
                         'w-full',
-                        files.length > 0 ? 'min-h-[400px]' : 'min-h-14',
+                        fileNodes.length > 0 ? 'min-h-[400px]' : 'min-h-14',
                     )}
                 >
                     <FileContentView
-                        files={files.sort(sortTreeItemsByLabel)}
-                        onFileDeleted={onFileDeleted}
-                        decodedDriveID={decodedDriveID}
-                        onFileSelected={onFileSelected}
-                        fileItemOptions={fileItemOptions}
-                        onFileOptionsClick={onFileOptionsClick}
+                        fileNodes={fileNodes}
+                        isRemoteDrive={isRemoteDrive}
                         isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                     />
                 </div>

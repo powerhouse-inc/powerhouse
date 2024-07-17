@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import React, { useContext, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { ModalPropsMapping, ModalType, modals } from './modals';
 
 type MapModalProps<T> = {
@@ -11,7 +11,7 @@ type ModalProps = MapModalProps<ModalPropsMapping>;
 interface ModalContextValue {
     showModal: <T extends ModalType>(
         modalType: T,
-        props: ModalProps[T]
+        props: ModalProps[T],
     ) => void;
     closeModal: () => void;
 }
@@ -34,20 +34,28 @@ export const ModalManager: React.FC<{ children?: React.ReactNode }> = props => {
     const [modalType, setModalType] = useState<ModalType>();
     const [open, setOpen] = useState(false);
 
-    const showModal: ModalContextValue['showModal'] = (modalType, props) => {
-        setOpen(true);
-        setModalProps(props);
-        setModalType(modalType);
-    };
+    const showModal: ModalContextValue['showModal'] = useCallback(
+        (modalType, props) => {
+            setOpen(true);
+            setModalProps(props);
+            setModalType(modalType);
+        },
+        [],
+    );
 
-    const closeModal: ModalContextValue['closeModal'] = () => {
+    const closeModal: ModalContextValue['closeModal'] = useCallback(() => {
         setOpen(false);
-    };
+    }, []);
 
     const ModalComponent = modalType ? modals[modalType] : null;
 
+    const value = useMemo(
+        () => ({ showModal, closeModal }),
+        [closeModal, showModal],
+    );
+
     return (
-        <ModalContext.Provider value={{ showModal, closeModal }}>
+        <ModalContext.Provider value={value}>
             {children}
             {ModalComponent && (
                 <ModalComponent

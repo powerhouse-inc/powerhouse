@@ -17,7 +17,6 @@ function shortAddress(address: string) {
 
 export default function Sidebar() {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
-    const [disableHoverStyles, setDisableHoverStyles] = useState(false);
     const { showModal } = useModal();
     const navigate = useNavigate();
 
@@ -64,10 +63,7 @@ export default function Sidebar() {
                 }
                 onError={console.error}
             >
-                <DriveContainer
-                    disableHoverStyles={disableHoverStyles}
-                    setDisableHoverStyles={setDisableHoverStyles}
-                />
+                <DriveContainer />
             </ErrorBoundary>
         </ConnectSidebar>
     );

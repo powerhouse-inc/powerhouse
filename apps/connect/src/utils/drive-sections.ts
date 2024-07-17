@@ -1,8 +1,14 @@
 import {
-    ConnectDropdownMenuItem,
-    defaultDropdownMenuOptions as defOptions,
+    CLOUD,
+    defaultDriveOptions,
+    DELETE,
+    LOCAL,
+    NodeDropdownMenuOption,
+    PUBLIC,
+    SharingType,
 } from '@powerhousedao/design-system';
 import connectConfig from 'connect-config';
+import { ReactNode } from 'react';
 
 // Enables debug options for the drive
 const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
@@ -14,36 +20,34 @@ const debugOptions = connectDebug
       ]
     : [];
 
-const defaultDropdownMenuOptions = [...defOptions, ...debugOptions];
-
-type DriveSectionKey = 'public' | 'cloud' | 'local';
-
-const DriveSections = [
-    { key: 'public', name: 'Public Drives', type: 'PUBLIC_DRIVE' },
-    { key: 'cloud', name: 'Secure Cloud Drives', type: 'CLOUD_DRIVE' },
-    { key: 'local', name: 'My Local Drives', type: 'LOCAL_DRIVE' },
+const DriveSections: {
+    sharingType: SharingType;
+    label: ReactNode;
+}[] = [
+    { sharingType: PUBLIC, label: 'Public Drives' },
+    { sharingType: CLOUD, label: 'Secure Cloud Drives' },
+    { sharingType: LOCAL, label: 'My Local Drives' },
 ] as const;
 
-const getSectionConfig = (key: DriveSectionKey) => {
-    return connectConfig.drives.sections[key];
+const getSectionConfig = (sharingType: SharingType) => {
+    return connectConfig.drives.sections[sharingType];
 };
 
-const getDriveOptions = (driveType: DriveSectionKey) => {
-    const options = connectConfig.drives.sections[driveType].allowDelete
-        ? defaultDropdownMenuOptions
-        : defaultDropdownMenuOptions.filter(option => option.id !== 'delete');
+export function getOptionsForDriveSharingType(sharingType: SharingType) {
+    const options = connectConfig.drives.sections[sharingType].allowDelete
+        ? [...defaultDriveOptions, DELETE]
+        : [...defaultDriveOptions];
 
-    return options as ConnectDropdownMenuItem[];
-};
+    return options as NodeDropdownMenuOption[];
+}
 
 export const driveSections = DriveSections.filter(
-    section => getSectionConfig(section.key).enabled,
+    section => getSectionConfig(section.sharingType).enabled,
 ).map(section => {
-    const sectionConfig = getSectionConfig(section.key);
+    const sectionConfig = getSectionConfig(section.sharingType);
 
     return {
         ...section,
         disableAddDrives: !sectionConfig.allowAdd,
-        defaultItemOptions: getDriveOptions(section.key),
     };
 });

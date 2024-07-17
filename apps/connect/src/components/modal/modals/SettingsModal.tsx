@@ -8,7 +8,6 @@ import {
 import { DocumentModel } from 'document-model/document';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Option } from 'react-multi-select-component';
 import { useModal } from 'src/components/modal';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
@@ -43,7 +42,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
     const { setConfig } = useFeatureFlag();
     const { showModal } = useModal();
     const [connectConfig] = useConnectConfig();
-    const [selectedDocuments, setSelectedDocuments] = useState<Option[]>(
+    const [selectedDocuments, setSelectedDocuments] = useState(
         mapDocumentModelsToOptions(enabledDocuments),
     );
     const { logout, status } = useLogin();
@@ -53,9 +52,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
         setConfig(conf => ({
             ...conf,
             editors: {
-                enabledEditors: selectedDocuments.map(
-                    doc => doc.value as string,
-                ),
+                enabledEditors: selectedDocuments.map(doc => doc.value),
             },
         }));
 
