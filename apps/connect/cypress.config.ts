@@ -8,4 +8,9 @@ export default defineConfig({
             // implement node event listeners here
         },
     },
+    env: {
+        TEST_PUBLIC_DRIVE:
+            'https://apps.powerhouse.io/develop/powerhouse/switchboard/d/test',
+        TEST_PUBLIC_DRIVE_NAME: 'Test',
+    },
 });

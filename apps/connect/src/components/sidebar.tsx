@@ -38,6 +38,7 @@ export default function Sidebar() {
             <Icon name="connect" className="!h-[30px] !w-[100px]" />
             {connectDebug && (
                 <button
+                    id="connect-debug-button"
                     className="ml-6"
                     onClick={() => showModal('debugSettingsModal', {})}
                 >
@@ -49,6 +50,7 @@ export default function Sidebar() {
 
     return (
         <ConnectSidebar
+            id="sidebar"
             collapsed={collapsed}
             onToggle={toggleCollapse}
             onClickSettings={onClickSettings}

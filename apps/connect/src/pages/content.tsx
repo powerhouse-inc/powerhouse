@@ -310,7 +310,10 @@ const Content = () => {
     };
 
     return (
-        <div className="flex h-full flex-col overflow-auto bg-gray-100 p-6">
+        <div
+            className="flex h-full flex-col overflow-auto bg-gray-100 p-6"
+            id="content-view"
+        >
             {selectedFileNode && selectedDocument ? (
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
                     <Suspense
@@ -342,6 +345,7 @@ const Content = () => {
                     <div className="grow overflow-auto rounded-2xl bg-gray-50 p-2">
                         {selectedPath && (
                             <Breadcrumbs
+                                id="breadcrumbs"
                                 filterPath={selectedPath}
                                 onItemClick={(e, itemPath) => {
                                     const item = getItemByPath(itemPath);
