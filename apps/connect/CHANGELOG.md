@@ -1,3 +1,10 @@
+# [1.0.0-dev.43](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.42...v1.0.0-dev.43) (2024-07-17)
+
+
+### Features
+
+* added base e2e tests ([fab24e1](https://github.com/powerhouse-inc/document-model-electron/commit/fab24e14247b31a96df09ccc17e7a3d05b065194))
+
 # [1.0.0-dev.42](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.41...v1.0.0-dev.42) (2024-07-11)
 
 
