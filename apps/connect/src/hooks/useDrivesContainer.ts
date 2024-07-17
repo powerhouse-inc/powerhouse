@@ -53,7 +53,7 @@ export function useDrivesContainer() {
 
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument) => {
-            const { id, name, icon } = drive.state.global;
+            const { id, name, icon, slug } = drive.state.global;
             const { sharingType: _sharingType, availableOffline } =
                 drive.state.local;
             const __sharingType = _sharingType?.toUpperCase();
@@ -65,6 +65,7 @@ export function useDrivesContainer() {
             const driveNode: UiDriveNode = {
                 id,
                 name,
+                slug: slug || null,
                 kind: DRIVE,
                 children: [],
                 nodeMap: {},

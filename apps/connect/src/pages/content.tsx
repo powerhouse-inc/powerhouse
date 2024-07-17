@@ -5,9 +5,8 @@ import {
     useUiNodesContext,
 } from '@powerhousedao/design-system';
 import { Document, DocumentModel, Operation } from 'document-model/document';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
@@ -17,6 +16,7 @@ import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useNodeNavigation } from 'src/hooks/useNodeNavigation';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { useFileNodeDocument } from 'src/store/document-drive';
@@ -57,6 +57,7 @@ const Content = () => {
         useFileNodeDocument(selectedDriveNode?.id, selectedNode?.id);
 
     const preloadEditor = usePreloadEditor();
+    useNodeNavigation();
 
     // preload document editors
     useEffect(() => {

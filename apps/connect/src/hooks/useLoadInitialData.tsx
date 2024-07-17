@@ -12,8 +12,7 @@ import { useLoadDefaultDrives } from './useLoadDefaultDrives';
 
 export const useLoadInitialData = () => {
     // const { t } = useTranslation();
-    const { selectedNode, driveNodes, setSelectedNode, setDriveNodes } =
-        useUiNodesContext();
+    const { setDriveNodes } = useUiNodesContext();
     const { documentDrives, onSyncStatus } = useDocumentDriveServer();
     const { makeUiDriveNodes } = useDrivesContainer();
     // const prevDrivesState = useRef([...drives]);
@@ -86,7 +85,6 @@ export const useLoadInitialData = () => {
     const updateUiDriveNodes = useCallback(
         async (documentDrives: DocumentDriveDocument[]) => {
             const uiDriveNodes = await makeUiDriveNodes(documentDrives);
-            console.log({ uiDriveNodes });
             setDriveNodes(uiDriveNodes);
         },
         [makeUiDriveNodes, setDriveNodes],
@@ -100,11 +98,4 @@ export const useLoadInitialData = () => {
         const unsub = onSyncStatus(() => updateUiDriveNodes(documentDrives));
         return unsub;
     }, [documentDrives, onSyncStatus, updateUiDriveNodes]);
-
-    // Auto select first drive if there is no selected node
-    useEffect(() => {
-        if (!selectedNode) {
-            setSelectedNode(driveNodes[0]);
-        }
-    }, [driveNodes, selectedNode, setSelectedNode]);
 };

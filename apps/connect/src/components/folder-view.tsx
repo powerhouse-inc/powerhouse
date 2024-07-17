@@ -4,6 +4,7 @@ import {
     FolderItem,
     UiDriveNode,
     UiFolderNode,
+    UiNode,
     useDraggableTarget,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
