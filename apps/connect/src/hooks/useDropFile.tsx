@@ -28,10 +28,15 @@ export function useDropFile(ref: React.RefObject<HTMLElement>) {
 
                     const drive = documentDrives[0]; // TODO improve default drive selection
                     if (drive) {
+                        const fileName = file.name
+                            .split('.')
+                            .slice(0, -1)
+                            .join('.');
+
                         const node = await addFile(
                             file,
                             drive.state.global.id,
-                            file.name,
+                            fileName,
                             undefined, // TODO selectedFolder as parent folder
                         );
 
