@@ -1,3 +1,10 @@
+# [1.0.0-dev.44](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.43...v1.0.0-dev.44) (2024-07-17)
+
+
+### Features
+
+* removed file extension when importing a document file ([b2da3b0](https://github.com/powerhouse-inc/document-model-electron/commit/b2da3b05eba3af229a99667c6d454d51aaec3bfd))
+
 # [1.0.0-dev.43](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.42...v1.0.0-dev.43) (2024-07-17)
 
 
