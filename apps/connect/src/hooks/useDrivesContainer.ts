@@ -32,12 +32,13 @@ export function useDrivesContainer() {
     const [disableHoverStyles, setDisableHoverStyles] = useState(false);
     const { showModal } = useModal();
     const { t } = useTranslation();
-    const { driveNodes, selectedParentNode, setSelectedNode } =
+    const { driveNodes, selectedParentNode, setSelectedNode, getParentNode } =
         useUiNodesContext();
     const onDropEvent = useOnDropEvent();
     const {
         addFolder,
         renameNode,
+        deleteNode,
         addDrive,
         addRemoteDrive,
         deleteDrive,
@@ -182,25 +183,47 @@ export function useDrivesContainer() {
     );
 
     const onDeleteNode = useCallback(
-        (uiNode: UiNode) => {
-            if (uiNode.kind === DRIVE) {
-                showModal('deleteDriveModal', {
-                    onCancel: closeModal => closeModal(),
-                    uiDriveNode: uiNode,
-                    onDelete: async closeModal => {
-                        closeModal();
-                        await deleteDrive(uiNode.id);
+        (uiNode: UiFileNode | UiFolderNode) => {
+            showModal('deleteItem', {
+                uiNode,
+                onDelete: async closeModal => {
+                    closeModal();
 
-                        toast(t('notifications.deleteDriveSuccess'), {
-                            type: 'connect-deleted',
-                        });
-                    },
-                });
-            } else {
-                showModal('deleteItem', uiNode);
-            }
+                    const i18nKey =
+                        uiNode.kind === FOLDER
+                            ? 'notifications.deleteFolderSuccess'
+                            : 'notifications.fileDeleteSuccess';
+
+                    const parentNode = getParentNode(uiNode);
+
+                    await deleteNode(uiNode.driveId, uiNode.id);
+
+                    setSelectedNode(parentNode);
+
+                    toast(t(i18nKey), { type: 'connect-deleted' });
+                },
+            });
         },
-        [deleteDrive, showModal, t],
+        [deleteNode, getParentNode, setSelectedNode, showModal, t],
+    );
+
+    const onDeleteDrive = useCallback(
+        (uiDriveNode: UiDriveNode) => {
+            showModal('deleteDriveModal', {
+                uiDriveNode,
+                onDelete: async closeModal => {
+                    closeModal();
+                    await deleteDrive(uiDriveNode.id);
+
+                    setSelectedNode(driveNodes[0]);
+
+                    toast(t('notifications.deleteDriveSuccess'), {
+                        type: 'connect-deleted',
+                    });
+                },
+            });
+        },
+        [deleteDrive, driveNodes, setSelectedNode, showModal, t],
     );
 
     const onAddLocalDrive = useCallback(
@@ -291,13 +314,6 @@ export function useDrivesContainer() {
             await renameDrive(uiDriveNode.id, newName);
         },
         [renameDrive],
-    );
-
-    const onDeleteDrive = useCallback(
-        async (uiDriveNode: UiDriveNode) => {
-            await deleteDrive(uiDriveNode.id);
-        },
-        [deleteDrive],
     );
 
     const onChangeSharingType = useCallback(
@@ -468,8 +484,15 @@ export function useDrivesContainer() {
             onRenameNode,
             onDuplicateNode,
             onDeleteNode,
+            onDeleteDrive,
         }),
-        [onAddFolder, onDeleteNode, onDuplicateNode, onRenameNode],
+        [
+            onAddFolder,
+            onDeleteDrive,
+            onDeleteNode,
+            onDuplicateNode,
+            onRenameNode,
+        ],
     );
 
     const driveNodesBySharingType = useMemo(

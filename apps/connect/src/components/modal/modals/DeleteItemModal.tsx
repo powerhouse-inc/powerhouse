@@ -1,44 +1,27 @@
 import {
     ConnectDeleteItemModal,
-    FILE,
-    FOLDER,
-    toast,
+    UiFileNode,
+    UiFolderNode,
 } from '@powerhousedao/design-system';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 
 export interface DeleteItemModalProps {
+    uiNode: UiFileNode | UiFolderNode;
     open: boolean;
-    id: string;
-    driveId: string;
-    name: string;
+    onDelete: (closeModal: () => void) => void;
     onClose: () => void;
-    kind: typeof FILE | typeof FOLDER;
 }
 
 export const DeleteItemModal: React.FC<DeleteItemModalProps> = props => {
-    const { open, onClose, id, driveId, name, kind } = props;
-
     const { t } = useTranslation();
-    const { deleteNode } = useDocumentDriveServer();
-
-    const onDelete = async () => {
-        const i18nKey =
-            kind === FOLDER
-                ? 'notifications.deleteFolderSuccess'
-                : 'notifications.fileDeleteSuccess';
-
-        await deleteNode(driveId, id);
-
-        toast(t(i18nKey), { type: 'connect-deleted' });
-        onClose();
-    };
+    const { uiNode, open, onClose, onDelete } = props;
+    const { kind, name } = uiNode;
 
     return (
         <ConnectDeleteItemModal
             open={open}
-            onDelete={onDelete}
+            onDelete={() => onDelete(onClose)}
             onCancel={() => onClose()}
             header={t(`modals.deleteItem.${kind.toLowerCase()}.header`, {
                 item: name,

@@ -10,12 +10,10 @@ export interface DeleteDriveModalProps {
     open: boolean;
     onClose: () => void;
     onDelete: (closeModal: () => void) => void;
-    onCancel: (closeModal: () => void) => void;
-
 }
 
 export const DeleteDriveModal: React.FC<DeleteDriveModalProps> = props => {
-    const { open, onClose, onCancel, uiDriveNode, onDelete } = props;
+    const { open, onClose, uiDriveNode, onDelete } = props;
 
     const { t } = useTranslation();
 
@@ -23,7 +21,7 @@ export const DeleteDriveModal: React.FC<DeleteDriveModalProps> = props => {
         <ConnectDeleteDriveModal
             open={open}
             driveName={uiDriveNode.name}
-            onCancel={() => onCancel(onClose)}
+            onCancel={onClose}
             header={t('modals.deleteDrive.title', { label: uiDriveNode.name })}
             body={t('modals.deleteDrive.body')}
             inputPlaceholder={t('modals.deleteDrive.inputPlaceholder')}
