@@ -160,6 +160,15 @@ export class ListenerManager extends BaseListenerManager {
             ) {
                 continue;
             }
+
+            const transmitter = await this.getTransmitter(
+                driveId,
+                listener.listener.listenerId
+            );
+            if (!transmitter?.transmit) {
+                continue;
+            }
+
             for (const syncUnit of syncUnits) {
                 if (!this._checkFilter(listener.listener.filter, syncUnit)) {
                     continue;
@@ -229,7 +238,7 @@ export class ListenerManager extends BaseListenerManager {
         for (const [driveId, drive] of this.listenerState) {
             for (const [id, listener] of drive) {
                 const transmitter = await this.getTransmitter(driveId, id);
-                if (!transmitter) {
+                if (!transmitter?.transmit) {
                     continue;
                 }
 
@@ -239,6 +248,8 @@ export class ListenerManager extends BaseListenerManager {
                 );
 
                 const strandUpdates: StrandUpdate[] = [];
+
+                // TODO change to push one after the other, reusing operation data
                 await Promise.all(
                     syncUnits.map(async syncUnit => {
                         const unitState = listener.syncUnits.get(
@@ -292,7 +303,7 @@ export class ListenerManager extends BaseListenerManager {
 
                 // TODO update listeners in parallel, blocking for listeners with block=true
                 try {
-                    const listenerRevisions = await transmitter?.transmit(
+                    const listenerRevisions = await transmitter.transmit(
                         strandUpdates,
                         source
                     );
@@ -321,22 +332,31 @@ export class ListenerManager extends BaseListenerManager {
                             );
                         }
                     }
-                    const revisionError = listenerRevisions.find(
-                        l => l.status !== 'SUCCESS'
-                    );
-                    if (revisionError) {
-                        throw new OperationError(
-                            revisionError.status as ErrorStatus,
-                            undefined,
-                            revisionError.error,
-                            revisionError.error
-                        );
+
+                    for (const revision of listenerRevisions) {
+                        const error = revision.status === 'ERROR';
+                        if (revision.error?.includes('Missing operations')) {
+                            const updates = await this._triggerUpdate(
+                                source,
+                                onError
+                            );
+                            listenerUpdates.push(...updates);
+                        } else {
+                            listenerUpdates.push({
+                                listenerId: listener.listener.listenerId,
+                                listenerRevisions
+                            });
+                            if (error) {
+                                throw new OperationError(
+                                    revision.status as ErrorStatus,
+                                    undefined,
+                                    revision.error,
+                                    revision.error
+                                );
+                            }
+                        }
                     }
                     listener.listenerStatus = 'SUCCESS';
-                    listenerUpdates.push({
-                        listenerId: listener.listener.listenerId,
-                        listenerRevisions
-                    });
                 } catch (e) {
                     // TODO: Handle error based on listener params (blocking, retry, etc)
                     onError?.(e as Error, driveId, listener);

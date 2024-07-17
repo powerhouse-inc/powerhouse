@@ -11,7 +11,7 @@ export type StrandUpdateSource =
     | { type: 'trigger'; trigger: Trigger };
 
 export interface ITransmitter {
-    transmit(
+    transmit?(
         strands: StrandUpdate[],
         source: StrandUpdateSource
     ): Promise<ListenerRevision[]>;

@@ -59,10 +59,6 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         this.manager = manager;
     }
 
-    async transmit(): Promise<ListenerRevision[]> {
-        return [];
-    }
-
     getStrands(since?: string | undefined): Promise<StrandUpdate[]> {
         return this.manager.getStrands(
             this.listener.driveId,

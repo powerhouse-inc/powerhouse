@@ -80,9 +80,13 @@ function getRetryTransactionsClient<T extends PrismaClient>(
                 // eslint-disable-next-line prefer-spread
                 return backOff(() => prisma.$transaction.apply(prisma, args), {
                     retry: e => {
+                        const code = (e as { code: string }).code;
                         // Retry the transaction only if the error was due to a write conflict or deadlock
                         // See: https://www.prisma.io/docs/reference/api-reference/error-reference#p2034
-                        return (e as { code: string }).code === 'P2034';
+                        if (code !== 'P2034') {
+                            logger.error('TRANSACTION ERROR', e);
+                        }
+                        return code === 'P2034';
                     },
                     ...backOffOptions
                 });
@@ -502,12 +506,13 @@ export class PrismaStorage implements IDriveStorage {
                     id: id
                 }
             });
-        } catch (e: any) {
+        } catch (e: unknown) {
+            const prismaError = e as { code?: string; message?: string };
             // Ignore Error: P2025: An operation failed because it depends on one or more records that were required but not found.
             if (
-                (e.code && e.code === 'P2025') ||
-                (e.message &&
-                    e.message.includes(
+                (prismaError.code && prismaError.code === 'P2025') ||
+                (prismaError.message &&
+                    prismaError.message.includes(
                         'An operation failed because it depends on one or more records that were required but not found.'
                     ))
             ) {

@@ -220,6 +220,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             }
 
             if (PullResponderTransmitter.isPullResponderTrigger(trigger)) {
+                let firstPull = true;
                 const cancelPullLoop = PullResponderTransmitter.setupPull(
                     driveId,
                     trigger,
@@ -267,6 +268,37 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                                     syncUnit.syncId,
                                     'SUCCESS'
                                 );
+                            }
+                        }
+
+                        // if it is the first pull and returns empty
+                        // then updates corresponding push transmitter
+                        if (firstPull) {
+                            firstPull = false;
+                            const pushListener =
+                                drive.state.local.listeners.find(
+                                    listener =>
+                                        trigger.data.url ===
+                                        listener.callInfo?.data
+                                );
+                            if (pushListener) {
+                                this.getSynchronizationUnitsRevision(
+                                    driveId,
+                                    syncUnits
+                                )
+                                    .then(syncUnitRevisions => {
+                                        for (const revision of syncUnitRevisions) {
+                                            this.listenerStateManager
+                                                .updateListenerRevision(
+                                                    pushListener.listenerId,
+                                                    driveId,
+                                                    revision.syncId,
+                                                    revision.revision
+                                                )
+                                                .catch(logger.error);
+                                        }
+                                    })
+                                    .catch(logger.error);
                             }
                         }
                     }
@@ -405,16 +437,30 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             documentType,
             drive
         );
-        const revisions = await this.storage.getSynchronizationUnitsRevision(
-            synchronizationUnitsQuery
+        return this.getSynchronizationUnitsRevision(
+            driveId,
+            synchronizationUnitsQuery,
+            drive
         );
+    }
 
-        const synchronizationUnits: SynchronizationUnit[] =
-            synchronizationUnitsQuery.map(s => ({
+    public async getSynchronizationUnitsRevision(
+        driveId: string,
+        syncUnitsQuery: SynchronizationUnitQuery[],
+        loadedDrive?: DocumentDriveDocument
+    ): Promise<SynchronizationUnit[]> {
+        const drive = loadedDrive || (await this.getDrive(driveId));
+
+        const revisions =
+            await this.storage.getSynchronizationUnitsRevision(syncUnitsQuery);
+
+        const synchronizationUnits: SynchronizationUnit[] = syncUnitsQuery.map(
+            s => ({
                 ...s,
                 lastUpdated: drive.created,
                 revision: -1
-            }));
+            })
+        );
         for (const revision of revisions) {
             const syncUnit = synchronizationUnits.find(
                 s =>
