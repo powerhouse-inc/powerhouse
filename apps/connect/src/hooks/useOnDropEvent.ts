@@ -37,11 +37,12 @@ export const useOnDropEvent = () => {
 
             if (isFileUpload) {
                 const file = await item.getFile();
+                const fileName = file.name.split('.').slice(0, -1).join('.');
 
                 await addFile(
                     file,
                     decodedDriveId,
-                    undefined,
+                    fileName,
                     decodeID(targetId),
                 );
 
