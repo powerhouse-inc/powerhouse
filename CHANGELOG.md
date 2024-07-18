@@ -1,3 +1,10 @@
+# [1.0.0-alpha.85](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.84...v1.0.0-alpha.85) (2024-07-18)
+
+
+### Features
+
+* improved queue and listener handling ([38453d4](https://github.com/powerhouse-inc/document-drive/commit/38453d4afd4737ce213cbbd9223902002197b516))
+
 # [1.0.0-alpha.84](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.83...v1.0.0-alpha.84) (2024-07-11)
 
 
