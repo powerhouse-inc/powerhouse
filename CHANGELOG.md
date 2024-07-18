@@ -1,3 +1,10 @@
+# [1.0.0-alpha.86](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.85...v1.0.0-alpha.86) (2024-07-18)
+
+
+### Features
+
+* updated dependencies ([d0de9c8](https://github.com/powerhouse-inc/document-drive/commit/d0de9c8fe164f46f4455cf0def21b9d1d5501a1f))
+
 # [1.0.0-alpha.85](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.84...v1.0.0-alpha.85) (2024-07-18)
 
 
