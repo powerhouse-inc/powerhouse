@@ -1,3 +1,10 @@
+# [1.0.0-alpha.87](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.86...v1.0.0-alpha.87) (2024-07-22)
+
+
+### Features
+
+* ignore document not found error on document check ([5ecdf4a](https://github.com/powerhouse-inc/document-drive/commit/5ecdf4af2d887ed2e5a7872608849cb6b4febf3b))
+
 # [1.0.0-alpha.86](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.85...v1.0.0-alpha.86) (2024-07-18)
 
 
