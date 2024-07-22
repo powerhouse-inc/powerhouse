@@ -36,19 +36,25 @@ export async function exportFile(
         await downloadFile(document);
         return;
     }
+    try {
+        const fileHandle = await window.showSaveFilePicker({
+            suggestedName: `${document.name || 'Untitled'}.${
+                extension ? `${extension}.` : ''
+            }zip`,
+        });
 
-    const fileHandle = await window.showSaveFilePicker({
-        suggestedName: `${document.name || 'Untitled'}.${
-            extension ? `${extension}.` : ''
-        }zip`,
-    });
-
-    await documentModel.utils.saveToFileHandle(document, fileHandle);
-    const path = (await fileHandle.getFile()).path;
-    if (typeof window !== 'undefined') {
-        window.electronAPI?.fileSaved(document, path);
+        await documentModel.utils.saveToFileHandle(document, fileHandle);
+        const path = (await fileHandle.getFile()).path;
+        if (typeof window !== 'undefined') {
+            window.electronAPI?.fileSaved(document, path);
+        }
+        return path;
+    } catch (e) {
+        // ignores error if user cancelled the file picker
+        if (!(e instanceof DOMException && e.name === 'AbortError')) {
+            throw e;
+        }
     }
-    return path;
 }
 
 export async function loadFile(
