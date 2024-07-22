@@ -1294,7 +1294,13 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 return undefined;
             }
         } catch (error) {
-            console.error(error); // TODO error
+            if (
+                !(error as Error).message.includes(
+                    `Document with id ${id} not found`
+                )
+            ) {
+                console.error(error);
+            }
             return undefined;
         }
     }
@@ -1537,7 +1543,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             // new changes originating from this document drive server
             const source: StrandUpdateSource = newOp
                 ? { type: 'local' }
-                : options?.source ?? { type: 'local' };
+                : (options?.source ?? { type: 'local' });
 
             // update listener cache
             this.listenerStateManager
@@ -1849,7 +1855,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 // new changes originating from this document drive server
                 const source: StrandUpdateSource = newOp
                     ? { type: 'local' }
-                    : options?.source ?? { type: 'local' };
+                    : (options?.source ?? { type: 'local' });
 
                 this.listenerStateManager
                     .updateSynchronizationRevisions(
