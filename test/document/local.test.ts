@@ -128,7 +128,7 @@ describe('Local reducer', () => {
         });
     });
 
-    it.skip('should undo local operation', async () => {
+    it('should undo local operation', async () => {
         const document = createDocument<
             CountState,
             CountAction,
@@ -157,13 +157,6 @@ describe('Local reducer', () => {
                 {
                     type: 'NOOP',
                     input: {},
-                    index: 0,
-                    skip: 0,
-                    scope: 'local',
-                },
-                {
-                    type: 'NOOP',
-                    input: {},
                     index: 1,
                     skip: 1,
                     scope: 'local',
@@ -173,13 +166,11 @@ describe('Local reducer', () => {
 
         expect(newDocument.clipboard.length).toBe(1);
         expect(newDocument.clipboard[0]).toMatchObject({
-            hash: 'HbiD0GRM+ijPjZ/N3Kw+6WxMTNI=',
             type: 'SET_LOCAL_NAME',
             input: 'test',
             index: 0,
             skip: 0,
             scope: 'local',
-            timestamp: new Date().toISOString(),
         });
     });
 

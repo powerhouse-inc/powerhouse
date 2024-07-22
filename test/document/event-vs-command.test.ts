@@ -55,7 +55,7 @@ describe('Event', () => {
         ]);
     });
 
-    it.skip('should change to NOOP when event includes skip and operation to be skipped is in the history', () => {
+    it('should remove skipped operations', () => {
         let document = createDocument();
 
         document = emptyReducer(document, {
@@ -98,10 +98,6 @@ describe('Event', () => {
             {
                 type: 'TEST_2',
                 index: 1,
-            },
-            {
-                type: 'NOOP',
-                index: 2,
             },
             {
                 type: 'TEST_4',

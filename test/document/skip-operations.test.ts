@@ -1,11 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { Operation, utils } from '../../src/document';
+import { utils } from '../../src/document';
 import { setName } from '../../src/document/actions/creators';
 import {
     createDocument,
     createExtendedState,
     mapSkippedOperations,
-    calculateSkipsLeft,
     documentHelpers,
 } from '../../src/document/utils';
 import {
@@ -306,63 +305,6 @@ describe('skip operations', () => {
         });
     });
 
-    // TODO: remove this tests, this function is not used anymore
-    describe.skip('calculateSkipsLeft', () => {
-        it('should return 0 when there are no skip operations to be performed', () => {
-            const operations = [
-                createFakeOperation(0),
-                createFakeOperation(1),
-                createFakeOperation(2),
-            ];
-
-            const skipsLeft = calculateSkipsLeft(operations, 4, 1);
-            expect(skipsLeft).toBe(0);
-        });
-
-        it('should return 1 when there is still 1 operation to be skipped', () => {
-            const operations = [
-                createFakeOperation(0),
-                createFakeOperation(1),
-                createFakeOperation(2),
-            ];
-
-            const skipsLeft = calculateSkipsLeft(operations, 4, 2);
-            expect(skipsLeft).toBe(1);
-        });
-
-        it('should return 3 when there is still 3 operations to be skipped', () => {
-            const operations = [
-                createFakeOperation(0),
-                createFakeOperation(1),
-                createFakeOperation(2),
-                createFakeOperation(3),
-                createFakeOperation(4),
-            ];
-
-            const skipsLeft = calculateSkipsLeft(operations, 6, 4);
-            expect(skipsLeft).toBe(3);
-        });
-
-        it('should return 2 when there is still 2 operations to be skipped (gap between operations)', () => {
-            const operations = [
-                createFakeOperation(0),
-                createFakeOperation(1),
-                createFakeOperation(2),
-                createFakeOperation(4),
-            ];
-
-            const skipsLeft = calculateSkipsLeft(operations, 6, 4);
-            expect(skipsLeft).toBe(2);
-        });
-
-        it('should return 0 if there are no operations', () => {
-            const operations = [] as Operation[];
-
-            const skipsLeft = calculateSkipsLeft(operations, 0, 1);
-            expect(skipsLeft).toBe(0);
-        });
-    });
-
     describe('replayOperations', () => {
         it('should ignore operation 2, when operation 3 -> (skip=1)', () => {
             const initialState = createExtendedState<
@@ -599,52 +541,6 @@ describe('skip operations', () => {
                     index: 4,
                 },
             ]);
-        });
-
-        // TODO: handle skip head operations in replayOperations
-        it.skip('should skip the latest 2 operations from global scope ops when skipHeaderOperations is defined', () => {
-            const initialState = createExtendedState<
-                CountState,
-                CountLocalState
-            >({
-                documentType: 'powerhouse/counter',
-                state: { global: { count: 0 }, local: {} },
-            });
-
-            let document = createDocument<
-                CountState,
-                CountAction,
-                CountLocalState
-            >(initialState);
-
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-            document = countReducer(document, increment());
-
-            const replayedDoc = utils.replayOperations(
-                initialState,
-                document.operations,
-                baseCountReducer,
-                undefined,
-                undefined,
-                undefined,
-                { global: 2 },
-            );
-
-            expect(replayedDoc.state.global.count).toBe(3);
-
-            expect(replayedDoc.revision.global).toBe(5);
-            expect(replayedDoc.operations.global.length).toBe(5);
-            expect(replayedDoc.operations.global[3]).toHaveProperty(
-                'type',
-                'NOOP',
-            );
-            expect(replayedDoc.operations.global[4]).toHaveProperty(
-                'type',
-                'NOOP',
-            );
         });
 
         it('should skip operations when dispatch a new action with an skip value', () => {

@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { hashDocument, replayOperations } from '../utils/base';
 import { loadState, noop } from './creators';
+import { documentHelpers } from '../utils';
 
 // updates the name of the document
 export function setNameOperation<T>(document: T, name: string): T {
@@ -63,83 +64,43 @@ export function undoOperation<T, A extends Action, L>(
         document,
         action,
         skip,
+        reuseLastOperationIndex: false,
     };
 
     return create(defaultResult, draft => {
-        if (draft.document.operations[scope].length < 1) {
-            throw new Error(
-                `Cannot undo: no operations in history for scope "${scope}"`,
-            );
+        const operations = [...document.operations[scope]];
+        const sortedOperations = documentHelpers.sortOperations(operations);
+
+        draft.action = noop(scope);
+
+        const lastOperation = sortedOperations.at(-1);
+        let nextIndex = lastOperation?.index ?? -1;
+
+        const isNewNoop = lastOperation?.type !== 'NOOP';
+
+        if (isNewNoop) {
+            nextIndex = nextIndex + 1;
+        } else {
+            draft.reuseLastOperationIndex = true;
         }
 
-        if (input < 1) {
-            throw new Error(
-                `Invalid UNDO action: input value must be greater than 0`,
-            );
+        const nextOperationHistory = isNewNoop
+            ? [...sortedOperations, { index: nextIndex, skip: 0 }]
+            : sortedOperations;
+
+        draft.skip = documentHelpers.nextSkipNumber(nextOperationHistory);
+
+        if (lastOperation && draft.skip > lastOperation.skip + 1) {
+            // there's an overlap with a previous skip operation
+            // (add 1 to the skip value because we are adding a new operation to the history)
+            draft.skip = draft.skip + 1;
         }
 
-        if (draft.skip > 0) {
-            throw new Error(
-                `Cannot undo: skip value from reducer cannot be used with UNDO action`,
-            );
-        }
-
-        const lastOperation = draft.document.operations[scope].at(-1);
-
-        const isLatestOpNOOP =
-            lastOperation &&
-            lastOperation.type === 'NOOP' &&
-            lastOperation.skip > 0;
-
-        draft.skip += input;
-
-        if (isLatestOpNOOP) {
-            draft.skip += lastOperation.skip;
-
-            const preLastOperation =
-                draft.document.operations[scope][
-                    draft.document.operations[scope].length - 2
-                ];
-            if (
-                preLastOperation &&
-                lastOperation.index - preLastOperation.index === 1
-            ) {
-                draft.document.operations[scope].pop();
-            }
-        }
-
-        if (draft.document.operations[scope].length < draft.skip) {
+        if (draft.skip < 0) {
             throw new Error(
                 `Cannot undo: you can't undo more operations than the ones in the scope history`,
             );
         }
-
-        const operationsLastIndex = draft.document.operations[scope].length - 1;
-        let skippedOpsLeft = input;
-        let index = isLatestOpNOOP
-            ? operationsLastIndex - lastOperation.skip
-            : operationsLastIndex;
-
-        while (skippedOpsLeft > 0 && index >= 0) {
-            const op = draft.document.operations[scope][index];
-
-            if (!op) {
-                skippedOpsLeft--;
-                index--;
-                continue;
-            }
-
-            if (op.type === 'NOOP' && op.skip > 0) {
-                index = index - (op.skip + 1);
-                draft.skip += op.skip + 1;
-            } else {
-                draft.document.clipboard.push({ ...op });
-                skippedOpsLeft--;
-                index--;
-            }
-        }
-
-        draft.action = noop(scope);
     });
 }
 
@@ -154,6 +115,7 @@ export function redoOperation<T, A extends Action, L>(
         document,
         action,
         skip,
+        reuseLastOperationIndex: false,
     };
 
     return create(defaultResult, draft => {
