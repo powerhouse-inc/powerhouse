@@ -174,7 +174,7 @@ describe('Local reducer', () => {
         });
     });
 
-    it.skip('should redo local operation', async () => {
+    it('should redo local operation', async () => {
         const document = createDocument<
             CountState,
             CountAction,
@@ -198,25 +198,16 @@ describe('Local reducer', () => {
                 {
                     type: 'NOOP',
                     input: {},
-                    index: 0,
-                    skip: 0,
-                    scope: 'local',
-                },
-                {
-                    type: 'NOOP',
-                    input: {},
                     index: 1,
                     skip: 1,
                     scope: 'local',
                 },
                 {
-                    hash: 'HbiD0GRM+ijPjZ/N3Kw+6WxMTNI=',
                     type: 'SET_LOCAL_NAME',
                     input: 'test',
                     index: 2,
                     skip: 0,
                     scope: 'local',
-                    timestamp: new Date().toISOString(),
                 },
             ],
         });

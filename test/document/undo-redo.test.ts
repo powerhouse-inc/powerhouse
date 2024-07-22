@@ -112,7 +112,7 @@ describe('UNDO/REDO', () => {
         });
     });
 
-    describe.skip('processUndoRedo -> REDO', () => {
+    describe('processUndoRedo -> REDO', () => {
         it("should throw an error when there's no operation to redo in the clipboard", () => {
             const initialState = createExtendedState<
                 CountState,
@@ -127,7 +127,7 @@ describe('UNDO/REDO', () => {
             );
 
             const skip = 0;
-            const redoAction = redo(1);
+            const redoAction = redo();
             const throwErrorFunc = () =>
                 processUndoRedo(document, redoAction, skip);
 
@@ -229,10 +229,6 @@ describe('UNDO/REDO', () => {
             document = countReducer(document, undo());
             document = countReducer(document, undo());
             document = countReducer(document, undo());
-
-            console.log(document.operations.global);
-            console.log(document.state.global.count);
-            console.log(document.clipboard);
 
             expect(document.revision.global).toBe(6);
             expect(document.state.global.count).toBe(2);
@@ -338,69 +334,77 @@ describe('UNDO/REDO', () => {
         });
     });
 
-    describe.skip('REDO', () => {
+    describe('REDO', () => {
         it('should redo the latest operation', () => {
-            document = countReducer(document, undo(2));
-            document = countReducer(document, redo(1));
+            document = countReducer(document, undo());
+            document = countReducer(document, undo());
+            document = countReducer(document, redo());
 
             expect(document.revision.global).toBe(7);
             expect(document.state.global.count).toBe(4);
-            expect(document.operations.global.length).toBe(7);
+            expect(document.operations.global.length).toBe(5);
             expect(document.clipboard.length).toBe(1);
-            expect(document.operations.global[6]).toMatchObject({
+            expect(document.operations.global[4]).toMatchObject({
                 type: 'INCREMENT',
                 index: 6,
             });
         });
 
         it('should revert document state to the latest state before applying an undo', () => {
-            document = countReducer(document, undo(2));
-            document = countReducer(document, redo(1));
-            document = countReducer(document, redo(1));
+            document = countReducer(document, undo());
+            document = countReducer(document, undo());
+            document = countReducer(document, redo());
+            document = countReducer(document, redo());
 
             expect(document.revision.global).toBe(8);
             expect(document.state.global.count).toBe(5);
-            expect(document.operations.global.length).toBe(8);
+            expect(document.operations.global.length).toBe(6);
             expect(document.clipboard.length).toBe(0);
-            expect(document.operations.global[7]).toMatchObject({
+            expect(document.operations.global[5]).toMatchObject({
                 type: 'INCREMENT',
                 index: 7,
                 skip: 0,
             });
-            expect(document.operations.global[6]).toMatchObject({
+            expect(document.operations.global[4]).toMatchObject({
                 type: 'INCREMENT',
                 index: 6,
                 skip: 0,
             });
-            expect(document.operations.global[5]).toMatchObject({
+            expect(document.operations.global[3]).toMatchObject({
                 type: 'NOOP',
                 index: 5,
                 skip: 2,
             });
-            expect(document.operations.global[4]).toMatchObject({
-                type: 'NOOP',
-                index: 4,
+            expect(document.operations.global[2]).toMatchObject({
+                type: 'INCREMENT',
+                index: 2,
                 skip: 0,
             });
-            expect(document.operations.global[3]).toMatchObject({
-                type: 'NOOP',
-                index: 3,
+            expect(document.operations.global[1]).toMatchObject({
+                type: 'INCREMENT',
+                index: 1,
+                skip: 0,
+            });
+            expect(document.operations.global[0]).toMatchObject({
+                type: 'INCREMENT',
+                index: 0,
                 skip: 0,
             });
         });
 
         it("should clean clipboard after applying an action that's not UNDO/REDO", () => {
-            document = countReducer(document, undo(2));
+            document = countReducer(document, undo());
+            document = countReducer(document, undo());
             document = countReducer(document, increment());
 
             expect(document.revision.global).toBe(7);
             expect(document.state.global.count).toBe(4);
-            expect(document.operations.global.length).toBe(7);
+            expect(document.operations.global.length).toBe(5);
             expect(document.clipboard.length).toBe(0);
         });
     });
 
-    describe.skip('NOOP operations', () => {
+    describe('NOOP operations', () => {
         it('should apply NOOP operations', () => {
             const op: Operation = {
                 input: undefined,
@@ -412,12 +416,14 @@ describe('UNDO/REDO', () => {
                 timestamp: new Date().toISOString(),
             };
 
-            document = countReducer(document, op as CountAction, undefined);
+            document = countReducer(document, op as CountAction, undefined, {
+                skip: 1,
+            });
 
             expect(document.revision.global).toBe(6);
             expect(document.state.global.count).toBe(4);
-            expect(document.operations.global.length).toBe(6);
-            expect(document.operations.global[5]).toMatchObject({
+            expect(document.operations.global.length).toBe(5);
+            expect(document.operations.global[4]).toMatchObject({
                 type: 'NOOP',
                 index: 5,
                 skip: 1,
@@ -439,14 +445,14 @@ describe('UNDO/REDO', () => {
             const op2 = { ...baseOperation, skip: 2 } as CountAction;
             const op3 = { ...baseOperation, skip: 3 } as CountAction;
 
-            document = countReducer(document, op1, undefined);
-            document = countReducer(document, op2, undefined);
-            document = countReducer(document, op3, undefined);
+            document = countReducer(document, op1, undefined, { skip: 1 });
+            document = countReducer(document, op2, undefined, { skip: 2 });
+            document = countReducer(document, op3, undefined, { skip: 3 });
 
             expect(document.revision.global).toBe(6);
             expect(document.state.global.count).toBe(2);
-            expect(document.operations.global.length).toBe(6);
-            expect(document.operations.global[5]).toMatchObject({
+            expect(document.operations.global.length).toBe(3);
+            expect(document.operations.global[2]).toMatchObject({
                 type: 'NOOP',
                 index: 5,
                 skip: 3,
@@ -464,7 +470,9 @@ describe('UNDO/REDO', () => {
                 timestamp: new Date().toISOString(),
             };
 
-            document = countReducer(document, op as CountAction, undefined);
+            document = countReducer(document, op as CountAction, undefined, {
+                skip: 1,
+            });
 
             expect(document.clipboard.length).toBe(0);
         });
