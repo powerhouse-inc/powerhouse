@@ -4,12 +4,11 @@ import {
     FolderItem,
     UiDriveNode,
     UiFolderNode,
-    UiNode,
     useDraggableTarget,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 import { sortUiNodesByName } from 'src/utils';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
@@ -28,7 +27,7 @@ export const FolderView: React.FC<IProps> = ({
 }) => {
     const { t } = useTranslation();
     const { allowedDropdownMenuOptions, nodeHandlers, dragAndDropHandlers } =
-        useDrivesContainer();
+        useUiNodes();
     const onDropEvent = useOnDropEvent();
     const { dropProps, isDropTarget } = useDraggableTarget({
         data: selectedParentNode,

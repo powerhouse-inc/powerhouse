@@ -28,7 +28,7 @@ import { getOptionsForDriveSharingType } from 'src/utils/drive-sections';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useOnDropEvent } from './useOnDropEvent';
 
-export function useDrivesContainer() {
+export function useUiNodes() {
     const [disableHoverStyles, setDisableHoverStyles] = useState(false);
     const { showModal } = useModal();
     const { t } = useTranslation();

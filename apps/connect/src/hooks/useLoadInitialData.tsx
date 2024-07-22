@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReloadConnectToast } from 'src/components/toast';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-server';
 import { useClientErrorHandler } from './useClientErrorHandler';
 import { useDocumentDrives } from './useDocumentDrives';
@@ -23,7 +23,7 @@ export const useLoadInitialData = () => {
     const { t } = useTranslation();
     const { driveNodes, setDriveNodes } = useUiNodesContext();
     const { documentDrives, onSyncStatus } = useDocumentDriveServer();
-    const { makeUiDriveNodes } = useDrivesContainer();
+    const { makeUiDriveNodes } = useUiNodes();
     const prevDrivesState = useRef([...driveNodes]);
     const drivesWithError = useRef<UiDriveNode[]>([]);
     const [, , serverSubscribeUpdates] = useDocumentDrives(server);

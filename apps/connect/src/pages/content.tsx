@@ -15,9 +15,9 @@ import { SearchBar } from 'src/components/search-bar';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useNodeNavigation } from 'src/hooks/useNodeNavigation';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { useFileNodeDocument } from 'src/store/document-drive';
 import {
@@ -45,7 +45,7 @@ const Content = () => {
         selectedParentNode,
         setSelectedNode,
     } = useUiNodesContext();
-    const { onAddFolder } = useDrivesContainer();
+    const { onAddFolder } = useUiNodes();
     const { showModal } = useModal();
     const { isRemoteDrive } = useDocumentDriveById(selectedDriveNode?.id);
     const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);

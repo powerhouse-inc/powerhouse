@@ -1,5 +1,5 @@
 import { DriveView } from '@powerhousedao/design-system';
-import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { driveSections } from 'src/utils/drive-sections';
 
@@ -13,7 +13,7 @@ export default function DriveContainer() {
         nodeHandlers,
         showAddDriveModal,
         showDriveSettingsModal,
-    } = useDrivesContainer();
+    } = useUiNodes();
 
     return (
         <>

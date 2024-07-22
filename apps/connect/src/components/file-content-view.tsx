@@ -2,7 +2,7 @@ import { FILE, FileItem, UiFileNode } from '@powerhousedao/design-system';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 import { useWindowSize } from 'src/hooks/useWindowSize';
 
 interface IProps {
@@ -26,7 +26,7 @@ export const FileContentView: React.FC<IProps> = ({
     const { t } = useTranslation();
     const windowSize = useWindowSize();
     const { allowedDropdownMenuOptions, nodeHandlers, dragAndDropHandlers } =
-        useDrivesContainer();
+        useUiNodes();
 
     const availableWidth = windowSize.innerWidth - USED_SPACE;
 

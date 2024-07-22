@@ -7,9 +7,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
 import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
-import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
 import { useGetDocumentById } from 'src/hooks/useGetDocumentById';
 import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 
 export type SetIsWriteMode = (isWriteMode: boolean) => void;
 
@@ -21,7 +21,7 @@ const defaultItemOptions = defaultDropdownMenuOptions.filter(option =>
 
 export function useFileOptions(decodedDriveID: string) {
     const { showModal } = useModal();
-    const { onSubmitInput } = useDrivesContainer();
+    const { onSubmitInput } = useUiNodes();
     const getDocumentById = useGetDocumentById();
     const { t } = useTranslation();
     const openSwitchboardLink = useOpenSwitchboardLink(decodedDriveID);
