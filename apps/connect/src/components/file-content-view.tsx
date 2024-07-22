@@ -2,14 +2,12 @@ import { FILE, FileItem, UiFileNode } from '@powerhousedao/design-system';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUiNodes } from 'src/hooks/useUiNodes';
+import { UiNodes } from 'src/hooks/useUiNodes';
 import { useWindowSize } from 'src/hooks/useWindowSize';
 
-interface IProps {
+type Props = UiNodes & {
     fileNodes: UiFileNode[];
-    isRemoteDrive: boolean;
-    isAllowedToCreateDocuments: boolean;
-}
+};
 
 const GAP = 8;
 const ITEM_WIDTH = 256;
@@ -17,17 +15,11 @@ const ITEM_HEIGHT = 48;
 
 const USED_SPACE = 420;
 
-export const FileContentView: React.FC<IProps> = ({
-    fileNodes,
-    isRemoteDrive,
-    isAllowedToCreateDocuments,
-}) => {
+export function FileContentView(props: Props) {
     const parentRef = useRef(null);
     const { t } = useTranslation();
     const windowSize = useWindowSize();
-    const { allowedDropdownMenuOptions, nodeHandlers, dragAndDropHandlers } =
-        useUiNodes();
-
+    const { fileNodes, allowedDropdownMenuOptions } = props;
     const availableWidth = windowSize.innerWidth - USED_SPACE;
 
     const columnCount = Math.floor(availableWidth / (ITEM_WIDTH + GAP)) || 1;
@@ -91,15 +83,12 @@ export const FileContentView: React.FC<IProps> = ({
                 }}
             >
                 <FileItem
-                    {...nodeHandlers}
-                    {...dragAndDropHandlers}
+                    {...props}
+                    key={fileNode.id}
+                    uiFileNode={fileNode}
                     allowedDropdownMenuOptions={
                         allowedDropdownMenuOptions[FILE]
                     }
-                    key={fileNode.id}
-                    uiFileNode={fileNode}
-                    displaySyncIcon={isRemoteDrive}
-                    isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                 />
             </div>
         );
@@ -150,6 +139,6 @@ export const FileContentView: React.FC<IProps> = ({
             </div>
         </div>
     );
-};
+}
 
 export default FileContentView;

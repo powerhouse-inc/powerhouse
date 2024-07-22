@@ -360,13 +360,11 @@ export function useDocumentDriveServer(
 
             if (target.kind === FILE || src.parentFolder === target.id) return;
 
-            if (src.parentFolder === target.parentFolder) return;
-
             await _addDriveOperation(
                 target.driveId,
                 actions.moveNode({
                     srcFolder: src.id,
-                    targetParentFolder: target.parentFolder,
+                    targetParentFolder: target.id,
                 }),
             );
         },
@@ -393,7 +391,7 @@ export function useDocumentDriveServer(
                 {
                     srcId: src.id,
                     targetParentFolder: target.id,
-                    targetName: src.name,
+                    targetName: target.name,
                 },
                 generateId,
                 drive.state.global.nodes,

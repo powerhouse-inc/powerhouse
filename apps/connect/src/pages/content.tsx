@@ -1,9 +1,4 @@
-import {
-    Breadcrumbs,
-    FILE,
-    FOLDER,
-    useUiNodesContext,
-} from '@powerhousedao/design-system';
+import { Breadcrumbs, FILE } from '@powerhousedao/design-system';
 import { Document, DocumentModel, Operation } from 'document-model/document';
 import { Suspense, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,12 +8,8 @@ import FolderView from 'src/components/folder-view';
 import { useModal } from 'src/components/modal';
 import { SearchBar } from 'src/components/search-bar';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
-import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { useNodeNavigation } from 'src/hooks/useNodeNavigation';
-import { useOpenSwitchboardLink } from 'src/hooks/useOpenSwitchboardLink';
 import { useUiNodes } from 'src/hooks/useUiNodes';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { useFileNodeDocument } from 'src/store/document-drive';
 import {
     useFilteredDocumentModels,
@@ -39,25 +30,23 @@ const getDocumentModelName = (name: string) => {
 const Content = () => {
     const [connectConfig] = useConnectConfig();
     const { t } = useTranslation();
+    const uiNodes = useUiNodes();
     const {
         selectedNode,
         selectedDriveNode,
         selectedParentNode,
+        isRemoteDrive,
+        isAllowedToCreateDocuments,
         setSelectedNode,
-    } = useUiNodesContext();
-    const { onAddFolder } = useUiNodes();
+        openSwitchboardLink,
+    } = useUiNodes();
     const { showModal } = useModal();
-    const { isRemoteDrive } = useDocumentDriveById(selectedDriveNode?.id);
-    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
     const { addFile, renameNode } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
     const getDocumentModel = useGetDocumentModel();
-    const { isAllowedToCreateDocuments } = useUserPermissions();
     const [selectedDocument, setSelectedDocument, addOperation] =
         useFileNodeDocument(selectedDriveNode?.id, selectedNode?.id);
-
     const preloadEditor = usePreloadEditor();
-    useNodeNavigation();
 
     // preload document editors
     useEffect(() => {
@@ -159,21 +148,6 @@ const Content = () => {
         }
     };
 
-    async function onSubmitNewFolder(name: string) {
-        if (!name || !selectedParentNode) return;
-
-        const newFolder = await onAddFolder(name, selectedParentNode);
-
-        setSelectedNode({
-            ...newFolder,
-            kind: FOLDER,
-            parentFolder: selectedParentNode.id,
-            syncStatus: selectedParentNode.syncStatus,
-            driveId: selectedParentNode.driveId,
-            children: [],
-        });
-    }
-
     return (
         <div className="flex h-full flex-col overflow-auto bg-gray-100 p-6">
             {selectedNode && selectedDocument ? (
@@ -202,24 +176,11 @@ const Content = () => {
             ) : (
                 <>
                     <div className="grow overflow-auto rounded-2xl bg-gray-50 p-2">
-                        <Breadcrumbs
-                            onSubmitNewFolder={onSubmitNewFolder}
-                            isAllowedToCreateDocuments={
-                                isAllowedToCreateDocuments
-                            }
-                        />
+                        <Breadcrumbs {...uiNodes} />
                         {connectConfig.content.showSearchBar && <SearchBar />}
                         <div className="px-4">
                             <div className="mb-5">
-                                {selectedParentNode && (
-                                    <FolderView
-                                        selectedParentNode={selectedParentNode}
-                                        isRemoteDrive={isRemoteDrive}
-                                        isAllowedToCreateDocuments={
-                                            isAllowedToCreateDocuments
-                                        }
-                                    />
-                                )}
+                                <FolderView {...uiNodes} />
                             </div>
                             {isAllowedToCreateDocuments && (
                                 <>

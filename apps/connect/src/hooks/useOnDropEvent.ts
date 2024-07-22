@@ -4,14 +4,14 @@ import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 export const useOnDropEvent = () => {
     const { copyNode, moveNode, addFile } = useDocumentDriveServer();
 
-    const onDropEventHandler: UseDraggableTargetProps<UiNode>['onDropEvent'] =
+    const onDropEventHandler: UseDraggableTargetProps<UiNode | null>['onDropEvent'] =
         async (item, target, event) => {
             const isDropAfter = !!item.dropAfterItem;
             const isFileUpload = item.kind === 'file';
-
             // const sortOptions: SortOptions | undefined = isDropAfter
             //     ? { afterNodePath: target.id }
             //     : undefined;
+            if (!target) return;
 
             if (isFileUpload) {
                 const file = await item.getFile();
@@ -19,6 +19,8 @@ export const useOnDropEvent = () => {
 
                 return;
             }
+
+            if (item.data === null) return;
 
             const isMoveOperation = event.dropOperation === 'move';
 

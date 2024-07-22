@@ -25,16 +25,27 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
 import { getOptionsForDriveSharingType } from 'src/utils/drive-sections';
+import { useDocumentDriveById } from './useDocumentDriveById';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
+import { useNodeNavigation } from './useNodeNavigation';
 import { useOnDropEvent } from './useOnDropEvent';
+import { useOpenSwitchboardLink } from './useOpenSwitchboardLink';
+import { useUserPermissions } from './useUserPermissions';
 
 export function useUiNodes() {
     const [disableHoverStyles, setDisableHoverStyles] = useState(false);
     const { showModal } = useModal();
     const { t } = useTranslation();
-    const { driveNodes, selectedParentNode, setSelectedNode, getParentNode } =
-        useUiNodesContext();
+    const uiNodesContext = useUiNodesContext();
+    const {
+        selectedDriveNode,
+        driveNodes,
+        selectedParentNode,
+        setSelectedNode,
+        getParentNode,
+    } = uiNodesContext;
     const onDropEvent = useOnDropEvent();
+    const documentDriveServer = useDocumentDriveServer();
     const {
         addFolder,
         renameNode,
@@ -50,7 +61,11 @@ export function useUiNodes() {
         removeTrigger,
         addTrigger,
         registerNewPullResponderTrigger,
-    } = useDocumentDriveServer();
+    } = documentDriveServer;
+    const selectedDocumentDrive = useDocumentDriveById(selectedDriveNode?.id);
+    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
+    const userPermissions = useUserPermissions();
+    useNodeNavigation();
 
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument) => {
@@ -349,6 +364,24 @@ export function useUiNodes() {
         ],
     );
 
+    const onAddAndSelectNewFolder = useCallback(
+        async (name: string) => {
+            if (!name || !selectedParentNode) return;
+
+            const newFolder = await onAddFolder(name, selectedParentNode);
+
+            setSelectedNode({
+                ...newFolder,
+                kind: FOLDER,
+                parentFolder: selectedParentNode.id,
+                syncStatus: selectedParentNode.syncStatus,
+                driveId: selectedParentNode.driveId,
+                children: [],
+            });
+        },
+        [onAddFolder, selectedParentNode, setSelectedNode],
+    );
+
     // const onItemOptionsClick: DriveViewProps['onItemOptionsClick'] = async (
     //     item,
     //     option,
@@ -513,32 +546,46 @@ export function useUiNodes() {
 
     return useMemo(
         () => ({
+            ...documentDriveServer,
+            ...uiNodesContext,
+            ...userPermissions,
+            ...nodeHandlers,
+            ...dragAndDropHandlers,
+            ...selectedDocumentDrive,
             driveNodesBySharingType,
             allowedDropdownMenuOptions,
-            dragAndDropHandlers,
-            nodeHandlers,
             disableHoverStyles,
             makeUiDriveNodes,
             onAddFolder,
+            onAddAndSelectNewFolder,
             onRenameNode,
             onDuplicateNode,
             onDeleteNode,
             showAddDriveModal,
             showDriveSettingsModal,
+            openSwitchboardLink,
         }),
         [
+            documentDriveServer,
+            uiNodesContext,
+            userPermissions,
+            nodeHandlers,
+            dragAndDropHandlers,
+            selectedDocumentDrive,
             driveNodesBySharingType,
             allowedDropdownMenuOptions,
             disableHoverStyles,
-            dragAndDropHandlers,
             makeUiDriveNodes,
-            nodeHandlers,
             onAddFolder,
-            onDeleteNode,
-            onDuplicateNode,
+            onAddAndSelectNewFolder,
             onRenameNode,
+            onDuplicateNode,
+            onDeleteNode,
             showAddDriveModal,
             showDriveSettingsModal,
+            openSwitchboardLink,
         ],
     );
 }
+
+export type UiNodes = ReturnType<typeof useUiNodes>;

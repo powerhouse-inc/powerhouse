@@ -2,45 +2,35 @@ import {
     FILE,
     FOLDER,
     FolderItem,
-    UiDriveNode,
-    UiFolderNode,
+    UiNode,
     useDraggableTarget,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
 import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
-import { useUiNodes } from 'src/hooks/useUiNodes';
+import { UiNodes } from 'src/hooks/useUiNodes';
 import { sortUiNodesByName } from 'src/utils';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
 import FileContentView from './file-content-view';
 
-interface IProps {
-    selectedParentNode: UiDriveNode | UiFolderNode;
-    isAllowedToCreateDocuments: boolean;
-    isRemoteDrive: boolean;
-}
-
-export const FolderView: React.FC<IProps> = ({
-    selectedParentNode,
-    isAllowedToCreateDocuments,
-    isRemoteDrive,
-}) => {
+export function FolderView(props: UiNodes) {
     const { t } = useTranslation();
-    const { allowedDropdownMenuOptions, nodeHandlers, dragAndDropHandlers } =
-        useUiNodes();
+    const { selectedParentNode, allowedDropdownMenuOptions } = props;
     const onDropEvent = useOnDropEvent();
-    const { dropProps, isDropTarget } = useDraggableTarget({
+    const { dropProps, isDropTarget } = useDraggableTarget<UiNode | null>({
         data: selectedParentNode,
         onDropEvent,
     });
 
-    const folderNodes = selectedParentNode.children
-        .filter(node => node.kind === FOLDER)
-        .sort(sortUiNodesByName);
+    const folderNodes =
+        selectedParentNode?.children
+            .filter(node => node.kind === FOLDER)
+            .sort(sortUiNodesByName) ?? [];
 
-    const fileNodes = selectedParentNode.children
-        .filter(node => node.kind === FILE)
-        .sort(sortUiNodesByName);
+    const fileNodes =
+        selectedParentNode?.children
+            .filter(node => node.kind === FILE)
+            .sort(sortUiNodesByName) ?? [];
 
     return (
         <div
@@ -57,17 +47,12 @@ export const FolderView: React.FC<IProps> = ({
                 {folderNodes.length > 0 ? (
                     folderNodes.map(folderNode => (
                         <FolderItem
-                            {...nodeHandlers}
-                            {...dragAndDropHandlers}
+                            {...props}
                             key={folderNode.id}
                             uiFolderNode={folderNode}
                             allowedDropdownMenuOptions={
                                 allowedDropdownMenuOptions[FOLDER]
                             }
-                            isAllowedToCreateDocuments={
-                                isAllowedToCreateDocuments
-                            }
-                            displaySyncIcon={isRemoteDrive}
                         />
                     ))
                 ) : (
@@ -84,15 +69,11 @@ export const FolderView: React.FC<IProps> = ({
                         fileNodes.length > 0 ? 'min-h-[400px]' : 'min-h-14',
                     )}
                 >
-                    <FileContentView
-                        fileNodes={fileNodes}
-                        isRemoteDrive={isRemoteDrive}
-                        isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-                    />
+                    <FileContentView {...props} fileNodes={fileNodes} />
                 </div>
             </ContentSection>
         </div>
     );
-};
+}
 
 export default FolderView;
