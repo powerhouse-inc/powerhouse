@@ -15,7 +15,7 @@ import FileContentView from './file-content-view';
 
 export function FolderView(props: UiNodes) {
     const { t } = useTranslation();
-    const { selectedParentNode, allowedDropdownMenuOptions } = props;
+    const { selectedParentNode } = props;
     const onDropEvent = useOnDropEvent();
     const { dropProps, isDropTarget } = useDraggableTarget<UiNode | null>({
         data: selectedParentNode,
@@ -50,9 +50,6 @@ export function FolderView(props: UiNodes) {
                             {...props}
                             key={folderNode.id}
                             uiFolderNode={folderNode}
-                            allowedDropdownMenuOptions={
-                                allowedDropdownMenuOptions[FOLDER]
-                            }
                         />
                     ))
                 ) : (

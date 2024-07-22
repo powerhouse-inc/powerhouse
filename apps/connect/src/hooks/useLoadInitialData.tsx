@@ -5,13 +5,11 @@ import {
     SUCCESS,
     toast,
     UiDriveNode,
-    useUiNodesContext,
 } from '@powerhousedao/design-system';
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReloadConnectToast } from 'src/components/toast';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useUiNodes } from 'src/hooks/useUiNodes';
 import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-server';
 import { useClientErrorHandler } from './useClientErrorHandler';
@@ -21,9 +19,13 @@ import { isLatestVersion } from './utils';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
-    const { driveNodes, setDriveNodes } = useUiNodesContext();
-    const { documentDrives, onSyncStatus } = useDocumentDriveServer();
-    const { makeUiDriveNodes } = useUiNodes();
+    const {
+        documentDrives,
+        driveNodes,
+        setDriveNodes,
+        makeUiDriveNodes,
+        onSyncStatus,
+    } = useUiNodes();
     const prevDrivesState = useRef([...driveNodes]);
     const drivesWithError = useRef<UiDriveNode[]>([]);
     const [, , serverSubscribeUpdates] = useDocumentDrives(server);

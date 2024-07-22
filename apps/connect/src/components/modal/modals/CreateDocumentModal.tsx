@@ -1,5 +1,5 @@
 import {
-    DocumentType,
+    TDocumentType,
     FILE,
     RenameNodeModal,
     UiDriveNode,
@@ -51,11 +51,12 @@ export const CreateDocumentModal: React.FC<
             setSelectedNode({
                 ...node,
                 kind: FILE,
-                documentType: node.documentType as DocumentType,
+                documentType: node.documentType as TDocumentType,
                 parentFolder: selectedParentNode.id,
                 driveId: selectedParentNode.driveId,
                 syncStatus: selectedParentNode.syncStatus,
                 synchronizationUnits: [],
+                sharingType: selectedParentNode.sharingType,
             });
         }
     };

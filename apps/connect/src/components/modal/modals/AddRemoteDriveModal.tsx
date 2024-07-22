@@ -6,19 +6,24 @@ import {
 
 type Props = {
     open: boolean;
-    onSubmit: (data: AddRemoteDriveInput) => void;
+    groupSharingType: SharingType;
+    onAddRemoteDrive: (data: AddRemoteDriveInput) => Promise<void>;
     onClose: () => void;
-    sharingType: SharingType;
 };
 
 export function AddRemoteDriveModal(props: Props) {
-    const { open, onSubmit, onClose, sharingType } = props;
+    const { open, groupSharingType, onAddRemoteDrive, onClose } = props;
+
+    async function onSubmit(data: AddRemoteDriveInput) {
+        await onAddRemoteDrive(data);
+        onClose();
+    }
 
     return (
         <ConnectAddRemoteDriveModal
             open={open}
             onSubmit={onSubmit}
-            sharingType={sharingType}
+            sharingType={groupSharingType}
             onOpenChange={status => {
                 if (!status) return onClose();
             }}

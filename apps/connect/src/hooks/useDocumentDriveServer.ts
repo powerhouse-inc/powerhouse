@@ -456,19 +456,21 @@ export function useDocumentDriveServer(
             }
             const id = drive.global.id || utils.hashKey();
             drive = documentDriveUtils.createState(drive);
-            await server.addDrive({
+            const newDrive = await server.addDrive({
                 global: { ...drive.global, id },
                 local: drive.local,
             });
             await refreshDocumentDrives();
+            return newDrive;
         },
         [isAllowedToCreateDocuments, refreshDocumentDrives, server],
     );
 
     const addRemoteDrive = useCallback(
         async (url: string, options: RemoteDriveOptions) => {
-            await server.addRemoteDrive(url, options);
+            const newDrive = await server.addRemoteDrive(url, options);
             await refreshDocumentDrives();
+            return newDrive;
         },
         [refreshDocumentDrives, server],
     );

@@ -2,14 +2,11 @@ import {
     AddLocalDriveInput,
     AddRemoteDriveInput,
     CLOUD,
-    defaultFileOptions,
-    defaultFolderOptions,
-    DragAndDropHandlers,
+    DragAndDropProps,
     DRIVE,
     FILE,
     FOLDER,
     LOCAL,
-    NodeHandlers,
     PUBLIC,
     SharingType,
     SUCCESS,
@@ -24,7 +21,7 @@ import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
-import { getOptionsForDriveSharingType } from 'src/utils/drive-sections';
+import { getNodeOptions } from 'src/utils/drive-sections';
 import { useDocumentDriveById } from './useDocumentDriveById';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useNodeNavigation } from './useNodeNavigation';
@@ -33,7 +30,9 @@ import { useOpenSwitchboardLink } from './useOpenSwitchboardLink';
 import { useUserPermissions } from './useUserPermissions';
 
 export function useUiNodes() {
-    const [disableHoverStyles, setDisableHoverStyles] = useState(false);
+    const [disableHighlightStyles, setDisableHighlightStyles] = useState(false);
+    const [disableDropBetween, setDisableDropBetween] = useState(false);
+
     const { showModal } = useModal();
     const { t } = useTranslation();
     const uiNodesContext = useUiNodesContext();
@@ -65,6 +64,7 @@ export function useUiNodes() {
     const selectedDocumentDrive = useDocumentDriveById(selectedDriveNode?.id);
     const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
     const userPermissions = useUserPermissions();
+    const nodeOptions = getNodeOptions();
     useNodeNavigation();
 
     const makeUiDriveNode = useCallback(
@@ -100,6 +100,7 @@ export function useUiNodes() {
                     parentFolder: n.parentFolder || id,
                     kind: n.kind.toUpperCase(),
                     syncStatus: driveSyncStatus,
+                    sharingType,
                 };
 
                 if (node.kind === DRIVE) {
@@ -244,7 +245,7 @@ export function useUiNodes() {
     const onAddLocalDrive = useCallback(
         async (data: AddLocalDriveInput) => {
             try {
-                await addDrive({
+                const newDrive = await addDrive({
                     global: {
                         name: data.name,
                         id: undefined,
@@ -262,17 +263,21 @@ export function useUiNodes() {
                 toast(t('notifications.addDriveSuccess'), {
                     type: 'connect-success',
                 });
+
+                const newDriveNode = await makeUiDriveNode(newDrive);
+
+                setSelectedNode(newDriveNode);
             } catch (e) {
                 console.error(e);
             }
         },
-        [addDrive, t],
+        [addDrive, makeUiDriveNode, setSelectedNode, t],
     );
 
     const onAddRemoteDrive = useCallback(
         async (data: AddRemoteDriveInput) => {
             try {
-                await addRemoteDrive(data.url, {
+                const newDrive = await addRemoteDrive(data.url, {
                     sharingType: data.sharingType,
                     availableOffline: data.availableOffline,
                     listeners: [
@@ -301,23 +306,27 @@ export function useUiNodes() {
                 toast(t('notifications.addDriveSuccess'), {
                     type: 'connect-success',
                 });
+
+                const newDriveNode = await makeUiDriveNode(newDrive);
+
+                setSelectedNode(newDriveNode);
             } catch (e) {
                 console.error(e);
             }
         },
-        [addRemoteDrive, t],
+        [addRemoteDrive, makeUiDriveNode, setSelectedNode, t],
     );
 
     const showAddDriveModal = useCallback(
         (groupSharingType: SharingType) => {
             if (groupSharingType === LOCAL) {
                 showModal('addLocalDrive', {
-                    onSubmit: onAddLocalDrive,
+                    onAddLocalDrive,
                 });
             } else {
                 showModal('addRemoteDrive', {
-                    onSubmit: onAddRemoteDrive,
-                    sharingType: groupSharingType,
+                    onAddRemoteDrive,
+                    groupSharingType,
                 });
             }
         },
@@ -376,155 +385,70 @@ export function useUiNodes() {
                 parentFolder: selectedParentNode.id,
                 syncStatus: selectedParentNode.syncStatus,
                 driveId: selectedParentNode.driveId,
+                sharingType: selectedParentNode.sharingType,
                 children: [],
             });
         },
         [onAddFolder, selectedParentNode, setSelectedNode],
     );
 
-    // const onItemOptionsClick: DriveViewProps['onItemOptionsClick'] = async (
-    //     item,
-    //     option,
-    // ) => {
-    //     const driveID = item.path.split('/')[0];
-    //     switch (option) {
-    //         case 'new-folder':
-    //             actions.setExpandedItem(item.id, true);
-    //             addVirtualNewFolder(item, driveID);
-    //             break;
-    //         case 'rename':
-    //             actions.setItemAction(item.id, 'UPDATE');
-    //             break;
-    //         case 'delete':
-    //             if (
-    //                 ['PUBLIC_DRIVE', 'LOCAL_DRIVE', 'CLOUD_DRIVE'].includes(
-    //                     item.type,
-    //                 )
-    //             ) {
-    //                 showModal('deleteDriveModal', {
-    //                     onCancel: closeModal => closeModal(),
-    //                     driveName: item.label,
-    //                     onDelete: async closeModal => {
-    //                         closeModal();
-    //                         await deleteDrive(decodeID(item.id));
+    const onAddTrigger = useCallback(
+        async (uiNodeDriveId: string) => {
+            const url = window.prompt('url') || '';
 
-    //                         toast(t('notifications.deleteDriveSuccess'), {
-    //                             type: 'connect-deleted',
-    //                         });
-    //                     },
-    //                 });
-    //             } else {
-    //                 showModal('deleteItem', {
-    //                     itemId: decodeID(item.id),
-    //                     itemName: item.label,
-    //                     driveId: decodeID(driveID),
-    //                     type: item.type === 'FOLDER' ? 'folder' : 'file',
-    //                 });
-    //             }
-    //             break;
-    //         case 'delete-drive':
-    //             await deleteDrive(decodeID(item.id));
-    //             break;
-    //         case 'rename-drive':
-    //             await renameDrive(decodeID(item.id), item.label);
-    //             break;
-    //         case 'change-availability':
-    //             await setDriveAvailableOffline(
-    //                 decodeID(item.id),
-    //                 item.availableOffline,
-    //             );
-    //             break;
-    //         case 'change-sharing-type':
-    //             await setDriveSharingType(
-    //                 decodeID(item.id),
-    //                 item.sharingType?.toLowerCase() as TreeItemSharingType,
-    //             );
-    //             break;
-    //         case 'duplicate':
-    //             await onSubmitInput({
-    //                 ...item,
-    //                 action: 'UPDATE_AND_COPY',
-    //             });
-    //             break;
-    //         case 'remove-trigger': {
-    //             // ONLY AVAILABLE FOR DEBUGGING
-    //             const triggerId = window.prompt('triggerId:');
-
-    //             if (triggerId) {
-    //                 await removeTrigger(decodeID(driveID), triggerId);
-    //             }
-    //             break;
-    //         }
-    //         case 'add-trigger': {
-    //             // ONLY AVAILABLE FOR DEBUGGING
-    //             const url = window.prompt('url') || '';
-
-    //             const pullResponderTrigger =
-    //                 await registerNewPullResponderTrigger(
-    //                     decodeID(driveID),
-    //                     url,
-    //                     { pullInterval: 6000 },
-    //                 );
-    //             await addTrigger(decodeID(driveID), pullResponderTrigger);
-
-    //             break;
-    //         }
-    //         case 'add-invalid-trigger': {
-    //             // ONLY AVAILABLE FOR DEBUGGING
-    //             const url = window.prompt('url') || '';
-
-    //             await addTrigger(decodeID(driveID), {
-    //                 id: 'some-invalid-id',
-    //                 type: 'PullResponder',
-    //                 data: {
-    //                     interval: '3000',
-    //                     listenerId: 'invalid-listener-id',
-    //                     url,
-    //                 },
-    //             });
-    //             break;
-    //         }
-    //     }
-    // };
-
-    const allowedDropdownMenuOptions = useMemo(
-        () => ({
-            [FILE]: defaultFileOptions,
-            [FOLDER]: defaultFolderOptions,
-            [DRIVE]: {
-                [LOCAL]: getOptionsForDriveSharingType(LOCAL),
-                [CLOUD]: getOptionsForDriveSharingType(CLOUD),
-                [PUBLIC]: getOptionsForDriveSharingType(PUBLIC),
-            },
-        }),
-        [],
+            const pullResponderTrigger = await registerNewPullResponderTrigger(
+                uiNodeDriveId,
+                url,
+                { pullInterval: 6000 },
+            );
+            await addTrigger(uiNodeDriveId, pullResponderTrigger);
+        },
+        [addTrigger, registerNewPullResponderTrigger],
     );
 
-    const dragAndDropHandlers: DragAndDropHandlers = useMemo(
+    const onRemoveTrigger = useCallback(
+        async (uiNodeDriveId: string) => {
+            const triggerId = window.prompt('triggerId:');
+
+            if (triggerId) {
+                await removeTrigger(uiNodeDriveId, triggerId);
+            }
+        },
+        [removeTrigger],
+    );
+
+    const onAddInvalidTrigger = useCallback(
+        async (uiNodeDriveId: string) => {
+            const url = window.prompt('url') || '';
+
+            await addTrigger(uiNodeDriveId, {
+                id: 'some-invalid-id',
+                type: 'PullResponder',
+                data: {
+                    interval: '3000',
+                    listenerId: 'invalid-listener-id',
+                    url,
+                },
+            });
+        },
+        [addTrigger],
+    );
+
+    const draDragAndDropProps: DragAndDropProps = useMemo(
         () => ({
             onDropEvent,
             onDropActivate: (dropTargetItem: UiNode) =>
                 setSelectedNode(dropTargetItem),
-            onDragStart: () => setDisableHoverStyles(true),
-            onDragEnd: () => setDisableHoverStyles(false),
-        }),
-        [onDropEvent, setSelectedNode],
-    );
-
-    const nodeHandlers: NodeHandlers = useMemo(
-        () => ({
-            onAddFolder,
-            onRenameNode,
-            onDuplicateNode,
-            onDeleteNode,
-            onDeleteDrive,
+            onDragStart: () => setDisableHighlightStyles(true),
+            onDragEnd: () => setDisableHighlightStyles(false),
+            disableDropBetween,
+            disableHighlightStyles,
         }),
         [
-            onAddFolder,
-            onDeleteDrive,
-            onDeleteNode,
-            onDuplicateNode,
-            onRenameNode,
+            disableDropBetween,
+            disableHighlightStyles,
+            onDropEvent,
+            setSelectedNode,
         ],
     );
 
@@ -549,41 +473,45 @@ export function useUiNodes() {
             ...documentDriveServer,
             ...uiNodesContext,
             ...userPermissions,
-            ...nodeHandlers,
-            ...dragAndDropHandlers,
+            ...draDragAndDropProps,
             ...selectedDocumentDrive,
+            nodeOptions,
             driveNodesBySharingType,
-            allowedDropdownMenuOptions,
-            disableHoverStyles,
-            makeUiDriveNodes,
             onAddFolder,
-            onAddAndSelectNewFolder,
             onRenameNode,
             onDuplicateNode,
             onDeleteNode,
+            onDeleteDrive,
+            makeUiDriveNodes,
+            onAddAndSelectNewFolder,
             showAddDriveModal,
             showDriveSettingsModal,
             openSwitchboardLink,
+            onAddTrigger,
+            onRemoveTrigger,
+            onAddInvalidTrigger,
         }),
         [
             documentDriveServer,
             uiNodesContext,
             userPermissions,
-            nodeHandlers,
-            dragAndDropHandlers,
+            draDragAndDropProps,
             selectedDocumentDrive,
+            nodeOptions,
             driveNodesBySharingType,
-            allowedDropdownMenuOptions,
-            disableHoverStyles,
-            makeUiDriveNodes,
             onAddFolder,
-            onAddAndSelectNewFolder,
             onRenameNode,
             onDuplicateNode,
             onDeleteNode,
+            onDeleteDrive,
+            makeUiDriveNodes,
+            onAddAndSelectNewFolder,
             showAddDriveModal,
             showDriveSettingsModal,
             openSwitchboardLink,
+            onAddTrigger,
+            onRemoveTrigger,
+            onAddInvalidTrigger,
         ],
     );
 }

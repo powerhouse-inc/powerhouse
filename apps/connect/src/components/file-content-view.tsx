@@ -1,4 +1,4 @@
-import { FILE, FileItem, UiFileNode } from '@powerhousedao/design-system';
+import { FileItem, UiFileNode } from '@powerhousedao/design-system';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,7 @@ export function FileContentView(props: Props) {
     const parentRef = useRef(null);
     const { t } = useTranslation();
     const windowSize = useWindowSize();
-    const { fileNodes, allowedDropdownMenuOptions } = props;
+    const { fileNodes } = props;
     const availableWidth = windowSize.innerWidth - USED_SPACE;
 
     const columnCount = Math.floor(availableWidth / (ITEM_WIDTH + GAP)) || 1;
@@ -82,14 +82,7 @@ export function FileContentView(props: Props) {
                     marginLeft: columnIndex === 0 ? 0 : GAP,
                 }}
             >
-                <FileItem
-                    {...props}
-                    key={fileNode.id}
-                    uiFileNode={fileNode}
-                    allowedDropdownMenuOptions={
-                        allowedDropdownMenuOptions[FILE]
-                    }
-                />
+                <FileItem {...props} key={fileNode.id} uiFileNode={fileNode} />
             </div>
         );
     };

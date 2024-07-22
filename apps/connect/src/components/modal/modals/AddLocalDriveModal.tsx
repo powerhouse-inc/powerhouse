@@ -5,12 +5,17 @@ import {
 
 type Props = {
     open: boolean;
-    onSubmit: (data: AddLocalDriveInput) => void;
+    onAddLocalDrive: (data: AddLocalDriveInput) => Promise<void>;
     onClose: () => void;
 };
 
 export function AddLocalDriveModal(props: Props) {
-    const { open, onSubmit, onClose } = props;
+    const { open, onAddLocalDrive, onClose } = props;
+
+    async function onSubmit(data: AddLocalDriveInput) {
+        await onAddLocalDrive(data);
+        onClose();
+    }
 
     return (
         <ConnectAddLocalDriveModal
