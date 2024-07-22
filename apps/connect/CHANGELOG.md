@@ -1,3 +1,10 @@
+# [1.0.0-dev.45](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.44...v1.0.0-dev.45) (2024-07-22)
+
+
+### Features
+
+* ignore AbortError when user cancels file picker ([9c3cf4d](https://github.com/powerhouse-inc/document-model-electron/commit/9c3cf4d47b1d28442b21c491e7443c48969b5140))
+
 # [1.0.0-dev.44](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.43...v1.0.0-dev.44) (2024-07-17)
 
 
