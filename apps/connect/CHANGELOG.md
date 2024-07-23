@@ -1,3 +1,24 @@
+# [1.0.0-dev.45](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.44...v1.0.0-dev.45) (2024-07-22)
+
+
+### Features
+
+* ignore AbortError when user cancels file picker ([9c3cf4d](https://github.com/powerhouse-inc/document-model-electron/commit/9c3cf4d47b1d28442b21c491e7443c48969b5140))
+
+# [1.0.0-dev.44](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.43...v1.0.0-dev.44) (2024-07-17)
+
+
+### Features
+
+* removed file extension when importing a document file ([b2da3b0](https://github.com/powerhouse-inc/document-model-electron/commit/b2da3b05eba3af229a99667c6d454d51aaec3bfd))
+
+# [1.0.0-dev.43](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.42...v1.0.0-dev.43) (2024-07-17)
+
+
+### Features
+
+* added base e2e tests ([fab24e1](https://github.com/powerhouse-inc/document-model-electron/commit/fab24e14247b31a96df09ccc17e7a3d05b065194))
+
 # [1.0.0-dev.42](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.41...v1.0.0-dev.42) (2024-07-11)
 
 
