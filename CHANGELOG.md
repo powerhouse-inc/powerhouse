@@ -1,3 +1,10 @@
+# [1.0.0-alpha.148](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.147...v1.0.0-alpha.148) (2024-07-23)
+
+
+### Features
+
+* use radix tooltip instead of react tooltip ([#329](https://github.com/powerhouse-inc/design-system/issues/329)) ([873b30a](https://github.com/powerhouse-inc/design-system/commit/873b30ad66700868bc8189f5a7d62257c5ea74f5))
+
 # [1.0.0-alpha.147](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.146...v1.0.0-alpha.147) (2024-07-03)
 
 
