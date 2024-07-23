@@ -1,10 +1,10 @@
 import { Meta, StoryObj } from '@storybook/react';
-import { Tooltip } from './tooltip';
+import { Tooltip, TooltipProvider } from './tooltip';
 
-const meta = {
+const meta: Meta<typeof Tooltip> = {
     title: 'Connect/Components/Tooltip',
     component: Tooltip,
-} satisfies Meta<typeof Tooltip>;
+};
 
 export default meta;
 
@@ -12,16 +12,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
     render: function Wrapper(args) {
+        const tooltipContent = (
+            <div>
+                <div>tooltip content</div>
+                <button onClick={() => alert('you can click me')}>
+                    click me
+                </button>
+            </div>
+        );
         return (
-            <>
-                <a id="tooltip">hover me</a>
-                <Tooltip {...args} anchorSelect="#tooltip">
-                    <div>tooltip content</div>
-                    <button onClick={() => alert('you can click me')}>
-                        click me
-                    </button>
+            <TooltipProvider>
+                <Tooltip {...args} content={tooltipContent}>
+                    <a id="tooltip">hover me</a>
                 </Tooltip>
-            </>
+            </TooltipProvider>
         );
     },
 };

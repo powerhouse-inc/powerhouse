@@ -1,6 +1,5 @@
-import { formatEthAddress } from '@/connect/utils';
+import { ENSAvatar, formatEthAddress } from '@/connect';
 import { useEnsName } from 'wagmi';
-import { ENSAvatar } from '../ens-avatar';
 
 export interface SidebarUserProps {
     address: `0x${string}`;

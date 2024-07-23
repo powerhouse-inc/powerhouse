@@ -1,6 +1,5 @@
 import { Tooltip } from '@/connect';
 import { Icon } from '@/powerhouse';
-import { useId } from 'react';
 
 export type OperationProps = {
     operationType: string;
@@ -9,19 +8,19 @@ export type OperationProps = {
 
 export function Operation(props: OperationProps) {
     const { operationType, operationInput } = props;
-    const tooltipId = useId().replace(/:/g, '');
+
+    const tooltipContent = (
+        <code>
+            <pre>{JSON.stringify(operationInput, null, 2)}</pre>
+        </code>
+    );
 
     return (
-        <span className="flex items-center gap-2 text-xs">
-            {operationType}
-            <a id={tooltipId} className="cursor-pointer text-gray-300">
-                <Icon name="braces" size={16} />
-            </a>
-            <Tooltip anchorSelect={`#${tooltipId}`}>
-                <code>
-                    <pre>{JSON.stringify(operationInput, null, 2)}</pre>
-                </code>
-            </Tooltip>
-        </span>
+        <Tooltip content={tooltipContent}>
+            <span className="flex cursor-pointer items-center gap-2 text-xs">
+                {operationType}
+                <Icon name="braces" className="text-gray-300" size={16} />
+            </span>
+        </Tooltip>
     );
 }

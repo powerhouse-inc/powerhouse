@@ -22,7 +22,6 @@ import {
     ComponentPropsWithRef,
     ForwardedRef,
     forwardRef,
-    useId,
     useMemo,
     useState,
 } from 'react';
@@ -38,37 +37,35 @@ const TransactionReference = forwardRef(function TransactionReference(
 ) {
     const { control, disabled } = props;
     const value = useWatch({ control, name: 'txRef' });
-    const tooltipId = useId().replace(/:/g, '');
     const maxLength = 46;
     const shouldShortenValue =
         typeof value === 'string' && value.length >= maxLength;
-    const maybeShortedValue = shouldShortenValue
+    const maybeShortenedValue = shouldShortenValue
         ? `${value.slice(0, maxLength)}...`
         : value;
     const isTransaction = getIsTransaction(value);
 
+    const tooltipContent = (
+        <div>
+            <p>{value}</p>
+            {isTransaction && (
+                <p className="mt-2 text-center">
+                    <a
+                        className="text-blue-900 underline"
+                        href={`https://etherscan.io/tx/${value}`}
+                    >
+                        View on Etherscan
+                    </a>
+                </p>
+            )}
+        </div>
+    );
+
     if (disabled)
         return (
-            <span>
-                <a id={tooltipId} className="cursor-pointer">
-                    {maybeShortedValue}
-                </a>
-                {shouldShortenValue && (
-                    <Tooltip anchorSelect={`#${tooltipId}`}>
-                        <p>{value}</p>
-                        {isTransaction && (
-                            <p className="mt-2 text-center">
-                                <a
-                                    className="text-blue-900 underline"
-                                    href={`https://etherscan.io/tx/${value}`}
-                                >
-                                    View on Etherscan
-                                </a>
-                            </p>
-                        )}
-                    </Tooltip>
-                )}
-            </span>
+            <Tooltip content={tooltipContent}>
+                <span>{maybeShortenedValue}</span>
+            </Tooltip>
         );
 
     return <RWATableTextInput {...props} ref={ref} />;

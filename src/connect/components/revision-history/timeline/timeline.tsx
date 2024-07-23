@@ -73,7 +73,8 @@ export function Timeline(props: TimelineProps) {
                 width: '100%',
                 position: 'relative',
             }}
-            className="border-l border-slate-100 px-4"
+            className="border-l border-slate-100
+            "
         >
             {rowVirtualizer.getVirtualItems().map(virtualRow => {
                 const row = rows[virtualRow.index];

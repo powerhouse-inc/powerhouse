@@ -1,24 +1,44 @@
-import { ComponentPropsWithoutRef } from 'react';
-import { Tooltip as ReactTooltip } from 'react-tooltip';
+import * as RadixTooltip from '@radix-ui/react-tooltip';
+import { ReactNode } from 'react';
+import { twMerge } from 'tailwind-merge';
 
-type Props = ComponentPropsWithoutRef<typeof ReactTooltip>;
+type Props = RadixTooltip.TooltipProps & {
+    className?: string;
+    content: ReactNode;
+};
 
 export function Tooltip(props: Props) {
+    const {
+        children,
+        content,
+        open,
+        defaultOpen,
+        onOpenChange,
+        className,
+        ...rest
+    } = props;
+
     return (
-        <ReactTooltip
-            clickable
-            noArrow
-            border="1px solid var(--gray-200)"
-            opacity={1}
-            {...props}
-            style={{
-                backgroundColor: 'var(--white)',
-                color: 'var(--gray-900)',
-                padding: '8px',
-                borderRadius: '8px',
-                boxShadow: 'var(--shadow-tooltip)',
-                ...props.style,
-            }}
-        />
+        <RadixTooltip.Root
+            open={open}
+            defaultOpen={defaultOpen}
+            onOpenChange={onOpenChange}
+            delayDuration={0}
+        >
+            <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
+            <RadixTooltip.Portal>
+                <RadixTooltip.Content
+                    {...rest}
+                    className={twMerge(
+                        'rounded-lg border border-gray-200 bg-white p-2 text-xs shadow-tooltip',
+                        className,
+                    )}
+                >
+                    {content}
+                </RadixTooltip.Content>
+            </RadixTooltip.Portal>
+        </RadixTooltip.Root>
     );
 }
+
+export const TooltipProvider = RadixTooltip.Provider;
