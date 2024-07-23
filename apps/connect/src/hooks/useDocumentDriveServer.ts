@@ -391,7 +391,7 @@ export function useDocumentDriveServer(
                 {
                     srcId: src.id,
                     targetParentFolder: target.id,
-                    targetName: target.name,
+                    targetName: src.name,
                 },
                 generateId,
                 drive.state.global.nodes,
