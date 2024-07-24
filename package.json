@@ -19,6 +19,7 @@
         "./queue/base": "./src/queue/base.ts",
         "./utils": "./src/utils/index.ts",
         "./utils/graphql": "./src/utils/graphql.ts",
+        "./utils/migrations": "./src/utils/migrations.ts",
         "./logger": "./src/utils/logger.ts"
     },
     "files": [

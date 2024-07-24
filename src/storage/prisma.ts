@@ -561,6 +561,13 @@ export class PrismaStorage implements IDriveStorage {
 
         // delete drive document and its operations
         await this.deleteDocument('drives', id);
+
+        // deletes all documents of the drive
+        await this.db.document.deleteMany({
+            where: {
+                driveId: id
+            }
+        });
     }
 
     async getOperationResultingState(
@@ -647,5 +654,23 @@ export class PrismaStorage implements IDriveStorage {
             documentId: row.driveId === 'drives' ? '' : row.documentId,
             lastUpdated: new Date(row.lastUpdated).toISOString()
         }));
+    }
+
+    // migrates all stored operations from legacy signature to signatures array
+    async migrateOperationSignatures() {
+        const count = await this.db.$executeRaw`
+            UPDATE "Operation"
+            SET context = jsonb_set(
+                context #- '{signer,signature}',  -- Remove the old 'signature' field
+                '{signer,signatures}',            -- Path to the new 'signatures' field
+                CASE
+                    WHEN context->'signer'->>'signature' = '' THEN '[]'::jsonb
+                    ELSE to_jsonb(array[context->'signer'->>'signature'])
+                END
+            )
+            WHERE context->'signer' ? 'signature'  -- Check if the 'signature' key exists
+        `;
+        logger.info(`Migrated ${count} operations`);
+        return;
     }
 }

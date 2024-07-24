@@ -6,7 +6,9 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
-import { mergeOperations, type SynchronizationUnitQuery } from '..';
+import { SynchronizationUnitQuery } from '../server/types';
+import { mergeOperations } from '../utils';
+import { migrateDocumentOperationSigatures } from '../utils/migrations';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
 
 export class BrowserStorage implements IDriveStorage {
@@ -213,5 +215,29 @@ export class BrowserStorage implements IDriveStorage {
             }
             return acc;
         }, []);
+    }
+
+    // migrates all stored operations from legacy signature to signatures array
+    async migrateOperationSignatures() {
+        const drives = await this.getDrives();
+        for (const drive of drives) {
+            await this.migrateDocument(BrowserStorage.DRIVES_KEY, drive);
+
+            const documents = await this.getDocuments(drive);
+            await Promise.all(
+                documents.map(async docId => this.migrateDocument(drive, docId))
+            );
+        }
+    }
+
+    private async migrateDocument(drive: string, id: string) {
+        const document = await this.getDocument(drive, id);
+        const migratedDocument = migrateDocumentOperationSigatures(document);
+        if (migratedDocument !== document) {
+            return (await this.db).setItem(
+                this.buildKey(drive, id),
+                migratedDocument
+            );
+        }
     }
 }
