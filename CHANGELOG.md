@@ -1,3 +1,10 @@
+# [1.0.0-alpha.150](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.149...v1.0.0-alpha.150) (2024-07-25)
+
+
+### Features
+
+* add ml auto to folder item ([c84035e](https://github.com/powerhouse-inc/design-system/commit/c84035e5a84925a883e1e663f0154b80c3f693e4))
+
 # [1.0.0-alpha.149](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.148...v1.0.0-alpha.149) (2024-07-25)
 
 
