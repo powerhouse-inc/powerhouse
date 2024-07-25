@@ -1,3 +1,10 @@
+# [1.0.0-alpha.88](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.87...v1.0.0-alpha.88) (2024-07-25)
+
+
+### Features
+
+* legacy signatures migration ([a90bb49](https://github.com/powerhouse-inc/document-drive/commit/a90bb4977c2e9012ca1377155c09b15561175b34))
+
 # [1.0.0-alpha.87](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.86...v1.0.0-alpha.87) (2024-07-22)
 
 
