@@ -155,7 +155,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                 </div>
                 {isReadMode && isAllowedToCreateDocuments && (
                     <button
-                        className="hidden group-hover:block"
+                        className="ml-auto hidden group-hover:block"
                         onClick={e => {
                             e.stopPropagation();
                             setIsDropdownMenuOpen(true);
