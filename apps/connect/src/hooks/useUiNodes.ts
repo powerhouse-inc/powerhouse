@@ -95,7 +95,7 @@ export function useUiNodes() {
             const nodes = drive.state.global.nodes.map(n => {
                 const node = {
                     ...n,
-                    slug: n.name.replaceAll(' ', '-').toLowerCase(),
+                    slug: makeNodeSlugFromNodeName(n.name),
                     driveId: id,
                     parentFolder: n.parentFolder || id,
                     kind: n.kind.toUpperCase(),
