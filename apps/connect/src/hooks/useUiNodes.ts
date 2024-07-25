@@ -65,7 +65,6 @@ export function useUiNodes() {
     const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
     const userPermissions = useUserPermissions();
     const nodeOptions = getNodeOptions();
-    useNodeNavigation();
 
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument) => {
