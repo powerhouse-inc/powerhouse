@@ -26,7 +26,7 @@ function buildPathname(selectedNodePath: UiNode[]) {
     const driveNodeComponent = makeDriveNodeUrlComponent(driveNode);
     const nodePathComponents = selectedNodePath
         .slice(1)
-        .map(node => encodeURIComponent(node.name));
+        .map(node => encodeURIComponent(node.slug || node.name));
     const pathname = [driveNodeComponent, ...nodePathComponents].join('/');
     return pathname;
 }
@@ -67,7 +67,7 @@ function getSelectedNodeFromPathname(
         if (selectedNode.kind === FILE) break;
 
         const nextNode: UiNode | undefined = selectedNode.children.find(
-            node => node.name === nodeName,
+            node => node.slug === nodeName || node.name === nodeName,
         );
 
         if (!nextNode) {

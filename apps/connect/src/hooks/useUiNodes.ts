@@ -22,9 +22,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
 import { getNodeOptions } from 'src/utils/drive-sections';
+import { makeNodeSlugFromNodeName } from 'src/utils/slug';
 import { useDocumentDriveById } from './useDocumentDriveById';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
-import { useNodeNavigation } from './useNodeNavigation';
 import { useOnDropEvent } from './useOnDropEvent';
 import { useOpenSwitchboardLink } from './useOpenSwitchboardLink';
 import { useUserPermissions } from './useUserPermissions';
@@ -95,6 +95,7 @@ export function useUiNodes() {
             const nodes = drive.state.global.nodes.map(n => {
                 const node = {
                     ...n,
+                    slug: n.name.replaceAll(' ', '-').toLowerCase(),
                     driveId: id,
                     parentFolder: n.parentFolder || id,
                     kind: n.kind.toUpperCase(),
@@ -381,6 +382,7 @@ export function useUiNodes() {
             setSelectedNode({
                 ...newFolder,
                 kind: FOLDER,
+                slug: makeNodeSlugFromNodeName(newFolder.name),
                 parentFolder: selectedParentNode.id,
                 syncStatus: selectedParentNode.syncStatus,
                 driveId: selectedParentNode.driveId,

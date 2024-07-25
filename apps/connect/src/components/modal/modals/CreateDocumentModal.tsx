@@ -1,7 +1,7 @@
 import {
-    TDocumentType,
     FILE,
     RenameNodeModal,
+    TDocumentType,
     UiDriveNode,
     UiFolderNode,
     UiNode,
@@ -10,6 +10,7 @@ import { DocumentModel } from 'document-model/document';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import { makeNodeSlugFromNodeName } from 'src/utils/slug';
 
 export interface CreateDocumentModalProps {
     open: boolean;
@@ -50,6 +51,7 @@ export const CreateDocumentModal: React.FC<
         if (node) {
             setSelectedNode({
                 ...node,
+                slug: makeNodeSlugFromNodeName(node.name),
                 kind: FILE,
                 documentType: node.documentType as TDocumentType,
                 parentFolder: selectedParentNode.id,
