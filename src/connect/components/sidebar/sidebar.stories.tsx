@@ -1,109 +1,31 @@
 import connectLogo from '@/assets/connect.png';
-import { SUCCESS, TreeItem } from '@/connect';
-import { ItemsContextProvider } from '@/connect/context/ItemsContext';
-import { useItemActions } from '@/connect/hooks/tree-view/useItemActions';
-import { generateMockDriveData } from '@/connect/utils/mocks/tree-item';
-import { action } from '@storybook/addon-actions';
-import { useArgs } from '@storybook/preview-api';
+import {
+    UiDriveNode,
+    UiNode,
+    UiNodesContextProvider,
+    useUiNodesContext,
+} from '@/connect';
+import { CLOUD, LOCAL, PUBLIC } from '@/connect/constants';
+import { SharingType } from '@/connect/types';
+import { mockDriveNodes, mockNodeOptions } from '@/connect/utils';
+import { DropItem } from '@/powerhouse';
+import { useEffect } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentPropsWithoutRef } from 'react';
-import { ConnectSidebar, DriveView, DriveViewProps } from '..';
-
-const emptyDrives: TreeItem[] = [];
-
-const drives = [
-    ...generateMockDriveData({
-        path: 'drive',
-        label: 'MakerDAO Atlas',
-        type: 'PUBLIC_DRIVE',
-        expanded: true,
-        availableOffline: false,
-        syncStatus: SUCCESS,
-    }),
-    ...generateMockDriveData({
-        path: 'cloud',
-        label: 'Powerhouse Team Drive',
-        type: 'CLOUD_DRIVE',
-        expanded: false,
-        availableOffline: false,
-        syncStatus: SUCCESS,
-    }),
-    ...generateMockDriveData({
-        path: 'cloud-2',
-        label: 'Powerhouse Team Drive 2',
-        type: 'CLOUD_DRIVE',
-        expanded: true,
-        availableOffline: false,
-        syncStatus: SUCCESS,
-    }),
-    ...generateMockDriveData({
-        path: 'local',
-        label: 'Local Device',
-        type: 'LOCAL_DRIVE',
-        expanded: true,
-        availableOffline: false,
-        syncStatus: SUCCESS,
-    }),
-];
+import { ComponentPropsWithoutRef, useState } from 'react';
+import { DragEndEvent, DragStartEvent, DropEvent } from 'react-aria';
+import { ConnectSidebar, DriveView } from '..';
 
 type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
-    drives: TreeItem[];
+    driveNodes?: UiDriveNode[];
 };
 
 const meta: Meta<Args> = {
     title: 'Connect/Components/Sidebar',
     component: ConnectSidebar,
-    parameters: {
-        layout: 'fullscreen',
-    },
 };
 
 export default meta;
 type Story = StoryObj<Args>;
-
-const onItemOptionsClick = action('onItemOptionsClick');
-
-const DriveViewImpl = (args: DriveViewProps) => {
-    const { onItemClick, ...restArgs } = args;
-    const actions = useItemActions();
-
-    const onItemClickHandler: DriveViewProps['onItemClick'] = (e, item) => {
-        actions.toggleExpandedAndSelect(item.id);
-        onItemClick?.(e, item);
-    };
-
-    return <DriveView {...restArgs} onItemClick={onItemClickHandler} />;
-};
-
-const headerContent = (
-    <div className="flex h-full items-center">
-        <img
-            src={connectLogo}
-            alt="Connect logo"
-            className="h-5 object-contain"
-        />
-    </div>
-);
-
-const children = (
-    <>
-        <DriveViewImpl
-            type="PUBLIC_DRIVE"
-            name="Public Drives"
-            onItemOptionsClick={onItemOptionsClick}
-        />
-        <DriveViewImpl
-            type="CLOUD_DRIVE"
-            name="Secure Cloud Storage"
-            onItemOptionsClick={onItemOptionsClick}
-        />
-        <DriveViewImpl
-            type="LOCAL_DRIVE"
-            name="My Local Drives"
-            onItemOptionsClick={onItemOptionsClick}
-        />
-    </>
-);
 
 const user = {
     address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
@@ -111,28 +33,131 @@ const user = {
 
 export const Expanded: Story = {
     decorators: [
-        (Story, { args }) => (
-            <ItemsContextProvider items={args.drives}>
+        Story => (
+            <UiNodesContextProvider>
                 <div className="relative h-screen">
                     <Story />
                 </div>
-            </ItemsContextProvider>
+            </UiNodesContextProvider>
         ),
     ],
     render: function Wrapper(args) {
-        const [{ collapsed, ...restArgs }, updateArgs] = useArgs<typeof args>();
+        const [collapsed, setCollapsed] = useState(args.collapsed);
+        const [disableHighlightStyles, setDisableHighlightStyles] =
+            useState(false);
+        const uiNodesContext = useUiNodesContext();
+        const { driveNodes, setDriveNodes, setSelectedNode } = uiNodesContext;
+
+        useEffect(() => {
+            setDriveNodes(args.driveNodes ?? []);
+            setSelectedNode(args.driveNodes?.[0] ?? null);
+        }, []);
+
+        const nodeHandlers = {
+            onAddFolder: (name: string, uiNode: UiNode) => {},
+            onAddAndSelectNewFolder: (name: string) => Promise.resolve(),
+            onRenameNode: (name: string, uiNode: UiNode) => {},
+            onDuplicateNode: (uiNode: UiNode) => {},
+            onDeleteNode: (uiNode: UiNode) => {},
+            onDeleteDrive: (uiNode: UiNode) => {},
+            onRenameDrive: (uiDriveNode: UiDriveNode, newName: string) => {},
+            onChangeSharingType: (
+                uiDriveNode: UiDriveNode,
+                newSharingType: SharingType,
+            ) => {},
+            onChangeAvailableOffline: (
+                uiDriveNode: UiDriveNode,
+                newAvailableOffline: boolean,
+            ) => {},
+            onDropEvent: (
+                item: DropItem<UiNode>,
+                target: UiNode,
+                event: DropEvent,
+            ) => {},
+            onDropActivate: (dropTargetItem: UiNode) => {},
+            onDragStart: (dragItem: UiNode, event: DragStartEvent) => {
+                setDisableHighlightStyles(true);
+            },
+            onDragEnd: (dragItem: UiNode, event: DragEndEvent) => {
+                setDisableHighlightStyles(false);
+            },
+            showAddDriveModal: () => {},
+            showDriveSettingsModal: (uiDriveNode: UiDriveNode) => {},
+            onAddTrigger: (uiNodeDriveId: string) => {},
+            onRemoveTrigger: (uiNodeDriveId: string) => {},
+            onAddInvalidTrigger: (uiNodeDriveId: string) => {},
+        };
+
+        const driveNodesByType = driveNodes.reduce<
+            Record<SharingType, UiDriveNode[]>
+        >(
+            (acc, driveNode) => {
+                acc[driveNode.sharingType].push(driveNode);
+                return acc;
+            },
+            {
+                [PUBLIC]: [],
+                [CLOUD]: [],
+                [LOCAL]: [],
+            },
+        );
+
         return (
             <ConnectSidebar
+                {...args}
                 collapsed={collapsed}
-                {...restArgs}
-                onToggle={() => updateArgs({ collapsed: !collapsed })}
-            />
+                onToggle={() => setCollapsed(!collapsed)}
+                headerContent={
+                    <div className="flex h-full items-center">
+                        <img
+                            src={connectLogo}
+                            alt="Connect logo"
+                            className="h-5 object-contain"
+                        />
+                    </div>
+                }
+            >
+                <DriveView
+                    {...uiNodesContext}
+                    {...nodeHandlers}
+                    driveNodes={driveNodesByType[PUBLIC]}
+                    label="Public Drives"
+                    groupSharingType={PUBLIC}
+                    disableAddDrives={false}
+                    isAllowedToCreateDocuments
+                    isRemoteDrive
+                    nodeOptions={mockNodeOptions}
+                    disableHighlightStyles={disableHighlightStyles}
+                    disableDropBetween={false}
+                />
+                <DriveView
+                    {...uiNodesContext}
+                    {...nodeHandlers}
+                    driveNodes={driveNodesByType[CLOUD]}
+                    label="Secure Cloud Drives"
+                    groupSharingType={CLOUD}
+                    disableAddDrives={false}
+                    isAllowedToCreateDocuments
+                    isRemoteDrive
+                    nodeOptions={mockNodeOptions}
+                    disableDropBetween={false}
+                    disableHighlightStyles={disableHighlightStyles}
+                />
+                <DriveView
+                    {...uiNodesContext}
+                    {...nodeHandlers}
+                    driveNodes={driveNodesByType[LOCAL]}
+                    label="My Local Drives"
+                    groupSharingType={LOCAL}
+                    disableAddDrives={false}
+                    isAllowedToCreateDocuments
+                    isRemoteDrive={false}
+                    nodeOptions={mockNodeOptions}
+                    disableDropBetween={false}
+                    disableHighlightStyles={disableHighlightStyles}
+                />
+            </ConnectSidebar>
         );
-    },
-    args: {
-        drives: emptyDrives,
-        headerContent,
-        children,
     },
 };
 
@@ -147,7 +172,7 @@ export const ExpandedWithDrives: Story = {
     ...Expanded,
     args: {
         ...Expanded.args,
-        drives,
+        driveNodes: mockDriveNodes,
     },
 };
 
@@ -155,8 +180,8 @@ export const ExpandedWithDrivesAndUser: Story = {
     ...Expanded,
     args: {
         ...Expanded.args,
-        drives,
         ...user,
+        driveNodes: mockDriveNodes,
     },
 };
 
@@ -180,7 +205,7 @@ export const CollapsedWithDrives: Story = {
     ...Collapsed,
     args: {
         ...Collapsed.args,
-        drives,
+        driveNodes: mockDriveNodes,
     },
 };
 
@@ -188,7 +213,6 @@ export const CollapsedWithDrivesAndUser: Story = {
     ...Collapsed,
     args: {
         ...Collapsed.args,
-        drives,
         ...user,
     },
 };

@@ -19,10 +19,8 @@ export const FormInput = forwardRef(function FormInput(
 ) {
     const {
         icon,
-        name,
         errorMessage,
         isDirty,
-        isTouched,
         containerClassName,
         inputClassName,
         errorMessageClassName,
@@ -62,6 +60,7 @@ export const FormInput = forwardRef(function FormInput(
                     'hidden min-h-4 text-xs text-red-900',
                     isError && 'block',
                     hideErrors && 'hidden',
+                    errorMessageClassName,
                 )}
             >
                 {errorMessage}

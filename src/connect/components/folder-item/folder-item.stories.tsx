@@ -1,27 +1,10 @@
+import { mockNodeOptions, mockUiFolderNode } from '@/connect/utils';
 import { Meta, StoryObj } from '@storybook/react';
 import { FolderItem } from './folder-item';
 
 const meta: Meta<typeof FolderItem> = {
     title: 'Connect/Components/FolderItem',
     component: FolderItem,
-    argTypes: {
-        onClick: { action: 'onClick' },
-        onOptionsClick: { action: 'onOptionsClick' },
-        title: { control: 'text' },
-        mode: { control: { type: 'select', options: ['read', 'write'] } },
-        onDragStart: { action: 'onDragStart' },
-        onDragEnd: { action: 'onDragEnd' },
-        onDropEvent: { action: 'onDropEvent' },
-        item: { control: { type: 'object' } },
-        displaySyncIcon: { control: { type: 'boolean' } },
-    },
-    decorators: [
-        Story => (
-            <div className="w-[500px] bg-white p-10">
-                <Story />
-            </div>
-        ),
-    ],
 };
 
 export default meta;
@@ -30,25 +13,24 @@ type Story = StoryObj<typeof meta>;
 
 export const ReadMode: Story = {
     args: {
-        title: 'Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs Chronicle Labs',
-        displaySyncIcon: true,
-        item: {
-            id: '1',
-            parentFolder: null,
-            label: 'Test Folder',
-            availableOffline: false,
-            path: '',
-            type: 'FOLDER',
-            syncStatus: 'SYNCING',
-        },
+        uiFolderNode: mockUiFolderNode,
+        isRemoteDrive: true,
+        isAllowedToCreateDocuments: true,
+        nodeOptions: mockNodeOptions,
     },
-};
-
-export const WriteMode: Story = {
-    ...ReadMode,
-    args: {
-        ...ReadMode.args,
-        mode: 'write',
+    render: function Wrapper(args) {
+        const folderNodes = Array.from({ length: 100 }).map((_, index) => ({
+            ...args.uiFolderNode,
+            id: `folder-${index}`,
+            name: `Folder ${index} lorem ipsum dolor sit amet consectetur adipiscing elit`,
+        }));
+        return (
+            <div className="flex flex-wrap gap-2">
+                {folderNodes.map(node => (
+                    <FolderItem key={node.id} {...args} uiFolderNode={node} />
+                ))}
+            </div>
+        );
     },
 };
 

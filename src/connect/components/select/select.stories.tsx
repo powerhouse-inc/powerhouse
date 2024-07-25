@@ -5,7 +5,6 @@ import { Select, SelectItem } from '.';
 
 const meta: Meta<typeof Select> = {
     title: 'Connect/Components/Select',
-    // @ts-expect-error - strange error introduced in new ts version
     component: Select,
 };
 

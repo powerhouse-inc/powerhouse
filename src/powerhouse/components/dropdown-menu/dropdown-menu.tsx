@@ -8,7 +8,7 @@ import {
 } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
-export interface SharedDropdownMenuProps<T extends string = string> {
+export interface SharedDropdownMenuProps<T extends string> {
     onItemClick: (itemId: T) => void;
     items: Array<{ id: T; content: React.ReactNode }>;
     className?: string;

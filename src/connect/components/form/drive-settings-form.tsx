@@ -3,65 +3,59 @@ import {
     DeleteDrive,
     Disclosure,
     Divider,
-    DriveLocation,
     DriveNameInput,
     Label,
     LocationInfo,
+    PUBLIC,
     SharingType,
     SharingTypeFormInput,
+    SWITCHBOARD,
+    UiDriveNode,
 } from '@/connect';
 import { Button, Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
-import { ImageInput } from '../image-input';
 
 type Inputs = {
-    driveName: string;
+    name: string;
     sharingType: SharingType;
     availableOffline: boolean;
-    driveIcon?: string;
 };
 
-type DriveSettingsFormProps = Inputs & {
-    location: DriveLocation;
+type DriveSettingsFormProps = {
+    uiDriveNode: UiDriveNode;
     onSubmit: DriveSettingsFormSubmitHandler;
-    onCancel: () => void;
-    onDeleteDrive: () => void;
+    handleCancel: () => void;
+    handleDeleteDrive: () => void;
 };
 
 export type DriveSettingsFormSubmitHandler = SubmitHandler<Inputs>;
 
 export function DriveSettingsForm(props: DriveSettingsFormProps) {
+    const { uiDriveNode, onSubmit } = props;
+    const { name, sharingType, availableOffline } = uiDriveNode;
+
     const [showLocationSettings, setShowLocationSettings] = useState(false);
     const [showDangerZone, setShowDangerZone] = useState(false);
     const [showDeleteDrive, setShowDeleteDrive] = useState(false);
-    const { driveIcon } = props;
-    const hasDriveIcon = Boolean(driveIcon);
-    const optionalDriveIconField = hasDriveIcon ? { driveIcon } : {};
+
     const { register, handleSubmit, control } = useForm<Inputs>({
         mode: 'onBlur',
         defaultValues: {
-            driveName: props.driveName,
-            sharingType: props.sharingType,
-            availableOffline: props.availableOffline,
-            ...optionalDriveIconField,
+            name,
+            sharingType,
+            availableOffline,
         },
     });
 
+    const location = sharingType === PUBLIC ? SWITCHBOARD : sharingType;
+
     return (
-        <form onSubmit={handleSubmit(props.onSubmit)}>
-            <DriveNameInput {...register('driveName')} />
+        <form onSubmit={handleSubmit(onSubmit)}>
+            <DriveNameInput {...register('name')} />
             <Divider className="my-4" />
             <Label htmlFor="sharingType">Sharing settings</Label>
             <SharingTypeFormInput control={control} />
-            {hasDriveIcon && (
-                <>
-                    <Divider className="my-3" />
-                    <Label htmlFor="driveIcon">Drive icon</Label>
-                    <ImageInput control={control} name="driveIcon" />
-                </>
-            )}
-
             <Divider className="my-3" />
             <Disclosure
                 title="Location"
@@ -70,7 +64,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                     setShowLocationSettings(!showLocationSettings)
                 }
             >
-                <LocationInfo location={props.location} />
+                <LocationInfo location={location} />
                 <AvailableOfflineToggle {...register('availableOffline')} />
             </Disclosure>
             <Divider className="my-3" />

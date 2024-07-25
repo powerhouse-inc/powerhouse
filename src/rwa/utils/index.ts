@@ -45,9 +45,9 @@ export function isCashAsset(
 }
 
 export function getFixedIncomeAssets(state: RealWorldAssetsState) {
-    return state.portfolio.filter(a => isFixedIncomeAsset(a)) as FixedIncome[];
+    return state.portfolio.filter(a => isFixedIncomeAsset(a));
 }
 
 export function getCashAsset(state: RealWorldAssetsState) {
-    return state.portfolio.find(a => isCashAsset(a)) as CashAsset | undefined;
+    return state.portfolio.find(a => isCashAsset(a));
 }

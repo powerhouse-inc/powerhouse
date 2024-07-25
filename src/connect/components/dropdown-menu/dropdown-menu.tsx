@@ -1,40 +1,40 @@
 import { ControlledDropdownMenuProps, DropdownMenu } from '@/powerhouse';
-import { useMemo } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { twMerge } from 'tailwind-merge';
 
-export interface ConnectDropdownMenuItem {
-    id: string;
+export interface ConnectDropdownMenuItem<TItemId extends string> {
+    id: TItemId;
+    label: ReactNode;
     icon?: React.JSX.Element;
-    label: string;
     className?: string;
 }
 
-export interface ConnectDropdownMenuProps
-    extends Omit<ControlledDropdownMenuProps, 'items'> {
-    items: ConnectDropdownMenuItem[];
+export interface ConnectDropdownMenuProps<TItemId extends string>
+    extends Omit<ControlledDropdownMenuProps<TItemId>, 'items'> {
+    items: ConnectDropdownMenuItem<TItemId>[];
 }
 
-export function ConnectDropdownMenu(props: ConnectDropdownMenuProps) {
+export function ConnectDropdownMenu<TItemId extends string>(
+    props: ConnectDropdownMenuProps<TItemId>,
+) {
     const { items, onItemClick, menuClassName, ...dropDownProps } = props;
 
-    const dropdownItems = useMemo<ControlledDropdownMenuProps['items']>(
+    const dropdownItems = useMemo(
         () =>
-            items.map(item => ({
-                id: item.id,
+            items.map(({ id, className, label, icon }) => ({
+                id,
                 content: (
                     <div
-                        key={item.id}
+                        key={id}
                         className={twMerge(
                             'flex h-9 flex-row items-center px-3',
-                            item.className,
+                            className,
                         )}
                     >
-                        {item.icon && (
-                            <span className="mr-2 inline-block">
-                                {item.icon}
-                            </span>
+                        {icon && (
+                            <span className="mr-2 inline-block">{icon}</span>
                         )}
-                        <div>{item.label}</div>
+                        <div>{label}</div>
                     </div>
                 ),
             })),

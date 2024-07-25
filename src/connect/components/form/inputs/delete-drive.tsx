@@ -1,21 +1,22 @@
-import { DriveNameInput } from '@/connect';
+import { DriveNameInput, UiDriveNode } from '@/connect';
 import { Button, Icon } from '@/powerhouse';
 import { useState } from 'react';
 
 export type DeleteDriveProps = {
-    driveName: string;
-    onDeleteDrive: () => void;
+    uiDriveNode: UiDriveNode;
+    handleDeleteDrive: () => void;
     onCancel: () => void;
 };
 
 export function DeleteDrive(props: DeleteDriveProps) {
+    const { uiDriveNode, handleDeleteDrive, onCancel } = props;
     const [driveNameInput, setDriveNameInput] = useState('');
 
-    const isAllowedToDelete = driveNameInput === props.driveName;
+    const isAllowedToDelete = driveNameInput === uiDriveNode.name;
 
-    function handleDeleteDrive() {
+    function deleteDrive() {
         if (isAllowedToDelete) {
-            props.onDeleteDrive();
+            handleDeleteDrive();
         }
     }
 
@@ -32,15 +33,11 @@ export function DeleteDrive(props: DeleteDriveProps) {
                 icon={<Icon name="lock" />}
             />
             <div className="flex gap-3">
-                <Button
-                    onClick={props.onCancel}
-                    color="light"
-                    className="w-full"
-                >
+                <Button onClick={onCancel} color="light" className="w-full">
                     Cancel
                 </Button>
                 <Button
-                    onClick={handleDeleteDrive}
+                    onClick={deleteDrive}
                     disabled={!isAllowedToDelete}
                     color="red"
                     className="w-full"

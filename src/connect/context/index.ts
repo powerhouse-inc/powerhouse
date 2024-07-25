@@ -1,2 +1,2 @@
-export * from './ItemsContext';
+export * from './UiNodesContext';
 export * from './WagmiContext';

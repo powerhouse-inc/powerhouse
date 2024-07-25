@@ -1,66 +1,119 @@
 import {
+    ADD_INVALID_TRIGGER,
+    ADD_TRIGGER,
     ConnectDropdownMenu,
-    ConnectDropdownMenuProps,
-    TreeItem,
-    defaultDropdownMenuOptions,
+    DELETE,
+    DragAndDropProps,
+    DropdownMenuHandlers,
+    DUPLICATE,
+    FOLDER,
+    NodeInput,
+    NodeOption,
+    nodeOptionsMap,
+    NodeProps,
+    READ,
+    REMOVE_TRIGGER,
+    RENAME,
+    SyncStatusIcon,
+    TUiNodesContext,
+    UiFolderNode,
+    WRITE,
 } from '@/connect';
-import {
-    DivProps,
-    Icon,
-    UseDraggableTargetProps,
-    useDraggableTarget,
-} from '@/powerhouse';
-import {
-    TreeViewInput,
-    TreeViewInputProps,
-} from '@/powerhouse/components/tree-view-input';
+import { Icon, useDraggableTarget } from '@/powerhouse';
 import React, { useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { SyncStatusIcon } from '../status-icon';
 
-type FolderItem = object;
-
-export interface FolderItemProps
-    extends Omit<DivProps, 'onDragEnd' | 'onDragStart' | 'onDropEvent'> {
-    title: string;
-    itemOptions?: ConnectDropdownMenuProps['items'];
-    onOptionsClick: ConnectDropdownMenuProps['onItemClick'];
-    mode?: 'write' | 'read';
-    onSubmitInput: TreeViewInputProps['onSubmitInput'];
-    onCancelInput: TreeViewInputProps['onCancelInput'];
-    item: TreeItem;
-    onDragStart?: UseDraggableTargetProps<TreeItem>['onDragStart'];
-    onDragEnd?: UseDraggableTargetProps<TreeItem>['onDragEnd'];
-    onDropEvent?: UseDraggableTargetProps<TreeItem>['onDropEvent'];
-    isAllowedToCreateDocuments?: boolean;
-    displaySyncIcon?: boolean;
-}
+export type FolderItemProps = TUiNodesContext &
+    DragAndDropProps &
+    NodeProps & {
+        uiFolderNode: UiFolderNode;
+        className?: string;
+    };
 
 export const FolderItem: React.FC<FolderItemProps> = ({
-    title,
-    itemOptions,
-    mode = 'read',
-    onSubmitInput,
-    onCancelInput,
-    onOptionsClick,
-    item,
+    uiFolderNode,
+    isAllowedToCreateDocuments,
+    nodeOptions,
+    isRemoteDrive,
+    className,
+    setSelectedNode,
+    onRenameNode,
+    onDuplicateNode,
+    onDeleteNode,
     onDragEnd,
     onDragStart,
     onDropEvent,
-    isAllowedToCreateDocuments = true,
-    displaySyncIcon = false,
-    ...divProps
+    onAddTrigger,
+    onRemoveTrigger,
+    onAddInvalidTrigger,
 }) => {
-    const containerRef = useRef(null);
+    const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
     const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
     const { dropProps, dragProps, isDropTarget } = useDraggableTarget({
-        data: item,
+        data: uiFolderNode,
         onDragEnd,
         onDragStart,
         onDropEvent,
     });
 
-    const isReadMode = mode === 'read';
+    const containerRef = useRef(null);
+
+    const isReadMode = mode === READ;
+
+    function onCancel() {
+        setMode(READ);
+    }
+
+    function onSubmit(name: string) {
+        onRenameNode(name, uiFolderNode);
+    }
+
+    function onClick() {
+        setSelectedNode(uiFolderNode);
+    }
+
+    const dropdownMenuHandlers: DropdownMenuHandlers = {
+        [DUPLICATE]: () => onDuplicateNode(uiFolderNode),
+        [RENAME]: () => setMode(WRITE),
+        [DELETE]: () => onDeleteNode(uiFolderNode),
+        [ADD_TRIGGER]: () => onAddTrigger(uiFolderNode.driveId),
+        [REMOVE_TRIGGER]: () => onRemoveTrigger(uiFolderNode.driveId),
+        [ADD_INVALID_TRIGGER]: () => onAddInvalidTrigger(uiFolderNode.driveId),
+    } as const;
+
+    const nodeOptionsForKind = nodeOptions[uiFolderNode.sharingType][FOLDER];
+
+    const dropdownMenuOptions = Object.entries(nodeOptionsMap)
+        .map(([id, option]) => ({
+            ...option,
+            id: id as NodeOption,
+        }))
+        .filter(option => nodeOptionsForKind.includes(option.id));
+
+    function onItemClick(itemId: NodeOption) {
+        const handler = dropdownMenuHandlers[itemId];
+        if (!handler) {
+            console.error(`No handler found for dropdown menu item: ${itemId}`);
+            return;
+        }
+        handler();
+        setIsDropdownMenuOpen(false);
+    }
+
+    const content =
+        isReadMode || !isAllowedToCreateDocuments ? (
+            <div className="ml-3 max-h-6 truncate font-medium text-slate-200">
+                {uiFolderNode.name}
+            </div>
+        ) : (
+            <NodeInput
+                className="ml-3 font-medium"
+                defaultValue={uiFolderNode.name}
+                onCancel={onCancel}
+                onSubmit={onSubmit}
+            />
+        );
+
     const textStyles = isReadMode
         ? 'text-gray-600 hover:text-gray-800'
         : 'text-gray-800';
@@ -68,45 +121,26 @@ export const FolderItem: React.FC<FolderItemProps> = ({
     const containerStyles = twMerge(
         'group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2',
         textStyles,
-        divProps.className,
+        className,
         isDropTarget && 'bg-blue-100',
     );
 
-    const content =
-        isReadMode || !isAllowedToCreateDocuments ? (
-            <>
-                <div className="ml-3 max-h-6 truncate font-medium text-slate-200">
-                    {title}
-                </div>
-            </>
-        ) : (
-            <TreeViewInput
-                className="ml-3 flex-1 font-medium"
-                defaultValue={title}
-                onCancelInput={onCancelInput}
-                onSubmitInput={onSubmitInput}
-            />
-        );
-
     return (
-        <div className="relative" ref={containerRef}>
-            <div
-                {...dropProps}
-                {...dragProps}
-                {...divProps}
-                className={containerStyles}
-            >
-                <div className="relative flex flex-1 flex-row items-center overflow-hidden">
+        <div onClick={onClick} className="relative w-64" ref={containerRef}>
+            <div {...dropProps} {...dragProps} className={containerStyles}>
+                <div className="flex items-center overflow-hidden">
                     <div className="p-1">
                         <div className="relative">
                             <Icon name="folder-close" size={24} />
                             {isReadMode &&
-                                displaySyncIcon &&
-                                item.syncStatus && (
+                                isRemoteDrive &&
+                                uiFolderNode.syncStatus && (
                                     <div className="absolute bottom-[-3px] right-[-2px] size-3 rounded-full bg-white">
                                         <div className="absolute left-[-2px] top-[-2px]">
                                             <SyncStatusIcon
-                                                syncStatus={item.syncStatus}
+                                                syncStatus={
+                                                    uiFolderNode.syncStatus
+                                                }
                                                 overrideSyncIcons={{
                                                     SUCCESS:
                                                         'check-circle-fill',
@@ -120,18 +154,15 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                     {content}
                 </div>
                 {isReadMode && isAllowedToCreateDocuments && (
-                    <div
+                    <button
+                        className="hidden group-hover:block"
                         onClick={e => {
                             e.stopPropagation();
                             setIsDropdownMenuOpen(true);
                         }}
                     >
-                        <Icon
-                            name="vertical-dots"
-                            className="hidden group-hover:inline-block"
-                            size={24}
-                        />
-                    </div>
+                        <Icon name="vertical-dots" />
+                    </button>
                 )}
             </div>
             {isAllowedToCreateDocuments && (
@@ -140,10 +171,10 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                     onOpenChange={() =>
                         setIsDropdownMenuOpen(!isDropdownMenuOpen)
                     }
-                    items={itemOptions || [...defaultDropdownMenuOptions]}
+                    items={dropdownMenuOptions}
                     menuClassName="bg-white cursor-pointer"
                     menuItemClassName="hover:bg-slate-50 px-2"
-                    onItemClick={onOptionsClick}
+                    onItemClick={onItemClick}
                     popoverProps={{
                         triggerRef: containerRef,
                         placement: 'bottom end',

@@ -1,0 +1,45 @@
+import { LOCAL } from '@/connect/constants';
+import { useArgs } from '@storybook/preview-api';
+import { Meta, StoryObj } from '@storybook/react';
+import { AddRemoteDriveModal } from './add-remote-drive-modal';
+
+const meta = {
+    title: 'Connect/Components/Add Remote Drive Modal',
+    component: AddRemoteDriveModal,
+} satisfies Meta<typeof AddRemoteDriveModal>;
+
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {
+    args: {
+        open: true,
+        onSubmit() {},
+        onOpenChange() {},
+        sharingType: LOCAL,
+    },
+    render: function Wrapper(args) {
+        const [, setArgs] = useArgs<typeof args>();
+
+        return (
+            <div className="grid size-full place-items-center">
+                <button
+                    className="rounded-lg bg-red-500 p-4 text-white"
+                    onClick={() => {
+                        setArgs({
+                            ...args,
+                            modalProps: {
+                                ...args.modalProps,
+                                open: true,
+                            },
+                        });
+                    }}
+                >
+                    Open Modal
+                </button>
+                <AddRemoteDriveModal {...args} />
+            </div>
+        );
+    },
+};

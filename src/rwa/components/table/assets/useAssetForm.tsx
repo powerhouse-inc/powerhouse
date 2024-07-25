@@ -122,7 +122,7 @@ export function useAssetForm(
                 label: 'CUSIP',
                 Input: () =>
                     operation === 'view' ? (
-                        item?.CUSIP ?? 'Not available'
+                        (item?.CUSIP ?? 'Not available')
                     ) : (
                         <RWATableTextInput
                             {...register('CUSIP', {
@@ -151,7 +151,7 @@ export function useAssetForm(
                 label: 'ISIN',
                 Input: () =>
                     operation === 'view' ? (
-                        item?.ISIN ?? 'Not available'
+                        (item?.ISIN ?? 'Not available')
                     ) : (
                         <RWATableTextInput
                             {...register('ISIN', {

@@ -1,3 +1,4 @@
+import { mockLocalDrive } from '@/connect/utils';
 import { useArgs } from '@storybook/preview-api';
 import { Meta, StoryObj } from '@storybook/react';
 import { DriveSettingsModal } from '.';
@@ -13,18 +14,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
     args: {
-        formProps: {
-            driveName: 'My Drive',
-            sharingType: 'PRIVATE',
-            availableOffline: false,
-            location: 'CLOUD',
-            onSubmit() {},
-            onCancel() {},
-            onDeleteDrive() {},
-        },
-        modalProps: {
-            open: true,
-        },
+        uiDriveNode: mockLocalDrive,
+        onChangeAvailableOffline() {},
+        onRenameDrive() {},
+        onChangeSharingType() {},
+        onDeleteDrive() {},
+        onOpenChange() {},
+        open: true,
     },
     render: function Wrapper(args) {
         const [, setArgs] = useArgs<typeof args>();
@@ -55,19 +51,6 @@ export const Default: Story = {
                                 modalProps: {
                                     ...args.modalProps,
                                     open,
-                                },
-                            });
-                        },
-                    }}
-                    formProps={{
-                        ...args.formProps,
-                        onSubmit: data => {
-                            console.log(data);
-                            setArgs({
-                                ...args,
-                                formProps: {
-                                    ...args.formProps,
-                                    ...data,
                                 },
                             });
                         },

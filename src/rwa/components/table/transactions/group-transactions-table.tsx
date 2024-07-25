@@ -98,11 +98,12 @@ export function makeGroupTransactionsTableItems(
             cashTransactionSign,
         );
         const totalFees = feesTransactions.includes(transaction.type)
-            ? maybeAddSignToAmount(
+            ? (maybeAddSignToAmount(
                   transaction.cashTransaction?.amount,
                   transaction.type === FEES_INCOME ? -1 : 1,
-              ) ?? 0
-            : transaction.fees?.reduce((acc, fee) => acc + fee.amount, 0) ?? 0;
+              ) ?? 0)
+            : (transaction.fees?.reduce((acc, fee) => acc + fee.amount, 0) ??
+              0);
         const cashBalanceChange = transaction.cashBalanceChange;
 
         return {
@@ -138,9 +139,7 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
     const { transactions, portfolio } = state;
     const { operation, setOperation, showForm, existingState } =
         useDocumentOperationState({ state });
-    const fixedIncomes = portfolio.filter(a =>
-        isFixedIncomeAsset(a),
-    ) as FixedIncome[];
+    const fixedIncomes = portfolio.filter(a => isFixedIncomeAsset(a));
 
     const [filteredTransactions, setFilteredTransactions] =
         useState(transactions);

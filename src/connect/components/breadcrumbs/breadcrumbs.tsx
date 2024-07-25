@@ -1,47 +1,35 @@
-import { useGetItemByPath } from '@/connect';
-import { DivProps, Icon } from '@/powerhouse';
+import { NodeProps, TUiNodesContext, UiNode } from '@/connect';
+import { Icon } from '@/powerhouse';
 import { useState } from 'react';
 import { AddNewItemInput } from './add-new-item-input';
 
-export type BreadcrumbsProps = DivProps & {
-    filterPath: string;
-    onItemClick?: (
-        event: React.MouseEvent<HTMLDivElement>,
-        filterPath: string,
-    ) => void;
-    onAddNewItem: (basePath: string, option: 'new-folder') => void;
-    onSubmitInput: (basepath: string, label: string) => void;
-    onCancelInput: (basePath: string) => void;
-    isAllowedToCreateDocuments?: boolean;
-};
+export type BreadcrumbsProps = NodeProps & TUiNodesContext;
 
-/**
- * The `Breadcrumbs` component displays the current path (provided by the filterPath prop).
- * It also allows the user to add a new folder to the current path.
- */
 export function Breadcrumbs(props: BreadcrumbsProps) {
-    const [isAddingNewItem, setIsAddingNewItem] = useState(false);
-
-    const { isAllowedToCreateDocuments = true } = props;
+    const {
+        selectedNodePath,
+        isAllowedToCreateDocuments,
+        onAddAndSelectNewFolder,
+    } = props;
+    const [isAddingNewItem, setIsAddingNewFolder] = useState(false);
 
     function onAddNew() {
-        setIsAddingNewItem(true);
-        props.onAddNewItem(props.filterPath, 'new-folder');
+        setIsAddingNewFolder(true);
     }
 
-    const filterSegments = props.filterPath
-        .split('/')
-        .map((_, index, arr) => arr.slice(0, index + 1).join('/'));
+    async function onSubmit(name: string) {
+        await onAddAndSelectNewFolder(name);
+        setIsAddingNewFolder(false);
+    }
+
+    function onCancel() {
+        setIsAddingNewFolder(false);
+    }
 
     return (
         <div className="flex h-9 flex-row items-center gap-2 p-6 text-gray-500">
-            {filterSegments.map(routeSegment => (
-                <Breadcrumb
-                    key={routeSegment}
-                    filterPath={routeSegment}
-                    onClick={e => props.onItemClick?.(e, routeSegment)}
-                    className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
-                />
+            {selectedNodePath.map(node => (
+                <Breadcrumb {...props} key={node.id} node={node} />
             ))}
             <>
                 {isAllowedToCreateDocuments && (
@@ -50,17 +38,8 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
                             <AddNewItemInput
                                 defaultValue="New Folder"
                                 placeholder="New Folder"
-                                onSubmit={value => {
-                                    props.onSubmitInput(
-                                        props.filterPath,
-                                        value,
-                                    );
-                                    setIsAddingNewItem(false);
-                                }}
-                                onCancel={() => {
-                                    props.onCancelInput(props.filterPath);
-                                    setIsAddingNewItem(false);
-                                }}
+                                onSubmit={onSubmit}
+                                onCancel={onCancel}
                             />
                         ) : (
                             <button
@@ -78,30 +57,21 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
     );
 }
 
-export type BreadcrumbProps = {
-    onClick?: (
-        event: React.MouseEvent<HTMLDivElement>,
-        filterPath: string,
-    ) => void;
-    filterPath: string;
-    className?: string;
-    isAllowedToCreateDocuments?: boolean;
+export type BreadcrumbProps = BreadcrumbsProps & {
+    node: UiNode;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {
-    const label = props.filterPath.split('/').pop();
-
-    const getItemByPath = useGetItemByPath();
-    const item = getItemByPath(props.filterPath);
+    const { node, setSelectedNode } = props;
 
     return (
         <>
             <div
                 role="button"
-                className={props.className}
-                onClick={e => props.onClick?.(e, props.filterPath)}
+                className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
+                onClick={() => setSelectedNode(node)}
             >
-                {item?.label || label}
+                {node.name}
             </div>
             /
         </>
