@@ -42,7 +42,7 @@ function getSelectedNodeFromPathname(
     driveIdFromPathname: string | undefined,
     nodeNamesFromPathname: string | undefined,
 ) {
-    if (!driveIdFromPathname || !nodeNamesFromPathname) {
+    if (!driveIdFromPathname) {
         return driveNodes[0];
     }
 
@@ -55,6 +55,7 @@ function getSelectedNodeFromPathname(
     );
 
     if (!driveNode) return driveNodes[0];
+    if (!nodeNamesFromPathname) return driveNode;
 
     const nodeNames = nodeNamesFromPathname
         .split('/')
