@@ -38,7 +38,7 @@ function makeDriveNodeUrlComponent(driveNode: UiDriveNode) {
 }
 
 function getSelectedNodeFromPathname(
-    driveNodes: UiDriveNode[],
+    driveNodes: (UiDriveNode | null)[],
     driveIdFromPathname: string | undefined,
     nodeNamesFromPathname: string | undefined,
 ) {
@@ -49,17 +49,17 @@ function getSelectedNodeFromPathname(
     const driveId = decodeURIComponent(driveIdFromPathname);
     const driveNode = driveNodes.find(
         node =>
-            node.id === driveId ||
-            node.slug === driveId ||
-            node.name === driveId,
+            node?.id === driveId ||
+            node?.slug === driveId ||
+            node?.name === driveId,
     );
+
+    if (!driveNode) return driveNodes[0];
 
     const nodeNames = nodeNamesFromPathname
         .split('/')
         .filter(Boolean)
         .map(decodeURIComponent);
-
-    if (!driveNode) return driveNodes[0];
 
     let selectedNode: UiNode = driveNode;
 
@@ -84,27 +84,50 @@ function getSelectedNodeFromPathname(
 export const useNodeNavigation = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { search, pathname } = location;
     const params = useParams<RouteParams>();
     const { driveNodes, selectedNode, selectedNodePath, setSelectedNode } =
         useUiNodesContext();
+    const driveIdFromPathname = params.driveId;
+    const nodeNamesFromPathname = params['*'];
+    const selectedNodeFromPathname = getSelectedNodeFromPathname(
+        driveNodes,
+        driveIdFromPathname,
+        nodeNamesFromPathname,
+    );
+    const selectedNodePathname = buildPathname(selectedNodePath);
 
     useEffect(() => {
-        const pathname = buildPathname(selectedNodePath);
-        navigate({ pathname, search: location.search });
-    }, [selectedNodePath, location.search, navigate]);
+        if (!selectedNodePathname || selectedNodePathname === pathname) return;
+
+        navigate({ pathname: selectedNodePathname, search });
+    }, [search, navigate, selectedNodePathname]);
 
     useEffect(() => {
-        if (selectedNode) return;
+        if (selectedNode || !selectedNodeFromPathname) return;
 
-        const driveIdFromPathname = params.driveId;
-        const nodeNamesFromPathname = params['*'];
+        setSelectedNode(selectedNodeFromPathname);
+    }, [selectedNode, selectedNodeFromPathname, setSelectedNode]);
 
+    useEffect(() => {
         const selectedNodeFromPathname = getSelectedNodeFromPathname(
             driveNodes,
             driveIdFromPathname,
             nodeNamesFromPathname,
         );
 
+        if (
+            !selectedNodeFromPathname ||
+            selectedNodeFromPathname.id === selectedNode?.id
+        )
+            return;
+
         setSelectedNode(selectedNodeFromPathname);
-    }, [driveNodes, params, selectedNode, setSelectedNode]);
+    }, [
+        driveNodes,
+        driveIdFromPathname,
+        nodeNamesFromPathname,
+        selectedNode,
+        setSelectedNode,
+    ]);
 };
