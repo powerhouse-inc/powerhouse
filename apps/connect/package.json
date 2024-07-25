@@ -93,7 +93,7 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.149",
+        "@powerhousedao/design-system": "1.0.0-alpha.150",
         "@sentry/react": "^7.109.0",
         "@tanstack/react-virtual": "^3.8.1",
         "did-key-creator": "^1.2.0",
@@ -104,7 +104,6 @@
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",
         "graphql": "^16.8.1",
-        "history": "^5.3.0",
         "i18next": "^23.7.6",
         "jotai": "^2.1.0",
         "localforage": "^1.10.0",

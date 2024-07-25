@@ -122,18 +122,13 @@ export const useNodeNavigation = () => {
             nodeNamesFromPathname,
         );
 
-        if (
-            !selectedNodeFromPathname ||
-            selectedNodeFromPathname.id === selectedNode?.id
-        )
-            return;
+        if (!selectedNodeFromPathname) return;
 
         setSelectedNode(selectedNodeFromPathname);
     }, [
         driveNodes,
         driveIdFromPathname,
         nodeNamesFromPathname,
-        selectedNode,
         setSelectedNode,
     ]);
 };

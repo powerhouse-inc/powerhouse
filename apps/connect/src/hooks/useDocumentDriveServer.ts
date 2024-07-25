@@ -1,4 +1,10 @@
-import { ERROR, FILE, SharingType, UiNode } from '@powerhousedao/design-system';
+import {
+    ERROR,
+    FILE,
+    LOCAL,
+    SharingType,
+    UiNode,
+} from '@powerhousedao/design-system';
 import {
     DriveInput,
     IDocumentDriveServer,
@@ -544,9 +550,9 @@ export function useDocumentDriveServer(
     const getSyncStatus = useCallback(
         async (
             syncId: string,
-            type: DriveType,
+            sharingType: SharingType,
         ): Promise<SyncStatus | undefined> => {
-            if (type === 'LOCAL_DRIVE') return;
+            if (sharingType === LOCAL) return;
             try {
                 return server.getSyncStatus(syncId);
             } catch (error) {
