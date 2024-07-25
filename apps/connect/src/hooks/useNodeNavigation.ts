@@ -98,18 +98,23 @@ export const useNodeNavigation = () => {
     );
     const selectedNodePathname = buildPathname(selectedNodePath);
 
+    // when selectedNodePathname changes, navigate to the new path
     useEffect(() => {
         if (!selectedNodePathname || selectedNodePathname === pathname) return;
 
         navigate({ pathname: selectedNodePathname, search });
     }, [search, navigate, selectedNodePathname]);
 
+    // on first load, set the selected node from the pathname
+    // defaults to setting the first drive node if no drive node is found
     useEffect(() => {
         if (selectedNode || !selectedNodeFromPathname) return;
 
         setSelectedNode(selectedNodeFromPathname);
     }, [selectedNode, selectedNodeFromPathname, setSelectedNode]);
 
+    // respond to changes in the url (browser back and forward buttons)
+    // update the selected node accordingly
     useEffect(() => {
         const selectedNodeFromPathname = getSelectedNodeFromPathname(
             driveNodes,
