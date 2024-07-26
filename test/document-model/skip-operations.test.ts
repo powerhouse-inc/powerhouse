@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import {
     reducer,
     DocumentModel,
@@ -7,7 +8,7 @@ import {
     utils as documentModelUtils,
 } from '../../src/document-model';
 import { utils } from '../../src/document';
-import { createDocument } from '../../src/document/utils';
+import { createDocument, documentHelpers } from '../../src/document/utils';
 import {
     setAuthorName,
     setAuthorWebsite,
@@ -412,7 +413,7 @@ describe('DocumentModel Class', () => {
     });
 
     describe('state replayOperations', () => {
-        it.skip('skipped operations should be ignored when re-calculate document state', () => {
+        it.only('skipped operations should be ignored when re-calculate document state', () => {
             const initialState = documentModelUtils.createExtendedState();
             const document = createDocument<
                 DocumentModelState,
@@ -448,12 +449,14 @@ describe('DocumentModel Class', () => {
 
             const replayedDoc = utils.replayOperations(
                 initialState,
-                newDocument.operations,
+                documentHelpers.garbageCollectDocumentOperations(
+                    newDocument.operations,
+                ),
                 stateReducer,
             );
 
             expect(replayedDoc.revision.global).toBe(6);
-            expect(replayedDoc.operations.global.length).toBe(6);
+            expect(replayedDoc.operations.global.length).toBe(3);
             expect(replayedDoc.state.global).toMatchObject({
                 id: '<id>',
                 name: '',

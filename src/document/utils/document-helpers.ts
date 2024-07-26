@@ -610,3 +610,24 @@ export function filterDocumentOperationsResultingState<A extends Action>(
         {} as DocumentOperations<A>,
     );
 }
+
+/**
+ * Calculates the difference between two arrays of operations.
+ * Returns an array of operations that are present in `clearedOperationsA` but not in `clearedOperationsB`.
+ *
+ * @template A - The type of the operations.
+ * @param {A[]} clearedOperationsA - The first array of operations.
+ * @param {A[]} clearedOperationsB - The second array of operations.
+ * @returns {A[]} - The difference between the two arrays of operations.
+ */
+export function diffOperations<A extends OperationIndex>(
+    clearedOperationsA: A[],
+    clearedOperationsB: A[],
+): A[] {
+    return clearedOperationsA.filter(
+        operationA =>
+            !clearedOperationsB.some(
+                operationB => operationA.index === operationB.index,
+            ),
+    );
+}

@@ -18,6 +18,7 @@ import {
     Operation,
     MappedOperation,
     ReducerOptions,
+    UndoAction,
 } from '../types';
 import { hash } from './node';
 import {
@@ -41,6 +42,10 @@ export function isNoopOperation(op: Partial<Operation>): boolean {
 
 export function isUndoRedo(action: Action): action is UndoRedoAction {
     return [UNDO, REDO].includes(action.type);
+}
+
+export function isUndo(action: Action): action is UndoAction {
+    return action.type === UNDO;
 }
 
 export function isBaseAction(action: Action): action is BaseAction {
@@ -258,36 +263,6 @@ export function mapSkippedOperations<A extends Action>(
     }
 
     return scopeOpsWithIgnore.reverse();
-}
-
-export function calculateSkipsLeft<A extends Action>(
-    operations: Operation<BaseAction | A>[],
-    currentIndex: number,
-    skip: number,
-): number {
-    const sortedOperations = operations
-        .slice()
-        .sort((a, b) => a.skip - b.skip)
-        .sort((a, b) => a.index - b.index);
-
-    let skipsLeft = skip;
-    let skipsToPerform = 0;
-    let lastIndex = currentIndex;
-
-    for (const operation of sortedOperations.reverse()) {
-        const distance = lastIndex - operation.index;
-
-        skipsLeft = skipsLeft - distance;
-
-        if (skipsLeft > -1) {
-            skipsToPerform++;
-            lastIndex = operation.index;
-        } else {
-            break;
-        }
-    }
-
-    return skipsToPerform;
 }
 
 // Flattens the operations from all scopes into
