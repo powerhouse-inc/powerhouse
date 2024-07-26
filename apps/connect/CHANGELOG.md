@@ -1,3 +1,10 @@
+# [1.0.0-dev.46](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.45...v1.0.0-dev.46) (2024-07-26)
+
+
+### Features
+
+* fix merge conflict when adding a new pullResponder ([6941c0a](https://github.com/powerhouse-inc/document-model-electron/commit/6941c0a836cd43aca631b626f2312957a201ca50))
+
 # [1.0.0-dev.45](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.44...v1.0.0-dev.45) (2024-07-22)
 
 
