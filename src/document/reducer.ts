@@ -84,6 +84,8 @@ export function updateHeader<T extends Document>(
  *
  * @param state The current state of the document.
  * @param action The action being applied to the document.
+ * @param skip The number of operations to skip before applying the action.
+ * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
  * @returns The updated document state.
  */
 function updateOperations<T extends Document>(
@@ -146,6 +148,8 @@ function updateOperations<T extends Document>(
  *
  * @param state The current state of the document.
  * @param action The action being applied to the document.
+ * @param skip The number of operations to skip before applying the action.
+ * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
  * @returns The updated document state.
  */
 export function updateDocument<T extends Document>(
@@ -392,8 +396,6 @@ export function baseReducer<T, A extends Action, L>(
     const shouldProcessSkipOperation =
         !ignoreSkipOperations &&
         (skipValue > 0 || ('index' in _action && _action.skip > 0));
-
-    // ignore undo redo for now
 
     if (isUndoRedo(_action)) {
         const {
