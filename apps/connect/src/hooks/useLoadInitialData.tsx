@@ -36,7 +36,7 @@ export const useLoadInitialData = () => {
     useEffect(() => {
         const unsubscribe = serverSubscribeUpdates(clientErrorHandler);
         return unsubscribe;
-    }, [serverSubscribeUpdates, documentDrives.length, clientErrorHandler]);
+    }, [serverSubscribeUpdates, documentDrives, clientErrorHandler]);
 
     useEffect(() => {
         driveNodes.forEach(drive => {
