@@ -37,7 +37,7 @@ export default (
                 .then(drives => {
                     if (
                         !drives.length &&
-                        connectConfig.drives.sections.local.enabled
+                        connectConfig.drives.sections.LOCAL.enabled
                     ) {
                         documentDrive
                             .addDrive({

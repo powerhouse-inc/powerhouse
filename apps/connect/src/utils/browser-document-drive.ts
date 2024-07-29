@@ -19,7 +19,7 @@ BrowserDocumentDriveServer.initialize()
             .then(drives => {
                 if (
                     !drives.length &&
-                    connectConfig.drives.sections.local.enabled
+                    connectConfig.drives.sections.LOCAL.enabled
                 ) {
                     BrowserDocumentDriveServer.addDrive({
                         global: {

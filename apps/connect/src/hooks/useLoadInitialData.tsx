@@ -1,39 +1,33 @@
 import {
-    BaseTreeItem,
-    decodeID,
+    CONFLICT,
+    ERROR,
+    LOCAL,
+    SUCCESS,
     toast,
-    useGetItemById,
-    useItemActions,
-    useItemsContext,
-    usePathContent,
+    UiDriveNode,
 } from '@powerhousedao/design-system';
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReloadConnectToast } from 'src/components/toast';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { useDrivesContainer } from 'src/hooks/useDrivesContainer';
-import { useSelectedPath } from 'src/store/document-drive';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-server';
 import { useClientErrorHandler } from './useClientErrorHandler';
 import { useDocumentDrives } from './useDocumentDrives';
 import { useLoadDefaultDrives } from './useLoadDefaultDrives';
-import { useNavigateToItemId } from './useNavigateToItemId';
 import { isLatestVersion } from './utils';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
-    const { setBaseItems, items } = useItemsContext();
-    const { documentDrives, onSyncStatus } = useDocumentDriveServer();
-    const [selectedPath] = useSelectedPath();
-    const actions = useItemActions();
-    const { driveToBaseItems } = useDrivesContainer();
-    const drives = usePathContent();
-    const prevDrivesState = useRef([...drives]);
-    const drivesWithError = useRef<string[]>([]);
-    const isFirstLoad = useRef(true);
-    const navigateToItemId = useNavigateToItemId();
-    const getItemById = useGetItemById();
+    const {
+        documentDrives,
+        driveNodes,
+        setDriveNodes,
+        makeUiDriveNodes,
+        onSyncStatus,
+    } = useUiNodes();
+    const prevDrivesState = useRef([...driveNodes]);
+    const drivesWithError = useRef<UiDriveNode[]>([]);
     const [, , serverSubscribeUpdates] = useDocumentDrives(server);
     const clientErrorHandler = useClientErrorHandler();
 
@@ -42,10 +36,10 @@ export const useLoadInitialData = () => {
     useEffect(() => {
         const unsubscribe = serverSubscribeUpdates(clientErrorHandler);
         return unsubscribe;
-    }, [serverSubscribeUpdates, documentDrives]);
+    }, [serverSubscribeUpdates, documentDrives, clientErrorHandler]);
 
     useEffect(() => {
-        drives.forEach(drive => {
+        driveNodes.forEach(drive => {
             const prevDrive = prevDrivesState.current.find(
                 prevDrive => prevDrive.id === drive.id,
             );
@@ -53,13 +47,13 @@ export const useLoadInitialData = () => {
             if (!prevDrive) return;
 
             if (
-                drive.type !== 'LOCAL_DRIVE' &&
-                drive.syncStatus === 'SUCCESS' &&
-                drivesWithError.current.includes(drive.id)
+                drive.sharingType !== LOCAL &&
+                drive.syncStatus === SUCCESS &&
+                drivesWithError.current.includes(drive)
             ) {
                 // remove the drive from the error list
                 drivesWithError.current = drivesWithError.current.filter(
-                    id => id !== drive.id,
+                    d => d.id !== drive.id,
                 );
 
                 return toast(t('notifications.driveSyncSuccess'), {
@@ -68,12 +62,11 @@ export const useLoadInitialData = () => {
             }
 
             if (
-                (drive.syncStatus === 'CONFLICT' ||
-                    drive.syncStatus === 'ERROR') &&
+                (drive.syncStatus === CONFLICT || drive.syncStatus === ERROR) &&
                 drive.syncStatus !== prevDrive.syncStatus
             ) {
                 // add the drive to the error list
-                drivesWithError.current.push(drive.id);
+                drivesWithError.current.push(drive);
 
                 isLatestVersion().then(result => {
                     if (!result) {
@@ -85,8 +78,8 @@ export const useLoadInitialData = () => {
 
                 return toast(
                     t(
-                        `notifications.${drive.syncStatus === 'CONFLICT' ? 'driveSyncConflict' : 'driveSyncError'}`,
-                        { drive: drive.label },
+                        `notifications.${drive.syncStatus === CONFLICT ? 'driveSyncConflict' : 'driveSyncError'}`,
+                        { drive: drive.name },
                     ),
                     {
                         type: 'connect-warning',
@@ -95,67 +88,23 @@ export const useLoadInitialData = () => {
             }
         });
 
-        prevDrivesState.current = [...drives];
-    }, [drives]);
+        prevDrivesState.current = [...driveNodes];
+    }, [driveNodes, t]);
 
-    const updateBaseItems = useCallback(
+    const updateUiDriveNodes = useCallback(
         async (documentDrives: DocumentDriveDocument[]) => {
-            const baseItems: Array<BaseTreeItem> =
-                documentDrives.length > 0
-                    ? (
-                          await Promise.all(
-                              documentDrives.map(driveToBaseItems),
-                          )
-                      ).flat()
-                    : [];
-
-            setBaseItems(baseItems);
+            const uiDriveNodes = await makeUiDriveNodes(documentDrives);
+            setDriveNodes(uiDriveNodes);
         },
-        [documentDrives],
+        [makeUiDriveNodes, setDriveNodes],
     );
 
     useEffect(() => {
-        updateBaseItems(documentDrives).catch(console.error);
-    }, [documentDrives, updateBaseItems]);
+        updateUiDriveNodes(documentDrives).catch(console.error);
+    }, [documentDrives, updateUiDriveNodes]);
 
     useEffect(() => {
-        const unsub = onSyncStatus(() => updateBaseItems(documentDrives));
+        const unsub = onSyncStatus(() => updateUiDriveNodes(documentDrives));
         return unsub;
-    }, [documentDrives, onSyncStatus, updateBaseItems]);
-
-    // Auto select first drive if there is no selected path
-    useEffect(() => {
-        if (!selectedPath && items.length > 0) {
-            const driveID = documentDrives[0].state.global.id;
-
-            actions.setSelectedItem(driveID);
-            actions.setExpandedItem(driveID, true);
-
-            navigateToItemId(driveID);
-        }
-    }, [items, selectedPath]);
-
-    // expand the selected path in the Sidebar on first load
-    useEffect(() => {
-        if (selectedPath && isFirstLoad.current) {
-            isFirstLoad.current = false;
-            const pathItemsIds = selectedPath.split('/');
-
-            for (const id of pathItemsIds) {
-                const item = getItemById(decodeID(id));
-                if (item?.type === 'FILE') return;
-
-                actions.setExpandedItem(decodeID(id), true);
-            }
-
-            // get the last item in the path and select it
-            const lastItemId = pathItemsIds[pathItemsIds.length - 1];
-            if (lastItemId) {
-                const item = getItemById(decodeID(lastItemId));
-                if (item?.type === 'FILE') return;
-
-                actions.setSelectedItem(decodeID(lastItemId));
-            }
-        }
-    }, [selectedPath]);
+    }, [documentDrives, onSyncStatus, updateUiDriveNodes]);
 };

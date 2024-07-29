@@ -1,3 +1,5 @@
+import { CLOUD, LOCAL, PUBLIC } from "@powerhousedao/design-system";
+
 const DISABLE_ADD_PUBLIC_DRIVES =
     import.meta.env.VITE_DISABLE_ADD_PUBLIC_DRIVES || undefined;
 const DISABLE_ADD_CLOUD_DRIVES =
@@ -41,17 +43,17 @@ export default {
     },
     drives: {
         sections: {
-            local: {
+            [LOCAL]: {
                 enabled: LOCAL_DRIVES_ENABLED !== 'false',
                 allowAdd: DISABLE_ADD_LOCAL_DRIVES !== 'true',
                 allowDelete: DISABLE_DELETE_LOCAL_DRIVES !== 'true',
             },
-            cloud: {
+            [CLOUD]: {
                 enabled: CLOUD_DRIVES_ENABLED !== 'false',
                 allowAdd: DISABLE_ADD_CLOUD_DRIVES !== 'true',
                 allowDelete: DISABLE_DELETE_CLOUD_DRIVES !== 'true',
             },
-            public: {
+            [PUBLIC]: {
                 enabled: PUBLIC_DRIVES_ENABLED !== 'false',
                 allowAdd: DISABLE_ADD_PUBLIC_DRIVES !== 'true',
                 allowDelete: DISABLE_DELETE_PUBLIC_DRIVES !== 'true',
