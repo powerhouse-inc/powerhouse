@@ -1,24 +1,15 @@
-import BudgetImg from '@/assets/icons/budget.png';
-import GlobalImg from '@/assets/icons/global.png';
-import LegalImg from '@/assets/icons/legal.png';
-import ProfileImg from '@/assets/icons/profile.png';
+import BudgetStatementImg from '@/assets/icons/budget.png';
 import MakerdaoRWAPortfolioImg from '@/assets/icons/rwa-report.png';
-import TemplateImg from '@/assets/icons/template.png';
+import DefaultImg from '@/assets/icons/template.png';
 import {
     BUDGET,
-    GLOBAL,
-    LEGAL,
+    DEFAULT,
     MAKERDAO_RWA_PORTFOLIO,
-    PROFILE,
     TDocumentType,
-    TEMPLATE,
 } from '@/connect';
 
 export const iconMap: Record<TDocumentType, string> = {
-    [LEGAL]: LegalImg,
-    [GLOBAL]: GlobalImg,
-    [PROFILE]: ProfileImg,
-    [BUDGET]: BudgetImg,
-    [TEMPLATE]: TemplateImg,
+    [BUDGET]: BudgetStatementImg,
+    [DEFAULT]: DefaultImg,
     [MAKERDAO_RWA_PORTFOLIO]: MakerdaoRWAPortfolioImg,
 };

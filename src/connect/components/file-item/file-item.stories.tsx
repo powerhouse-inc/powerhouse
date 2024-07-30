@@ -1,3 +1,4 @@
+import { documentTypes } from '@/connect/constants';
 import {
     mockNodeOptions,
     mockUiFileNode,
@@ -36,11 +37,14 @@ export const Default: Story = {
         ],
     },
     render: function Wrapper(args) {
-        const fileNodes = Array.from({ length: 100 }).map((_, index) => ({
-            ...args.uiFileNode,
-            id: `file-${index}`,
-            name: `File ${index} lorem ipsum dolor sit amet consectetur adipiscing elit`,
-        }));
+        const fileNodes = [...documentTypes, 'SOME RANDOM DOCUMENT TYPE'].map(
+            (documentType, index) => ({
+                ...args.uiFileNode,
+                documentType,
+                id: `file-${index}`,
+                name: `${documentType} document`,
+            }),
+        );
         return (
             <div className="flex flex-wrap gap-2">
                 {fileNodes.map(node => (
