@@ -1,16 +1,20 @@
+import { useDrop } from '@powerhousedao/design-system';
 import { useAtomValue } from 'jotai';
-import { useEffect, useRef } from 'react';
-import { useDropFile, useOpenFile } from 'src/hooks';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import { useEffect } from 'react';
+import { useOpenFile } from 'src/hooks';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 import { documentModelsAtom } from 'src/store/document-model';
 import { preloadTabs, useTabs } from 'src/store/tabs';
 import Button from '../button';
 
 export default function TabNew() {
-    const ref = useRef(null);
     const { selectedTab, updateTab, fromDocument } = useTabs();
-    const { documentDrives, addFile, openFile } = useDocumentDriveServer();
-    const { dropProps, isDropTarget } = useDropFile(ref);
+    const uiNodes = useUiNodes();
+    const { selectedDriveNode, documentDrives, addFile, openFile } = uiNodes;
+    const { isDropTarget, onDragOver, onDragLeave, onDrop } = useDrop({
+        ...uiNodes,
+        uiNode: selectedDriveNode,
+    });
     const documentModels = useAtomValue(documentModelsAtom);
 
     const handleOpenFile = useOpenFile(async (document, file) => {
@@ -56,8 +60,9 @@ export default function TabNew() {
                 Open existing file
             </h2>
             <div
-                {...dropProps}
-                ref={ref}
+                onDrop={onDrop}
+                onDragLeave={onDragLeave}
+                onDragOver={onDragOver}
                 className={`h-60 rounded-xl border-2 border-dashed border-gray-500/20
                 ${
                     isDropTarget ? 'bg-slate-50' : 'bg-white'

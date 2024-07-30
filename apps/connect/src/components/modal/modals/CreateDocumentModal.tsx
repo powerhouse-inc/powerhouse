@@ -1,13 +1,12 @@
 import {
+    CreateDocumentModal as ConnectCreateDocumentModal,
     FILE,
-    RenameNodeModal,
     TDocumentType,
     UiDriveNode,
     UiFolderNode,
     UiNode,
 } from '@powerhousedao/design-system';
 import { DocumentModel } from 'document-model/document';
-import { useTranslation } from 'react-i18next';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { makeNodeSlugFromNodeName } from 'src/utils/slug';
 
@@ -30,7 +29,6 @@ export const CreateDocumentModal: React.FC<
         documentModel,
     } = props;
 
-    const { t } = useTranslation();
     const { addDocument } = useDocumentDriveServer();
 
     const onCreateDocument = async (documentName: string) => {
@@ -63,12 +61,8 @@ export const CreateDocumentModal: React.FC<
     };
 
     return (
-        <RenameNodeModal
+        <ConnectCreateDocumentModal
             open={open}
-            header={t('modals.createDocument.header')}
-            placeholder={t('modals.createDocument.placeholder')}
-            cancelLabel={t('common.cancel')}
-            continueLabel={t('common.create')}
             onContinue={onCreateDocument}
             onOpenChange={status => {
                 if (!status) return onClose();

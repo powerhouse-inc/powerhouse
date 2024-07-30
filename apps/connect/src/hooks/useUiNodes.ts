@@ -2,7 +2,6 @@ import {
     AddLocalDriveInput,
     AddRemoteDriveInput,
     CLOUD,
-    DragAndDropProps,
     DRIVE,
     FILE,
     FOLDER,
@@ -25,7 +24,6 @@ import { getNodeOptions } from 'src/utils/drive-sections';
 import { makeNodeSlugFromNodeName } from 'src/utils/slug';
 import { useDocumentDriveById } from './useDocumentDriveById';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
-import { useOnDropEvent } from './useOnDropEvent';
 import { useOpenSwitchboardLink } from './useOpenSwitchboardLink';
 import { useUserPermissions } from './useUserPermissions';
 
@@ -40,7 +38,6 @@ export function useUiNodes() {
         setSelectedNode,
         getParentNode,
     } = uiNodesContext;
-    const onDropEvent = useOnDropEvent();
     const documentDriveServer = useDocumentDriveServer();
     const {
         addFolder,
@@ -214,7 +211,12 @@ export function useUiNodes() {
             if (parentNode.kind === FILE) {
                 throw new Error('Cannot add file to a file');
             }
-            return await addFile(file, parentNode.driveId, file.name, parentNode.id);
+            return await addFile(
+                file,
+                parentNode.driveId,
+                file.name,
+                parentNode.id,
+            );
         },
         [addFile],
     );
@@ -469,24 +471,6 @@ export function useUiNodes() {
         [addTrigger],
     );
 
-    const draDragAndDropProps: DragAndDropProps = useMemo(
-        () => ({
-            onDropEvent,
-            onDropActivate: (dropTargetItem: UiNode) =>
-                setSelectedNode(dropTargetItem),
-            onDragStart: () => setDisableHighlightStyles(true),
-            onDragEnd: () => setDisableHighlightStyles(false),
-            disableDropBetween,
-            disableHighlightStyles,
-        }),
-        [
-            disableDropBetween,
-            disableHighlightStyles,
-            onDropEvent,
-            setSelectedNode,
-        ],
-    );
-
     const driveNodesBySharingType = useMemo(
         () =>
             driveNodes.reduce<Record<SharingType, UiDriveNode[]>>(
@@ -508,11 +492,13 @@ export function useUiNodes() {
             ...documentDriveServer,
             ...uiNodesContext,
             ...userPermissions,
-            ...draDragAndDropProps,
             ...selectedDocumentDrive,
             nodeOptions,
             driveNodesBySharingType,
             onAddFolder,
+            onAddFile,
+            onCopyNode,
+            onMoveNode,
             onRenameNode,
             onDuplicateNode,
             onDeleteNode,
@@ -530,11 +516,13 @@ export function useUiNodes() {
             documentDriveServer,
             uiNodesContext,
             userPermissions,
-            draDragAndDropProps,
             selectedDocumentDrive,
             nodeOptions,
             driveNodesBySharingType,
             onAddFolder,
+            onAddFile,
+            onCopyNode,
+            onMoveNode,
             onRenameNode,
             onDuplicateNode,
             onDeleteNode,
