@@ -1,3 +1,10 @@
+# [1.0.0-dev.49](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.48...v1.0.0-dev.49) (2024-07-30)
+
+
+### Features
+
+* regenerate lockfile ([b88daf9](https://github.com/powerhouse-inc/document-model-electron/commit/b88daf91e491729e7b25e4e490293be0fa57cd63))
+
 # [1.0.0-dev.48](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.47...v1.0.0-dev.48) (2024-07-30)
 
 
