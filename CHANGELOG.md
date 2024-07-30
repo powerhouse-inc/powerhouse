@@ -1,3 +1,10 @@
+# [1.0.0-alpha.151](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.150...v1.0.0-alpha.151) (2024-07-30)
+
+
+### Features
+
+* fix wrong document type names ([2dcdde7](https://github.com/powerhouse-inc/design-system/commit/2dcdde71cf5a7afe486d6d87b223ebbb0f5f31b6))
+
 # [1.0.0-alpha.150](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.149...v1.0.0-alpha.150) (2024-07-25)
 
 
