@@ -32,10 +32,7 @@
         "update-icons": "node scripts/copyIconsFromDesignSystem.js",
         "e2e": "playwright test",
         "postinstall": "npm run update-icons",
-        "cy:open": "cypress open",
-        "prestart": "npm run update-icons",
-        "prebuild:web": "npm run update-icons",
-        "predev:web": "npm run update-icons"
+        "cy:open": "cypress open"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.3",
