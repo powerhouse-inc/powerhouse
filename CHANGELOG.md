@@ -1,3 +1,10 @@
+# [1.71.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.70.0...v1.71.0) (2024-07-30)
+
+
+### Features
+
+* remove react aria ([#197](https://github.com/powerhouse-inc/document-model-libs/issues/197)) ([64ae046](https://github.com/powerhouse-inc/document-model-libs/commit/64ae046591ce2adefb0db7e68444f525f788b127))
+
 # [1.70.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.69.0...v1.70.0) (2024-07-08)
 
 
