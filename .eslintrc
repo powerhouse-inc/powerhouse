@@ -22,6 +22,7 @@
     },
     "plugins": ["react", "@typescript-eslint"],
     "rules": {
+        "@typescript-eslint/unbound-method": "warn",
         "@typescript-eslint/no-non-null-assertion": "warn",
         "@typescript-eslint/use-unknown-in-catch-callback-variable": "warn",
         "@typescript-eslint/restrict-plus-operands": "warn",
