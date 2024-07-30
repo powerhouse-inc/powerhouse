@@ -1,4 +1,4 @@
-import { AssetsTable, AssetsTableProps } from '@powerhousedao/design-system';
+import { AssetsTableProps, PortfolioTab } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
 import { useCallback } from 'react';
@@ -133,22 +133,15 @@ export const Portfolio = (props: IProps) => {
         );
 
     return (
-        <div>
-            <h1 className="text-lg font-bold mb-2">Portfolio</h1>
-            <p className="text-xs text-gray-600 mb-4">
-                Details on the distribution of assets among different financial
-                institutions or investment vehicles.
-            </p>
-            <AssetsTable
-                state={state}
-                isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-                isAllowedToEditDocuments={isAllowedToEditDocuments}
-                onSubmitEdit={onSubmitEdit}
-                onSubmitCreate={onSubmitCreate}
-                onSubmitDelete={onSubmitDelete}
-                onSubmitCreateFixedIncomeType={onSubmitCreateFixedIncomeType}
-                onSubmitCreateSpv={onSubmitCreateSpv}
-            />
-        </div>
+        <PortfolioTab
+            state={state}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            isAllowedToEditDocuments={isAllowedToEditDocuments}
+            onSubmitEdit={onSubmitEdit}
+            onSubmitCreate={onSubmitCreate}
+            onSubmitDelete={onSubmitDelete}
+            onSubmitCreateFixedIncomeType={onSubmitCreateFixedIncomeType}
+            onSubmitCreateSpv={onSubmitCreateSpv}
+        />
     );
 };

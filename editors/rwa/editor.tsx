@@ -1,13 +1,17 @@
-import { RWATabs, RWATabsProps } from '@powerhousedao/design-system';
-import { EditorProps, actions } from 'document-model/document';
-import { useState } from 'react';
-import { Key, TabPanel } from 'react-aria-components';
+import {
+    OTHER,
+    PORTFOLIO,
+    RWATabs,
+    RWATabsProps,
+    TabComponents,
+    TRANSACTIONS,
+} from '@powerhousedao/design-system';
+import { actions, EditorProps } from 'document-model/document';
 import {
     RealWorldAssetsAction,
     RealWorldAssetsLocalState,
     RealWorldAssetsState,
 } from '../../document-models/real-world-assets';
-import { Attachments } from './attachments';
 import { Other } from './other';
 import { Portfolio } from './portfolio';
 import { Transactions } from './transactions';
@@ -34,58 +38,34 @@ function Editor(props: IProps) {
             clipboard,
         },
         dispatch,
-        onClose,
-        onExport,
-        onShowRevisionHistory,
-        onSwitchboardLinkClick,
     } = props;
 
-    const [activeTab, setActiveTab] = useState<Key>('portfolio');
+    const undoProps = {
+        undo: () => dispatch(actions.undo()),
+        redo: () => dispatch(actions.redo()),
+        canUndo: global > 0 || local > 0,
+        canRedo: clipboard.length > 0,
+    };
 
-    const undo = () => dispatch(actions.undo());
-    const redo = () => dispatch(actions.redo());
+    const tabComponents: TabComponents = [
+        {
+            value: PORTFOLIO,
+            label: 'Portfolio',
+            Component: () => <Portfolio {...props} />,
+        },
+        {
+            value: TRANSACTIONS,
+            label: 'Transactions',
+            Component: () => <Transactions {...props} />,
+        },
+        {
+            value: OTHER,
+            label: 'Other',
+            Component: () => <Other {...props} />,
+        },
+    ];
 
-    const canUndo = global > 0 || local > 0;
-    const canRedo = clipboard.length > 0;
-
-    return (
-        <RWATabs
-            onClose={onClose}
-            onExport={onExport}
-            onUndo={undo}
-            onRedo={redo}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            selectedKey={activeTab}
-            onShowRevisionHistory={onShowRevisionHistory}
-            onSwitchboardLinkClick={onSwitchboardLinkClick}
-            onSelectionChange={key => setActiveTab(key)}
-            disabledKeys={['attachments']}
-            tabs={[
-                { id: 'portfolio', label: 'Portfolio' },
-                { id: 'transactions', label: 'Transactions' },
-                { id: 'attachments', label: 'Attachments' },
-                { id: 'other', label: 'Other' },
-            ]}
-        >
-            <div className="flex justify-center mt-3">
-                <div className="w-full rounded-md bg-slate-50 p-8">
-                    <TabPanel id="portfolio">
-                        <Portfolio {...props} />
-                    </TabPanel>
-                    <TabPanel id="transactions">
-                        <Transactions {...props} />
-                    </TabPanel>
-                    <TabPanel id="attachments">
-                        <Attachments />
-                    </TabPanel>
-                    <TabPanel id="other">
-                        <Other {...props} />
-                    </TabPanel>
-                </div>
-            </div>
-        </RWATabs>
-    );
+    return <RWATabs {...props} {...undoProps} tabComponents={tabComponents} />;
 }
 
 export default Editor;

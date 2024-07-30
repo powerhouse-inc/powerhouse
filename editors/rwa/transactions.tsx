@@ -2,8 +2,8 @@ import {
     AssetsTableProps,
     CashAsset,
     GroupTransactionFormInputs,
-    GroupTransactionsTable,
     GroupTransactionsTableProps,
+    TransactionsTab,
 } from '@powerhousedao/design-system';
 import { copy } from 'copy-anything';
 import { utils } from 'document-model/document';
@@ -434,23 +434,17 @@ export const Transactions = (props: IProps) => {
         );
 
     return (
-        <div>
-            <h1 className="text-lg font-bold mb-2">Transactions</h1>
-            <p className="text-xs text-gray-600 mb-4">
-                Details of this portfolios transactions
-            </p>
-            <GroupTransactionsTable
-                state={state}
-                isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-                isAllowedToEditDocuments={isAllowedToEditDocuments}
-                onSubmitEdit={onSubmitEdit}
-                onSubmitCreate={onSubmitCreate}
-                onSubmitDelete={onSubmitDelete}
-                onSubmitCreateAsset={onSubmitCreateAsset}
-                onSubmitCreateServiceProviderFeeType={
-                    onSubmitCreateServiceProviderFeeType
-                }
-            />
-        </div>
+        <TransactionsTab
+            state={state}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            isAllowedToEditDocuments={isAllowedToEditDocuments}
+            onSubmitEdit={onSubmitEdit}
+            onSubmitCreate={onSubmitCreate}
+            onSubmitDelete={onSubmitDelete}
+            onSubmitCreateAsset={onSubmitCreateAsset}
+            onSubmitCreateServiceProviderFeeType={
+                onSubmitCreateServiceProviderFeeType
+            }
+        />
     );
 };
