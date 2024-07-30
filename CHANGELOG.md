@@ -1,3 +1,10 @@
+# [1.0.0-alpha.153](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.152...v1.0.0-alpha.153) (2024-07-30)
+
+
+### Features
+
+* remove react aria ([#336](https://github.com/powerhouse-inc/design-system/issues/336)) ([047a498](https://github.com/powerhouse-inc/design-system/commit/047a498f3e4b40bfa3d19c18d49d3a14db44d932))
+
 # [1.0.0-alpha.152](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.151...v1.0.0-alpha.152) (2024-07-30)
 
 
