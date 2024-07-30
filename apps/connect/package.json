@@ -29,10 +29,13 @@
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "release": "semantic-release",
-        "prepare": "npm run prepare:scripts",
-        "prepare:scripts": "node scripts/index.js",
+        "update-icons": "node scripts/copyIconsFromDesignSystem.js",
         "e2e": "playwright test",
-        "cy:open": "cypress open"
+        "postinstall": "npm run update-icons",
+        "cy:open": "cypress open",
+        "prestart": "npm run update-icons",
+        "prebuild:web": "npm run update-icons",
+        "predev:web": "npm run update-icons"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.3",
