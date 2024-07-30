@@ -1,3 +1,10 @@
+# [1.0.0-alpha.152](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.151...v1.0.0-alpha.152) (2024-07-30)
+
+
+### Features
+
+* change weird lint rule to warn ([67f711d](https://github.com/powerhouse-inc/design-system/commit/67f711d90cd33737b813714d9552aa5816837b25))
+
 # [1.0.0-alpha.151](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.150...v1.0.0-alpha.151) (2024-07-30)
 
 
