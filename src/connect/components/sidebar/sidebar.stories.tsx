@@ -8,11 +8,9 @@ import {
 import { CLOUD, LOCAL, PUBLIC } from '@/connect/constants';
 import { SharingType } from '@/connect/types';
 import { mockDriveNodes, mockNodeOptions } from '@/connect/utils';
-import { DropItem } from '@/powerhouse';
 import { useEffect } from '@storybook/preview-api';
 import type { Meta, StoryObj } from '@storybook/react';
 import { ComponentPropsWithoutRef, useState } from 'react';
-import { DragEndEvent, DragStartEvent, DropEvent } from 'react-aria';
 import { ConnectSidebar, DriveView } from '..';
 
 type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
@@ -55,6 +53,18 @@ export const Expanded: Story = {
 
         const nodeHandlers = {
             onAddFolder: (name: string, uiNode: UiNode) => {},
+            onAddFile: (file: File, parentNode: UiNode | null) => {
+                console.log('onAddFile', { file, parentNode });
+                return Promise.resolve();
+            },
+            onCopyNode: (uiNode: UiNode, targetNode: UiNode) => {
+                console.log('onCopyNode', { uiNode, targetNode });
+                return Promise.resolve();
+            },
+            onMoveNode: (uiNode: UiNode, targetNode: UiNode) => {
+                console.log('onMoveNode', { uiNode, targetNode });
+                return Promise.resolve();
+            },
             onAddAndSelectNewFolder: (name: string) => Promise.resolve(),
             onRenameNode: (name: string, uiNode: UiNode) => {},
             onDuplicateNode: (uiNode: UiNode) => {},
@@ -69,18 +79,6 @@ export const Expanded: Story = {
                 uiDriveNode: UiDriveNode,
                 newAvailableOffline: boolean,
             ) => {},
-            onDropEvent: (
-                item: DropItem<UiNode>,
-                target: UiNode,
-                event: DropEvent,
-            ) => {},
-            onDropActivate: (dropTargetItem: UiNode) => {},
-            onDragStart: (dragItem: UiNode, event: DragStartEvent) => {
-                setDisableHighlightStyles(true);
-            },
-            onDragEnd: (dragItem: UiNode, event: DragEndEvent) => {
-                setDisableHighlightStyles(false);
-            },
             showAddDriveModal: () => {},
             showDriveSettingsModal: (uiDriveNode: UiDriveNode) => {},
             onAddTrigger: (uiNodeDriveId: string) => {},
@@ -127,8 +125,6 @@ export const Expanded: Story = {
                     isAllowedToCreateDocuments
                     isRemoteDrive
                     nodeOptions={mockNodeOptions}
-                    disableHighlightStyles={disableHighlightStyles}
-                    disableDropBetween={false}
                 />
                 <DriveView
                     {...uiNodesContext}
@@ -140,8 +136,6 @@ export const Expanded: Story = {
                     isAllowedToCreateDocuments
                     isRemoteDrive
                     nodeOptions={mockNodeOptions}
-                    disableDropBetween={false}
-                    disableHighlightStyles={disableHighlightStyles}
                 />
                 <DriveView
                     {...uiNodesContext}
@@ -153,8 +147,6 @@ export const Expanded: Story = {
                     isAllowedToCreateDocuments
                     isRemoteDrive={false}
                     nodeOptions={mockNodeOptions}
-                    disableDropBetween={false}
-                    disableHighlightStyles={disableHighlightStyles}
                 />
             </ConnectSidebar>
         );

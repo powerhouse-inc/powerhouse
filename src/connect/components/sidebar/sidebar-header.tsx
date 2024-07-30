@@ -1,5 +1,4 @@
 import { Icon, SidebarHeader, SidebarHeaderProps } from '@/powerhouse';
-import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
 export interface ConnectSidebarHeaderProps extends SidebarHeaderProps {
@@ -28,15 +27,15 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
                     />
                 )}
             </div>
-            <Button
-                className={`rounded-md border border-gray-100 p-3 outline-none hover:bg-slate-50
+            <button
+                className="rounded-md border border-gray-100 p-3 outline-none hover:bg-slate-50
                 collapsed:rotate-180 collapsed:border-gray-100/10 collapsed:bg-gray-100
                 collapsed:shadow-sidebar collapsed:hover:bg-slate-50
-                expanding:hidden`}
-                onPress={() => onToggle()}
+                expanding:hidden"
+                onClick={() => onToggle()}
             >
                 <Icon name="arrow-left" size={16} className="text-gray-600" />
-            </Button>
+            </button>
         </SidebarHeader>
     );
 };

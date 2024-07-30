@@ -1,6 +1,5 @@
 import {
     ConnectTreeView,
-    DragAndDropProps,
     NodeProps,
     SharingType,
     TUiNodesContext,
@@ -11,8 +10,7 @@ import { ReactNode } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
 
 export type DriveViewProps = TUiNodesContext &
-    NodeProps &
-    DragAndDropProps & {
+    NodeProps & {
         label: ReactNode;
         groupSharingType: SharingType;
         disableAddDrives: boolean;

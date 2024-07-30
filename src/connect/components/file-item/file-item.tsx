@@ -3,11 +3,11 @@ import {
     ADD_TRIGGER,
     ConnectDropdownMenu,
     DELETE,
-    DragAndDropProps,
     DropdownMenuHandlers,
     DUPLICATE,
     FILE,
     getDocumentIconSrc,
+    NodeInput,
     NodeOption,
     nodeOptionsMap,
     NodeProps,
@@ -16,49 +16,41 @@ import {
     RENAME,
     TUiNodesContext,
     UiFileNode,
+    useDrag,
     WRITE,
 } from '@/connect';
-import { Icon, useDraggableTarget } from '@/powerhouse';
-import { useRef, useState } from 'react';
+import { Icon } from '@/powerhouse';
+import { useState } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { NodeInput } from '../node-input/node-input';
 import { SyncStatusIcon } from '../status-icon';
 
 export type FileItemProps = TUiNodesContext &
-    DragAndDropProps &
     NodeProps & {
-        uiFileNode: UiFileNode;
+        uiNode: UiFileNode;
         customDocumentIconSrc?: string;
         className?: string;
     };
 
-export const FileItem: React.FC<FileItemProps> = ({
-    uiFileNode,
-    selectedNodePath,
-    nodeOptions,
-    isAllowedToCreateDocuments,
-    isRemoteDrive,
-    customDocumentIconSrc,
-    className,
-    setSelectedNode,
-    onRenameNode,
-    onDuplicateNode,
-    onDeleteNode,
-    onDragEnd,
-    onDragStart,
-    onAddTrigger,
-    onRemoveTrigger,
-    onAddInvalidTrigger,
-}) => {
-    const containerRef = useRef(null);
+export function FileItem(props: FileItemProps) {
+    const {
+        uiNode,
+        selectedNodePath,
+        nodeOptions,
+        isAllowedToCreateDocuments,
+        isRemoteDrive,
+        customDocumentIconSrc,
+        className,
+        setSelectedNode,
+        onRenameNode,
+        onDuplicateNode,
+        onDeleteNode,
+        onAddTrigger,
+        onRemoveTrigger,
+        onAddInvalidTrigger,
+    } = props;
     const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
     const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-
-    const { dragProps } = useDraggableTarget({
-        data: uiFileNode,
-        onDragEnd,
-        onDragStart,
-    });
+    const { dragProps } = useDrag(props);
 
     const isReadMode = mode === READ;
 
@@ -68,15 +60,15 @@ export const FileItem: React.FC<FileItemProps> = ({
     );
 
     const dropdownMenuHandlers: DropdownMenuHandlers = {
-        [DUPLICATE]: () => onDuplicateNode(uiFileNode),
+        [DUPLICATE]: () => onDuplicateNode(uiNode),
         [RENAME]: () => setMode(WRITE),
-        [DELETE]: () => onDeleteNode(uiFileNode),
-        [ADD_TRIGGER]: () => onAddTrigger(uiFileNode.driveId),
-        [REMOVE_TRIGGER]: () => onRemoveTrigger(uiFileNode.driveId),
-        [ADD_INVALID_TRIGGER]: () => onAddInvalidTrigger(uiFileNode.driveId),
+        [DELETE]: () => onDeleteNode(uiNode),
+        [ADD_TRIGGER]: () => onAddTrigger(uiNode.driveId),
+        [REMOVE_TRIGGER]: () => onRemoveTrigger(uiNode.driveId),
+        [ADD_INVALID_TRIGGER]: () => onAddInvalidTrigger(uiNode.driveId),
     } as const;
 
-    const nodeOptionsForKind = nodeOptions[uiFileNode.sharingType][FILE];
+    const nodeOptionsForKind = nodeOptions[uiNode.sharingType][FILE];
 
     const dropdownMenuOptions = Object.entries(nodeOptionsMap)
         .map(([id, option]) => ({
@@ -86,7 +78,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         .filter(option => nodeOptionsForKind.includes(option.id));
 
     function onSubmit(name: string) {
-        onRenameNode(name, uiFileNode);
+        onRenameNode(name, uiNode);
         setMode(READ);
     }
 
@@ -95,21 +87,21 @@ export const FileItem: React.FC<FileItemProps> = ({
     }
 
     function onClick() {
-        setSelectedNode(uiFileNode);
+        setSelectedNode(uiNode);
     }
 
-    function onItemClick(itemId: NodeOption) {
+    function onDropdownMenuOptionClick(itemId: NodeOption) {
         const handler = dropdownMenuHandlers[itemId];
         if (!handler) {
             console.error(`No handler found for dropdown menu item: ${itemId}`);
             return;
         }
-        handler(uiFileNode);
+        handler(uiNode);
         setIsDropdownMenuOpen(false);
     }
 
     const iconSrc = getDocumentIconSrc(
-        uiFileNode.documentType,
+        uiNode.documentType,
         customDocumentIconSrc,
     );
 
@@ -122,11 +114,11 @@ export const FileItem: React.FC<FileItemProps> = ({
                 width={32}
                 height={34}
             />
-            {isReadMode && isRemoteDrive && uiFileNode.syncStatus && (
+            {isReadMode && isRemoteDrive && uiNode.syncStatus && (
                 <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
                     <div className="absolute left-[-2px] top-[-2px]">
                         <SyncStatusIcon
-                            syncStatus={uiFileNode.syncStatus}
+                            syncStatus={uiNode.syncStatus}
                             overrideSyncIcons={{ SUCCESS: 'check-circle-fill' }}
                         />
                     </div>
@@ -139,58 +131,51 @@ export const FileItem: React.FC<FileItemProps> = ({
         <div className="flex w-52 items-center justify-between">
             <div className="mr-2 truncate group-hover:mr-0">
                 <div className="max-h-6 truncate text-sm font-medium group-hover:text-gray-800">
-                    {uiFileNode.name}
+                    {uiNode.name}
                 </div>
                 <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800">
                     {selectedNodePath.map(node => node.name).join(' / ')}
                 </div>
             </div>
             {isAllowedToCreateDocuments && (
-                <button
-                    className="ml-auto hidden group-hover:block"
-                    onClick={e => {
-                        e.stopPropagation();
-                        setIsDropdownMenuOpen(true);
-                    }}
+                <ConnectDropdownMenu
+                    open={isDropdownMenuOpen}
+                    onOpenChange={setIsDropdownMenuOpen}
+                    onItemClick={onDropdownMenuOptionClick}
+                    items={dropdownMenuOptions}
                 >
-                    <Icon name="vertical-dots" />
-                </button>
+                    <button
+                        onClick={e => {
+                            e.stopPropagation();
+                            setIsDropdownMenuOpen(true);
+                        }}
+                        className={twMerge(
+                            'hidden group-hover:block',
+                            isDropdownMenuOpen && 'block',
+                        )}
+                    >
+                        <Icon name="vertical-dots" className="text-gray-600" />
+                    </button>
+                </ConnectDropdownMenu>
             )}
         </div>
     ) : (
         <NodeInput
             className="ml-3 flex-1 font-medium"
-            defaultValue={uiFileNode.name}
+            defaultValue={uiNode.name}
             onCancel={onCancel}
             onSubmit={onSubmit}
         />
     );
 
     return (
-        <div onClick={onClick} className="relative w-64" ref={containerRef}>
+        <div onClick={onClick} className="relative w-64">
             <div {...dragProps} className={containerStyles}>
                 <div className="flex items-center">
                     <div className="mr-1.5">{iconNode}</div>
                     {content}
                 </div>
             </div>
-            {isAllowedToCreateDocuments && (
-                <ConnectDropdownMenu
-                    isOpen={isDropdownMenuOpen}
-                    onOpenChange={() =>
-                        setIsDropdownMenuOpen(!isDropdownMenuOpen)
-                    }
-                    items={dropdownMenuOptions}
-                    menuClassName="bg-white cursor-pointer"
-                    menuItemClassName="hover:bg-slate-50 px-2"
-                    onItemClick={onItemClick}
-                    popoverProps={{
-                        triggerRef: containerRef,
-                        placement: 'bottom end',
-                        offset: -10,
-                    }}
-                />
-            )}
         </div>
     );
-};
+}

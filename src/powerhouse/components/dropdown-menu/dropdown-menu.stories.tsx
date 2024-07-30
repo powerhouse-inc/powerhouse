@@ -1,79 +1,74 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import {
-    ControlledDropdownMenuProps,
     DropdownMenu,
-    UncontrolledDropdownMenuProps,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from './dropdown-menu';
 
 const meta = {
     title: 'Powerhouse/Components/DropdownMenu',
     component: DropdownMenu,
-    argTypes: {
-        onItemClick: { action: 'onItemClick' },
-        children: { control: { type: 'text' } },
-        items: { control: { type: 'object' } },
-        className: { control: { type: 'text' } },
-        menuClassName: { control: { type: 'text' } },
-        menuItemClassName: { control: { type: 'text' } },
-    },
 } satisfies Meta<typeof DropdownMenu>;
 
 export default meta;
-type ControlledStory = StoryObj<ControlledDropdownMenuProps>;
-type UncontrolledStory = StoryObj<UncontrolledDropdownMenuProps>;
+type Story = StoryObj<typeof meta>;
 
-const sharedArgs = {
-    className:
-        'bg-blue-500 text-white w-8 h-8 rounded justify-center items-center flex',
-    menuClassName:
-        'border-2 border-indigo-600 w-64 rounded bg-white cursor-pointer',
-    menuItemClassName: 'hover:bg-gray-200 px-2',
-    items: [
-        {
-            id: 'item-1',
-            content: 'Item 1',
-        },
-        {
-            id: 'item-2',
-            content: 'Item 2',
-        },
-        {
-            id: 'item-3',
-            content: 'Item 3',
-        },
-    ],
-};
+const items = [
+    {
+        id: 'item-1',
+        content: 'Item 1',
+    },
+    {
+        id: 'item-2',
+        content: 'Item 2',
+    },
+    {
+        id: 'item-3',
+        content: 'Item 3',
+    },
+];
 
-export const Uncontrolled: UncontrolledStory = {
-    args: {
-        ...sharedArgs,
-        children: '☰',
-        defaultOpen: false,
+const content = (
+    <DropdownMenuContent className="w-64 cursor-pointer rounded border-2 border-blue-600 bg-white">
+        {items.map(item => (
+            <DropdownMenuItem
+                key={item.id}
+                id={item.id}
+                className="px-2 hover:bg-gray-200"
+            >
+                {item.content}
+            </DropdownMenuItem>
+        ))}
+    </DropdownMenuContent>
+);
+
+export const Uncontrolled: Story = {
+    render: function Wrapper(args) {
+        return (
+            <DropdownMenu {...args}>
+                <DropdownMenuTrigger>☰</DropdownMenuTrigger>
+                {content}
+            </DropdownMenu>
+        );
     },
 };
 
-export const Controlled: ControlledStory = {
-    render: function ControlledWrapper(args) {
-        const [isOpen, setIsOpen] = useState(false);
-        function onOpenChange() {
-            setIsOpen(!isOpen);
+export const Controlled: Story = {
+    render: function Wrapper(args) {
+        const [open, setOpen] = useState(true);
+        function toggleDropdown() {
+            setOpen(!open);
         }
 
         return (
-            <div>
-                <button onClick={onOpenChange}>Toggle</button>
-                <DropdownMenu
-                    {...args}
-                    isOpen={isOpen}
-                    onOpenChange={onOpenChange}
-                />
-            </div>
+            <DropdownMenu {...args} open={open} onOpenChange={setOpen}>
+                <DropdownMenuTrigger onClick={toggleDropdown}>
+                    Toggle
+                </DropdownMenuTrigger>
+                {content}
+            </DropdownMenu>
         );
-    },
-    args: {
-        isOpen: false,
-        onOpenChange: () => {},
-        ...sharedArgs,
     },
 };

@@ -1,7 +1,6 @@
-import { NodeProps, TUiNodesContext, UiNode } from '@/connect';
+import { NodeInput, NodeProps, TUiNodesContext, UiNode } from '@/connect';
 import { Icon } from '@/powerhouse';
 import { useState } from 'react';
-import { AddNewItemInput } from './add-new-item-input';
 
 export type BreadcrumbsProps = NodeProps & TUiNodesContext;
 
@@ -35,9 +34,10 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
                 {isAllowedToCreateDocuments && (
                     <>
                         {isAddingNewItem ? (
-                            <AddNewItemInput
+                            <NodeInput
                                 defaultValue="New Folder"
                                 placeholder="New Folder"
+                                className="text-gray-800"
                                 onSubmit={onSubmit}
                                 onCancel={onCancel}
                             />

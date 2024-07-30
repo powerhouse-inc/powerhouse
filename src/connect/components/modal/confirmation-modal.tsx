@@ -1,10 +1,11 @@
 import { DivProps, Modal, mergeClassNameProps } from '@/powerhouse';
 import React, { ComponentPropsWithoutRef } from 'react';
-import { Button, ButtonProps } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
 const buttonStyles =
     'min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all';
+
+type ButtonProps = ComponentPropsWithoutRef<'button'>;
 
 export type ConfirmationModalProps = ComponentPropsWithoutRef<typeof Modal> & {
     header: React.ReactNode;
@@ -84,8 +85,8 @@ export const ConnectConfirmationModal = (props: ConfirmationModalProps) => {
                         'mt-8 flex justify-between gap-3',
                     )}
                 >
-                    <Button
-                        onPress={onCancel}
+                    <button
+                        onClick={onCancel}
                         {...mergeClassNameProps(
                             cancelButtonProps,
                             twMerge(
@@ -95,9 +96,9 @@ export const ConnectConfirmationModal = (props: ConfirmationModalProps) => {
                         )}
                     >
                         {cancelLabel}
-                    </Button>
-                    <Button
-                        onPress={onContinue}
+                    </button>
+                    <button
+                        onClick={onContinue}
                         {...mergeClassNameProps(
                             continueButtonProps,
                             twMerge(
@@ -107,7 +108,7 @@ export const ConnectConfirmationModal = (props: ConfirmationModalProps) => {
                         )}
                     >
                         {continueLabel}
-                    </Button>
+                    </button>
                 </div>
             </div>
         </Modal>

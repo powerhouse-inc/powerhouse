@@ -24,7 +24,7 @@ export const ConnectDeleteDriveModal: React.FC<
             bodyProps={{ className: 'p-0 bg-white my-0' }}
             containerProps={{ className: 'w-[450px]' }}
             continueButtonProps={{
-                isDisabled: inputName !== driveName,
+                disabled: inputName !== driveName,
                 className:
                     inputName !== driveName
                         ? 'bg-red-600 hover:scale-100 cursor-not-allowed active:opacity-100'

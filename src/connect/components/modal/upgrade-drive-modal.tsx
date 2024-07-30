@@ -1,6 +1,5 @@
 import { Modal } from '@/powerhouse';
 import React, { ComponentPropsWithoutRef } from 'react';
-import { Button } from 'react-aria-components';
 import { twMerge } from 'tailwind-merge';
 
 const buttonStyles =
@@ -52,24 +51,24 @@ export const ConnectUpgradeDriveModal = (
                     {body}
                 </div>
                 <div className="mt-8 flex justify-between gap-3">
-                    <Button
-                        onPress={() => onOpenChange?.(false)}
+                    <button
+                        onClick={() => onOpenChange?.(false)}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-slate-50 text-slate-800',
                         )}
                     >
                         {cancelLabel}
-                    </Button>
-                    <Button
-                        onPress={onContinue}
+                    </button>
+                    <button
+                        onClick={onContinue}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-gray-800 text-gray-50',
                         )}
                     >
                         {continueLabel}
-                    </Button>
+                    </button>
                 </div>
             </div>
         </Modal>

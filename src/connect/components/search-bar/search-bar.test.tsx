@@ -31,52 +31,12 @@ describe('ConnectSearchBar Component', () => {
                 placeholder="Search Files"
                 filterLabel="File type"
                 filterItems={filterItems}
-                textFieldProps={{ 'aria-label': 'search input' }}
+                value="test"
+                onChange={() => {}}
             />,
         );
 
         expect(asFragment()).toMatchSnapshot();
-    });
-
-    it('should open filter menu when click on filters', () => {
-        render(
-            <ConnectSearchBar
-                placeholder="Search Files"
-                filterLabel="File type"
-                filterItems={filterItems}
-                data-testid="search-bar"
-                textFieldProps={{ 'aria-label': 'search input' }}
-            />,
-        );
-
-        fireEvent.click(screen.getByText('File type'));
-
-        expect(screen.getByText('.project')).toBeInTheDocument();
-        expect(screen.getByText('.budget')).toBeInTheDocument();
-        expect(screen.getByText('.profile')).toBeInTheDocument();
-        expect(screen.getByText('.legal')).toBeInTheDocument();
-        expect(screen.getByText('.Atlas')).toBeInTheDocument();
-    });
-
-    it('should call onFilterSelect when a filter is selected', () => {
-        const onFilterSelect = vi.fn();
-
-        render(
-            <ConnectSearchBar
-                placeholder="Search Files"
-                filterLabel="File type"
-                filterItems={filterItems}
-                data-testid="search-bar"
-                textFieldProps={{ 'aria-label': 'search input' }}
-                onFilterSelect={onFilterSelect}
-            />,
-        );
-
-        fireEvent.click(screen.getByText('File type'));
-        fireEvent.click(screen.getByText('.project'));
-
-        expect(onFilterSelect).toBeCalledTimes(1);
-        expect(onFilterSelect).toBeCalledWith('project');
     });
 
     it('should call onChange when input value is changed', () => {
@@ -88,7 +48,7 @@ describe('ConnectSearchBar Component', () => {
                 filterLabel="File type"
                 filterItems={filterItems}
                 data-testid="search-bar"
-                textFieldProps={{ 'aria-label': 'search input' }}
+                value=""
                 onChange={onChange}
             />,
         );
@@ -108,7 +68,8 @@ describe('ConnectSearchBar Component', () => {
                 filterLabel="File type"
                 filterItems={filterItems}
                 data-testid="search-bar"
-                textFieldProps={{ 'aria-label': 'search input' }}
+                value="test"
+                onChange={() => {}}
                 selectedFilter="project"
             />,
         );

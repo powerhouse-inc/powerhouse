@@ -30,17 +30,11 @@ exports[`Modal Component > should match snapshot 1`] = `
     >
       <button
         class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 bg-slate-50 text-slate-800"
-        data-focus-visible="true"
-        data-focused="true"
-        data-rac=""
-        type="button"
       >
         Cancel
       </button>
       <button
         class="min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all flex-1 text-gray-50 bg-red-900"
-        data-rac=""
-        type="button"
       >
         Delete
       </button>

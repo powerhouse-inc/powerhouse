@@ -1,14 +1,17 @@
 import {
     DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
     Icon,
-    TextInput,
-    TextInputProps,
-    mergeClassNameProps,
 } from '@/powerhouse';
-import { useMemo } from 'react';
+import { ChangeEvent, useMemo } from 'react';
+import { twMerge } from 'tailwind-merge';
 import { FilterItem, FilterItemType } from './filter-item';
 
-export interface ConnectSearchBarProps extends TextInputProps {
+export interface ConnectSearchBarProps {
+    value: string;
+    onChange: (value: string) => void;
     placeholder?: string;
     filterLabel?: string;
     filterItems?: Array<FilterItemType>;
@@ -25,7 +28,6 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
         filterItems,
         selectedFilter,
         onFilterSelect = () => {},
-        ...containerProps
     } = props;
 
     const items = useMemo(
@@ -33,7 +35,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
             filterItems?.map(item => ({
                 id: item.id,
                 content: <FilterItem item={item} />,
-            })),
+            })) ?? [],
         [filterItems],
     );
 
@@ -51,33 +53,38 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
         )
     );
 
-    const startAdornment = <Icon name="search" className="mr-3" />;
-
-    const endAdornment = (
-        <DropdownMenu
-            items={items || []}
-            onItemClick={onFilterSelect}
-            popoverProps={{ placement: 'bottom right', offset: 4 }}
-            className="ml-3 flex h-full flex-row items-center outline-none"
-            menuClassName="bg-gray-50 border border-gray-100 rounded-xl p-2"
-            menuItemClassName="hover:bg-gray-100 rounded-lg overflow-hidden cursor-pointer h-10"
-        >
-            {filterLabelContent}
-            <Icon name="chevron-down" />
-        </DropdownMenu>
-    );
+    function handleChange(event: ChangeEvent<HTMLInputElement>) {
+        onChange(event.target.value);
+    }
 
     return (
-        <TextInput
-            value={value}
-            onChange={onChange}
-            startAdornment={startAdornment}
-            endAdornment={endAdornment}
-            inputProps={{ placeholder, className: 'text-sm' }}
-            {...mergeClassNameProps(
-                containerProps,
-                'h-[52px] items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-slate-200',
-            )}
-        />
+        <div className="flex items-center">
+            <Icon name="search" className="mr-3" />
+            <input
+                value={value}
+                onChange={handleChange}
+                placeholder={placeholder}
+                className={twMerge(
+                    'flex h-[52px] min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-slate-200 outline-none',
+                )}
+            />
+            <DropdownMenu>
+                <DropdownMenuTrigger className="ml-3 flex h-full flex-row items-center outline-none">
+                    {filterLabelContent} <Icon name="chevron-down" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="rounded-xl border border-gray-100 bg-gray-50 p-2">
+                    {items.map(item => (
+                        <DropdownMenuItem
+                            key={item.id}
+                            id={item.id}
+                            className="h-10 cursor-pointer overflow-hidden rounded-lg hover:bg-gray-100"
+                            onSelect={() => onFilterSelect(item.id)}
+                        >
+                            {item.content}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
     );
 };
