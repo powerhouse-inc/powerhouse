@@ -70,7 +70,7 @@
         "test": "powerhouse generate && vitest run",
         "test:nogen": "vitest run",
         "test:watch": "powerhouse generate && vitest",
-        "update-icons": "node scripts/copyIconsFromDesignSystem.cjs",
+        "update-icons": "node ./scripts/copyIconsFromDesignSystem.cjs",
         "chromatic": "npx chromatic --project-token chpt_7f618da80620e4d",
         "prepare": "husky install",
         "release": "semantic-release",
