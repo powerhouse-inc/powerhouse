@@ -1,3 +1,10 @@
+# [1.0.0-alpha.154](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.153...v1.0.0-alpha.154) (2024-07-31)
+
+
+### Features
+
+* switch to inline svgs ([#337](https://github.com/powerhouse-inc/design-system/issues/337)) ([d55463a](https://github.com/powerhouse-inc/design-system/commit/d55463acfbb47919aa747f99536b1d4c4840e12f))
+
 # [1.0.0-alpha.153](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.152...v1.0.0-alpha.153) (2024-07-30)
 
 
