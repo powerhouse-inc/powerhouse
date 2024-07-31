@@ -1,3 +1,15 @@
+# [1.0.0-dev.50](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.49...v1.0.0-dev.50) (2024-07-31)
+
+
+### Features
+
+* bump document-model-libs ([9f5516c](https://github.com/powerhouse-inc/document-model-electron/commit/9f5516c502769a4056e36d92187595c0ea53ea33))
+* include copy and move handlers ([3b1342f](https://github.com/powerhouse-inc/document-model-electron/commit/3b1342f4ceb9c07eb1e1175daeb4647fde1d8792))
+* only copy icons post install ([9866258](https://github.com/powerhouse-inc/document-model-electron/commit/9866258f1da336e3161232e279b68bbaf7c901b0))
+* remove old tabs ([8a7f62d](https://github.com/powerhouse-inc/document-model-electron/commit/8a7f62dd4e6f2145f0f86fd3652a63645624e5da))
+* remove react aria drag and drop ([80e0353](https://github.com/powerhouse-inc/document-model-electron/commit/80e035328daa59c423cde9199887df11b54b0934))
+* update node lifecycle scripts ([e959228](https://github.com/powerhouse-inc/document-model-electron/commit/e959228254441df256a4477812b941623c64feea))
+
 # [1.0.0-dev.49](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.48...v1.0.0-dev.49) (2024-07-30)
 
 
