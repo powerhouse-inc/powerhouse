@@ -1,3 +1,10 @@
+# [1.0.0-dev.51](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.50...v1.0.0-dev.51) (2024-07-31)
+
+
+### Features
+
+* remove copy icons script ([23a309a](https://github.com/powerhouse-inc/document-model-electron/commit/23a309a181711bc150c65ee931138f0ba822de0a))
+
 # [1.0.0-dev.50](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.49...v1.0.0-dev.50) (2024-07-31)
 
 
