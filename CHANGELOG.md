@@ -1,3 +1,10 @@
+# [1.76.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.75.0...v1.76.0) (2024-07-31)
+
+
+### Features
+
+* remove copy icons script ([79729b8](https://github.com/powerhouse-inc/document-model-libs/commit/79729b87b4283a05b2d412b17cec84a96a3d0d67))
+
 # [1.75.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.74.0...v1.75.0) (2024-07-31)
 
 
