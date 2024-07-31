@@ -74,7 +74,8 @@
         "chromatic": "npx chromatic --project-token chpt_7f618da80620e4d",
         "prepare": "husky install",
         "release": "semantic-release",
-        "postinstall": "npm run update-icons",
+        "@comment_postinstall": "Behavior of the node-js subscript below: if '.git' doesn't exist under this lib, it's installed as a dep, so do nothing -- else, return error-code 1, causing update-icons to run.",
+        "postinstall": "node -e \"let isInstalledAsDep = !require('fs').existsSync('.git'); if (!isInstalledAsDep) process.exit(1);\" || npm run update-icons",
         "prepublishOnly": "npm run build"
     },
     "devDependencies": {
