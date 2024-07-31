@@ -1,3 +1,10 @@
+# [1.75.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.74.0...v1.75.0) (2024-07-31)
+
+
+### Features
+
+* add exclusion in the script itself ([8febd72](https://github.com/powerhouse-inc/document-model-libs/commit/8febd7273b3873261b98b0b362ee58d08d57aafb))
+
 # [1.74.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.73.0...v1.74.0) (2024-07-31)
 
 
