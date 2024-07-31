@@ -12,11 +12,11 @@ import { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 const syncIcons: Record<SyncStatus, IconName> = {
-    SYNCING: 'syncing',
-    SUCCESS: 'synced',
-    CONFLICT: 'error',
-    MISSING: 'circle',
-    ERROR: 'error',
+    SYNCING: 'Syncing',
+    SUCCESS: 'Synced',
+    CONFLICT: 'Error',
+    MISSING: 'Circle',
+    ERROR: 'Error',
 };
 
 export type SyncStatusIconProps = Omit<

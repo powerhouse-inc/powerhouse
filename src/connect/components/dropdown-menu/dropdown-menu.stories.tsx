@@ -20,22 +20,22 @@ export const Default: Story = {
             {
                 id: 'duplicate',
                 label: 'Duplicate',
-                icon: <Icon name="files-earmark" />,
+                icon: <Icon name="FilesEarmark" />,
             },
             {
                 id: 'new-folder',
                 label: 'New Folder',
-                icon: <Icon name="folder-plus" />,
+                icon: <Icon name="FolderPlus" />,
             },
             {
                 id: 'rename',
                 label: 'Rename',
-                icon: <Icon name="pencil" />,
+                icon: <Icon name="Pencil" />,
             },
             {
                 id: 'delete',
                 label: 'Delete',
-                icon: <Icon name="trash" />,
+                icon: <Icon name="Trash" />,
                 className: 'text-red-900',
             },
         ],

@@ -119,7 +119,7 @@ export function FileItem(props: FileItemProps) {
                     <div className="absolute left-[-2px] top-[-2px]">
                         <SyncStatusIcon
                             syncStatus={uiNode.syncStatus}
-                            overrideSyncIcons={{ SUCCESS: 'check-circle-fill' }}
+                            overrideSyncIcons={{ SUCCESS: 'CheckCircleFill' }}
                         />
                     </div>
                 </div>
@@ -154,7 +154,7 @@ export function FileItem(props: FileItemProps) {
                             isDropdownMenuOpen && 'block',
                         )}
                     >
-                        <Icon name="vertical-dots" className="text-gray-600" />
+                        <Icon name="VerticalDots" className="text-gray-600" />
                     </button>
                 </ConnectDropdownMenu>
             )}

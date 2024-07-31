@@ -44,7 +44,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                         className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900"
                         onClick={() => onOpenChange?.(false)}
                     >
-                        <Icon name="xmark-light" size={24} />
+                        <Icon name="XmarkLight" size={24} />
                     </button>
                 </div>
                 <div className="mt-8 flex min-h-[50px] items-center justify-center rounded-md bg-slate-50 p-3 text-xs font-medium text-gray-600">

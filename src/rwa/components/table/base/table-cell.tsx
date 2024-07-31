@@ -29,7 +29,7 @@ export function MoreDetailsCell(props: {
                 onClick={onClick}
             >
                 <Icon
-                    name="caret-down"
+                    name="CaretDown"
                     size={16}
                     className={twMerge(
                         'text-gray-600',

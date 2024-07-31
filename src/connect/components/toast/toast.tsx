@@ -42,7 +42,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
                 options.icon = (
                     <Icon
                         size={24}
-                        name="check-circle-fill"
+                        name="CheckCircleFill"
                         className="text-green-800"
                     />
                 );
@@ -52,7 +52,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
                 options.icon = (
                     <Icon
                         size={24}
-                        name="warning-fill"
+                        name="WarningFill"
                         className="text-gray-600"
                     />
                 );
@@ -62,7 +62,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
                 options.icon = (
                     <Icon
                         size={24}
-                        name="clock-fill"
+                        name="ClockFill"
                         className="text-gray-600"
                     />
                 );
@@ -70,11 +70,7 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
             case 'connect-deleted':
                 options.type = 'error';
                 options.icon = (
-                    <Icon
-                        size={24}
-                        name="trash-fill"
-                        className="text-red-800"
-                    />
+                    <Icon size={24} name="TrashFill" className="text-red-800" />
                 );
                 break;
         }
@@ -97,7 +93,7 @@ const CloseButton: ToastContainerProps['closeButton'] = ({ closeToast }) => (
         onClick={closeToast}
         className="flex items-center text-gray-500 hover:text-gray-600"
     >
-        <Icon name="xmark-light" size={16} />
+        <Icon name="XmarkLight" size={16} />
     </button>
 );
 

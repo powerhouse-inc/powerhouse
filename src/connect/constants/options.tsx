@@ -57,17 +57,17 @@ export const nodeOptions = [...normalNodeOptions, ...debugNodeOptions] as const;
 export const sharingTypeOptions = [
     {
         value: LOCAL,
-        icon: <Icon name="lock" />,
+        icon: <Icon name="Lock" />,
         description: 'Only available to you',
     },
     {
         value: CLOUD,
-        icon: <Icon name="people" />,
+        icon: <Icon name="People" />,
         description: 'Only available to people in this drive',
     },
     {
         value: PUBLIC,
-        icon: <Icon name="globe" />,
+        icon: <Icon name="Globe" />,
         description: 'Available to everyone',
         disabled: true,
     },
@@ -77,56 +77,56 @@ export const locationInfoByLocation = {
     CLOUD: {
         title: 'Secure cloud',
         description: 'End to end encryption between members.',
-        icon: <Icon name="lock" />,
+        icon: <Icon name="Lock" />,
     },
     LOCAL: {
         title: 'Local',
         description: 'Private and only available to you.',
-        icon: <Icon name="hdd" />,
+        icon: <Icon name="Hdd" />,
     },
     SWITCHBOARD: {
         title: 'Switchboard',
         description: 'Public and available to everyone.',
-        icon: <Icon name="drive" />,
+        icon: <Icon name="Drive" />,
     },
 } as const;
 
 export const debugNodeOptionsMap: Record<DebugNodeOption, OptionMetadata> = {
     [ADD_TRIGGER]: {
         label: 'Add Trigger',
-        icon: <Icon name="plus" className="text-orange-900" />,
+        icon: <Icon name="Plus" className="text-orange-900" />,
     },
     [REMOVE_TRIGGER]: {
         label: 'Remove Trigger',
-        icon: <Icon name="xmark" className="text-orange-900" />,
+        icon: <Icon name="Xmark" className="text-orange-900" />,
     },
     [ADD_INVALID_TRIGGER]: {
         label: 'Add Trigger',
-        icon: <Icon name="exclamation" className="text-orange-900" />,
+        icon: <Icon name="Exclamation" className="text-orange-900" />,
     },
 } as const;
 
 export const normalNodeOptionsMap: Record<NormalNodeOption, OptionMetadata> = {
     [DUPLICATE]: {
         label: 'Duplicate',
-        icon: <Icon name="files-earmark" />,
+        icon: <Icon name="FilesEarmark" />,
     },
     [NEW_FOLDER]: {
         label: 'New Folder',
-        icon: <Icon name="folder-plus" />,
+        icon: <Icon name="FolderPlus" />,
     },
     [RENAME]: {
         label: 'Rename',
-        icon: <Icon name="pencil" />,
+        icon: <Icon name="Pencil" />,
     },
     [DELETE]: {
         label: 'Delete',
-        icon: <Icon name="trash" />,
+        icon: <Icon name="Trash" />,
         className: 'text-red-900',
     },
     [SETTINGS]: {
         label: 'Settings',
-        icon: <Icon name="gear" />,
+        icon: <Icon name="Gear" />,
     },
 } as const;
 

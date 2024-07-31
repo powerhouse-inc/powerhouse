@@ -105,7 +105,7 @@ export function ItemDetails<
         <RWAButton
             onClick={submit}
             iconPosition="right"
-            icon={<Icon name="save" size={16} />}
+            icon={<Icon name="Save" size={16} />}
         >
             {isCreateOperation ? 'Save' : 'Save Edits'}
         </RWAButton>
@@ -113,7 +113,7 @@ export function ItemDetails<
 
     const deleteButton = (
         <button onClick={handleDelete}>
-            <Icon name="trash" className="ml-3 text-red-800" size={22} />
+            <Icon name="Trash" className="ml-3 text-red-800" size={22} />
         </button>
     );
 
@@ -124,7 +124,7 @@ export function ItemDetails<
                 setOperation('edit');
             }}
             iconPosition="right"
-            icon={<Icon name="pencil" size={16} />}
+            icon={<Icon name="Pencil" size={16} />}
         >
             Edit {itemName}
         </RWAButton>

@@ -187,11 +187,11 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     }
 
     const folderCloseIcon = (
-        <Icon name="folder-close" className={sharedIconStyles} size={20} />
+        <Icon name="FolderClose" className={sharedIconStyles} size={20} />
     );
 
     const folderOpenIcon = (
-        <Icon name="folder-open" className={sharedIconStyles} size={22} />
+        <Icon name="FolderOpen" className={sharedIconStyles} size={22} />
     );
 
     const documentTypeFileIcon = (
@@ -205,9 +205,9 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
         />
     );
 
-    const localDriveIcon = <Icon name="hdd" />;
+    const localDriveIcon = <Icon name="Hdd" />;
 
-    const cloudDriveIcon = <Icon name="server" />;
+    const cloudDriveIcon = <Icon name="Server" />;
 
     const publicDriveIcon =
         'icon' in uiNode && !!uiNode.icon ? (
@@ -217,12 +217,12 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
                 alt="drive icon"
             />
         ) : (
-            <Icon name="m" />
+            <Icon name="M" />
         );
 
     const caretIcon = (
         <Icon
-            name="caret"
+            name="Caret"
             className={twMerge(
                 isExpanded && 'rotate-90',
                 'ease pointer-events-none transition delay-75',
@@ -252,7 +252,7 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
                             isDropdownMenuOpen && 'block',
                         )}
                     >
-                        <Icon name="vertical-dots" className="text-gray-600" />
+                        <Icon name="VerticalDots" className="text-gray-600" />
                     </button>
                 </ConnectDropdownMenu>
             )}

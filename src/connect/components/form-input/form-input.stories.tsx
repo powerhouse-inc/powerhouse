@@ -14,7 +14,7 @@ type Story = StoryObj<typeof meta>;
 const Template: Story = {
     args: {
         name: 'driveName',
-        icon: <Icon name="drive" />,
+        icon: <Icon name="Drive" />,
         placeholder: 'Enter value',
     },
     decorators: [

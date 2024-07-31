@@ -46,7 +46,7 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
                                 onClick={onAddNew}
                                 className="ml-1 flex items-center justify-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 transition-colors hover:bg-gray-200 hover:text-gray-800"
                             >
-                                <Icon name="plus" size={14} />
+                                <Icon name="Plus" size={14} />
                                 Add new
                             </button>
                         )}

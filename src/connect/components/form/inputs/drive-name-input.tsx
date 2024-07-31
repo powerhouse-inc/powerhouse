@@ -17,7 +17,7 @@ export const DriveNameInput = forwardRef(function DriveNameInput(
         <FormInput
             {...props}
             ref={ref}
-            icon={props.icon ?? <Icon name="drive" />}
+            icon={props.icon ?? <Icon name="Drive" />}
             id="driveName"
             placeholder="Drive name"
         />

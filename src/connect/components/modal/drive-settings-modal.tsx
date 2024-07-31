@@ -86,7 +86,7 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
                         onClick={handleCancel}
                         tabIndex={-1}
                     >
-                        <Icon name="xmark-light" size={24} />
+                        <Icon name="XmarkLight" size={24} />
                     </button>
                 </div>
                 <Divider className="my-4" />

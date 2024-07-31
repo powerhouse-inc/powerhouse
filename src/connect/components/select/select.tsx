@@ -75,7 +75,7 @@ export const Select = fixedForwardRef(function Select<TValue extends string>(
             >
                 <ItemContainer {...selectedItem} className={itemClassName} />
                 <Icon
-                    name="chevron-down"
+                    name="ChevronDown"
                     className={twJoin(
                         'transition',
                         showItems ? '' : '-rotate-90',

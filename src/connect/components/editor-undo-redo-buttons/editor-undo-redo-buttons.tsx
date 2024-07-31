@@ -15,7 +15,7 @@ export function EditorUndoRedoButtons(props: Props) {
         <div className="flex gap-x-2 text-gray-500">
             <button onClick={undo} disabled={!canUndo} className={buttonStyles}>
                 <Icon
-                    name="redo-arrow"
+                    name="RedoArrow"
                     className={twMerge(
                         'scale-x-[-1]',
                         canUndo ? 'active:opacity-50' : 'text-gray-500',
@@ -24,7 +24,7 @@ export function EditorUndoRedoButtons(props: Props) {
             </button>
             <button onClick={redo} disabled={!canRedo} className={buttonStyles}>
                 <Icon
-                    name="redo-arrow"
+                    name="RedoArrow"
                     className={twMerge(
                         canRedo ? 'active:opacity-50' : 'text-gray-500',
                     )}

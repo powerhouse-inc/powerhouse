@@ -20,7 +20,7 @@ export function RevisionNumber(props: RevisionNumberProps) {
             Revision {revisionNumber} - Event ID: {eventId} - State Hash:{' '}
             {stateHash}
             <Icon
-                name="files-earmark"
+                name="FilesEarmark"
                 className="inline-block text-gray-600"
                 size={16}
             />
@@ -40,7 +40,7 @@ export function RevisionNumber(props: RevisionNumberProps) {
                 Revision {revisionNumber}.
                 <a>
                     <Icon
-                        name="ellipsis"
+                        name="Ellipsis"
                         size={14}
                         className="cursor-pointer text-slate-100"
                     />

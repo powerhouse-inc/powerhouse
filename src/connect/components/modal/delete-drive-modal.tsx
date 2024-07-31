@@ -39,7 +39,7 @@ export const ConnectDeleteDriveModal: React.FC<
                 <div>
                     <FormInput
                         value={inputName}
-                        icon={<Icon name="lock" />}
+                        icon={<Icon name="Lock" />}
                         placeholder={inputPlaceholder}
                         onChange={e => setInputName(e.target.value)}
                         hideErrors

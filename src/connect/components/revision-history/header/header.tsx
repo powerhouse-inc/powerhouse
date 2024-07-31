@@ -22,7 +22,7 @@ export function Header(props: Props) {
                     onClick={onClose}
                     className="rounded-lg bg-gray-50 p-1 text-slate-100 shadow-button"
                 >
-                    <Icon name="variant-arrow-left" />
+                    <Icon name="VariantArrowLeft" />
                 </button>
                 <h1 className="text-xs">{title}</h1>
             </div>

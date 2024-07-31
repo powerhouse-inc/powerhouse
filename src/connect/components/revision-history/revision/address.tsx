@@ -30,7 +30,7 @@ export function Address(props: AddressProps) {
         >
             {address}
             <Icon
-                name="files-earmark"
+                name="FilesEarmark"
                 className="inline-block text-gray-600"
                 size={16}
             />

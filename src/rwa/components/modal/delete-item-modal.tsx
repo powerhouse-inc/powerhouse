@@ -35,7 +35,7 @@ export const RWADeleteItemModal = (props: RWADeleteItemModalProps) => {
                 </div>
                 <div className="my-6 flex gap-2 rounded-md bg-orange-100 p-4 text-orange-800">
                     <div>
-                        <Icon name="error" className="mt-1 text-orange-800" />
+                        <Icon name="Error" className="mt-1 text-orange-800" />
                     </div>
                     <div>
                         Warning! Cannot delete this {itemName} because there are{' '}

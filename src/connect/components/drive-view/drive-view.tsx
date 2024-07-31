@@ -63,7 +63,7 @@ export function DriveView(props: DriveViewProps) {
                                 'mr-2 transition hover:text-gray-800',
                             )}
                         >
-                            <Icon name="plus-circle" size={16} />
+                            <Icon name="PlusCircle" size={16} />
                         </button>
                     )}
                 </div>

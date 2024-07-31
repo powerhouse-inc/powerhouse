@@ -42,7 +42,7 @@ export const CreateDocumentModal = (props: CreateDocumentModalProps) => {
                 </div>
                 <div className="my-6">
                     <FormInput
-                        icon={<Icon name="brick-globe" />}
+                        icon={<Icon name="BrickGlobe" />}
                         value={nodeName}
                         placeholder="Document name"
                         required

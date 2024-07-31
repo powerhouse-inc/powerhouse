@@ -30,7 +30,7 @@ export function DeleteDrive(props: DeleteDriveProps) {
                 value={driveNameInput}
                 placeholder="Enter drive name..."
                 onChange={event => setDriveNameInput(event.target.value)}
-                icon={<Icon name="lock" />}
+                icon={<Icon name="Lock" />}
             />
             <div className="flex gap-3">
                 <Button onClick={onCancel} color="light" className="w-full">

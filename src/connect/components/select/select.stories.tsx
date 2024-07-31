@@ -21,17 +21,17 @@ const Template: Story = {
         items: [
             {
                 value: 'Private',
-                icon: <Icon name="hdd" />,
+                icon: <Icon name="Hdd" />,
                 description: 'Only available to you',
             },
             {
                 value: 'Shared',
-                icon: <Icon name="people" />,
+                icon: <Icon name="People" />,
                 description: 'Only available to people in this drive',
             },
             {
                 value: 'Public',
-                icon: <Icon name="globe" />,
+                icon: <Icon name="Globe" />,
                 description: 'Available to everyone',
                 disabled: true,
             },

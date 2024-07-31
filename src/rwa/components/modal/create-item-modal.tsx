@@ -61,7 +61,7 @@ export function RWACreateItemModal<TFieldValues extends FieldValues>(
                         onClick={handleCancel}
                         tabIndex={-1}
                     >
-                        <Icon name="xmark-light" size={24} />
+                        <Icon name="XmarkLight" size={24} />
                     </button>
                 </div>
                 <ModalFormInputs inputs={inputs} />

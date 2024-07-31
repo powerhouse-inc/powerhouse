@@ -98,7 +98,7 @@ export const TableBase = fixedForwardRef(function TableBase<
                                         {column.label}
                                         {column.allowSorting && (
                                             <Icon
-                                                name="arrow-filled-right"
+                                                name="ArrowFilledRight"
                                                 size={6}
                                                 className={twMerge(
                                                     'invisible ml-1 rotate-90',

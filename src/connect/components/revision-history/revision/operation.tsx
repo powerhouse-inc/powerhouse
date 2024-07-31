@@ -19,7 +19,7 @@ export function Operation(props: OperationProps) {
         <Tooltip content={tooltipContent}>
             <span className="flex cursor-pointer items-center gap-2 text-xs">
                 {operationType}
-                <Icon name="braces" className="text-gray-300" size={16} />
+                <Icon name="Braces" className="text-gray-300" size={16} />
             </span>
         </Tooltip>
     );

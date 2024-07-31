@@ -21,7 +21,7 @@ export function DocId(props: Props) {
             className="flex h-8 items-center gap-1 rounded-lg bg-slate-50 pl-1 pr-2 text-xs text-slate-100"
             onClick={handleCopy(docId)}
         >
-            <Icon name="link" />
+            <Icon name="Link" />
             DOC ID
             <span className="text-gray-900">{docId}</span>
         </button>

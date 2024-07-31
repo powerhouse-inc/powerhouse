@@ -51,7 +51,7 @@ export function Signature(props: SignatureProps) {
         <Tooltip content={tooltipContent}>
             <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 px-2 py-1">
                 <VerificationStatus />{' '}
-                <Icon name="info-square" className="text-gray-300" size={16} />
+                <Icon name="InfoSquare" className="text-gray-300" size={16} />
             </span>
         </Tooltip>
     );

@@ -59,7 +59,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
 
     return (
         <div className="flex items-center">
-            <Icon name="search" className="mr-3" />
+            <Icon name="Search" className="mr-3" />
             <input
                 value={value}
                 onChange={handleChange}
@@ -70,7 +70,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
             />
             <DropdownMenu>
                 <DropdownMenuTrigger className="ml-3 flex h-full flex-row items-center outline-none">
-                    {filterLabelContent} <Icon name="chevron-down" />
+                    {filterLabelContent} <Icon name="ChevronDown" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="rounded-xl border border-gray-100 bg-gray-50 p-2">
                     {items.map(item => (

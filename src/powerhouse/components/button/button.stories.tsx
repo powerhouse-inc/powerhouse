@@ -168,7 +168,7 @@ export const WithIcon: Story = {
     ...Template,
     args: {
         ...Template.args,
-        icon: <Icon name="plus" size={20} />,
+        icon: <Icon name="Plus" size={20} />,
     },
 };
 
@@ -176,6 +176,6 @@ export const SmallWithIcon: Story = {
     ...Small,
     args: {
         ...Small.args,
-        icon: <Icon name="plus" size={16} />,
+        icon: <Icon name="Plus" size={16} />,
     },
 };

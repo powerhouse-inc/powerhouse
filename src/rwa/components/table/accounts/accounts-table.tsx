@@ -33,7 +33,7 @@ function makeAccountsTableItems(
                     <>
                         {itemData}{' '}
                         <span className="ml-2 inline-flex items-center gap-1 rounded bg-green-100 px-1 font-extralight">
-                            Lender <Icon name="check-circle" size={14} />
+                            Lender <Icon name="CheckCircle" size={14} />
                         </span>
                     </>
                 );

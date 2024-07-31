@@ -51,7 +51,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
                     required: 'Drive name is required',
                 })}
                 errorMessage={errors.name?.message}
-                icon={<Icon name="drive" />}
+                icon={<Icon name="Drive" />}
                 placeholder="Drive name"
             />
             <Divider className="my-4" />
@@ -66,7 +66,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
                 <div className="mt-3 grid h-[117px] w-full place-items-center rounded-xl bg-gray-200">
                     <div className="rounded-xl bg-white p-3 text-xs">
                         <Icon
-                            name="arrow-up"
+                            name="ArrowUp"
                             size={20}
                             className="mr-2 inline-block"
                         />

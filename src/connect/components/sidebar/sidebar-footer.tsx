@@ -35,7 +35,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
                 className="mt-3 flex w-full cursor-pointer gap-3 outline-none collapsed:px-3 expanding:px-3"
                 onClick={onClickSettings}
             >
-                <Icon name="settings" className="text-gray-600" />
+                <Icon name="Settings" className="text-gray-600" />
                 <span className="text-sm font-semibold leading-6 text-gray-800 collapsed:hidden expanding:hidden">
                     Settings
                 </span>

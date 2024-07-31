@@ -78,7 +78,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
                     className="flex gap-2 py-3 font-semibold text-red-900 transition hover:brightness-125"
                     onClick={() => setShowDeleteDrive(true)}
                 >
-                    <Icon name="trash" />
+                    <Icon name="Trash" />
                     Delete drive
                 </button>
             </Disclosure>

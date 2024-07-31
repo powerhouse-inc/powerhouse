@@ -22,6 +22,6 @@ export const Primary: Story = {
     args: {
         children: 'Edit Transaction',
         iconPosition: 'right',
-        icon: <Icon name="pencil" size={16} />,
+        icon: <Icon name="Pencil" size={16} />,
     },
 };

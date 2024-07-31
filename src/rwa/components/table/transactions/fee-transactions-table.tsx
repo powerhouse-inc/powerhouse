@@ -126,7 +126,7 @@ export function FeeTransactionsTable(props: Props) {
                                                     className="flex items-center"
                                                 >
                                                     <Icon
-                                                        name="xmark"
+                                                        name="Xmark"
                                                         className="text-gray-900"
                                                     />
                                                 </button>
@@ -151,7 +151,7 @@ export function FeeTransactionsTable(props: Props) {
                     className="ml-[234px] mt-1 flex w-fit items-center justify-center gap-x-2 rounded-lg bg-white pb-6 text-sm font-semibold text-gray-900"
                 >
                     <span>Add Fee</span>
-                    <Icon name="plus" size={16} />
+                    <Icon name="Plus" size={16} />
                 </button>
             )}
         </>

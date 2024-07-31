@@ -123,7 +123,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
                 <>
                     <FormInput
                         type="url"
-                        icon={<Icon name="brick-globe" />}
+                        icon={<Icon name="BrickGlobe" />}
                         value={url}
                         placeholder="Drive URL"
                         required

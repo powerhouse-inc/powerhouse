@@ -18,7 +18,7 @@ export function Disclosure(props: DisclosureProps) {
             >
                 <h2 className=" font-semibold text-gray-500">{title}</h2>
                 <Icon
-                    name="chevron-down"
+                    name="ChevronDown"
                     className={twJoin('transition', isOpen ? '' : '-rotate-90')}
                 />
             </div>

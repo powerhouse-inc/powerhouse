@@ -123,7 +123,7 @@ export function FolderItem(props: FolderItemProps) {
                 <div className="flex items-center overflow-hidden">
                     <div className="p-1">
                         <div className="relative">
-                            <Icon name="folder-close" size={24} />
+                            <Icon name="FolderClose" size={24} />
                             {isReadMode &&
                                 isRemoteDrive &&
                                 uiNode.syncStatus && (
@@ -132,8 +132,7 @@ export function FolderItem(props: FolderItemProps) {
                                             <SyncStatusIcon
                                                 syncStatus={uiNode.syncStatus}
                                                 overrideSyncIcons={{
-                                                    SUCCESS:
-                                                        'check-circle-fill',
+                                                    SUCCESS: 'CheckCircleFill',
                                                 }}
                                             />
                                         </div>
@@ -161,7 +160,7 @@ export function FolderItem(props: FolderItemProps) {
                             )}
                         >
                             <Icon
-                                name="vertical-dots"
+                                name="VerticalDots"
                                 className="text-gray-600"
                             />
                         </button>

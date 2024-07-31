@@ -19,7 +19,7 @@ type Props = Omit<SelectProps, 'components' | 'styles' | 'theme'> & {
 function DropdownIndicator(props: DropdownIndicatorProps) {
     return (
         <components.DropdownIndicator {...props}>
-            <Icon name="chevron-down" size={16} />
+            <Icon name="ChevronDown" size={16} />
         </components.DropdownIndicator>
     );
 }
@@ -27,7 +27,7 @@ function DropdownIndicator(props: DropdownIndicatorProps) {
 function ClearIndicator(props: ClearIndicatorProps) {
     return (
         <components.ClearIndicator {...props}>
-            <Icon name="xmark" size={16} />
+            <Icon name="Xmark" size={16} />
         </components.ClearIndicator>
     );
 }

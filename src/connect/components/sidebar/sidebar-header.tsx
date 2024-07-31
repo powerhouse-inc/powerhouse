@@ -34,7 +34,7 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
                 expanding:hidden"
                 onClick={() => onToggle()}
             >
-                <Icon name="arrow-left" size={16} className="text-gray-600" />
+                <Icon name="ArrowLeft" size={16} className="text-gray-600" />
             </button>
         </SidebarHeader>
     );

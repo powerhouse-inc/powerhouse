@@ -14,9 +14,9 @@ export function Errors(props: ErrorsProps) {
     const color = hasErrors ? 'text-red-800' : 'text-green-700';
 
     const icon = hasErrors ? (
-        <Icon name="exclamation" size={16} />
+        <Icon name="Exclamation" size={16} />
     ) : (
-        <Icon name="check" size={16} />
+        <Icon name="Check" size={16} />
     );
 
     const text = hasErrors ? `Error: ${errors[0]}` : 'No errors';
