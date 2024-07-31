@@ -1,3 +1,10 @@
+# [1.72.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.71.0...v1.72.0) (2024-07-31)
+
+
+### Features
+
+* make script path relative ([521e588](https://github.com/powerhouse-inc/document-model-libs/commit/521e588966ef6e2253daa3a883dffee87efab47c))
+
 # [1.71.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.70.0...v1.71.0) (2024-07-30)
 
 
