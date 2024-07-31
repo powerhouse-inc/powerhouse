@@ -27,7 +27,7 @@ export default function Sidebar() {
 
     const headerContent = (
         <div className="flex h-full items-center">
-            <Icon name="connect" className="!h-[30px] !w-[100px]" />
+            <Icon name="Connect" className="!h-[30px] !w-[100px]" />
             {connectDebug && (
                 <button
                     id="connect-debug-button"

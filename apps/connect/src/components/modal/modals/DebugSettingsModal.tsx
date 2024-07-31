@@ -109,12 +109,12 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                 <div className="mb-6 flex justify-between">
                     <div className="text-xl font-bold">Debug Tools</div>
                     <button id="close-modal" onClick={() => onClose()}>
-                        <Icon name="xmark" size={28} />
+                        <Icon name="Xmark" size={28} />
                     </button>
                 </div>
 
                 <div className="flex text-sm font-bold">
-                    <Icon name="hdd" size={22} />
+                    <Icon name="Hdd" size={22} />
                     <span className="ml-2">Drive Tools:</span>
                 </div>
 
