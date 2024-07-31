@@ -1,3 +1,10 @@
+# [1.74.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.73.0...v1.74.0) (2024-07-31)
+
+
+### Features
+
+* add try catch ([6a3f5af](https://github.com/powerhouse-inc/document-model-libs/commit/6a3f5afa28200d1e0aca905bb2380f3f52da600f))
+
 # [1.73.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.72.0...v1.73.0) (2024-07-31)
 
 
