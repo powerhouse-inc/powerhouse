@@ -82,7 +82,7 @@ export function FileContentView(props: Props) {
                     marginLeft: columnIndex === 0 ? 0 : GAP,
                 }}
             >
-                <FileItem {...props} key={fileNode.id} uiFileNode={fileNode} />
+                <FileItem {...props} key={fileNode.id} uiNode={fileNode} />
             </div>
         );
     };

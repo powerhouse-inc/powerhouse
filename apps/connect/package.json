@@ -29,9 +29,9 @@
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "release": "semantic-release",
-        "prepare": "npm run prepare:scripts",
-        "prepare:scripts": "node scripts/index.js",
         "e2e": "playwright test",
+        "update-icons": "node scripts/copyIconsFromDesignSystem.js",
+        "postinstall": "npm run update-icons",
         "cy:open": "cypress open"
     },
     "devDependencies": {
@@ -76,8 +76,6 @@
         "prettier": "^3.1.1",
         "prettier-plugin-organize-imports": "^3.2.4",
         "react": "^18.2.0",
-        "react-aria": "^3.32.0",
-        "react-aria-components": "1.2.0",
         "react-dom": "^18.2.0",
         "rollup-plugin-node-polyfills": "^0.2.1",
         "rollup-plugin-shim": "^1.0.0",
@@ -93,13 +91,13 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "1.0.0-alpha.152",
+        "@powerhousedao/design-system": "1.0.0-alpha.153",
         "@sentry/react": "^7.109.0",
         "@tanstack/react-virtual": "^3.8.1",
         "did-key-creator": "^1.2.0",
         "document-drive": "1.0.0-alpha.82",
         "document-model": "1.7.0",
-        "document-model-libs": "^1.69.0",
+        "document-model-libs": "^1.75.0",
         "electron-is-dev": "^3.0.1",
         "electron-squirrel-startup": "^1.0.0",
         "electron-store": "^8.1.0",

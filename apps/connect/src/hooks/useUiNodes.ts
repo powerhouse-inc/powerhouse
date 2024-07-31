@@ -2,7 +2,6 @@ import {
     AddLocalDriveInput,
     AddRemoteDriveInput,
     CLOUD,
-    DragAndDropProps,
     DRIVE,
     FILE,
     FOLDER,
@@ -18,21 +17,17 @@ import {
     useUiNodesContext,
 } from '@powerhousedao/design-system';
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
 import { getNodeOptions } from 'src/utils/drive-sections';
 import { makeNodeSlugFromNodeName } from 'src/utils/slug';
 import { useDocumentDriveById } from './useDocumentDriveById';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
-import { useOnDropEvent } from './useOnDropEvent';
 import { useOpenSwitchboardLink } from './useOpenSwitchboardLink';
 import { useUserPermissions } from './useUserPermissions';
 
 export function useUiNodes() {
-    const [disableHighlightStyles, setDisableHighlightStyles] = useState(false);
-    const [disableDropBetween, setDisableDropBetween] = useState(false);
-
     const { showModal } = useModal();
     const { t } = useTranslation();
     const uiNodesContext = useUiNodesContext();
@@ -43,10 +38,10 @@ export function useUiNodes() {
         setSelectedNode,
         getParentNode,
     } = uiNodesContext;
-    const onDropEvent = useOnDropEvent();
     const documentDriveServer = useDocumentDriveServer();
     const {
         addFolder,
+        addFile,
         renameNode,
         deleteNode,
         addDrive,
@@ -56,6 +51,7 @@ export function useUiNodes() {
         setDriveAvailableOffline,
         setDriveSharingType,
         copyNode,
+        moveNode,
         getSyncStatus,
         removeTrigger,
         addTrigger,
@@ -183,6 +179,46 @@ export function useUiNodes() {
             return await renameNode(uiNode.driveId, uiNode.id, name);
         },
         [renameNode],
+    );
+
+    const onCopyNode = useCallback(
+        async (uiNode: UiNode, targetNode: UiNode) => {
+            if (uiNode.kind === DRIVE) {
+                throw new Error('Drive cannot be duplicated');
+            }
+
+            await copyNode(uiNode, targetNode);
+        },
+        [copyNode],
+    );
+
+    const onMoveNode = useCallback(
+        async (uiNode: UiNode, targetNode: UiNode) => {
+            if (uiNode.kind === DRIVE) {
+                throw new Error('Drive cannot be moved');
+            }
+
+            await moveNode(uiNode, targetNode);
+        },
+        [moveNode],
+    );
+
+    const onAddFile = useCallback(
+        async (file: File, parentNode: UiNode | null) => {
+            if (!parentNode) {
+                throw new Error('Parent node is required');
+            }
+            if (parentNode.kind === FILE) {
+                throw new Error('Cannot add file to a file');
+            }
+            return await addFile(
+                file,
+                parentNode.driveId,
+                file.name,
+                parentNode.id,
+            );
+        },
+        [addFile],
     );
 
     const onDuplicateNode = useCallback(
@@ -435,24 +471,6 @@ export function useUiNodes() {
         [addTrigger],
     );
 
-    const draDragAndDropProps: DragAndDropProps = useMemo(
-        () => ({
-            onDropEvent,
-            onDropActivate: (dropTargetItem: UiNode) =>
-                setSelectedNode(dropTargetItem),
-            onDragStart: () => setDisableHighlightStyles(true),
-            onDragEnd: () => setDisableHighlightStyles(false),
-            disableDropBetween,
-            disableHighlightStyles,
-        }),
-        [
-            disableDropBetween,
-            disableHighlightStyles,
-            onDropEvent,
-            setSelectedNode,
-        ],
-    );
-
     const driveNodesBySharingType = useMemo(
         () =>
             driveNodes.reduce<Record<SharingType, UiDriveNode[]>>(
@@ -474,11 +492,13 @@ export function useUiNodes() {
             ...documentDriveServer,
             ...uiNodesContext,
             ...userPermissions,
-            ...draDragAndDropProps,
             ...selectedDocumentDrive,
             nodeOptions,
             driveNodesBySharingType,
             onAddFolder,
+            onAddFile,
+            onCopyNode,
+            onMoveNode,
             onRenameNode,
             onDuplicateNode,
             onDeleteNode,
@@ -496,11 +516,13 @@ export function useUiNodes() {
             documentDriveServer,
             uiNodesContext,
             userPermissions,
-            draDragAndDropProps,
             selectedDocumentDrive,
             nodeOptions,
             driveNodesBySharingType,
             onAddFolder,
+            onAddFile,
+            onCopyNode,
+            onMoveNode,
             onRenameNode,
             onDuplicateNode,
             onDeleteNode,

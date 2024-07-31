@@ -2,11 +2,9 @@ import {
     FILE,
     FOLDER,
     FolderItem,
-    UiNode,
-    useDraggableTarget,
+    useDrop,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import { useOnDropEvent } from 'src/hooks/useOnDropEvent';
 import { UiNodes } from 'src/hooks/useUiNodes';
 import { sortUiNodesByName } from 'src/utils';
 import { twMerge } from 'tailwind-merge';
@@ -16,10 +14,9 @@ import FileContentView from './file-content-view';
 export function FolderView(props: UiNodes) {
     const { t } = useTranslation();
     const { selectedParentNode } = props;
-    const onDropEvent = useOnDropEvent();
-    const { dropProps, isDropTarget } = useDraggableTarget<UiNode | null>({
-        data: selectedParentNode,
-        onDropEvent,
+    const { isDropTarget, dropProps } = useDrop({
+        ...props,
+        uiNode: selectedParentNode,
     });
 
     const folderNodes =
@@ -36,8 +33,8 @@ export function FolderView(props: UiNodes) {
         <div
             {...dropProps}
             className={twMerge(
-                'rounded-md border-2 border-dashed border-transparent p-2',
-                isDropTarget && 'border-blue-100',
+                'rounded-md border-2 border-transparent p-2',
+                isDropTarget && 'border-dashed border-blue-100',
             )}
         >
             <ContentSection
@@ -49,7 +46,7 @@ export function FolderView(props: UiNodes) {
                         <FolderItem
                             {...props}
                             key={folderNode.id}
-                            uiFolderNode={folderNode}
+                            uiNode={folderNode}
                         />
                     ))
                 ) : (
