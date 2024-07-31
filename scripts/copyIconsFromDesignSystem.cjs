@@ -1,17 +1,32 @@
 const fs = require('fs');
 const path = require('path');
 
-if (process.env.INIT_CWD !== process.cwd())
-    process.exit()
+function copyIcons() {
+    try {
+        const srcPath = path.join(
+            __dirname,
+            '../node_modules/@powerhousedao/design-system/dist/icons.svg',
+        );
+        const destPath = path.join(__dirname, '../public/icons.svg');
 
-console.log('🤖 Copying icons.svg to public folder...');
+        if (!fs.existsSync(srcPath)) {
+            console.log(
+                'Not copying icons because install is inside another package',
+            );
+            return;
+        }
 
-fs.copyFileSync(
-    path.join(
-        __dirname,
-        '../node_modules/@powerhousedao/design-system/dist/icons.svg',
-    ),
-    path.join(__dirname, '../public/icons.svg'),
-);
+        console.log('🤖 Copying icons.svg to public folder...');
 
-console.log('✅ Copying icons.svg to public folder... Done!');
+        fs.copyFileSync(srcPath, destPath);
+
+        console.log('✅ Copying icons.svg to public folder... Done!');
+    } catch (error) {
+        console.log(
+            'Not copying icons because install is inside another package',
+        );
+        return;
+    }
+}
+
+copyIcons();
