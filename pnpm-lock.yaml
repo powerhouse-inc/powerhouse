@@ -67,8 +67,8 @@ importers:
         specifier: 0.0.15
         version: 0.0.15(@parcel/watcher@2.4.1)(bufferutil@4.0.8)(graphql@16.9.0)(utf-8-validate@5.0.10)(zod@3.23.8)
       '@powerhousedao/design-system':
-        specifier: 1.0.0-alpha.153
-        version: 1.0.0-alpha.153(@tanstack/query-core@5.51.15)(@types/react@18.3.3)(bufferutil@4.0.8)(react-dom@18.3.1(react@18.3.1))(react-native@0.74.4(@babel/core@7.25.2)(@babel/preset-env@7.25.2(@babel/core@7.25.2))(@types/react@18.3.3)(bufferutil@4.0.8)(react@18.3.1)(utf-8-validate@5.0.10))(react@18.3.1)(rollup@4.19.1)(typescript@5.5.4)(utf-8-validate@5.0.10)(zod@3.23.8)
+        specifier: 1.0.0-alpha.154
+        version: 1.0.0-alpha.154(@tanstack/query-core@5.51.15)(@types/react@18.3.3)(bufferutil@4.0.8)(react-dom@18.3.1(react@18.3.1))(react-native@0.74.4(@babel/core@7.25.2)(@babel/preset-env@7.25.2(@babel/core@7.25.2))(@types/react@18.3.3)(bufferutil@4.0.8)(react@18.3.1)(utf-8-validate@5.0.10))(react@18.3.1)(rollup@4.19.1)(typescript@5.5.4)(utf-8-validate@5.0.10)(zod@3.23.8)
       '@semantic-release/changelog':
         specifier: ^6.0.3
         version: 6.0.3(semantic-release@23.1.1(typescript@5.5.4))
@@ -2162,8 +2162,8 @@ packages:
     peerDependencies:
       graphql: ^16.8.1
 
-  '@powerhousedao/design-system@1.0.0-alpha.153':
-    resolution: {integrity: sha512-KB60KsM+viU1fJ+mxPjLy+R3yH1Lk0Nk5Su0B3yfm3mmCidGVne8FzrvAS/KnDQCr10B1mdXHHNi9WHKBYALMA==}
+  '@powerhousedao/design-system@1.0.0-alpha.154':
+    resolution: {integrity: sha512-qOa1YsdlPn1ilOG5NvSIoCkJD/zlkB7dy6unVcT0N5mQK3UJcyGbvHgrSoIUlsDVI8l8QSFYjeZgkagQElB82w==}
     peerDependencies:
       react: ^18.2.0
       react-dom: ^18.2.0
@@ -12243,7 +12243,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@powerhousedao/design-system@1.0.0-alpha.153(@tanstack/query-core@5.51.15)(@types/react@18.3.3)(bufferutil@4.0.8)(react-dom@18.3.1(react@18.3.1))(react-native@0.74.4(@babel/core@7.25.2)(@babel/preset-env@7.25.2(@babel/core@7.25.2))(@types/react@18.3.3)(bufferutil@4.0.8)(react@18.3.1)(utf-8-validate@5.0.10))(react@18.3.1)(rollup@4.19.1)(typescript@5.5.4)(utf-8-validate@5.0.10)(zod@3.23.8)':
+  '@powerhousedao/design-system@1.0.0-alpha.154(@tanstack/query-core@5.51.15)(@types/react@18.3.3)(bufferutil@4.0.8)(react-dom@18.3.1(react@18.3.1))(react-native@0.74.4(@babel/core@7.25.2)(@babel/preset-env@7.25.2(@babel/core@7.25.2))(@types/react@18.3.3)(bufferutil@4.0.8)(react@18.3.1)(utf-8-validate@5.0.10))(react@18.3.1)(rollup@4.19.1)(typescript@5.5.4)(utf-8-validate@5.0.10)(zod@3.23.8)':
     dependencies:
       '@internationalized/date': 3.5.5
       '@radix-ui/react-dialog': 1.1.1(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)

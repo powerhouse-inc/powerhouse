@@ -70,12 +70,9 @@
         "test": "powerhouse generate && vitest run",
         "test:nogen": "vitest run",
         "test:watch": "powerhouse generate && vitest",
-        "update-icons": "node ./scripts/copyIconsFromDesignSystem.cjs",
         "chromatic": "npx chromatic --project-token chpt_7f618da80620e4d",
         "prepare": "husky install",
         "release": "semantic-release",
-        "@comment_postinstall": "Behavior of the node-js subscript below: if '.git' doesn't exist under this lib, it's installed as a dep, so do nothing -- else, return error-code 1, causing update-icons to run.",
-        "postinstall": "node -e \"let isInstalledAsDep = !require('fs').existsSync('.git'); if (!isInstalledAsDep) process.exit(1);\" || npm run update-icons",
         "prepublishOnly": "npm run build"
     },
     "devDependencies": {
@@ -86,7 +83,7 @@
         "@monaco-editor/react": "^4.6.0",
         "@mui/material": "^5.15.5",
         "@powerhousedao/codegen": "0.0.15",
-        "@powerhousedao/design-system": "1.0.0-alpha.153",
+        "@powerhousedao/design-system": "1.0.0-alpha.154",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@storybook/addon-essentials": "^8.2.6",
