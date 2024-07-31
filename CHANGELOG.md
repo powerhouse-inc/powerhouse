@@ -1,3 +1,10 @@
+# [1.73.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.72.0...v1.73.0) (2024-07-31)
+
+
+### Features
+
+* exit when not installing in local ([0c1e27b](https://github.com/powerhouse-inc/document-model-libs/commit/0c1e27b4fd176b2e10621e185a7bc61b35b51a15))
+
 # [1.72.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.71.0...v1.72.0) (2024-07-31)
 
 
