@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
+if (process.env.INIT_CWD !== process.cwd())
+    process.exit()
+
 console.log('🤖 Copying icons.svg to public folder...');
 
 fs.copyFileSync(
