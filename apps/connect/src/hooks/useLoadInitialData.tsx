@@ -7,9 +7,10 @@ import {
     UiDriveNode,
 } from '@powerhousedao/design-system';
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
+import { TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReloadConnectToast } from 'src/components/toast';
+import { ReloadConnectToast } from 'src/components/toast/reload-connect-toast';
 import { useUiNodes } from 'src/hooks/useUiNodes';
 import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-server';
 import { useClientErrorHandler } from './useClientErrorHandler';
@@ -33,63 +34,86 @@ export const useLoadInitialData = () => {
 
     useLoadDefaultDrives();
 
+    async function checkLatestVersion() {
+        const result = await isLatestVersion();
+        if (!result) {
+            toast(<ReloadConnectToast />, {
+                type: 'connect-warning',
+                toastId: 'outdated-app',
+                autoClose: false,
+            });
+        }
+        return result;
+    }
+
+    useEffect(() => {
+        checkLatestVersion().catch(console.error);
+    }, []);
+
     useEffect(() => {
         const unsubscribe = serverSubscribeUpdates(clientErrorHandler);
         return unsubscribe;
     }, [serverSubscribeUpdates, documentDrives, clientErrorHandler]);
 
+    const checkDrivesErrors = useCallback(
+        async (driveNodes: UiDriveNode[], t: TFunction) => {
+            driveNodes.forEach(drive => {
+                const prevDrive = prevDrivesState.current.find(
+                    prevDrive => prevDrive.id === drive.id,
+                );
+
+                if (!prevDrive) return;
+
+                if (
+                    drive.sharingType !== LOCAL &&
+                    drive.syncStatus === SUCCESS &&
+                    drivesWithError.current.includes(drive)
+                ) {
+                    // remove the drive from the error list
+                    drivesWithError.current = drivesWithError.current.filter(
+                        d => d.id !== drive.id,
+                    );
+
+                    return toast(t('notifications.driveSyncSuccess'), {
+                        type: 'connect-success',
+                    });
+                }
+
+                if (
+                    (drive.syncStatus === CONFLICT ||
+                        drive.syncStatus === ERROR) &&
+                    drive.syncStatus !== prevDrive.syncStatus
+                ) {
+                    // add the drive to the error list
+                    drivesWithError.current.push(drive);
+                }
+            });
+
+            prevDrivesState.current = [...driveNodes];
+
+            if (drivesWithError.current.length > 0) {
+                const isCurrent = await checkLatestVersion();
+                if (isCurrent) {
+                    drivesWithError.current.forEach(drive => {
+                        toast(
+                            t(
+                                `notifications.${drive.syncStatus === CONFLICT ? 'driveSyncConflict' : 'driveSyncError'}`,
+                                { drive: drive.name },
+                            ),
+                            {
+                                type: 'connect-warning',
+                            },
+                        );
+                    });
+                }
+            }
+        },
+        [],
+    );
+
     useEffect(() => {
-        driveNodes.forEach(drive => {
-            const prevDrive = prevDrivesState.current.find(
-                prevDrive => prevDrive.id === drive.id,
-            );
-
-            if (!prevDrive) return;
-
-            if (
-                drive.sharingType !== LOCAL &&
-                drive.syncStatus === SUCCESS &&
-                drivesWithError.current.includes(drive)
-            ) {
-                // remove the drive from the error list
-                drivesWithError.current = drivesWithError.current.filter(
-                    d => d.id !== drive.id,
-                );
-
-                return toast(t('notifications.driveSyncSuccess'), {
-                    type: 'connect-success',
-                });
-            }
-
-            if (
-                (drive.syncStatus === CONFLICT || drive.syncStatus === ERROR) &&
-                drive.syncStatus !== prevDrive.syncStatus
-            ) {
-                // add the drive to the error list
-                drivesWithError.current.push(drive);
-
-                isLatestVersion().then(result => {
-                    if (!result) {
-                        return toast(<ReloadConnectToast />, {
-                            type: 'connect-warning',
-                        });
-                    }
-                });
-
-                return toast(
-                    t(
-                        `notifications.${drive.syncStatus === CONFLICT ? 'driveSyncConflict' : 'driveSyncError'}`,
-                        { drive: drive.name },
-                    ),
-                    {
-                        type: 'connect-warning',
-                    },
-                );
-            }
-        });
-
-        prevDrivesState.current = [...driveNodes];
-    }, [driveNodes, t]);
+        checkDrivesErrors(driveNodes, t).catch(console.error);
+    }, [driveNodes, t, checkDrivesErrors]);
 
     const updateUiDriveNodes = useCallback(
         async (documentDrives: DocumentDriveDocument[]) => {
