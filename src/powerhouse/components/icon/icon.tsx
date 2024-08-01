@@ -1,35 +1,20 @@
 import { iconComponents } from '@/assets';
-import { IconName } from '@/powerhouse';
-import { ComponentPropsWithoutRef, CSSProperties } from 'react';
+import { Color, getDimensions, IconName, Size } from '@/powerhouse';
+import { ComponentPropsWithoutRef } from 'react';
 
 export type IconProps = ComponentPropsWithoutRef<'svg'> & {
     name: IconName;
-    size?: CSSProperties['width'];
-    color?: CSSProperties['color'];
+    size?: Size;
+    color?: Color;
 };
 
-function getDimensions(size?: IconProps['size']) {
-    if (!size) return {};
-
-    if (typeof size === 'number') {
-        return {
-            width: size + 'px',
-            height: size + 'px',
-        };
-    }
-
-    return {
-        width: size,
-        height: size,
-    };
-}
-
-export function Icon({ name, size = 24, color, ...props }: IconProps) {
+export function Icon({ name, size = 24, color, style, ...props }: IconProps) {
     const dimensions = getDimensions(size);
-    const style = {
+    const _style = {
         color,
         ...dimensions,
+        style,
     };
     const IconComponent = iconComponents[name];
-    return <IconComponent {...props} style={style} />;
+    return <IconComponent {...props} style={_style} />;
 }
