@@ -1,3 +1,10 @@
+# [1.0.0-dev.54](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.53...v1.0.0-dev.54) (2024-08-01)
+
+
+### Features
+
+* outdated app check improvements ([800b4b2](https://github.com/powerhouse-inc/document-model-electron/commit/800b4b25952417f7ecfdd78ecf3db291776d14a9))
+
 # [1.0.0-dev.53](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.52...v1.0.0-dev.53) (2024-08-01)
 
 
