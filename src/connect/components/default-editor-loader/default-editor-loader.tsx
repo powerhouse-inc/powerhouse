@@ -1,4 +1,4 @@
-import { AnimatedLoader } from '../animated-loader';
+import { AnimatedLoader } from '@/connect';
 
 export function DefaultEditorLoader() {
     return (
