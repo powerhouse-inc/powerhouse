@@ -1,3 +1,10 @@
+# [1.0.0-dev.53](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.52...v1.0.0-dev.53) (2024-08-01)
+
+
+### Features
+
+* add animated loader for editors ([0ef0cc5](https://github.com/powerhouse-inc/document-model-electron/commit/0ef0cc587bb04d3fa65a4fd133c4c42f5998c92c))
+
 # [1.0.0-dev.52](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.51...v1.0.0-dev.52) (2024-08-01)
 
 
