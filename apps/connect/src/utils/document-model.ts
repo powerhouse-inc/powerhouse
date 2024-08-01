@@ -44,7 +44,7 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
     initialState: Document<State, A, LocalState>,
     onError: OnErrorHandler = console.error,
 ): readonly [
-    Document<State, A, LocalState>,
+    Document<State, A, LocalState> | undefined,
     DocumentDispatch<State, A, LocalState>,
     unknown,
 ] {
