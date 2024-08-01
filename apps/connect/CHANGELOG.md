@@ -1,3 +1,13 @@
+# [1.0.0-dev.52](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.51...v1.0.0-dev.52) (2024-08-01)
+
+
+### Features
+
+* add suspense for editor component ([62f78e7](https://github.com/powerhouse-inc/document-model-electron/commit/62f78e7b2288c4ce346c9bcfde638c9fc943145f))
+* expect undefined document ([d10ef75](https://github.com/powerhouse-inc/document-model-electron/commit/d10ef751d363f56dce29626ec8fbcc7d38fe945a))
+* handle async editor switching ([453939b](https://github.com/powerhouse-inc/document-model-electron/commit/453939bdb2f110dca48a61e91707aaee3eeb9b9d))
+* remove old store tabs ([816406e](https://github.com/powerhouse-inc/document-model-electron/commit/816406e8a04a48ac3dc659a8274162693f4d735f))
+
 # [1.0.0-dev.51](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.50...v1.0.0-dev.51) (2024-07-31)
 
 
