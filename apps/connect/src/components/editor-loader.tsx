@@ -1,7 +1,13 @@
-export function EditorLoader() {
-    return (
-        <div className="flex h-full animate-pulse items-center justify-center">
-            <h3 className="text-xl">Loading editor</h3>
-        </div>
-    );
+import { DefaultEditorLoader } from '@powerhousedao/design-system';
+import { ReactNode } from 'react';
+
+type Props = {
+    customEditorLoader?: ReactNode;
+};
+export function EditorLoader(props: Props) {
+    const { customEditorLoader } = props;
+
+    if (customEditorLoader) return <>{customEditorLoader}</>;
+
+    return <DefaultEditorLoader />;
 }
