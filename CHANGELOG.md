@@ -1,3 +1,10 @@
+# [1.0.0-alpha.156](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.155...v1.0.0-alpha.156) (2024-08-01)
+
+
+### Features
+
+* fix loader in wrong dir ([0577590](https://github.com/powerhouse-inc/design-system/commit/0577590a839a6210df918c7cfed28780c630c221))
+
 # [1.0.0-alpha.155](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.154...v1.0.0-alpha.155) (2024-08-01)
 
 
