@@ -1,3 +1,10 @@
+# [1.0.0-alpha.155](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.154...v1.0.0-alpha.155) (2024-08-01)
+
+
+### Features
+
+* add connect loader component ([#338](https://github.com/powerhouse-inc/design-system/issues/338)) ([540742b](https://github.com/powerhouse-inc/design-system/commit/540742b74e72f0f1b6b69d517fecdfcad86edb20))
+
 # [1.0.0-alpha.154](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.153...v1.0.0-alpha.154) (2024-07-31)
 
 
