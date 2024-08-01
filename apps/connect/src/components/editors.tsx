@@ -14,7 +14,7 @@ import {
     utils,
 } from 'document-model/document';
 import { useAtomValue } from 'jotai';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
 import { UiNodes } from 'src/hooks/useUiNodes';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
@@ -28,6 +28,7 @@ import {
     useDocumentDispatch,
 } from 'src/utils/document-model';
 import Button from './button';
+import { EditorLoader } from './editor-loader';
 
 export type EditorProps<
     T = unknown,
@@ -215,11 +216,7 @@ export function DocumentEditor(props: EditorProps) {
     }
 
     if (!document || isLoadingEditor) {
-        return (
-            <div className="flex h-full animate-pulse items-center justify-center">
-                <h3 className="text-xl">Loading editor</h3>
-            </div>
-        );
+        return <EditorLoader />;
     }
 
     const EditorComponent = editor.Component;
@@ -253,20 +250,24 @@ export function DocumentEditor(props: EditorProps) {
                         onClose={() => setShowRevisionHistory(false)}
                     />
                 ) : (
-                    <EditorComponent
-                        error={error}
-                        context={context}
-                        document={document}
-                        dispatch={dispatch}
-                        onClose={onClose}
-                        onExport={onExport}
-                        onSwitchboardLinkClick={onOpenSwitchboardLink}
-                        onShowRevisionHistory={() =>
-                            setShowRevisionHistory(true)
-                        }
-                        isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-                        isAllowedToEditDocuments={isAllowedToEditDocuments}
-                    />
+                    <Suspense fallback={<EditorLoader />}>
+                        <EditorComponent
+                            error={error}
+                            context={context}
+                            document={document}
+                            dispatch={dispatch}
+                            onClose={onClose}
+                            onExport={onExport}
+                            onSwitchboardLinkClick={onOpenSwitchboardLink}
+                            onShowRevisionHistory={() =>
+                                setShowRevisionHistory(true)
+                            }
+                            isAllowedToCreateDocuments={
+                                isAllowedToCreateDocuments
+                            }
+                            isAllowedToEditDocuments={isAllowedToEditDocuments}
+                        />
+                    </Suspense>
                 )}
             </>
         </div>
