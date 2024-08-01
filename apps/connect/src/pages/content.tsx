@@ -1,6 +1,6 @@
 import { Breadcrumbs, FILE } from '@powerhousedao/design-system';
 import { Document, DocumentModel, Operation } from 'document-model/document';
-import { Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
@@ -155,28 +155,16 @@ const Content = () => {
             className="flex h-full flex-col overflow-auto bg-gray-100 p-6"
             id="content-view"
         >
-            {selectedNode && selectedDocument ? (
+            {selectedDocument ? (
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
-                    <Suspense
-                        fallback={
-                            <div className="flex h-full animate-pulse items-center justify-center">
-                                <h3 className="text-xl">Loading editor</h3>
-                            </div>
-                        }
-                    >
-                        <DocumentEditor
-                            document={selectedDocument}
-                            fileNodeId={selectedNode.id}
-                            onClose={() => {
-                                setSelectedNode(selectedParentNode);
-                            }}
-                            fileId={selectedNode.id}
-                            onChange={onDocumentChangeHandler}
-                            onExport={() => exportDocument(selectedDocument)}
-                            onAddOperation={handleAddOperation}
-                            {...(isRemoteDrive && { onOpenSwitchboardLink })}
-                        />
-                    </Suspense>
+                    <DocumentEditor
+                        {...uiNodes}
+                        document={selectedDocument}
+                        onChange={onDocumentChangeHandler}
+                        onExport={() => exportDocument(selectedDocument)}
+                        onAddOperation={handleAddOperation}
+                        {...(isRemoteDrive && { onOpenSwitchboardLink })}
+                    />
                 </div>
             ) : (
                 <>
