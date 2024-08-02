@@ -68,6 +68,8 @@ FROM macbre/nginx-brotli:latest AS runner
 ARG X_TAG
 WORKDIR /opt/app
 ENV NODE_ENV=production
+ARG PORT=80
+ENV PORT=${PORT}
 ARG BASE_PATH="/alpha/powerhouse/connect"
 ENV BASE_PATH=${BASE_PATH}
 COPY --from=builder /opt/app/dist /usr/share/nginx/html
