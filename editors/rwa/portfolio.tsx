@@ -5,6 +5,7 @@ import { useCallback } from 'react';
 import {
     FixedIncome,
     actions,
+    calculateCurrentValue,
     getDifferences,
 } from '../../document-models/real-world-assets';
 import { IProps } from './editor';
@@ -18,6 +19,7 @@ export const Portfolio = (props: IProps) => {
     } = props;
 
     const state = document.state.global;
+    const { transactions, fixedIncomeTypes } = state;
 
     const onSubmitEdit: AssetsTableProps['onSubmitEdit'] = useCallback(
         data => {
@@ -132,6 +134,18 @@ export const Portfolio = (props: IProps) => {
             [dispatch],
         );
 
+    const calculateCurrentValueCallback: AssetsTableProps['calculateCurrentValueCallback'] =
+        useCallback(
+            (asset: FixedIncome, currentDate?: Date) =>
+                calculateCurrentValue({
+                    asset,
+                    transactions,
+                    fixedIncomeTypes,
+                    currentDate,
+                }),
+            [fixedIncomeTypes, transactions],
+        );
+
     return (
         <PortfolioTab
             state={state}
@@ -142,6 +156,7 @@ export const Portfolio = (props: IProps) => {
             onSubmitDelete={onSubmitDelete}
             onSubmitCreateFixedIncomeType={onSubmitCreateFixedIncomeType}
             onSubmitCreateSpv={onSubmitCreateSpv}
+            calculateCurrentValueCallback={calculateCurrentValueCallback}
         />
     );
 };

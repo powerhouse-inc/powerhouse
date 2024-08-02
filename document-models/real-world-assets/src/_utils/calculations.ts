@@ -1,4 +1,6 @@
 import {
+    FixedIncome,
+    FixedIncomeType,
     GroupTransaction,
     GroupTransactionType,
     InputMaybe,
@@ -53,38 +55,41 @@ export function computeFixedIncomeAssetDerivedFields(
  */
 export function calculatePurchaseDate(
     transactions: GroupTransaction[],
-): string {
+    as: 'ms',
+    round?: boolean,
+): BigNumber;
+
+export function calculatePurchaseDate(
+    transactions: GroupTransaction[],
+    as?: 'iso',
+    round?: boolean,
+): string;
+export function calculatePurchaseDate(
+    transactions: GroupTransaction[],
+    as: 'ms' | 'iso' = 'iso',
+    round = true,
+) {
     const purchaseTransactions = transactions.filter(
         ({ type }) => type === ASSET_PURCHASE,
     );
 
     if (!purchaseTransactions.length) return '';
 
-    const sumQuantity = purchaseTransactions.reduce(
-        (sum, { fixedIncomeTransaction }) => {
-            if (!fixedIncomeTransaction) return sum;
-            return sum.add(math.bignumber(fixedIncomeTransaction.amount));
-        },
-        math.bignumber(0),
-    );
+    const sumQuantities = calculateSumQuantity(purchaseTransactions);
 
-    const sumQuantityTimesDate = purchaseTransactions.reduce(
-        (sum, { fixedIncomeTransaction }) => {
-            if (!fixedIncomeTransaction) return sum;
-            const { entryTime, amount } = fixedIncomeTransaction;
-            // Convert to milliseconds since the epoch
-            const time = math.bignumber(new Date(entryTime).getTime());
-            return sum.add(time.mul(math.bignumber(amount)));
-        },
-        math.bignumber(0),
-    );
+    const sumQuantitiesTimesDate =
+        calculateSumQuantityTimesDate(purchaseTransactions);
 
-    // Calculate the weighted average in milliseconds
-    const purchaseDateMs = sumQuantityTimesDate.div(sumQuantity);
-    // Convert back to a Date object
-    const purchaseDate = new Date(purchaseDateMs.toNumber());
-    // Round to the nearest day
-    return roundToNearestDay(purchaseDate).toISOString();
+    const purchaseDateMs = sumQuantitiesTimesDate.div(sumQuantities);
+    const maybeRounded = round
+        ? math.bignumber(
+              roundToNearestDay(new Date(purchaseDateMs.toNumber())).getTime(),
+          )
+        : purchaseDateMs;
+
+    return as === 'iso'
+        ? new Date(maybeRounded.toNumber()).toISOString()
+        : maybeRounded;
 }
 
 /**
@@ -326,4 +331,74 @@ export function calculateUnitPrice(
 ): BigNumber {
     if (!cashAmount || !fixedIncomeAmount) return math.bignumber(0);
     return math.bignumber(cashAmount).div(math.bignumber(fixedIncomeAmount));
+}
+
+/* 
+CurrentValue = (Current Date - Purchase Date) / ((Maturity Date - Current Date) ) × Total Discount + Purchase Proceeds)
+
+For T-bills, which mature at $1 each, the Total Discount is calculated as:
+
+Total Discount = Quantity − Purchase Proceeds
+*/
+export function calculateCurrentValue(props: {
+    asset: FixedIncome;
+    transactions: GroupTransaction[];
+    fixedIncomeTypes: FixedIncomeType[];
+    currentDate?: Date;
+}) {
+    const {
+        asset,
+        transactions,
+        fixedIncomeTypes,
+        currentDate = new Date(),
+    } = props;
+    const fixedIncomeType = fixedIncomeTypes.find(
+        ({ id }) => id === asset.fixedIncomeTypeId,
+    )!;
+    const purchaseTransactionsForAsset = transactions.filter(
+        ({ type, fixedIncomeTransaction }) =>
+            type === ASSET_PURCHASE &&
+            fixedIncomeTransaction?.assetId === asset.id,
+    );
+    if (
+        !asset.maturity ||
+        fixedIncomeType.name !== 'Treasury Bill' ||
+        !purchaseTransactionsForAsset.length
+    )
+        return null;
+    const currentDateMs = math.bignumber(currentDate.getTime());
+    const maturityDateMs = math.bignumber(new Date(asset.maturity).getTime());
+    const purchaseDateMs = math.bignumber(
+        new Date(asset.purchaseDate).getTime(),
+    );
+    const sumQuantities = calculateSumQuantity(purchaseTransactionsForAsset);
+    const purchaseProceeds = math.bignumber(asset.purchaseProceeds);
+    const totalDiscount = sumQuantities.sub(purchaseProceeds);
+    const currentDateMinusPurchaseDate = currentDateMs.sub(purchaseDateMs);
+    const maturityMinusCurrentDate = maturityDateMs.sub(currentDateMs);
+    const totalDiscountPlusPurchaseProceeds =
+        totalDiscount.add(purchaseProceeds);
+
+    return currentDateMinusPurchaseDate
+        .div(maturityMinusCurrentDate)
+        .mul(totalDiscountPlusPurchaseProceeds)
+        .toNumber();
+}
+
+export function calculateSumQuantity(transactions: GroupTransaction[]) {
+    return transactions.reduce((sum, { fixedIncomeTransaction }) => {
+        if (!fixedIncomeTransaction) return sum;
+        return sum.add(math.bignumber(fixedIncomeTransaction.amount));
+    }, math.bignumber(0));
+}
+
+export function calculateSumQuantityTimesDate(
+    transactions: GroupTransaction[],
+) {
+    return transactions.reduce((sum, { fixedIncomeTransaction }) => {
+        if (!fixedIncomeTransaction) return sum;
+        const { entryTime, amount } = fixedIncomeTransaction;
+        const time = math.bignumber(new Date(entryTime).getTime());
+        return sum.add(time.mul(math.bignumber(amount)));
+    }, math.bignumber(0));
 }

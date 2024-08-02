@@ -1,5 +1,5 @@
 export const mockFixedIncomeTypes = [
-    { id: '1', name: 'T-Bill 91279GF8' },
+    { id: '1', name: 'T-Bill' },
     { id: '2', name: 'T-Bill 91279GF9' },
     { id: '3', name: 'T-Bill 99999999' },
 ];
