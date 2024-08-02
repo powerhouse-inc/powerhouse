@@ -27,11 +27,12 @@ export const mockFixedIncomes: Asset[] = [
         purchasePrice: 97.24456777,
         purchaseProceeds: 42054.12,
         totalDiscount: 1193.64,
-        ISIN: undefined,
-        CUSIP: undefined,
+        ISIN: null,
+        CUSIP: null,
         coupon: 3.67,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '683189',
@@ -50,6 +51,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 3.41,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '752165',
@@ -68,6 +70,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 3.35,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '472706',
@@ -86,6 +89,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 4.24,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '852793',
@@ -104,6 +108,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 1.21,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '704871',
@@ -122,6 +127,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 1.94,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '117828',
@@ -140,6 +146,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 3.76,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '023427',
@@ -158,6 +165,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 1.49,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '637391',
@@ -176,6 +184,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 4.79,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
     {
         id: '269772',
@@ -194,6 +203,7 @@ export const mockFixedIncomes: Asset[] = [
         coupon: 3.98,
         realizedSurplus: 1234.567,
         salesProceeds: 43254.123,
+        assetProceeds: 43254.123,
     },
 ];
 

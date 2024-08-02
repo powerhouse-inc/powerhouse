@@ -1,6 +1,7 @@
 import {
     AssetDetails,
     AssetFormInputs,
+    AssetsTableItem,
     FixedIncome,
     FixedIncomeTypeFormInputs,
     RWATableCell,
@@ -22,6 +23,12 @@ import { sumTotalForProperty } from './utils';
 
 const columns = [
     { key: 'name' as const, label: 'Name', allowSorting: true },
+    {
+        key: 'currentValue' as const,
+        label: 'Current Value',
+        allowSorting: true,
+        isNumberColumn: true,
+    },
     {
         key: 'purchaseDate' as const,
         label: 'Purchase Date',
@@ -67,18 +74,49 @@ const columns = [
     },
 ];
 
+type CalculateCurrentValueCallback = (
+    asset: FixedIncome,
+    currentDate?: Date,
+) => number | null;
+
+export function makeAssetsTableItems(
+    assets: FixedIncome[],
+    calculateCurrentValueCallback: CalculateCurrentValueCallback,
+): AssetsTableItem[] {
+    const currentDate = new Date();
+
+    const tableItems = assets.map(asset => {
+        const currentValue = calculateCurrentValueCallback(asset, currentDate);
+
+        return {
+            ...asset,
+            currentValue,
+        };
+    });
+
+    return tableItems;
+}
+
 export type AssetsTableProps = TableWrapperProps<AssetFormInputs> & {
+    calculateCurrentValueCallback: CalculateCurrentValueCallback;
     onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
     onSubmitCreateSpv: (data: SPVFormInputs) => void;
 };
 
 export function AssetsTable(props: AssetsTableProps) {
     const itemName = 'Asset';
-    const { state } = props;
+    const { state, calculateCurrentValueCallback } = props;
     const assets = getFixedIncomeAssets(state);
-    const tableData = useMemo(() => makeTableData(assets), [assets]);
+
+    const tableData = useMemo(
+        () =>
+            makeTableData(
+                makeAssetsTableItems(assets, calculateCurrentValueCallback),
+            ),
+        [assets, calculateCurrentValueCallback],
+    );
     const [selectedTableItem, setSelectedTableItem] =
-        useState<TableItem<FixedIncome>>();
+        useState<TableItem<AssetsTableItem>>();
     const { operation, setOperation, showForm, existingState } =
         useDocumentOperationState({ state });
 
@@ -100,6 +138,7 @@ export function AssetsTable(props: AssetsTableProps) {
         salesProceeds: '--',
         totalDiscount: '--',
         realizedSurplus: '--',
+        currentValue: '--',
     };
 
     const totalNotional = sumTotalForProperty(
@@ -116,7 +155,7 @@ export function AssetsTable(props: AssetsTableProps) {
 
     const specialFirstRow: TableProps<
         FixedIncome,
-        TableItem<FixedIncome>
+        TableItem<AssetsTableItem>
     >['specialFirstRow'] = c => (
         <RWATableRow>
             {c.map(column => (
@@ -141,8 +180,8 @@ export function AssetsTable(props: AssetsTableProps) {
 
     const specialLastRow: TableProps<
         FixedIncome,
-        TableItem<FixedIncome>
-    >['specialFirstRow'] = c => (
+        TableItem<AssetsTableItem>
+    >['specialLastRow'] = c => (
         <RWATableRow
             className={twMerge(
                 'sticky bottom-0',
@@ -184,7 +223,8 @@ export function AssetsTable(props: AssetsTableProps) {
                         column.key !== 'purchaseProceeds' &&
                         column.key !== 'salesProceeds' &&
                         column.key !== 'totalDiscount' &&
-                        column.key !== 'realizedSurplus' && (
+                        column.key !== 'realizedSurplus' &&
+                        column.key !== 'currentValue' && (
                             <RWATableCell></RWATableCell>
                         )}
                 </Fragment>

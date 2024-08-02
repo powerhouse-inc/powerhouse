@@ -8,30 +8,39 @@ import {
     FEES_PAYMENT,
     allGroupTransactionTypes,
 } from '../constants/transactions';
-import { GroupTransaction } from '../types';
+import { BaseTransaction, GroupTransaction } from '../types';
 import { isAssetGroupTransactionType } from '../utils';
 
-export const mockFixedIncomeTransaction = {
+export const mockFixedIncomeTransaction: BaseTransaction = {
     id: 'fixed-income-transaction-1',
     assetId: mockFixedIncomes[1].id,
     accountId: mockAccounts[1].id,
     amount: 1000,
     entryTime: '2023-06-01T00:00:00.000Z',
+    assetType: 'FixedIncome',
+    counterPartyAccountId: null,
+    settlementTime: null,
+    tradeTime: null,
 };
 
-export const mockCashTransaction = {
+export const mockCashTransaction: BaseTransaction = {
     id: 'cash-transaction-1',
     assetId: 'cash-asset-1',
     amount: 1000,
     entryTime: '2023-06-01T00:00:00.000Z',
     counterPartyAccountId: mockPrincipalLenderAccountId,
+    accountId: mockPrincipalLenderAccountId,
+    assetType: 'Cash',
+    settlementTime: null,
+    tradeTime: null,
 };
 
-export const mockGroupTransaction = {
+export const mockGroupTransaction: GroupTransaction = {
     id: 'group-transaction-0',
     type: allGroupTransactionTypes[0],
     entryTime: '2023-06-01T00:00:00.000Z',
     txRef: '0x99f19e36b83f59159b917fa67282f913f6c85ecdee5f49d427048d5ed9508b0b',
+    unitPrice: 1,
     fees: [
         {
             id: 'fee-transaction-1',
@@ -51,8 +60,6 @@ export const mockGroupTransaction = {
     ],
     cashTransaction: mockCashTransaction,
     fixedIncomeTransaction: mockFixedIncomeTransaction,
-    feeTransactions: [],
-    interestTransaction: null,
     serviceProviderFeeTypeId: null,
     cashBalanceChange: 10,
 };

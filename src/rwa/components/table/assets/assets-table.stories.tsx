@@ -88,12 +88,18 @@ export const Empty: Story = {
                 console.log({ data });
             }, []);
 
+        const calculateCurrentValueCallback: AssetsTableProps['calculateCurrentValueCallback'] =
+            useCallback(() => {
+                return 100;
+            }, []);
+
         const argsWithHandlers: AssetsTableProps = {
             ...args,
             onSubmitCreate,
             onSubmitEdit,
             onSubmitCreateFixedIncomeType,
             onSubmitCreateSpv,
+            calculateCurrentValueCallback,
         };
         return (
             <div className="flex flex-col gap-4">

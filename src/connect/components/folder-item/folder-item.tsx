@@ -94,7 +94,7 @@ export function FolderItem(props: FolderItemProps) {
 
     const content =
         isReadMode || !isAllowedToCreateDocuments ? (
-            <div className="ml-3 max-h-6 truncate font-medium text-slate-200">
+            <div className="ml-3 max-h-6 truncate font-medium text-gray-600 group-hover:text-gray-800">
                 {uiNode.name}
             </div>
         ) : (
@@ -106,13 +106,8 @@ export function FolderItem(props: FolderItemProps) {
             />
         );
 
-    const textStyles = isReadMode
-        ? 'text-gray-600 hover:text-gray-800'
-        : 'text-gray-800';
-
     const containerStyles = twMerge(
         'group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2',
-        textStyles,
         className,
         isDropTarget && 'bg-blue-100',
     );

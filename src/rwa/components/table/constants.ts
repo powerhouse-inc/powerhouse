@@ -11,11 +11,11 @@ import {
 import type { GroupTransactionType } from '../../types';
 
 export const defaultColumnCountByTableWidth = {
-    1520: 9,
-    1394: 8,
-    1239: 7,
-    1112: 6,
-    984: 5,
+    1520: 10,
+    1394: 9,
+    1239: 8,
+    1112: 7,
+    984: 6,
 };
 
 export const cashTransactionSignByTransactionType: Record<

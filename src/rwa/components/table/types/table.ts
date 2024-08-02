@@ -1,5 +1,6 @@
 import { DivProps } from '@/powerhouse';
 import {
+    FixedIncome,
     GroupTransaction,
     RealWorldAssetsState,
     ServiceProviderFeeType,
@@ -102,4 +103,7 @@ export type GroupTransactionsTableItem = GroupTransaction & {
 export type ServiceProviderFeeTypeTableItem = ServiceProviderFeeType & {
     accountName: string | undefined;
     accountReference: string | undefined;
+};
+export type AssetsTableItem = FixedIncome & {
+    currentValue: number | null;
 };

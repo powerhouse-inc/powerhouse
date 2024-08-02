@@ -4,6 +4,7 @@ import {
     groupTransactionTypeLabels,
     tabs,
 } from '@/rwa';
+import { Maybe, Scalars } from 'document-model/document';
 import { ReactNode } from 'react';
 import { otherTables } from '../constants/other';
 
@@ -20,26 +21,24 @@ export type RealWorldAssetsState = {
 export type AssetType = 'Cash' | 'FixedIncome';
 
 export type FixedIncome = {
-    // editable fields
-    id: string;
-    name: string;
-    fixedIncomeTypeId: string;
-    spvId: string;
-    maturity: string | null;
-    ISIN?: string | null;
-    CUSIP?: string | null;
-    coupon?: number | null;
-    // derived fields
+    CUSIP: Maybe<Scalars['String']['output']>;
+    ISIN: Maybe<Scalars['String']['output']>;
+    assetProceeds: Scalars['Float']['output'];
+    coupon: Maybe<Scalars['Float']['output']>;
+    fixedIncomeTypeId: Scalars['ID']['output'];
+    id: Scalars['ID']['output'];
+    maturity: Maybe<Scalars['DateTime']['output']>;
+    name: Scalars['String']['output'];
+    notional: Scalars['Float']['output'];
+    purchaseDate: Scalars['DateTime']['output'];
+    purchasePrice: Scalars['Float']['output'];
+    purchaseProceeds: Scalars['Float']['output'];
+    realizedSurplus: Scalars['Float']['output'];
+    salesProceeds: Scalars['Float']['output'];
+    spvId: Scalars['ID']['output'];
+    totalDiscount: Scalars['Float']['output'];
     type: AssetType;
-    notional: number;
-    purchaseDate: string;
-    purchasePrice: number;
-    purchaseProceeds: number;
-    totalDiscount: number;
-    realizedSurplus: number;
-    salesProceeds: number;
 };
-
 export type CashAsset = {
     id: string;
     type: AssetType;
@@ -68,15 +67,16 @@ export type GroupTransactionTypeLabel =
     (typeof groupTransactionTypeLabels)[keyof typeof groupTransactionTypeLabels];
 
 export type GroupTransaction = {
-    id: string;
+    cashBalanceChange: Scalars['Float']['output'];
+    cashTransaction: BaseTransaction;
+    entryTime: Scalars['DateTime']['output'];
+    fees: Maybe<Array<TransactionFee>>;
+    fixedIncomeTransaction: Maybe<BaseTransaction>;
+    id: Scalars['ID']['output'];
+    serviceProviderFeeTypeId: Maybe<Scalars['ID']['output']>;
+    txRef: Maybe<Scalars['String']['output']>;
     type: GroupTransactionType;
-    cashBalanceChange: number;
-    entryTime: string;
-    serviceProviderFeeTypeId?: string | null;
-    txRef?: string | null;
-    fees?: TransactionFee[] | null;
-    fixedIncomeTransaction?: BaseTransaction | null;
-    cashTransaction?: BaseTransaction | null;
+    unitPrice: Maybe<Scalars['Float']['output']>;
 };
 
 export type TransactionFee = {
@@ -86,14 +86,15 @@ export type TransactionFee = {
 };
 
 export type BaseTransaction = {
-    id: string;
-    assetId: string;
-    amount: number;
-    entryTime: string;
-    tradeTime?: string | null;
-    settlementTime?: string | null;
-    accountId?: string | null;
-    counterPartyAccountId?: string | null;
+    accountId: Maybe<Scalars['ID']['output']>;
+    amount: Scalars['Float']['output'];
+    assetId: Scalars['ID']['output'];
+    assetType: AssetType;
+    counterPartyAccountId: Maybe<Scalars['ID']['output']>;
+    entryTime: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    settlementTime: Maybe<Scalars['DateTime']['output']>;
+    tradeTime: Maybe<Scalars['DateTime']['output']>;
 };
 
 export type ServiceProviderFeeType = {

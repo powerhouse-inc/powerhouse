@@ -1,6 +1,6 @@
 import {
     AssetFormInputs,
-    FixedIncome,
+    AssetsTableItem,
     FixedIncomeTypeFormInputs,
     FormInputs,
     ItemDetails,
@@ -13,7 +13,7 @@ import {
 } from '@/rwa';
 import { memo } from 'react';
 
-type AssetDetailsProps = ItemDetailsProps<FixedIncome, AssetFormInputs> & {
+type AssetDetailsProps = ItemDetailsProps<AssetsTableItem, AssetFormInputs> & {
     onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
     onSubmitCreateSpv: (data: SPVFormInputs) => void;
 };
