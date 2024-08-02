@@ -1,9 +1,12 @@
+import { copy } from 'copy-anything';
 import {
+    calculateCurrentValue,
     computeFixedIncomeAssetDerivedFields,
     getGroupTransactionsForAsset,
+    isFixedIncomeAsset,
     validateFixedIncomeAssetDerivedFields,
 } from '.';
-import { RealWorldAssetsState } from '../..';
+import { RealWorldAssetsDocument, RealWorldAssetsState } from '../..';
 
 export function makeFixedIncomeAssetWithDerivedFields(
     state: RealWorldAssetsState,
@@ -25,4 +28,30 @@ export function makeFixedIncomeAssetWithDerivedFields(
     };
 
     return newAsset;
+}
+
+export function makeRwaDocumentWithAssetCurrentValues(
+    document: RealWorldAssetsDocument,
+    currentDate = new Date(),
+) {
+    const documentCopy = copy(document);
+    const transactions = documentCopy.state.global.transactions;
+    const fixedIncomeTypes = documentCopy.state.global.fixedIncomeTypes;
+    const portfolio = documentCopy.state.global.portfolio;
+
+    const portfolioWithCurrentValues = portfolio.map(asset => ({
+        ...asset,
+        ...(isFixedIncomeAsset(asset) && {
+            currentValue: calculateCurrentValue({
+                asset,
+                transactions,
+                fixedIncomeTypes,
+                currentDate,
+            }),
+        }),
+    }));
+
+    documentCopy.state.global.portfolio = portfolioWithCurrentValues;
+
+    return documentCopy;
 }
