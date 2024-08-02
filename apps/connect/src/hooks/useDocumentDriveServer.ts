@@ -25,6 +25,7 @@ import {
 } from 'document-model-libs/document-drive';
 import { Document, Operation, utils } from 'document-model/document';
 import { useCallback, useMemo } from 'react';
+import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { DefaultDocumentDriveServer } from 'src/utils/document-drive-server';
 import { loadFile } from 'src/utils/file';
@@ -97,7 +98,7 @@ export function useDocumentDriveServer(
                 );
 
                 if (result.status !== 'SUCCESS') {
-                    console.error(result.error);
+                    logger.error(result.error);
                 }
 
                 if (result.operations.length) {
@@ -111,7 +112,7 @@ export function useDocumentDriveServer(
                 }
                 return result.document;
             } catch (error) {
-                console.error(error);
+                logger.error(error);
                 return drive;
             }
         },
@@ -414,7 +415,7 @@ export function useDocumentDriveServer(
             if (result.operations.length) {
                 await refreshDocumentDrives();
             } else if (result.status !== 'SUCCESS') {
-                console.error(
+                logger.error(
                     `Error copying files: ${result.status}`,
                     result.error,
                 );

@@ -5,6 +5,7 @@ import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLoadInitialData } from 'src/hooks/useLoadInitialData';
 import { useLogin } from 'src/hooks/useLogin';
 import { isElectron, isMac } from 'src/hooks/utils';
+import { logger } from 'src/services/logger';
 import Sidebar from './sidebar';
 
 const Root = () => {
@@ -24,7 +25,7 @@ const Root = () => {
             const userDid = decodeURIComponent(userStr);
             searchParams.delete('user');
             setSearchParams(searchParams);
-            login(userDid).catch(console.error);
+            login(userDid).catch(logger.error);
         }
     }, [login, searchParams, setSearchParams]);
 

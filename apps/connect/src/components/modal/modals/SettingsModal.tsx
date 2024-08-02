@@ -13,6 +13,7 @@ import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
 import { useLogin } from 'src/hooks/useLogin';
+import { logger } from 'src/services/logger';
 import {
     useDocumentModels,
     useFilteredDocumentModels,
@@ -84,7 +85,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                         // refreshes the page to reload default drive
                         onRefresh();
                     })
-                    .catch(console.error);
+                    .catch(logger.error);
             },
             onCancel: () => showModal('settingsModal', { onRefresh }),
         });

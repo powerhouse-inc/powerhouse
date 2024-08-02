@@ -1,12 +1,13 @@
+import { LOCAL } from '@powerhousedao/design-system';
 import { PullResponderTrigger } from 'document-drive';
 import {
     PullResponderTriggerData,
     Trigger,
 } from 'document-model-libs/document-drive';
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { logger } from 'src/services/logger';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useSwitchboard } from './useSwitchboard';
-import { LOCAL } from '@powerhousedao/design-system';
 
 export type ClientErrorHandler = {
     strandsErrorHandler: (
@@ -87,7 +88,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                     delay === DELAY_LIMIT ? delay : delay * 10,
                 );
 
-                console.error(error);
+                logger.error(error);
             } finally {
                 setHandlingInProgress(state =>
                     state.filter(code => code !== handlerCode),
@@ -140,7 +141,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                     }
                 }
             } catch (e: unknown) {
-                console.error(e);
+                logger.error(e);
             } finally {
                 setHandlingInProgress(state =>
                     state.filter(code => code !== handlerCode),

@@ -4,6 +4,7 @@ import { useAtom } from 'jotai';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { useLogin } from 'src/hooks/useLogin';
+import { logger } from 'src/services/logger';
 import { sidebarCollapsedAtom } from 'src/store';
 import DriveContainer from './drive-container';
 import { useModal } from './modal';
@@ -56,7 +57,7 @@ export default function Sidebar() {
                         There was an error loading drives
                     </div>
                 }
-                onError={console.error}
+                onError={logger.error}
             >
                 <DriveContainer />
             </ErrorBoundary>

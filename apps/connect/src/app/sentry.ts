@@ -9,7 +9,7 @@ import {
 
 import config from '../../connect.config';
 
-export default () => {
+function initSenty() {
     if (!config.sentry.dsn || config.sentry.dsn === '') {
         return;
     }
@@ -18,6 +18,7 @@ export default () => {
         dsn: config.sentry.dsn,
         environment: config.sentry.env,
         integrations: [
+            Sentry.extraErrorDataIntegration({ depth: 5 }),
             Sentry.reactRouterV6BrowserTracingIntegration({
                 useEffect: React.useEffect,
                 useLocation,
@@ -26,10 +27,17 @@ export default () => {
                 matchRoutes,
             }),
             Sentry.replayIntegration(),
+            Sentry.captureConsoleIntegration(),
         ],
-
+        ignoreErrors: [
+            'User is not allowed to create files',
+            'User is not allowed to move documents',
+            'The user aborted a request.',
+        ],
         tracesSampleRate: 1.0,
         replaysSessionSampleRate: 0.1,
         replaysOnErrorSampleRate: 1.0,
     });
-};
+}
+
+initSenty();

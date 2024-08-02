@@ -7,6 +7,7 @@ import type {
     Reducer,
 } from 'document-model/document';
 import { useEffect, useState } from 'react';
+import { logger } from 'src/services/logger';
 
 export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
     operation: Operation,
@@ -42,7 +43,7 @@ type OnErrorHandler = (error: unknown) => void;
 export function useDocumentDispatch<State, A extends Action, LocalState>(
     documentReducer: Reducer<State, A, LocalState> | undefined,
     initialState: Document<State, A, LocalState>,
-    onError: OnErrorHandler = console.error,
+    onError: OnErrorHandler = logger.error,
 ): readonly [
     Document<State, A, LocalState> | undefined,
     DocumentDispatch<State, A, LocalState>,

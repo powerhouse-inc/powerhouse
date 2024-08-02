@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { logger } from 'src/services/logger';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useFeatureFlag } from './useFeatureFlags';
 import defaultConfig from './useFeatureFlags/default-config';
@@ -124,7 +125,7 @@ export const useLoadDefaultDrives = () => {
                             ],
                         })),
                     )
-                    .catch(console.error)
+                    .catch(logger.error)
                     .finally(() => {
                         loadingDrives.current = loadingDrives.current.filter(
                             url => url !== defaultDrive.url,

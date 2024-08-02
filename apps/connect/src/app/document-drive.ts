@@ -16,6 +16,7 @@ import {
 } from 'document-model/document';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
+import { logger } from 'src/services/logger';
 
 export default (
     documentModels: DocumentModel[],
@@ -54,13 +55,13 @@ export default (
                                     triggers: [],
                                 },
                             })
-                            .catch(console.error);
+                            .catch(logger.error);
                     }
                 })
-                .catch(console.error),
+                .catch(logger.error),
         )
         .then(() => bindEvents(documentDrive))
-        .catch(console.error);
+        .catch(logger.error);
 
     ipcMain.handle('documentDrive:getDrives', () => documentDrive.getDrives());
     ipcMain.handle('documentDrive:getDrive', (_e, id: string) =>

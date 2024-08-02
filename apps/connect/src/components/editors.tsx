@@ -19,6 +19,7 @@ import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
 import { UiNodes } from 'src/hooks/useUiNodes';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
+import { logger } from 'src/services/logger';
 import { useDocumentModel } from 'src/store/document-model';
 import { useEditor } from 'src/store/editor';
 import { themeAtom } from 'src/store/theme';
@@ -54,7 +55,9 @@ const signOperation = async (
     if (!operation.context) return operation;
     if (!operation.context.signer) return operation;
     if (!reducer) {
-        console.error('Document model does not have a reducer');
+        logger.error(
+            `Document model '${document.documentType}' does not have a reducer`,
+        );
         return operation;
     }
 
@@ -162,7 +165,7 @@ export function DocumentEditor(props: EditorProps) {
                     window.documentEditorDebugTools?.pushOperation(operation);
                     return onAddOperation(op);
                 })
-                .catch(console.error);
+                .catch(logger.error);
         };
 
         _dispatch(addActionContext(action), callback, onErrorCallback);

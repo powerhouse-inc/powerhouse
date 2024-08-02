@@ -4,6 +4,7 @@ import { BaseQueueManager } from 'document-drive/queue/base';
 import { DocumentDriveServer } from 'document-drive/server';
 import { BrowserStorage } from 'document-drive/storage/browser';
 import { utils } from 'document-model/document';
+import { logger } from 'src/services/logger';
 import { documentModels } from 'src/store/document-model';
 
 export const BrowserDocumentDriveServer = new DocumentDriveServer(
@@ -34,9 +35,9 @@ BrowserDocumentDriveServer.initialize()
                             listeners: [],
                             triggers: [],
                         },
-                    }).catch(console.error);
+                    }).catch(logger.error);
                 }
             })
-            .catch(console.error),
+            .catch(logger.error),
     )
-    .catch(console.error);
+    .catch(logger.error);
