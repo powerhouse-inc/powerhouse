@@ -1,3 +1,10 @@
+# [1.0.0-alpha.157](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.156...v1.0.0-alpha.157) (2024-08-02)
+
+
+### Features
+
+* add current value to assets table ([#339](https://github.com/powerhouse-inc/design-system/issues/339)) ([6bd7109](https://github.com/powerhouse-inc/design-system/commit/6bd7109a85a6538b320f82e22fe7a490103c2b91))
+
 # [1.0.0-alpha.156](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.155...v1.0.0-alpha.156) (2024-08-01)
 
 
