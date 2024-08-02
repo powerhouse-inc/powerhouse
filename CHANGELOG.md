@@ -1,3 +1,10 @@
+# [1.77.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.76.0...v1.77.0) (2024-08-02)
+
+
+### Features
+
+* add current value ([#198](https://github.com/powerhouse-inc/document-model-libs/issues/198)) ([893ca22](https://github.com/powerhouse-inc/document-model-libs/commit/893ca223a4934a3a0788370e77609718330b3d7b))
+
 # [1.76.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.75.0...v1.76.0) (2024-07-31)
 
 
