@@ -1,0 +1,51 @@
+{
+  "namedInputs": {
+    "noMarkdown": ["!{projectRoot}/**/*.md"],
+    "noStories": [
+      "!{projectRoot}/**/*.stories.tsx",
+      "!{projectRoot}/.storybook/**/*"
+    ],
+    "noLicenses": ["!{projectRoot}/LICENSE", "!{projectRoot}/LICENSE.md"],
+    "noTests": [
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.spec.tsx",
+      "!{projectRoot}/**/*.test.ts",
+      "!{projectRoot}/**/*.test.tsx",
+      "!{projectRoot}/cypress/**/*",
+      "!{projectRoot}/e2e/**/*",
+      "!{projectRoot}/coverage/**/*",
+      "!{projectRoot}/test/**/*"
+    ]
+  },
+  "targetDefaults": {
+    "dev": {
+      "dependsOn": ["^build"]
+    },
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": [
+        "noMarkdown",
+        "^noMarkdown",
+        "noStories",
+        "^noStories",
+        "noLicenses",
+        "^noLicenses",
+        "noTests",
+        "^noTests"
+      ]
+    }
+  },
+  "release": {
+    "projects": ["packages/*"],
+    "projectsRelationship": "independent",
+    "version": {
+      "conventionalCommits": true
+    },
+    "changelog": {
+      "projectChangelogs": {
+        "createRelease": "github"
+      }
+    }
+  }
+}

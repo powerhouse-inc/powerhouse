@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "moduleResolution": "Bundler",
+        "allowJs": true,
+        "declaration": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "module": "ESNext",
+        "outDir": "./dist"
+    },
+    "include": ["."],
+    "exclude": ["dist", "node_modules", "**/*.spec.ts"]
+}
