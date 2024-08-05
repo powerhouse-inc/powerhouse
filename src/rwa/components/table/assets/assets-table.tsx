@@ -24,12 +24,6 @@ import { sumTotalForProperty } from './utils';
 const columns = [
     { key: 'name' as const, label: 'Name', allowSorting: true },
     {
-        key: 'currentValue' as const,
-        label: 'Current Value',
-        allowSorting: true,
-        isNumberColumn: true,
-    },
-    {
         key: 'purchaseDate' as const,
         label: 'Purchase Date',
         allowSorting: true,
@@ -38,6 +32,12 @@ const columns = [
     {
         key: 'notional' as const,
         label: 'Notional',
+        allowSorting: true,
+        isNumberColumn: true,
+    },
+    {
+        key: 'currentValue' as const,
+        label: 'Current Value',
         allowSorting: true,
         isNumberColumn: true,
     },
