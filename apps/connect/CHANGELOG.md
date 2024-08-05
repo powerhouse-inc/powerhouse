@@ -1,3 +1,10 @@
+# [1.0.0-dev.57](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.56...v1.0.0-dev.57) (2024-08-05)
+
+
+### Features
+
+* remove to lower case from slug generation ([180e747](https://github.com/powerhouse-inc/document-model-electron/commit/180e74792b54b707c15d0192ed01909723ca39fc))
+
 # [1.0.0-dev.56](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.55...v1.0.0-dev.56) (2024-08-02)
 
 
