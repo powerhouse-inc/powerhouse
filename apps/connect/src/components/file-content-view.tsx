@@ -2,10 +2,10 @@ import { FileItem, UiFileNode } from '@powerhousedao/design-system';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { UiNodes } from 'src/hooks/useUiNodes';
+import { TUiNodes } from 'src/hooks/useUiNodes';
 import { useWindowSize } from 'src/hooks/useWindowSize';
 
-type Props = UiNodes & {
+type Props = TUiNodes & {
     fileNodes: UiFileNode[];
 };
 

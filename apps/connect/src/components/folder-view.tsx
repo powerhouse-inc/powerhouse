@@ -5,13 +5,13 @@ import {
     useDrop,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import { UiNodes } from 'src/hooks/useUiNodes';
+import { TUiNodes } from 'src/hooks/useUiNodes';
 import { sortUiNodesByName } from 'src/utils';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
 import FileContentView from './file-content-view';
 
-export function FolderView(props: UiNodes) {
+export function FolderView(props: TUiNodes) {
     const { t } = useTranslation();
     const { selectedParentNode } = props;
     const { isDropTarget, dropProps } = useDrop({

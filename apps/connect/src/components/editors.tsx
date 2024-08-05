@@ -16,7 +16,7 @@ import {
 import { useAtomValue } from 'jotai';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
-import { UiNodes } from 'src/hooks/useUiNodes';
+import { TUiNodes } from 'src/hooks/useUiNodes';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { logger } from 'src/services/logger';
@@ -35,7 +35,7 @@ export type EditorProps<
     T = unknown,
     A extends Action = Action,
     LocalState = unknown,
-> = UiNodes & {
+> = TUiNodes & {
     document: Document<T, A, LocalState>;
     onExport: () => void;
     onAddOperation: (operation: Operation) => Promise<void>;
