@@ -1,3 +1,10 @@
+# [1.0.0-alpha.158](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.157...v1.0.0-alpha.158) (2024-08-05)
+
+
+### Features
+
+* move current value column ([cc034cd](https://github.com/powerhouse-inc/design-system/commit/cc034cdda664bf9e74e597f210fb63dca827c4ef))
+
 # [1.0.0-alpha.157](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.156...v1.0.0-alpha.157) (2024-08-02)
 
 
