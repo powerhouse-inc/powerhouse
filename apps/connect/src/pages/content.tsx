@@ -8,14 +8,8 @@ import FolderView from 'src/components/folder-view';
 import { useModal } from 'src/components/modal';
 import { SearchBar } from 'src/components/search-bar';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useNodeNavigation } from 'src/hooks/useNodeNavigation';
 import { useUiNodes } from 'src/hooks/useUiNodes';
-import { useFileNodeDocument } from 'src/store/document-drive';
-import {
-    useFilteredDocumentModels,
-    useGetDocumentModel,
-} from 'src/store/document-model';
 import { usePreloadEditor } from 'src/store/editor';
 import { exportFile } from 'src/utils';
 import { validateDocument } from 'src/utils/validate-document';
@@ -38,15 +32,17 @@ const Content = () => {
         selectedParentNode,
         isRemoteDrive,
         isAllowedToCreateDocuments,
+        selectedDocument,
+        documentModels,
         setSelectedNode,
         openSwitchboardLink,
+        setSelectedDocument,
+        addOperationToSelectedDocument,
+        addFile,
+        renameNode,
+        getDocumentModel,
     } = useUiNodes();
     const { showModal } = useModal();
-    const { addFile, renameNode } = useDocumentDriveServer();
-    const documentModels = useFilteredDocumentModels();
-    const getDocumentModel = useGetDocumentModel();
-    const [selectedDocument, setSelectedDocument, addOperation] =
-        useFileNodeDocument(selectedDriveNode?.id, selectedNode?.id);
     const preloadEditor = usePreloadEditor();
     useNodeNavigation();
 
@@ -79,14 +75,14 @@ const Content = () => {
         });
     }, [selectedDriveNode, selectedNode, addFile]);
 
-    async function handleAddOperation(operation: Operation) {
+    async function handleAddOperationToSelectedDocument(operation: Operation) {
         if (!selectedDocument) {
             throw new Error('No document selected');
         }
-        if (!addOperation) {
+        if (!addOperationToSelectedDocument) {
             throw new Error('No add operation function defined');
         }
-        await addOperation(operation);
+        await addOperationToSelectedDocument(operation);
     }
 
     function createDocument(documentModel: DocumentModel) {
@@ -162,7 +158,7 @@ const Content = () => {
                         document={selectedDocument}
                         onChange={onDocumentChangeHandler}
                         onExport={() => exportDocument(selectedDocument)}
-                        onAddOperation={handleAddOperation}
+                        onAddOperation={handleAddOperationToSelectedDocument}
                         {...(isRemoteDrive && { onOpenSwitchboardLink })}
                     />
                 </div>

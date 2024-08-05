@@ -700,3 +700,5 @@ export function useDocumentDriveServer(
         ],
     );
 }
+
+export type TDocumentDriveServer = ReturnType<typeof useDocumentDriveServer>;

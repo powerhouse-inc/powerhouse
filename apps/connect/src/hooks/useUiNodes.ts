@@ -20,6 +20,11 @@ import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
+import { useFileNodeDocument } from 'src/store/document-drive';
+import {
+    useFilteredDocumentModels,
+    useGetDocumentModel,
+} from 'src/store/document-model';
 import { getNodeOptions } from 'src/utils/drive-sections';
 import { makeNodeSlugFromNodeName } from 'src/utils/slug';
 import { useDocumentDriveById } from './useDocumentDriveById';
@@ -61,6 +66,12 @@ export function useUiNodes() {
     const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
     const userPermissions = useUserPermissions();
     const nodeOptions = getNodeOptions();
+    const documentModels = useFilteredDocumentModels();
+    const getDocumentModel = useGetDocumentModel();
+    const fileNodeDocument = useFileNodeDocument({
+        ...uiNodesContext,
+        ...documentDriveServer,
+    });
 
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument) => {
@@ -493,8 +504,10 @@ export function useUiNodes() {
             ...uiNodesContext,
             ...userPermissions,
             ...selectedDocumentDrive,
+            ...fileNodeDocument,
             nodeOptions,
             driveNodesBySharingType,
+            documentModels,
             onAddFolder,
             onAddFile,
             onCopyNode,
@@ -511,14 +524,17 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
+            getDocumentModel,
         }),
         [
             documentDriveServer,
             uiNodesContext,
             userPermissions,
             selectedDocumentDrive,
+            fileNodeDocument,
             nodeOptions,
             driveNodesBySharingType,
+            documentModels,
             onAddFolder,
             onAddFile,
             onCopyNode,
@@ -535,8 +551,9 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
+            getDocumentModel,
         ],
     );
 }
 
-export type UiNodes = ReturnType<typeof useUiNodes>;
+export type TUiNodes = ReturnType<typeof useUiNodes>;
