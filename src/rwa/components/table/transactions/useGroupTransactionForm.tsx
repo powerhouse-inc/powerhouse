@@ -1,4 +1,4 @@
-import { DateTimeLocalInput, Tooltip } from '@/connect';
+import { DateTimeLocalInput, Tooltip, TooltipProvider } from '@/connect';
 import {
     FormHookProps,
     FormattedNumber,
@@ -63,9 +63,11 @@ const TransactionReference = forwardRef(function TransactionReference(
 
     if (disabled)
         return (
-            <Tooltip content={tooltipContent}>
-                <span>{maybeShortenedValue}</span>
-            </Tooltip>
+            <TooltipProvider>
+                <Tooltip content={tooltipContent}>
+                    <span>{maybeShortenedValue}</span>
+                </Tooltip>
+            </TooltipProvider>
         );
 
     return <RWATableTextInput {...props} ref={ref} />;
@@ -141,7 +143,7 @@ export function useGroupTransactionForm(
               id: item.id,
               type: item.type,
               entryTime: convertToDateTimeLocalFormat(item.entryTime),
-              cashAmount: item.cashTransaction?.amount ?? null,
+              cashAmount: item.cashTransaction.amount ?? null,
               fixedIncomeId: item.fixedIncomeTransaction?.assetId ?? null,
               fixedIncomeAmount: item.fixedIncomeTransaction?.amount ?? null,
               serviceProviderFeeTypeId: item.serviceProviderFeeTypeId ?? null,
