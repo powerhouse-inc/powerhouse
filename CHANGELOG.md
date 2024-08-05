@@ -1,3 +1,11 @@
+# [1.81.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.80.0...v1.81.0) (2024-08-05)
+
+
+### Features
+
+* bump design system ([ac59906](https://github.com/powerhouse-inc/document-model-libs/commit/ac59906303416e41df6c053d299f64cef76eacf4))
+* handle zero in notional calculation ([561139a](https://github.com/powerhouse-inc/document-model-libs/commit/561139a69c81299b721c33c7875058579c012a30))
+
 # [1.80.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.79.0...v1.80.0) (2024-08-05)
 
 
