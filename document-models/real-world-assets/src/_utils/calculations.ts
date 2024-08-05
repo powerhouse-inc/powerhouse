@@ -372,17 +372,22 @@ export function calculateCurrentValue(props: {
         new Date(asset.purchaseDate).getTime(),
     );
     const sumQuantities = calculateSumQuantity(purchaseTransactionsForAsset);
+    const salesProceeds = math.bignumber(asset.salesProceeds);
+    const realizedSurplus = math.bignumber(asset.realizedSurplus);
     const purchaseProceeds = math.bignumber(asset.purchaseProceeds);
-    const totalDiscount = sumQuantities.sub(purchaseProceeds);
-    const currentDateMinusPurchaseDate = currentDateMs.sub(purchaseDateMs);
-    const maturityMinusCurrentDate = maturityDateMs.sub(currentDateMs);
-    const totalDiscountPlusPurchaseProceeds =
-        totalDiscount.add(purchaseProceeds);
+    const currentPurchaseProceeds = purchaseProceeds
+        .sub(salesProceeds)
+        .add(realizedSurplus);
+    const totalDiscount = sumQuantities.sub(currentPurchaseProceeds);
 
-    return currentDateMinusPurchaseDate
-        .div(maturityMinusCurrentDate)
-        .mul(totalDiscountPlusPurchaseProceeds)
+    const currentValue = currentDateMs
+        .sub(purchaseDateMs)
+        .div(maturityDateMs.sub(purchaseDateMs))
+        .mul(totalDiscount)
+        .add(currentPurchaseProceeds)
         .toNumber();
+
+    return currentValue;
 }
 
 export function calculateSumQuantity(transactions: GroupTransaction[]) {
