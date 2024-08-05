@@ -1,3 +1,10 @@
+# [1.0.0-dev.62](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.61...v1.0.0-dev.62) (2024-08-05)
+
+
+### Features
+
+* only open document when we know node is file ([9669a74](https://github.com/powerhouse-inc/document-model-electron/commit/9669a74d923d2a5c3b88ab857530731239a3d3f7))
+
 # [1.0.0-dev.61](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.60...v1.0.0-dev.61) (2024-08-05)
 
 
