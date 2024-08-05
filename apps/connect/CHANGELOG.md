@@ -1,3 +1,10 @@
+# [1.0.0-dev.61](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.60...v1.0.0-dev.61) (2024-08-05)
+
+
+### Features
+
+* log catched errors to sentry ([8e5e9ba](https://github.com/powerhouse-inc/document-model-electron/commit/8e5e9baf3bbe47894b67f0ca9652dfb855996f30))
+
 # [1.0.0-dev.60](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.59...v1.0.0-dev.60) (2024-08-05)
 
 
