@@ -110,6 +110,9 @@ export function calculateNotional(transactions: GroupTransaction[]): BigNumber {
         ASSET_SALE,
     );
 
+    if (assetAmountPurchase.sub(assetAmountSale).eq(0))
+        return math.bignumber(0);
+
     return purchasePrice.add(
         math
             .bignumber(assetAmountPurchase)
@@ -300,16 +303,14 @@ export function calculateCashBalanceChange(
     cashAmount: InputMaybe<number>,
     fees: InputMaybe<TransactionFee[]>,
 ): BigNumber {
-    if (!cashAmount || !transactionType)
-        throw new Error(
-            `Missing required fields: cashAmount: ${cashAmount}, transactionType: ${transactionType}`,
-        );
+    if (!transactionType)
+        throw new Error('Missing required fields: transactionType');
 
     const sign = cashTransactionSignByTransactionType[transactionType];
 
     const totalFees = calculateTotalFees(fees);
 
-    return math.bignumber(cashAmount * sign).sub(totalFees);
+    return math.bignumber((cashAmount ?? 0) * sign).sub(totalFees);
 }
 
 export function calculateTotalFees(
