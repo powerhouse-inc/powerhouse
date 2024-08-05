@@ -1,3 +1,10 @@
+# [1.0.0-alpha.159](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.158...v1.0.0-alpha.159) (2024-08-05)
+
+
+### Features
+
+* fix add tooltip provider ([964041b](https://github.com/powerhouse-inc/design-system/commit/964041b1f905ce77d315e98911d8e8c15c5422e6))
+
 # [1.0.0-alpha.158](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.157...v1.0.0-alpha.158) (2024-08-05)
 
 
