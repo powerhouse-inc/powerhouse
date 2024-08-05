@@ -1,3 +1,10 @@
+# [1.79.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.78.0...v1.79.0) (2024-08-05)
+
+
+### Features
+
+* update current value calculation ([37c1583](https://github.com/powerhouse-inc/document-model-libs/commit/37c1583b0a50b384397470cad254d7810fe53e6c))
+
 # [1.78.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.77.0...v1.78.0) (2024-08-02)
 
 
