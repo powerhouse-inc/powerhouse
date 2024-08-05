@@ -360,18 +360,23 @@ export function calculateCurrentValue(props: {
             type === ASSET_PURCHASE &&
             fixedIncomeTransaction?.assetId === asset.id,
     );
-    if (
-        !asset.maturity ||
-        fixedIncomeType.name !== 'Treasury Bill' ||
-        !purchaseTransactionsForAsset.length
-    )
+
+    const saleTransactionsForAsset = transactions.filter(
+        ({ type, fixedIncomeTransaction }) =>
+            type === ASSET_SALE && fixedIncomeTransaction?.assetId === asset.id,
+    );
+
+    if (!asset.maturity || fixedIncomeType.name !== 'Treasury Bill')
         return null;
+
     const currentDateMs = math.bignumber(currentDate.getTime());
     const maturityDateMs = math.bignumber(new Date(asset.maturity).getTime());
     const purchaseDateMs = math.bignumber(
         new Date(asset.purchaseDate).getTime(),
     );
-    const sumQuantities = calculateSumQuantity(purchaseTransactionsForAsset);
+    const sumQuantities = calculateSumQuantity(
+        purchaseTransactionsForAsset,
+    ).sub(calculateSumQuantity(saleTransactionsForAsset));
     const salesProceeds = math.bignumber(asset.salesProceeds);
     const realizedSurplus = math.bignumber(asset.realizedSurplus);
     const purchaseProceeds = math.bignumber(asset.purchaseProceeds);
