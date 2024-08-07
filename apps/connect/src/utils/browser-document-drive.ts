@@ -14,30 +14,29 @@ export const BrowserDocumentDriveServer = new DocumentDriveServer(
     new BaseQueueManager(1, 10),
 );
 
-BrowserDocumentDriveServer.initialize()
-    .then(() =>
-        BrowserDocumentDriveServer.getDrives()
-            .then(drives => {
-                if (
-                    !drives.length &&
-                    connectConfig.drives.sections.LOCAL.enabled
-                ) {
-                    BrowserDocumentDriveServer.addDrive({
-                        global: {
-                            id: utils.hashKey(),
-                            name: 'My Local Drive',
-                            icon: null,
-                            slug: 'my-local-drive',
-                        },
-                        local: {
-                            availableOffline: false,
-                            sharingType: 'private',
-                            listeners: [],
-                            triggers: [],
-                        },
-                    }).catch(logger.error);
-                }
-            })
-            .catch(logger.error),
-    )
-    .catch(logger.error);
+async function init() {
+    try {
+        await BrowserDocumentDriveServer.initialize();
+        const drives = await BrowserDocumentDriveServer.getDrives();
+        if (!drives.length && connectConfig.drives.sections.LOCAL.enabled) {
+            BrowserDocumentDriveServer.addDrive({
+                global: {
+                    id: utils.hashKey(),
+                    name: 'My Local Drive',
+                    icon: null,
+                    slug: 'my-local-drive',
+                },
+                local: {
+                    availableOffline: false,
+                    sharingType: 'private',
+                    listeners: [],
+                    triggers: [],
+                },
+            }).catch(logger.error);
+        }
+    } catch (e) {
+        logger.error(e);
+    }
+}
+
+init().catch(logger.error);
