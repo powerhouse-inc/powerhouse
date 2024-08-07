@@ -353,9 +353,17 @@ export function calculateCurrentValue(props: {
         fixedIncomeTypes,
         currentDate = new Date(),
     } = props;
+
+    // asset must have a maturity date to calculate
+    if (!asset.maturity) return null;
+
     const fixedIncomeType = fixedIncomeTypes.find(
         ({ id }) => id === asset.fixedIncomeTypeId,
     )!;
+
+    // currently only Treasury Bills are supported
+    if (fixedIncomeType.name !== 'Treasury Bill') return null;
+
     const purchaseTransactionsForAsset = transactions.filter(
         ({ type, fixedIncomeTransaction }) =>
             type === ASSET_PURCHASE &&
@@ -367,11 +375,19 @@ export function calculateCurrentValue(props: {
             type === ASSET_SALE && fixedIncomeTransaction?.assetId === asset.id,
     );
 
-    if (!asset.maturity || fixedIncomeType.name !== 'Treasury Bill')
+    // formula is meaningless if there are no purchase or sale transactions
+    if (
+        !purchaseTransactionsForAsset.length &&
+        !saleTransactionsForAsset.length
+    )
         return null;
 
     const currentDateMs = math.bignumber(currentDate.getTime());
     const maturityDateMs = math.bignumber(new Date(asset.maturity).getTime());
+
+    // do not calculate if the asset has matured
+    if (maturityDateMs.lessThan(currentDateMs)) return null;
+
     const purchaseDateMs = math.bignumber(
         new Date(asset.purchaseDate).getTime(),
     );
