@@ -27,7 +27,7 @@ function initSenty() {
                 matchRoutes,
             }),
             Sentry.replayIntegration(),
-            Sentry.captureConsoleIntegration(),
+            Sentry.captureConsoleIntegration({ levels: ['error'] }),
         ],
         ignoreErrors: [
             'User is not allowed to create files',
