@@ -1,3 +1,10 @@
+# [1.0.0-dev.64](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.63...v1.0.0-dev.64) (2024-08-07)
+
+
+### Features
+
+* fixed sentry console capture ([2962d91](https://github.com/powerhouse-inc/document-model-electron/commit/2962d916c6335f9a6cdef864917bdacd0d967d78))
+
 # [1.0.0-dev.63](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.62...v1.0.0-dev.63) (2024-08-07)
 
 
