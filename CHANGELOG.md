@@ -1,3 +1,10 @@
+# [1.82.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.81.0...v1.82.0) (2024-08-07)
+
+
+### Features
+
+* add date check ([#201](https://github.com/powerhouse-inc/document-model-libs/issues/201)) ([26ef8ce](https://github.com/powerhouse-inc/document-model-libs/commit/26ef8cec34cc9d3b4da0379d3cea81450ca4f177))
+
 # [1.81.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.80.0...v1.81.0) (2024-08-05)
 
 
