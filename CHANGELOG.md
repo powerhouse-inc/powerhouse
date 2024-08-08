@@ -1,3 +1,10 @@
+# [1.0.0-alpha.160](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.159...v1.0.0-alpha.160) (2024-08-08)
+
+
+### Bug Fixes
+
+* prevent onclick event propagation when selecting an item option ([3fda8fe](https://github.com/powerhouse-inc/design-system/commit/3fda8fef5352da93a933bd88739ef13dbea0331d))
+
 # [1.0.0-alpha.159](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.158...v1.0.0-alpha.159) (2024-08-05)
 
 
