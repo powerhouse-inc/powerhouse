@@ -102,6 +102,7 @@ export const useLoadInitialData = () => {
                             ),
                             {
                                 type: 'connect-warning',
+                                toastId: `${drive.syncStatus === CONFLICT ? 'driveSyncConflict' : 'driveSyncError'}-${drive.id}`,
                             },
                         );
                     });
