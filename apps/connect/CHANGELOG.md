@@ -1,3 +1,10 @@
+# [1.0.0-dev.65](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.64...v1.0.0-dev.65) (2024-08-11)
+
+
+### Features
+
+* show at most one drive error toast ([f7644ae](https://github.com/powerhouse-inc/document-model-electron/commit/f7644ae54ec60c06a176cac8c5f023d81c296052))
+
 # [1.0.0-dev.64](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.63...v1.0.0-dev.64) (2024-08-07)
 
 
