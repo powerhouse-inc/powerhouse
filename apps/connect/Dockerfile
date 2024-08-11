@@ -1,11 +1,11 @@
 FROM node:lts-alpine AS builder
-ARG BASE_PATH=/alpha/powerhouse/connect
+ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
 
-ARG VITE_BASE_HREF=/alpha/powerhouse/connect
+ARG VITE_BASE_HREF=""
 ENV VITE_BASE_HREF=${VITE_BASE_HREF}
 
-ARG VITE_ROUTER_BASENAME=/alpha/powerhouse/connect
+ARG VITE_ROUTER_BASENAME=""
 ENV VITE_ROUTER_BASENAME=${VITE_ROUTER_BASENAME}
 
 ARG VITE_RENOWN_NETWORK_ID="eip155"
@@ -70,7 +70,7 @@ WORKDIR /opt/app
 ENV NODE_ENV=production
 ARG PORT=80
 ENV PORT=${PORT}
-ARG BASE_PATH="/alpha/powerhouse/connect"
+ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
 COPY --from=builder /opt/app/dist /usr/share/nginx/html
 
