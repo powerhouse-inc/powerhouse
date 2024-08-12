@@ -15,6 +15,8 @@ import {
 import { isDocumentDrive } from 'document-drive/utils';
 import {
     DocumentDriveAction,
+    DocumentDriveLocalState,
+    DocumentDriveState,
     Trigger,
     actions,
     utils as documentDriveUtils,
@@ -27,8 +29,11 @@ import { Document, Operation, utils } from 'document-model/document';
 import { useCallback, useMemo } from 'react';
 import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
+import { useUser } from 'src/store/user';
 import { DefaultDocumentDriveServer } from 'src/utils/document-drive-server';
 import { loadFile } from 'src/utils/file';
+import { addActionContext, signOperation } from 'src/utils/signature';
+import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useDocumentDrives } from './useDocumentDrives';
 import { useUserPermissions } from './useUserPermissions';
 
@@ -45,6 +50,9 @@ export function useDocumentDriveServer(
 ) {
     const { isAllowedToCreateDocuments, isAllowedToEditDocuments } =
         useUserPermissions();
+    const user = useUser();
+    const connectDid = useConnectDid();
+    const { sign } = useConnectCrypto();
 
     if (!server) {
         throw new Error('Invalid Document Drive Server');
@@ -81,7 +89,9 @@ export function useDocumentDriveServer(
                 throw new Error(`Drive with id ${driveId} not found`);
             }
 
-            drive = reducer(drive, action);
+            const driveCopy = { ...drive };
+
+            drive = reducer(drive, addActionContext(action, connectDid, user));
             const scope = action.scope ?? 'global';
             const operations = drive.operations[scope];
             const operation = operations.findLast(
@@ -91,10 +101,24 @@ export function useDocumentDriveServer(
                 throw new Error('There was an error applying the operation');
             }
 
+            // sign operation
+            const signedOperation = await signOperation<
+                DocumentDriveState,
+                DocumentDriveAction,
+                DocumentDriveLocalState
+            >(
+                operation as Operation<DocumentDriveAction>,
+                sign,
+                driveId,
+                driveCopy,
+                reducer,
+                user,
+            );
+
             try {
                 const result = await server.queueDriveOperation(
                     driveId,
-                    operation,
+                    signedOperation,
                 );
 
                 if (result.status !== 'SUCCESS') {
@@ -116,7 +140,7 @@ export function useDocumentDriveServer(
                 return drive;
             }
         },
-        [documentDrives, refreshDocumentDrives, server],
+        [documentDrives, refreshDocumentDrives, server, sign, user, connectDid],
     );
 
     const addDocument = useCallback(

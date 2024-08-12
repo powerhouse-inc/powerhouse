@@ -2,16 +2,11 @@ import { FILE, RevisionHistory } from '@powerhousedao/design-system';
 import {
     Action,
     ActionErrorCallback,
-    ActionSigner,
     BaseAction,
     Document,
     EditorContext,
     Operation,
-    OperationSignatureContext,
-    Reducer,
-    User,
     actions,
-    utils,
 } from 'document-model/document';
 import { useAtomValue } from 'jotai';
 import { Suspense, useEffect, useMemo, useState } from 'react';
@@ -28,6 +23,7 @@ import {
     DocumentDispatchCallback,
     useDocumentDispatch,
 } from 'src/utils/document-model';
+import { addActionContext, signOperation } from 'src/utils/signature';
 import Button from './button';
 import { EditorLoader } from './editor-loader';
 
@@ -41,43 +37,6 @@ export type EditorProps<
     onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
     onChange?: (document: Document<T, A, LocalState>) => void;
-};
-
-const signOperation = async (
-    operation: Operation,
-    sign: (data: Uint8Array) => Promise<Uint8Array>,
-    documentId: string,
-    document: Document<unknown, Action>,
-    reducer?: Reducer<unknown, Action, unknown>,
-    user?: User,
-) => {
-    if (!user) return operation;
-    if (!operation.context) return operation;
-    if (!operation.context.signer) return operation;
-    if (!reducer) {
-        logger.error(
-            `Document model '${document.documentType}' does not have a reducer`,
-        );
-        return operation;
-    }
-
-    const context: Omit<
-        OperationSignatureContext,
-        'operation' | 'previousStateHash'
-    > = {
-        documentId,
-        signer: operation.context.signer,
-    };
-
-    const signedOperation = await utils.buildSignedOperation(
-        operation,
-        reducer,
-        document,
-        context,
-        sign,
-    );
-
-    return signedOperation;
 };
 
 export function DocumentEditor(props: EditorProps) {
@@ -118,29 +77,6 @@ export function DocumentEditor(props: EditorProps) {
     const canRedo = !!document?.clipboard.length;
     useUndoRedoShortcuts({ undo, redo, canUndo, canRedo });
 
-    function addActionContext(action: Action): Action {
-        if (!user) return action;
-        const signer: ActionSigner = {
-            app: {
-                name: 'Connect',
-                key: connectDid || '',
-            },
-            user: {
-                address: user.address,
-                networkId: user.networkId,
-                chainId: user.chainId,
-            },
-            signatures: [],
-        };
-
-        return {
-            ...action,
-            context: {
-                signer,
-            },
-        };
-    }
-
     function dispatch(
         action: BaseAction | Action,
         onErrorCallback?: ActionErrorCallback,
@@ -168,7 +104,11 @@ export function DocumentEditor(props: EditorProps) {
                 .catch(logger.error);
         };
 
-        _dispatch(addActionContext(action), callback, onErrorCallback);
+        _dispatch(
+            addActionContext(action, connectDid, user),
+            callback,
+            onErrorCallback,
+        );
     }
 
     useEffect(() => {
