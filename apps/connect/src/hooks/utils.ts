@@ -4,9 +4,9 @@ export const isElectron = window.navigator.userAgent.includes('Electron');
 export const isMac = window.navigator.appVersion.includes('Mac');
 
 const urlBranchMap: Record<string, string> = {
-    'alpha/makerdao': 'deployments/staging/makerdao',
-    'alpha/arbitrum': 'arb-ltip',
-    'alpha/powerhouse': 'staging',
+    'staging/makerdao': 'deployments/staging/makerdao',
+    'staging/arbitrum': 'arb-ltip',
+    'staging/powerhouse': 'staging',
     makerdao: 'deployments/makerdao',
     arbitrum: 'deployments/arbitrum',
     arbgrants: 'deployments/arbitrum',
@@ -40,5 +40,10 @@ const fetchLatestVersion = async () => {
 
 export const isLatestVersion = async () => {
     const deployed = await fetchLatestVersion();
-    return !deployed || deployed === currentVersion;
+
+    if (deployed) {
+        return deployed === currentVersion;
+    }
+
+    return null;
 };
