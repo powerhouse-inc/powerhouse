@@ -5,8 +5,9 @@ import {
     Icon,
     Modal,
 } from '@powerhousedao/design-system';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import serviceWorkerManager from 'src/utils/registerServiceWorker';
 import { v4 as uuid } from 'uuid';
 
 export interface DebugSettingsModalProps {
@@ -26,6 +27,11 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
 
     console.log('autoRegisterPullResponder', autoRegisterPullResponder);
 
+    const [appVersion, setAppVersion] = useState('');
+    const [serviceWorkerDebugMode, setServiceWorkerDebugMode] = useState({
+        label: serviceWorkerManager.debug ? 'Enabled' : 'Disabled',
+        value: serviceWorkerManager.debug,
+    });
     const [selectedDrive, setSelectedDrive] = useState<string>();
     const [selectedDriveTrigger, setSelectedDriveTrigger] =
         useState<ComboboxOption | null>(null);
@@ -40,6 +46,10 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
         addTrigger,
         registerNewPullResponderTrigger,
     } = useDocumentDriveServer();
+
+    useEffect(() => {
+        serviceWorkerManager.setDebug(serviceWorkerDebugMode.value);
+    }, [serviceWorkerDebugMode]);
 
     console.log('documentDrives', documentDrives);
     console.log('selectedDrive', selectedDrive);
@@ -114,6 +124,13 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                 </div>
 
                 <div className="flex text-sm font-bold">
+                    <Icon name="Ring" size={22} />
+                    <span className="ml-2">
+                        App Version: {process.env.APP_VERSION}
+                    </span>
+                </div>
+
+                <div className="flex text-sm font-bold mt-4">
                     <Icon name="Hdd" size={22} />
                     <span className="ml-2">Drive Tools:</span>
                 </div>
@@ -237,6 +254,73 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                             onClick={() => addTriggerHandler(true)}
                         >
                             Add Invalid Trigger
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="flex text-sm font-bold mt-4">
+                    <Icon name="Gear" size={22} />
+                    <span className="ml-2">Service Worker Tools:</span>
+                </div>
+
+                <div className="mt-2 flex items-end justify-between pl-4">
+                    <div className="w-[400px]">
+                        <label
+                            htmlFor="serviceWorkerDebugMode"
+                            className="text-xs"
+                        >
+                            Service Worker Debug Mode:
+                        </label>
+                        <Combobox
+                            id="serviceWorkerDebugMode"
+                            onChange={value => {
+                                setServiceWorkerDebugMode(
+                                    value as typeof serviceWorkerDebugMode,
+                                );
+                            }}
+                            value={serviceWorkerDebugMode}
+                            options={[
+                                { label: 'Enabled', value: true },
+                                { label: 'Disabled', value: false },
+                            ]}
+                        />
+                    </div>
+                </div>
+
+                <div className="mt-2 flex items-end justify-between pl-4">
+                    <div className="w-[400px]">
+                        <label htmlFor="appVersion" className="text-xs">
+                            Set invalid app version:
+                        </label>
+                        <FormInput
+                            containerClassName="p-1 bg-white border border-gray-200 rounded-md text-sm"
+                            inputClassName="text-xs font-normal"
+                            id="appVersion"
+                            icon={
+                                <div className="flex h-full items-center text-xs">
+                                    Version:
+                                </div>
+                            }
+                            value={appVersion}
+                            onChange={element =>
+                                setAppVersion(element.target.value)
+                            }
+                        />
+                    </div>
+                    <div className="mb-1 flex items-center justify-center">
+                        <Button
+                            color={appVersion === '' ? 'light' : 'red'}
+                            size="small"
+                            disabled={appVersion === ''}
+                            onClick={() => {
+                                serviceWorkerManager.sendMessage({
+                                    type: 'SET_APP_VERSION',
+                                    version: appVersion,
+                                });
+                                setAppVersion('');
+                            }}
+                        >
+                            Add Invalid App Version
                         </Button>
                     </div>
                 </div>
