@@ -1,3 +1,10 @@
+# [1.0.0-dev.66](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.65...v1.0.0-dev.66) (2024-08-12)
+
+
+### Features
+
+* fix fix-urlBranchMap ([aeadba1](https://github.com/powerhouse-inc/document-model-electron/commit/aeadba1524bf31ed04b9a44b6de57a32cfdec0c3))
+
 # [1.0.0-dev.65](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.64...v1.0.0-dev.65) (2024-08-11)
 
 
