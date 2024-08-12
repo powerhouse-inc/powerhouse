@@ -2,20 +2,16 @@ const VERSION_CACHE = 'version-cache';
 const VERSION_KEY = 'app-version';
 
 self.addEventListener('install', event => {
-    console.log('Service worker installed');
     self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
-    console.log('Service worker activated');
     event.waitUntil(self.clients.claim());
 });
 
 
 self.addEventListener('message', async event => {
     if (event.data && event.data.type === 'SET_APP_VERSION') {
-        console.log('Message received in service worker:', event.data.version);
-
         const cache = await caches.open(VERSION_CACHE);
         await cache.put(VERSION_KEY, new Response(event.data.version));
     }

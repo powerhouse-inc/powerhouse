@@ -6,10 +6,11 @@ import path from 'path';
 import { HtmlTagDescriptor, defineConfig, loadEnv } from 'vite';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
+import pkg from './package.json';
 
 import clientConfig from './client.config';
 
-const appVersion = Math.random().toString(36).substring(2, 15);
+const appVersion = pkg.version;
 
 const generateVersionPlugin = (hardRefresh = false) => {
     return {
