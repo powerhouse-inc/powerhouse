@@ -1,3 +1,10 @@
+# [1.0.0-dev.67](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.66...v1.0.0-dev.67) (2024-08-12)
+
+
+### Bug Fixes
+
+* fixes undefined this in logger methods ([d5a8fac](https://github.com/powerhouse-inc/document-model-electron/commit/d5a8face9f25e54cf1bd51c9118db1fff80394b0))
+
 # [1.0.0-dev.66](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.65...v1.0.0-dev.66) (2024-08-12)
 
 
