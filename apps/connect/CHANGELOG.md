@@ -1,3 +1,11 @@
+# [1.0.0-dev.68](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.67...v1.0.0-dev.68) (2024-08-12)
+
+
+### Features
+
+* added browser refresh when a new version of connect is deployed ([0208c62](https://github.com/powerhouse-inc/document-model-electron/commit/0208c62b20dc3b9c0a9aa9845426c803b3e9d57e))
+* use pkg version instead of random ver ([c2255c9](https://github.com/powerhouse-inc/document-model-electron/commit/c2255c9c9830d285d23e798aa0d799a396e2bb7b))
+
 # [1.0.0-dev.67](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.66...v1.0.0-dev.67) (2024-08-12)
 
 
