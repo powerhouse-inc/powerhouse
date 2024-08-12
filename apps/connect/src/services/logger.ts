@@ -5,6 +5,16 @@ import { ILogger, setLogger } from 'document-drive/logger';
 class ConnectLogger implements ILogger {
     #logger: ILogger = console;
 
+    constructor() {
+        // Bind all methods to the current instance
+        this.log = this.log.bind(this);
+        this.info = this.info.bind(this);
+        this.warn = this.warn.bind(this);
+        this.error = this.error.bind(this);
+        this.debug = this.debug.bind(this);
+        this.trace = this.trace.bind(this);
+    }
+
     set logger(logger: ILogger) {
         this.#logger = logger;
     }
