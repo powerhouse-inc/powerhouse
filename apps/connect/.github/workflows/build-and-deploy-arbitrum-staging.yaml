@@ -36,6 +36,7 @@ jobs:
             --build-arg VITE_LOCAL_DRIVES_ENABLED=false
             --build-arg VITE_DEFAULT_DRIVES_URL=https://apps.powerhouse.io/staging/arbitrum/switchboard/d/arbitrum
             --build-arg VITE_RENOWN_CHAIN_ID=42161
+            --build-arg VITE_SEARCH_BAR_ENABLED=false
             --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
             --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
             --build-arg VITE_ARBITRUM_ALLOW_LIST=${{secrets.VITE_ARBITRUM_ALLOW_LIST}}
