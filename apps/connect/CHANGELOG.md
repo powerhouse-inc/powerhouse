@@ -1,3 +1,10 @@
+# [1.0.0-dev.70](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.69...v1.0.0-dev.70) (2024-08-13)
+
+
+### Features
+
+* added drive operations context ([0c9d5fe](https://github.com/powerhouse-inc/document-model-electron/commit/0c9d5fee4b79d387c985ecd3ee755f0ae83fe399))
+
 # [1.0.0-dev.69](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.68...v1.0.0-dev.69) (2024-08-12)
 
 
