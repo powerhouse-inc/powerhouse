@@ -6,7 +6,7 @@ type Props = Omit<ComponentPropsWithoutRef<'img'>, 'src'> & {
     size?: Size;
 };
 export function AnimatedLoader(props: Props) {
-    const { style, size = 250, alt = 'Loading...', ...delegatedProps } = props;
+    const { style, size = 100, alt = 'Loading...', ...delegatedProps } = props;
 
     const dimensions = getDimensions(size);
 

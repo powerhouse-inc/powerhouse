@@ -14,12 +14,12 @@ export const Default: Story = {};
 
 export const Small: Story = {
     args: {
-        size: 100,
+        size: 50,
     },
 };
 
 export const Tiny: Story = {
     args: {
-        size: 20,
+        size: 10,
     },
 };
