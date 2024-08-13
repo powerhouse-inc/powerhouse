@@ -1,3 +1,10 @@
+# [1.0.0-alpha.162](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.161...v1.0.0-alpha.162) (2024-08-13)
+
+
+### Features
+
+* added LoadingScreen Component ([440bb5d](https://github.com/powerhouse-inc/design-system/commit/440bb5df4b018dab7f998ddcf03ece718289e4df))
+
 # [1.0.0-alpha.161](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.160...v1.0.0-alpha.161) (2024-08-13)
 
 
