@@ -1,3 +1,10 @@
+# [1.0.0-alpha.161](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.160...v1.0.0-alpha.161) (2024-08-13)
+
+
+### Features
+
+* update loader animation ([#344](https://github.com/powerhouse-inc/design-system/issues/344)) ([97293d3](https://github.com/powerhouse-inc/design-system/commit/97293d30ed22b4b8a1ad4f8ead220f14cf891cae))
+
 # [1.0.0-alpha.160](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.159...v1.0.0-alpha.160) (2024-08-08)
 
 
