@@ -14,6 +14,7 @@ export * from './file-item';
 export * from './folder-item';
 export * from './form';
 export * from './form-input';
+export * from './loading-screen';
 export * from './modal';
 export * from './node-input';
 export * from './revision-history';
