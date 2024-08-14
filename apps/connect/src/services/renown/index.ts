@@ -101,13 +101,13 @@ export class Renown {
         if (!this.#baseUrl) {
             throw new Error('RENOWN_URL is not set');
         }
-
-        const response = await fetch(
-            `${this.#baseUrl}/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(connectId)}`,
-            {
-                method: 'GET',
-            },
+        const url = new URL(
+            `/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(connectId)}`,
+            this.#baseUrl,
         );
+        const response = await fetch(url, {
+            method: 'GET',
+        });
         if (response.ok) {
             const result = (await response.json()) as {
                 credential: PowerhouseVerifiableCredential;
