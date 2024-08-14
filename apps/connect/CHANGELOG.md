@@ -1,3 +1,10 @@
+# [1.0.0-dev.71](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.70...v1.0.0-dev.71) (2024-08-14)
+
+
+### Bug Fixes
+
+* parse renown base url ([160b4df](https://github.com/powerhouse-inc/document-model-electron/commit/160b4df770bd2c0e181b69aa68c01feba101b173))
+
 # [1.0.0-dev.70](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.69...v1.0.0-dev.70) (2024-08-13)
 
 
