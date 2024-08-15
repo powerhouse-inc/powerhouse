@@ -1,3 +1,10 @@
+# [1.0.0-dev.72](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.71...v1.0.0-dev.72) (2024-08-15)
+
+
+### Features
+
+* upload sourcemaps to sentry ([47190fa](https://github.com/powerhouse-inc/document-model-electron/commit/47190faeda45bdad8250420bee4cbe1b546c0dd5))
+
 # [1.0.0-dev.71](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.70...v1.0.0-dev.71) (2024-08-14)
 
 
