@@ -1,43 +1,66 @@
-# name: Check PR
+name: Check PR
 
-# on:
-#     push:
-#         branches: ['main']
-#     pull_request:
-#         branches: ['main']
-#         types: [opened, synchronize]
+on:
+    push:
+        branches: ['main']
+    pull_request:
+        branches: ['main']
+        types: [opened, synchronize]
 
-# jobs:
-#     lint:
-#         name: Lint
-#         runs-on: ubuntu-latest
+env:
+    DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90
 
-#         steps:
-#             - uses: actions/checkout@v3
+jobs:
+    # lint:
+    #     name: Lint
+    #     runs-on: ubuntu-latest
 
-#             - uses: pnpm/action-setup@v3
-#               with:
-#                   version: latest-8
-#                   run_install: true
+    #     steps:
+    #         - uses: actions/checkout@v3
 
-#             - name: Lint
-#               run: pnpm run lint
+    #         - uses: pnpm/action-setup@v3
+    #           with:
+    #               version: latest-8
+    #               run_install: true
 
-#             - name: Check types
-#               run: pnpm run check-types
+    #         - name: Lint
+    #           run: pnpm run lint
 
-#     test:
-#         name: Test
-#         runs-on: ubuntu-latest
+    #         - name: Check types
+    #           run: pnpm run check-types
 
-#         steps:
-#             - uses: actions/checkout@v3
+    test:
+        name: Test
+        runs-on: ubuntu-latest
+        container: node:22
 
-#             - uses: pnpm/action-setup@v3
-#               with:
-#                   version: latest-8
-#                   run_install: true
+        services:
+            postgres:
+                image: postgres
+                # Provide the password for postgres
+                env:
+                    POSTGRES_PASSWORD: postgres
+                # Set health checks to wait until postgres has started
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                    # Maps tcp port 5432 on service container to the host
+                    - 5432:5432
 
-#             - name: Test
-#               run: pnpm run test
+        steps:
+            - uses: actions/checkout@v4
 
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: prisma
+              run: pnpm prisma generate && pnpm prisma db push
+
+            - name: Test
+              run: pnpm test
