@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { actions, reducer, utils } from 'document-model-libs/document-drive';
 import { ActionContext, Operation } from 'document-model/document';
 import { beforeEach, describe, it } from 'vitest';
+import { generateUUID } from '../src';
 import { BrowserStorage } from '../src/storage/browser';
 import { PrismaStorage } from '../src/storage/prisma';
 import { migrateLegacyOperationSignature } from '../src/utils/migrations';
@@ -74,9 +75,10 @@ describe('Signature migration', () => {
 describe.each(storageLayers)(
     'should migrate operations in %s',
     async (_storageName, buildStorage) => {
+        const driveId = generateUUID();
         beforeEach(async () => {
             const storage = storageLayers[1][1]();
-            return storage.deleteDrive('1');
+            return storage.deleteDrive(driveId);
         });
 
         it('should migrate operation without context', async ({ expect }) => {
@@ -85,7 +87,7 @@ describe.each(storageLayers)(
                 state: {
                     global: {
                         icon: null,
-                        id: '1',
+                        id: driveId,
                         name: 'name',
                         nodes: [],
                         slug: null
@@ -97,7 +99,7 @@ describe.each(storageLayers)(
                     }
                 }
             });
-            await storage.createDrive('1', drive);
+            await storage.createDrive(driveId, drive);
 
             const driveOperation = buildOperation(
                 reducer,
@@ -111,12 +113,12 @@ describe.each(storageLayers)(
             );
             expect(driveOperation.context).toBeUndefined();
 
-            await storage.addDriveOperations('1', [driveOperation], drive);
+            await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-            const storedDrive = await storage.getDrive('1');
+            const storedDrive = await storage.getDrive(driveId);
 
             await storage.migrateOperationSignatures();
-            const migratedDrive = await storage.getDrive('1');
+            const migratedDrive = await storage.getDrive(driveId);
 
             expect(storedDrive.operations.global.length).toEqual(
                 migratedDrive.operations.global.length
@@ -135,7 +137,7 @@ describe.each(storageLayers)(
                 state: {
                     global: {
                         icon: null,
-                        id: '1',
+                        id: driveId,
                         name: 'name',
                         nodes: [],
                         slug: null
@@ -147,7 +149,7 @@ describe.each(storageLayers)(
                     }
                 }
             });
-            await storage.createDrive('1', drive);
+            await storage.createDrive(driveId, drive);
 
             const driveOperation = buildOperation(
                 reducer,
@@ -174,12 +176,12 @@ describe.each(storageLayers)(
                 }
             } as unknown as ActionContext;
 
-            await storage.addDriveOperations('1', [driveOperation], drive);
+            await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-            const storedDrive = await storage.getDrive('1');
+            const storedDrive = await storage.getDrive(driveId);
 
             await storage.migrateOperationSignatures();
-            const migratedDrive = await storage.getDrive('1');
+            const migratedDrive = await storage.getDrive(driveId);
 
             expect(storedDrive.operations.global.length).toEqual(
                 migratedDrive.operations.global.length
@@ -211,7 +213,7 @@ describe.each(storageLayers)(
                 state: {
                     global: {
                         icon: null,
-                        id: '1',
+                        id: driveId,
                         name: 'name',
                         nodes: [],
                         slug: null
@@ -223,7 +225,7 @@ describe.each(storageLayers)(
                     }
                 }
             });
-            await storage.createDrive('1', drive);
+            await storage.createDrive(driveId, drive);
 
             const driveOperation = buildOperation(
                 reducer,
@@ -250,12 +252,12 @@ describe.each(storageLayers)(
                 }
             } as unknown as ActionContext;
 
-            await storage.addDriveOperations('1', [driveOperation], drive);
+            await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-            const storedDrive = await storage.getDrive('1');
+            const storedDrive = await storage.getDrive(driveId);
 
             await storage.migrateOperationSignatures();
-            const migratedDrive = await storage.getDrive('1');
+            const migratedDrive = await storage.getDrive(driveId);
 
             expect(storedDrive.operations.global.length).toEqual(
                 migratedDrive.operations.global.length

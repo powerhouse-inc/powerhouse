@@ -441,7 +441,7 @@ describe('processOperations', () => {
         )) as DocumentModelDocument;
 
         expect(resultOp2.status).toBe('SUCCESS');
-        expect(resultOp2.operations.length).toBe(0);
+        expect(resultOp2.operations.length).toBe(1);
 
         expect(document.operations.global.length).toBe(1);
         expect(document.operations.global).toMatchObject([

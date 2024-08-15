@@ -7,8 +7,8 @@ import {
     module as DocumentModelLib
 } from 'document-model/document-model';
 import { afterEach, beforeEach, describe, it, vi } from 'vitest';
-import { DocumentDriveServer } from '../src/server';
-import { MemoryStorage } from '../src/storage/memory';
+import { DocumentDriveServer } from '../../src/server';
+import { MemoryStorage } from '../../src/storage/memory';
 
 const SWITCHBOARD_URL =
     process.env['SWITCHBOARD_URL'] ?? 'http://localhost:3000/';

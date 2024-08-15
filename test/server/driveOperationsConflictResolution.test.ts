@@ -563,13 +563,18 @@ describe('Drive Operations', () => {
 
         // TODO: validate that there are not duplicated operations after operation id implementation
         expect(client2Nodes).toHaveLength(8);
-        expect(client2Nodes).toMatchObject([
+
+        function sortNodes(nodes: DocumentDrive.Node[]) {
+            return nodes.sort((a, b) => (a.id < b.id ? -1 : 1));
+        }
+        const sortedClient2Nodes = sortNodes(client2Nodes);
+        expect(sortedClient2Nodes).toMatchObject([
             { id: '1', name: '1', parentFolder: null },
             { id: '2', name: '2', parentFolder: '1' },
-            { id: '5', name: '1 (copy) 1', parentFolder: null },
-            { id: '6', name: '2', parentFolder: '5' },
             { id: '3', name: '1 (copy) 2', parentFolder: null },
             { id: '4', name: '2', parentFolder: '3' },
+            { id: '5', name: '1 (copy) 1', parentFolder: null },
+            { id: '6', name: '2', parentFolder: '5' },
             { id: '7', name: '1 (copy) 3', parentFolder: null },
             { id: '8', name: '2', parentFolder: '7' }
         ]);

@@ -47,7 +47,8 @@ const storageLayers = [
         async () => {
             const storage = new SequelizeStorage({
                 dialect: 'sqlite',
-                storage: ':memory:'
+                storage: ':memory:',
+                logging: false
             });
 
             await storage.syncModels();

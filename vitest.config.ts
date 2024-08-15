@@ -10,8 +10,8 @@ export default defineConfig({
         },
         setupFiles: './test/vitest-setup.ts',
         poolOptions: {
-            threads: {
-                singleThread: true
+            forks: {
+                singleFork: true
             }
         }
     }

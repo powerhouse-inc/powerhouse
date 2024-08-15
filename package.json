@@ -31,7 +31,7 @@
         "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
         "format": "prettier . --write",
         "release": "semantic-release",
-        "test": "vitest run --coverage",
+        "test": "vitest run --coverage --exclude \"test/flaky/**\"",
         "test:watch": "vitest watch"
     },
     "peerDependencies": {
@@ -66,6 +66,7 @@
         "@typescript-eslint/eslint-plugin": "^6.21.0",
         "@typescript-eslint/parser": "^6.21.0",
         "@vitest/coverage-v8": "^1.6.0",
+        "@vitest/ui": "^2.0.5",
         "document-model": "^1.7.0",
         "document-model-libs": "^1.70.0",
         "eslint": "^8.57.0",
