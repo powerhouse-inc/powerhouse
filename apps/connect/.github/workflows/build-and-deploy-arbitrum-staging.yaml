@@ -41,4 +41,7 @@ jobs:
             --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
             --build-arg VITE_ARBITRUM_ALLOW_LIST=${{secrets.VITE_ARBITRUM_ALLOW_LIST}}
             --build-arg VITE_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS=true
+            --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
           process_type: web

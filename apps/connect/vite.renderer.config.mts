@@ -1,9 +1,10 @@
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import path from 'path';
-import { HtmlTagDescriptor, defineConfig, loadEnv } from 'vite';
+import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import pkg from './package.json';
@@ -35,6 +36,42 @@ export default defineConfig(({ mode }) => {
 
     const requiresHardRefresh = env.VITE_APP_REQUIRES_HARD_REFRESH === 'true';
 
+    const plugins: PluginOption[] = [
+        react({
+            include: 'src/**/*.tsx',
+            babel: {
+                plugins: isProd ? [] : [jotaiDebugLabel, jotaiReactRefresh],
+            },
+        }),
+        svgr(),
+        createHtmlPlugin({
+            minify: true,
+            inject: {
+                tags: [
+                    ...(clientConfig.meta.map(meta => ({
+                        ...meta,
+                        injectTo: 'head',
+                    })) as HtmlTagDescriptor[]),
+                ],
+            },
+        }),
+        generateVersionPlugin(isProd ? requiresHardRefresh : false),
+    ];
+
+    const authToken = process.env.SENTRY_AUTH_TOKEN;
+    const org = process.env.SENTRY_ORG;
+    const project = process.env.SENTRY_PROJECT;
+    const uploadSentrySourcemaps = authToken && org && project;
+    if (uploadSentrySourcemaps) {
+        plugins.push(
+            sentryVitePlugin({
+                authToken,
+                org,
+                project,
+            }) as PluginOption,
+        );
+    }
+
     return {
         define: {
             'process.env': {
@@ -42,27 +79,7 @@ export default defineConfig(({ mode }) => {
                 REQUIRES_HARD_REFRESH: isProd ? requiresHardRefresh : false,
             },
         },
-        plugins: [
-            react({
-                include: 'src/**/*.tsx',
-                babel: {
-                    plugins: isProd ? [] : [jotaiDebugLabel, jotaiReactRefresh],
-                },
-            }),
-            svgr(),
-            createHtmlPlugin({
-                minify: true,
-                inject: {
-                    tags: [
-                        ...(clientConfig.meta.map(meta => ({
-                            ...meta,
-                            injectTo: 'head',
-                        })) as HtmlTagDescriptor[]),
-                    ],
-                },
-            }),
-            generateVersionPlugin(isProd ? requiresHardRefresh : false),
-        ],
+        plugins,
         build: {
             minify: isProd,
             sourcemap: isProd,

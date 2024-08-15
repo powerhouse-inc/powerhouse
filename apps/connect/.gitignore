@@ -65,3 +65,5 @@ out/
 public/icons.svg
 
 .env.local
+# Sentry Config File
+.env.sentry-build-plugin

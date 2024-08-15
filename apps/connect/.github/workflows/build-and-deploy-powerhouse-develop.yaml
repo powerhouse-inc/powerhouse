@@ -28,4 +28,9 @@ jobs:
             --build-arg VITE_ROUTER_BASENAME=/develop/powerhouse/connect
             --build-arg VITE_DEFAULT_DRIVES_URL=https://apps.powerhouse.io/develop/powerhouse/switchboard/d/core-dev
             --build-arg VITE_SEARCH_BAR_ENABLED=false
+            --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
+            --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
           process_type: web
