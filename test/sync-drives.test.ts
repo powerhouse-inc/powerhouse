@@ -277,7 +277,7 @@ describe('Document Drive Server interaction', () => {
                 }
             ]
         });
-
+        await connectServer.clearStorage();
         mswServer.close();
     });
 
@@ -314,7 +314,11 @@ describe('Document Drive Server interaction', () => {
             )
         );
 
-        vi.advanceTimersByTime(5000);
+        // wait for pull strands polling
+        await vi.advanceTimersByTimeAsync(5000);
+
+        // wait for queue processNextJob
+        await vi.advanceTimersToNextTimerAsync();
         await new Promise<void>(resolve =>
             connectServer.on('strandUpdate', () => resolve())
         );
@@ -330,6 +334,7 @@ describe('Document Drive Server interaction', () => {
             }
         ]);
 
+        await connectServer.clearStorage();
         mswServer.close();
     });
 
@@ -422,6 +427,7 @@ describe('Document Drive Server interaction', () => {
         )) as DocumentModelLib.DocumentModelDocument;
         expect(connectDocument.state.global.name).toBe('test');
 
+        await connectServer.clearStorage();
         mswServer.close();
     });
 
@@ -499,6 +505,7 @@ describe('Document Drive Server interaction', () => {
             }
         ]);
 
+        await connectServer.clearStorage();
         mswServer.close();
     });
 
@@ -606,7 +613,11 @@ describe('Document Drive Server interaction', () => {
             )
         );
 
-        vi.advanceTimersByTime(5000);
+        // wait for pull strands polling
+        await vi.advanceTimersByTimeAsync(5000);
+
+        // wait for queue processNextJob
+        await vi.advanceTimersToNextTimerAsync();
 
         await vi.waitFor(async () => {
             const connectDocument = await connectServer.getDrive('1');
@@ -623,6 +634,7 @@ describe('Document Drive Server interaction', () => {
             }
         ]);
 
+        await connectServer.clearStorage();
         mswServer.close();
     });
 
@@ -738,6 +750,7 @@ describe('Document Drive Server interaction', () => {
         await createRemoteDrive();
 
         const connectServer = new DocumentDriveServer(documentModels);
+
         await connectServer.addRemoteDrive('http://test', {
             availableOffline: true,
             sharingType: 'public',

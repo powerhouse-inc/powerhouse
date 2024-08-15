@@ -10,6 +10,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DocumentDriveServer, IOperationResult } from '../../src';
 import { DriveBasicClient } from '../utils';
 
+function sortNodes(nodes: DocumentDrive.Node[]) {
+    return nodes.sort((a, b) => (a.id < b.id ? -1 : 1));
+}
+
 describe('Drive Operations', () => {
     const documentModels = [
         DocumentModelLib,
@@ -564,9 +568,6 @@ describe('Drive Operations', () => {
         // TODO: validate that there are not duplicated operations after operation id implementation
         expect(client2Nodes).toHaveLength(8);
 
-        function sortNodes(nodes: DocumentDrive.Node[]) {
-            return nodes.sort((a, b) => (a.id < b.id ? -1 : 1));
-        }
         const sortedClient2Nodes = sortNodes(client2Nodes);
         expect(sortedClient2Nodes).toMatchObject([
             { id: '1', name: '1', parentFolder: null },

@@ -101,6 +101,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     private syncStatus = new Map<string, SyncStatus>();
 
     private queueManager: IQueueManager;
+    private initializePromise: Promise<Error[] | null>;
 
     constructor(
         documentModels: DocumentModel[],
@@ -126,6 +127,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 }
             }
         });
+
+        this.initializePromise = this._initialize();
     }
 
     private updateSyncStatus(
@@ -372,7 +375,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }
     };
 
-    async initialize() {
+    initialize() {
+        return this.initializePromise;
+    }
+
+    private async _initialize() {
         const errors: Error[] = [];
         const drives = await this.getDrives();
         for (const drive of drives) {
@@ -989,7 +996,9 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                     );
                     document = appliedResult.document;
                     signals.push(...appliedResult.signals);
-                    operationsApplied.push(...appliedResult.operation);
+                    operationsApplied.push(appliedResult.operation);
+
+                    // TODO what to do if one of the applied operations has an error?
                 } catch (e) {
                     error =
                         e instanceof OperationError
@@ -1189,21 +1198,26 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             { skip: operation.skip, reuseOperationResultingState: true }
         ) as T;
 
-        const appliedOperation = newDocument.operations[operation.scope].filter(
+        const appliedOperations = newDocument.operations[
+            operation.scope
+        ].filter(
             op => op.index == operation.index && op.skip == operation.skip
         );
+        const appliedOperation = appliedOperations.at(0);
 
-        if (appliedOperation.length < 1) {
+        if (!appliedOperation) {
             throw new OperationError(
                 'ERROR',
                 operation,
                 `Operation with index ${operation.index}:${operation.skip} was not applied.`
             );
-        } else if (
-            appliedOperation[0]!.hash !== operation.hash &&
+        }
+        if (
+            !appliedOperation.error &&
+            appliedOperation.hash !== operation.hash &&
             !skipHashValidation
         ) {
-            throw new ConflictOperationError(operation, appliedOperation[0]!);
+            throw new ConflictOperationError(operation, appliedOperation);
         }
 
         for (const signalHandler of operationSignals) {

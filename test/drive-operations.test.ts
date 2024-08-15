@@ -7,8 +7,7 @@ import {
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { BaseAction, DocumentModel, Operation } from 'document-model/document';
 import { module as DocumentModelLib } from 'document-model/document-model';
-import { beforeEach } from 'node:test';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { DocumentDriveServer } from '../src';
 
 function buildOperation(
@@ -41,6 +40,7 @@ describe('Drive operations', () => {
     ] as DocumentModel[];
 
     let server = new DocumentDriveServer(documentModels);
+
     beforeEach(async () => {
         server = new DocumentDriveServer(documentModels);
         await server.initialize();
@@ -65,6 +65,7 @@ describe('Drive operations', () => {
     });
 
     it('should reject invalid operation', async () => {
+        await server.clearStorage();
         await server.addDrive({
             global: { id: '1', name: 'test', icon: null, slug: null },
             local: {
@@ -88,8 +89,10 @@ describe('Drive operations', () => {
                 1
             )
         );
-        expect(result.status).toBe('ERROR');
-        expect(result.error?.message).toBe('Node with id 1 already exists!');
+        expect(result.status).toBe('SUCCESS');
+        expect(result.operations.find(op => op.error)?.error).toBe(
+            'Node with id 1 already exists!'
+        );
     });
 
     it('should reject operation with missing index', async () => {

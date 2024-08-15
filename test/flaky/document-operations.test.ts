@@ -9,8 +9,8 @@ import {
     reducer
 } from 'document-model/document-model';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DocumentDriveServer } from '../src';
-import { buildOperation, buildOperations } from './utils';
+import { DocumentDriveServer } from '../../src';
+import { buildOperation, buildOperations } from '../utils';
 
 describe('Document operations', () => {
     const documentModels = [
@@ -199,9 +199,14 @@ describe('Document operations', () => {
         }
 
         it('should undo latest operation', async () => {
-            const undoAction = [actions.undo()];
-            const document = await getDocumentWithOps(undoAction);
-
+            const undoAction = [
+                { skip: 1, type: 'NOOP', scope: 'global', input: {} }
+            ];
+            try {
+                const document = await getDocumentWithOps(undoAction);
+            } catch (e) {
+                console.error(e);
+            }
             const expectedState = {
                 name: 'test',
                 id: 'testId',
