@@ -70,7 +70,7 @@ jobs:
                   version: latest-8
                   run_install: true
 
-            - name: prisma
+            - name: Prisma
               run: pnpm prisma generate && pnpm prisma db push
 
             - name: Test

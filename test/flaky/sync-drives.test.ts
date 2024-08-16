@@ -1,3 +1,13 @@
+/**
+ *
+ *
+ * TODO: Fix MSW issue when running on CI
+ * 'Cookie has domain set to the public suffix "test" which is a special use domain.
+ * To allow this, configure your CookieJar with {allowSpecialUseDomain:true, rejectPublicSuffixes: false}.'
+ *
+ *
+ */
+
 import {
     DocumentDriveAction,
     Listener,
@@ -22,9 +32,9 @@ import {
     PullResponderTransmitter,
     StrandUpdate,
     SyncStatus
-} from '../src/server';
-import { generateUUID } from '../src/utils';
-import { buildOperation, buildOperations } from './utils';
+} from '../../src/server';
+import { generateUUID } from '../../src/utils';
+import { buildOperation, buildOperations } from '../utils';
 
 describe('Document Drive Server interaction', () => {
     const documentModels = [
