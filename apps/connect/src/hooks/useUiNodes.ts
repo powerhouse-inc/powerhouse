@@ -222,10 +222,13 @@ export function useUiNodes() {
             if (parentNode.kind === FILE) {
                 throw new Error('Cannot add file to a file');
             }
+
+            const fileName = file.name.replace(/\.zip$/gim, '');
+
             return await addFile(
                 file,
                 parentNode.driveId,
-                file.name,
+                fileName,
                 parentNode.id,
             );
         },
