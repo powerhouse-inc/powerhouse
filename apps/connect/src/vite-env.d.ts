@@ -9,6 +9,7 @@ type ImportMetaEnv = {
   DEV: boolean
   PROD: boolean
   APP_VERSION: string
+  REQUIRES_HARD_REFRESH: boolean
   BASE_PATH: string
   BASE_HREF: string
   PH_CONNECT_APP_REQUIRES_HARD_REFRESH: string
