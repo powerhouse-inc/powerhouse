@@ -58,7 +58,14 @@ export default defineConfig(({ mode }) => {
             },
         }),
         generateVersionPlugin(isProd ? requiresHardRefresh : false),
-        viteEnvs()
+        viteEnvs({
+            computedEnv() {
+                return {
+                    APP_VERSION: appVersion,
+                    REQUIRES_HARD_REFRESH: isProd ? requiresHardRefresh : false,
+                };
+            },
+        })
     ];
 
     const authToken = process.env.SENTRY_AUTH_TOKEN;
@@ -76,18 +83,10 @@ export default defineConfig(({ mode }) => {
     }
 
     return {
-        define: {
-            'process.env': {
-                REQUIRES_HARD_REFRESH: isProd ? requiresHardRefresh : false,
-            },
-        },
         plugins,
         build: {
             minify: isProd,
             sourcemap: isProd,
-            rollupOptions: {
-                external: ['package.json'],
-            }
         },
         resolve: {
             alias: {

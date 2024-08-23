@@ -1,5 +1,3 @@
-import { version } from "package.json"
-
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import connectConfig from 'connect-config';
 
@@ -23,6 +21,7 @@ type NEW_VERSION_AVAILABLE_MESSAGE = {
 };
 
 export type ServiceWorkerMessage = NEW_VERSION_AVAILABLE_MESSAGE;
+import config from "connect-config"
 
 class ServiceWorkerManager {
     ready = false;
@@ -76,11 +75,11 @@ class ServiceWorkerManager {
                                 }
                             },
                         );
-
+                        console.log(import.meta.env.APP_VERSION);
                         if (navigator.serviceWorker.controller) {
                             navigator.serviceWorker.controller.postMessage({
                                 type: 'SET_APP_VERSION',
-                                version,
+                                version: import.meta.env.APP_VERSION,
                             });
                         }
 

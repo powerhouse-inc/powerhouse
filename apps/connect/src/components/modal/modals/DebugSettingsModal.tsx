@@ -5,7 +5,6 @@ import {
     Icon,
     Modal,
 } from '@powerhousedao/design-system';
-import { version } from 'package.json';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import serviceWorkerManager from 'src/utils/registerServiceWorker';
@@ -125,10 +124,12 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
 
                 <div className="flex text-sm font-bold">
                     <Icon name="Ring" size={22} />
-                    <span className="ml-2">App Version: {version}</span>
+                    <span className="ml-2">
+                        App Version: {import.meta.env.APP_VERSION}
+                    </span>
                 </div>
 
-                <div className="flex text-sm font-bold mt-4">
+                <div className="mt-4 flex text-sm font-bold">
                     <Icon name="Hdd" size={22} />
                     <span className="ml-2">Drive Tools:</span>
                 </div>
@@ -256,7 +257,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                     </div>
                 </div>
 
-                <div className="flex text-sm font-bold mt-4">
+                <div className="mt-4 flex text-sm font-bold">
                     <Icon name="Gear" size={22} />
                     <span className="ml-2">Service Worker Tools:</span>
                 </div>
