@@ -20,3 +20,4 @@ vite.renderer.config.ts
 .github
 .releaserc
 scripts
+src/vite-env.d.ts

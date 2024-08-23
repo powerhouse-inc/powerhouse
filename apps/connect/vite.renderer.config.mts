@@ -8,6 +8,7 @@ import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import pkg from './package.json';
+import { viteEnvs } from 'vite-envs'
 
 import clientConfig from './client.config';
 
@@ -34,8 +35,9 @@ export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
     const env = loadEnv(mode, process.cwd());
 
-    const requiresHardRefresh = env.VITE_APP_REQUIRES_HARD_REFRESH === 'true';
+    const requiresHardRefresh = env.PH_CONNECT_APP_REQUIRES_HARD_REFRESH === 'true';
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const plugins: PluginOption[] = [
         react({
             include: 'src/**/*.tsx',
@@ -56,6 +58,7 @@ export default defineConfig(({ mode }) => {
             },
         }),
         generateVersionPlugin(isProd ? requiresHardRefresh : false),
+        viteEnvs()
     ];
 
     const authToken = process.env.SENTRY_AUTH_TOKEN;
@@ -75,7 +78,6 @@ export default defineConfig(({ mode }) => {
     return {
         define: {
             'process.env': {
-                APP_VERSION: appVersion,
                 REQUIRES_HARD_REFRESH: isProd ? requiresHardRefresh : false,
             },
         },
@@ -83,6 +85,9 @@ export default defineConfig(({ mode }) => {
         build: {
             minify: isProd,
             sourcemap: isProd,
+            rollupOptions: {
+                external: ['package.json'],
+            }
         },
         resolve: {
             alias: {

@@ -5,11 +5,11 @@ import {
     Icon,
     Modal,
 } from '@powerhousedao/design-system';
+import { version } from 'package.json';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import serviceWorkerManager from 'src/utils/registerServiceWorker';
 import { v4 as uuid } from 'uuid';
-
 export interface DebugSettingsModalProps {
     open: boolean;
     onClose: () => void;
@@ -125,9 +125,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
 
                 <div className="flex text-sm font-bold">
                     <Icon name="Ring" size={22} />
-                    <span className="ml-2">
-                        App Version: {process.env.APP_VERSION}
-                    </span>
+                    <span className="ml-2">App Version: {version}</span>
                 </div>
 
                 <div className="flex text-sm font-bold mt-4">

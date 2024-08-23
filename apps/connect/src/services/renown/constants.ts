@@ -1,9 +1,9 @@
 export const RENOWN_URL =
-    (import.meta.env.VITE_RENOWN_URL as string) || 'https://www.renown.id';
+    import.meta.env.PH_CONNECT_RENOWN_URL || 'https://www.renown.id';
 export const RENOWN_NETWORK_ID =
-    (import.meta.env.VITE_RENOWN_NETWORK_ID as string) || 'eip155';
+    import.meta.env.PH_CONNECT_RENOWN_NETWORK_ID || 'eip155';
 export const RENOWN_CHAIN_ID =
-    (import.meta.env.VITE_RENOWN_CHAIN_ID as string) || '1';
+    import.meta.env.PH_CONNECT_RENOWN_CHAIN_ID || '1';
 
 export const DOMAIN_TYPE = [
     { name: 'name', type: 'string' },

@@ -1,3 +1,5 @@
+import { version } from "package.json"
+
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import connectConfig from 'connect-config';
 
@@ -64,7 +66,7 @@ class ServiceWorkerManager {
                                 if (
                                     event.data &&
                                     event.data.type ===
-                                        'NEW_VERSION_AVAILABLE' &&
+                                    'NEW_VERSION_AVAILABLE' &&
                                     event.data.requiresHardRefresh === true
                                 ) {
                                     if (this.debug) {
@@ -78,7 +80,7 @@ class ServiceWorkerManager {
                         if (navigator.serviceWorker.controller) {
                             navigator.serviceWorker.controller.postMessage({
                                 type: 'SET_APP_VERSION',
-                                version: process.env.APP_VERSION,
+                                version,
                             });
                         }
 

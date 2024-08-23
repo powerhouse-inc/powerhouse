@@ -17,10 +17,10 @@
     "scripts": {
         "start": "electron-forge start",
         "package": "electron-forge package",
-        "make": "VITE_BASE_HREF=./ electron-forge make",
-        "make:mac": "VITE_BASE_HREF=./ electron-forge make -p darwin",
-        "make:linux": "VITE_BASE_HREF=./ electron-forge make -p linux",
-        "make:windows": "VITE_BASE_HREF=./ electron-forge make -p win32",
+        "make": "PH_CONNECT_BASE_HREF=./ electron-forge make",
+        "make:mac": "PH_CONNECT_BASE_HREF=./ electron-forge make -p darwin",
+        "make:linux": "PH_CONNECT_BASE_HREF=./ electron-forge make -p linux",
+        "make:windows": "PH_CONNECT_BASE_HREF=./ electron-forge make -p win32",
         "publish": "electron-forge publish",
         "lint": "eslint --ext .js,.ts,.tsx . && tsc --noemit --project tsconfig.spec.json",
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
@@ -113,7 +113,8 @@
         "react-stately": "^3.31.0",
         "tailwind-merge": "^1.14.0",
         "uuid": "^9.0.1",
-        "viem": "^2.8.13"
+        "viem": "^2.8.13",
+        "vite-envs": "^4.4.1"
     },
     "optionalDependencies": {
         "@esbuild/linux-x64": "^0.21.4",

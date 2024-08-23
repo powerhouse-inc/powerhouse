@@ -7,8 +7,8 @@ export function useAllowList(): {
 } {
     const { user, status } = useLogin();
 
-    const arbitrumAllowListEnvString = import.meta.env.VITE_ARBITRUM_ALLOW_LIST;
-    const rwaAllowListEnvString = import.meta.env.VITE_RWA_ALLOW_LIST;
+    const arbitrumAllowListEnvString = import.meta.env.PH_CONNECT_ARBITRUM_ALLOW_LIST;
+    const rwaAllowListEnvString = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST;
 
     const arbitrumAllowListIsDefined =
         !!arbitrumAllowListEnvString && arbitrumAllowListEnvString !== '';
