@@ -10,7 +10,7 @@ export default defineConfig({
     },
     env: {
         TEST_PUBLIC_DRIVE:
-            'https://apps.powerhouse.io/develop/powerhouse/switchboard/d/test',
-        TEST_PUBLIC_DRIVE_NAME: 'Test',
+            'https://apps.powerhouse.io/develop/powerhouse/switchboard/d/cypress-test',
+        TEST_PUBLIC_DRIVE_NAME: 'CypressTest',
     },
 });
