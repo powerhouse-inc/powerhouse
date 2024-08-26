@@ -1,8 +1,13 @@
 name: End-to-end tests
 
 on:
-  push:
-    branches: [develop]
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+      - production
+      - deployments/**
   workflow_dispatch:
 jobs:
   cypress-run:
