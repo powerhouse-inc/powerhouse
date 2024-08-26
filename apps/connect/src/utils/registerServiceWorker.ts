@@ -1,4 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import connectConfig from 'connect-config';
+
+const serviceWorkerScriptPath = [
+    connectConfig.routerBasename,
+    'service-worker.js',
+]
+    .join('/')
+    .replace(/\/{2,}/gm, '/');
+
 type SET_APP_VERSION_MESSAGE = {
     type: 'SET_APP_VERSION';
     version: string;
@@ -32,7 +41,7 @@ class ServiceWorkerManager {
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker
-                    .register('/service-worker.js')
+                    .register(serviceWorkerScriptPath)
                     .then(registration => {
                         // Listen for messages from the service worker
                         if (this.debug) {
