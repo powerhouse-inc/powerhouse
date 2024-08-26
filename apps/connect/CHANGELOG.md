@@ -1,3 +1,10 @@
+# [1.0.0-dev.73](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.72...v1.0.0-dev.73) (2024-08-26)
+
+
+### Bug Fixes
+
+* remove file ext when importing document ([fc926ec](https://github.com/powerhouse-inc/document-model-electron/commit/fc926ec8d0ddb27b93d139af6b68a65691f9c8c2))
+
 # [1.0.0-dev.72](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.71...v1.0.0-dev.72) (2024-08-15)
 
 
