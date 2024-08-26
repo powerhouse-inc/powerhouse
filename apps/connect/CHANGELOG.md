@@ -1,3 +1,10 @@
+# [1.0.0-dev.74](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.73...v1.0.0-dev.74) (2024-08-26)
+
+
+### Bug Fixes
+
+* use routerBasename to get service worker script path ([41b4b8c](https://github.com/powerhouse-inc/document-model-electron/commit/41b4b8c70ae66de89ae98c54626f10e0775d56c5))
+
 # [1.0.0-dev.73](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.72...v1.0.0-dev.73) (2024-08-26)
 
 
