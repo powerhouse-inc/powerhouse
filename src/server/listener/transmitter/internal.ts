@@ -1,7 +1,7 @@
 import { Document, OperationScope } from 'document-model/document';
 import { logger } from '../../../utils/logger';
 import {
-    BaseDocumentDriveServer,
+    IBaseDocumentDriveServer,
     Listener,
     ListenerRevision,
     OperationUpdate,
@@ -28,11 +28,11 @@ export type InternalTransmitterUpdate<
 };
 
 export class InternalTransmitter implements ITransmitter {
-    private drive: BaseDocumentDriveServer;
+    private drive: IBaseDocumentDriveServer;
     private listener: Listener;
     private receiver: IReceiver | undefined;
 
-    constructor(listener: Listener, drive: BaseDocumentDriveServer) {
+    constructor(listener: Listener, drive: IBaseDocumentDriveServer) {
         this.listener = listener;
         this.drive = drive;
     }

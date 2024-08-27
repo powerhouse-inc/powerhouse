@@ -76,14 +76,16 @@ import {
     PullResponderTransmitter,
     StrandUpdateSource
 } from './listener/transmitter';
+import { ReadModeServer } from './read-mode';
 import {
+    AbstractDocumentDriveServer,
     AddOperationOptions,
-    BaseDocumentDriveServer,
     DefaultListenerManagerOptions,
     DocumentDriveServerOptions,
     DriveEvents,
     GetDocumentOptions,
     GetStrandsOptions,
+    IBaseDocumentDriveServer,
     IOperationResult,
     ListenerState,
     RemoteDriveOptions,
@@ -103,7 +105,11 @@ export * from './listener';
 export type * from './types';
 
 export const PULL_DRIVE_INTERVAL = 5000;
-export class DocumentDriveServer extends BaseDocumentDriveServer {
+
+export class BaseDocumentDriveServer
+    extends AbstractDocumentDriveServer
+    implements IBaseDocumentDriveServer
+{
     private emitter = createNanoEvents<DriveEvents>();
     private cache: ICache;
     private documentModels: DocumentModel[];
@@ -899,7 +905,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }));
     }
 
-    private _getDocumentModel(documentType: string) {
+    protected getDocumentModel(documentType: string) {
         const documentModel = this.documentModels.find(
             model => model.documentModel.id === documentType
         );
@@ -1093,7 +1099,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         // if no document was provided then create a new one
         const document =
             input.document ??
-            this._getDocumentModel(input.documentType).utils.createDocument();
+            this.getDocumentModel(input.documentType).utils.createDocument();
 
         // stores document information
         const documentStorage: DocumentStorage = {
@@ -1331,7 +1337,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             return documentStorage as T;
         }
 
-        const documentModel = this._getDocumentModel(
+        const documentModel = this.getDocumentModel(
             documentStorage.documentType
         );
 
@@ -1369,7 +1375,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         operation: Operation,
         skipHashValidation = false
     ) {
-        const documentModel = this._getDocumentModel(document.documentType);
+        const documentModel = this.getDocumentModel(document.documentType);
 
         const signalResults: SignalResult[] = [];
         let newDocument = document;
@@ -2205,7 +2211,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         actions: (T | BaseAction)[]
     ): Operation<T | BaseAction>[] {
         const operations: Operation<T | BaseAction>[] = [];
-        const { reducer } = this._getDocumentModel(document.documentType);
+        const { reducer } = this.getDocumentModel(document.documentType);
         for (const action of actions) {
             document = reducer(document, action);
             const operation = document.operations[action.scope].slice().pop();
@@ -2369,3 +2375,5 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         return this.emitter.emit(event, ...args);
     }
 }
+
+export const DocumentDriveServer = ReadModeServer(BaseDocumentDriveServer);

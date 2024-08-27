@@ -6,8 +6,8 @@ import { gql, requestGraphql } from '../../../utils/graphql';
 import { logger as defaultLogger } from '../../../utils/logger';
 import { OperationError } from '../../error';
 import {
-    BaseDocumentDriveServer,
     GetStrandsOptions,
+    IBaseDocumentDriveServer,
     IOperationResult,
     Listener,
     ListenerRevision,
@@ -46,13 +46,13 @@ export interface IPullResponderTransmitter extends ITransmitter {
 }
 
 export class PullResponderTransmitter implements IPullResponderTransmitter {
-    private drive: BaseDocumentDriveServer;
+    private drive: IBaseDocumentDriveServer;
     private listener: Listener;
     private manager: ListenerManager;
 
     constructor(
         listener: Listener,
-        drive: BaseDocumentDriveServer,
+        drive: IBaseDocumentDriveServer,
         manager: ListenerManager
     ) {
         this.listener = listener;
@@ -66,6 +66,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             this.listener.listenerId,
             options
         );
+    }
+
+    disconnect(): Promise<void> {
+        // TODO remove listener from switchboard
+        return Promise.resolve();
     }
 
     async processAcknowledge(

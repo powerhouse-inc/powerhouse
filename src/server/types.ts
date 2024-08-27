@@ -13,6 +13,7 @@ import type {
     BaseAction,
     CreateChildDocumentInput,
     Document,
+    DocumentModel,
     Operation,
     OperationScope,
     ReducerOptions,
@@ -20,6 +21,7 @@ import type {
     State
 } from 'document-model/document';
 import { Unsubscribe } from 'nanoevents';
+import { IReadModeDriveStorage } from '../storage/read-mode';
 import { RunAsap } from '../utils';
 import { DriveInfo } from '../utils/graphql';
 import { OperationError, SynchronizationUnitNotFoundError } from './error';
@@ -250,7 +252,7 @@ export type GetStrandsOptions = {
     fromRevision?: number;
 };
 
-export abstract class BaseDocumentDriveServer {
+export abstract class AbstractDocumentDriveServer {
     /** Public methods **/
     abstract getDrives(): Promise<string[]>;
     abstract addDrive(drive: DriveInput): Promise<DocumentDriveDocument>;
@@ -416,6 +418,8 @@ export abstract class BaseDocumentDriveServer {
     ): Promise<Document>;
     protected abstract deleteDocument(drive: string, id: string): Promise<void>;
 
+    protected abstract getDocumentModel(documentType: string): DocumentModel;
+
     /** Event methods **/
     protected abstract emit<K extends keyof DriveEvents>(
         this: this,
@@ -450,17 +454,25 @@ export const DefaultListenerManagerOptions = {
     sequentialUpdates: true
 };
 
+export type IBaseDocumentDriveServer = Pick<
+    AbstractDocumentDriveServer,
+    keyof AbstractDocumentDriveServer
+>;
+
+export type IDocumentDriveServer = IBaseDocumentDriveServer &
+    IReadModeDriveStorage;
+
 export abstract class BaseListenerManager {
-    protected drive: BaseDocumentDriveServer;
-    protected options: ListenerManagerOptions;
+    protected drive: IBaseDocumentDriveServer;
     protected listenerState = new Map<string, Map<string, ListenerState>>();
+    protected options: ListenerManagerOptions;
     protected transmitters: Record<
         DocumentDriveState['id'],
         Record<Listener['listenerId'], ITransmitter>
     > = {};
 
     constructor(
-        drive: BaseDocumentDriveServer,
+        drive: IBaseDocumentDriveServer,
         listenerState = new Map<string, Map<string, ListenerState>>(),
         options: ListenerManagerOptions = DefaultListenerManagerOptions
     ) {
@@ -513,11 +525,6 @@ export abstract class BaseListenerManager {
         listenerRev: number
     ): Promise<void>;
 }
-
-export type IDocumentDriveServer = Pick<
-    BaseDocumentDriveServer,
-    keyof BaseDocumentDriveServer
->;
 
 export type ListenerStatus =
     | 'CREATED'

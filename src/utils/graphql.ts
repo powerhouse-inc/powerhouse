@@ -8,6 +8,7 @@ import { Document } from 'document-model/document';
 import { DocumentModelState } from 'document-model/document-model';
 import {
     BuildSchemaOptions,
+    GraphQLError,
     GraphQLList,
     GraphQLNonNull,
     GraphQLObjectType,
@@ -19,6 +20,35 @@ import {
 } from 'graphql';
 import request, { GraphQLClient, gql } from 'graphql-request';
 import { logger } from './logger';
+
+export { gql } from 'graphql-request';
+
+type ReqGraphQLError = {
+    message: string;
+};
+
+export type GraphQLResult<T> = { [K in keyof T]: T[K] | null } & {
+    errors?: GraphQLError[];
+};
+
+// replaces fetch so it can be used in Node and Browser envs
+export async function requestGraphql<T>(
+    ...args: Parameters<typeof request>
+): Promise<GraphQLResult<T>> {
+    const [url, ...requestArgs] = args;
+    const client = new GraphQLClient(url, { fetch });
+    const { errors, ...response } = await client.request<
+        { [K in keyof T]: T[K] | null } & { errors?: ReqGraphQLError[] }
+    >(...requestArgs);
+
+    const result = { ...response } as GraphQLResult<T>;
+    if (errors?.length) {
+        result.errors = errors.map(
+            ({ message, ...options }) => new GraphQLError(message, options)
+        );
+    }
+    return result;
+}
 
 export type DriveInfo = {
     id: string;
@@ -103,13 +133,6 @@ export function generateDocumentStateQuery(
     return `... on ${name} { state { ${queryFields} }`;
 }
 
-// replaces fetch so it can be used in Node and Browser envs
-export async function requestGraphql<T>(...args: Parameters<typeof request>) {
-    const [url, ...requestArgs] = args;
-    const client = new GraphQLClient(url, { fetch });
-    return client.request<T>(...requestArgs);
-}
-
 export async function requestPublicDrive(url: string): Promise<DriveInfo> {
     let drive: DriveInfo;
     try {
@@ -126,14 +149,13 @@ export async function requestPublicDrive(url: string): Promise<DriveInfo> {
                 }
             `
         );
+        if (result.errors?.length || !result.drive) {
+            throw result.errors?.at(0) ?? new Error('Drive not found');
+        }
         drive = result.drive;
     } catch (e) {
         logger.error(e);
         throw new Error("Couldn't find drive info");
-    }
-
-    if (!drive) {
-        throw new Error('Drive not found');
     }
 
     return drive;
@@ -148,11 +170,13 @@ export async function fetchDocumentState<D extends Document>(
     url: string,
     documentId: string,
     documentModel?: DocumentModelState
-): Promise<Omit<D, 'operations'>> {
+) {
     const stateFields = documentModel
         ? generateDocumentStateQuery(documentModel)
         : undefined;
-    const result = await requestGraphql<{ document: D }>(
+    const result = await requestGraphql<{
+        document: Pick<D, 'name'> & { id: string; state: D['state']['global'] };
+    }>(
         url,
         gql`
             query ($id: String!) {
@@ -171,5 +195,15 @@ export async function fetchDocumentState<D extends Document>(
         `,
         { id: documentId }
     );
-    return result.document;
+
+    // TODO add missing fields to the result
+    return {
+        ...result,
+        document: result.document
+            ? {
+                  ...result.document,
+                  state: { global: result.document.state }
+              }
+            : null
+    };
 }
