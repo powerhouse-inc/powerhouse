@@ -35,6 +35,7 @@ import {
     Job,
     OperationJob
 } from '../queue/types';
+import { ReadModeServer } from '../read-mode';
 import { MemoryStorage } from '../storage/memory';
 import type {
     DocumentDriveStorage,
@@ -76,7 +77,6 @@ import {
     PullResponderTransmitter,
     StrandUpdateSource
 } from './listener/transmitter';
-import { ReadModeServer } from './read-mode';
 import {
     AbstractDocumentDriveServer,
     AddOperationOptions,

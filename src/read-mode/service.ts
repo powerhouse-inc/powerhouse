@@ -1,71 +1,25 @@
 import {
     DocumentDriveDocument,
-    documentModel as DriveDocumentModel,
-    ListenerFilter
+    documentModel as DriveDocumentModel
 } from 'document-model-libs/document-drive';
-import { Document, DocumentModel } from 'document-model/document';
+import { Document } from 'document-model/document';
 import { GraphQLError } from 'graphql';
 import { fetchDocumentState } from '../utils/graphql';
+import {
+    ReadDocumentNotFoundError,
+    ReadDriveError,
+    ReadDriveNotFoundError,
+    ReadDriveSlugNotFoundError
+} from './errors';
+import {
+    GetDocumentModel,
+    IReadModeDriveService,
+    ReadDocument,
+    ReadDrive,
+    ReadDriveContext
+} from './types';
 
-export type ReadDriveContext = {
-    url: string;
-    filter: ListenerFilter;
-};
-
-export type ReadDocument<D extends Document> = Omit<D, 'operations'>;
-export type ReadDrive = ReadDocument<DocumentDriveDocument>;
-
-export interface IReadModeDriveStorage {
-    addReadDrive(id: string, context: ReadDriveContext): Promise<void>;
-
-    getReadDrives(): Promise<string[]>;
-
-    getReadDriveBySlug(
-        slug: string
-    ): Promise<ReadDrive | ReadDriveSlugNotFoundError>;
-
-    getReadDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
-
-    getReadDriveContext(
-        id: string
-    ): Promise<ReadDriveContext | ReadDriveNotFoundError>;
-
-    fetchDriveState(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
-
-    fetchDocumentState<D extends Document>(
-        driveId: string,
-        documentId: string,
-        documentType?: string
-    ): Promise<
-        ReadDocument<D> | ReadDriveNotFoundError | ReadDocumentNotFoundError
-    >;
-
-    deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined>;
-}
-
-export abstract class ReadDriveError extends Error {}
-
-export class ReadDriveNotFoundError extends ReadDriveError {
-    constructor(driveId: string) {
-        super(`Read drive ${driveId} not found.`);
-    }
-}
-
-export class ReadDriveSlugNotFoundError extends ReadDriveError {
-    constructor(slug: string) {
-        super(`Read drive with slug ${slug} not found.`);
-    }
-}
-
-export class ReadDocumentNotFoundError extends ReadDriveError {
-    constructor(drive: string, id: string) {
-        super(`Document with id ${id} not found on read drive ${drive}.`);
-    }
-}
-
-type GetDocumentModel = (documentType: string) => DocumentModel;
-
-export class ReadModeStorage implements IReadModeDriveStorage {
+export class ReadModeService implements IReadModeDriveService {
     #getDocumentModel: GetDocumentModel;
     #drives = new Map<
         string,

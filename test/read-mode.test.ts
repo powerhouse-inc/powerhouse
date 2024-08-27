@@ -9,9 +9,9 @@ import {
     ReadDocumentNotFoundError,
     ReadDriveContext,
     ReadDriveNotFoundError,
-    ReadDriveSlugNotFoundError,
-    ReadModeStorage
-} from '../src/storage/read-mode';
+    ReadDriveSlugNotFoundError
+} from '../src/read-mode';
+import { ReadModeService } from '../src/read-mode/service';
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
@@ -34,7 +34,7 @@ describe('Read mode methods', () => {
     it('should return read drive when drive ID is found in read drives', async ({
         expect
     }) => {
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const readDriveId = 'read-drive';
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
@@ -69,7 +69,7 @@ describe('Read mode methods', () => {
             })
         }));
 
-        await readModeStorage.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(readDriveId, context);
 
         expect(fetchMocker).toHaveBeenCalledWith(context.url, {
             body: '{"query":"\\n            query ($id: String!) {\\n                document(id: $id) {\\n                    id\\n                    name\\n                    state {\\n                        ... on DocumentDrive { state { id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug }\\n                    }\\n                }\\n            }\\n        ","variables":{"id":"read-drive"}}',
@@ -79,7 +79,7 @@ describe('Read mode methods', () => {
             method: 'POST'
         });
 
-        const result = await readModeStorage.getReadDrive(readDriveId);
+        const result = await readModeService.getReadDrive(readDriveId);
         expect(result).toStrictEqual({
             id: readDriveId,
             name: 'Read drive',
@@ -98,14 +98,14 @@ describe('Read mode methods', () => {
         });
 
         const resultContext =
-            await readModeStorage.getReadDriveContext(readDriveId);
+            await readModeService.getReadDriveContext(readDriveId);
         expect(resultContext).toStrictEqual(context);
     });
 
     it('should return existing read drive for given slug', async ({
         expect
     }) => {
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const readDriveId = 'read-drive';
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
@@ -140,8 +140,8 @@ describe('Read mode methods', () => {
             })
         }));
 
-        await readModeStorage.addReadDrive(readDriveId, context);
-        const result = await readModeStorage.getReadDriveBySlug('read-drive');
+        await readModeService.addReadDrive(readDriveId, context);
+        const result = await readModeService.getReadDriveBySlug('read-drive');
         expect(result).toStrictEqual({
             id: readDriveId,
             name: 'Read drive',
@@ -161,7 +161,7 @@ describe('Read mode methods', () => {
     });
 
     it('should delete read drive', async ({ expect }) => {
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const readDriveId = 'read-drive';
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
@@ -196,11 +196,11 @@ describe('Read mode methods', () => {
             })
         }));
 
-        await readModeStorage.addReadDrive(readDriveId, context);
-        const result = await readModeStorage.deleteReadDrive(readDriveId);
+        await readModeService.addReadDrive(readDriveId, context);
+        const result = await readModeService.deleteReadDrive(readDriveId);
         expect(result).toBeUndefined();
 
-        const result2 = await readModeStorage.deleteReadDrive(readDriveId);
+        const result2 = await readModeService.deleteReadDrive(readDriveId);
         expect(result2).toStrictEqual(new ReadDriveNotFoundError(readDriveId));
     });
 
@@ -239,7 +239,7 @@ describe('Read mode methods', () => {
             })
         );
 
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
             filter: {
@@ -263,12 +263,12 @@ describe('Read mode methods', () => {
             })
         }));
 
-        await readModeStorage.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(readDriveId, context);
 
-        const drives = await readModeStorage.getReadDrives();
+        const drives = await readModeService.getReadDrives();
         expect(drives).toStrictEqual([readDriveId]);
 
-        const readDrive = await readModeStorage.getReadDrive(readDriveId);
+        const readDrive = await readModeService.getReadDrive(readDriveId);
         expect(readDrive).toMatchObject({
             id: readDriveId,
             name: '',
@@ -313,7 +313,7 @@ describe('Read mode methods', () => {
             };
         });
 
-        const readDocument = await readModeStorage.fetchDocumentState(
+        const readDocument = await readModeService.fetchDocumentState(
             readDriveId,
             documentId,
             BudgetStatement.documentModel.id
@@ -346,7 +346,7 @@ describe('Read mode methods', () => {
     it('should return ReadDriveNotFoundError if read drive ID is not found', async ({
         expect
     }) => {
-        const readMode = new ReadModeStorage(getDocumentModel);
+        const readMode = new ReadModeService(getDocumentModel);
         const getResult = await readMode.getReadDrive('non-existent-drive-id');
         expect(getResult).toStrictEqual(
             new ReadDriveNotFoundError('non-existent-drive-id')
@@ -370,7 +370,7 @@ describe('Read mode methods', () => {
     it('should return ReadDriveSlugNotFoundError if read drive slug is not found', async ({
         expect
     }) => {
-        const readMode = new ReadModeStorage(getDocumentModel);
+        const readMode = new ReadModeService(getDocumentModel);
         const result = await readMode.getReadDriveBySlug(
             'non-existent-drive-slug'
         );
@@ -382,7 +382,7 @@ describe('Read mode methods', () => {
     it('should return ReadDocumentNotFoundError when document is not found in read drive', async ({
         expect
     }) => {
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const readDriveId = 'read-drive';
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
@@ -417,7 +417,7 @@ describe('Read mode methods', () => {
             })
         }));
 
-        await readModeStorage.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(readDriveId, context);
 
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -433,7 +433,7 @@ describe('Read mode methods', () => {
                 }
             })
         }));
-        const result = await readModeStorage.fetchDocumentState(
+        const result = await readModeService.fetchDocumentState(
             readDriveId,
             'non-existent-document-id'
         );
@@ -458,7 +458,7 @@ describe('Read mode methods', () => {
             })
         }));
 
-        const result2 = await readModeStorage.fetchDocumentState(
+        const result2 = await readModeService.fetchDocumentState(
             readDriveId,
             'non-existent-document-id'
         );
@@ -468,7 +468,7 @@ describe('Read mode methods', () => {
     it('should throw Error when trying to add non existent drive', async ({
         expect
     }) => {
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const readDriveId = 'non-existent-drive-id';
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
@@ -495,7 +495,7 @@ describe('Read mode methods', () => {
         }));
 
         await expect(
-            readModeStorage.addReadDrive(readDriveId, context)
+            readModeService.addReadDrive(readDriveId, context)
         ).rejects.toThrowError(
             `Drive with ${readDriveId} not found at ${context.url}`
         );
@@ -504,7 +504,7 @@ describe('Read mode methods', () => {
     it('should throw if specific Graphql error is found', async ({
         expect
     }) => {
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const readDriveId = 'read-drive';
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
@@ -539,7 +539,7 @@ describe('Read mode methods', () => {
             })
         }));
 
-        await readModeStorage.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(readDriveId, context);
 
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -557,7 +557,7 @@ describe('Read mode methods', () => {
         }));
 
         await expect(
-            readModeStorage.fetchDocumentState(readDriveId, 'document-id')
+            readModeService.fetchDocumentState(readDriveId, 'document-id')
         ).rejects.toThrowError(
             'Cannot query field "revisio" on type "IDocument". Did you mean "revision"?'
         );
@@ -566,7 +566,7 @@ describe('Read mode methods', () => {
     it('should throw ReadDriveNotFoundError if no document is returned', async ({
         expect
     }) => {
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const readDriveId = 'read-drive';
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
@@ -588,7 +588,7 @@ describe('Read mode methods', () => {
         }));
 
         await expect(
-            readModeStorage.addReadDrive(readDriveId, context)
+            readModeService.addReadDrive(readDriveId, context)
         ).rejects.toThrowError(
             `Drive "${readDriveId}" not found at ${context.url}`
         );
@@ -597,7 +597,7 @@ describe('Read mode methods', () => {
     it('should return ReadDocumentNotFoundError if no document is returned', async ({
         expect
     }) => {
-        const readModeStorage = new ReadModeStorage(getDocumentModel);
+        const readModeService = new ReadModeService(getDocumentModel);
         const readDriveId = 'read-drive';
         const context: ReadDriveContext = {
             url: `https://switchboard.com/d/${readDriveId}`,
@@ -632,7 +632,7 @@ describe('Read mode methods', () => {
             })
         }));
 
-        await readModeStorage.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(readDriveId, context);
 
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -643,7 +643,7 @@ describe('Read mode methods', () => {
             })
         }));
 
-        const result = await readModeStorage.fetchDocumentState(
+        const result = await readModeService.fetchDocumentState(
             readDriveId,
             'document-id'
         );

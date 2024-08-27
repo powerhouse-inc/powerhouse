@@ -21,7 +21,8 @@ import type {
     State
 } from 'document-model/document';
 import { Unsubscribe } from 'nanoevents';
-import { IReadModeDriveStorage } from '../storage/read-mode';
+import { BaseDocumentDriveServer } from '.';
+import { IReadModeDriveService } from '../read-mode/types';
 import { RunAsap } from '../utils';
 import { DriveInfo } from '../utils/graphql';
 import { OperationError, SynchronizationUnitNotFoundError } from './error';
@@ -30,6 +31,21 @@ import {
     PullResponderTrigger,
     StrandUpdateSource
 } from './listener/transmitter/types';
+
+// eslint-disable-next-line @typescript-eslint/ban-types, @typescript-eslint/no-explicit-any
+export type Constructor<T = object> = new (...args: any[]) => T;
+
+export type DocumentDriveServerConstructor =
+    Constructor<BaseDocumentDriveServer>;
+
+// Mixin type that returns a type extending both the base class and the interface
+export type Mixin<T extends Constructor, I> = T &
+    Constructor<InstanceType<T> & I>;
+
+export type DocumentDriveServerMixin<I> = Mixin<
+    DocumentDriveServerConstructor,
+    I
+>;
 
 export type DriveInput = State<
     Omit<DocumentDriveState, '__typename' | 'id' | 'nodes'> & { id?: string },
@@ -460,7 +476,7 @@ export type IBaseDocumentDriveServer = Pick<
 >;
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
-    IReadModeDriveStorage;
+    IReadModeDriveService;
 
 export abstract class BaseListenerManager {
     protected drive: IBaseDocumentDriveServer;

@@ -1,44 +1,31 @@
-import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { Document } from 'document-model/document';
-import { BaseDocumentDriveServer } from '.';
+import { DocumentDriveServerConstructor, RemoteDriveOptions } from '../server';
+import { logger } from '../utils/logger';
+import { ReadDriveSlugNotFoundError } from './errors';
+import { ReadModeService } from './service';
 import {
-    IReadModeDriveStorage,
+    IReadModeDriveService,
+    IReadMoveDriveServer,
     ReadDrive,
     ReadDriveContext,
-    ReadDriveNotFoundError,
-    ReadDriveSlugNotFoundError,
-    ReadModeStorage
-} from '../storage/read-mode';
-import { logger } from '../utils/logger';
-import { RemoteDriveOptions } from './types';
+    ReadModeDriveServerMixin
+} from './types';
 
-// eslint-disable-next-line @typescript-eslint/ban-types, @typescript-eslint/no-explicit-any
-type Constructor<T = object> = new (...args: any[]) => T;
+export * from './errors';
+export * from './types';
 
-// This mixin adds a scale property, with getters and setters
-// for changing it with an encapsulated private property:
-
-export type DocumentDriveServer = Constructor<BaseDocumentDriveServer>;
-
-export interface IReadMoveDriveServer extends IReadModeDriveStorage {
-    migrateReadDrive(
-        id: string,
-        options: RemoteDriveOptions
-    ): Promise<DocumentDriveDocument | ReadDriveNotFoundError>;
-}
-
-export function ReadModeServer<TBase extends DocumentDriveServer>(
+export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
     Base: TBase
-): Constructor<BaseDocumentDriveServer & IReadMoveDriveServer> {
+): ReadModeDriveServerMixin {
     return class ReadMode extends Base implements IReadMoveDriveServer {
-        #readModeStorage: IReadModeDriveStorage;
+        #readModeStorage: IReadModeDriveService;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         constructor(...args: any[]) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             super(...args);
 
-            this.#readModeStorage = new ReadModeStorage(
+            this.#readModeStorage = new ReadModeService(
                 this.getDocumentModel.bind(this)
             );
         }
