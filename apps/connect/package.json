@@ -84,6 +84,7 @@
         "typescript": "^5.3.3",
         "vite": "^5.2.6",
         "vite-plugin-html": "^3.2.2",
+        "vite-plugin-static-copy": "^1.0.6",
         "vite-plugin-svgr": "^4.2.0",
         "vite-tsconfig-paths": "^4.2.0",
         "xvfb-maybe": "^0.2.1"

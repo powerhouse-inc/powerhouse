@@ -3,7 +3,7 @@ import connectConfig from 'connect-config';
 
 const serviceWorkerScriptPath = [
     connectConfig.routerBasename,
-    'service-worker.js',
+    'assets/service-worker.js',
 ]
     .join('/')
     .replace(/\/{2,}/gm, '/');
