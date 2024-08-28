@@ -1,26 +1,41 @@
+/// <reference lib="WebWorker" />
+
+const _self = self as unknown as ServiceWorkerGlobalScope;
+
 const VERSION_CACHE = 'version-cache';
 const VERSION_KEY = 'app-version';
 
-self.addEventListener('install', event => {
-    self.skipWaiting();
+_self.addEventListener('install', () => {
+    _self.skipWaiting().catch(console.error);
 });
 
-self.addEventListener('activate', event => {
-    event.waitUntil(self.clients.claim());
+_self.addEventListener('activate', (event: ExtendableEvent) => {
+    event.waitUntil(_self.clients.claim());
 });
 
+interface SeriveWorkerMessage extends ExtendableMessageEvent {
+    data: {
+        type: string;
+        version: string;
+    };
+}
 
-self.addEventListener('message', async event => {
+interface VersionResponse {
+    version: string;
+    requiresHardRefresh: boolean;
+}
+
+_self.addEventListener('message', async (event: SeriveWorkerMessage) => {
     if (event.data && event.data.type === 'SET_APP_VERSION') {
         const cache = await caches.open(VERSION_CACHE);
         await cache.put(VERSION_KEY, new Response(event.data.version));
     }
-  });
+});
 
 async function checkForUpdates() {
     try {
         const response = await fetch('/version.json', { cache: 'no-store' });
-        const newVersion = await response.json();
+        const newVersion = (await response.json()) as VersionResponse;
         const cache = await caches.open(VERSION_CACHE);
         const cachedResponse = await cache.match(VERSION_KEY);
 
@@ -29,7 +44,7 @@ async function checkForUpdates() {
         if (cachedResponse) {
             currentVersion = await cachedResponse.text();
         }
-    
+
         if (currentVersion === '') {
             // Initial cache
             await cache.put(VERSION_KEY, new Response(newVersion.version));
@@ -38,9 +53,12 @@ async function checkForUpdates() {
             console.log('Current version:', currentVersion);
             console.log('New version:', newVersion.version);
 
-            const clients = await self.clients.matchAll();
+            const clients = await _self.clients.matchAll();
             clients.forEach(client => {
-                client.postMessage({ type: 'NEW_VERSION_AVAILABLE', requiresHardRefresh: newVersion.requiresHardRefresh });
+                client.postMessage({
+                    type: 'NEW_VERSION_AVAILABLE',
+                    requiresHardRefresh: newVersion.requiresHardRefresh,
+                });
             });
 
             // Update the stored version
@@ -52,4 +70,4 @@ async function checkForUpdates() {
 }
 
 // Check for updates every minute
-setInterval(checkForUpdates, 60 * 1000); // 60 seconds
+setInterval(checkForUpdates, 5 * 1000); // 60 seconds

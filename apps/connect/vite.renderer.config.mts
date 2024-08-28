@@ -6,7 +6,6 @@ import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import path from 'path';
 import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
 import { createHtmlPlugin } from 'vite-plugin-html';
-import { viteStaticCopy } from 'vite-plugin-static-copy';
 import svgr from 'vite-plugin-svgr';
 import pkg from './package.json';
 
@@ -57,14 +56,6 @@ export default defineConfig(({ mode }) => {
             },
         }),
         generateVersionPlugin(isProd ? requiresHardRefresh : false),
-        viteStaticCopy({
-            targets: [
-                {
-                    src: 'public/service-worker.js',
-                    dest: 'assets',
-                },
-            ],
-        }),
     ];
 
     const authToken = process.env.SENTRY_AUTH_TOKEN;
