@@ -20,6 +20,7 @@ import type {
     State
 } from 'document-model/document';
 import { Unsubscribe } from 'nanoevents';
+import { DriveInfo } from '../utils/graphql';
 import { OperationError } from './error';
 import {
     ITransmitter,
@@ -140,8 +141,23 @@ export type StrandUpdate = {
 
 export type SyncStatus = 'SYNCING' | UpdateStatus;
 
+export type AddRemoteDriveStatus =
+    | 'SUCCESS'
+    | 'ERROR'
+    | 'PENDING'
+    | 'ADDING'
+    | 'ALREADY_ADDED';
+
 export interface DriveEvents {
     syncStatus: (driveId: string, status: SyncStatus, error?: Error) => void;
+    defaultRemoteDrive: (
+        status: AddRemoteDriveStatus,
+        defaultDrives: Map<string, DefaultRemoteDriveInfo>,
+        driveInput: DefaultRemoteDriveInput,
+        driveId?: string,
+        driveName?: string,
+        error?: Error
+    ) => void;
     strandUpdate: (update: StrandUpdate) => void;
     clientStrandsError: (
         driveId: string,
@@ -166,6 +182,20 @@ export type GetDocumentOptions = ReducerOptions & {
 export type AddOperationOptions = {
     forceSync?: boolean;
     source: StrandUpdateSource;
+};
+
+export type DefaultRemoteDriveInput = {
+    url: string;
+    options: RemoteDriveOptions;
+};
+
+export type DefaultRemoteDriveInfo = DefaultRemoteDriveInput & {
+    status: AddRemoteDriveStatus;
+    metadata?: DriveInfo;
+};
+
+export type DocumentDriveServerOptions = {
+    defaultRemoteDrives?: Array<DefaultRemoteDriveInput>;
 };
 
 export abstract class BaseDocumentDriveServer {

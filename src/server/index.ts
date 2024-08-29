@@ -52,9 +52,13 @@ import {
     reshuffleByTimestamp,
     sortOperations
 } from '../utils/document-helpers';
-import { requestPublicDrive } from '../utils/graphql';
+import { DriveInfo, requestPublicDrive } from '../utils/graphql';
 import { logger } from '../utils/logger';
-import { ConflictOperationError, OperationError } from './error';
+import {
+    ConflictOperationError,
+    DriveAlreadyExistsError,
+    OperationError
+} from './error';
 import { ListenerManager } from './listener/manager';
 import {
     CancelPullLoop,
@@ -67,6 +71,8 @@ import {
 import {
     AddOperationOptions,
     BaseDocumentDriveServer,
+    DefaultRemoteDriveInfo,
+    DocumentDriveServerOptions,
     DriveEvents,
     GetDocumentOptions,
     IOperationResult,
@@ -103,11 +109,14 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     private queueManager: IQueueManager;
     private initializePromise: Promise<Error[] | null>;
 
+    private defaultRemoteDrives = new Map<string, DefaultRemoteDriveInfo>();
+
     constructor(
         documentModels: DocumentModel[],
         storage: IDriveStorage = new MemoryStorage(),
         cache: ICache = new InMemoryCache(),
-        queueManager: IQueueManager = new BaseQueueManager()
+        queueManager: IQueueManager = new BaseQueueManager(),
+        options?: DocumentDriveServerOptions
     ) {
         super();
         this.listenerStateManager = new ListenerManager(this);
@@ -128,7 +137,20 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
             }
         });
 
+        if (options?.defaultRemoteDrives) {
+            for (const defaultDrive of options.defaultRemoteDrives) {
+                this.defaultRemoteDrives.set(defaultDrive.url, {
+                    ...defaultDrive,
+                    status: 'PENDING'
+                });
+            }
+        }
+
         this.initializePromise = this._initialize();
+    }
+
+    getDefaultRemoteDrives() {
+        return this.defaultRemoteDrives;
     }
 
     private updateSyncStatus(
@@ -375,6 +397,81 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         }
     };
 
+    private async initializeDefaultRemoteDrives() {
+        const drives = await this.storage.getDrives();
+
+        for (const remoteDrive of this.defaultRemoteDrives.values()) {
+            let remoteDriveInfo = { ...remoteDrive };
+
+            try {
+                const driveInfo = await requestPublicDrive(remoteDrive.url);
+
+                remoteDriveInfo = { ...remoteDrive, metadata: driveInfo };
+
+                this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
+
+                if (drives.includes(driveInfo.id)) {
+                    remoteDriveInfo.status = 'ALREADY_ADDED';
+
+                    this.defaultRemoteDrives.set(
+                        remoteDrive.url,
+                        remoteDriveInfo
+                    );
+                    this.emit(
+                        'defaultRemoteDrive',
+                        'ALREADY_ADDED',
+                        this.defaultRemoteDrives,
+                        remoteDriveInfo,
+                        driveInfo.id,
+                        driveInfo.name
+                    );
+                    continue;
+                }
+
+                remoteDriveInfo.status = 'ADDING';
+
+                this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
+                this.emit(
+                    'defaultRemoteDrive',
+                    'ADDING',
+                    this.defaultRemoteDrives,
+                    remoteDriveInfo
+                );
+
+                await this.addRemoteDrive(
+                    remoteDrive.url,
+                    remoteDrive.options,
+                    driveInfo
+                );
+
+                remoteDriveInfo.status = 'SUCCESS';
+
+                this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
+                this.emit(
+                    'defaultRemoteDrive',
+                    'SUCCESS',
+                    this.defaultRemoteDrives,
+                    remoteDriveInfo,
+                    driveInfo.id,
+                    driveInfo.name
+                );
+            } catch (error) {
+                remoteDriveInfo.status = 'ERROR';
+
+                this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
+                this.emit(
+                    'defaultRemoteDrive',
+                    'ERROR',
+                    this.defaultRemoteDrives,
+                    remoteDriveInfo,
+                    undefined,
+                    undefined,
+                    error as Error
+                );
+            }
+        }
+    }
+
     initialize() {
         return this.initializePromise;
     }
@@ -388,6 +485,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 errors.push(error as Error);
             });
         }
+
+        await this.initializeDefaultRemoteDrives();
 
         await this.queueManager.init(this.queueDelegate, error => {
             logger.error(`Error initializing queue manager`, error);
@@ -696,7 +795,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const drives = await this.storage.getDrives();
         if (drives.includes(id)) {
-            throw new Error('Drive already exists');
+            throw new DriveAlreadyExistsError(id);
         }
 
         const document = utils.createDocument({
@@ -716,9 +815,12 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     async addRemoteDrive(
         url: string,
-        options: RemoteDriveOptions
+        options: RemoteDriveOptions,
+        driveInfo?: DriveInfo
     ): Promise<DocumentDriveDocument> {
-        const { id, name, slug, icon } = await requestPublicDrive(url);
+        const { id, name, slug, icon } =
+            driveInfo || (await requestPublicDrive(url));
+
         const {
             pullFilter,
             pullInterval,

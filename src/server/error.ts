@@ -33,3 +33,12 @@ export class MissingOperationError extends OperationError {
         super('MISSING', operation, `Missing operation on index ${index}`);
     }
 }
+
+export class DriveAlreadyExistsError extends Error {
+    driveId: string;
+
+    constructor(driveId: string) {
+        super(`Drive already exists. ID: ${driveId}`);
+        this.driveId = driveId;
+    }
+}
