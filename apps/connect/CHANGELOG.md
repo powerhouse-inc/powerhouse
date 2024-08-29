@@ -1,3 +1,17 @@
+# [1.0.0-dev.75](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.74...v1.0.0-dev.75) (2024-08-29)
+
+
+### Bug Fixes
+
+* broken cypress tests ([cc9af0a](https://github.com/powerhouse-inc/document-model-electron/commit/cc9af0ad97b3bf93e488b02dd65e1e87201112a4))
+* moved service-worker script to assets folder ([900b11c](https://github.com/powerhouse-inc/document-model-electron/commit/900b11c3d0be4dcf88fb8a8aaff7c2234930b0ca))
+
+
+### Features
+
+* added service-worker.ts ([fa97092](https://github.com/powerhouse-inc/document-model-electron/commit/fa9709256a7e89f6d090ae671138f08473994838))
+* run e2e tests when a PR is open ([a6682b6](https://github.com/powerhouse-inc/document-model-electron/commit/a6682b6cfd9476fd49dfe1c8738985a0078b98f9))
+
 # [1.0.0-dev.74](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.73...v1.0.0-dev.74) (2024-08-26)
 
 
