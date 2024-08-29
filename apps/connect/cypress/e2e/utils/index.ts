@@ -67,41 +67,39 @@ export const clickSidebarItemOption = (
     folderName: string,
     option: SidebarItemOption,
 ) => {
-    cy.get('article')
+    cy.get('.mr-1')
         .contains(folderName)
-        .then(el => {
-            hoverElement(el[0]);
-        });
-
-    cy.get('article')
-        .contains(folderName)
-        .closest('article')
+        .closest('div')
         .children('button')
-        .click();
+        .invoke('removeClass', 'hidden')
+        .click()
+        .invoke('addClass', 'hidden');
 
     const optionName = getOptionName(option);
     cy.contains(optionName).click();
 };
 
 export const newFolder = (parent: string, folderName: string) => {
-    cy.get('article')
+    cy.get('.mr-1')
         .contains(parent)
-        .then(el => {
-            hoverElement(el[0]);
-        });
-
-    cy.get('article')
-        .contains(parent)
-        .closest('article')
+        .closest('div')
         .children('button')
-        .click();
+        .invoke('removeClass', 'hidden')
+        .click()
+        .invoke('addClass', 'hidden');
 
     cy.contains('New Folder').click();
     cy.get('input[value="New Folder"]').clear().type(`${folderName}{enter}`);
+
+    cy.get('.mr-1')
+        .contains(parent)
+        .closest('div')
+        .children('button')
+        .invoke('addClass', 'hidden');
 };
 
 export const selectSidebarItem = (item: string) => {
-    cy.get('article').contains(item).click();
+    cy.get('.mr-1').contains(item).click();
 };
 
 export const addPublicDrive = (url: string) => {
@@ -143,9 +141,7 @@ export const clickContentViewItemOption = (
     cy.get('#content-view')
         .contains(itemName)
         .parent()
-        .parent()
         .next()
-        .children('svg')
         .invoke('attr', 'style', 'display: inline-block; width: 24px')
         .click();
 
