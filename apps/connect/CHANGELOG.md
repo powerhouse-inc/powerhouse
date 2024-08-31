@@ -1,3 +1,10 @@
+# [1.0.0-dev.76](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.75...v1.0.0-dev.76) (2024-08-31)
+
+
+### Features
+
+* fix service worker build ([9b0c99a](https://github.com/powerhouse-inc/document-model-electron/commit/9b0c99a151323af4a08d0d9a901920edb134ed4f))
+
 # [1.0.0-dev.75](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.74...v1.0.0-dev.75) (2024-08-29)
 
 
