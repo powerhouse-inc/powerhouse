@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.76",
+    "version": "1.0.0-dev.75",
     "description": "Powerhouse Connect",
     "main": ".vite/build/main.js",
     "license": "AGPL-3.0-only",
@@ -27,7 +27,7 @@
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
-        "postbuild:web": "build:service-worker",
+        "postbuild:web": "npm run build:service-worker",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "release": "semantic-release",
         "e2e": "playwright test",
