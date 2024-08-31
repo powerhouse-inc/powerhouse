@@ -11,6 +11,7 @@ import { TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReloadConnectToast } from 'src/components/toast/reload-connect-toast';
+import { useReadModeContext } from 'src/context/read-mode';
 import { useUiNodes } from 'src/hooks/useUiNodes';
 import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-server';
 import { useClientErrorHandler } from './useClientErrorHandler';
@@ -29,6 +30,7 @@ export const useLoadInitialData = () => {
     const prevDrivesState = useRef([...driveNodes]);
     const drivesWithError = useRef<UiDriveNode[]>([]);
     const [, , serverSubscribeUpdates] = useDocumentDrives(server);
+    const { readDrives } = useReadModeContext();
     const clientErrorHandler = useClientErrorHandler();
 
     async function checkLatestVersion() {
@@ -123,8 +125,10 @@ export const useLoadInitialData = () => {
     );
 
     useEffect(() => {
-        updateUiDriveNodes(documentDrives).catch(console.error);
-    }, [documentDrives, updateUiDriveNodes]);
+        updateUiDriveNodes(readDrives.concat(documentDrives)).catch(
+            console.error,
+        );
+    }, [documentDrives, readDrives, updateUiDriveNodes]);
 
     useEffect(() => {
         const unsub = onSyncStatus(() => updateUiDriveNodes(documentDrives));

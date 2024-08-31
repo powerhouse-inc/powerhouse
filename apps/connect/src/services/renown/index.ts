@@ -66,12 +66,16 @@ export class Renown {
                 credential,
             };
 
-            try {
-                const ens = await getEnsInfo(user.address, user.chainId);
-                user.ens = ens;
-            } catch (error) {
-                console.error(error);
-            }
+            getEnsInfo(user.address, user.chainId)
+                .then(ens => {
+                    if (
+                        this.user?.address === user.address &&
+                        this.user.chainId === user.chainId
+                    ) {
+                        this.#updateUser({ ...this.user, ens });
+                    }
+                })
+                .catch(logger.error);
 
             this.#updateUser(user);
             return user;

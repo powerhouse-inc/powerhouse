@@ -89,6 +89,9 @@ export default defineConfig(({ mode }) => {
         react({
             include: 'src/**/*.tsx',
             babel: {
+                parserOpts: {
+                    plugins: ['decorators'],
+                },
                 plugins: isProd ? [] : [jotaiDebugLabel, jotaiReactRefresh],
             },
         }),

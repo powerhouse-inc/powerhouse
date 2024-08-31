@@ -7,6 +7,7 @@ import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { ModalManager } from 'src/components/modal';
 import { PHLogo } from 'src/components/ph-logo';
+import { ReadModeContextProvider } from 'src/context/read-mode';
 import atoms from 'src/store';
 
 const Router = React.lazy(async () => {
@@ -28,13 +29,15 @@ export default (
         <Suspense fallback={<>{/* TODO loading */}</>}>
             <Preloader />
             <WagmiContext>
-                <UiNodesContextProvider>
-                    <ToastContainer position="bottom-right" />
-                    <ModalManager>
-                        <Router />
-                        <PHLogo />
-                    </ModalManager>
-                </UiNodesContextProvider>
+                <ReadModeContextProvider>
+                    <UiNodesContextProvider>
+                        <ToastContainer position="bottom-right" />
+                        <ModalManager>
+                            <Router />
+                            <PHLogo />
+                        </ModalManager>
+                    </UiNodesContextProvider>
+                </ReadModeContextProvider>
             </WagmiContext>
         </Suspense>
     </React.StrictMode>
