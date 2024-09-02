@@ -104,6 +104,8 @@ import { filterOperationsByRevision } from './utils';
 export * from './listener';
 export type * from './types';
 
+export * from '../read-mode';
+
 export const PULL_DRIVE_INTERVAL = 5000;
 
 export class BaseDocumentDriveServer

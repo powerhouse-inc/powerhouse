@@ -1,10 +1,12 @@
-import {
+import type {
     DocumentDriveDocument,
-    documentModel as DriveDocumentModel
+    ListenerFilter
 } from 'document-model-libs/document-drive';
-import { Document } from 'document-model/document';
+import * as DocumentDrive from 'document-model-libs/document-drive';
+import { Document, DocumentModel } from 'document-model/document';
 import { GraphQLError } from 'graphql';
-import { fetchDocumentState } from '../utils/graphql';
+import { DocumentModelNotFoundError } from '../server/error';
+import { fetchDocument, requestPublicDrive } from '../utils/graphql';
 import {
     ReadDocumentNotFoundError,
     ReadDriveError,
@@ -13,8 +15,10 @@ import {
 } from './errors';
 import {
     GetDocumentModel,
+    InferDocumentLocalState,
+    InferDocumentOperation,
+    InferDocumentState,
     IReadModeDriveService,
-    ReadDocument,
     ReadDrive,
     ReadDriveContext
 } from './types';
@@ -23,7 +27,7 @@ export class ReadModeService implements IReadModeDriveService {
     #getDocumentModel: GetDocumentModel;
     #drives = new Map<
         string,
-        { drive: ReadDrive; context: ReadDriveContext }
+        { drive: Omit<ReadDrive, 'readContext'>; context: ReadDriveContext }
     >();
 
     constructor(getDocumentModel: GetDocumentModel) {
@@ -52,42 +56,80 @@ export class ReadModeService implements IReadModeDriveService {
     }
 
     async #fetchDrive(id: string, url: string) {
-        const { errors, document } =
-            await fetchDocumentState<DocumentDriveDocument>(
-                url,
-                id,
-                DriveDocumentModel
-            );
+        const { errors, document } = await fetchDocument<DocumentDriveDocument>(
+            url,
+            id,
+            DocumentDrive
+        );
         const error = errors ? this.#parseGraphQLErrors(errors, id) : undefined;
         return error || document;
     }
 
-    async fetchDriveState(id: string) {
-        return this.fetchDocumentState<DocumentDriveDocument>(
+    async fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError> {
+        const drive = this.#drives.get(id);
+        if (!drive) {
+            return new ReadDriveNotFoundError(id);
+        }
+        const document = await this.fetchDocument<DocumentDriveDocument>(
             id,
             id,
-            DriveDocumentModel.id
+            DocumentDrive.documentModel.id
         );
+        if (document instanceof Error) {
+            return document;
+        }
+        const result = { ...document, readContext: drive.context };
+        drive.drive = result;
+        return result;
     }
 
-    async fetchDocumentState<D extends Document>(
+    async fetchDocument<D extends Document>(
         driveId: string,
         documentId: string,
-        documentType?: string
-    ) {
+        documentType: DocumentModel<
+            InferDocumentState<D>,
+            InferDocumentOperation<D>,
+            InferDocumentLocalState<D>
+        >['documentModel']['id']
+    ): Promise<
+        | Document<
+              InferDocumentState<D>,
+              InferDocumentOperation<D>,
+              InferDocumentLocalState<D>
+          >
+        | DocumentModelNotFoundError
+        | ReadDriveNotFoundError
+        | ReadDocumentNotFoundError
+    > {
         const drive = this.#drives.get(driveId);
         if (!drive) {
             return new ReadDriveNotFoundError(driveId);
         }
 
-        const documentModel = documentType
-            ? this.#getDocumentModel(documentType)
-            : undefined;
+        let documentModel:
+            | DocumentModel<
+                  InferDocumentState<D>,
+                  InferDocumentOperation<D>,
+                  InferDocumentLocalState<D>
+              >
+            | undefined = undefined;
+        try {
+            documentModel = this.#getDocumentModel(
+                documentType
+            ) as unknown as DocumentModel<
+                InferDocumentState<D>,
+                InferDocumentOperation<D>,
+                InferDocumentLocalState<D>
+            >;
+        } catch (error) {
+            return new DocumentModelNotFoundError(documentType, error);
+        }
+
         const { url } = drive.context;
-        const { errors, document } = await fetchDocumentState<D>(
+        const { errors, document } = await fetchDocument<D>(
             url,
             documentId,
-            documentModel?.documentModel
+            documentModel
         );
 
         if (errors) {
@@ -99,23 +141,33 @@ export class ReadModeService implements IReadModeDriveService {
             }
         }
 
-        if (document) {
-            return document as unknown as ReadDocument<D>;
-        } else {
+        if (!document) {
             return new ReadDocumentNotFoundError(driveId, documentId);
         }
+
+        return document;
     }
 
-    async addReadDrive(id: string, context: ReadDriveContext) {
-        const result = await this.#fetchDrive(id, context.url);
+    async addReadDrive(url: string, filter?: ListenerFilter): Promise<void> {
+        const { id } = await requestPublicDrive(url);
+
+        const result = await this.#fetchDrive(id, url);
         if (result instanceof Error) {
             throw result;
         } else if (!result) {
-            throw new Error(`Drive "${id}" not found at ${context.url}`);
+            throw new Error(`Drive "${id}" not found at ${url}`);
         }
         this.#drives.set(id, {
             drive: result as unknown as ReadDrive,
-            context
+            context: {
+                url,
+                filter: filter ?? {
+                    documentId: ['*'],
+                    documentType: ['*'],
+                    branch: ['*'],
+                    scope: ['*']
+                }
+            }
         });
     }
 
@@ -124,8 +176,11 @@ export class ReadModeService implements IReadModeDriveService {
     }
 
     async getReadDrive(id: string) {
+        const result = this.#drives.get(id);
         return Promise.resolve(
-            this.#drives.get(id)?.drive ?? new ReadDriveNotFoundError(id)
+            result
+                ? { ...result.drive, readContext: result.context }
+                : new ReadDriveNotFoundError(id)
         );
     }
 
@@ -136,7 +191,9 @@ export class ReadModeService implements IReadModeDriveService {
             ({ drive }) => drive.state.global.slug === slug
         );
         return Promise.resolve(
-            readDrive?.drive || new ReadDriveSlugNotFoundError(slug)
+            readDrive
+                ? { ...readDrive.drive, readContext: readDrive.context }
+                : new ReadDriveSlugNotFoundError(slug)
         );
     }
 

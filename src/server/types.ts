@@ -22,7 +22,7 @@ import type {
 } from 'document-model/document';
 import { Unsubscribe } from 'nanoevents';
 import { BaseDocumentDriveServer } from '.';
-import { IReadModeDriveService } from '../read-mode/types';
+import { IReadMoveDriveServer } from '../read-mode/types';
 import { RunAsap } from '../utils';
 import { DriveInfo } from '../utils/graphql';
 import { OperationError, SynchronizationUnitNotFoundError } from './error';
@@ -476,7 +476,7 @@ export type IBaseDocumentDriveServer = Pick<
 >;
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
-    IReadModeDriveService;
+    IReadMoveDriveServer;
 
 export abstract class BaseListenerManager {
     protected drive: IBaseDocumentDriveServer;

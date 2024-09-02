@@ -1,3 +1,4 @@
+import { ListenerFilter } from 'document-model-libs/document-drive';
 import { Document } from 'document-model/document';
 import { DocumentDriveServerConstructor, RemoteDriveOptions } from '../server';
 import { logger } from '../utils/logger';
@@ -7,7 +8,7 @@ import {
     IReadModeDriveService,
     IReadMoveDriveServer,
     ReadDrive,
-    ReadDriveContext,
+    ReadDrivesListener,
     ReadModeDriveServerMixin
 } from './types';
 
@@ -19,6 +20,7 @@ export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
 ): ReadModeDriveServerMixin {
     return class ReadMode extends Base implements IReadMoveDriveServer {
         #readModeStorage: IReadModeDriveService;
+        #listeners = new Set<ReadDrivesListener>();
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         constructor(...args: any[]) {
@@ -28,6 +30,28 @@ export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
             this.#readModeStorage = new ReadModeService(
                 this.getDocumentModel.bind(this)
             );
+
+            this.#buildDrives()
+                .then(drives => {
+                    if (drives.length) {
+                        this.#notifyListeners(drives, 'add');
+                    }
+                })
+                .catch(logger.error);
+        }
+
+        async #buildDrives() {
+            const driveIds = await this.getReadDrives();
+            const drives = (
+                await Promise.all(
+                    driveIds.map(driveId => this.getReadDrive(driveId))
+                )
+            ).filter(drive => !(drive instanceof Error)) as ReadDrive[];
+            return drives;
+        }
+
+        #notifyListeners(drives: ReadDrive[], operation: 'add' | 'delete') {
+            this.#listeners.forEach(listener => listener(drives, operation));
         }
 
         getReadDrives(): Promise<string[]> {
@@ -48,28 +72,34 @@ export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
             return this.#readModeStorage.getReadDriveContext(id);
         }
 
-        addReadDrive(id: string, context: ReadDriveContext) {
-            return this.#readModeStorage.addReadDrive(id, context);
+        async addReadDrive(url: string, filter?: ListenerFilter) {
+            await this.#readModeStorage.addReadDrive(url, filter);
+            this.#notifyListeners(await this.#buildDrives(), 'add');
         }
 
-        fetchDriveState(id: string) {
-            return this.#readModeStorage.fetchDriveState(id);
+        fetchDrive(id: string) {
+            return this.#readModeStorage.fetchDrive(id);
         }
 
-        fetchDocumentState<D extends Document>(
+        fetchDocument<D extends Document>(
             driveId: string,
             documentId: string,
-            documentType?: string
+            documentType: string
         ) {
-            return this.#readModeStorage.fetchDocumentState<D>(
+            return this.#readModeStorage.fetchDocument<D>(
                 driveId,
                 documentId,
                 documentType
             );
         }
 
-        deleteReadDrive(id: string) {
-            return this.#readModeStorage.deleteReadDrive(id);
+        async deleteReadDrive(id: string) {
+            const error = await this.#readModeStorage.deleteReadDrive(id);
+            if (error) {
+                return error;
+            }
+
+            this.#notifyListeners(await this.#buildDrives(), 'delete');
         }
 
         async migrateReadDrive(id: string, options: RemoteDriveOptions) {
@@ -84,9 +114,14 @@ export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
             } catch (error) {
                 // if an error is thrown, then add the read drive again
                 logger.error(error);
-                await this.addReadDrive(id, result);
+                await this.addReadDrive(result.url, result.filter);
                 throw error;
             }
+        }
+
+        onReadDrivesUpdate(listener: ReadDrivesListener) {
+            this.#listeners.add(listener);
+            return Promise.resolve(() => this.#listeners.delete(listener));
         }
     };
 }

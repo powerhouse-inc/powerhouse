@@ -2,25 +2,49 @@ import {
     DocumentDriveDocument,
     ListenerFilter
 } from 'document-model-libs/document-drive';
-import { Document, DocumentModel } from 'document-model/document';
+import { Action, Document, DocumentModel } from 'document-model/document';
 import { DocumentDriveServerMixin, RemoteDriveOptions } from '../server';
+import { DocumentModelNotFoundError } from '../server/error';
 import {
     ReadDocumentNotFoundError,
     ReadDriveNotFoundError,
     ReadDriveSlugNotFoundError
 } from './errors';
 
-// This mixin adds a scale property, with getters and setters
-// for changing it with an encapsulated private property:
+// TODO: move these types to the document-model package
+export type InferDocumentState<D extends Document> =
+    D extends Document<infer S> ? S : never;
+
+export type InferDocumentOperation<D extends Document> =
+    D extends Document<unknown, infer A> ? A : never;
+
+export type InferDocumentLocalState<D extends Document> =
+    D extends Document<unknown, Action, infer L> ? L : never;
+
+export type InferDocumentGenerics<D extends Document> = {
+    state: InferDocumentState<D>;
+    action: InferDocumentOperation<D>;
+    logger: InferDocumentLocalState<D>;
+};
 
 export type ReadModeDriveServerMixin =
     DocumentDriveServerMixin<IReadMoveDriveServer>;
+
+export type ReadDrivesListener = (
+    drives: ReadDrive[],
+    operation: 'add' | 'delete'
+) => void;
+
+export type ReadDrivesListenerUnsubscribe = () => void;
 
 export interface IReadMoveDriveServer extends IReadModeDriveService {
     migrateReadDrive(
         id: string,
         options: RemoteDriveOptions
     ): Promise<DocumentDriveDocument | ReadDriveNotFoundError>;
+    onReadDrivesUpdate(
+        listener: ReadDrivesListener
+    ): Promise<ReadDrivesListenerUnsubscribe>; // TODO: make DriveEvents extensible and reuse event emitter
 }
 
 export type ReadDriveContext = {
@@ -28,11 +52,17 @@ export type ReadDriveContext = {
     filter: ListenerFilter;
 };
 
-export type ReadDocument<D extends Document> = Omit<D, 'operations'>;
-export type ReadDrive = ReadDocument<DocumentDriveDocument>;
+export type ReadDrive = DocumentDriveDocument & {
+    readContext: ReadDriveContext;
+};
+
+export type IsDocument<D extends Document> =
+    (<G>() => G extends D ? 1 : 2) extends <G>() => G extends Document ? 1 : 2
+        ? true
+        : false;
 
 export interface IReadModeDriveService {
-    addReadDrive(id: string, context: ReadDriveContext): Promise<void>;
+    addReadDrive(url: string, filter?: ListenerFilter): Promise<void>;
 
     getReadDrives(): Promise<string[]>;
 
@@ -46,14 +76,25 @@ export interface IReadModeDriveService {
         id: string
     ): Promise<ReadDriveContext | ReadDriveNotFoundError>;
 
-    fetchDriveState(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
+    fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
 
-    fetchDocumentState<D extends Document>(
+    fetchDocument<D extends Document>(
         driveId: string,
         documentId: string,
-        documentType?: string
+        documentType: DocumentModel<
+            InferDocumentState<D>,
+            InferDocumentOperation<D>,
+            InferDocumentLocalState<D>
+        >['documentModel']['id']
     ): Promise<
-        ReadDocument<D> | ReadDriveNotFoundError | ReadDocumentNotFoundError
+        | Document<
+              InferDocumentState<D>,
+              InferDocumentOperation<D>,
+              InferDocumentLocalState<D>
+          >
+        | DocumentModelNotFoundError
+        | ReadDriveNotFoundError
+        | ReadDocumentNotFoundError
     >;
 
     deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined>;

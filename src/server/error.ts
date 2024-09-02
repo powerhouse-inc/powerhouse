@@ -1,6 +1,14 @@
 import type { Operation } from 'document-model/document';
 import type { ErrorStatus } from './types';
 
+export class DocumentModelNotFoundError extends Error {
+    constructor(
+        public id: string,
+        cause?: unknown
+    ) {
+        super(`Document model "${id}" not found`, { cause });
+    }
+}
 export class OperationError extends Error {
     status: ErrorStatus;
     operation: Operation | undefined;

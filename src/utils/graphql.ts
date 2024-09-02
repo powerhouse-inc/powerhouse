@@ -4,7 +4,7 @@ import {
     FileNode,
     FolderNode
 } from 'document-model-libs/document-drive';
-import { Document } from 'document-model/document';
+import { Document, DocumentModel, Operation } from 'document-model/document';
 import { DocumentModelState } from 'document-model/document-model';
 import {
     BuildSchemaOptions,
@@ -19,6 +19,11 @@ import {
     buildSchema
 } from 'graphql';
 import request, { GraphQLClient, gql } from 'graphql-request';
+import {
+    InferDocumentLocalState,
+    InferDocumentOperation,
+    InferDocumentState
+} from '../read-mode/types';
 import { logger } from './logger';
 
 export { gql } from 'graphql-request';
@@ -107,7 +112,7 @@ function getFields(type: GraphQLOutputType): string {
     return '';
 }
 
-export function generateDocumentStateQuery(
+export function generateDocumentStateQueryFields(
     documentModel: DocumentModelState,
     options?: BuildSchemaOptions & ParseOptions
 ): string {
@@ -130,7 +135,7 @@ export function generateDocumentStateQuery(
     }
 
     const queryFields = getFields(stateQuery.type);
-    return `... on ${name} { state { ${queryFields} }`;
+    return queryFields;
 }
 
 export async function requestPublicDrive(url: string): Promise<DriveInfo> {
@@ -166,16 +171,40 @@ export type DriveState = DriveInfo &
         nodes: Array<FolderNode | Omit<FileNode, 'synchronizationUnits'>>;
     };
 
-export async function fetchDocumentState<D extends Document>(
+export async function fetchDocument<D extends Document>(
     url: string,
     documentId: string,
-    documentModel?: DocumentModelState
-) {
-    const stateFields = documentModel
-        ? generateDocumentStateQuery(documentModel)
-        : undefined;
+    documentModelLib: DocumentModel<
+        InferDocumentState<D>,
+        InferDocumentOperation<D>,
+        InferDocumentLocalState<D>
+    >
+): Promise<
+    GraphQLResult<{
+        document: Document<
+            InferDocumentState<D>,
+            InferDocumentOperation<D>,
+            InferDocumentLocalState<D>
+        >;
+    }>
+> {
+    const { documentModel, utils } = documentModelLib;
+    const stateFields = generateDocumentStateQueryFields(documentModel);
+    const name = pascalCase(documentModel.name);
     const result = await requestGraphql<{
-        document: Pick<D, 'name'> & { id: string; state: D['state']['global'] };
+        document: Pick<
+            D,
+            'name' | 'created' | 'documentType' | 'lastModified'
+        > & {
+            id: string;
+            revision: number;
+            state: InferDocumentState<D>;
+            initialState: InferDocumentState<D>;
+            operations: (Pick<
+                Operation,
+                'id' | 'hash' | 'index' | 'skip' | 'timestamp' | 'type'
+            > & { inputText: string })[];
+        };
     }>(
         url,
         gql`
@@ -183,27 +212,66 @@ export async function fetchDocumentState<D extends Document>(
                 document(id: $id) {
                     id
                     name
-                    ${
-                        stateFields
-                            ? `state {
-                        ${stateFields}
-                    }`
-                            : ''
+                    created
+                    documentType
+                    lastModified
+                    revision
+                    operations {
+                        id
+                        hash
+                        index
+                        skip
+                        timestamp
+                        type
+                        inputText
+                    }
+                    ... on ${name} {
+                        state {
+                            ${stateFields}
+                        }
+                        initialState {
+                            ${stateFields}
+                        }
                     }
                 }
             }
         `,
         { id: documentId }
     );
+    const document: Document<
+        InferDocumentState<D>,
+        InferDocumentOperation<D>,
+        InferDocumentLocalState<D>
+    > | null = result.document
+        ? {
+              ...result.document,
+              revision: {
+                  global: result.document.revision,
+                  local: 0
+              },
+              state: utils.createState({ global: result.document.state }),
+              operations: {
+                  global: result.document.operations.map(
+                      ({ inputText, ...o }) => ({
+                          ...o,
+                          scope: 'global',
+                          input: JSON.parse(inputText) as D
+                      })
+                  ),
+                  local: []
+              },
+              attachments: {},
+              initialState: utils.createExtendedState({
+                  created: result.document.created,
+                  lastModified: result.document.lastModified,
+                  state: utils.createState({ global: result.document.state })
+              }),
+              clipboard: []
+          }
+        : null;
 
-    // TODO add missing fields to the result
     return {
         ...result,
-        document: result.document
-            ? {
-                  ...result.document,
-                  state: { global: result.document.state }
-              }
-            : null
+        document
     };
 }

@@ -1,9 +1,8 @@
 import * as BudgetStatement from 'document-model-libs/budget-statement';
 import * as DocumentDrive from 'document-model-libs/document-drive';
 import * as documentModelsMap from 'document-model-libs/document-models';
-import { DocumentModel } from 'document-model/document';
-import { beforeEach } from 'node:test';
-import { describe, it, vi } from 'vitest';
+import { Document, DocumentModel } from 'document-model/document';
+import { beforeEach, describe, it, vi } from 'vitest';
 import createFetchMock from 'vitest-fetch-mock';
 import {
     ReadDocumentNotFoundError,
@@ -24,6 +23,47 @@ function getDocumentModel(id: string) {
         throw new Error(`Document model not found for id: ${id}`);
     }
     return documentModel;
+}
+
+function buildDrive(state: Partial<DocumentDrive.DocumentDriveState>) {
+    return DocumentDrive.utils.createDocument({
+        state: DocumentDrive.utils.createState({
+            global: state
+        })
+    });
+}
+
+function buildDocumentResponse(drive: Document) {
+    return {
+        ...drive,
+        revision: drive.revision.global,
+        state: drive.state.global,
+        operations: drive.operations.global.map(({ input, ...op }) => ({
+            ...op,
+            inputText: JSON.stringify(input)
+        })),
+        initialState: drive.initialState.state.global
+    };
+}
+
+function mockAddDrive(url: string, drive: DocumentDrive.DocumentDriveDocument) {
+    fetchMocker.mockIf(url, async req => {
+        const { operationName } = (await req.json()) as {
+            operationName: string;
+        };
+
+        return {
+            headers: { 'content-type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({
+                data:
+                    operationName === 'getDrive'
+                        ? { drive: drive.state.global }
+                        : {
+                              document: buildDocumentResponse(drive)
+                          }
+            })
+        };
+    });
 }
 
 describe('Read mode methods', () => {
@@ -48,31 +88,66 @@ describe('Read mode methods', () => {
         const driveData = {
             id: readDriveId,
             name: 'Read drive',
-            documentType: '',
-            created: '',
-            lastModified: '',
-            state: {
-                icon: null,
-                id: readDriveId,
-                name: 'Read drive',
-                nodes: [],
-                slug: 'read-drive'
-            }
+            nodes: [],
+            slug: 'read-drive'
         };
+        const drive = buildDrive(driveData);
+        mockAddDrive(context.url, drive);
 
-        fetchMocker.mockIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: driveData
-                }
-            })
-        }));
-
-        await readModeService.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(context.url, context.filter);
 
         expect(fetchMocker).toHaveBeenCalledWith(context.url, {
-            body: '{"query":"\\n            query ($id: String!) {\\n                document(id: $id) {\\n                    id\\n                    name\\n                    state {\\n                        ... on DocumentDrive { state { id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug }\\n                    }\\n                }\\n            }\\n        ","variables":{"id":"read-drive"}}',
+            body: JSON.stringify({
+                query: `
+                query getDrive {
+                    drive {
+                        id
+                        name
+                        icon
+                        slug
+                    }
+                }
+            `,
+                operationName: 'getDrive'
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            method: 'POST'
+        });
+        expect(fetchMocker).toHaveBeenCalledWith(context.url, {
+            body: JSON.stringify({
+                query: `
+            query ($id: String!) {
+                document(id: $id) {
+                    id
+                    name
+                    created
+                    documentType
+                    lastModified
+                    revision
+                    operations {
+                        id
+                        hash
+                        index
+                        skip
+                        timestamp
+                        type
+                        inputText
+                    }
+                    ... on DocumentDrive {
+                        state {
+                            id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug
+                        }
+                        initialState {
+                            id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug
+                        }
+                    }
+                }
+            }
+        `,
+                variables: { id: readDriveId }
+            }),
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -81,25 +156,19 @@ describe('Read mode methods', () => {
 
         const result = await readModeService.getReadDrive(readDriveId);
         expect(result).toStrictEqual({
-            id: readDriveId,
-            name: 'Read drive',
-            documentType: '',
-            created: '',
-            lastModified: '',
-            state: {
-                global: {
-                    icon: null,
-                    id: readDriveId,
-                    name: 'Read drive',
-                    nodes: [],
-                    slug: 'read-drive'
-                }
-            }
+            ...drive,
+            readContext: context
         });
 
         const resultContext =
             await readModeService.getReadDriveContext(readDriveId);
         expect(resultContext).toStrictEqual(context);
+
+        const readDrive = await readModeService.fetchDrive(readDriveId);
+        expect(readDrive).toStrictEqual({
+            ...drive,
+            readContext: context
+        });
     });
 
     it('should return existing read drive for given slug', async ({
@@ -117,46 +186,20 @@ describe('Read mode methods', () => {
             }
         };
         const driveData = {
+            icon: null,
             id: readDriveId,
             name: 'Read drive',
-            documentType: '',
-            created: '',
-            lastModified: '',
-            state: {
-                icon: null,
-                id: readDriveId,
-                name: 'Read drive',
-                nodes: [],
-                slug: 'read-drive'
-            }
+            nodes: [],
+            slug: 'read-drive'
         };
+        const drive = buildDrive(driveData);
+        mockAddDrive(context.url, drive);
 
-        fetchMocker.mockIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: driveData
-                }
-            })
-        }));
-
-        await readModeService.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(context.url, context.filter);
         const result = await readModeService.getReadDriveBySlug('read-drive');
         expect(result).toStrictEqual({
-            id: readDriveId,
-            name: 'Read drive',
-            documentType: '',
-            created: '',
-            lastModified: '',
-            state: {
-                global: {
-                    icon: null,
-                    id: readDriveId,
-                    name: 'Read drive',
-                    nodes: [],
-                    slug: 'read-drive'
-                }
-            }
+            ...drive,
+            readContext: context
         });
     });
 
@@ -186,17 +229,10 @@ describe('Read mode methods', () => {
                 slug: 'read-drive'
             }
         };
+        const drive = buildDrive(driveData);
+        mockAddDrive(context.url, drive);
 
-        fetchMocker.mockIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: driveData
-                }
-            })
-        }));
-
-        await readModeService.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(context.url);
         const result = await readModeService.deleteReadDrive(readDriveId);
         expect(result).toBeUndefined();
 
@@ -249,53 +285,17 @@ describe('Read mode methods', () => {
                 scope: ['*']
             }
         };
+        mockAddDrive(context.url, drive);
 
-        fetchMocker.mockOnceIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: {
-                        id: readDriveId,
-                        name: '',
-                        state: drive.state.global
-                    }
-                }
-            })
-        }));
-
-        await readModeService.addReadDrive(readDriveId, context);
+        await readModeService.addReadDrive(context.url, context.filter);
 
         const drives = await readModeService.getReadDrives();
         expect(drives).toStrictEqual([readDriveId]);
 
         const readDrive = await readModeService.getReadDrive(readDriveId);
         expect(readDrive).toMatchObject({
-            id: readDriveId,
-            name: '',
-            state: {
-                global: {
-                    icon: null,
-                    id: readDriveId,
-                    name: 'Read drive',
-                    nodes: [
-                        {
-                            documentType: 'powerhouse/budget-statement',
-                            id: 'budget-statement',
-                            kind: 'file',
-                            name: 'Document 1',
-                            parentFolder: null,
-                            synchronizationUnits: [
-                                {
-                                    branch: '1',
-                                    scope: '1',
-                                    syncId: 'document-1'
-                                }
-                            ]
-                        }
-                    ],
-                    slug: 'read-drive'
-                }
-            }
+            ...drive,
+            readContext: context
         });
 
         fetchMocker.mockOnceIf(context.url, () => {
@@ -303,44 +303,19 @@ describe('Read mode methods', () => {
                 headers: { 'content-type': 'application/json; charset=utf-8' },
                 body: JSON.stringify({
                     data: {
-                        document: {
-                            id: documentId,
-                            name: 'budget-statement',
-                            state: budgetStatement.state.global
-                        }
+                        document: buildDocumentResponse(budgetStatement)
                     }
                 })
             };
         });
 
-        const readDocument = await readModeService.fetchDocumentState(
+        const readDocument = await readModeService.fetchDocument(
             readDriveId,
             documentId,
             BudgetStatement.documentModel.id
         );
 
-        expect(readDocument).toMatchObject({
-            id: documentId,
-            name: 'budget-statement',
-            state: {
-                global: {
-                    owner: { id: null, ref: null, title: null },
-                    month: null,
-                    quoteCurrency: null,
-                    vesting: [],
-                    ftes: null,
-                    accounts: [
-                        {
-                            address: '0x123',
-                            lineItems: [],
-                            name: ''
-                        }
-                    ],
-                    auditReports: [],
-                    comments: []
-                }
-            }
-        });
+        expect(readDocument).toMatchObject(budgetStatement);
     });
 
     it('should return ReadDriveNotFoundError if read drive ID is not found', async ({
@@ -356,6 +331,14 @@ describe('Read mode methods', () => {
             'non-existent-drive-id'
         );
         expect(fetchResult).toStrictEqual(
+            new ReadDriveNotFoundError('non-existent-drive-id')
+        );
+
+        const fetchDriveDocument = await readMode.fetchDocumentState(
+            'non-existent-drive-id',
+            'non-existent-drive-id'
+        );
+        expect(fetchDriveDocument).toStrictEqual(
             new ReadDriveNotFoundError('non-existent-drive-id')
         );
 
@@ -408,16 +391,25 @@ describe('Read mode methods', () => {
             }
         };
 
-        fetchMocker.mockOnceIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: driveData
-                }
-            })
-        }));
+        fetchMocker.mockIf(context.url, async req => {
+            const { operationName } = (await req.json()) as {
+                operationName: string;
+            };
 
-        await readModeService.addReadDrive(readDriveId, context);
+            return {
+                headers: { 'content-type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    data:
+                        operationName === 'getDrive'
+                            ? { drive: driveData }
+                            : {
+                                  document: driveData
+                              }
+                })
+            };
+        });
+
+        await readModeService.addReadDrive(context.url, context.filter);
 
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -480,24 +472,28 @@ describe('Read mode methods', () => {
             }
         };
 
-        fetchMocker.mockOnceIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: null,
-                    errors: [
-                        {
-                            message: `Drive with ${readDriveId} not found at ${context.url}`
-                        }
-                    ]
-                }
-            })
-        }));
+        fetchMocker.mockIf(context.url, async req => {
+            const { operationName } = (await req.json()) as {
+                operationName: string;
+            };
+
+            return {
+                headers: { 'content-type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    data:
+                        operationName === 'getDrive'
+                            ? { drive: { id: readDriveId } }
+                            : {
+                                  document: null
+                              }
+                })
+            };
+        });
 
         await expect(
-            readModeService.addReadDrive(readDriveId, context)
+            readModeService.addReadDrive(context.url)
         ).rejects.toThrowError(
-            `Drive with ${readDriveId} not found at ${context.url}`
+            `Drive "${readDriveId}" not found at ${context.url}`
         );
     });
 
@@ -530,16 +526,25 @@ describe('Read mode methods', () => {
             }
         };
 
-        fetchMocker.mockIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: driveData
-                }
-            })
-        }));
+        fetchMocker.mockIf(context.url, async req => {
+            const { operationName } = (await req.json()) as {
+                operationName: string;
+            };
 
-        await readModeService.addReadDrive(readDriveId, context);
+            return {
+                headers: { 'content-type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    data:
+                        operationName === 'getDrive'
+                            ? { drive: driveData }
+                            : {
+                                  document: driveData
+                              }
+                })
+            };
+        });
+
+        await readModeService.addReadDrive(context.url, context.filter);
 
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -561,6 +566,22 @@ describe('Read mode methods', () => {
         ).rejects.toThrowError(
             'Cannot query field "revisio" on type "IDocument". Did you mean "revision"?'
         );
+
+        fetchMocker.mockOnceIf(context.url, () => ({
+            headers: { 'content-type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({
+                data: {
+                    document: null,
+                    errors: [
+                        {
+                            message: `Drive with id ${readDriveId} not found`
+                        }
+                    ]
+                }
+            })
+        }));
+        const result = await readModeService.fetchDriveState(readDriveId);
+        expect(result).toStrictEqual(new ReadDriveNotFoundError(readDriveId));
     });
 
     it('should throw ReadDriveNotFoundError if no document is returned', async ({
@@ -578,17 +599,31 @@ describe('Read mode methods', () => {
             }
         };
 
-        fetchMocker.mockIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: null
-                }
-            })
-        }));
+        fetchMocker.mockIf(context.url, async req => {
+            const { operationName } = (await req.json()) as {
+                operationName: string;
+            };
+
+            return {
+                headers: { 'content-type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    data:
+                        operationName === 'getDrive'
+                            ? { drive: { id: readDriveId } }
+                            : {
+                                  document: null,
+                                  errors: [
+                                      {
+                                          message: `Drive "${readDriveId}" not found at ${context.url}`
+                                      }
+                                  ]
+                              }
+                })
+            };
+        });
 
         await expect(
-            readModeService.addReadDrive(readDriveId, context)
+            readModeService.addReadDrive(context.url)
         ).rejects.toThrowError(
             `Drive "${readDriveId}" not found at ${context.url}`
         );
@@ -623,17 +658,25 @@ describe('Read mode methods', () => {
             }
         };
 
-        fetchMocker.mockIf(context.url, () => ({
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-                data: {
-                    document: driveData
-                }
-            })
-        }));
+        fetchMocker.mockIf(context.url, async req => {
+            const { operationName } = (await req.json()) as {
+                operationName: string;
+            };
 
-        await readModeService.addReadDrive(readDriveId, context);
+            return {
+                headers: { 'content-type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({
+                    data:
+                        operationName === 'getDrive'
+                            ? { drive: driveData }
+                            : {
+                                  document: driveData
+                              }
+                })
+            };
+        });
 
+        await readModeService.addReadDrive(context.url, context.filter);
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
             body: JSON.stringify({
