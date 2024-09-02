@@ -139,7 +139,15 @@ export type StrandUpdate = {
     operations: OperationUpdate[];
 };
 
-export type SyncStatus = 'SYNCING' | UpdateStatus;
+export type SyncStatus = 'INITIAL_SYNC' | 'SYNCING' | UpdateStatus;
+
+export type PullSyncStatus = SyncStatus;
+export type PushSyncStatus = SyncStatus;
+
+export type SyncUnitStatusObject = {
+    push?: PushSyncStatus;
+    pull?: PullSyncStatus;
+};
 
 export type AddRemoteDriveStatus =
     | 'SUCCESS'
@@ -149,7 +157,12 @@ export type AddRemoteDriveStatus =
     | 'ALREADY_ADDED';
 
 export interface DriveEvents {
-    syncStatus: (driveId: string, status: SyncStatus, error?: Error) => void;
+    syncStatus: (
+        driveId: string,
+        status: SyncStatus,
+        error?: Error,
+        syncUnitStatus?: SyncUnitStatusObject
+    ) => void;
     defaultRemoteDrive: (
         status: AddRemoteDriveStatus,
         defaultDrives: Map<string, DefaultRemoteDriveInfo>,
@@ -410,6 +423,7 @@ export abstract class BaseListenerManager {
     abstract initDrive(drive: DocumentDriveDocument): Promise<void>;
     abstract removeDrive(driveId: DocumentDriveState['id']): Promise<void>;
 
+    abstract driveHasListeners(driveId: string): boolean;
     abstract addListener(listener: Listener): Promise<ITransmitter>;
     abstract removeListener(
         driveId: string,

@@ -56,6 +56,10 @@ export class ListenerManager extends BaseListenerManager {
         return Promise.resolve(this.transmitters[driveId]?.[listenerId]);
     }
 
+    driveHasListeners(driveId: string) {
+        return this.listenerState.has(driveId);
+    }
+
     async addListener(listener: Listener) {
         const drive = listener.driveId;
 
