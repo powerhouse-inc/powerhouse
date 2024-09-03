@@ -1,3 +1,12 @@
+# [1.0.0-alpha.89](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.88...v1.0.0-alpha.89) (2024-09-03)
+
+
+### Features
+
+* handle default remote drives ([#277](https://github.com/powerhouse-inc/document-drive/issues/277)) ([2a0dddf](https://github.com/powerhouse-inc/document-drive/commit/2a0dddff7a7b1e4d16464ddfa5c9b3815efb4da5))
+* handle old remote drives ([#284](https://github.com/powerhouse-inc/document-drive/issues/284)) ([87e304a](https://github.com/powerhouse-inc/document-drive/commit/87e304a3e346170c459cbe7e9536ffd8bad7a3a8))
+* implemented sync unit status for push and pull operations ([#269](https://github.com/powerhouse-inc/document-drive/issues/269)) ([ea0138c](https://github.com/powerhouse-inc/document-drive/commit/ea0138c61a0b79466cdacfb64e7118537de58881))
+
 # [1.0.0-alpha.88](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.87...v1.0.0-alpha.88) (2024-07-25)
 
 
