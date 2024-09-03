@@ -1,3 +1,10 @@
+# [1.0.0-dev.87](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.86...v1.0.0-dev.87) (2024-09-03)
+
+
+### Bug Fixes
+
+* test env access in config ([e9275a9](https://github.com/powerhouse-inc/document-model-electron/commit/e9275a9b2012e8902436fc369ebf8dad468fac92))
+
 # [1.0.0-dev.86](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.85...v1.0.0-dev.86) (2024-09-03)
 
 
