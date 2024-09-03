@@ -1,3 +1,10 @@
+# [1.0.0-dev.82](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.81...v1.0.0-dev.82) (2024-09-03)
+
+
+### Features
+
+* check if nginx.conf is valid ([ab70580](https://github.com/powerhouse-inc/document-model-electron/commit/ab70580c9fc11af21e0537a821585680385767a9))
+
 # [1.0.0-dev.81](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.80...v1.0.0-dev.81) (2024-09-03)
 
 
