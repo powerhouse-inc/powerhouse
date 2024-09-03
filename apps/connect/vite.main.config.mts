@@ -6,7 +6,10 @@ export default defineConfig({
     resolve: {
         alias: {
             src: path.resolve(__dirname, './src'),
-            'connect-config': path.resolve(__dirname, './connect.config.ts'),
+            'connect-config': path.resolve(
+                __dirname,
+                './src/connect.config.ts',
+            ),
         },
     },
 });

@@ -1,6 +1,5 @@
 import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
-console.log('Config');
-console.log(JSON.stringify(import.meta.env, null, 2));
+
 const DISABLE_ADD_PUBLIC_DRIVES =
     import.meta.env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES || undefined;
 const DISABLE_ADD_CLOUD_DRIVES =

@@ -8,8 +8,6 @@ const DISABLED_EDITORS =
 const DEFAULT_DRIVES_URL =
     import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
 const disabledEditors = DISABLED_EDITORS?.split(',');
-console.log('Default');
-console.log(JSON.stringify(import.meta.env, null, 2));
 
 export interface FeatureFlag {
     defaultDrives?: {

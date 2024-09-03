@@ -102,7 +102,7 @@ export default defineConfig(({ mode }) => {
                 src: path.resolve(__dirname, './src'),
                 'connect-config': path.resolve(
                     __dirname,
-                    './connect.config.ts',
+                    './src/connect.config.ts',
                 ),
                 path: 'rollup-plugin-node-polyfills/polyfills/path',
                 events: 'rollup-plugin-node-polyfills/polyfills/events',
