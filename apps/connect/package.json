@@ -95,7 +95,7 @@
         "@sentry/vite-plugin": "^2.22.2",
         "@tanstack/react-virtual": "^3.8.1",
         "did-key-creator": "^1.2.0",
-        "document-drive": "^1.0.0-alpha.88",
+        "document-drive": "1.0.0-alpha.90",
         "document-model": "1.7.0",
         "document-model-libs": "^1.83.0",
         "electron-is-dev": "^3.0.1",

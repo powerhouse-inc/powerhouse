@@ -5,15 +5,9 @@ const enabledEditors = ENABLED_EDITORS?.split(',');
 
 const DISABLED_EDITORS =
     import.meta.env.PH_CONNECT_DISABLED_EDITORS || undefined;
-const DEFAULT_DRIVES_URL =
-    import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
 const disabledEditors = DISABLED_EDITORS?.split(',');
 
 export interface FeatureFlag {
-    defaultDrives?: {
-        url: string;
-        loaded: boolean;
-    }[];
     editors: {
         enabledEditors?: '*' | string[];
         disabledEditors?: '*' | string[];
@@ -21,12 +15,6 @@ export interface FeatureFlag {
 }
 
 const defaultConfig: FeatureFlag = {
-    defaultDrives: DEFAULT_DRIVES_URL
-        ? DEFAULT_DRIVES_URL.split(',').map(url => ({
-              url,
-              loaded: false,
-          }))
-        : undefined,
     editors: {
         enabledEditors: ENABLED_EDITORS === '*' ? '*' : enabledEditors,
         disabledEditors: DISABLED_EDITORS === '*' ? '*' : disabledEditors,

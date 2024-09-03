@@ -6,12 +6,14 @@ import { BrowserStorage } from 'document-drive/storage/browser';
 import { utils } from 'document-model/document';
 import { logger } from 'src/services/logger';
 import { documentModels } from 'src/store/document-model';
+import { getReactorDefaultDrivesConfig } from './reactor';
 
 export const BrowserDocumentDriveServer = new DocumentDriveServer(
     documentModels,
     new BrowserStorage(connectConfig.routerBasename),
     new InMemoryCache(),
     new BaseQueueManager(1, 10),
+    { ...getReactorDefaultDrivesConfig() },
 );
 
 async function init() {
