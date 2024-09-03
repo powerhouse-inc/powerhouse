@@ -30,4 +30,4 @@ ARG BASE_PATH="/"
 ENV BASE_PATH=${BASE_PATH}
 COPY --from=builder /opt/app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
-ENTRYPOINT sh -c "/usr/share/nginx/html/vite-envs.sh && envsubst '$PORT,$BASE_PATH' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+ENTRYPOINT sh -c "/usr/share/nginx/html/vite-envs.sh && /usr/share/nginx/html/nginx.sh && nginx -g 'daemon off;'"

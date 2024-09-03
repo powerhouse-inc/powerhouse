@@ -14,9 +14,9 @@ import clientConfig from './client.config';
 
 const appVersion = pkg.version;
 
-const generateVersionPlugin = (hardRefresh = false) => {
+const addToBundlePlugin = (hardRefresh = false) => {
     return {
-        name: 'generate-version',
+        name: 'add-to-bundle',
         closeBundle() {
             const versionManifest = {
                 version: appVersion,
@@ -27,6 +27,8 @@ const generateVersionPlugin = (hardRefresh = false) => {
                 path.join('dist', 'version.json'),
                 JSON.stringify(versionManifest, null, 2),
             );
+
+            fs.copyFileSync('./nginx.sh', './dist/nginx.sh');
         },
     };
 };
@@ -58,7 +60,7 @@ export default defineConfig(({ mode }) => {
                 ],
             },
         }),
-        generateVersionPlugin(isProd ? requiresHardRefresh : false),
+        addToBundlePlugin(isProd ? requiresHardRefresh : false),
         viteEnvs({
             computedEnv() {
                 return {
