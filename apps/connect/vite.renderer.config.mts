@@ -5,10 +5,10 @@ import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import path from 'path';
 import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
+import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import pkg from './package.json';
-import { viteEnvs } from 'vite-envs'
 
 import clientConfig from './client.config';
 
@@ -35,7 +35,8 @@ export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
     const env = loadEnv(mode, process.cwd());
 
-    const requiresHardRefresh = env.PH_CONNECT_APP_REQUIRES_HARD_REFRESH === 'true';
+    const requiresHardRefresh =
+        env.PH_CONNECT_APP_REQUIRES_HARD_REFRESH === 'true';
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const plugins: PluginOption[] = [
@@ -65,16 +66,21 @@ export default defineConfig(({ mode }) => {
                     REQUIRES_HARD_REFRESH: isProd ? requiresHardRefresh : false,
                 };
             },
-        })
+        }),
     ];
 
     const authToken = process.env.SENTRY_AUTH_TOKEN;
     const org = process.env.SENTRY_ORG;
     const project = process.env.SENTRY_PROJECT;
+    const release = process.env.SENTRY_RELEASE || appVersion;
     const uploadSentrySourcemaps = authToken && org && project;
+
     if (uploadSentrySourcemaps) {
         plugins.push(
             sentryVitePlugin({
+                release: {
+                    name: release,
+                },
                 authToken,
                 org,
                 project,

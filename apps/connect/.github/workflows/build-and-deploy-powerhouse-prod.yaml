@@ -24,10 +24,10 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           docker_options: >-
             --build-arg BASE_PATH=/powerhouse/connect
-            --build-arg VITE_BASE_HREF=/powerhouse/connect/
-            --build-arg VITE_ROUTER_BASENAME=/powerhouse/connect
-            --build-arg VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
-            --build-arg VITE_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
-            --build-arg VITE_DEFAULT_DRIVES_URL=https://apps.powerhouse.io/powerhouse/switchboard/d/powerhouse
-            --build-arg VITE_SEARCH_BAR_ENABLED=false
+            --build-arg PH_CONNECT_BASE_HREF=/powerhouse/connect/
+            --build-arg PH_CONNECT_ROUTER_BASENAME=/powerhouse/connect
+            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            --build-arg PH_CONNECT_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
+            --build-arg PH_CONNECT_DEFAULT_DRIVES_URL=https://apps.powerhouse.io/powerhouse/switchboard/d/powerhouse
+            --build-arg PH_CONNECT_SEARCH_BAR_ENABLED=false
           process_type: web
