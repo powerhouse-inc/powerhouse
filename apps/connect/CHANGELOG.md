@@ -1,3 +1,10 @@
+# [1.0.0-dev.86](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.85...v1.0.0-dev.86) (2024-09-03)
+
+
+### Features
+
+* fixed env vars ([3951036](https://github.com/powerhouse-inc/document-model-electron/commit/3951036c1dcc9c8728c7c33f130f1f67d8cee504))
+
 # [1.0.0-dev.85](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.84...v1.0.0-dev.85) (2024-09-03)
 
 
