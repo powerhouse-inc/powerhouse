@@ -41,7 +41,7 @@ import type {
     DocumentStorage,
     IDriveStorage
 } from '../storage/types';
-import { generateUUID, isBefore, isDocumentDrive } from '../utils';
+import { generateUUID, isBefore, isDocumentDrive, runAsap } from '../utils';
 import { DefaultDrivesManager } from '../utils/default-drives-manager';
 import {
     attachBranch,
@@ -76,6 +76,7 @@ import {
     DocumentDriveServerOptions,
     DriveEvents,
     GetDocumentOptions,
+    GetStrandsOptions,
     IOperationResult,
     ListenerState,
     RemoteDriveOptions,
@@ -820,10 +821,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     async getOperationData(
         driveId: string,
         syncId: string,
-        filter: {
-            since?: string | undefined;
-            fromRevision?: number | undefined;
-        },
+        filter: GetStrandsOptions,
         loadedDrive?: DocumentDriveDocument
     ): Promise<OperationUpdate[]> {
         const syncUnit =
@@ -846,6 +844,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const operations =
             document.operations[syncUnit.scope as OperationScope] ?? []; // TODO filter by branch also
+
         const filteredOperations = operations.filter(
             operation =>
                 Object.keys(filter).length === 0 ||
@@ -855,7 +854,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                         operation.index > filter.fromRevision))
         );
 
-        return filteredOperations.map(operation => ({
+        const limitedOperations = filter.limit
+            ? filteredOperations.slice(0, filter.limit)
+            : operations;
+
+        return limitedOperations.map(operation => ({
             hash: operation.hash,
             index: operation.index,
             timestamp: operation.timestamp,
@@ -1136,6 +1139,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     ) {
         const operationsApplied: Operation<A | BaseAction>[] = [];
         const signals: SignalResult[] = [];
+
         const documentStorageWithState = await this._addDocumentResultingStage(
             documentStorage,
             drive,
@@ -1193,12 +1197,15 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 }
 
                 try {
-                    const appliedResult = await this._performOperation(
-                        drive,
-                        documentId,
-                        document,
-                        nextOperation,
-                        skipHashValidation
+                    // runs operation on next available tick, to avoid blocking the main thread
+                    const appliedResult = await runAsap(() =>
+                        this._performOperation(
+                            drive,
+                            documentId,
+                            document,
+                            nextOperation,
+                            skipHashValidation
+                        )
                     );
                     document = appliedResult.document;
                     signals.push(...appliedResult.signals);

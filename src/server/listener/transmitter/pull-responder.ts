@@ -7,6 +7,7 @@ import { logger as defaultLogger } from '../../../utils/logger';
 import { OperationError } from '../../error';
 import {
     BaseDocumentDriveServer,
+    GetStrandsOptions,
     IOperationResult,
     Listener,
     ListenerRevision,
@@ -41,7 +42,7 @@ export type StrandUpdateGraphQL = Omit<StrandUpdate, 'operations'> & {
 };
 
 export interface IPullResponderTransmitter extends ITransmitter {
-    getStrands(since?: string): Promise<StrandUpdate[]>;
+    getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]>;
 }
 
 export class PullResponderTransmitter implements IPullResponderTransmitter {
@@ -59,11 +60,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         this.manager = manager;
     }
 
-    getStrands(since?: string | undefined): Promise<StrandUpdate[]> {
+    getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]> {
         return this.manager.getStrands(
             this.listener.driveId,
             this.listener.listenerId,
-            since
+            options
         );
     }
 
@@ -135,7 +136,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         driveId: string,
         url: string,
         listenerId: string,
-        since?: string // TODO add support for since
+        options?: GetStrandsOptions // TODO add support for since
     ): Promise<StrandUpdate[]> {
         const {
             system: {

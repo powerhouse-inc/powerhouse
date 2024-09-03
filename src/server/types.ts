@@ -237,6 +237,12 @@ export type DocumentDriveServerOptions = {
     removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
 };
 
+export type GetStrandsOptions = {
+    limit?: number;
+    since?: string;
+    fromRevision?: number;
+};
+
 export abstract class BaseDocumentDriveServer {
     /** Public methods **/
     abstract getDrives(): Promise<string[]>;
@@ -392,10 +398,7 @@ export abstract class BaseDocumentDriveServer {
     abstract getOperationData(
         driveId: string,
         syncId: string,
-        filter: {
-            since?: string;
-            fromRevision?: number;
-        },
+        filter: GetStrandsOptions,
         loadedDrive?: DocumentDriveDocument
     ): Promise<OperationUpdate[]>;
 
@@ -468,8 +471,9 @@ export abstract class BaseListenerManager {
     ): Promise<ITransmitter | undefined>;
 
     abstract getStrands(
+        driveId: string,
         listenerId: string,
-        since?: string
+        options?: GetStrandsOptions
     ): Promise<StrandUpdate[]>;
 
     abstract updateSynchronizationRevisions(

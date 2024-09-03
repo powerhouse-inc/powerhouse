@@ -10,9 +10,19 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
+// import setAsap from 'setasap';
 import { v4 as uuidv4 } from 'uuid';
 import { OperationError } from '../server/error';
 import { DocumentDriveStorage, DocumentStorage } from '../storage';
+import setAsap from './setAsap.js';
+
+export function runAsap<T>(method: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+        setAsap(() => {
+            method().then(resolve).catch(reject);
+        });
+    });
+}
 
 export function isDocumentDriveStorage(
     document: DocumentStorage

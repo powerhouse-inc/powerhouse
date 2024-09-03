@@ -8,6 +8,7 @@ import { OperationError } from '../error';
 import {
     BaseListenerManager,
     ErrorStatus,
+    GetStrandsOptions,
     Listener,
     ListenerState,
     ListenerUpdate,
@@ -45,7 +46,6 @@ function debounce<T extends unknown[], R>(
         });
     };
 }
-
 export class ListenerManager extends BaseListenerManager {
     static LISTENER_UPDATE_DELAY = 250;
 
@@ -478,7 +478,7 @@ export class ListenerManager extends BaseListenerManager {
     async getStrands(
         driveId: string,
         listenerId: string,
-        since?: string
+        options?: GetStrandsOptions
     ): Promise<StrandUpdate[]> {
         // fetch listenerState from listenerManager
         const listener = await this.getListener(driveId, listenerId);
@@ -493,46 +493,54 @@ export class ListenerManager extends BaseListenerManager {
             drive
         );
 
-        await Promise.all(
-            syncUnits.map(async syncUnit => {
-                if (syncUnit.revision < 0) {
-                    return;
-                }
-                const entry = listener.syncUnits.get(syncUnit.syncId);
-                if (entry && entry.listenerRev >= syncUnit.revision) {
-                    return;
+        const limit = options?.limit; // maximum number of operations to send across all sync units
+        let operationsCount = 0; // total amount of operations that have been retrieved
+
+        for (const syncUnit of syncUnits) {
+            if (limit && operationsCount >= limit) {
+                break;
+            }
+            if (syncUnit.revision < 0) {
+                continue;
+            }
+            const entry = listener.syncUnits.get(syncUnit.syncId);
+            if (entry && entry.listenerRev >= syncUnit.revision) {
+                continue;
+            }
+
+            const { documentId, driveId, scope, branch } = syncUnit;
+            try {
+                const operations = await this.drive.getOperationData(
+                    // DEAL WITH INVALID SYNC ID ERROR
+                    driveId,
+                    syncUnit.syncId,
+                    {
+                        since: options?.since,
+                        fromRevision:
+                            options?.fromRevision ?? entry?.listenerRev,
+                        limit: limit ? limit - operationsCount : undefined
+                    },
+                    drive
+                );
+
+                if (!operations.length) {
+                    continue;
                 }
 
-                const { documentId, driveId, scope, branch } = syncUnit;
-                try {
-                    const operations = await this.drive.getOperationData(
-                        // DEAL WITH INVALID SYNC ID ERROR
-                        driveId,
-                        syncUnit.syncId,
-                        {
-                            since,
-                            fromRevision: entry?.listenerRev
-                        },
-                        drive
-                    );
+                operationsCount += operations.length;
 
-                    if (!operations.length) {
-                        return;
-                    }
-
-                    strands.push({
-                        driveId,
-                        documentId,
-                        scope: scope as OperationScope,
-                        branch,
-                        operations
-                    });
-                } catch (error) {
-                    logger.error(error);
-                    return;
-                }
-            })
-        );
+                strands.push({
+                    driveId,
+                    documentId,
+                    scope: scope as OperationScope,
+                    branch,
+                    operations
+                });
+            } catch (error) {
+                logger.error(error);
+                continue;
+            }
+        }
 
         return strands;
     }
