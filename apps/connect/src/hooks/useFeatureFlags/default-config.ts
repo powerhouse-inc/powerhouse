@@ -3,9 +3,13 @@ export const FEATURE_FLAG_KEY_STORAGE = 'feature-flags-config';
 const ENABLED_EDITORS = import.meta.env.PH_CONNECT_ENABLED_EDITORS || undefined;
 const enabledEditors = ENABLED_EDITORS?.split(',');
 
-const DISABLED_EDITORS = import.meta.env.PH_CONNECT_DISABLED_EDITORS || undefined;
-const DEFAULT_DRIVES_URL = import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
+const DISABLED_EDITORS =
+    import.meta.env.PH_CONNECT_DISABLED_EDITORS || undefined;
+const DEFAULT_DRIVES_URL =
+    import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
 const disabledEditors = DISABLED_EDITORS?.split(',');
+console.log('Default');
+console.log(JSON.stringify(import.meta.env, null, 2));
 
 export interface FeatureFlag {
     defaultDrives?: {

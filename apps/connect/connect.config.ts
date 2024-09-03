@@ -1,5 +1,6 @@
-import { CLOUD, LOCAL, PUBLIC } from "@powerhousedao/design-system";
-
+import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
+console.log('Config');
+console.log(JSON.stringify(import.meta.env, null, 2));
 const DISABLE_ADD_PUBLIC_DRIVES =
     import.meta.env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES || undefined;
 const DISABLE_ADD_CLOUD_DRIVES =
@@ -20,12 +21,15 @@ const CLOUD_DRIVES_ENABLED =
 const PUBLIC_DRIVES_ENABLED =
     import.meta.env.PH_CONNECT_PUBLIC_DRIVES_ENABLED || undefined;
 
-const SEARCH_BAR_ENABLED = import.meta.env.PH_CONNECT_SEARCH_BAR_ENABLED || undefined;
+const SEARCH_BAR_ENABLED =
+    import.meta.env.PH_CONNECT_SEARCH_BAR_ENABLED || undefined;
 
 const HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS =
-    import.meta.env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS || 'false';
+    import.meta.env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS ||
+    'false';
 
-const PH_CONNECT_ROUTER_BASENAME = import.meta.env.PH_CONNECT_ROUTER_BASENAME || '/';
+const PH_CONNECT_ROUTER_BASENAME =
+    import.meta.env.PH_CONNECT_ROUTER_BASENAME || '/';
 
 const PH_CONNECT_SENTRY_DSN = import.meta.env.PH_CONNECT_SENTRY_DSN || '';
 const PH_CONNECT_SENTRY_ENV = import.meta.env.PH_CONNECT_SENTRY_ENV || 'dev';
