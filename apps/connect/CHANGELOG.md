@@ -1,3 +1,10 @@
+# [1.0.0-dev.84](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.83...v1.0.0-dev.84) (2024-09-03)
+
+
+### Features
+
+* fixed entrypoint script ([ffe04e7](https://github.com/powerhouse-inc/document-model-electron/commit/ffe04e761213640e2487e1da8f22639c873bcbc5))
+
 # [1.0.0-dev.83](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.82...v1.0.0-dev.83) (2024-09-03)
 
 
