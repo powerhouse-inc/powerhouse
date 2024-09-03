@@ -37,6 +37,7 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
     // TODO make local state optional
     pullFilter?: ListenerFilter;
     pullInterval?: number;
+    expectedDriveInfo?: DriveInfo;
 };
 
 export type CreateDocumentInput = CreateChildDocumentInput;
@@ -207,8 +208,33 @@ export type DefaultRemoteDriveInfo = DefaultRemoteDriveInput & {
     metadata?: DriveInfo;
 };
 
+export type RemoveOldRemoteDrivesOption =
+    | {
+          strategy: 'remove-all';
+      }
+    | {
+          strategy: 'preserve-all';
+      }
+    | {
+          strategy: 'remove-by-id';
+          ids: string[];
+      }
+    | {
+          strategy: 'remove-by-url';
+          urls: string[];
+      }
+    | {
+          strategy: 'preserve-by-id';
+          ids: string[];
+      }
+    | {
+          strategy: 'preserve-by-url';
+          urls: string[];
+      };
+
 export type DocumentDriveServerOptions = {
     defaultRemoteDrives?: Array<DefaultRemoteDriveInput>;
+    removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
 };
 
 export abstract class BaseDocumentDriveServer {

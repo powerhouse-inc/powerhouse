@@ -19,7 +19,7 @@ import type {
     State
 } from 'document-model/document';
 import { IBackOffOptions, backOff } from 'exponential-backoff';
-import { ConflictOperationError } from '../server/error';
+import { ConflictOperationError, DriveNotFoundError } from '../server/error';
 import type { SynchronizationUnitQuery } from '../server/types';
 import { logger } from '../utils/logger';
 import {
@@ -533,7 +533,7 @@ export class PrismaStorage implements IDriveStorage {
             return doc as DocumentDriveStorage;
         } catch (e) {
             logger.error(e);
-            throw new Error(`Drive with id ${id} not found`);
+            throw new DriveNotFoundError(id);
         }
     }
 

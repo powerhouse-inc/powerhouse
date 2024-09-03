@@ -1,20 +1,78 @@
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { DocumentModel as BaseDocumentModel } from 'document-model/document';
 import { module as DocumentModelLib } from 'document-model/document-model';
-import { describe, expect, it, vi } from 'vitest';
+import { v4 as uuid } from 'uuid';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
     DefaultRemoteDriveInput,
     DocumentDriveServer,
     DocumentDriveServerOptions
 } from '../src';
 import { MemoryStorage } from '../src/storage/memory';
+import { DriveInfo } from '../src/utils/graphql';
 
-const remoteDriveUrl =
-    'https://apps.powerhouse.io/develop/powerhouse/switchboard/d/drive-unit-test';
-const remoteDriveId = 'drive-unit-test';
+type DriveInput = {
+    url: string;
+    id: string;
+};
+const drive1: DriveInput = {
+    url: 'https://test.com/d/drive1',
+    id: 'drive1'
+};
 
-const defaultRemoteDriveInput: DefaultRemoteDriveInput = {
-    url: remoteDriveUrl,
+const drive2: DriveInput = {
+    url: 'https://test.com/d/drive2',
+    id: 'drive2'
+};
+
+const drive3: DriveInput = {
+    url: 'https://test.com/d/drive3',
+    id: 'drive3'
+};
+
+const drive4: DriveInput = {
+    url: 'https://test.com/d/drive4',
+    id: 'drive4'
+};
+
+const generateDrive = (id: string) => ({
+    url: `https://test.com/d/${id}`,
+    id: id,
+    name: `Drive ${id}`,
+    icon: undefined,
+    slug: id
+});
+
+const driveMetadataByUrl: Record<string, DriveInfo> = {
+    [drive1.url]: {
+        id: drive1.id,
+        name: 'Drive1',
+        icon: undefined,
+        slug: 'drive1'
+    },
+    [drive2.url]: {
+        id: drive2.id,
+        name: 'Drive2',
+        icon: undefined,
+        slug: 'drive2'
+    },
+    [drive3.url]: {
+        id: drive3.id,
+        name: 'Drive3',
+        icon: undefined,
+        slug: 'drive3'
+    },
+    [drive4.url]: {
+        id: drive4.id,
+        name: 'Drive4',
+        icon: undefined,
+        slug: 'drive4'
+    }
+};
+const getDefaultRemoteDriveInput = (
+    drive: DriveInput
+): DefaultRemoteDriveInput => ({
+    url: drive.url,
     options: {
         sharingType: 'PUBLIC',
         availableOffline: true,
@@ -22,7 +80,7 @@ const defaultRemoteDriveInput: DefaultRemoteDriveInput = {
             {
                 block: true,
                 callInfo: {
-                    data: remoteDriveUrl,
+                    data: drive.url,
                     name: 'switchboard-push',
                     transmitterType: 'SwitchboardPush'
                 },
@@ -40,55 +98,63 @@ const defaultRemoteDriveInput: DefaultRemoteDriveInput = {
         triggers: [],
         pullInterval: 3000
     }
-};
-
-const documentDriveServerOptions: DocumentDriveServerOptions = {
-    defaultRemoteDrives: [defaultRemoteDriveInput]
-};
+});
 
 vi.mock('graphql-request', () => ({
-    GraphQLClient: vi.fn().mockImplementation(() => ({
-        request: vi.fn().mockImplementation((query: string) => {
-            if (query.includes('query getDrive')) {
-                return Promise.resolve({
-                    drive: {
-                        id: 'drive-unit-test',
-                        name: 'DriveUnitTest',
-                        icon: null,
-                        slug: 'drive-unit-test'
+    GraphQLClient: vi
+        .fn()
+        .mockImplementation((driveUrl: keyof typeof driveMetadataByUrl) => {
+            // console.log('driveUrl', driveUrl);
+            return {
+                request: vi.fn().mockImplementation((query: string) => {
+                    if (query.includes('query getDrive')) {
+                        return Promise.resolve({
+                            drive: driveMetadataByUrl[driveUrl]
+                        });
                     }
-                });
-            }
 
-            if (query.includes('query strands')) {
-                return Promise.resolve({
-                    system: {
-                        sync: {
-                            strands: []
-                        }
+                    if (query.includes('query strands')) {
+                        return Promise.resolve({
+                            system: {
+                                sync: {
+                                    strands: []
+                                }
+                            }
+                        });
                     }
-                });
-            }
 
-            if (query.includes('mutation registerPullResponderListener')) {
-                return Promise.resolve({
-                    registerPullResponderListener: {
-                        listenerId: 'be3004e7-5ef9-4408-b05c-bb917b94f0e8'
+                    if (
+                        query.includes('mutation registerPullResponderListener')
+                    ) {
+                        return Promise.resolve({
+                            registerPullResponderListener: {
+                                listenerId: uuid()
+                            }
+                        });
                     }
-                });
-            }
 
-            return Promise.resolve({});
-        })
-    })),
+                    return Promise.resolve({});
+                })
+            };
+        }),
     gql: vi.fn().mockImplementation((...args) => args.join(''))
 }));
 
+const documentModels = [
+    DocumentModelLib,
+    ...Object.values(DocumentModelsLibs)
+] as BaseDocumentModel[];
+
 describe('default remote drives', () => {
-    const documentModels = [
-        DocumentModelLib,
-        ...Object.values(DocumentModelsLibs)
-    ] as BaseDocumentModel[];
+    const documentDriveServerOptions: DocumentDriveServerOptions = {
+        defaultRemoteDrives: [getDefaultRemoteDriveInput(drive1)]
+    };
+
+    afterEach(() => {
+        delete process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_STRATEGY;
+        delete process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_URLS;
+        delete process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_IDS;
+    });
 
     it('should add a remote default remote drives added in the config object', async () => {
         const server = new DocumentDriveServer(
@@ -105,7 +171,7 @@ describe('default remote drives', () => {
         const drives = await server.getDrives();
 
         expect(drives).toHaveLength(1);
-        expect(drives).toMatchObject([remoteDriveId]);
+        expect(drives).toMatchObject([drive1.id]);
     });
 
     it('should start defaultRemoteDrives with pending state', () => {
@@ -119,10 +185,10 @@ describe('default remote drives', () => {
 
         const defaultRemoteDriveConfig = server
             .getDefaultRemoteDrives()
-            .get(remoteDriveUrl);
+            .get(drive1.url);
 
         expect(defaultRemoteDriveConfig).toMatchObject({
-            url: remoteDriveUrl,
+            url: drive1.url,
             status: 'PENDING'
         });
     });
@@ -146,7 +212,7 @@ describe('default remote drives', () => {
         expect(mockCallback.mock.calls[0][0]).toBe('ADDING');
         expect(mockCallback.mock.calls[0][3]).toBe(undefined);
         expect(mockCallback.mock.calls[1][0]).toBe('SUCCESS');
-        expect(mockCallback.mock.calls[1][3]).toBe('drive-unit-test');
+        expect(mockCallback.mock.calls[1][3]).toBe(drive1.id);
     });
 
     it('should not add an existing remote drive', async () => {
@@ -176,6 +242,206 @@ describe('default remote drives', () => {
 
         expect(mockCallback).toHaveBeenCalledTimes(1);
         expect(mockCallback.mock.calls[0][0]).toBe('ALREADY_ADDED');
-        expect(mockCallback.mock.calls[0][3]).toBe('drive-unit-test');
+        expect(mockCallback.mock.calls[0][3]).toBe(drive1.id);
+    });
+});
+
+describe('remove old drives', () => {
+    const documentDriveServerOptions: DocumentDriveServerOptions = {
+        defaultRemoteDrives: [
+            getDefaultRemoteDriveInput(drive1),
+            getDefaultRemoteDriveInput(drive2),
+            getDefaultRemoteDriveInput(drive3),
+            getDefaultRemoteDriveInput(drive4)
+        ]
+    };
+
+    const generatePopulatedStorage = async () => {
+        const storage = new MemoryStorage();
+
+        const server1 = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            documentDriveServerOptions
+        );
+
+        await server1.initialize();
+        return storage;
+    };
+
+    it("should preserve all old drives when 'preserve-all' strategy is used", async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                removeOldRemoteDrives: {
+                    strategy: 'preserve-all'
+                }
+            }
+        );
+
+        await server.initialize();
+
+        const drives = await server.getDrives();
+        expect(drives).toHaveLength(4);
+        expect(drives).toMatchObject([
+            drive1.id,
+            drive2.id,
+            drive3.id,
+            drive4.id
+        ]);
+    });
+
+    it("should preserve only remote drives specified when 'preserve-by-id' strategy is used", async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                removeOldRemoteDrives: {
+                    strategy: 'preserve-by-id',
+                    ids: [drive1.id, drive2.id]
+                }
+            }
+        );
+
+        await server.initialize();
+
+        const drives = await server.getDrives();
+        expect(drives).toHaveLength(2);
+        expect(drives).toMatchObject([drive1.id, drive2.id]);
+    });
+
+    it("should preserve only remote drives specified when 'preserve-by-url' strategy is used", async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                removeOldRemoteDrives: {
+                    strategy: 'preserve-by-url',
+                    urls: [drive1.url, drive2.url]
+                }
+            }
+        );
+
+        await server.initialize();
+
+        const drives = await server.getDrives();
+        expect(drives).toHaveLength(2);
+        expect(drives).toMatchObject([drive1.id, drive2.id]);
+    });
+
+    it("should remove all remote drives when 'remove-all' strategy is used", async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                removeOldRemoteDrives: {
+                    strategy: 'remove-all'
+                }
+            }
+        );
+
+        await server.initialize();
+
+        const drives = await server.getDrives();
+        expect(drives).toHaveLength(0);
+    });
+
+    it("should remove only remote drives specified when 'remove-by-id' strategy is used", async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                removeOldRemoteDrives: {
+                    strategy: 'remove-by-id',
+                    ids: [drive1.id, drive2.id]
+                }
+            }
+        );
+
+        await server.initialize();
+
+        const drives = await server.getDrives();
+        console.log('drives', drives);
+        expect(drives).toHaveLength(2);
+        expect(drives).toMatchObject([drive3.id, drive4.id]);
+    });
+
+    it("should remove only remote drives specified when 'remove-by-url' strategy is used", async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                removeOldRemoteDrives: {
+                    strategy: 'remove-by-url',
+                    urls: [drive1.url, drive2.url]
+                }
+            }
+        );
+
+        await server.initialize();
+
+        const drives = await server.getDrives();
+        expect(drives).toHaveLength(2);
+        expect(drives).toMatchObject([drive3.id, drive4.id]);
+    });
+
+    it('should use env info if available (strategy + urls)', async () => {
+        process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_STRATEGY = 'remove-by-url';
+        process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_URLS = `${drive1.url},${drive2.url}`;
+
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined
+        );
+
+        await server.initialize();
+
+        const drives = await server.getDrives();
+        expect(drives).toHaveLength(2);
+        expect(drives).toMatchObject([drive3.id, drive4.id]);
+    });
+
+    it('should use env info if available (strategy + ids)', async () => {
+        process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_STRATEGY = 'remove-by-id';
+        process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_IDS = `${drive1.id},${drive2.id}`;
+
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined
+        );
+
+        await server.initialize();
+
+        const drives = await server.getDrives();
+        console.log('drives', drives);
+        expect(drives).toHaveLength(2);
+        expect(drives).toMatchObject([drive3.id, drive4.id]);
     });
 });

@@ -6,6 +6,7 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
+import { DriveNotFoundError } from '../server/error';
 import { SynchronizationUnitQuery } from '../server/types';
 import { mergeOperations } from '../utils';
 import { migrateDocumentOperationSigatures } from '../utils/migrations';
@@ -112,7 +113,7 @@ export class BrowserStorage implements IDriveStorage {
             this.buildKey(BrowserStorage.DRIVES_KEY, id)
         );
         if (!drive) {
-            throw new Error(`Drive with id ${id} not found`);
+            throw new DriveNotFoundError(id);
         }
         return drive;
     }

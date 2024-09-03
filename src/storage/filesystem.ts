@@ -17,6 +17,7 @@ import fs from 'fs/promises';
 import stringify from 'json-stringify-deterministic';
 import path from 'path';
 import sanitize from 'sanitize-filename';
+import { DriveNotFoundError } from '../server/error';
 import type { SynchronizationUnitQuery } from '../server/types';
 import { mergeOperations } from '../utils';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
@@ -199,7 +200,7 @@ export class FilesystemStorage implements IDriveStorage {
                 id
             )) as DocumentDriveStorage;
         } catch {
-            throw new Error(`Drive with id ${id} not found`);
+            throw new DriveNotFoundError(id);
         }
     }
 

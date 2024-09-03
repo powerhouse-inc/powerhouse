@@ -42,3 +42,12 @@ export class DriveAlreadyExistsError extends Error {
         this.driveId = driveId;
     }
 }
+
+export class DriveNotFoundError extends Error {
+    driveId: string;
+
+    constructor(driveId: string) {
+        super(`Drive with id ${driveId} not found`);
+        this.driveId = driveId;
+    }
+}

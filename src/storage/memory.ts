@@ -6,6 +6,7 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
+import { DriveNotFoundError } from '../server/error';
 import type { SynchronizationUnitQuery } from '../server/types';
 import { mergeOperations } from '../utils';
 import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from './types';
@@ -31,7 +32,7 @@ export class MemoryStorage implements IDriveStorage {
     async getDocument(driveId: string, id: string) {
         const drive = this.documents[driveId];
         if (!drive) {
-            throw new Error(`Drive with id ${driveId} not found`);
+            throw new DriveNotFoundError(driveId);
         }
         const document = drive[id];
         if (!document) {
@@ -102,7 +103,7 @@ export class MemoryStorage implements IDriveStorage {
 
     async deleteDocument(drive: string, id: string) {
         if (!this.documents[drive]) {
-            throw new Error(`Drive with id ${drive} not found`);
+            throw new DriveNotFoundError(drive);
         }
         delete this.documents[drive]![id];
     }
@@ -114,7 +115,7 @@ export class MemoryStorage implements IDriveStorage {
     async getDrive(id: string) {
         const drive = this.drives[id];
         if (!drive) {
-            throw new Error(`Drive with id ${id} not found`);
+            throw new DriveNotFoundError(id);
         }
         return drive;
     }
