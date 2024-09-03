@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react';
+import config from 'connect-config';
 import React from 'react';
 import {
     createRoutesFromChildren,
@@ -6,7 +7,6 @@ import {
     useLocation,
     useNavigationType,
 } from 'react-router-dom';
-import config from '../../connect.config';
 import { version } from '../../package.json';
 
 function initSenty() {
