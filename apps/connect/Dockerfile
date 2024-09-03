@@ -30,4 +30,5 @@ ARG BASE_PATH="/"
 ENV BASE_PATH=${BASE_PATH}
 COPY --from=builder /opt/app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
-ENTRYPOINT ["//usr/share/nginx/html/nginx.sh"]
+RUN chmod +x /usr/share/nginx/html/nginx.sh
+ENTRYPOINT ["/usr/share/nginx/html/nginx.sh"]
