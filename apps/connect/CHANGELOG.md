@@ -1,3 +1,10 @@
+# [1.0.0-dev.81](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.80...v1.0.0-dev.81) (2024-09-03)
+
+
+### Features
+
+* use script instead of inline nginx config ([39b0091](https://github.com/powerhouse-inc/document-model-electron/commit/39b00916965d8834be33b7eb9c24a4ae4162c267))
+
 # [1.0.0-dev.80](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.79...v1.0.0-dev.80) (2024-09-03)
 
 
