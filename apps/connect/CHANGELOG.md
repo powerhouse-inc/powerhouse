@@ -1,3 +1,10 @@
+# [1.0.0-dev.80](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.79...v1.0.0-dev.80) (2024-09-03)
+
+
+### Features
+
+* remove escape chars from dockerfile entrypoint ([58516f3](https://github.com/powerhouse-inc/document-model-electron/commit/58516f37c5c6c2a901d591600b04488ae17f938f))
+
 # [1.0.0-dev.79](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.78...v1.0.0-dev.79) (2024-09-03)
 
 
