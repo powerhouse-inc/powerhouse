@@ -1,3 +1,16 @@
+# [1.0.0-dev.78](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.77...v1.0.0-dev.78) (2024-09-03)
+
+
+### Bug Fixes
+
+* service worker app version ([1e63c59](https://github.com/powerhouse-inc/document-model-electron/commit/1e63c593f39bff4e83661d461ae67c68d2e75a79))
+
+
+### Features
+
+* added env vars for connect ([d4567a4](https://github.com/powerhouse-inc/document-model-electron/commit/d4567a4b1b4ce4d4b15dd8f12116b995c5df4dd2))
+* set package version as sentry release ([29ba7fe](https://github.com/powerhouse-inc/document-model-electron/commit/29ba7fecadd8ad3794c2abb22dca8ae79b7a70ae))
+
 # [1.0.0-dev.77](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.76...v1.0.0-dev.77) (2024-08-31)
 
 
