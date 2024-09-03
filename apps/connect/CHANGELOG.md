@@ -1,3 +1,10 @@
+# [1.0.0-dev.89](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.88...v1.0.0-dev.89) (2024-09-03)
+
+
+### Bug Fixes
+
+* fixed outdated config import ([beb5d71](https://github.com/powerhouse-inc/document-model-electron/commit/beb5d711a527090fdde84085295a6e775594c436))
+
 # [1.0.0-dev.88](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.87...v1.0.0-dev.88) (2024-09-03)
 
 
