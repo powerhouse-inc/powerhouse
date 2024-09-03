@@ -856,7 +856,7 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
         const limitedOperations = filter.limit
             ? filteredOperations.slice(0, filter.limit)
-            : operations;
+            : filteredOperations;
 
         return limitedOperations.map(operation => ({
             hash: operation.hash,

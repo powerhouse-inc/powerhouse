@@ -61,7 +61,9 @@ describe('Internal Listener', () => {
     });
 
     test('should call transmit function of listener and acknowledge', async () => {
-        const transmitFn = vitest.fn(() => Promise.resolve());
+        const transmitFn = vitest.fn(() => {
+            return Promise.resolve();
+        });
 
         const server = await buildServer({
             transmit: transmitFn,
