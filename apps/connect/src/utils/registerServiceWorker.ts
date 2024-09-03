@@ -21,7 +21,6 @@ type NEW_VERSION_AVAILABLE_MESSAGE = {
 };
 
 export type ServiceWorkerMessage = NEW_VERSION_AVAILABLE_MESSAGE;
-import config from "connect-config"
 
 class ServiceWorkerManager {
     ready = false;
@@ -65,7 +64,7 @@ class ServiceWorkerManager {
                                 if (
                                     event.data &&
                                     event.data.type ===
-                                    'NEW_VERSION_AVAILABLE' &&
+                                        'NEW_VERSION_AVAILABLE' &&
                                     event.data.requiresHardRefresh === true
                                 ) {
                                     if (this.debug) {
@@ -75,7 +74,7 @@ class ServiceWorkerManager {
                                 }
                             },
                         );
-                        console.log(import.meta.env.APP_VERSION);
+
                         if (navigator.serviceWorker.controller) {
                             navigator.serviceWorker.controller.postMessage({
                                 type: 'SET_APP_VERSION',
