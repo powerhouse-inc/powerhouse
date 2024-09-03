@@ -1,3 +1,10 @@
+# [1.0.0-dev.88](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.87...v1.0.0-dev.88) (2024-09-03)
+
+
+### Features
+
+* moved connect config to the src folder so it has access to the env vars ([84d4af7](https://github.com/powerhouse-inc/document-model-electron/commit/84d4af738b462175d6f6e59a09d200046e23793d))
+
 # [1.0.0-dev.87](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.86...v1.0.0-dev.87) (2024-09-03)
 
 
