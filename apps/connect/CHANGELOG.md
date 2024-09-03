@@ -1,3 +1,10 @@
+# [1.0.0-dev.79](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.78...v1.0.0-dev.79) (2024-09-03)
+
+
+### Features
+
+* pass build args as strings ([940a0f1](https://github.com/powerhouse-inc/document-model-electron/commit/940a0f16a6770c88095e0e151959fe3de1c5b275))
+
 # [1.0.0-dev.78](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.77...v1.0.0-dev.78) (2024-09-03)
 
 
