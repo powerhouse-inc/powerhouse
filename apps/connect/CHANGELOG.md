@@ -1,3 +1,10 @@
+# [1.0.0-dev.83](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.82...v1.0.0-dev.83) (2024-09-03)
+
+
+### Features
+
+* use script as entrypoint ([2652d51](https://github.com/powerhouse-inc/document-model-electron/commit/2652d51a0a9342dc28e4f8c52ee06280d0d555da))
+
 # [1.0.0-dev.82](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.81...v1.0.0-dev.82) (2024-09-03)
 
 
