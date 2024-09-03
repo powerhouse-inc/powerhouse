@@ -28,6 +28,10 @@ ARG PORT=80
 ENV PORT=${PORT}
 ARG BASE_PATH="/"
 ENV BASE_PATH=${BASE_PATH}
+ARG PH_CONNECT_SENTRY_DSN=""
+ENV PH_CONNECT_SENTRY_DSN=${PH_CONNECT_SENTRY_DSN}
+ARG PH_CONNECT_SENTRY_ENV=""
+ENV PH_CONNECT_SENTRY_ENV=${PH_CONNECT_SENTRY_ENV}
 COPY --from=builder /opt/app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 RUN chmod +x /usr/share/nginx/html/nginx.sh
