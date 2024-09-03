@@ -1,3 +1,10 @@
+# [1.0.0-dev.85](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.84...v1.0.0-dev.85) (2024-09-03)
+
+
+### Features
+
+* entrypoint script cleanup ([82c2c95](https://github.com/powerhouse-inc/document-model-electron/commit/82c2c9526a50dd79513dc8772863bdd8aef284c3))
+
 # [1.0.0-dev.84](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.83...v1.0.0-dev.84) (2024-09-03)
 
 
