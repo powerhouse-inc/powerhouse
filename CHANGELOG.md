@@ -1,3 +1,10 @@
+# [1.0.0-alpha.163](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.162...v1.0.0-alpha.163) (2024-09-04)
+
+
+### Features
+
+* enabled INITIAL_SYNC status ([c963d17](https://github.com/powerhouse-inc/design-system/commit/c963d179d92dfa093ab3ba7a05b7f75a060d8c7f))
+
 # [1.0.0-alpha.162](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.161...v1.0.0-alpha.162) (2024-08-13)
 
 
