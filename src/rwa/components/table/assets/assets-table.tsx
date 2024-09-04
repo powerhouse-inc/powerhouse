@@ -193,11 +193,6 @@ export function AssetsTable(props: AssetsTableProps) {
                     {column.key === 'name' && (
                         <RWATableCell>Totals</RWATableCell>
                     )}
-                    {column.key === 'notional' && (
-                        <RWATableCell key={column.key} className="text-right">
-                            {handleTableDatum(totalNotional)}
-                        </RWATableCell>
-                    )}
                     {column.key === 'purchaseProceeds' && (
                         <RWATableCell key={column.key} className="text-right">
                             {handleTableDatum(totalPurchaseProceeds)}
@@ -219,12 +214,10 @@ export function AssetsTable(props: AssetsTableProps) {
                         </RWATableCell>
                     )}
                     {column.key !== 'name' &&
-                        column.key !== 'notional' &&
                         column.key !== 'purchaseProceeds' &&
                         column.key !== 'salesProceeds' &&
                         column.key !== 'totalDiscount' &&
-                        column.key !== 'realizedSurplus' &&
-                        column.key !== 'currentValue' && (
+                        column.key !== 'realizedSurplus' && (
                             <RWATableCell></RWATableCell>
                         )}
                 </Fragment>
