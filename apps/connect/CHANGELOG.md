@@ -1,3 +1,10 @@
+# [1.0.0-dev.91](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.90...v1.0.0-dev.91) (2024-09-04)
+
+
+### Features
+
+* build service worker as part of the bundle ([50515ae](https://github.com/powerhouse-inc/document-model-electron/commit/50515aec4168d90c1c1572e7bfa52dc808b1a6c9))
+
 # [1.0.0-dev.90](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.89...v1.0.0-dev.90) (2024-09-04)
 
 
