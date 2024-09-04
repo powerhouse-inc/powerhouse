@@ -34,5 +34,6 @@ ARG PH_CONNECT_SENTRY_ENV=""
 ENV PH_CONNECT_SENTRY_ENV=${PH_CONNECT_SENTRY_ENV}
 COPY --from=builder /opt/app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
-RUN chmod +x /usr/share/nginx/html/nginx.sh
-ENTRYPOINT ["/usr/share/nginx/html/nginx.sh"]
+COPY nginx.sh /usr/share/nginx/nginx.sh
+RUN chmod +x /usr/share/nginx/nginx.sh
+ENTRYPOINT ["/usr/share/nginx/nginx.sh"]

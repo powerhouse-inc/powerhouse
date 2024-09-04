@@ -6,6 +6,7 @@ import {
     Modal,
 } from '@powerhousedao/design-system';
 import { useEffect, useState } from 'react';
+import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import serviceWorkerManager from 'src/utils/registerServiceWorker';
 import { v4 as uuid } from 'uuid';
@@ -20,13 +21,14 @@ type ComboboxOption = {
 };
 
 export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
+    const [connectConfig] = useConnectConfig();
     const { open, onClose } = props;
     const autoRegisterPullResponder =
         localStorage.getItem('AUTO_REGISTER_PULL_RESPONDER') !== 'false';
 
     console.log('autoRegisterPullResponder', autoRegisterPullResponder);
 
-    const [appVersion, setAppVersion] = useState('');
+    const [appVersion, setAppVersion] = useState(connectConfig.appVersion);
     const [serviceWorkerDebugMode, setServiceWorkerDebugMode] = useState({
         label: serviceWorkerManager.debug ? 'Enabled' : 'Disabled',
         value: serviceWorkerManager.debug,
@@ -125,7 +127,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                 <div className="flex text-sm font-bold">
                     <Icon name="Ring" size={22} />
                     <span className="ml-2">
-                        App Version: {import.meta.env.APP_VERSION}
+                        App Version: {connectConfig.appVersion}
                     </span>
                 </div>
 

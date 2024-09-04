@@ -1,5 +1,10 @@
 /// <reference lib="WebWorker" />
 
+import {
+    ServiceWorkerEvent,
+    ServiceWorkerManagerMessage,
+} from './utils/registerServiceWorker';
+
 const _self = self as unknown as ServiceWorkerGlobalScope;
 
 const VERSION_CACHE = 'version-cache';
@@ -13,29 +18,49 @@ _self.addEventListener('activate', (event: ExtendableEvent) => {
     event.waitUntil(_self.clients.claim());
 });
 
-interface SeriveWorkerMessage extends ExtendableMessageEvent {
-    data: {
-        type: string;
-        version: string;
-    };
-}
+export type NEW_VERSION_AVAILABLE_MESSAGE = {
+    type: 'NEW_VERSION_AVAILABLE';
+    requiresHardRefresh: boolean;
+};
+
+export type ServiceWorkerMessageData = NEW_VERSION_AVAILABLE_MESSAGE;
+
+export type ServiceWorkerMessage = ServiceWorkerEvent<ServiceWorkerMessageData>;
 
 interface VersionResponse {
     version: string;
     requiresHardRefresh: boolean;
 }
 
-_self.addEventListener('message', async (event: SeriveWorkerMessage) => {
-    if (event.data && event.data.type === 'SET_APP_VERSION') {
-        const cache = await caches.open(VERSION_CACHE);
-        await cache.put(VERSION_KEY, new Response(event.data.version));
+function postMessage(client: Client, message: ServiceWorkerMessageData) {
+    return client.postMessage(message);
+}
+
+_self.addEventListener('message', async event => {
+    const message =
+        'type' in event.data ? (event as ServiceWorkerManagerMessage) : null;
+    switch (message?.data.type) {
+        case 'SET_APP_VERSION': {
+            const cache = await caches.open(VERSION_CACHE);
+            await cache.put(VERSION_KEY, new Response(message.data.version));
+            break;
+        }
+        case 'NETWORK_STATUS': {
+            message.data.online
+                ? startCheckingForUpdates()
+                : stopCheckingForUpdates();
+            break;
+        }
+        default: {
+            console.warn('Unhandled message:', message);
+            break;
+        }
     }
 });
 
-async function checkForUpdates() {
+async function checkForUpdates(basePath: string) {
     try {
-        const scope = _self.registration.scope;
-        const response = await fetch(new URL('/version.json', scope), {
+        const response = await fetch(new URL('/version.json', basePath), {
             cache: 'no-store',
         });
         const newVersion = (await response.json()) as VersionResponse;
@@ -58,7 +83,7 @@ async function checkForUpdates() {
 
             const clients = await _self.clients.matchAll();
             clients.forEach(client => {
-                client.postMessage({
+                postMessage(client, {
                     type: 'NEW_VERSION_AVAILABLE',
                     requiresHardRefresh: newVersion.requiresHardRefresh,
                 });
@@ -72,5 +97,25 @@ async function checkForUpdates() {
     }
 }
 
-// Check for updates every minute
-setInterval(checkForUpdates, 5 * 1000); // 60 seconds
+let checkUpdatesInterval: number | undefined;
+function startCheckingForUpdates() {
+    stopCheckingForUpdates();
+    const basePath = _self.registration.scope;
+
+    // does the initial check right away
+    setTimeout(() => checkForUpdates(basePath), 0);
+
+    // Check for updates every 5 minutes
+    checkUpdatesInterval = setInterval(
+        () => checkForUpdates(basePath),
+        5 * 1000,
+    ) as unknown as number;
+}
+
+function stopCheckingForUpdates() {
+    if (checkUpdatesInterval) {
+        clearInterval(checkUpdatesInterval);
+    }
+}
+
+startCheckingForUpdates();

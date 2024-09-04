@@ -7,7 +7,6 @@ import {
     useLocation,
     useNavigationType,
 } from 'react-router-dom';
-import { version } from '../../package.json';
 
 function initSenty() {
     if (!config.sentry.dsn || config.sentry.dsn === '') {
@@ -17,7 +16,7 @@ function initSenty() {
     Sentry.init({
         dsn: config.sentry.dsn,
         environment: config.sentry.env,
-        release: version,
+        release: import.meta.env.SENTRY_RELEASE,
         integrations: [
             Sentry.extraErrorDataIntegration({ depth: 5 }),
             Sentry.reactRouterV6BrowserTracingIntegration({
