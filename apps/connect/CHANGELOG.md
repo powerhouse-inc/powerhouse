@@ -1,3 +1,10 @@
+# [1.0.0-dev.93](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.92...v1.0.0-dev.93) (2024-09-04)
+
+
+### Features
+
+* remove default drives info from connect + add default drives to reactor config ([1483e82](https://github.com/powerhouse-inc/document-model-electron/commit/1483e82d71baeafb5b660595c8857a7343d87dca))
+
 # [1.0.0-dev.92](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.91...v1.0.0-dev.92) (2024-09-04)
 
 
