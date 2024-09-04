@@ -2,14 +2,16 @@ import { DocumentDriveServerOptions } from 'document-drive/server';
 
 const DEFAULT_DRIVES_URL =
     import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
-const defaultDrivesUrl = DEFAULT_DRIVES_URL?.split(',');
+const defaultDrivesUrl = DEFAULT_DRIVES_URL
+    ? DEFAULT_DRIVES_URL.split(',')
+    : [];
 
 export const getReactorDefaultDrivesConfig = (): Pick<
     DocumentDriveServerOptions,
     'defaultRemoteDrives' | 'removeOldRemoteDrives'
 > => {
     const defaultDrives: DocumentDriveServerOptions['defaultRemoteDrives'] =
-        defaultDrivesUrl?.map(driveUrl => ({
+        defaultDrivesUrl.map(driveUrl => ({
             url: driveUrl,
             options: {
                 sharingType: 'PUBLIC',
@@ -40,9 +42,12 @@ export const getReactorDefaultDrivesConfig = (): Pick<
 
     return {
         defaultRemoteDrives: defaultDrives,
-        removeOldRemoteDrives: {
-            strategy: 'preserve-by-url',
-            urls: defaultDrivesUrl || [],
-        },
+        removeOldRemoteDrives:
+            defaultDrivesUrl.length > 0
+                ? {
+                      strategy: 'preserve-by-url',
+                      urls: defaultDrivesUrl,
+                  }
+                : { strategy: 'preserve-all' },
     };
 };
