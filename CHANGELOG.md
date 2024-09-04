@@ -1,3 +1,10 @@
+# [1.0.0-alpha.91](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.90...v1.0.0-alpha.91) (2024-09-04)
+
+
+### Features
+
+* enable return error from getSyncStatus ([#292](https://github.com/powerhouse-inc/document-drive/issues/292)) ([fcd3508](https://github.com/powerhouse-inc/document-drive/commit/fcd3508b587f9a890e2ee967fca26fd37da4bf1b))
+
 # [1.0.0-alpha.90](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.89...v1.0.0-alpha.90) (2024-09-04)
 
 
