@@ -1,3 +1,10 @@
+# [1.0.0-dev.98](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.97...v1.0.0-dev.98) (2024-09-04)
+
+
+### Features
+
+* fixed lint warning ([9c2bf2c](https://github.com/powerhouse-inc/document-model-electron/commit/9c2bf2cf24a626e19672c4795697cc079d35ee88))
+
 # [1.0.0-dev.97](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.96...v1.0.0-dev.97) (2024-09-04)
 
 
