@@ -5,6 +5,7 @@ import {
     SharingType,
     UiNode,
 } from '@powerhousedao/design-system';
+import { SynchronizationUnitNotFoundError } from 'document-drive';
 import {
     DriveInput,
     IDocumentDriveServer,
@@ -579,7 +580,10 @@ export function useDocumentDriveServer(
         ): Promise<SyncStatus | undefined> => {
             if (sharingType === LOCAL) return;
             try {
-                return server.getSyncStatus(syncId);
+                const syncStatus = server.getSyncStatus(syncId);
+                if (syncStatus instanceof SynchronizationUnitNotFoundError)
+                    return 'INITIAL_SYNC';
+                return syncStatus;
             } catch (error) {
                 console.error(error);
                 return ERROR;
