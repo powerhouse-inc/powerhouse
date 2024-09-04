@@ -1,3 +1,10 @@
+# [1.0.0-dev.95](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.94...v1.0.0-dev.95) (2024-09-04)
+
+
+### Bug Fixes
+
+* prevent sentry code injection ([85e4f7f](https://github.com/powerhouse-inc/document-model-electron/commit/85e4f7fdcf42276b6a104a4774a5bf89006cba6a))
+
 # [1.0.0-dev.94](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.93...v1.0.0-dev.94) (2024-09-04)
 
 
