@@ -1,7 +1,6 @@
 import { Document, ValidationError } from 'document-model/document';
 import {
     DocumentModel as DocumentModelClass,
-    Module,
     utils as documentModelUtils,
 } from 'document-model/document-model';
 
@@ -61,9 +60,7 @@ export const validateDocument = (document: Document) => {
     }, []);
 
     // modules validation
-    const modulesErrors = documentModelUtils.validateModules(
-        specs.modules as Module[],
-    );
+    const modulesErrors = documentModelUtils.validateModules(specs.modules);
 
     return [...initialStateErrors, ...schemaStateErrors, ...modulesErrors];
 };
