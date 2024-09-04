@@ -34,7 +34,10 @@ _self.addEventListener('message', async (event: SeriveWorkerMessage) => {
 
 async function checkForUpdates() {
     try {
-        const response = await fetch('/version.json', { cache: 'no-store' });
+        const scope = _self.registration.scope;
+        const response = await fetch(new URL('/version.json', scope), {
+            cache: 'no-store',
+        });
         const newVersion = (await response.json()) as VersionResponse;
         const cache = await caches.open(VERSION_CACHE);
         const cachedResponse = await cache.match(VERSION_KEY);

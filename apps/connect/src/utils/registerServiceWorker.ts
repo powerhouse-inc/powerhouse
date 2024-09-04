@@ -8,6 +8,8 @@ const serviceWorkerScriptPath = [
     .join('/')
     .replace(/\/{2,}/gm, '/');
 
+const serviceWorkerScope = connectConfig.routerBasename;
+
 type SET_APP_VERSION_MESSAGE = {
     type: 'SET_APP_VERSION';
     version: string;
@@ -41,7 +43,9 @@ class ServiceWorkerManager {
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker
-                    .register(serviceWorkerScriptPath)
+                    .register(serviceWorkerScriptPath, {
+                        scope: serviceWorkerScope,
+                    })
                     .then(registration => {
                         // Listen for messages from the service worker
                         if (this.debug) {
