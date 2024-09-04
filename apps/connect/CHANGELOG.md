@@ -1,3 +1,10 @@
+# [1.0.0-dev.94](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.93...v1.0.0-dev.94) (2024-09-04)
+
+
+### Features
+
+* preserve all remote drives if no default drives config is passed ([af45238](https://github.com/powerhouse-inc/document-model-electron/commit/af4523898d70b8eb79b6c34746cf1aaa15f91ee7))
+
 # [1.0.0-dev.93](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.92...v1.0.0-dev.93) (2024-09-04)
 
 
