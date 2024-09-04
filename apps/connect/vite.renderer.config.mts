@@ -28,7 +28,7 @@ const addToBundlePlugin = (
         requiresHardRefresh: file.requiresHardRefresh || false,
     };
 
-    console.log(versionManifest);
+    console.info(versionManifest);
 
     return {
         name: 'add-to-bundle',
@@ -127,6 +127,7 @@ export default defineConfig(({ mode }) => {
             sentryVitePlugin({
                 release: {
                     name: release,
+                    inject: false,
                 },
                 authToken,
                 org,
@@ -152,8 +153,8 @@ export default defineConfig(({ mode }) => {
                 output: {
                     // Ensure the service worker file goes to the root of the dist folder
                     entryFileNames: chunk => {
-                        return chunk.name === 'service-worker'
-                            ? 'service-worker.js'
+                        return ['service-worker'].includes(chunk.name)
+                            ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js';
                     },
                 },
