@@ -1,6 +1,7 @@
 import {
     CONFLICT,
     ERROR,
+    INITIAL_SYNC,
     MISSING,
     SUCCESS,
     SYNCING,
@@ -17,6 +18,7 @@ const syncIcons: Record<SyncStatus, IconName> = {
     CONFLICT: 'Error',
     MISSING: 'Circle',
     ERROR: 'Error',
+    INITIAL_SYNC: 'Syncing',
 };
 
 export type SyncStatusIconProps = Omit<
@@ -37,6 +39,14 @@ export function SyncStatusIcon(props: SyncStatusIconProps) {
     const icons = { ...syncIcons, ...overrideSyncIcons };
 
     const syncStatusIcons = {
+        [INITIAL_SYNC]: (
+            <Icon
+                size={16}
+                {...iconProps}
+                className={twMerge('text-blue-900', className)}
+                name={icons[INITIAL_SYNC]}
+            />
+        ),
         [SYNCING]: (
             <Icon
                 size={16}
