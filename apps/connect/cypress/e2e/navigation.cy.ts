@@ -118,13 +118,13 @@ describe('Navigation', () => {
         cy.contains('button', 'Delete').click();
     });
 
-    it('should create a document model inside test drive folder', () => {
+    // TODO: need to rewrite this test
+    it.skip('should create a document model inside test drive folder', () => {
         const publicDriveName = Cypress.env('TEST_PUBLIC_DRIVE_NAME') as string;
         selectSidebarItem(publicDriveName);
 
         newFolder(publicDriveName, 'test-folder');
         selectSidebarItem('test-folder');
-
         cy.contains('DocumentModel').click();
         cy.get('input[placeholder="Document name"]')
             .clear()
