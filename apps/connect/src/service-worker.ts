@@ -7,6 +7,9 @@ import {
 
 const _self = self as unknown as ServiceWorkerGlobalScope;
 
+const VERSION_CHECK_INTERVAL =
+    parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL as string) ||
+    5 * 60 * 1000; // 5 minutes;
 const VERSION_CACHE = 'version-cache';
 const VERSION_KEY = 'app-version';
 
@@ -60,7 +63,7 @@ _self.addEventListener('message', async event => {
 
 async function checkForUpdates(basePath: string) {
     try {
-        const response = await fetch(new URL('/version.json', basePath), {
+        const response = await fetch(new URL('./version.json', basePath), {
             cache: 'no-store',
         });
         const newVersion = (await response.json()) as VersionResponse;
@@ -108,7 +111,7 @@ function startCheckingForUpdates() {
     // Check for updates every 5 minutes
     checkUpdatesInterval = setInterval(
         () => checkForUpdates(basePath),
-        5 * 1000,
+        VERSION_CHECK_INTERVAL,
     ) as unknown as number;
 }
 
