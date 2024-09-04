@@ -1,3 +1,10 @@
+# [1.0.0-dev.92](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.91...v1.0.0-dev.92) (2024-09-04)
+
+
+### Bug Fixes
+
+* fixed bundle location ([fb12b37](https://github.com/powerhouse-inc/document-model-electron/commit/fb12b37e76b9be827b2c45affbb6efcffc3b7f53))
+
 # [1.0.0-dev.91](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.90...v1.0.0-dev.91) (2024-09-04)
 
 
