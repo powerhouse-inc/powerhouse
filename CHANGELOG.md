@@ -1,3 +1,10 @@
+# [1.0.0-alpha.90](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.89...v1.0.0-alpha.90) (2024-09-04)
+
+
+### Features
+
+* remove default drives env config ([#291](https://github.com/powerhouse-inc/document-drive/issues/291)) ([dab49f7](https://github.com/powerhouse-inc/document-drive/commit/dab49f7fb3e99d8b8f76ddc223849b5a7a27c21f))
+
 # [1.0.0-alpha.89](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.88...v1.0.0-alpha.89) (2024-09-03)
 
 
