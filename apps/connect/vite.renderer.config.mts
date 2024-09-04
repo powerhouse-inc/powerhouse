@@ -127,7 +127,7 @@ export default defineConfig(({ mode }) => {
             sentryVitePlugin({
                 release: {
                     name: release,
-                    inject: false,
+                    inject: false, // prevent it from injecting the release id in the service worker code, this is done in 'src/app/sentry.ts' instead
                 },
                 authToken,
                 org,

@@ -18,6 +18,7 @@ type ImportMetaEnv = {
   SENTRY_ORG: string
   SENTRY_PROJECT: string
   PH_CONNECT_ROUTER_BASENAME: string
+  PH_CONNECT_DEFAULT_DRIVES_URL: string
   PH_CONNECT_ENABLED_EDITORS: string
   PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES: string
   PH_CONNECT_SEARCH_BAR_ENABLED: string
@@ -39,7 +40,6 @@ type ImportMetaEnv = {
   PH_CONNECT_SENTRY_DSN: string
   PH_CONNECT_SENTRY_PROJECT: string
   PH_CONNECT_SENTRY_ENV: string
-  PH_CONNECT_DEFAULT_DRIVES_URL?: string
   // @user-defined-start
   /*
    *  You can use this section to explicitly extend the type definition of `import.meta.env`

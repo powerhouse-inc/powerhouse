@@ -38,7 +38,7 @@ if (!AppElement) {
     throw new Error('#app element not found!');
 }
 
-if (import.meta.env.MODE !== 'development') {
+if (import.meta.env.MODE === 'development') {
     window.documentEditorDebugTools = new DocumentEditorDebugTools();
 } else {
     serviceWorkerManager.registerServiceWorker(false);
