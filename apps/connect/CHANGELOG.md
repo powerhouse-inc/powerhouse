@@ -1,3 +1,10 @@
+# [1.0.0-dev.96](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.95...v1.0.0-dev.96) (2024-09-04)
+
+
+### Bug Fixes
+
+* activate service worker in prod ([ef00ce3](https://github.com/powerhouse-inc/document-model-electron/commit/ef00ce3cc2060479fcb5f0484021a6fa7f931e65))
+
 # [1.0.0-dev.95](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.94...v1.0.0-dev.95) (2024-09-04)
 
 
