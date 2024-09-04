@@ -27,7 +27,9 @@ const addToBundlePlugin = (
         version: file.version,
         requiresHardRefresh: file.requiresHardRefresh || false,
     };
+
     console.log(versionManifest);
+
     return {
         name: 'add-to-bundle',
 
@@ -152,7 +154,7 @@ export default defineConfig(({ mode }) => {
                     entryFileNames: chunk => {
                         return chunk.name === 'service-worker'
                             ? 'service-worker.js'
-                            : '[name].[hash].js';
+                            : 'assets/[name].[hash].js';
                     },
                 },
             },
