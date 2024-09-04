@@ -1,3 +1,10 @@
+# [1.0.0-dev.100](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.99...v1.0.0-dev.100) (2024-09-04)
+
+
+### Features
+
+* handle syncUnitStatus not found error ([c84db48](https://github.com/powerhouse-inc/document-model-electron/commit/c84db4814175aeb04afabf475be84d22cb55bf24))
+
 # [1.0.0-dev.99](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.98...v1.0.0-dev.99) (2024-09-04)
 
 
