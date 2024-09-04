@@ -1,3 +1,10 @@
+# [1.0.0-dev.90](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.89...v1.0.0-dev.90) (2024-09-04)
+
+
+### Features
+
+* scope the service worker to the basepath ([dbca2b4](https://github.com/powerhouse-inc/document-model-electron/commit/dbca2b46a418035794cd931d3b89f229bb34a04b))
+
 # [1.0.0-dev.89](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.88...v1.0.0-dev.89) (2024-09-03)
 
 
