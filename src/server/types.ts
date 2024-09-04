@@ -21,7 +21,7 @@ import type {
 } from 'document-model/document';
 import { Unsubscribe } from 'nanoevents';
 import { DriveInfo } from '../utils/graphql';
-import { OperationError } from './error';
+import { OperationError, SynchronizationUnitNotFoundError } from './error';
 import {
     ITransmitter,
     PullResponderTrigger,
@@ -361,7 +361,9 @@ export abstract class BaseDocumentDriveServer {
         options?: AddOperationOptions
     ): Promise<IOperationResult<DocumentDriveDocument>>;
 
-    abstract getSyncStatus(drive: string): SyncStatus;
+    abstract getSyncStatus(
+        syncUnitId: string
+    ): SyncStatus | SynchronizationUnitNotFoundError;
 
     /** Synchronization methods */
     abstract getSynchronizationUnits(

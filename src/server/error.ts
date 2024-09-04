@@ -51,3 +51,12 @@ export class DriveNotFoundError extends Error {
         this.driveId = driveId;
     }
 }
+
+export class SynchronizationUnitNotFoundError extends Error {
+    syncUnitId: string;
+
+    constructor(message: string, syncUnitId: string) {
+        super(message);
+        this.syncUnitId = syncUnitId;
+    }
+}

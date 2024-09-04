@@ -58,7 +58,8 @@ import { logger } from '../utils/logger';
 import {
     ConflictOperationError,
     DriveAlreadyExistsError,
-    OperationError
+    OperationError,
+    SynchronizationUnitNotFoundError
 } from './error';
 import { ListenerManager } from './listener/manager';
 import {
@@ -2304,11 +2305,15 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         return this.listenerStateManager.getListener(driveId, listenerId);
     }
 
-    getSyncStatus(drive: string): SyncStatus {
-        const status = this.syncStatus.get(drive);
+    getSyncStatus(
+        syncUnitId: string
+    ): SyncStatus | SynchronizationUnitNotFoundError {
+        const status = this.syncStatus.get(syncUnitId);
         if (!status) {
-            logger.error(`Sync status not found for drive ${drive}`);
-            throw new Error(`Sync status not found for drive ${drive}`);
+            return new SynchronizationUnitNotFoundError(
+                `Sync status not found for syncUnitId: ${syncUnitId}`,
+                syncUnitId
+            );
         }
         return this.getCombinedSyncUnitStatus(status);
     }
