@@ -1,3 +1,10 @@
+# [1.0.0-dev.97](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.96...v1.0.0-dev.97) (2024-09-04)
+
+
+### Features
+
+* fixed version fetch and added env var for version check interval ([415e3a4](https://github.com/powerhouse-inc/document-model-electron/commit/415e3a424e4932c10ef7829eee0246699f48209c))
+
 # [1.0.0-dev.96](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.95...v1.0.0-dev.96) (2024-09-04)
 
 
