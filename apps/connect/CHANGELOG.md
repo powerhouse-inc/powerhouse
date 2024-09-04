@@ -1,3 +1,15 @@
+# [1.0.0-dev.99](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.98...v1.0.0-dev.99) (2024-09-04)
+
+
+### Bug Fixes
+
+* added PH_CONNECT_ROUTER_BASENAME env variable to e2e github action ([1e104e7](https://github.com/powerhouse-inc/document-model-electron/commit/1e104e7d93f64df8a001e33a02143efd81d089b4))
+
+
+### Features
+
+* added PH_CONNECT_DEFAULT_DRIVES_URL env to e2e github action ([b308b03](https://github.com/powerhouse-inc/document-model-electron/commit/b308b03be38067e3dfd563b02707349208224c46))
+
 # [1.0.0-dev.98](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.97...v1.0.0-dev.98) (2024-09-04)
 
 
