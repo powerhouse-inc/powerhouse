@@ -84,6 +84,12 @@ export function useUiNodes() {
             ) as SharingType;
             const driveSyncStatus = await getSyncStatus(id, sharingType);
 
+            // TODO: rempve this after integration in design-system
+            const normalizedDriveSyncStatus =
+                driveSyncStatus === 'INITIAL_SYNC'
+                    ? 'SYNCING'
+                    : driveSyncStatus;
+
             const driveNode: UiDriveNode = {
                 id,
                 name,
@@ -92,7 +98,7 @@ export function useUiNodes() {
                 children: [],
                 nodeMap: {},
                 sharingType,
-                syncStatus: driveSyncStatus,
+                syncStatus: normalizedDriveSyncStatus,
                 availableOffline,
                 icon,
                 parentFolder: null,
@@ -106,7 +112,7 @@ export function useUiNodes() {
                     driveId: id,
                     parentFolder: n.parentFolder || id,
                     kind: n.kind.toUpperCase(),
-                    syncStatus: driveSyncStatus,
+                    syncStatus: normalizedDriveSyncStatus,
                     sharingType,
                 };
 
@@ -130,10 +136,18 @@ export function useUiNodes() {
 
             for await (const node of nodes) {
                 if (node.kind === FILE) {
-                    node.syncStatus = await getSyncStatus(
+                    const fileSyncStatus = await getSyncStatus(
                         node.synchronizationUnits[0].syncId,
                         sharingType,
                     );
+
+                    // TODO: rempve this after integration in design-system
+                    const normalizedFileSyncStatus =
+                        fileSyncStatus === 'INITIAL_SYNC'
+                            ? 'SYNCING'
+                            : fileSyncStatus;
+
+                    node.syncStatus = normalizedFileSyncStatus;
                 }
 
                 if (node.parentFolder === id) {

@@ -71,17 +71,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
             onContinue: () => {
                 clearStorage()
                     .then(() => {
-                        // resets the default drive to unloaded if it is defined
-                        setConfig(conf => ({
-                            ...conf,
-                            defaultDrives: conf.defaultDrives
-                                ? conf.defaultDrives.map(drive => ({
-                                      ...drive,
-                                      loaded: false,
-                                  }))
-                                : undefined,
-                        }));
-
                         // refreshes the page to reload default drive
                         onRefresh();
                     })

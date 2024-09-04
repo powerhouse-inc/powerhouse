@@ -17,6 +17,7 @@ import {
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
 import { logger } from 'src/services/logger';
+import { getReactorDefaultDrivesConfig } from 'src/utils/reactor';
 
 export default (
     documentModels: DocumentModel[],
@@ -28,6 +29,7 @@ export default (
         new FilesystemStorage(join(path, 'Document Drives')),
         new InMemoryCache(),
         new BaseQueueManager(1, 10),
+        { ...getReactorDefaultDrivesConfig() },
     );
 
     const promise = documentDrive
