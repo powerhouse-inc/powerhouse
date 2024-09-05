@@ -1,3 +1,10 @@
+# [1.0.0-alpha.164](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.163...v1.0.0-alpha.164) (2024-09-05)
+
+
+### Features
+
+* removed notional total ([a91de25](https://github.com/powerhouse-inc/design-system/commit/a91de2506e17815e88ce52688bf04c29f119ba43))
+
 # [1.0.0-alpha.163](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.162...v1.0.0-alpha.163) (2024-09-04)
 
 
