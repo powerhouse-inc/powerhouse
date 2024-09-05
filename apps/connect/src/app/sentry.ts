@@ -14,11 +14,6 @@ function initSenty() {
     }
 
     const release = import.meta.env.SENTRY_RELEASE;
-    // sets the sentry release id on the window object, this is needed as
-    // we prevent the sentry vite plugin from injecting it into the bundle
-    (window as unknown as { SENTRY_RELEASE: unknown }).SENTRY_RELEASE = {
-        id: release,
-    };
 
     Sentry.init({
         release,
