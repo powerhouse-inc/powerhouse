@@ -1,3 +1,10 @@
+# [1.0.0-dev.102](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.101...v1.0.0-dev.102) (2024-09-06)
+
+
+### Bug Fixes
+
+* revert nginx docker image change ([174b57c](https://github.com/powerhouse-inc/document-model-electron/commit/174b57cab2a063ab97614c10ec31e98406cdae65))
+
 # [1.0.0-dev.101](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.100...v1.0.0-dev.101) (2024-09-06)
 
 
