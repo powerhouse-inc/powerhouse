@@ -19,7 +19,7 @@ RUN npm install --frozen-lockfile --force
 RUN npm run build:web -- --base ${BASE_PATH}
 
 # Production image, copy all the files and run next
-FROM macbre/nginx-brotli:latest AS runner
+FROM georgjung/nginx-brotli:mainline AS runner
 
 ARG X_TAG
 WORKDIR /opt/app
