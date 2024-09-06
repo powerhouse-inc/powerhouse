@@ -1,3 +1,11 @@
+# [1.0.0-dev.101](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.100...v1.0.0-dev.101) (2024-09-06)
+
+
+### Features
+
+* activated brotli on nginx ([835cb76](https://github.com/powerhouse-inc/document-model-electron/commit/835cb760069d5753c46a0027397b2b2529169f9e))
+* updated nginx docker image ([f87d5c8](https://github.com/powerhouse-inc/document-model-electron/commit/f87d5c8244a396a87f1361a71565679a70372363))
+
 # [1.0.0-dev.100](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.99...v1.0.0-dev.100) (2024-09-04)
 
 
