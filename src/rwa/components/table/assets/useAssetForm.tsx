@@ -5,7 +5,7 @@ import {
     FormHookProps,
     RWATableSelect,
     RWATableTextInput,
-    convertToDateTimeLocalFormat,
+    convertToDateLocalFormat,
     handleTableDatum,
 } from '@/rwa';
 import { useMemo, useState } from 'react';
@@ -45,7 +45,7 @@ export function useAssetForm(
               spvId: item.spvId,
               name: item.name,
               maturity: item.maturity
-                  ? convertToDateTimeLocalFormat(item.maturity)
+                  ? convertToDateLocalFormat(item.maturity)
                   : null,
               ISIN: item.ISIN,
               CUSIP: item.CUSIP,
@@ -188,6 +188,7 @@ export function useAssetForm(
                             },
                         })}
                         name="maturity"
+                        inputType="date"
                     />
                 ),
             },

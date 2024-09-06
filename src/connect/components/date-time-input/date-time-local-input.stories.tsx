@@ -5,6 +5,12 @@ import { DateTimeLocalInput } from '.';
 const meta = {
     title: 'Connect/Components/Date Time Local Input',
     component: DateTimeLocalInput,
+    argTypes: {
+        inputType: {
+            control: 'radio',
+            options: ['datetime-local', 'date'],
+        },
+    },
 } satisfies Meta<typeof DateTimeLocalInput>;
 
 export default meta;
@@ -12,7 +18,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-    args: {},
+    args: {
+        inputType: 'datetime-local',
+    },
     render: function Wrapper(args) {
         const [value, setValue] = useState('');
 

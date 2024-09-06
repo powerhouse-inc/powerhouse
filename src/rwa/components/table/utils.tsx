@@ -17,23 +17,30 @@ export function isISODate(str: string) {
     return d instanceof Date && !isNaN(d.getTime()) && d.toISOString() === str;
 }
 
-export function handleDateInTable(maybeDate: string | Date) {
+export function handleDateInTable(
+    maybeDate: string | Date,
+    displayTime = true,
+) {
     const isDate = maybeDate instanceof Date || isISODate(maybeDate);
     if (isDate) {
         const dateStr =
             maybeDate instanceof Date ? maybeDate.toISOString() : maybeDate;
-        return formatDateForDisplay(dateStr);
+        return formatDateForDisplay(dateStr, displayTime);
     }
     return maybeDate;
 }
 
-export function handleTableDatum(datum: ItemData, decimalScale = 2) {
+export function handleTableDatum(
+    datum: ItemData,
+    decimalScale = 2,
+    displayTime = true,
+) {
     if (datum === null || datum === undefined) return '--';
 
     if (typeof datum === 'number')
         return <FormattedNumber value={datum} decimalScale={decimalScale} />;
 
-    return handleDateInTable(datum);
+    return handleDateInTable(datum, displayTime);
 }
 
 export function getItemById(

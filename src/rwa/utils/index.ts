@@ -16,8 +16,13 @@ export function convertToDateTimeLocalFormat(date: Date | string = new Date()) {
     return format(date, "yyyy-MM-dd'T'HH:mm");
 }
 
-export function formatDateForDisplay(date: Date | string) {
-    return format(date, 'yyyy/MM/dd, HH:mm:ss');
+export function convertToDateLocalFormat(date: Date | string = new Date()) {
+    return format(date, 'yyyy-MM-dd');
+}
+
+export function formatDateForDisplay(date: Date | string, displayTime = true) {
+    const formatString = displayTime ? 'yyyy/MM/dd, HH:mm:ss' : 'yyyy/MM/dd';
+    return format(date, formatString);
 }
 
 export function isAssetGroupTransactionType(
