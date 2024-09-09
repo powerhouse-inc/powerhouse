@@ -4,7 +4,7 @@ import {
 } from 'document-model-libs/document-drive';
 import { Action } from 'document-model/document';
 import { Unsubscribe, createNanoEvents } from 'nanoevents';
-import { generateUUID } from '../utils';
+import { generateUUID, runAsap } from '../utils';
 import { logger } from '../utils/logger';
 import {
     IJob,
@@ -214,9 +214,7 @@ export class BaseQueueManager implements IQueueManager {
         const retry =
             _timeout > 0
                 ? (fn: () => void) => setTimeout(fn, _timeout)
-                : typeof window === 'undefined'
-                  ? setImmediate
-                  : (fn: () => void) => setTimeout(fn, _timeout);
+                : runAsap;
         retry(() => this.processNextJob());
     }
 
