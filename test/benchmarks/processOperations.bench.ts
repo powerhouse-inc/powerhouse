@@ -74,6 +74,9 @@ vi.mock(import('graphql-request'), () => ({
     gql: vi.fn().mockImplementation((...args) => args.join(''))
 }));
 
+const ITERATIONS = 10;
+const WARMUP = 5;
+
 describe('Process Operations', () => {
     const defaultRemoteDrives: DefaultRemoteDriveInput[] = [
         {
@@ -139,62 +142,82 @@ describe('Process Operations', () => {
         });
     }
 
-    bench('blocking', () => {
-        return new Promise<void>((resolve, reject) => {
-            processStrands(null, resolve, reject);
-        });
-    });
+    bench(
+        'blocking',
+        () => {
+            return new Promise<void>((resolve, reject) => {
+                processStrands(null, resolve, reject);
+            });
+        },
+        { iterations: ITERATIONS, warmupIterations: WARMUP }
+    );
 
     const setImmediate = RunAsap.useSetImmediate;
-    bench.skipIf(setImmediate instanceof Error)('setImmediate', () => {
-        return new Promise<void>((resolve, reject) => {
-            processStrands(
-                setImmediate as RunAsap.RunAsap<unknown>,
-                resolve,
-                reject
-            );
-        });
-    });
+    bench.skipIf(setImmediate instanceof Error)(
+        'setImmediate',
+        () => {
+            return new Promise<void>((resolve, reject) => {
+                processStrands(
+                    setImmediate as RunAsap.RunAsap<unknown>,
+                    resolve,
+                    reject
+                );
+            });
+        },
+        { iterations: ITERATIONS, warmupIterations: WARMUP }
+    );
 
     const messageChannel = RunAsap.useMessageChannel;
-    bench.skipIf(messageChannel instanceof Error)('MessageChannel', () => {
-        return new Promise<void>((resolve, reject) => {
-            processStrands(
-                messageChannel as RunAsap.RunAsap<unknown>,
-                resolve,
-                reject
-            );
-        });
-    });
+    bench.skipIf(messageChannel instanceof Error)(
+        'MessageChannel',
+        () => {
+            return new Promise<void>((resolve, reject) => {
+                processStrands(
+                    messageChannel as RunAsap.RunAsap<unknown>,
+                    resolve,
+                    reject
+                );
+            });
+        },
+        { iterations: ITERATIONS, warmupIterations: WARMUP }
+    );
 
     const postMessage = RunAsap.usePostMessage;
-    bench.skipIf(postMessage instanceof Error)('window.postMessage', () => {
-        return new Promise<void>((resolve, reject) => {
-            processStrands(
-                postMessage as RunAsap.RunAsap<unknown>,
-                resolve,
-                reject
-            );
-        });
-    });
+    bench.skipIf(postMessage instanceof Error)(
+        'window.postMessage',
+        () => {
+            return new Promise<void>((resolve, reject) => {
+                processStrands(
+                    postMessage as RunAsap.RunAsap<unknown>,
+                    resolve,
+                    reject
+                );
+            });
+        },
+        { iterations: ITERATIONS, warmupIterations: WARMUP }
+    );
 
     // TODO: not working, maybe timers issue?
     // const setTimeout = RunAsap.useSetTimeout;
-    // bench.skipIf(setTimeout instanceof Error)('setTimeout', () => {
-    //     vi.runAllTimers();
-    //     return new Promise<void>((resolve, reject) => {
-    //         processStrands(
-    //             task => {
-    //                 vi.runAllTimers();
-    //                 vi.runAllTicks();
-    //                 const abort = setTimeout(task);
-    //                 vi.runAllTimers();
-    //                 vi.runAllTicks();
-    //                 return abort;
-    //             },
-    //             resolve,
-    //             reject
-    //         );
-    //     });
-    // });
+    // bench.skipIf(setTimeout instanceof Error)(
+    //     'setTimeout',
+    //     () => {
+    //         vi.runAllTimers();
+    //         return new Promise<void>((resolve, reject) => {
+    //             processStrands(
+    //                 task => {
+    //                     vi.runAllTimers();
+    //                     vi.runAllTicks();
+    //                     const abort = setTimeout(task);
+    //                     vi.runAllTimers();
+    //                     vi.runAllTicks();
+    //                     return abort;
+    //                 },
+    //                 resolve,
+    //                 reject
+    //             );
+    //         });
+    //     },
+    //     { iterations: ITERATIONS, warmupIterations: WARMUP }
+    // );
 });
