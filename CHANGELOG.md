@@ -1,3 +1,21 @@
+# [1.0.0-alpha.92](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.91...v1.0.0-alpha.92) (2024-09-09)
+
+
+### Bug Fixes
+
+* fixed test timers ([05b12db](https://github.com/powerhouse-inc/document-drive/commit/05b12db865827436069c2266c61e29762068c6d4))
+
+
+### Features
+
+* added config support to set task queue method ([5575c60](https://github.com/powerhouse-inc/document-drive/commit/5575c60694dc0a41f839c78a00bcead9836325b9))
+* added queueing to triggerUpdate ([809bf43](https://github.com/powerhouse-inc/document-drive/commit/809bf430f9cb00a4672fe1d24c20034cb475f2dc))
+* handle old remote drives ([#284](https://github.com/powerhouse-inc/document-drive/issues/284)) ([562c5b2](https://github.com/powerhouse-inc/document-drive/commit/562c5b2248d8c73f2d887b30c82973c6004e3ee9))
+* iterate through strands and queue macro tasks for performOperation ([1978899](https://github.com/powerhouse-inc/document-drive/commit/197889984e9a46d594275180b8407af3098986c4))
+* remove env support from default-drives-manager ([a8f7aae](https://github.com/powerhouse-inc/document-drive/commit/a8f7aae4b22e8e44773bda3e3dd54338cc72f68a))
+* updated document model dep ([c8b9dfb](https://github.com/powerhouse-inc/document-drive/commit/c8b9dfbb14296358f34d75789c14ee98e1be393b))
+* use runAsap when processing jobs on the queue ([ac671aa](https://github.com/powerhouse-inc/document-drive/commit/ac671aa9acd9c07f087aa5ebe88c4faa1ab54c29))
+
 # [1.0.0-alpha.91](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.90...v1.0.0-alpha.91) (2024-09-04)
 
 
