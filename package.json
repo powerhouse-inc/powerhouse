@@ -35,7 +35,7 @@
         "test:watch": "vitest watch"
     },
     "peerDependencies": {
-        "document-model": "^1.7.0",
+        "document-model": "^1.8.0",
         "document-model-libs": "^1.57.0"
     },
     "optionalDependencies": {

@@ -197,27 +197,14 @@ describe('Process Operations', () => {
         { iterations: ITERATIONS, warmupIterations: WARMUP }
     );
 
-    // TODO: not working, maybe timers issue?
-    // const setTimeout = RunAsap.useSetTimeout;
-    // bench.skipIf(setTimeout instanceof Error)(
-    //     'setTimeout',
-    //     () => {
-    //         vi.runAllTimers();
-    //         return new Promise<void>((resolve, reject) => {
-    //             processStrands(
-    //                 task => {
-    //                     vi.runAllTimers();
-    //                     vi.runAllTicks();
-    //                     const abort = setTimeout(task);
-    //                     vi.runAllTimers();
-    //                     vi.runAllTicks();
-    //                     return abort;
-    //                 },
-    //                 resolve,
-    //                 reject
-    //             );
-    //         });
-    //     },
-    //     { iterations: ITERATIONS, warmupIterations: WARMUP }
-    // );
+    const setTimeout = RunAsap.useSetTimeout;
+    bench.skipIf(setTimeout instanceof Error)(
+        'setTimeout',
+        () => {
+            return new Promise<void>((resolve, reject) => {
+                processStrands(setTimeout, resolve, reject);
+            });
+        },
+        { iterations: ITERATIONS, warmupIterations: WARMUP }
+    );
 });
