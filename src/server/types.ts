@@ -20,6 +20,7 @@ import type {
     State
 } from 'document-model/document';
 import { Unsubscribe } from 'nanoevents';
+import { RunAsap } from '../utils';
 import { DriveInfo } from '../utils/graphql';
 import { OperationError, SynchronizationUnitNotFoundError } from './error';
 import {
@@ -235,6 +236,12 @@ export type RemoveOldRemoteDrivesOption =
 export type DocumentDriveServerOptions = {
     defaultRemoteDrives?: Array<DefaultRemoteDriveInput>;
     removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
+    /* method to queue heavy tasks that might block the event loop.
+     * If set to null then it will queued as micro task.
+     * Defaults to the most appropriate method according to the system
+     */
+    taskQueueMethod?: RunAsap.RunAsap<unknown> | null;
+    listenerManager?: ListenerManagerOptions;
 };
 
 export type GetStrandsOptions = {
@@ -435,8 +442,17 @@ export abstract class BaseDocumentDriveServer {
     ): Promise<PullResponderTrigger>;
 }
 
+export type ListenerManagerOptions = {
+    sequentialUpdates?: boolean;
+};
+
+export const DefaultListenerManagerOptions = {
+    sequentialUpdates: true
+};
+
 export abstract class BaseListenerManager {
     protected drive: BaseDocumentDriveServer;
+    protected options: ListenerManagerOptions;
     protected listenerState = new Map<string, Map<string, ListenerState>>();
     protected transmitters: Record<
         DocumentDriveState['id'],
@@ -445,10 +461,12 @@ export abstract class BaseListenerManager {
 
     constructor(
         drive: BaseDocumentDriveServer,
-        listenerState = new Map<string, Map<string, ListenerState>>()
+        listenerState = new Map<string, Map<string, ListenerState>>(),
+        options: ListenerManagerOptions = DefaultListenerManagerOptions
     ) {
         this.drive = drive;
         this.listenerState = listenerState;
+        this.options = { ...DefaultListenerManagerOptions, ...options };
     }
 
     abstract initDrive(drive: DocumentDriveDocument): Promise<void>;

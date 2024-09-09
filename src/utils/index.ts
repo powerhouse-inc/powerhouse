@@ -14,15 +14,11 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { OperationError } from '../server/error';
 import { DocumentDriveStorage, DocumentStorage } from '../storage';
-import setAsap from './setAsap.js';
+import { RunAsap } from './run-asap';
+export * from './run-asap';
 
-export function runAsap<T>(method: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-        setAsap(() => {
-            method().then(resolve).catch(reject);
-        });
-    });
-}
+export const runAsap = RunAsap.runAsap;
+export const runAsapAsync = RunAsap.runAsapAsync;
 
 export function isDocumentDriveStorage(
     document: DocumentStorage

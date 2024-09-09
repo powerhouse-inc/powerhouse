@@ -496,16 +496,17 @@ export class ListenerManager extends BaseListenerManager {
         const limit = options?.limit; // maximum number of operations to send across all sync units
         let operationsCount = 0; // total amount of operations that have been retrieved
 
-        for (const syncUnit of syncUnits) {
+        const tasks = syncUnits.map(syncUnit => async () => {
             if (limit && operationsCount >= limit) {
-                break;
+                // break;
+                return;
             }
             if (syncUnit.revision < 0) {
-                continue;
+                return;
             }
             const entry = listener.syncUnits.get(syncUnit.syncId);
             if (entry && entry.listenerRev >= syncUnit.revision) {
-                continue;
+                return;
             }
 
             const { documentId, driveId, scope, branch } = syncUnit;
@@ -524,7 +525,7 @@ export class ListenerManager extends BaseListenerManager {
                 );
 
                 if (!operations.length) {
-                    continue;
+                    return;
                 }
 
                 operationsCount += operations.length;
@@ -538,8 +539,16 @@ export class ListenerManager extends BaseListenerManager {
                 });
             } catch (error) {
                 logger.error(error);
-                continue;
+                return;
             }
+        });
+
+        if (this.options.sequentialUpdates) {
+            for (const task of tasks) {
+                await task();
+            }
+        } else {
+            await Promise.all(tasks.map(task => task()));
         }
 
         return strands;

@@ -212,10 +212,12 @@ export class BaseQueueManager implements IQueueManager {
     private retryNextJob(timeout?: number) {
         const _timeout = timeout !== undefined ? timeout : this.timeout;
         const retry =
-            _timeout === 0 && typeof setImmediate !== 'undefined'
-                ? setImmediate
-                : (fn: () => void) => setTimeout(fn, _timeout);
-        return retry(() => this.processNextJob());
+            _timeout > 0
+                ? (fn: () => void) => setTimeout(fn, _timeout)
+                : typeof window === 'undefined'
+                  ? setImmediate
+                  : (fn: () => void) => setTimeout(fn, _timeout);
+        retry(() => this.processNextJob());
     }
 
     private async findFirstNonEmptyQueue(

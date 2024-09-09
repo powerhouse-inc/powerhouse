@@ -41,7 +41,13 @@ import type {
     DocumentStorage,
     IDriveStorage
 } from '../storage/types';
-import { generateUUID, isBefore, isDocumentDrive, runAsap } from '../utils';
+import {
+    generateUUID,
+    isBefore,
+    isDocumentDrive,
+    RunAsap,
+    runAsapAsync
+} from '../utils';
 import { DefaultDrivesManager } from '../utils/default-drives-manager';
 import {
     attachBranch,
@@ -73,6 +79,7 @@ import {
 import {
     AddOperationOptions,
     BaseDocumentDriveServer,
+    DefaultListenerManagerOptions,
     DocumentDriveServerOptions,
     DriveEvents,
     GetDocumentOptions,
@@ -113,6 +120,8 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
     private defaultDrivesManager: DefaultDrivesManager;
 
+    protected options: Required<DocumentDriveServerOptions>;
+
     constructor(
         documentModels: DocumentModel[],
         storage: IDriveStorage = new MemoryStorage(),
@@ -121,7 +130,27 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
         options?: DocumentDriveServerOptions
     ) {
         super();
-        this.listenerStateManager = new ListenerManager(this);
+        this.options = {
+            defaultRemoteDrives: [],
+            removeOldRemoteDrives: {
+                strategy: 'preserve-all'
+            },
+            ...options,
+            listenerManager: {
+                ...DefaultListenerManagerOptions,
+                ...options?.listenerManager
+            },
+            taskQueueMethod:
+                options?.taskQueueMethod === undefined
+                    ? RunAsap.runAsap
+                    : options.taskQueueMethod
+        };
+
+        this.listenerStateManager = new ListenerManager(
+            this,
+            undefined,
+            options?.listenerManager
+        );
         this.documentModels = documentModels;
         this.storage = storage;
         this.cache = cache;
@@ -561,6 +590,11 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
     }
 
     private async _initialize() {
+        await this.queueManager.init(this.queueDelegate, error => {
+            logger.error(`Error initializing queue manager`, error);
+            errors.push(error);
+        });
+
         try {
             await this.defaultDrivesManager.removeOldremoteDrives();
         } catch (error) {
@@ -575,11 +609,6 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
                 errors.push(error as Error);
             });
         }
-
-        await this.queueManager.init(this.queueDelegate, error => {
-            logger.error(`Error initializing queue manager`, error);
-            errors.push(error);
-        });
 
         await this.defaultDrivesManager.initializeDefaultRemoteDrives();
 
@@ -1198,15 +1227,18 @@ export class DocumentDriveServer extends BaseDocumentDriveServer {
 
                 try {
                     // runs operation on next available tick, to avoid blocking the main thread
-                    const appliedResult = await runAsap(() =>
+                    const taskQueueMethod = this.options.taskQueueMethod;
+                    const task = () =>
                         this._performOperation(
                             drive,
                             documentId,
                             document,
                             nextOperation,
                             skipHashValidation
-                        )
-                    );
+                        );
+                    const appliedResult = await (taskQueueMethod
+                        ? runAsapAsync(task, taskQueueMethod)
+                        : task());
                     document = appliedResult.document;
                     signals.push(...appliedResult.signals);
                     operationsApplied.push(appliedResult.operation);

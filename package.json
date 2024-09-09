@@ -65,9 +65,10 @@
         "@types/uuid": "^9.0.8",
         "@typescript-eslint/eslint-plugin": "^6.21.0",
         "@typescript-eslint/parser": "^6.21.0",
+        "@vitest/browser": "^2.0.5",
         "@vitest/coverage-v8": "^2.0.5",
         "document-model": "^1.7.0",
-        "document-model-libs": "^1.70.0",
+        "document-model-libs": "^1.83.0",
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "fake-indexeddb": "^5.0.2",
@@ -80,7 +81,8 @@
         "sequelize": "^6.37.2",
         "sqlite3": "^5.1.7",
         "typescript": "^5.5.3",
-        "vitest": "^2.0.5"
+        "vitest": "^2.0.5",
+        "webdriverio": "^9.0.9"
     },
     "packageManager": "pnpm@9.1.4+sha256.30a1801ac4e723779efed13a21f4c39f9eb6c9fbb4ced101bce06b422593d7c9"
 }
