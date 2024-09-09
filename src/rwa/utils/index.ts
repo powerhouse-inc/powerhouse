@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { assetGroupTransactions } from '../constants';
 import {
     Asset,
@@ -21,8 +22,11 @@ export function convertToDateLocalFormat(date: Date | string = new Date()) {
 }
 
 export function formatDateForDisplay(date: Date | string, displayTime = true) {
-    const formatString = displayTime ? 'yyyy/MM/dd, HH:mm:ss' : 'yyyy/MM/dd';
-    return format(date, formatString);
+    const formatString = displayTime
+        ? 'yyyy/MM/dd, HH:mm:ss zzz'
+        : 'yyyy/MM/dd';
+
+    return formatInTimeZone(date, 'UTC', formatString);
 }
 
 export function isAssetGroupTransactionType(

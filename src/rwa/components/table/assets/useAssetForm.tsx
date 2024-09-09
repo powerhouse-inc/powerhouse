@@ -6,6 +6,7 @@ import {
     RWATableSelect,
     RWATableTextInput,
     convertToDateLocalFormat,
+    formatDateForDisplay,
     handleTableDatum,
 } from '@/rwa';
 import { useMemo, useState } from 'react';
@@ -53,7 +54,7 @@ export function useAssetForm(
           }
         : createDefaultValues;
 
-    const { submit, reset, register, control, formState } = useSubmit({
+    const { submit, reset, register, control, formState, watch } = useSubmit({
         operation,
         createDefaultValues,
         editDefaultValues,
@@ -100,6 +101,11 @@ export function useAssetForm(
             operation,
         ],
     );
+
+    const maturityInputValue =
+        operation === 'view'
+            ? item?.maturity
+            : watch('maturity') || item?.maturity;
 
     const inputs = useMemo(
         () => [
@@ -191,6 +197,9 @@ export function useAssetForm(
                         inputType="date"
                     />
                 ),
+                inputLabel: maturityInputValue
+                    ? formatDateForDisplay(maturityInputValue, true)
+                    : null,
             },
             {
                 label: 'Asset Type',
@@ -242,6 +251,7 @@ export function useAssetForm(
             ...derivedInputsToDisplay,
         ],
         [
+            maturityInputValue,
             derivedInputsToDisplay,
             register,
             operation,

@@ -4,6 +4,7 @@ import { twJoin } from 'tailwind-merge';
 type Input = {
     label: string;
     Input: ComponentType;
+    inputLabel?: string | null;
 };
 type Props = {
     inputs: Input[];
@@ -12,7 +13,7 @@ export function FormInputs(props: Props) {
     const { inputs } = props;
     return (
         <div className="bg-white text-xs font-medium">
-            {inputs.map(({ label, Input }, index) => (
+            {inputs.map(({ label, Input, inputLabel }, index) => (
                 <div
                     key={label}
                     className={twJoin(
@@ -23,6 +24,11 @@ export function FormInputs(props: Props) {
                     <div>{label}</div>
                     <div className="h-max py-2 text-gray-900" key={index}>
                         <Input />
+                        {inputLabel && (
+                            <div className="text-left italic text-gray-500">
+                                {inputLabel}
+                            </div>
+                        )}
                     </div>
                 </div>
             ))}

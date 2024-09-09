@@ -12,6 +12,7 @@ import {
     calculateUnitPrice,
     convertToDateTimeLocalFormat,
     feesTransactions,
+    formatDateForDisplay,
     getFixedIncomeAssets,
     groupTransactionTypeLabels,
     makeFixedIncomeOptionLabel,
@@ -217,6 +218,9 @@ export function useGroupTransactionForm(
         [serviceProviderFeeTypes, accounts],
     );
 
+    const entryTimeInputValue =
+        watch('entryTime') || formState.defaultValues?.entryTime;
+
     const inputs = [
         {
             label: 'Transaction Type',
@@ -243,6 +247,9 @@ export function useGroupTransactionForm(
                     name="entryTime"
                 />
             ),
+            inputLabel: entryTimeInputValue
+                ? formatDateForDisplay(new Date(entryTimeInputValue))
+                : null,
         },
         isFeesTransaction
             ? {
