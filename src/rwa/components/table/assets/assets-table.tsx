@@ -28,7 +28,12 @@ const columns = [
         label: 'Purchase Date',
         allowSorting: true,
     },
-    { key: 'maturity' as const, label: 'Maturity', allowSorting: true },
+    {
+        key: 'maturity' as const,
+        label: 'Maturity',
+        allowSorting: true,
+        displayTime: false,
+    },
     {
         key: 'notional' as const,
         label: 'Notional',

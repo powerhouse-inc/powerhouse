@@ -115,7 +115,7 @@ export function Table<
                                         handleTableDatum(
                                             tableItem[column.key],
                                             column.decimalScale,
-                                            false,
+                                            column.displayTime,
                                         )}
                                 </RWATableCell>
                             )}

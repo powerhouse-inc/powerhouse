@@ -36,6 +36,7 @@ export interface TableColumn<
     isSpecialColumn?: boolean; // Used to identify index or more details columns
     isNumberColumn?: boolean; // Used to right-align numbers
     decimalScale?: number; // Used to format numbers
+    displayTime?: boolean; // Used to format dates (true for datetime-local)
 }
 
 export type TableBaseProps<
