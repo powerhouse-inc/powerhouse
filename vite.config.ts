@@ -48,9 +48,6 @@ export default defineConfig(({ mode = 'node' }) => {
             sourcemap: true,
             minify: false,
         },
-        optimizeDeps: {
-            include: isBrowser ? ['sha.js/sha1', 'sha.js/sha256'] : [],
-        },
         plugins: [
             isBrowser ? replaceBrowserModules() : undefined,
             dts({ insertTypesEntry: true }),
