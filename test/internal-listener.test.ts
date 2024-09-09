@@ -2,17 +2,9 @@ import { utils } from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { DocumentModel } from 'document-model/document';
 import * as DocumentModelLib from 'document-model/document-model';
-import {
-    afterEach,
-    beforeEach,
-    describe,
-    expect,
-    test,
-    vi,
-    vitest
-} from 'vitest';
+import { beforeEach, describe, expect, test, vi, vitest } from 'vitest';
 import { DocumentDriveServer, IReceiver } from '../src';
-import { expectUUID } from './utils';
+import { expectUTCTimestamp, expectUUID } from './utils';
 
 describe('Internal Listener', () => {
     const documentModels = [
@@ -53,11 +45,7 @@ describe('Internal Listener', () => {
     }
 
     beforeEach(() => {
-        vi.useFakeTimers().setSystemTime(new Date('2024-01-01'));
-    });
-
-    afterEach(() => {
-        vi.useRealTimers();
+        vi.setSystemTime(new Date('2024-01-01'));
     });
 
     test('should call transmit function of listener and acknowledge', async () => {
@@ -155,7 +143,7 @@ describe('Internal Listener', () => {
                             name: 'test'
                         },
                         skip: 0,
-                        timestamp: '2024-01-01T00:00:00.100Z',
+                        timestamp: expectUTCTimestamp(expect),
                         type: 'SET_MODEL_NAME'
                     }
                 ],
@@ -214,7 +202,7 @@ describe('Internal Listener', () => {
                             name: 'test 2'
                         },
                         skip: 0,
-                        timestamp: '2024-01-01T00:00:00.200Z',
+                        timestamp: expectUTCTimestamp(expect),
                         type: 'SET_MODEL_NAME'
                     }
                 ],

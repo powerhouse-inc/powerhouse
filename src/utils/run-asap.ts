@@ -109,18 +109,14 @@ export namespace RunAsap {
 
         return (task: Task) => {
             const id = setImmediate(task);
-            return () => {
-                clearImmediate(id);
-            };
+            return () => clearImmediate(id);
         };
     })();
 
     export const useSetTimeout = (() => {
         return (task: Task) => {
             const id = setTimeout(task, 0);
-            return () => {
-                clearTimeout(id);
-            };
+            return () => clearTimeout(id);
         };
     })();
 

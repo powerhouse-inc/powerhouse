@@ -70,7 +70,7 @@ describe.each(storageLayers)(
     'Document Drive Server with %s',
     (storageName, buildStorage) => {
         beforeEach(() => {
-            vi.useFakeTimers().setSystemTime(new Date('2024-01-01'));
+            vi.setSystemTime(new Date('2024-01-01'));
         });
 
         afterEach(async () => {
