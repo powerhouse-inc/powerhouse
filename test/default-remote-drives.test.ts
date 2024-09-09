@@ -405,42 +405,4 @@ describe('remove old drives', () => {
         expect(drives).toHaveLength(2);
         expect(drives).toMatchObject([drive3.id, drive4.id]);
     });
-
-    it('should use env info if available (strategy + urls)', async () => {
-        process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_STRATEGY = 'remove-by-url';
-        process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_URLS = `${drive1.url},${drive2.url}`;
-
-        const storage = await generatePopulatedStorage();
-        const server = new DocumentDriveServer(
-            documentModels,
-            storage,
-            undefined,
-            undefined
-        );
-
-        await server.initialize();
-
-        const drives = await server.getDrives();
-        expect(drives).toHaveLength(2);
-        expect(drives).toMatchObject([drive3.id, drive4.id]);
-    });
-
-    it('should use env info if available (strategy + ids)', async () => {
-        process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_STRATEGY = 'remove-by-id';
-        process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_IDS = `${drive1.id},${drive2.id}`;
-
-        const storage = await generatePopulatedStorage();
-        const server = new DocumentDriveServer(
-            documentModels,
-            storage,
-            undefined,
-            undefined
-        );
-
-        await server.initialize();
-
-        const drives = await server.getDrives();
-        expect(drives).toHaveLength(2);
-        expect(drives).toMatchObject([drive3.id, drive4.id]);
-    });
 });

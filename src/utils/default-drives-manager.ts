@@ -34,30 +34,8 @@ export class DefaultDrivesManager {
             }
         }
 
-        const strategyFromEnv =
-            process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_STRATEGY;
-        const urlsFromEnv = process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_URLS;
-        const idsFromEnv = process.env.DOCUMENT_DRIVE_OLD_REMOTE_DRIVES_IDS;
-
-        const strategy: RemoveOldRemoteDrivesOption['strategy'] =
-            strategyFromEnv !== undefined && strategyFromEnv !== ''
-                ? (strategyFromEnv as RemoveOldRemoteDrivesOption['strategy'])
-                : 'preserve-all';
-
-        const urls =
-            urlsFromEnv !== undefined && urlsFromEnv !== ''
-                ? urlsFromEnv.split(',')
-                : [];
-
-        const ids =
-            idsFromEnv !== undefined && idsFromEnv !== ''
-                ? idsFromEnv.split(',')
-                : [];
-
         this.removeOldRemoteDrivesConfig = options?.removeOldRemoteDrives || {
-            strategy,
-            urls,
-            ids
+            strategy: 'preserve-all'
         };
     }
 
