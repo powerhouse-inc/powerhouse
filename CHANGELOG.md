@@ -1,3 +1,18 @@
+# [1.8.0](https://github.com/powerhouse-inc/document-model/compare/v1.7.0...v1.8.0) (2024-09-09)
+
+
+### Bug Fixes
+
+* fixed ci ([276d007](https://github.com/powerhouse-inc/document-model/commit/276d00741958693b0387e5c3db1f178832778aed))
+
+
+### Features
+
+* fix PR comments ([e66bcca](https://github.com/powerhouse-inc/document-model/commit/e66bcca058fbef5dbb2543fc155ac580437e1a61))
+* re-enable redo action ([37531d9](https://github.com/powerhouse-inc/document-model/commit/37531d97883a57fc694a9eb6c351a0da1f252c5c))
+* re-enable undo + fix broken tests ([0ae5c5b](https://github.com/powerhouse-inc/document-model/commit/0ae5c5b0cea68faf3245489af708301255f6e1e6))
+* replaced browser hashing dependency ([36c6f49](https://github.com/powerhouse-inc/document-model/commit/36c6f498b515c3cf666678413c40ba907c1807d4))
+
 # [1.7.0](https://github.com/powerhouse-inc/document-model/compare/v1.6.0...v1.7.0) (2024-06-26)
 
 
