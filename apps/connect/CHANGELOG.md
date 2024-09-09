@@ -1,3 +1,10 @@
+# [1.0.0-dev.103](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.102...v1.0.0-dev.103) (2024-09-09)
+
+
+### Features
+
+* updated dependencies ([e6c88eb](https://github.com/powerhouse-inc/document-model-electron/commit/e6c88eb0b07c4fa9478987d43ae16c814b97bf7c))
+
 # [1.0.0-dev.102](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.101...v1.0.0-dev.102) (2024-09-06)
 
 
