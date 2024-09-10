@@ -4,6 +4,7 @@ import * as documentModelsMap from 'document-model-libs/document-models';
 import { Document, DocumentModel } from 'document-model/document';
 import { beforeEach, describe, it, vi } from 'vitest';
 import createFetchMock from 'vitest-fetch-mock';
+import { DocumentModelNotFoundError } from '../src';
 import {
     ReadDocumentNotFoundError,
     ReadDriveContext,
@@ -128,6 +129,7 @@ describe('Read mode methods', () => {
                     revision
                     operations {
                         id
+                        error
                         hash
                         index
                         skip
@@ -255,9 +257,7 @@ describe('Read mode methods', () => {
                 local: {}
             }
         });
-        let budgetStatement = BudgetStatement.utils.createDocument({
-            name: 'budget-statement'
-        });
+        let budgetStatement = BudgetStatement.utils.createDocument();
         const addNodeAction = DocumentDrive.actions.addFile({
             name: 'Document 1',
             documentType: BudgetStatement.documentModel.id,
@@ -293,10 +293,8 @@ describe('Read mode methods', () => {
         expect(drives).toStrictEqual([readDriveId]);
 
         const readDrive = await readModeService.getReadDrive(readDriveId);
-        expect(readDrive).toMatchObject({
-            ...drive,
-            readContext: context
-        });
+        const expectedDrive = { ...drive, readContext: context };
+        expect(readDrive).toMatchObject(expectedDrive);
 
         fetchMocker.mockOnceIf(context.url, () => {
             return {
@@ -327,16 +325,15 @@ describe('Read mode methods', () => {
             new ReadDriveNotFoundError('non-existent-drive-id')
         );
 
-        const fetchResult = await readMode.fetchDriveState(
-            'non-existent-drive-id'
-        );
+        const fetchResult = await readMode.fetchDrive('non-existent-drive-id');
         expect(fetchResult).toStrictEqual(
             new ReadDriveNotFoundError('non-existent-drive-id')
         );
 
-        const fetchDriveDocument = await readMode.fetchDocumentState(
+        const fetchDriveDocument = await readMode.fetchDocument(
             'non-existent-drive-id',
-            'non-existent-drive-id'
+            'non-existent-drive-id',
+            'powerhouse/document-drive'
         );
         expect(fetchDriveDocument).toStrictEqual(
             new ReadDriveNotFoundError('non-existent-drive-id')
@@ -377,19 +374,13 @@ describe('Read mode methods', () => {
             }
         };
         const driveData = {
+            icon: null,
             id: readDriveId,
             name: 'Read drive',
-            documentType: '',
-            created: '',
-            lastModified: '',
-            state: {
-                icon: null,
-                id: readDriveId,
-                name: 'Read drive',
-                nodes: [],
-                slug: 'read-drive'
-            }
+            nodes: [],
+            slug: 'read-drive'
         };
+        const drive = buildDrive(driveData);
 
         fetchMocker.mockIf(context.url, async req => {
             const { operationName } = (await req.json()) as {
@@ -403,7 +394,7 @@ describe('Read mode methods', () => {
                         operationName === 'getDrive'
                             ? { drive: driveData }
                             : {
-                                  document: driveData
+                                  document: buildDocumentResponse(drive)
                               }
                 })
             };
@@ -425,9 +416,10 @@ describe('Read mode methods', () => {
                 }
             })
         }));
-        const result = await readModeService.fetchDocumentState(
+        const result = await readModeService.fetchDocument(
             readDriveId,
-            'non-existent-document-id'
+            'non-existent-document-id',
+            'powerhouse/document-drive'
         );
         expect(result).toStrictEqual(
             new ReadDocumentNotFoundError(
@@ -450,9 +442,10 @@ describe('Read mode methods', () => {
             })
         }));
 
-        const result2 = await readModeService.fetchDocumentState(
+        const result2 = await readModeService.fetchDocument(
             readDriveId,
-            'non-existent-document-id'
+            'non-existent-document-id',
+            'powerhouse/document-drive'
         );
         expect(result2).toStrictEqual(new ReadDriveNotFoundError(readDriveId));
     });
@@ -512,19 +505,13 @@ describe('Read mode methods', () => {
             }
         };
         const driveData = {
+            icon: null,
             id: readDriveId,
             name: 'Read drive',
-            documentType: '',
-            created: '',
-            lastModified: '',
-            state: {
-                icon: null,
-                id: readDriveId,
-                name: 'Read drive',
-                nodes: [],
-                slug: 'read-drive'
-            }
+            nodes: [],
+            slug: 'read-drive'
         };
+        const drive = buildDrive(driveData);
 
         fetchMocker.mockIf(context.url, async req => {
             const { operationName } = (await req.json()) as {
@@ -538,7 +525,7 @@ describe('Read mode methods', () => {
                         operationName === 'getDrive'
                             ? { drive: driveData }
                             : {
-                                  document: driveData
+                                  document: buildDocumentResponse(drive)
                               }
                 })
             };
@@ -562,7 +549,11 @@ describe('Read mode methods', () => {
         }));
 
         await expect(
-            readModeService.fetchDocumentState(readDriveId, 'document-id')
+            readModeService.fetchDocument(
+                readDriveId,
+                'document-id',
+                'powerhouse/document-drive'
+            )
         ).rejects.toThrowError(
             'Cannot query field "revisio" on type "IDocument". Did you mean "revision"?'
         );
@@ -580,7 +571,7 @@ describe('Read mode methods', () => {
                 }
             })
         }));
-        const result = await readModeService.fetchDriveState(readDriveId);
+        const result = await readModeService.fetchDrive(readDriveId);
         expect(result).toStrictEqual(new ReadDriveNotFoundError(readDriveId));
     });
 
@@ -644,19 +635,13 @@ describe('Read mode methods', () => {
             }
         };
         const driveData = {
+            icon: null,
             id: readDriveId,
             name: 'Read drive',
-            documentType: '',
-            created: '',
-            lastModified: '',
-            state: {
-                icon: null,
-                id: readDriveId,
-                name: 'Read drive',
-                nodes: [],
-                slug: 'read-drive'
-            }
+            nodes: [],
+            slug: 'read-drive'
         };
+        const drive = buildDrive(driveData);
 
         fetchMocker.mockIf(context.url, async req => {
             const { operationName } = (await req.json()) as {
@@ -670,7 +655,7 @@ describe('Read mode methods', () => {
                         operationName === 'getDrive'
                             ? { drive: driveData }
                             : {
-                                  document: driveData
+                                  document: buildDocumentResponse(drive)
                               }
                 })
             };
@@ -686,13 +671,24 @@ describe('Read mode methods', () => {
             })
         }));
 
-        const result = await readModeService.fetchDocumentState(
+        const result = await readModeService.fetchDocument(
             readDriveId,
-            'document-id'
+            'document-id',
+            'powerhouse/document-drive'
         );
 
         expect(result).toStrictEqual(
             new ReadDocumentNotFoundError(readDriveId, 'document-id')
+        );
+
+        const result2 = await readModeService.fetchDocument(
+            readDriveId,
+            'document-id',
+            'powerhouse/non-existing-model'
+        );
+
+        expect(result2).toStrictEqual(
+            new DocumentModelNotFoundError('powerhouse/non-existing-model')
         );
     });
 });

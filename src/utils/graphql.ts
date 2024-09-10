@@ -202,7 +202,13 @@ export async function fetchDocument<D extends Document>(
             initialState: InferDocumentState<D>;
             operations: (Pick<
                 Operation,
-                'id' | 'hash' | 'index' | 'skip' | 'timestamp' | 'type'
+                | 'id'
+                | 'hash'
+                | 'index'
+                | 'skip'
+                | 'timestamp'
+                | 'type'
+                | 'error'
             > & { inputText: string })[];
         };
     }>(
@@ -218,6 +224,7 @@ export async function fetchDocument<D extends Document>(
                     revision
                     operations {
                         id
+                        error
                         hash
                         index
                         skip
@@ -254,6 +261,7 @@ export async function fetchDocument<D extends Document>(
                   global: result.document.operations.map(
                       ({ inputText, ...o }) => ({
                           ...o,
+                          error: o.error ?? undefined,
                           scope: 'global',
                           input: JSON.parse(inputText) as D
                       })
@@ -263,8 +271,10 @@ export async function fetchDocument<D extends Document>(
               attachments: {},
               initialState: utils.createExtendedState({
                   created: result.document.created,
-                  lastModified: result.document.lastModified,
-                  state: utils.createState({ global: result.document.state })
+                  lastModified: result.document.created,
+                  state: utils.createState({
+                      global: result.document.initialState
+                  })
               }),
               clipboard: []
           }
