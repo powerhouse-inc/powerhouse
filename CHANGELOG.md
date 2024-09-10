@@ -1,3 +1,10 @@
+# [1.0.0-alpha.166](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.165...v1.0.0-alpha.166) (2024-09-10)
+
+
+### Features
+
+* display dates in tables in UTC + UTC label for date inputs ([dab0731](https://github.com/powerhouse-inc/design-system/commit/dab0731b5a7dc61379f2b8d23535d4e399fabf03))
+
 # [1.0.0-alpha.165](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.164...v1.0.0-alpha.165) (2024-09-10)
 
 
