@@ -1,3 +1,11 @@
+# [1.0.0-alpha.165](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.164...v1.0.0-alpha.165) (2024-09-10)
+
+
+### Features
+
+* added displayTime prop to columns config ([5de00fd](https://github.com/powerhouse-inc/design-system/commit/5de00fdd242428913e5491fee0b065c17b44d961))
+* change maturity input to date only ([247adf5](https://github.com/powerhouse-inc/design-system/commit/247adf53361f0aa1369e96e8b1a9f909b7f2904e))
+
 # [1.0.0-alpha.164](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.163...v1.0.0-alpha.164) (2024-09-05)
 
 
