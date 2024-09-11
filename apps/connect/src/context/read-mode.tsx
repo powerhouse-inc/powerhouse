@@ -13,7 +13,6 @@ import {
     ReadDriveSlugNotFoundError,
     RemoteDriveOptions,
 } from 'document-drive';
-import { ListenerFilter } from 'document-model-libs/document-drive';
 import { Document, DocumentModel } from 'document-model/document';
 import { DocumentModelNotFoundError } from 'node_modules/document-drive/src/server/error';
 import {
@@ -96,8 +95,8 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     }
 
     @checkServer
-    addReadDrive(url: string, filter?: ListenerFilter) {
-        return this.server!.addReadDrive(url, filter);
+    addReadDrive(url: string, options?: RemoteDriveOptions) {
+        return this.server!.addReadDrive(url, options);
     }
 
     @checkServer
@@ -177,6 +176,18 @@ export interface ReadModeContextProviderProps {
     children: ReactNode;
 }
 
+async function getReadDrives(
+    instance: ReadModeContextImpl,
+): Promise<ReadDrive[]> {
+    const driveIds = await instance.getReadDrives();
+    const drives = await Promise.all(
+        driveIds.map(id => instance.getReadDrive(id)),
+    );
+    return drives.filter(
+        drive => !(drive instanceof ReadDriveNotFoundError),
+    ) as ReadDrive[];
+}
+
 export const ReadModeContextProvider: FC<
     ReadModeContextProviderProps
 > = props => {
@@ -202,6 +213,10 @@ export const ReadModeContextProvider: FC<
     }, [readMode]);
 
     useEffect(() => {
+        getReadDrives(ReadModeInstance)
+            .then(drives => setReadDrives(drives))
+            .catch(logger.error);
+
         const unsubscribe = ReadModeInstance.onReadDrivesUpdate(newDrives => {
             setReadDrives(readDrives =>
                 readDrives.length !== newDrives.length ||

@@ -144,10 +144,12 @@ export function useUiNodes() {
 
             for await (const node of nodes) {
                 if (node.kind === FILE) {
-                    const fileSyncStatus = await getSyncStatus(
-                        node.synchronizationUnits[0].syncId,
-                        sharingType,
-                    );
+                    const fileSyncStatus = !isReadDrive
+                        ? await getSyncStatus(
+                              node.synchronizationUnits[0].syncId,
+                              sharingType,
+                          )
+                        : undefined;
 
                     // TODO: rempve this after integration in design-system
                     const normalizedFileSyncStatus =
