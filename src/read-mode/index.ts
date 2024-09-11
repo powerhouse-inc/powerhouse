@@ -1,4 +1,3 @@
-import { ListenerFilter } from 'document-model-libs/document-drive';
 import { Document } from 'document-model/document';
 import { DocumentDriveServerConstructor, RemoteDriveOptions } from '../server';
 import { logger } from '../utils/logger';
@@ -8,6 +7,7 @@ import {
     IReadModeDriveServer,
     IReadModeDriveService,
     ReadDrive,
+    ReadDriveOptions,
     ReadDrivesListener,
     ReadModeDriveServerMixin
 } from './types';
@@ -72,8 +72,8 @@ export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
             return this.#readModeStorage.getReadDriveContext(id);
         }
 
-        async addReadDrive(url: string, filter?: ListenerFilter) {
-            await this.#readModeStorage.addReadDrive(url, filter);
+        async addReadDrive(url: string, options?: ReadDriveOptions) {
+            await this.#readModeStorage.addReadDrive(url, options);
             this.#notifyListeners(await this.#buildDrives(), 'add');
         }
 
@@ -108,13 +108,14 @@ export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
                 return result;
             }
 
+            const { url, ...readOptions } = result;
             try {
-                const newDrive = await this.addRemoteDrive(result.url, options);
+                const newDrive = await this.addRemoteDrive(url, options);
                 return newDrive;
             } catch (error) {
                 // if an error is thrown, then add the read drive again
                 logger.error(error);
-                await this.addReadDrive(result.url, result.filter);
+                await this.addReadDrive(result.url, readOptions);
                 throw error;
             }
         }

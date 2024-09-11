@@ -6,6 +6,7 @@ import {
     Operation,
     OperationScope
 } from 'document-model/document';
+import LocalForage from 'localforage';
 import { DriveNotFoundError } from '../server/error';
 import { SynchronizationUnitQuery } from '../server/types';
 import { mergeOperations } from '../utils';
@@ -20,8 +21,8 @@ export class BrowserStorage implements IDriveStorage {
     static DRIVES_KEY = 'DRIVES';
 
     constructor(namespace?: string) {
-        this.db = import('localforage').then(localForage =>
-            localForage.default.createInstance({
+        this.db = LocalForage.ready().then(() =>
+            LocalForage.createInstance({
                 name: namespace
                     ? `${namespace}:${BrowserStorage.DBName}`
                     : BrowserStorage.DBName
@@ -41,7 +42,8 @@ export class BrowserStorage implements IDriveStorage {
     }
 
     async getDocuments(drive: string) {
-        const keys = await (await this.db).keys();
+        const db = await this.db;
+        const keys = await db.keys();
         const driveKey = `${drive}${BrowserStorage.SEP}`;
         return keys
             .filter(key => key.startsWith(driveKey))
@@ -96,7 +98,7 @@ export class BrowserStorage implements IDriveStorage {
 
     async getDrives() {
         const db = await this.db;
-        const keys = (await db.keys()) ?? [];
+        const keys = await db.keys();
         return keys
             .filter(key => key.startsWith(BrowserStorage.DRIVES_KEY))
             .map(key =>
@@ -107,9 +109,8 @@ export class BrowserStorage implements IDriveStorage {
     }
 
     async getDrive(id: string) {
-        const drive = await (
-            await this.db
-        ).getItem<DocumentDriveStorage>(
+        const db = await this.db;
+        const drive = await db.getItem<DocumentDriveStorage>(
             this.buildKey(BrowserStorage.DRIVES_KEY, id)
         );
         if (!drive) {

@@ -1,7 +1,4 @@
-import type {
-    DocumentDriveDocument,
-    ListenerFilter
-} from 'document-model-libs/document-drive';
+import type { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import * as DocumentDrive from 'document-model-libs/document-drive';
 import { Document, DocumentModel } from 'document-model/document';
 import { GraphQLError } from 'graphql';
@@ -20,7 +17,8 @@ import {
     InferDocumentState,
     IReadModeDriveService,
     ReadDrive,
-    ReadDriveContext
+    ReadDriveContext,
+    ReadDriveOptions
 } from './types';
 
 export class ReadModeService implements IReadModeDriveService {
@@ -148,8 +146,9 @@ export class ReadModeService implements IReadModeDriveService {
         return document;
     }
 
-    async addReadDrive(url: string, filter?: ListenerFilter): Promise<void> {
-        const { id } = await requestPublicDrive(url);
+    async addReadDrive(url: string, options?: ReadDriveOptions): Promise<void> {
+        const { id } =
+            options?.expectedDriveInfo ?? (await requestPublicDrive(url));
 
         const result = await this.#fetchDrive(id, url);
         if (result instanceof Error) {
@@ -160,13 +159,8 @@ export class ReadModeService implements IReadModeDriveService {
         this.#drives.set(id, {
             drive: result as unknown as ReadDrive,
             context: {
-                url,
-                filter: filter ?? {
-                    documentId: ['*'],
-                    documentType: ['*'],
-                    branch: ['*'],
-                    scope: ['*']
-                }
+                ...options,
+                url
             }
         });
     }

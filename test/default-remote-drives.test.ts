@@ -74,6 +74,7 @@ const getDefaultRemoteDriveInput = (
 ): DefaultRemoteDriveInput => ({
     url: drive.url,
     options: {
+        accessLevel: 'WRITE',
         sharingType: 'PUBLIC',
         availableOffline: true,
         listeners: [
@@ -167,7 +168,6 @@ describe('default remote drives', () => {
 
         await server.initialize();
 
-        expect(true).toBe(true);
         const drives = await server.getDrives();
 
         expect(drives).toHaveLength(1);

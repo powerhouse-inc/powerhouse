@@ -203,7 +203,9 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
             let remoteDriveInfo = { ...remoteDrive };
 
             try {
-                const driveInfo = await requestPublicDrive(remoteDrive.url);
+                const driveInfo =
+                    remoteDrive.metadata ??
+                    (await requestPublicDrive(remoteDrive.url));
 
                 remoteDriveInfo = { ...remoteDrive, metadata: driveInfo };
 
@@ -212,15 +214,17 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
                 const driveIsAdded = drives.includes(driveInfo.id);
                 const readDriveIsAdded = readDrives?.includes(driveInfo.id);
 
+                const hasAccessLevel =
+                    remoteDrive.options.accessLevel !== undefined;
                 const readMode =
                     readServer && remoteDrive.options.accessLevel === 'READ';
                 const isAdded = readMode ? readDriveIsAdded : driveIsAdded;
 
                 // if the read mode has changed then existing drives
                 // in the previous mode should be deleted
-                const driveToDelete = readMode
-                    ? driveIsAdded
-                    : readDriveIsAdded;
+                const driveToDelete =
+                    hasAccessLevel &&
+                    (readMode ? driveIsAdded : readDriveIsAdded);
                 if (driveToDelete) {
                     try {
                         await (readMode
@@ -257,10 +261,17 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
                     remoteDriveInfo
                 );
 
-                await this.server.addRemoteDrive(remoteDrive.url, {
-                    ...remoteDrive.options,
-                    expectedDriveInfo: driveInfo
-                });
+                // if no access level is defined and read mode
+                // is supported then uses read mode
+                (!hasAccessLevel && readServer) || readMode
+                    ? await readServer.addReadDrive(remoteDrive.url, {
+                          ...remoteDrive.options,
+                          expectedDriveInfo: driveInfo
+                      })
+                    : await this.server.addRemoteDrive(remoteDrive.url, {
+                          ...remoteDrive.options,
+                          expectedDriveInfo: driveInfo
+                      });
 
                 remoteDriveInfo.status = 'SUCCESS';
 

@@ -5,6 +5,7 @@ import {
 import { Action, Document, DocumentModel } from 'document-model/document';
 import { DocumentDriveServerMixin, RemoteDriveOptions } from '../server';
 import { DocumentModelNotFoundError } from '../server/error';
+import { DriveInfo } from '../utils/graphql';
 import {
     ReadDocumentNotFoundError,
     ReadDriveNotFoundError,
@@ -47,10 +48,14 @@ export interface IReadModeDriveServer extends IReadModeDriveService {
     ): Promise<ReadDrivesListenerUnsubscribe>; // TODO: make DriveEvents extensible and reuse event emitter
 }
 
+export type ReadDriveOptions = {
+    expectedDriveInfo?: DriveInfo;
+    filter?: ListenerFilter;
+};
+
 export type ReadDriveContext = {
     url: string;
-    filter: ListenerFilter;
-};
+} & ReadDriveOptions;
 
 export type ReadDrive = DocumentDriveDocument & {
     readContext: ReadDriveContext;
@@ -62,7 +67,7 @@ export type IsDocument<D extends Document> =
         : false;
 
 export interface IReadModeDriveService {
-    addReadDrive(url: string, filter?: ListenerFilter): Promise<void>;
+    addReadDrive(url: string, options?: ReadDriveOptions): Promise<void>;
 
     getReadDrives(): Promise<string[]>;
 

@@ -96,7 +96,7 @@ describe('Read mode methods', () => {
         const drive = buildDrive(driveData);
         mockAddDrive(context.url, drive);
 
-        await readModeService.addReadDrive(context.url, context.filter);
+        await readModeService.addReadDrive(context.url, context);
 
         expect(fetchMocker).toHaveBeenCalledWith(context.url, {
             body: JSON.stringify({
@@ -202,7 +202,7 @@ describe('Read mode methods', () => {
         const drive = buildDrive(driveData);
         mockAddDrive(context.url, drive);
 
-        await readModeService.addReadDrive(context.url, context.filter);
+        await readModeService.addReadDrive(context.url, context);
         const result = await readModeService.getReadDriveBySlug('read-drive');
         expect(result).toStrictEqual({
             ...drive,
@@ -292,7 +292,7 @@ describe('Read mode methods', () => {
         };
         mockAddDrive(context.url, drive);
 
-        await readModeService.addReadDrive(context.url, context.filter);
+        await readModeService.addReadDrive(context.url, context);
 
         const drives = await readModeService.getReadDrives();
         expect(drives).toStrictEqual([readDriveId]);
@@ -405,7 +405,7 @@ describe('Read mode methods', () => {
             };
         });
 
-        await readModeService.addReadDrive(context.url, context.filter);
+        await readModeService.addReadDrive(context.url, context);
 
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -536,7 +536,7 @@ describe('Read mode methods', () => {
             };
         });
 
-        await readModeService.addReadDrive(context.url, context.filter);
+        await readModeService.addReadDrive(context.url, context);
 
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -666,7 +666,7 @@ describe('Read mode methods', () => {
             };
         });
 
-        await readModeService.addReadDrive(context.url, context.filter);
+        await readModeService.addReadDrive(context.url, context);
         fetchMocker.mockOnceIf(context.url, () => ({
             headers: { 'content-type': 'application/json; charset=utf-8' },
             body: JSON.stringify({
