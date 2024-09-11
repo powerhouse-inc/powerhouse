@@ -147,7 +147,7 @@ const documentModels = [
 
 describe('default remote drives', () => {
     const documentDriveServerOptions: DocumentDriveServerOptions = {
-        defaultRemoteDrives: [getDefaultRemoteDriveInput(drive1)]
+        defaultDrives: { remoteDrives: [getDefaultRemoteDriveInput(drive1)] }
     };
 
     afterEach(() => {
@@ -209,10 +209,10 @@ describe('default remote drives', () => {
         await server.initialize();
 
         expect(mockCallback).toHaveBeenCalledTimes(2);
-        expect(mockCallback.mock.calls[0][0]).toBe('ADDING');
-        expect(mockCallback.mock.calls[0][3]).toBe(undefined);
-        expect(mockCallback.mock.calls[1][0]).toBe('SUCCESS');
-        expect(mockCallback.mock.calls[1][3]).toBe(drive1.id);
+        expect(mockCallback.mock.calls[0]![0]).toBe('ADDING');
+        expect(mockCallback.mock.calls[0]![3]).toBe(undefined);
+        expect(mockCallback.mock.calls[1]![0]).toBe('SUCCESS');
+        expect(mockCallback.mock.calls[1]![3]).toBe(drive1.id);
     });
 
     it('should not add an existing remote drive', async () => {
@@ -241,19 +241,21 @@ describe('default remote drives', () => {
         await server2.initialize();
 
         expect(mockCallback).toHaveBeenCalledTimes(1);
-        expect(mockCallback.mock.calls[0][0]).toBe('ALREADY_ADDED');
-        expect(mockCallback.mock.calls[0][3]).toBe(drive1.id);
+        expect(mockCallback.mock.calls[0]![0]).toBe('ALREADY_ADDED');
+        expect(mockCallback.mock.calls[0]![3]).toBe(drive1.id);
     });
 });
 
 describe('remove old drives', () => {
     const documentDriveServerOptions: DocumentDriveServerOptions = {
-        defaultRemoteDrives: [
-            getDefaultRemoteDriveInput(drive1),
-            getDefaultRemoteDriveInput(drive2),
-            getDefaultRemoteDriveInput(drive3),
-            getDefaultRemoteDriveInput(drive4)
-        ]
+        defaultDrives: {
+            remoteDrives: [
+                getDefaultRemoteDriveInput(drive1),
+                getDefaultRemoteDriveInput(drive2),
+                getDefaultRemoteDriveInput(drive3),
+                getDefaultRemoteDriveInput(drive4)
+            ]
+        }
     };
 
     const generatePopulatedStorage = async () => {
@@ -279,8 +281,10 @@ describe('remove old drives', () => {
             undefined,
             undefined,
             {
-                removeOldRemoteDrives: {
-                    strategy: 'preserve-all'
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'preserve-all'
+                    }
                 }
             }
         );
@@ -305,9 +309,11 @@ describe('remove old drives', () => {
             undefined,
             undefined,
             {
-                removeOldRemoteDrives: {
-                    strategy: 'preserve-by-id',
-                    ids: [drive1.id, drive2.id]
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'preserve-by-id',
+                        ids: [drive1.id, drive2.id]
+                    }
                 }
             }
         );
@@ -327,9 +333,11 @@ describe('remove old drives', () => {
             undefined,
             undefined,
             {
-                removeOldRemoteDrives: {
-                    strategy: 'preserve-by-url',
-                    urls: [drive1.url, drive2.url]
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'preserve-by-url',
+                        urls: [drive1.url, drive2.url]
+                    }
                 }
             }
         );
@@ -349,8 +357,10 @@ describe('remove old drives', () => {
             undefined,
             undefined,
             {
-                removeOldRemoteDrives: {
-                    strategy: 'remove-all'
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'remove-all'
+                    }
                 }
             }
         );
@@ -369,9 +379,11 @@ describe('remove old drives', () => {
             undefined,
             undefined,
             {
-                removeOldRemoteDrives: {
-                    strategy: 'remove-by-id',
-                    ids: [drive1.id, drive2.id]
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'remove-by-id',
+                        ids: [drive1.id, drive2.id]
+                    }
                 }
             }
         );
@@ -392,9 +404,11 @@ describe('remove old drives', () => {
             undefined,
             undefined,
             {
-                removeOldRemoteDrives: {
-                    strategy: 'remove-by-url',
-                    urls: [drive1.url, drive2.url]
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'remove-by-url',
+                        urls: [drive1.url, drive2.url]
+                    }
                 }
             }
         );

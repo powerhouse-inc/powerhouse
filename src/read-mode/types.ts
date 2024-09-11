@@ -28,7 +28,7 @@ export type InferDocumentGenerics<D extends Document> = {
 };
 
 export type ReadModeDriveServerMixin =
-    DocumentDriveServerMixin<IReadMoveDriveServer>;
+    DocumentDriveServerMixin<IReadModeDriveServer>;
 
 export type ReadDrivesListener = (
     drives: ReadDrive[],
@@ -37,7 +37,7 @@ export type ReadDrivesListener = (
 
 export type ReadDrivesListenerUnsubscribe = () => void;
 
-export interface IReadMoveDriveServer extends IReadModeDriveService {
+export interface IReadModeDriveServer extends IReadModeDriveService {
     migrateReadDrive(
         id: string,
         options: RemoteDriveOptions

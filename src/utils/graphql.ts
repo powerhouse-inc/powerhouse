@@ -270,6 +270,7 @@ export async function fetchDocument<D extends Document>(
               },
               attachments: {},
               initialState: utils.createExtendedState({
+                  // TODO: getDocument should return all the initial state fields
                   created: result.document.created,
                   lastModified: result.document.created,
                   state: utils.createState({

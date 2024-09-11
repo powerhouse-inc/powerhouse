@@ -139,11 +139,10 @@ export class BaseDocumentDriveServer
     ) {
         super();
         this.options = {
-            defaultRemoteDrives: [],
-            removeOldRemoteDrives: {
-                strategy: 'preserve-all'
-            },
             ...options,
+            defaultDrives: {
+                ...options?.defaultDrives
+            },
             listenerManager: {
                 ...DefaultListenerManagerOptions,
                 ...options?.listenerManager

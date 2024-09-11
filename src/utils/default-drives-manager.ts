@@ -1,8 +1,10 @@
 import {
-    BaseDocumentDriveServer,
     DefaultRemoteDriveInfo,
     DocumentDriveServerOptions,
     DriveEvents,
+    IBaseDocumentDriveServer,
+    IReadModeDriveServer,
+    RemoteDriveAccessLevel,
     RemoveOldRemoteDrivesOption
 } from '../server';
 import { DriveNotFoundError } from '../server/error';
@@ -13,20 +15,23 @@ export interface IServerDelegateDrivesManager {
     emit: (...args: Parameters<DriveEvents['defaultRemoteDrive']>) => void;
 }
 
+function isReadModeDriveServer(obj: unknown): obj is IReadModeDriveServer {
+    return typeof (obj as IReadModeDriveServer).getReadDrives === 'function';
+}
+
 export class DefaultDrivesManager {
     private defaultRemoteDrives = new Map<string, DefaultRemoteDriveInfo>();
     private removeOldRemoteDrivesConfig: RemoveOldRemoteDrivesOption;
 
     constructor(
-        private server: BaseDocumentDriveServer,
+        private server:
+            | IBaseDocumentDriveServer
+            | (IBaseDocumentDriveServer & IReadModeDriveServer),
         private delegate: IServerDelegateDrivesManager,
-        options?: Pick<
-            DocumentDriveServerOptions,
-            'defaultRemoteDrives' | 'removeOldRemoteDrives'
-        >
+        options?: Pick<DocumentDriveServerOptions, 'defaultDrives'>
     ) {
-        if (options?.defaultRemoteDrives) {
-            for (const defaultDrive of options.defaultRemoteDrives) {
+        if (options?.defaultDrives.remoteDrives) {
+            for (const defaultDrive of options.defaultDrives.remoteDrives) {
                 this.defaultRemoteDrives.set(defaultDrive.url, {
                     ...defaultDrive,
                     status: 'PENDING'
@@ -34,13 +39,18 @@ export class DefaultDrivesManager {
             }
         }
 
-        this.removeOldRemoteDrivesConfig = options?.removeOldRemoteDrives || {
+        this.removeOldRemoteDrivesConfig = options?.defaultDrives
+            .removeOldRemoteDrives || {
             strategy: 'preserve-all'
         };
     }
 
     getDefaultRemoteDrives() {
-        return this.defaultRemoteDrives;
+        return new Map(
+            JSON.parse(
+                JSON.stringify(Array.from(this.defaultRemoteDrives))
+            ) as Iterable<readonly [string, DefaultRemoteDriveInfo]>
+        );
     }
 
     private async deleteDriveById(driveId: string) {
@@ -145,10 +155,33 @@ export class DefaultDrivesManager {
         }
     }
 
-    async initializeDefaultRemoteDrives() {
-        const drives = await this.server.getDrives();
+    async setDefaultDriveAccessLevel(
+        url: string,
+        level: RemoteDriveAccessLevel
+    ) {
+        const drive = this.defaultRemoteDrives.get(url);
+        if (drive && drive.options.accessLevel !== level) {
+            const newDriveValue = {
+                ...drive,
+                options: { ...drive.options, accessLevel: level }
+            };
+            this.defaultRemoteDrives.set(url, newDriveValue);
+            await this.initializeDefaultRemoteDrives([newDriveValue]);
+        }
+    }
 
-        for (const remoteDrive of this.defaultRemoteDrives.values()) {
+    async initializeDefaultRemoteDrives(
+        defaultDrives: DefaultRemoteDriveInfo[] = Array.from(
+            this.defaultRemoteDrives.values()
+        )
+    ) {
+        const drives = await this.server.getDrives();
+        const readServer = isReadModeDriveServer(this.server)
+            ? (this.server as IReadModeDriveServer)
+            : undefined;
+        const readDrives = await readServer?.getReadDrives();
+
+        for (const remoteDrive of defaultDrives) {
             let remoteDriveInfo = { ...remoteDrive };
 
             try {
@@ -158,7 +191,29 @@ export class DefaultDrivesManager {
 
                 this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
 
-                if (drives.includes(driveInfo.id)) {
+                const driveIsAdded = drives.includes(driveInfo.id);
+                const readDriveIsAdded = readDrives?.includes(driveInfo.id);
+
+                const readMode =
+                    readServer && remoteDrive.options.accessLevel === 'READ';
+                const isAdded = readMode ? readDriveIsAdded : driveIsAdded;
+
+                // if the read mode has changed then existing drives
+                // in the previous mode should be deleted
+                const driveToDelete = readMode
+                    ? driveIsAdded
+                    : readDriveIsAdded;
+                if (driveToDelete) {
+                    try {
+                        await (readMode
+                            ? this.server.deleteDrive(driveInfo.id)
+                            : readServer?.deleteReadDrive(driveInfo.id));
+                    } catch (e) {
+                        logger.error(e);
+                    }
+                }
+
+                if (isAdded) {
                     remoteDriveInfo.status = 'ALREADY_ADDED';
 
                     this.defaultRemoteDrives.set(

@@ -5,8 +5,8 @@ import { logger } from '../utils/logger';
 import { ReadDriveSlugNotFoundError } from './errors';
 import { ReadModeService } from './service';
 import {
+    IReadModeDriveServer,
     IReadModeDriveService,
-    IReadMoveDriveServer,
     ReadDrive,
     ReadDrivesListener,
     ReadModeDriveServerMixin
@@ -18,7 +18,7 @@ export * from './types';
 export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
     Base: TBase
 ): ReadModeDriveServerMixin {
-    return class ReadMode extends Base implements IReadMoveDriveServer {
+    return class ReadMode extends Base implements IReadModeDriveServer {
         #readModeStorage: IReadModeDriveService;
         #listeners = new Set<ReadDrivesListener>();
 

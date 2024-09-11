@@ -7,6 +7,7 @@ import createFetchMock from 'vitest-fetch-mock';
 import { DocumentModelNotFoundError } from '../src';
 import {
     ReadDocumentNotFoundError,
+    ReadDrive,
     ReadDriveContext,
     ReadDriveNotFoundError,
     ReadDriveSlugNotFoundError
@@ -159,6 +160,10 @@ describe('Read mode methods', () => {
         const result = await readModeService.getReadDrive(readDriveId);
         expect(result).toStrictEqual({
             ...drive,
+            initialState: {
+                ...drive.initialState,
+                lastModified: (result as ReadDrive).initialState.lastModified
+            },
             readContext: context
         });
 

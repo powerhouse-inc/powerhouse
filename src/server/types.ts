@@ -22,7 +22,7 @@ import type {
 } from 'document-model/document';
 import { Unsubscribe } from 'nanoevents';
 import { BaseDocumentDriveServer } from '.';
-import { IReadMoveDriveServer } from '../read-mode/types';
+import { IReadModeDriveServer } from '../read-mode/types';
 import { RunAsap } from '../utils';
 import { DriveInfo } from '../utils/graphql';
 import { OperationError, SynchronizationUnitNotFoundError } from './error';
@@ -43,7 +43,7 @@ export type Mixin<T extends Constructor, I> = T &
     Constructor<InstanceType<T> & I>;
 
 export type DocumentDriveServerMixin<I> = Mixin<
-    DocumentDriveServerConstructor,
+    typeof BaseDocumentDriveServer,
     I
 >;
 
@@ -52,11 +52,14 @@ export type DriveInput = State<
     DocumentDriveLocalState
 >;
 
+export type RemoteDriveAccessLevel = 'READ' | 'WRITE';
+
 export type RemoteDriveOptions = DocumentDriveLocalState & {
     // TODO make local state optional
     pullFilter?: ListenerFilter;
     pullInterval?: number;
     expectedDriveInfo?: DriveInfo;
+    accessLevel?: RemoteDriveAccessLevel;
 };
 
 export type CreateDocumentInput = CreateChildDocumentInput;
@@ -252,8 +255,10 @@ export type RemoveOldRemoteDrivesOption =
       };
 
 export type DocumentDriveServerOptions = {
-    defaultRemoteDrives?: Array<DefaultRemoteDriveInput>;
-    removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
+    defaultDrives: {
+        remoteDrives?: Array<DefaultRemoteDriveInput>;
+        removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
+    };
     /* method to queue heavy tasks that might block the event loop.
      * If set to null then it will queued as micro task.
      * Defaults to the most appropriate method according to the system
@@ -476,7 +481,7 @@ export type IBaseDocumentDriveServer = Pick<
 >;
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
-    IReadMoveDriveServer;
+    IReadModeDriveServer;
 
 export abstract class BaseListenerManager {
     protected drive: IBaseDocumentDriveServer;
