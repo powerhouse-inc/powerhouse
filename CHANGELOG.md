@@ -1,3 +1,15 @@
+# [1.0.0-alpha.93](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.92...v1.0.0-alpha.93) (2024-09-11)
+
+
+### Features
+
+* added support for read mode on default drives ([5d0d878](https://github.com/powerhouse-inc/document-drive/commit/5d0d87860283ff8de9dfd8114cb5be0b2eab6de1))
+* build queries per document model ([02f3866](https://github.com/powerhouse-inc/document-drive/commit/02f3866744927b5243a72ac7ae92fdd7f25455b7))
+* declared default drives interface ([ab5008d](https://github.com/powerhouse-inc/document-drive/commit/ab5008d6a02df1d332af54578adae47bdeedd33f))
+* implemented read mode interface ([f2c1a4a](https://github.com/powerhouse-inc/document-drive/commit/f2c1a4a9b0e8b3bd70e2d18ba150c95ebf9f87d8))
+* improved read mode code structure ([c3e9b82](https://github.com/powerhouse-inc/document-drive/commit/c3e9b82631dbccb1473234bc32517dfab38fbaba))
+* return full documents on read mode and emit drives change event ([174d9d7](https://github.com/powerhouse-inc/document-drive/commit/174d9d751576d82e59d9d322b1e973ece6371de2))
+
 # [1.0.0-alpha.92](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.91...v1.0.0-alpha.92) (2024-09-09)
 
 
