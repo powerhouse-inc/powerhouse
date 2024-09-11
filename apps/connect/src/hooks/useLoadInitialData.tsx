@@ -125,7 +125,8 @@ export const useLoadInitialData = () => {
     );
 
     useEffect(() => {
-        updateUiDriveNodes(readDrives.concat(documentDrives)).catch(
+        const drives: DocumentDriveDocument[] = [...readDrives, ...documentDrives];
+        updateUiDriveNodes(drives).catch(
             console.error,
         );
     }, [documentDrives, readDrives, updateUiDriveNodes]);

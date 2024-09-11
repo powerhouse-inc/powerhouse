@@ -1,4 +1,7 @@
-import { DocumentDriveServerOptions } from 'document-drive/server';
+import {
+    DefaultRemoteDriveInput,
+    DocumentDriveServerOptions,
+} from 'document-drive/server';
 
 const DEFAULT_DRIVES_URL =
     import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
@@ -8,12 +11,13 @@ const defaultDrivesUrl = DEFAULT_DRIVES_URL
 
 export const getReactorDefaultDrivesConfig = (): Pick<
     DocumentDriveServerOptions,
-    'defaultRemoteDrives' | 'removeOldRemoteDrives'
+    'defaultDrives'
 > => {
-    const defaultDrives: DocumentDriveServerOptions['defaultRemoteDrives'] =
-        defaultDrivesUrl.map(driveUrl => ({
+    const remoteDrives: DefaultRemoteDriveInput[] = defaultDrivesUrl.map(
+        driveUrl => ({
             url: driveUrl,
             options: {
+                accessLevel: 'READ',
                 sharingType: 'PUBLIC',
                 availableOffline: true,
                 listeners: [
@@ -38,16 +42,19 @@ export const getReactorDefaultDrivesConfig = (): Pick<
                 triggers: [],
                 pullInterval: 3000,
             },
-        }));
+        }),
+    );
 
     return {
-        defaultRemoteDrives: defaultDrives,
-        removeOldRemoteDrives:
-            defaultDrivesUrl.length > 0
-                ? {
-                      strategy: 'preserve-by-url',
-                      urls: defaultDrivesUrl,
-                  }
-                : { strategy: 'preserve-all' },
+        defaultDrives: {
+            remoteDrives,
+            removeOldRemoteDrives:
+                defaultDrivesUrl.length > 0
+                    ? {
+                          strategy: 'preserve-by-url',
+                          urls: defaultDrivesUrl,
+                      }
+                    : { strategy: 'preserve-all' },
+        },
     };
 };

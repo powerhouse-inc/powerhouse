@@ -1,8 +1,9 @@
 import {
+    IDocumentDriveServer,
     InferDocumentLocalState,
     InferDocumentOperation,
     InferDocumentState,
-    IReadMoveDriveServer,
+    IReadModeDriveServer,
     ReadDocumentNotFoundError,
     ReadDrive,
     ReadDriveContext,
@@ -25,17 +26,18 @@ import {
     useState,
 } from 'react';
 import { drivesToHash } from 'src/hooks/useDocumentDrives';
+import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { logger } from 'src/services/logger';
 import { DefaultDocumentDriveServer } from 'src/utils/document-drive-server';
 
-export interface IReadModeContext extends IReadMoveDriveServer {
+export interface IReadModeContext extends IReadModeDriveServer {
     readDrives: ReadDrive[];
-    setDocumentDrive(documentDrive: IReadMoveDriveServer): void;
+    setDocumentDrive(documentDrive: IReadModeDriveServer): void;
 }
 
 // decorator method to ensure server is defined before calling it
 function checkServer<
-    T extends IReadModeContext & { server: IReadMoveDriveServer | undefined },
+    T extends IReadModeContext & { server: IReadModeDriveServer | undefined },
     U extends any[],
     R,
 >(
@@ -72,14 +74,18 @@ function bindClassMethods(instance: any) {
 }
 
 class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
-    private server?: IReadMoveDriveServer;
+    private server?: IReadModeDriveServer;
 
-    constructor(documentDrive?: IReadMoveDriveServer) {
+    constructor(documentDrive?: IReadModeDriveServer) {
         bindClassMethods(this);
         this.server = documentDrive;
     }
 
-    setDocumentDrive(documentDrive: IReadMoveDriveServer) {
+    getServer(): IReadModeDriveServer | undefined {
+        return this.server;
+    }
+
+    setDocumentDrive(documentDrive: IReadModeDriveServer) {
         this.server = documentDrive;
     }
 
@@ -156,6 +162,7 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     ): Promise<ReadDrivesListenerUnsubscribe> {
         return this.server!.onReadDrivesUpdate(listener);
     }
+
     /* eslint-enable @typescript-eslint/no-non-null-assertion */
 }
 
@@ -174,6 +181,25 @@ export const ReadModeContextProvider: FC<
     ReadModeContextProviderProps
 > = props => {
     const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
+
+    const { isAllowedToCreateDocuments, isAllowedToEditDocuments } =
+        useUserPermissions();
+
+    // updates drive access level when user permissions change
+    const readMode = !(isAllowedToCreateDocuments || isAllowedToEditDocuments);
+    useMemo(() => {
+        const accessLevel = readMode ? 'READ' : 'WRITE';
+        const server = ReadModeInstance.getServer();
+        if (
+            server &&
+            typeof (server as IDocumentDriveServer)
+                .setAllDefaultDrivesAccessLevel === 'function'
+        ) {
+            (server as IDocumentDriveServer)
+                .setAllDefaultDrivesAccessLevel(accessLevel)
+                .catch(logger.error);
+        }
+    }, [readMode]);
 
     useEffect(() => {
         const unsubscribe = ReadModeInstance.onReadDrivesUpdate(newDrives => {
