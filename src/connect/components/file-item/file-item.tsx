@@ -127,6 +127,12 @@ export function FileItem(props: FileItemProps) {
         </div>
     );
 
+    // if this selected node is a file then hide it from the node path
+    const nodePath =
+        selectedNodePath.at(-1)?.kind === 'FILE'
+            ? selectedNodePath.slice(0, -1)
+            : selectedNodePath;
+
     const content = isReadMode ? (
         <div className="flex w-52 items-center justify-between">
             <div className="mr-2 truncate group-hover:mr-0">
@@ -134,7 +140,7 @@ export function FileItem(props: FileItemProps) {
                     {uiNode.name}
                 </div>
                 <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800">
-                    {selectedNodePath.map(node => node.name).join(' / ')}
+                    {nodePath.map(node => node.name).join(' / ')}
                 </div>
             </div>
             {isAllowedToCreateDocuments && (
