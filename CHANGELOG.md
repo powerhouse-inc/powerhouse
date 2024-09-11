@@ -1,3 +1,10 @@
+# [1.85.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.84.0...v1.85.0) (2024-09-11)
+
+
+### Features
+
+* update document-model-libs v166 ([#205](https://github.com/powerhouse-inc/document-model-libs/issues/205)) ([1e44080](https://github.com/powerhouse-inc/document-model-libs/commit/1e440800b1010f44da3ca636e1ee76af5e5f2985))
+
 # [1.84.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.83.0...v1.84.0) (2024-09-09)
 
 
