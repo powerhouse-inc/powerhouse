@@ -19,7 +19,18 @@ function isReadModeDriveServer(obj: unknown): obj is IReadModeDriveServer {
     return typeof (obj as IReadModeDriveServer).getReadDrives === 'function';
 }
 
-export class DefaultDrivesManager {
+export interface IDefaultDrivesManager {
+    getDefaultRemoteDrives(): Map<string, DefaultRemoteDriveInfo>;
+    setDefaultDriveAccessLevel(
+        url: string,
+        level: RemoteDriveAccessLevel
+    ): Promise<void>;
+    setAllDefaultDrivesAccessLevel(
+        level: RemoteDriveAccessLevel
+    ): Promise<void>;
+}
+
+export class DefaultDrivesManager implements IDefaultDrivesManager {
     private defaultRemoteDrives = new Map<string, DefaultRemoteDriveInfo>();
     private removeOldRemoteDrivesConfig: RemoveOldRemoteDrivesOption;
 
@@ -49,7 +60,7 @@ export class DefaultDrivesManager {
         return new Map(
             JSON.parse(
                 JSON.stringify(Array.from(this.defaultRemoteDrives))
-            ) as Iterable<readonly [string, DefaultRemoteDriveInfo]>
+            ) as Iterable<[string, DefaultRemoteDriveInfo]>
         );
     }
 
@@ -152,6 +163,13 @@ export class DefaultDrivesManager {
                 await this.removeDrivesById(drivesToRemove);
                 break;
             }
+        }
+    }
+
+    async setAllDefaultDrivesAccessLevel(level: RemoteDriveAccessLevel) {
+        const drives = this.defaultRemoteDrives.values();
+        for (const drive of drives) {
+            await this.setDefaultDriveAccessLevel(drive.url, level);
         }
     }
 

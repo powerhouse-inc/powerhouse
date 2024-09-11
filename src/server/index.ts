@@ -88,6 +88,7 @@ import {
     IBaseDocumentDriveServer,
     IOperationResult,
     ListenerState,
+    RemoteDriveAccessLevel,
     RemoteDriveOptions,
     StrandUpdate,
     SynchronizationUnitQuery,
@@ -185,6 +186,13 @@ export class BaseDocumentDriveServer
 
     getDefaultRemoteDrives() {
         return this.defaultDrivesManager.getDefaultRemoteDrives();
+    }
+
+    setDefaultDriveAccessLevel(url: string, level: RemoteDriveAccessLevel) {
+        return this.defaultDrivesManager.setDefaultDriveAccessLevel(url, level);
+    }
+    setAllDefaultDrivesAccessLevel(level: RemoteDriveAccessLevel) {
+        return this.defaultDrivesManager.setAllDefaultDrivesAccessLevel(level);
     }
 
     private getOperationSource(source: StrandUpdateSource) {

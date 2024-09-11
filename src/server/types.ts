@@ -24,6 +24,7 @@ import { Unsubscribe } from 'nanoevents';
 import { BaseDocumentDriveServer } from '.';
 import { IReadModeDriveServer } from '../read-mode/types';
 import { RunAsap } from '../utils';
+import { IDefaultDrivesManager } from '../utils/default-drives-manager';
 import { DriveInfo } from '../utils/graphql';
 import { OperationError, SynchronizationUnitNotFoundError } from './error';
 import {
@@ -481,6 +482,7 @@ export type IBaseDocumentDriveServer = Pick<
 >;
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
+    IDefaultDrivesManager &
     IReadModeDriveServer;
 
 export abstract class BaseListenerManager {
