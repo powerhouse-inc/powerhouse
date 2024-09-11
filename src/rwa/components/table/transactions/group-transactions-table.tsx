@@ -1,4 +1,5 @@
 import { Combobox } from '@/connect';
+import { Pagination, usePagination } from '@/powerhouse';
 import {
     AssetFormInputs,
     FEES_INCOME,
@@ -94,12 +95,12 @@ export function makeGroupTransactionsTableItems(
             assetTransactionSign,
         );
         const cashAmount = maybeAddSignToAmount(
-            transaction.cashTransaction?.amount,
+            transaction.cashTransaction.amount,
             cashTransactionSign,
         );
         const totalFees = feesTransactions.includes(transaction.type)
             ? (maybeAddSignToAmount(
-                  transaction.cashTransaction?.amount,
+                  transaction.cashTransaction.amount,
                   transaction.type === FEES_INCOME ? -1 : 1,
               ) ?? 0)
             : (transaction.fees?.reduce((acc, fee) => acc + fee.amount, 0) ??
@@ -125,6 +126,9 @@ export function makeGroupTransactionsTableItems(
 
 export type GroupTransactionsTableProps =
     TableWrapperProps<GroupTransactionFormInputs> & {
+        itemsPerPage?: number;
+        pageRange?: number;
+        initialPage?: number;
         onSubmitCreateAsset: (data: AssetFormInputs) => void;
         onSubmitCreateServiceProviderFeeType: (
             data: ServiceProviderFeeTypeFormInputs,
@@ -133,7 +137,7 @@ export type GroupTransactionsTableProps =
 
 export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
     const itemName = 'Group Transaction';
-    const { state } = props;
+    const { state, itemsPerPage = 20, initialPage = 0, pageRange = 3 } = props;
     const [selectedTableItem, setSelectedTableItem] =
         useState<TableItem<GroupTransactionsTableItem>>();
     const { transactions, portfolio } = state;
@@ -208,6 +212,23 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
         [filteredTransactions, fixedIncomes],
     );
 
+    const {
+        pageItems,
+        pages,
+        goToPage,
+        goToNextPage,
+        goToPreviousPage,
+        goToFirstPage,
+        goToLastPage,
+        hiddenNextPages,
+        isNextPageAvailable,
+        isPreviousPageAvailable,
+    } = usePagination(tableData, {
+        pageRange,
+        initialPage,
+        itemsPerPage,
+    });
+
     function handleFilterByAssetChange(update: unknown) {
         if (!update || !(typeof update === 'object') || !('value' in update)) {
             setFilterAssetId(undefined);
@@ -252,12 +273,27 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
                         placeholder="Filter by Type"
                     />
                 </div>
+                <div className="flex w-full justify-end">
+                    <Pagination
+                        pages={pages}
+                        hiddenNextPages={hiddenNextPages}
+                        goToFirstPage={goToFirstPage}
+                        goToLastPage={goToLastPage}
+                        goToNextPage={goToNextPage}
+                        goToPage={goToPage}
+                        goToPreviousPage={goToPreviousPage}
+                        isNextPageAvailable={isNextPageAvailable}
+                        isPreviousPageAvailable={isPreviousPageAvailable}
+                        nextPageLabel="Next"
+                        previousPageLabel="Previous"
+                    />
+                </div>
             </div>
             <Table
                 {...props}
                 state={state}
                 itemName={itemName}
-                tableData={tableData}
+                tableData={pageItems}
                 columns={columns}
                 selectedTableItem={selectedTableItem}
                 operation={operation}

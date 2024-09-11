@@ -1,3 +1,4 @@
+import { Pagination, usePagination } from '@/powerhouse';
 import {
     AssetDetails,
     AssetFormInputs,
@@ -106,11 +107,20 @@ export type AssetsTableProps = TableWrapperProps<AssetFormInputs> & {
     calculateCurrentValueCallback: CalculateCurrentValueCallback;
     onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
     onSubmitCreateSpv: (data: SPVFormInputs) => void;
+    itemsPerPage?: number;
+    pageRange?: number;
+    initialPage?: number;
 };
 
 export function AssetsTable(props: AssetsTableProps) {
     const itemName = 'Asset';
-    const { state, calculateCurrentValueCallback } = props;
+    const {
+        state,
+        calculateCurrentValueCallback,
+        itemsPerPage = 20,
+        initialPage = 0,
+        pageRange = 3,
+    } = props;
     const assets = getFixedIncomeAssets(state);
 
     const tableData = useMemo(
@@ -120,6 +130,24 @@ export function AssetsTable(props: AssetsTableProps) {
             ),
         [assets, calculateCurrentValueCallback],
     );
+
+    const {
+        pageItems,
+        pages,
+        goToPage,
+        goToNextPage,
+        goToPreviousPage,
+        goToFirstPage,
+        goToLastPage,
+        hiddenNextPages,
+        isNextPageAvailable,
+        isPreviousPageAvailable,
+    } = usePagination(tableData, {
+        pageRange,
+        initialPage,
+        itemsPerPage,
+    });
+
     const [selectedTableItem, setSelectedTableItem] =
         useState<TableItem<AssetsTableItem>>();
     const { operation, setOperation, showForm, existingState } =
@@ -232,10 +260,25 @@ export function AssetsTable(props: AssetsTableProps) {
 
     return (
         <>
+            <div className="mb-2 flex w-full justify-end">
+                <Pagination
+                    pages={pages}
+                    hiddenNextPages={hiddenNextPages}
+                    goToFirstPage={goToFirstPage}
+                    goToLastPage={goToLastPage}
+                    goToNextPage={goToNextPage}
+                    goToPage={goToPage}
+                    goToPreviousPage={goToPreviousPage}
+                    isNextPageAvailable={isNextPageAvailable}
+                    isPreviousPageAvailable={isPreviousPageAvailable}
+                    nextPageLabel="Next"
+                    previousPageLabel="Previous"
+                />
+            </div>
             <Table
                 {...props}
                 itemName={itemName}
-                tableData={tableData}
+                tableData={pageItems}
                 columns={columns}
                 selectedTableItem={selectedTableItem}
                 operation={operation}

@@ -12,6 +12,23 @@ export interface UsePaginationOptions {
     itemsPerPage?: number;
 }
 
+export interface UsePaginationBaseResult {
+    pages: PageItem[];
+    goToPage: (page: number) => void;
+    pageCount: number;
+    currentPage: number;
+    goToLastPage: () => void;
+    goToFirstPage: () => void;
+    goToNextPage: () => void;
+    goToPreviousPage: () => void;
+    isNextPageAvailable: boolean;
+    isPreviousPageAvailable: boolean;
+    hiddenNextPages: boolean;
+}
+export interface UsePaginationResult<T> extends UsePaginationBaseResult {
+    pageItems: T[];
+}
+
 /**
  * Custom hook for pagination.
  *
@@ -32,7 +49,11 @@ export interface UsePaginationOptions {
  *   isPreviousPageAvailable: boolean; - The flag to indicate if the previous page is available.
  * }} - The pagination object with various functions and properties.
  */
-export function usePagination<T>(items: T[], options?: UsePaginationOptions) {
+
+export function usePagination<T>(
+    items: T[],
+    options?: UsePaginationOptions,
+): UsePaginationResult<T> {
     const { itemsPerPage = 10, initialPage = 0, pageRange = 5 } = options || {};
 
     const [currentPage, setCurrentPage] = useState(initialPage);
@@ -95,6 +116,9 @@ export function usePagination<T>(items: T[], options?: UsePaginationOptions) {
         (currentPage + 1) * itemsPerPage,
     );
 
+    const hiddenNextPages =
+        pages.length > 0 && pages.slice(-1)[0].index < pageCount - 1;
+
     return {
         pages,
         goToPage,
@@ -104,6 +128,7 @@ export function usePagination<T>(items: T[], options?: UsePaginationOptions) {
         goToLastPage,
         goToFirstPage,
         goToNextPage,
+        hiddenNextPages,
         goToPreviousPage,
         isNextPageAvailable,
         isPreviousPageAvailable,

@@ -18,7 +18,7 @@ export function Scope(props: Props) {
             value={value}
             items={items}
             onChange={onChange}
-            containerClassName="bg-slate-50 text-gray-500 rounded-lg w-fit text-xs"
+            containerClassName="bg-slate-50 text-gray-500 rounded-lg w-fit text-xs z-10"
             menuClassName="min-w-0 text-gray-500"
             itemClassName="py-2 text-gray-500 grid grid-cols-[auto,auto] gap-1"
             absolutePositionMenu

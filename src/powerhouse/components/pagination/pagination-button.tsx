@@ -1,0 +1,27 @@
+import { Button, ButtonProps, mergeClassNameProps } from '@/powerhouse';
+import React from 'react';
+import { twMerge } from 'tailwind-merge';
+
+export interface PaginationButtonProps extends ButtonProps {
+    active?: boolean;
+}
+
+export const PaginationButton: React.FC<PaginationButtonProps> = ({
+    active = false,
+    ...props
+}) => {
+    const className = twMerge(
+        'h-10 min-w-10 border border-solid border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 hover:bg-gray-100',
+        !active && 'border-0',
+    );
+
+    return (
+        <Button
+            color="light"
+            size="small"
+            {...mergeClassNameProps(props, className)}
+        >
+            {props.children}
+        </Button>
+    );
+};
