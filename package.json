@@ -83,7 +83,7 @@
         "@monaco-editor/react": "^4.6.0",
         "@mui/material": "^5.15.5",
         "@powerhousedao/codegen": "0.0.15",
-        "@powerhousedao/design-system": "1.0.0-alpha.160",
+        "@powerhousedao/design-system": "1.0.0-alpha.166",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@storybook/addon-essentials": "^8.2.6",
