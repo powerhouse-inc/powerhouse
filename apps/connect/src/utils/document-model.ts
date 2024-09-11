@@ -42,7 +42,7 @@ type OnErrorHandler = (error: unknown) => void;
 
 export function useDocumentDispatch<State, A extends Action, LocalState>(
     documentReducer: Reducer<State, A, LocalState> | undefined,
-    initialState: Document<State, A, LocalState>,
+    initialState: Document<State, A, LocalState> | undefined,
     onError: OnErrorHandler = logger.error,
 ): readonly [
     Document<State, A, LocalState> | undefined,
@@ -68,7 +68,7 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
     ) => {
         setError(undefined);
         setState(_state => {
-            if (!documentReducer) return _state;
+            if (!documentReducer || !_state) return _state;
 
             try {
                 const newState = documentReducer(_state, action);

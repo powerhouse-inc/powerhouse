@@ -67,9 +67,7 @@ type FileNodeDocument =
 
 const documentCacheAtom = atom(new Map<string, Document>());
 
-const singletonFileNodeDocumentAtom = atom<FileNodeDocument | undefined>(
-    undefined,
-);
+const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
 const fileNodeDocumentAtom = atom(
     get => get(singletonFileNodeDocumentAtom),
     (get, set, newValue: FileNodeDocument) => {
@@ -270,11 +268,13 @@ export function useFileNodeDocument(
 
     return useMemo(
         () => ({
+            fileNodeDocument,
             selectedDocument: isSelectedDocument ? selectedDocument : undefined,
             setSelectedDocument,
             addOperationToSelectedDocument,
         }),
         [
+            fileNodeDocument,
             isSelectedDocument,
             selectedDocument,
             setSelectedDocument,

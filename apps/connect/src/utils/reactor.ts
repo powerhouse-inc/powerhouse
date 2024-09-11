@@ -17,7 +17,6 @@ export const getReactorDefaultDrivesConfig = (): Pick<
         driveUrl => ({
             url: driveUrl,
             options: {
-                accessLevel: 'READ',
                 sharingType: 'PUBLIC',
                 availableOffline: true,
                 listeners: [

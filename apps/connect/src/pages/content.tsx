@@ -32,6 +32,7 @@ const Content = () => {
         selectedParentNode,
         isRemoteDrive,
         isAllowedToCreateDocuments,
+        fileNodeDocument,
         selectedDocument,
         documentModels,
         setSelectedNode,
@@ -151,13 +152,15 @@ const Content = () => {
             className="flex h-full flex-col overflow-auto bg-gray-100 p-6"
             id="content-view"
         >
-            {selectedDocument ? (
+            {fileNodeDocument ? (
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
                     <DocumentEditor
                         {...uiNodes}
                         document={selectedDocument}
                         onChange={onDocumentChangeHandler}
-                        onExport={() => exportDocument(selectedDocument)}
+                        onExport={() =>
+                            selectedDocument && exportDocument(selectedDocument)
+                        }
                         onAddOperation={handleAddOperationToSelectedDocument}
                         {...(isRemoteDrive && { onOpenSwitchboardLink })}
                     />

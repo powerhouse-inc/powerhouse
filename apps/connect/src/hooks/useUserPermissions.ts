@@ -1,7 +1,13 @@
 import { useAllowList } from './useAllowList';
 
 export function useUserPermissions() {
-    const { isAllowed, allowListType } = useAllowList();
+    const allowList = useAllowList();
+
+    if (!allowList) {
+        return undefined;
+    }
+
+    const { allowListType, isAllowed } = allowList;
 
     if (allowListType === 'arbitrum') {
         return {

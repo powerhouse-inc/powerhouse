@@ -51,8 +51,11 @@ export function useDocumentDriveServer(
     server: IDocumentDriveServer | undefined = DefaultDocumentDriveServer,
 ) {
     const { isAllowedToCreateDocuments, isAllowedToEditDocuments } =
-        useUserPermissions();
-    const user = useUser();
+        useUserPermissions() || {
+            isAllowedToCreateDocuments: false,
+            isAllowedToEditDocuments: false,
+        };
+    const user = useUser() || undefined;
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
 

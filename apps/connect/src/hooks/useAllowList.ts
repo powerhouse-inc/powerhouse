@@ -1,13 +1,21 @@
 import { useLogin } from './useLogin';
 
 type AllowListType = 'arbitrum' | 'rwa' | 'none';
-export function useAllowList(): {
-    isAllowed: boolean;
-    allowListType: AllowListType;
-} {
+export function useAllowList():
+    | {
+          isAllowed: boolean;
+          allowListType: AllowListType;
+      }
+    | undefined {
     const { user, status } = useLogin();
 
-    const arbitrumAllowListEnvString = import.meta.env.PH_CONNECT_ARBITRUM_ALLOW_LIST;
+    // if the user is not yet loaded then wait
+    if (user === undefined) {
+        return undefined;
+    }
+
+    const arbitrumAllowListEnvString = import.meta.env
+        .PH_CONNECT_ARBITRUM_ALLOW_LIST;
     const rwaAllowListEnvString = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST;
 
     const arbitrumAllowListIsDefined =

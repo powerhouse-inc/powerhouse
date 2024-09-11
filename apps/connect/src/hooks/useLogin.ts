@@ -85,7 +85,7 @@ export const useLogin = () => {
             ({
                 openRenown,
                 user,
-                status,
+                status: user ? 'authorized' : status,
                 login: renown ? login : undefined,
                 logout,
             }) as const,

@@ -9,7 +9,7 @@ import type { User } from 'src/services/renown/types';
 
 let userInit = false;
 
-const userAtom = atom<User | undefined>(undefined);
+const userAtom = atom<User | null | undefined>(undefined);
 
 export const useUser = () => {
     const [user, setUser] = useAtom(userAtom);
@@ -31,14 +31,14 @@ export const useUser = () => {
         renown
             ?.user()
             .then(user => {
-                setUser(user);
+                setUser(user || null);
             })
             .catch(() => {
-                setUser(undefined);
+                setUser(null);
             });
 
         const unsub = renown?.on.user(user => {
-            setUser(user);
+            setUser(user || null);
         });
 
         return () => {

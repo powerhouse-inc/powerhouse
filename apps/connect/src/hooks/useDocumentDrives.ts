@@ -108,10 +108,15 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
                 clientErrorhandler.strandsErrorHandler,
             );
 
+            const unsub3 = server.on('defaultRemoteDrive', () =>
+                refreshDocumentDrives(),
+            );
+
             return () => {
                 unsub1();
                 unsub2();
                 unsubOnSyncError();
+                unsub3();
             };
         },
         [server, refreshDocumentDrives],

@@ -192,15 +192,25 @@ export const ReadModeContextProvider: FC<
     ReadModeContextProviderProps
 > = props => {
     const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
-
-    const { isAllowedToCreateDocuments, isAllowedToEditDocuments } =
-        useUserPermissions();
+    const userPermissions = useUserPermissions();
 
     // updates drive access level when user permissions change
-    const readMode = !(isAllowedToCreateDocuments || isAllowedToEditDocuments);
+    const readMode =
+        userPermissions === undefined
+            ? undefined
+            : !(
+                  userPermissions.isAllowedToCreateDocuments ||
+                  userPermissions.isAllowedToEditDocuments
+              );
     useMemo(() => {
+        // wait for user initial load
+        if (readMode === undefined) {
+            return;
+        }
+
         const accessLevel = readMode ? 'READ' : 'WRITE';
         const server = ReadModeInstance.getServer();
+
         if (
             server &&
             typeof (server as IDocumentDriveServer)
