@@ -1,3 +1,10 @@
+# [1.0.0-dev.107](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.106...v1.0.0-dev.107) (2024-09-12)
+
+
+### Bug Fixes
+
+* disable read mode for local drives ([dc1f0ac](https://github.com/powerhouse-inc/document-model-electron/commit/dc1f0ac3a49176ddeeb12815eec1ef006dc46410))
+
 # [1.0.0-dev.106](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.105...v1.0.0-dev.106) (2024-09-12)
 
 
