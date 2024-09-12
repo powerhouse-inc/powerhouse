@@ -1,3 +1,10 @@
+# [1.0.0-alpha.171](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.170...v1.0.0-alpha.171) (2024-09-12)
+
+
+### Bug Fixes
+
+* ph logo icon ([c8a03f1](https://github.com/powerhouse-inc/design-system/commit/c8a03f173d56705927e9d8085bcce2a2e2615600))
+
 # [1.0.0-alpha.170](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.169...v1.0.0-alpha.170) (2024-09-12)
 
 
