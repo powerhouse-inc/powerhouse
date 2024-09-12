@@ -1,3 +1,15 @@
+# [1.0.0-alpha.167](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.166...v1.0.0-alpha.167) (2024-09-12)
+
+
+### Bug Fixes
+
+* don't show selected file on fileItem path ([3bdb9eb](https://github.com/powerhouse-inc/design-system/commit/3bdb9eb2d3bb752bb50bcfcd6f79007fde895537))
+
+
+### Features
+
+* added support for setting message on default editor loader ([497a697](https://github.com/powerhouse-inc/design-system/commit/497a697615202a5e5346a42133ee4e18318203e1))
+
 # [1.0.0-alpha.166](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.165...v1.0.0-alpha.166) (2024-09-10)
 
 
