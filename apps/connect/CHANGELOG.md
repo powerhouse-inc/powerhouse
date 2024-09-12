@@ -1,3 +1,10 @@
+# [1.0.0-dev.108](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.107...v1.0.0-dev.108) (2024-09-12)
+
+
+### Features
+
+* Footer component integration ([76e5a16](https://github.com/powerhouse-inc/document-model-electron/commit/76e5a16de2e568413054fea55c4eae4ff5d5eb90))
+
 # [1.0.0-dev.107](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.106...v1.0.0-dev.107) (2024-09-12)
 
 
