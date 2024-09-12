@@ -128,7 +128,9 @@ export function useFileNodeDocument(
     } = props;
     const [fileNodeDocument, setFileNodeDocument] =
         useAtom(fileNodeDocumentAtom);
-    const isReadMode = selectedDriveNode?.syncStatus === undefined;
+    const isReadMode =
+        selectedDriveNode?.sharingType !== 'LOCAL' &&
+        selectedDriveNode?.syncStatus === undefined;
     const driveId = selectedNode?.driveId;
     const documentId = selectedNode?.id;
     const kind = selectedNode?.kind;
