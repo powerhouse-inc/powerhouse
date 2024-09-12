@@ -1,3 +1,11 @@
+# [1.0.0-alpha.169](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.168...v1.0.0-alpha.169) (2024-09-12)
+
+
+### Features
+
+* added Pagination component ([b0b45af](https://github.com/powerhouse-inc/design-system/commit/b0b45af2d29b3af76c257e218b0352735185e580))
+* added usePagination hook ([99bb553](https://github.com/powerhouse-inc/design-system/commit/99bb553ed7c3ec60d480b6f5d3397670a1503e1c))
+
 # [1.0.0-alpha.168](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.167...v1.0.0-alpha.168) (2024-09-12)
 
 
