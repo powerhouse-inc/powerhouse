@@ -1,3 +1,16 @@
+# [1.0.0-dev.105](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.104...v1.0.0-dev.105) (2024-09-12)
+
+
+### Features
+
+* added support for read mode ([146c59e](https://github.com/powerhouse-inc/document-model-electron/commit/146c59eb5c56365e36cb28493a415ae531054e57))
+* allow all when no allow list is defined ([94ae965](https://github.com/powerhouse-inc/document-model-electron/commit/94ae965a6633635e3c55ba4079cd9ece1ab615e4))
+* only show editor loader for slow documents ([ff6b7d8](https://github.com/powerhouse-inc/document-model-electron/commit/ff6b7d8a86a5c89d4eaa52a442e3f244c18981af))
+* show loading editor while document is being fetched ([cfdfa01](https://github.com/powerhouse-inc/document-model-electron/commit/cfdfa01895e2b31dd027b2818c5761f56c23c2d7))
+* updated default drives handling ([0cdb778](https://github.com/powerhouse-inc/document-model-electron/commit/0cdb778f5721c031e24304505ca8ef4819304e11))
+* updated document drive ([4a511dd](https://github.com/powerhouse-inc/document-model-electron/commit/4a511dd320343bd5899eab2c7c9175af41629c3e))
+* updated document drive ([16c07e6](https://github.com/powerhouse-inc/document-model-electron/commit/16c07e641c7beafa4639b1caf0f5532ec2532fa6))
+
 # [1.0.0-dev.104](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.103...v1.0.0-dev.104) (2024-09-11)
 
 
