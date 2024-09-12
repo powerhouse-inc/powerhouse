@@ -1,3 +1,10 @@
+# [1.0.0-alpha.170](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.169...v1.0.0-alpha.170) (2024-09-12)
+
+
+### Features
+
+* added Footer component ([38a1ffd](https://github.com/powerhouse-inc/design-system/commit/38a1ffdf4b012bf3c921c744b6f6f7d1fba2e405))
+
 # [1.0.0-alpha.169](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.168...v1.0.0-alpha.169) (2024-09-12)
 
 
