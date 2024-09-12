@@ -5,8 +5,8 @@ import {
 } from '@powerhousedao/design-system';
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
+import { Footer } from 'src/components/footer';
 import { ModalManager } from 'src/components/modal';
-import { PHLogo } from 'src/components/ph-logo';
 import { ReadModeContextProvider } from 'src/context/read-mode';
 import atoms from 'src/store';
 
@@ -34,7 +34,7 @@ export default (
                         <ToastContainer position="bottom-right" />
                         <ModalManager>
                             <Router />
-                            <PHLogo />
+                            <Footer />
                         </ModalManager>
                     </UiNodesContextProvider>
                 </ReadModeContextProvider>
