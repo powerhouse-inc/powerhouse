@@ -512,8 +512,8 @@ export function useDocumentDriveServer(
     );
 
     const deleteDrive = useCallback(
-        async (id: string, force = false) => {
-            if (!force && !isAllowedToCreateDocuments) {
+        async (id: string) => {
+            if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to delete drives');
             }
             if (!server) {

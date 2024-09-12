@@ -75,7 +75,7 @@ export function DocumentEditor(props: EditorProps) {
         initialDocument,
     );
     const context: EditorContext = useMemo(
-        () => ({ theme, user: user }),
+        () => ({ theme, user }),
         [theme, user],
     );
     const userPermissions = useUserPermissions();
@@ -151,7 +151,10 @@ export function DocumentEditor(props: EditorProps) {
     }
 
     if (isLoadingDocument || isLoadingEditor) {
-        return <EditorLoader />;
+        const message = isLoadingDocument
+            ? 'Loading document'
+            : 'Loading editor';
+        return <EditorLoader message={message} />;
     }
 
     if (selectedNode?.kind !== FILE) {
@@ -159,12 +162,7 @@ export function DocumentEditor(props: EditorProps) {
     }
 
     if (!documentModel) {
-        return (
-            <h3>
-                Document of type {fileNodeDocument?.documentType} is not
-                supported.
-            </h3>
-        );
+        return <h3>Document of type {documentType} is not supported.</h3>;
     }
 
     if (!editor) {
