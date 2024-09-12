@@ -39,6 +39,14 @@ export type EditorProps<
     onChange?: (document: Document<T, A, LocalState>) => void;
 };
 
+function EditorError({ message }: { message: string }) {
+    return (
+        <div className="flex size-full items-center justify-center">
+            <h3 className="text-lg font-semibold">{message}</h3>
+        </div>
+    );
+}
+
 export function DocumentEditor(props: EditorProps) {
     const {
         selectedNode,
@@ -150,6 +158,10 @@ export function DocumentEditor(props: EditorProps) {
         setSelectedNode(selectedParentNode);
     }
 
+    if (fileNodeDocument?.status === 'ERROR') {
+        return <EditorError message={'Error loading document'} />;
+    }
+
     if (isLoadingDocument || isLoadingEditor) {
         const message = isLoadingDocument
             ? 'Loading document'
@@ -162,11 +174,19 @@ export function DocumentEditor(props: EditorProps) {
     }
 
     if (!documentModel) {
-        return <h3>Document of type {documentType} is not supported.</h3>;
+        return (
+            <EditorError
+                message={`Document of type '${documentType}' is not supported`}
+            />
+        );
     }
 
     if (!editor) {
-        return <h3>No editor available for document of type {documentType}</h3>;
+        return (
+            <EditorError
+                message={`No editor available for document of type '${documentType}'`}
+            />
+        );
     }
 
     const EditorComponent = editor.Component;

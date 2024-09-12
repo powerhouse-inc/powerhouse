@@ -151,18 +151,13 @@ export function useFileNodeDocument(
 
     const fetchDocument = useCallback(
         async (driveId: string, id: string, documentType: string) => {
-            try {
-                const document = await (isReadMode
-                    ? fetchReadDocument(driveId, id, documentType)
-                    : openFile(driveId, id));
-                if (document instanceof Error) {
-                    throw document;
-                }
-                return document;
-            } catch (error) {
-                logger.error(error);
-                return undefined;
+            const document = await (isReadMode
+                ? fetchReadDocument(driveId, id, documentType)
+                : openFile(driveId, id));
+            if (document instanceof Error) {
+                throw document;
             }
+            return document;
         },
         [fetchReadDocument, isReadMode, openFile],
     );
