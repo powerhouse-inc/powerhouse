@@ -1,3 +1,10 @@
+# [1.0.0-dev.106](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.105...v1.0.0-dev.106) (2024-09-12)
+
+
+### Features
+
+* show error when document loading fails ([9c82f93](https://github.com/powerhouse-inc/document-model-electron/commit/9c82f933d83ddd0e581e30cc6889d09a8fecde4d))
+
 # [1.0.0-dev.105](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.104...v1.0.0-dev.105) (2024-09-12)
 
 
