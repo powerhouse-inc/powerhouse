@@ -1,3 +1,10 @@
+# [1.87.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.86.0...v1.87.0) (2024-09-12)
+
+
+### Features
+
+* update design-system v171 ([#207](https://github.com/powerhouse-inc/document-model-libs/issues/207)) ([02b238a](https://github.com/powerhouse-inc/document-model-libs/commit/02b238aacb965be4d68f830cb6e33d8f7594704d))
+
 # [1.86.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.85.0...v1.86.0) (2024-09-12)
 
 
