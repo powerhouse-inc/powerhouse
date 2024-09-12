@@ -65,8 +65,8 @@ devDependencies:
     specifier: 0.0.15
     version: 0.0.15(graphql@16.8.1)(zod@3.22.4)
   '@powerhousedao/design-system':
-    specifier: 1.0.0-alpha.170
-    version: 1.0.0-alpha.170(@types/react@18.2.57)(react-dom@18.3.1)(react-native@0.75.2)(react@18.3.1)(typescript@5.5.4)(zod@3.22.4)
+    specifier: 1.0.0-alpha.171
+    version: 1.0.0-alpha.171(@types/react@18.2.57)(react-dom@18.3.1)(react-native@0.75.2)(react@18.3.1)(typescript@5.5.4)(zod@3.22.4)
   '@semantic-release/changelog':
     specifier: ^6.0.3
     version: 6.0.3(semantic-release@23.0.2)
@@ -4764,10 +4764,10 @@ packages:
       '@types/ws': 8.5.10
       '@whatwg-node/fetch': 0.8.8
       graphql: 16.8.1
-      isomorphic-ws: 5.0.0(ws@8.16.0)
+      isomorphic-ws: 5.0.0(ws@8.17.1)
       tslib: 2.6.2
       value-or-promise: 1.0.12
-      ws: 8.16.0
+      ws: 8.17.1
     transitivePeerDependencies:
       - '@types/node'
       - bufferutil
@@ -6007,8 +6007,8 @@ packages:
       - zod
     dev: true
 
-  /@powerhousedao/design-system@1.0.0-alpha.170(@types/react@18.2.57)(react-dom@18.3.1)(react-native@0.75.2)(react@18.3.1)(typescript@5.5.4)(zod@3.22.4):
-    resolution: {integrity: sha512-ono0wOVfXEUttYRyVuwEXpipvhld1rAfxjiSHc7s9GseTxXtrVD9THshx3Tf504sBKbmn1TOPg7TamI1FCoRqQ==}
+  /@powerhousedao/design-system@1.0.0-alpha.171(@types/react@18.2.57)(react-dom@18.3.1)(react-native@0.75.2)(react@18.3.1)(typescript@5.5.4)(zod@3.22.4):
+    resolution: {integrity: sha512-j2a4QADzo3n+wva5CF0K3LR63Wh2oxYirihftKIhipWTZbFqkKNC68ybF7is3BzuYpMuiWe714Ky6FfFd8OQGw==}
     peerDependencies:
       react: ^18.2.0
       react-dom: ^18.2.0
@@ -15150,6 +15150,14 @@ packages:
       ws: 8.16.0
     dev: true
 
+  /isomorphic-ws@5.0.0(ws@8.17.1):
+    resolution: {integrity: sha512-muId7Zzn9ywDsyXgTIafTry2sV3nySZeUDe6YedVd1Hvuuep5AsIlqK+XefWpYTyJG5e503F2xIuT2lcU6rCSw==}
+    peerDependencies:
+      ws: '*'
+    dependencies:
+      ws: 8.17.1
+    dev: true
+
   /isows@1.0.3(ws@8.13.0):
     resolution: {integrity: sha512-2cKei4vlmg2cxEjm3wVSqn8pcoRF/LX/wpifuuNquFO4SQmPwarClT+SUCA2lt+l581tTeZIPIZuIDo2jWN1fg==}
     peerDependencies:
@@ -18496,7 +18504,7 @@ packages:
   /relay-runtime@12.0.0:
     resolution: {integrity: sha512-QU6JKr1tMsry22DXNy9Whsq5rmvwr3LSZiiWV/9+DFpuTWvp+WFhobWMc8TC4OjKFfNhEZy7mOiqUAn5atQtug==}
     dependencies:
-      '@babel/runtime': 7.23.9
+      '@babel/runtime': 7.25.0
       fbjs: 3.0.5
       invariant: 2.2.4
     transitivePeerDependencies:
