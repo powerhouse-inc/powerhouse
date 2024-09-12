@@ -1,3 +1,4 @@
+import { Icon } from '@/powerhouse';
 import { Meta, StoryObj } from '@storybook/react';
 import { Footer } from './footer';
 import { FooterLink } from './footer-link';
@@ -21,7 +22,15 @@ export const Default: Story = {
                 <FooterLink>Cookie Policy</FooterLink>
                 <FooterLink>Terms of Use</FooterLink>
                 <FooterLink>Disclaimer</FooterLink>
-                <FooterLink>Built with Powerhouse</FooterLink>
+                <FooterLink>
+                    Built with
+                    <Icon
+                        name="PowerhouseLogoSmall"
+                        size={16}
+                        className="mx-1"
+                    />
+                    Powerhouse
+                </FooterLink>
             </>
         ),
     },
