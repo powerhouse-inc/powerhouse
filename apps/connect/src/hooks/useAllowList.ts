@@ -9,11 +9,6 @@ export function useAllowList():
     | undefined {
     const { user, status } = useLogin();
 
-    // if the user is not yet loaded then wait
-    if (user === undefined) {
-        return undefined;
-    }
-
     const arbitrumAllowListEnvString = import.meta.env
         .PH_CONNECT_ARBITRUM_ALLOW_LIST;
     const rwaAllowListEnvString = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST;
@@ -27,6 +22,19 @@ export function useAllowList():
         throw new Error(
             'Both Arbitrum and RWA allow lists are defined. Please only define one.',
         );
+    }
+
+    // if none of the lists are defined then allow all
+    if (!arbitrumAllowListIsDefined && !rwaAllowListIsDefined) {
+        return {
+            isAllowed: true,
+            allowListType: 'none',
+        };
+    }
+
+    // if the user is not yet loaded then wait
+    if (user === undefined) {
+        return undefined;
     }
 
     if (arbitrumAllowListIsDefined) {
