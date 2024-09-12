@@ -12,6 +12,7 @@ export * from './editor-undo-redo-buttons';
 export * from './ens-avatar';
 export * from './file-item';
 export * from './folder-item';
+export * from './footer';
 export * from './form';
 export * from './form-input';
 export * from './loading-screen';
