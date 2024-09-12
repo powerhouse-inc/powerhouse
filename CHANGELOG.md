@@ -1,3 +1,10 @@
+# [1.0.0-alpha.168](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.167...v1.0.0-alpha.168) (2024-09-12)
+
+
+### Features
+
+* add grid positioning to inner div ([1788267](https://github.com/powerhouse-inc/design-system/commit/1788267d595ada348377e7fd7b408d4163a8d32f))
+
 # [1.0.0-alpha.167](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.166...v1.0.0-alpha.167) (2024-09-12)
 
 
