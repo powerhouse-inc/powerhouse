@@ -87,5 +87,11 @@
         "driveSyncError": "Error synchronizing drive {{drive}}",
         "driveSyncConflict": "Conflict error detected in {{drive}}",
         "reloadApp": "It seems like you're running an outdated version of the app. Please reload Connect to get the latest version."
+    },
+    "footer": {
+        "cookiePolicy": "Cookie Policy",
+        "termsOfUse": "Terms of Use",
+        "disclaimer": "Disclaimer",
+        "builtWith": "Built with <icon /> Powerhouse"
     }
 }
