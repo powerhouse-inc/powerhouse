@@ -1,3 +1,10 @@
+# [1.0.0-alpha.94](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.93...v1.0.0-alpha.94) (2024-09-12)
+
+
+### Features
+
+* improved handling of user access level on default drives ([d209944](https://github.com/powerhouse-inc/document-drive/commit/d20994483a1fcbbe8d79ea4110685fbe5ed2fac6))
+
 # [1.0.0-alpha.93](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.92...v1.0.0-alpha.93) (2024-09-11)
 
 
