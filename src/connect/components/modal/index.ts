@@ -5,5 +5,6 @@ export * from './create-document-modal';
 export * from './delete-drive-modal';
 export * from './delete-item-modal';
 export * from './drive-settings-modal';
+export * from './read-required-modal';
 export * from './settings-modal';
 export * from './upgrade-drive-modal';
