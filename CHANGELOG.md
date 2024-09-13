@@ -1,3 +1,10 @@
+# [1.0.0-alpha.172](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.171...v1.0.0-alpha.172) (2024-09-13)
+
+
+### Features
+
+* added required read modal ([6931140](https://github.com/powerhouse-inc/design-system/commit/693114014015371bdb40d2e445564b2a43170ad1))
+
 # [1.0.0-alpha.171](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.170...v1.0.0-alpha.171) (2024-09-12)
 
 
