@@ -1,3 +1,10 @@
+# [1.0.0-alpha.174](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.173...v1.0.0-alpha.174) (2024-09-13)
+
+
+### Features
+
+* added CookieBanner component ([b309bb0](https://github.com/powerhouse-inc/design-system/commit/b309bb0a47fd19ab0005d1947084ccc2c87d5dd0))
+
 # [1.0.0-alpha.173](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.172...v1.0.0-alpha.173) (2024-09-13)
 
 
