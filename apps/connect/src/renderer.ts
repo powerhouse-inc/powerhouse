@@ -26,7 +26,6 @@
  * ```
  */
 import { createRoot } from 'react-dom/client';
-import './app/sentry';
 import App from './components/app';
 import './i18n';
 import './index.css';
