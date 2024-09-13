@@ -1,3 +1,10 @@
+# [1.0.0-alpha.173](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.172...v1.0.0-alpha.173) (2024-09-13)
+
+
+### Bug Fixes
+
+* modal overlay ([7a11cb3](https://github.com/powerhouse-inc/design-system/commit/7a11cb31f031ef4e36194f98516aad49047ecce1))
+
 # [1.0.0-alpha.172](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.171...v1.0.0-alpha.172) (2024-09-13)
 
 
