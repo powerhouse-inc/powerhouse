@@ -27,7 +27,7 @@ export const CreateDocumentModal = (props: CreateDocumentModalProps) => {
         <Modal
             overlayProps={{
                 ...overlayProps,
-                className: twMerge('top-10', overlayProps?.className),
+                className: overlayProps?.className,
             }}
             contentProps={{
                 ...contentProps,
