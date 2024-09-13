@@ -1,3 +1,10 @@
+# [1.0.0-dev.109](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.108...v1.0.0-dev.109) (2024-09-13)
+
+
+### Features
+
+* added disclaimer update to connect footer ([6726595](https://github.com/powerhouse-inc/document-model-electron/commit/6726595e6042d569e56dce044d7c795c3e71b979))
+
 # [1.0.0-dev.108](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.107...v1.0.0-dev.108) (2024-09-12)
 
 
