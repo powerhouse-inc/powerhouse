@@ -1,63 +1,15 @@
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react';
-import fs from 'fs';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import path from 'path';
-import {
-    HtmlTagDescriptor,
-    Plugin,
-    PluginOption,
-    defineConfig,
-    loadEnv,
-} from 'vite';
+import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import pkg from './package.json';
 
 import clientConfig from './client.config';
-
-// Plugin to generate version.json in both dev and prod
-const addToBundlePlugin = (
-    file: { version: string; requiresHardRefresh?: boolean },
-    basePath = '/',
-): Plugin => {
-    const versionManifest = {
-        version: file.version,
-        requiresHardRefresh: file.requiresHardRefresh || false,
-    };
-
-    console.info(versionManifest);
-
-    return {
-        name: 'add-to-bundle',
-
-        // Hook for development mode (serves the file dynamically)
-        configureServer(server) {
-            // Middleware to serve version.json in dev mode
-            server.middlewares.use((req, res, next) => {
-                if (req.url === path.join(basePath, './version.json')) {
-                    res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify(versionManifest, null, 2));
-                } else {
-                    next();
-                }
-            });
-        },
-
-        // Hook for production mode (writes the file to the dist folder)
-        closeBundle() {
-            const outputPath = path.join('dist', 'version.json');
-
-            // Write the JSON file to the dist folder during production builds
-            fs.writeFileSync(
-                outputPath,
-                JSON.stringify(versionManifest, null, 2),
-            );
-        },
-    };
-};
 
 export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
@@ -107,13 +59,6 @@ export default defineConfig(({ mode }) => {
                 ],
             },
         }),
-        addToBundlePlugin(
-            {
-                version: APP_VERSION,
-                requiresHardRefresh: REQUIRES_HARD_REFRESH,
-            },
-            env.PH_CONNECT_ROUTER_BASENAME,
-        ),
         viteEnvs({
             computedEnv() {
                 return {
@@ -174,6 +119,10 @@ export default defineConfig(({ mode }) => {
                 path: 'rollup-plugin-node-polyfills/polyfills/path',
                 events: 'rollup-plugin-node-polyfills/polyfills/events',
             },
+        },
+        define: {
+            __APP_VERSION__: JSON.stringify(APP_VERSION),
+            __REQUIRES_HARD_REFRESH__: JSON.stringify(REQUIRES_HARD_REFRESH),
         },
     };
 });

@@ -64,3 +64,6 @@ interface ImportMeta {
   glob: import('vite-envs/types/importGlob').ImportGlobFunction
 }
 
+
+declare const __APP_VERSION__: string
+declare const __REQUIRES_HARD_REFRESH__: boolean

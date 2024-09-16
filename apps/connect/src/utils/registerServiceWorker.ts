@@ -2,6 +2,10 @@
 import connectConfig from 'connect-config';
 import { ServiceWorkerMessage } from 'src/service-worker';
 
+const VERSION_CHECK_INTERVAL =
+    parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL as string) ||
+    60 * 60 * 1000; // 1 hour;
+
 const basePath = connectConfig.routerBasename;
 
 const serviceWorkerScriptPath = [basePath, 'service-worker.js']
@@ -16,21 +20,6 @@ export interface ServiceWorkerEvent<T extends IServiceWorkerMessageData>
     extends ExtendableMessageEvent {
     data: T;
 }
-
-export type SET_APP_VERSION = {
-    type: 'SET_APP_VERSION';
-    version: string;
-};
-
-export type NETWORK_STATUS = {
-    type: 'NETWORK_STATUS';
-    online: boolean;
-};
-
-export type ServiceWorkerManagerMessageData = SET_APP_VERSION | NETWORK_STATUS;
-
-export type ServiceWorkerManagerMessage =
-    ServiceWorkerEvent<ServiceWorkerManagerMessageData>;
 
 class ServiceWorkerManager {
     ready = false;
@@ -82,31 +71,6 @@ class ServiceWorkerManager {
 
             this.registration = registration;
             this.ready = true;
-
-            window.addEventListener('online', () => {
-                if (navigator.serviceWorker.controller) {
-                    this.sendMessage({
-                        type: 'NETWORK_STATUS',
-                        online: true,
-                    });
-                }
-            });
-
-            window.addEventListener('offline', () => {
-                if (navigator.serviceWorker.controller) {
-                    this.sendMessage({
-                        type: 'NETWORK_STATUS',
-                        online: false,
-                    });
-                }
-            });
-
-            if (navigator.serviceWorker.controller) {
-                this.sendMessage({
-                    type: 'SET_APP_VERSION',
-                    version: import.meta.env.APP_VERSION,
-                });
-            }
         }
     }
 
@@ -117,37 +81,45 @@ class ServiceWorkerManager {
             console.warn('Service Worker not available');
             return;
         }
-        window.addEventListener('load', () => {
-            navigator.serviceWorker
-                .register(
-                    import.meta.env.MODE === 'development'
-                        ? './src/service-worker.ts'
-                        : serviceWorkerScriptPath,
-                )
-                .then(this.#handleServiceWorker.bind(this))
-                .catch(error => {
-                    console.error('ServiceWorker registration failed: ', error);
-                });
-        });
-    }
-
-    sendMessage(message: ServiceWorkerManagerMessageData) {
-        if (this.ready && this.registration) {
-            const serviceWorker =
-                this.registration.active ||
-                this.registration.waiting ||
-                this.registration.installing;
-            if (serviceWorker) {
-                if (this.debug) {
-                    console.log('Sending message to service worker: ', message);
+        window.addEventListener('load', async () => {
+            try {
+                // checks if there is a service worker installed already and calls
+                // its the update method to check if there is a new version available
+                const existingRegistration =
+                    await navigator.serviceWorker.getRegistration();
+                if (existingRegistration) {
+                    await existingRegistration.update();
+                    this.#handleServiceWorker(existingRegistration);
                 }
-                serviceWorker.postMessage(message);
-            } else {
-                console.error('No active service worker found.');
+
+                // if no service worker is installed then registers the service worker
+                else {
+                    const registration = await navigator.serviceWorker.register(
+                        serviceWorkerScriptPath,
+                    );
+                    this.#handleServiceWorker(registration);
+
+                    registration.addEventListener('updatefound', () => {
+                        this.#handleServiceWorker(registration);
+                    });
+                }
+
+                // calls the update on an interval to force
+                // the browser to check for a new version
+                const intervalId = setInterval(async () => {
+                    const existingRegistration =
+                        await navigator.serviceWorker.getRegistration();
+                    if (existingRegistration) {
+                        await existingRegistration.update();
+                    } else {
+                        clearInterval(intervalId);
+                        this.registerServiceWorker();
+                    }
+                }, VERSION_CHECK_INTERVAL);
+            } catch (error) {
+                console.error('ServiceWorker registration failed: ', error);
             }
-        } else {
-            console.error('Service Worker is not ready yet.');
-        }
+        });
     }
 }
 
