@@ -1,6 +1,7 @@
 import { AddLocalDriveModal } from './AddLocalDriveModal';
 import { AddRemoteDriveModal } from './AddRemoteDriveModal';
 import { ConfirmationModal } from './ConfirmationModal';
+import { CookiesPolicyModal } from './CookiesPolicyModal';
 import { CreateDocumentModal } from './CreateDocumentModal';
 import { DebugSettingsModal } from './DebugSettingsModal';
 import { DeleteDriveModal } from './DeleteDriveModal';
@@ -22,6 +23,7 @@ export const modals = {
     deleteDriveModal: DeleteDriveModal,
     debugSettingsModal: DebugSettingsModal,
     disclaimerModal: DisclaimerModal,
+    cookiesPolicy: CookiesPolicyModal,
 } as const;
 
 export type Modals = typeof modals;

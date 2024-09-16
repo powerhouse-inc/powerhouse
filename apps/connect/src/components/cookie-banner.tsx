@@ -7,6 +7,7 @@ import {
 import { Trans, useTranslation } from 'react-i18next';
 import { useAcceptedCookies } from 'src/hooks/useAcceptedCookies';
 import { useCookieBanner } from 'src/hooks/useCookieBanner';
+import { useModal } from './modal';
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {
     return cookies.some(cookie => cookie.id === id && cookie.value);
@@ -14,6 +15,7 @@ const isCookieAccepted = (cookies: CookieInput[], id: string) => {
 
 export const CookieBanner = () => {
     const { t } = useTranslation();
+    const { showModal } = useModal();
     const [showBanner, setShowBanner] = useCookieBanner();
     const [, setAcceptedCookies] = useAcceptedCookies();
 
@@ -68,10 +70,10 @@ export const CookieBanner = () => {
                             components={{
                                 a: (
                                     <a
-                                        href="https://expenses.makerdao.network/cookies-policy"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-gray-900 hover:underline"
+                                        onClick={() =>
+                                            showModal('cookiesPolicy', {})
+                                        }
+                                        className="cursor-pointer text-gray-900 hover:underline"
                                     />
                                 ),
                             }}
