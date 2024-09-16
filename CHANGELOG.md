@@ -1,3 +1,10 @@
+# [1.0.0-alpha.175](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.174...v1.0.0-alpha.175) (2024-09-16)
+
+
+### Bug Fixes
+
+* styles UTC label for RWA date input + pagination buttons ([df81efd](https://github.com/powerhouse-inc/design-system/commit/df81efd95de3481f31cd1258b36164a5e7cc160f))
+
 # [1.0.0-alpha.174](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.173...v1.0.0-alpha.174) (2024-09-13)
 
 
