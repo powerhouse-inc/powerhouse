@@ -19,11 +19,6 @@ export const CookieBanner = () => {
 
     const cookiesInput: CookieInput[] = [
         {
-            id: 'functional-cookie',
-            label: t('cookieBanner.cookies.functional'),
-            value: true,
-        },
-        {
             id: 'analytics-cookie',
             label: t('cookieBanner.cookies.analytics'),
             value: true,
@@ -40,13 +35,15 @@ export const CookieBanner = () => {
                 analytics: true,
             }));
         }
+    };
 
-        if (isCookieAccepted(cookies, 'functional-cookie')) {
-            setAcceptedCookies(acceptedCookies => ({
-                ...acceptedCookies,
-                functional: true,
-            }));
-        }
+    const handleReject = () => {
+        setShowBanner(false);
+        setAcceptedCookies({
+            analytics: false,
+            functional: false,
+            marketing: false,
+        });
     };
 
     if (!showBanner) {
@@ -61,7 +58,7 @@ export const CookieBanner = () => {
                     className="max-w-[1024px] "
                     cookies={cookiesInput}
                     onSubmit={handleAccept}
-                    onReject={() => setShowBanner(false)}
+                    onReject={handleReject}
                     submitLabel={t('cookieBanner.accept')}
                     rejectLabel={t('cookieBanner.reject')}
                 >
