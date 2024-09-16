@@ -41,6 +41,13 @@ describe('Navigation', () => {
 
     beforeEach(() => {
         cy.visit('http://localhost:5173/');
+        cy.window().then(win => {
+            win.localStorage.setItem(
+                '/:acceptedCookies',
+                '{"analytics":false,"marketing":false,"functional":false}',
+            );
+            win.localStorage.setItem('/:display-cookie-banner', 'false');
+        });
     });
 
     it('should create a default local drive', () => {
