@@ -1,3 +1,10 @@
+# [1.0.0-dev.110](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.109...v1.0.0-dev.110) (2024-09-16)
+
+
+### Features
+
+* update document-model-libs and design system ([3f84088](https://github.com/powerhouse-inc/document-model-electron/commit/3f84088f1262cc23eba260d7396f86075645d05e))
+
 # [1.0.0-dev.109](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.108...v1.0.0-dev.109) (2024-09-13)
 
 
