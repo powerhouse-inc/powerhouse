@@ -25,7 +25,7 @@ export function FormInputs(props: Props) {
                     <div className="h-max py-2 text-gray-900" key={index}>
                         <Input />
                         {inputLabel && (
-                            <div className="text-left italic text-gray-500">
+                            <div className="text-left text-gray-500">
                                 {inputLabel}
                             </div>
                         )}
