@@ -11,7 +11,7 @@ export const Footer = () => {
     const { showModal } = useModal();
 
     return (
-        <DesignSystemFooter className="fixed bottom-8 right-8">
+        <DesignSystemFooter>
             <FooterLink
                 onClick={() =>
                     openUrl('https://expenses.makerdao.network/cookies-policy')

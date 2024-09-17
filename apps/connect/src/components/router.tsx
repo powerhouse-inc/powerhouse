@@ -23,10 +23,6 @@ const RouterAsync = async () => {
                     path: 'd?/:driveId?/*?',
                     lazy: () => import('src/pages/content'),
                 },
-                {
-                    path: 'settings',
-                    lazy: () => import('src/pages/settings'),
-                },
             ],
         },
         {

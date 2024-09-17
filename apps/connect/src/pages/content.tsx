@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
 import FolderView from 'src/components/folder-view';
+import { Footer } from 'src/components/footer';
 import { useModal } from 'src/components/modal';
 import { SearchBar } from 'src/components/search-bar';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
@@ -149,7 +150,7 @@ const Content = () => {
 
     return (
         <div
-            className="flex h-full flex-col overflow-auto bg-gray-100 p-6"
+            className="flex h-full flex-col overflow-auto bg-gray-100 p-6 pb-3"
             id="content-view"
         >
             {fileNodeDocument ? (
@@ -206,6 +207,9 @@ const Content = () => {
                     </div>
                 </>
             )}
+            <div className="flex w-full flex-row justify-end pr-3 pt-3">
+                <Footer />
+            </div>
         </div>
     );
 };

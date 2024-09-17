@@ -6,7 +6,6 @@ import {
 import { useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { CookieBanner } from 'src/components/cookie-banner';
-import { Footer } from 'src/components/footer';
 import { ModalManager } from 'src/components/modal';
 import { ReadModeContextProvider } from 'src/context/read-mode';
 import { RootProvider } from 'src/context/root-provider';
@@ -37,7 +36,6 @@ export default (
                             <ToastContainer position="bottom-right" />
                             <ModalManager>
                                 <Router />
-                                <Footer />
                                 <CookieBanner />
                             </ModalManager>
                         </UiNodesContextProvider>
