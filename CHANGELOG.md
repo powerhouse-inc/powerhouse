@@ -1,3 +1,10 @@
+# [1.0.0-alpha.176](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.175...v1.0.0-alpha.176) (2024-09-17)
+
+
+### Bug Fixes
+
+* prevent revisions history scroll cutoff ([6ac1efd](https://github.com/powerhouse-inc/design-system/commit/6ac1efdcd59922c7cecc6e9ea473fc2fcc0b9244))
+
 # [1.0.0-alpha.175](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.174...v1.0.0-alpha.175) (2024-09-16)
 
 
