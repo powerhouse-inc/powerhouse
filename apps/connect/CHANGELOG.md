@@ -1,3 +1,10 @@
+# [1.0.0-dev.114](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.113...v1.0.0-dev.114) (2024-09-17)
+
+
+### Features
+
+* made footer static instead of fixed ([a9157e8](https://github.com/powerhouse-inc/document-model-electron/commit/a9157e8c702c4ed61268f2995b0cdaa470ade0e6))
+
 # [1.0.0-dev.113](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.112...v1.0.0-dev.113) (2024-09-17)
 
 
