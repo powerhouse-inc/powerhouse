@@ -1,3 +1,17 @@
+# [1.0.0-dev.112](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.111...v1.0.0-dev.112) (2024-09-17)
+
+
+### Bug Fixes
+
+* broken e2e tests ([62e533a](https://github.com/powerhouse-inc/document-model-electron/commit/62e533aa92122761724186ef590ca6ef0413584a))
+
+
+### Features
+
+* implemented cookie banner ([6b9f220](https://github.com/powerhouse-inc/document-model-electron/commit/6b9f2202365c85a8a75655c9fca773a22cf966fc))
+* implemented cookies policy as modal ([ebe2bc6](https://github.com/powerhouse-inc/document-model-electron/commit/ebe2bc6b75a744d774c74cda274ae888ad6cd92f))
+* removed functional cookie ([b806a6a](https://github.com/powerhouse-inc/document-model-electron/commit/b806a6ad0d81e73e84038dd155c99fd46a08cd1d))
+
 # [1.0.0-dev.111](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.110...v1.0.0-dev.111) (2024-09-17)
 
 
