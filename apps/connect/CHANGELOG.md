@@ -1,3 +1,10 @@
+# [1.0.0-dev.111](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.110...v1.0.0-dev.111) (2024-09-17)
+
+
+### Features
+
+* improved service worker handling ([b0aaf7e](https://github.com/powerhouse-inc/document-model-electron/commit/b0aaf7e8d569c75cbf24521ebfa89ab5c546772e))
+
 # [1.0.0-dev.110](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.109...v1.0.0-dev.110) (2024-09-16)
 
 
