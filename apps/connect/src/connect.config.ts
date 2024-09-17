@@ -35,6 +35,8 @@ const PH_CONNECT_ROUTER_BASENAME =
 
 const PH_CONNECT_SENTRY_DSN = import.meta.env.PH_CONNECT_SENTRY_DSN || '';
 const PH_CONNECT_SENTRY_ENV = import.meta.env.PH_CONNECT_SENTRY_ENV || 'dev';
+const PH_CONNECT_SENTRY_TRACING_ENABLED =
+    import.meta.env.PH_CONNECT_SENTRY_TRACING_ENABLED || 'false';
 
 export default {
     appVersion: APP_VERSION,
@@ -42,6 +44,7 @@ export default {
     sentry: {
         dsn: PH_CONNECT_SENTRY_DSN,
         env: PH_CONNECT_SENTRY_ENV,
+        tracing: PH_CONNECT_SENTRY_TRACING_ENABLED === 'true',
     },
     content: {
         showSearchBar: SEARCH_BAR_ENABLED !== 'false',

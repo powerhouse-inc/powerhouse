@@ -14,23 +14,27 @@ export function useInitSenty() {
     const { analytics } = acceptedCookies;
 
     useEffect(() => {
+        const client = Sentry.getClient();
         if (!analytics) {
-            console.log('>>> initSentry - no analytics');
+            if (client) {
+                void client.close();
+            }
             return;
         }
 
-        if (!config.sentry.dsn || config.sentry.dsn === '') {
+        if (client || !config.sentry.dsn || config.sentry.dsn === '') {
             return;
         }
 
         const release = import.meta.env.SENTRY_RELEASE;
 
-        Sentry.init({
-            release,
-            dsn: config.sentry.dsn,
-            environment: config.sentry.env,
-            integrations: [
-                Sentry.extraErrorDataIntegration({ depth: 5 }),
+        const integrations: Sentry.BrowserOptions['integrations'] = [
+            Sentry.extraErrorDataIntegration({ depth: 5 }),
+            Sentry.replayIntegration(),
+            Sentry.captureConsoleIntegration({ levels: ['error'] }),
+        ];
+        if (config.sentry.tracing) {
+            integrations.push(
                 Sentry.reactRouterV6BrowserTracingIntegration({
                     useEffect: React.useEffect,
                     useLocation,
@@ -38,9 +42,14 @@ export function useInitSenty() {
                     createRoutesFromChildren,
                     matchRoutes,
                 }),
-                Sentry.replayIntegration(),
-                Sentry.captureConsoleIntegration({ levels: ['error'] }),
-            ],
+            );
+        }
+
+        Sentry.init({
+            release,
+            dsn: config.sentry.dsn,
+            environment: config.sentry.env,
+            integrations,
             ignoreErrors: [
                 'User is not allowed to create files',
                 'User is not allowed to move documents',
