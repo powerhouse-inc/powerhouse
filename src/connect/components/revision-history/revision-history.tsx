@@ -52,41 +52,37 @@ export function RevisionHistory(props: Props) {
 
     return (
         <TooltipProvider>
-            <div className="h-[calc(100vh-86px)]">
-                <Header
-                    title={documentTitle}
-                    docId={documentId}
-                    scope={scope}
-                    onChangeScope={onChangeScope}
-                    onClose={onClose}
+            <Header
+                title={documentTitle}
+                docId={documentId}
+                scope={scope}
+                onChangeScope={onChangeScope}
+                onClose={onClose}
+            />
+            <div className="mt-2 flex w-full justify-end">
+                <Pagination
+                    pages={pages}
+                    hiddenNextPages={hiddenNextPages}
+                    goToFirstPage={goToFirstPage}
+                    goToLastPage={goToLastPage}
+                    goToNextPage={goToNextPage}
+                    goToPage={goToPage}
+                    goToPreviousPage={goToPreviousPage}
+                    isNextPageAvailable={isNextPageAvailable}
+                    isPreviousPageAvailable={isPreviousPageAvailable}
+                    nextPageLabel="Next"
+                    previousPageLabel="Previous"
+                    firstPageLabel="First Page"
+                    lastPageLabel="Last Page"
                 />
-                <div className="mt-2 flex w-full justify-end">
-                    <Pagination
-                        pages={pages}
-                        hiddenNextPages={hiddenNextPages}
-                        goToFirstPage={goToFirstPage}
-                        goToLastPage={goToLastPage}
-                        goToNextPage={goToNextPage}
-                        goToPage={goToPage}
-                        goToPreviousPage={goToPreviousPage}
-                        isNextPageAvailable={isNextPageAvailable}
-                        isPreviousPageAvailable={isPreviousPageAvailable}
-                        nextPageLabel="Next"
-                        previousPageLabel="Previous"
-                        firstPageLabel="First Page"
-                        lastPageLabel="Last Page"
+            </div>
+            <div className="mt-9 flex justify-center rounded-md bg-slate-50 p-4">
+                <div className="grid grid-cols-[minmax(min-content,1018px)]">
+                    <Timeline
+                        scope={scope}
+                        globalOperations={scope === 'global' ? pageItems : []}
+                        localOperations={scope === 'local' ? pageItems : []}
                     />
-                </div>
-                <div className="mt-9 flex h-full justify-center rounded-md bg-slate-50 p-4">
-                    <div className="grid grid-cols-[minmax(min-content,1018px)]">
-                        <Timeline
-                            scope={scope}
-                            globalOperations={
-                                scope === 'global' ? pageItems : []
-                            }
-                            localOperations={scope === 'local' ? pageItems : []}
-                        />
-                    </div>
                 </div>
             </div>
         </TooltipProvider>
