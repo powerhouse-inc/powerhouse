@@ -1,3 +1,10 @@
+# [1.0.0-dev.113](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.112...v1.0.0-dev.113) (2024-09-17)
+
+
+### Features
+
+* added env to enable sentry tracing ([b55945d](https://github.com/powerhouse-inc/document-model-electron/commit/b55945d5c2e455b22311be83e94ca86e7787c641))
+
 # [1.0.0-dev.112](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.111...v1.0.0-dev.112) (2024-09-17)
 
 
