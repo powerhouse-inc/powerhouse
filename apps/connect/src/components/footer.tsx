@@ -14,7 +14,7 @@ export const Footer = () => {
         <DesignSystemFooter>
             <FooterLink
                 onClick={() =>
-                    openUrl('https://expenses.makerdao.network/cookies-policy')
+                    openUrl('https://fusion.sky.money/cookies-policy')
                 }
             >
                 <Trans i18nKey="footer.cookiePolicy" />
