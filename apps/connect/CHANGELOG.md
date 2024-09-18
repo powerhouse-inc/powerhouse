@@ -1,3 +1,10 @@
+# [1.0.0-dev.117](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.116...v1.0.0-dev.117) (2024-09-18)
+
+
+### Features
+
+* show cookie banner on cookie ([21a7b26](https://github.com/powerhouse-inc/document-model-electron/commit/21a7b268be2554460ccd56a55aed77304a580d9d))
+
 # [1.0.0-dev.116](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.115...v1.0.0-dev.116) (2024-09-18)
 
 
