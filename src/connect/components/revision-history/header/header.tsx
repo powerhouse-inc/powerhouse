@@ -1,22 +1,37 @@
 import { Icon } from '@/powerhouse';
 import { ReactNode } from 'react';
+import { twMerge } from 'tailwind-merge';
 import { Scope as TScope } from '../types';
 import { Branch } from './branch';
 import { DocId } from './doc-id';
 import { Scope } from './scope';
 
-type Props = {
+interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
     title: ReactNode;
     docId: string;
     scope: TScope;
     onChangeScope: (scope: TScope) => void;
     onClose: () => void;
-};
+}
 
 export function Header(props: Props) {
-    const { title, docId, scope, onChangeScope, onClose } = props;
+    const {
+        title,
+        docId,
+        scope,
+        onChangeScope,
+        onClose,
+        className,
+        ...divProps
+    } = props;
     return (
-        <header className="flex items-center justify-between bg-transparent">
+        <header
+            className={twMerge(
+                'flex items-center justify-between bg-transparent',
+                className,
+            )}
+            {...divProps}
+        >
             <div className="flex items-center gap-3">
                 <button
                     onClick={onClose}

@@ -11,6 +11,7 @@ type Props = {
     globalOperations: Operation[];
     localOperations: Operation[];
     onClose: () => void;
+    itemsPerPage?: number;
 };
 
 export function RevisionHistory(props: Props) {
@@ -20,6 +21,7 @@ export function RevisionHistory(props: Props) {
         globalOperations,
         localOperations,
         onClose,
+        itemsPerPage = 100,
     } = props;
 
     const [scope, setScope] = useState<Scope>('global');
@@ -42,13 +44,37 @@ export function RevisionHistory(props: Props) {
         isNextPageAvailable,
         isPreviousPageAvailable,
     } = usePagination(visibleOperations, {
-        itemsPerPage: 100,
+        itemsPerPage,
     });
 
     function onChangeScope(scope: Scope) {
         goToFirstPage();
         setScope(scope);
     }
+
+    const showPagination = visibleOperations.length > itemsPerPage;
+
+    const PaginationComponent = showPagination ? (
+        <div className="mt-4 flex w-full justify-end">
+            <Pagination
+                pages={pages}
+                hiddenNextPages={hiddenNextPages}
+                goToFirstPage={goToFirstPage}
+                goToLastPage={goToLastPage}
+                goToNextPage={goToNextPage}
+                goToPage={goToPage}
+                goToPreviousPage={goToPreviousPage}
+                isNextPageAvailable={isNextPageAvailable}
+                isPreviousPageAvailable={isPreviousPageAvailable}
+                nextPageLabel="Next"
+                previousPageLabel="Previous"
+                firstPageLabel="First Page"
+                lastPageLabel="Last Page"
+            />
+        </div>
+    ) : (
+        <hr className="h-12 border-none" />
+    );
 
     return (
         <TooltipProvider>
@@ -59,32 +85,25 @@ export function RevisionHistory(props: Props) {
                 onChangeScope={onChangeScope}
                 onClose={onClose}
             />
-            <div className="mt-2 flex w-full justify-end">
-                <Pagination
-                    pages={pages}
-                    hiddenNextPages={hiddenNextPages}
-                    goToFirstPage={goToFirstPage}
-                    goToLastPage={goToLastPage}
-                    goToNextPage={goToNextPage}
-                    goToPage={goToPage}
-                    goToPreviousPage={goToPreviousPage}
-                    isNextPageAvailable={isNextPageAvailable}
-                    isPreviousPageAvailable={isPreviousPageAvailable}
-                    nextPageLabel="Next"
-                    previousPageLabel="Previous"
-                    firstPageLabel="First Page"
-                    lastPageLabel="Last Page"
-                />
+            {PaginationComponent}
+            <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4">
+                {visibleOperations.length > 0 ? (
+                    <div className="grid grid-cols-[minmax(min-content,1018px)]">
+                        <Timeline
+                            scope={scope}
+                            globalOperations={
+                                scope === 'global' ? pageItems : []
+                            }
+                            localOperations={scope === 'local' ? pageItems : []}
+                        />
+                    </div>
+                ) : (
+                    <h3 className="my-40 text-gray-600">
+                        This document has no recorded operations yet.
+                    </h3>
+                )}
             </div>
-            <div className="mt-9 flex justify-center rounded-md bg-slate-50 p-4">
-                <div className="grid grid-cols-[minmax(min-content,1018px)]">
-                    <Timeline
-                        scope={scope}
-                        globalOperations={scope === 'global' ? pageItems : []}
-                        localOperations={scope === 'local' ? pageItems : []}
-                    />
-                </div>
-            </div>
+            {PaginationComponent}
         </TooltipProvider>
     );
 }
