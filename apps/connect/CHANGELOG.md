@@ -1,3 +1,10 @@
+# [1.0.0-dev.120](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.119...v1.0.0-dev.120) (2024-09-18)
+
+
+### Features
+
+* fixed browser storage check ([175b59b](https://github.com/powerhouse-inc/document-model-electron/commit/175b59b5d22de9f277bbdb5f4e3174f8187eb58d))
+
 # [1.0.0-dev.119](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.118...v1.0.0-dev.119) (2024-09-18)
 
 
