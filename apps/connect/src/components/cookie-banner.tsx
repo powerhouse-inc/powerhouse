@@ -28,7 +28,6 @@ export const CookieBanner = () => {
     ];
 
     const handleAccept = (cookies: CookieInput[]) => {
-        console.log(cookies);
         setShowBanner(false);
 
         if (isCookieAccepted(cookies, 'analytics-cookie')) {

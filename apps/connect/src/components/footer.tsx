@@ -4,18 +4,20 @@ import {
     Icon,
 } from '@powerhousedao/design-system';
 import { Trans } from 'react-i18next';
+import { useCookieBanner } from 'src/hooks/useCookieBanner';
 import { openUrl } from 'src/utils/openUrl';
 import { useModal } from './modal';
 
 export const Footer = () => {
     const { showModal } = useModal();
+    const [, setShowCookieBanner] = useCookieBanner();
 
     return (
         <DesignSystemFooter>
             <FooterLink
-                onClick={() =>
-                    openUrl('https://fusion.sky.money/cookies-policy')
-                }
+                onClick={() => {
+                    setShowCookieBanner(true);
+                }}
             >
                 <Trans i18nKey="footer.cookiePolicy" />
             </FooterLink>
