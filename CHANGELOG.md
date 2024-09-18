@@ -1,3 +1,10 @@
+# [1.0.0-alpha.95](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.94...v1.0.0-alpha.95) (2024-09-18)
+
+
+### Bug Fixes
+
+* fixed browser storage document exists check ([3d513c0](https://github.com/powerhouse-inc/document-drive/commit/3d513c0d90b44fb25cce51c63f3359884aa1decf))
+
 # [1.0.0-alpha.94](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.93...v1.0.0-alpha.94) (2024-09-12)
 
 
