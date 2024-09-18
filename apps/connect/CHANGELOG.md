@@ -1,3 +1,10 @@
+# [1.0.0-dev.119](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.118...v1.0.0-dev.119) (2024-09-18)
+
+
+### Bug Fixes
+
+* cookies text fix ([029c1f6](https://github.com/powerhouse-inc/document-model-electron/commit/029c1f6b76fbe16e7a24eccdc58879b1f4921bd5))
+
 # [1.0.0-dev.118](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.117...v1.0.0-dev.118) (2024-09-18)
 
 
