@@ -1,3 +1,10 @@
+# [1.0.0-dev.121](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.120...v1.0.0-dev.121) (2024-09-18)
+
+
+### Features
+
+* updated document-drive ([0bf0109](https://github.com/powerhouse-inc/document-model-electron/commit/0bf01090774a2de3726cb9e739f7803603b2d552))
+
 # [1.0.0-dev.120](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.119...v1.0.0-dev.120) (2024-09-18)
 
 
