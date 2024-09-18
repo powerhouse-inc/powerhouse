@@ -1,3 +1,10 @@
+# [1.0.0-dev.118](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.117...v1.0.0-dev.118) (2024-09-18)
+
+
+### Features
+
+* added bottom pagination ([6e6d9da](https://github.com/powerhouse-inc/document-model-electron/commit/6e6d9dab519e1345822e383f0d2dc67f706b898d))
+
 # [1.0.0-dev.117](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.116...v1.0.0-dev.117) (2024-09-18)
 
 
