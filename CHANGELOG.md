@@ -1,3 +1,10 @@
+# [1.0.0-alpha.177](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.176...v1.0.0-alpha.177) (2024-09-18)
+
+
+### Features
+
+* added pagination at the bottom and spacing fixes ([72d23e9](https://github.com/powerhouse-inc/design-system/commit/72d23e956df9e0cd5244dd09d6edffb430e5fbe3))
+
 # [1.0.0-alpha.176](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.175...v1.0.0-alpha.176) (2024-09-17)
 
 
