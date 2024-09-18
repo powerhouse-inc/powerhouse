@@ -38,7 +38,7 @@ export class BrowserStorage implements IDriveStorage {
         const document = await (
             await this.db
         ).getItem<Document>(this.buildKey(drive, id));
-        return document !== undefined;
+        return !document;
     }
 
     async getDocuments(drive: string) {
