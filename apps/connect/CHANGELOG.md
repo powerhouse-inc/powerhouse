@@ -1,3 +1,10 @@
+# [1.0.0-dev.124](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.123...v1.0.0-dev.124) (2024-09-19)
+
+
+### Features
+
+* added robots.txt ([a735a79](https://github.com/powerhouse-inc/document-model-electron/commit/a735a79eba27f1ac51c243ee0471879c31d45784))
+
 # [1.0.0-dev.123](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.122...v1.0.0-dev.123) (2024-09-19)
 
 
