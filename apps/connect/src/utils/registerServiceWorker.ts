@@ -42,10 +42,14 @@ class ServiceWorkerManager {
             'type' in event.data ? (event as ServiceWorkerMessage) : null;
         switch (message?.data.type) {
             case 'NEW_VERSION_AVAILABLE': {
+                if (message.data.version === connectConfig.appVersion) {
+                    return;
+                }
                 if (message.data.requiresHardRefresh) {
                     if (this.debug) {
                         console.log('New version available');
                     }
+
                     window.location.reload(); // Reload the page to load the new version
                 }
                 break;

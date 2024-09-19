@@ -22,6 +22,7 @@ _self.addEventListener('activate', (event: ExtendableEvent) => {
 
 export type NEW_VERSION_AVAILABLE_MESSAGE = {
     type: 'NEW_VERSION_AVAILABLE';
+    version: string;
     requiresHardRefresh: boolean;
 };
 
@@ -56,19 +57,20 @@ async function checkAppVersion(version: string, requiresHardRefresh: boolean) {
             await cache.put(VERSION_KEY, new Response(version));
 
             // Update clients
-            await updateClients(requiresHardRefresh);
+            await updateClients(version, requiresHardRefresh);
         }
     } catch (error) {
         console.error('Error checking version:', error);
     }
 }
 
-async function updateClients(requiresHardRefresh: boolean) {
+async function updateClients(version: string, requiresHardRefresh: boolean) {
     await _self.clients.claim();
     const clients = await _self.clients.matchAll();
     clients.forEach(client => {
         postMessage(client, {
             type: 'NEW_VERSION_AVAILABLE',
+            version,
             requiresHardRefresh,
         });
     });
