@@ -3,7 +3,8 @@
         "target": "ESNext",
         "useDefineForClassFields": true,
         "lib": ["DOM", "DOM.Iterable", "ESNext"],
-        "allowJs": false,
+        "allowJs": true,
+        "checkJs": true,
         "allowSyntheticDefaultImports": true,
         "strict": true,
         "forceConsistentCasingInFileNames": true,
@@ -33,5 +34,5 @@
         "*.config.js",
         "reset.d.ts",
     ],
-    "files": ["custom.d.ts"]
+    "files": ["custom.d.ts", "index.js", "cli.js"]
 }
