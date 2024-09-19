@@ -1,3 +1,10 @@
+# [1.0.0-dev.123](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.122...v1.0.0-dev.123) (2024-09-19)
+
+
+### Features
+
+* avoid refreshing if already on latest app version ([e4c753d](https://github.com/powerhouse-inc/document-model-electron/commit/e4c753d09da69920aa7571d4908e50738d0fa7f7))
+
 # [1.0.0-dev.122](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.121...v1.0.0-dev.122) (2024-09-19)
 
 
