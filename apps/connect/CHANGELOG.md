@@ -1,3 +1,10 @@
+# [1.0.0-dev.122](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.121...v1.0.0-dev.122) (2024-09-19)
+
+
+### Bug Fixes
+
+* windows cookies scroll ([13a184d](https://github.com/powerhouse-inc/document-model-electron/commit/13a184d6cee1d63e17dd49725227ef16544acf90))
+
 # [1.0.0-dev.121](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.120...v1.0.0-dev.121) (2024-09-18)
 
 
