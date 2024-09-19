@@ -1,8 +1,16 @@
-import { Content, Overlay, Portal, Root } from '@radix-ui/react-dialog';
+import {
+    Content,
+    DialogTitle,
+    Overlay,
+    Portal,
+    Root,
+} from '@radix-ui/react-dialog';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 type Props = {
+    title?: string;
     children?: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
@@ -11,6 +19,7 @@ type Props = {
 };
 export function Modal(props: Props) {
     const {
+        title,
         open,
         onOpenChange,
         contentProps,
@@ -36,6 +45,9 @@ export function Modal(props: Props) {
                             contentProps?.className,
                         )}
                     >
+                        <VisuallyHidden.Root>
+                            <DialogTitle>{title}</DialogTitle>
+                        </VisuallyHidden.Root>
                         {children}
                     </Content>
                 </Overlay>

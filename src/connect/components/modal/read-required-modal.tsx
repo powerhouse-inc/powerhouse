@@ -62,7 +62,7 @@ export const ReadRequiredModal = (props: ReadRequiredModalProps) => {
             const element = contentRef.current;
             if (
                 element &&
-                element.scrollHeight - element.scrollTop ===
+                element.scrollHeight - Math.ceil(element.scrollTop) ===
                     element.clientHeight
             ) {
                 setDisableClose(false);
