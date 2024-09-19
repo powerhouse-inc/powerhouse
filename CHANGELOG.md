@@ -1,3 +1,10 @@
+# [1.0.0-alpha.178](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.177...v1.0.0-alpha.178) (2024-09-19)
+
+
+### Bug Fixes
+
+* fixed read required button not being enabled when scroll ends ([deed9f4](https://github.com/powerhouse-inc/design-system/commit/deed9f41bf9e84c43af3fbea724be5a4a94b94e9))
+
 # [1.0.0-alpha.177](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.176...v1.0.0-alpha.177) (2024-09-18)
 
 
