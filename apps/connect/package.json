@@ -90,7 +90,7 @@
         "xvfb-maybe": "^0.2.1"
     },
     "dependencies": {
-        "@powerhousedao/design-system": "^1.0.0-alpha.177",
+        "@powerhousedao/design-system": "^1.0.0-alpha.178",
         "@sentry/react": "^7.109.0",
         "@sentry/vite-plugin": "^2.22.2",
         "@tanstack/react-virtual": "^3.8.1",
