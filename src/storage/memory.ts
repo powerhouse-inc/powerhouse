@@ -44,7 +44,7 @@ export class MemoryStorage implements IDriveStorage {
 
     async saveDocument(drive: string, id: string, document: Document) {
         this.documents[drive] = this.documents[drive] ?? {};
-        this.documents[drive]![id] = document;
+        this.documents[drive][id] = document;
     }
 
     async clearStorage(): Promise<void> {
@@ -65,7 +65,7 @@ export class MemoryStorage implements IDriveStorage {
             clipboard,
             state
         } = document;
-        this.documents[drive]![id] = {
+        this.documents[drive][id] = {
             operations,
             initialState,
             name,
@@ -105,7 +105,7 @@ export class MemoryStorage implements IDriveStorage {
         if (!this.documents[drive]) {
             throw new DriveNotFoundError(drive);
         }
-        delete this.documents[drive]![id];
+        delete this.documents[drive][id];
     }
 
     async getDrives() {

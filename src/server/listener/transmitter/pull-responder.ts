@@ -117,7 +117,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         filter: ListenerFilter
     ): Promise<Listener['listenerId']> {
         // graphql request to switchboard
-        const { registerPullResponderListener } = await requestGraphql<{
+        const result = await requestGraphql<{
             registerPullResponderListener: {
                 listenerId: Listener['listenerId'];
             };
@@ -134,7 +134,17 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             `,
             { filter }
         );
-        return registerPullResponderListener.listenerId;
+
+        const error = result.errors?.at(0);
+        if (error) {
+            throw error;
+        }
+
+        if (!result.registerPullResponderListener) {
+            throw new Error('Error registering listener');
+        }
+
+        return result.registerPullResponderListener.listenerId;
     }
 
     static async pullStrands(
@@ -143,11 +153,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         listenerId: string,
         options?: GetStrandsOptions // TODO add support for since
     ): Promise<StrandUpdate[]> {
-        const {
-            system: {
-                sync: { strands }
-            }
-        } = await requestGraphql<PullStrandsGraphQL>(
+        const result = await requestGraphql<PullStrandsGraphQL>(
             url,
             gql`
                 query strands($listenerId: ID!) {
@@ -188,7 +194,17 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             `,
             { listenerId }
         );
-        return strands.map(s => ({
+
+        const error = result.errors?.at(0);
+        if (error) {
+            throw error;
+        }
+
+        if (!result.system) {
+            return [];
+        }
+
+        return result.system.sync.strands.map(s => ({
             ...s,
             operations: s.operations.map(o => ({
                 ...o,
@@ -215,6 +231,14 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             `,
             { listenerId, revisions }
         );
+        const error = result.errors?.at(0);
+        if (error) {
+            throw error;
+        }
+
+        if (result.acknowledge === null) {
+            throw new Error('Error acknowledging strands');
+        }
         return result.acknowledge;
     }
 

@@ -9,7 +9,7 @@ import {
 } from 'document-model/document';
 import { DocumentModelDocument } from 'document-model/document-model';
 import { ExpectStatic } from 'vitest';
-import { DocumentDriveServer } from '../src';
+import { BaseDocumentDriveServer } from '../src';
 
 export function expectUUID(expect: ExpectStatic): unknown {
     return expect.stringMatching(
@@ -93,7 +93,7 @@ export class BasicClient {
     private unsyncedOperations: Operation[] = [];
 
     constructor(
-        private server: DocumentDriveServer,
+        private server: BaseDocumentDriveServer,
         private driveId: string,
         private documentId: string,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -166,7 +166,7 @@ export class DriveBasicClient {
         [];
 
     constructor(
-        private server: DocumentDriveServer,
+        private server: BaseDocumentDriveServer,
         private driveId: string,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         private document: Document<any, any, any>,

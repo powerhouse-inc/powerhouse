@@ -171,6 +171,27 @@ export type DriveState = DriveInfo &
         nodes: Array<FolderNode | Omit<FileNode, 'synchronizationUnits'>>;
     };
 
+export type DocumentGraphQLResult<D extends Document> = Pick<
+    D,
+    'name' | 'created' | 'documentType' | 'lastModified'
+> & {
+    id: string;
+    revision: number;
+    state: InferDocumentState<D>;
+    initialState: InferDocumentState<D>;
+    operations: (Pick<
+        Operation,
+        | 'id'
+        | 'hash'
+        | 'index'
+        | 'skip'
+        | 'timestamp'
+        | 'type'
+        | 'error'
+        | 'context'
+    > & { inputText: string })[];
+};
+
 export async function fetchDocument<D extends Document>(
     url: string,
     documentId: string,
@@ -192,25 +213,7 @@ export async function fetchDocument<D extends Document>(
     const stateFields = generateDocumentStateQueryFields(documentModel);
     const name = pascalCase(documentModel.name);
     const result = await requestGraphql<{
-        document: Pick<
-            D,
-            'name' | 'created' | 'documentType' | 'lastModified'
-        > & {
-            id: string;
-            revision: number;
-            state: InferDocumentState<D>;
-            initialState: InferDocumentState<D>;
-            operations: (Pick<
-                Operation,
-                | 'id'
-                | 'hash'
-                | 'index'
-                | 'skip'
-                | 'timestamp'
-                | 'type'
-                | 'error'
-            > & { inputText: string })[];
-        };
+        document: DocumentGraphQLResult<D>;
     }>(
         url,
         gql`
