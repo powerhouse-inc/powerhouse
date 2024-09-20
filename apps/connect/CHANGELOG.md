@@ -1,3 +1,10 @@
+# [1.0.0-dev.127](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.126...v1.0.0-dev.127) (2024-09-20)
+
+
+### Features
+
+* ignore fetch error if user is offline ([b9460bd](https://github.com/powerhouse-inc/document-model-electron/commit/b9460bd3d2fb752161c835dced99c3af6df182d0))
+
 # [1.0.0-dev.126](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.125...v1.0.0-dev.126) (2024-09-20)
 
 
