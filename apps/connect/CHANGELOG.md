@@ -1,3 +1,10 @@
+# [1.0.0-dev.126](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.125...v1.0.0-dev.126) (2024-09-20)
+
+
+### Features
+
+* update document drive ([da20e47](https://github.com/powerhouse-inc/document-model-electron/commit/da20e473b365bfa127d1eb6975590ea03a891db0))
+
 # [1.0.0-dev.125](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.124...v1.0.0-dev.125) (2024-09-19)
 
 
