@@ -234,6 +234,20 @@ export async function fetchDocument<D extends Document>(
                         timestamp
                         type
                         inputText
+                        context {
+                            signer {
+                                user {
+                                    address
+                                    networkId
+                                    chainId
+                                }
+                                app {
+                                    name
+                                    key
+                                }
+                                signatures
+                            }
+                        }
                     }
                     ... on ${name} {
                         state {
