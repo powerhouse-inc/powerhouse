@@ -1,3 +1,10 @@
+# [1.0.0-alpha.98](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.97...v1.0.0-alpha.98) (2024-09-20)
+
+
+### Features
+
+* added operation context on fetch document ([66fd645](https://github.com/powerhouse-inc/document-drive/commit/66fd6456d153d974e15513813368a3ab30f14a47))
+
 # [1.0.0-alpha.97](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.96...v1.0.0-alpha.97) (2024-09-20)
 
 
