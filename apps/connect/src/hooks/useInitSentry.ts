@@ -29,6 +29,7 @@ export function useInitSenty() {
         const release = import.meta.env.SENTRY_RELEASE;
 
         const integrations: Sentry.BrowserOptions['integrations'] = [
+            Sentry.httpClientIntegration(),
             Sentry.extraErrorDataIntegration({ depth: 5 }),
             Sentry.replayIntegration(),
             Sentry.captureConsoleIntegration({ levels: ['error'] }),
@@ -55,9 +56,22 @@ export function useInitSenty() {
                 'User is not allowed to move documents',
                 'The user aborted a request.',
             ],
+            sendDefaultPii: true,
             tracesSampleRate: 1.0,
             replaysSessionSampleRate: 0.1,
             replaysOnErrorSampleRate: 1.0,
+            beforeSend(event, hint) {
+                const error = hint.originalException;
+                if (
+                    error instanceof TypeError &&
+                    error.message.includes('Failed to fetch') &&
+                    !navigator.onLine
+                ) {
+                    // If fetch fails because user is offline then ignores the error
+                    return null;
+                }
+                return event;
+            },
         });
     }, [analytics]);
 }

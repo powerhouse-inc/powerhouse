@@ -2,6 +2,31 @@
 import { captureException } from '@sentry/react';
 import { ILogger, setLogger } from 'document-drive/logger';
 
+function captureSentryException(...data: any[]) {
+    let error: unknown;
+    let info: any[] | undefined;
+    const errorIndex = data.findIndex(item => item instanceof Error);
+    if (errorIndex) {
+        error = data.at(errorIndex) as Error;
+        info = data.slice(0, errorIndex).concat(data.slice(errorIndex + 1));
+    } else if (data.length === 1) {
+        error = data;
+    } else if (data.length > 1) {
+        error = data[0];
+        info = data.slice(1);
+    }
+
+    // checks if it's a failed fetch request
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        // if the user is offline then doesn't emit to sentry
+        if (!navigator.onLine) {
+            return;
+        }
+    }
+
+    captureException(error, info ? { data: info } : undefined);
+}
+
 class ConnectLogger implements ILogger {
     #logger: ILogger = console;
 
@@ -35,18 +60,8 @@ class ConnectLogger implements ILogger {
     }
 
     error(...data: any[]): void {
-        const errorIndex = data.findIndex(item => item instanceof Error);
-        if (errorIndex) {
-            const error = data.at(errorIndex) as Error;
-            const info = data
-                .slice(0, errorIndex)
-                .concat(data.slice(errorIndex + 1));
-            captureException(error, { data: info });
-        } else if (data.length === 1) {
-            captureException(data.at(0));
-        } else if (data.length > 1) {
-            captureException(data[0], { data: data.slice(1) });
-        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        captureSentryException(...data);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         return this.#logger.error(...data);
     }
