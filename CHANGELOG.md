@@ -1,3 +1,10 @@
+# [1.0.0-alpha.97](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.96...v1.0.0-alpha.97) (2024-09-20)
+
+
+### Features
+
+* improved handling of graphql responses and type improvements ([aec6371](https://github.com/powerhouse-inc/document-drive/commit/aec63713ba4f95fc03cf044852a45b8083ae01d0))
+
 # [1.0.0-alpha.96](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.95...v1.0.0-alpha.96) (2024-09-18)
 
 
