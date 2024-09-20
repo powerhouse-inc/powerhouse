@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react';
+import { TooltipProvider } from '../../tooltip';
 import { RevisionNumber } from './revision-number';
 
 const meta = {
@@ -15,5 +16,12 @@ export const Default: Story = {
         operationIndex: 0,
         eventId: '21',
         stateHash: 'wH041NamJQq3AHgk8tD/suXDDI=',
+    },
+    render(args) {
+        return (
+            <TooltipProvider>
+                <RevisionNumber {...args} />
+            </TooltipProvider>
+        );
     },
 };

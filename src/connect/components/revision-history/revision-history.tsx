@@ -1,5 +1,6 @@
 import { TooltipProvider } from '@/connect';
 import { Pagination, usePagination } from '@/powerhouse';
+import { utils } from 'document-model/document';
 import { useMemo, useState } from 'react';
 import { Header } from './header';
 import { Timeline } from './timeline';
@@ -13,6 +14,8 @@ type Props = {
     onClose: () => void;
     itemsPerPage?: number;
 };
+
+const { garbageCollect, sortOperations } = utils.documentHelpers;
 
 export function RevisionHistory(props: Props) {
     const {
@@ -29,7 +32,9 @@ export function RevisionHistory(props: Props) {
     const visibleOperations = useMemo(() => {
         const operations =
             scope === 'global' ? globalOperations : localOperations;
-        return operations.sort((a, b) => b.index - a.index);
+        return garbageCollect(sortOperations(operations)).sort(
+            (a, b) => b.index - a.index,
+        );
     }, [globalOperations, localOperations, scope]);
 
     const {

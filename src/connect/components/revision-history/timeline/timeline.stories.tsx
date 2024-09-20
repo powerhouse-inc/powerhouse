@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react';
+import { TooltipProvider } from '../../tooltip';
 import { globalOperations, localOperations } from '../mocks';
 import { Timeline } from './timeline';
 
@@ -16,5 +17,12 @@ export const Default: Story = {
         globalOperations,
         localOperations,
         scope: 'global',
+    },
+    render(args) {
+        return (
+            <TooltipProvider>
+                <Timeline {...args} />
+            </TooltipProvider>
+        );
     },
 };

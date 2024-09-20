@@ -9,55 +9,44 @@ import {
 
 export function makeRows(operations: Operation[]) {
     const revisionsAndSkips: (Revision | Skip | Day)[] = [];
-    let index = 0;
-    let currentDay = '';
     const seenDays = new Set<string>();
 
-    while (index < operations.length) {
-        const operation = operations[index];
+    for (const operation of operations) {
         const day = operation.timestamp.split('T')[0];
 
-        if (day !== currentDay && !seenDays.has(day)) {
+        if (!seenDays.has(day)) {
             seenDays.add(day);
             revisionsAndSkips.push({
                 type: 'day',
                 height: 32,
                 timestamp: day,
             });
-            currentDay = day;
-            continue;
         }
+
+        revisionsAndSkips.push({
+            type: 'revision',
+            height: 46,
+            operationIndex: operation.index,
+            eventId: operation.id ?? 'EVENT_ID_NOT_FOUND',
+            stateHash: operation.hash,
+            operationType: operation.type,
+            operationInput: operation.input ?? {},
+            address: operation.context?.signer?.user?.address,
+            chainId: operation.context?.signer?.user?.chainId,
+            timestamp: operation.timestamp,
+            signatures: makeSignatures(operation.context?.signer?.signatures),
+            errors: operation.error ? [operation.error] : undefined,
+        });
 
         if (operation.skip > 0) {
             revisionsAndSkips.push({
                 type: 'skip',
-                height: 18,
+                height: 34,
                 operationIndex: operation.index,
                 skipCount: operation.skip,
                 timestamp: operation.timestamp,
             });
-            index += operation.skip;
-            continue;
-        } else {
-            revisionsAndSkips.push({
-                type: 'revision',
-                height: 46,
-                operationIndex: operation.index,
-                eventId: operation.id ?? 'EVENT_ID_NOT_FOUND',
-                stateHash: operation.hash,
-                operationType: operation.type,
-                operationInput: operation.input ?? {},
-                address: operation.context?.signer?.user?.address,
-                chainId: operation.context?.signer?.user?.chainId,
-                timestamp: operation.timestamp,
-                signatures: makeSignatures(
-                    operation.context?.signer?.signatures,
-                ),
-                errors: operation.error ? [operation.error] : undefined,
-            });
         }
-
-        index += 1;
     }
 
     return revisionsAndSkips;
