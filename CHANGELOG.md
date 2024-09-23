@@ -1,3 +1,10 @@
+# [1.0.0-alpha.179](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.178...v1.0.0-alpha.179) (2024-09-23)
+
+
+### Bug Fixes
+
+* [#376](https://github.com/powerhouse-inc/design-system/issues/376) skipped operations on revision history ([900bc43](https://github.com/powerhouse-inc/design-system/commit/900bc434a1ade2dbc3cbd648a35c64d023d0eabe))
+
 # [1.0.0-alpha.178](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.177...v1.0.0-alpha.178) (2024-09-19)
 
 
