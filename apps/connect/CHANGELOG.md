@@ -1,3 +1,10 @@
+# [1.0.0-dev.130](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.129...v1.0.0-dev.130) (2024-09-23)
+
+
+### Bug Fixes
+
+* skipped operations on revision history ([7c49063](https://github.com/powerhouse-inc/document-model-electron/commit/7c49063008edf2f26413daa38095038a91299d3f))
+
 # [1.0.0-dev.129](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.128...v1.0.0-dev.129) (2024-09-23)
 
 
