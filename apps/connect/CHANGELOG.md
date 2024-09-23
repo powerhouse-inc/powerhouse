@@ -1,3 +1,10 @@
+# [1.0.0-dev.128](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.127...v1.0.0-dev.128) (2024-09-23)
+
+
+### Bug Fixes
+
+* base path ([9c4e94e](https://github.com/powerhouse-inc/document-model-electron/commit/9c4e94ec8399799c4e476d4e6ae248e44e9f690a))
+
 # [1.0.0-dev.127](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.126...v1.0.0-dev.127) (2024-09-20)
 
 
