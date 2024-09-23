@@ -6,7 +6,7 @@ export type { Address } from 'viem';
 export type Chain = chains.Chain;
 
 export function getChain(id: number): Chain | undefined {
-    return Object.values(chains).find(x => x.id === id);
+    return Object.values(chains).find((x) => x.id === id);
 }
 
 let client: PublicClient = createPublicClient({
@@ -76,7 +76,7 @@ export function useEnsInfo(
         }
         setLoading(true);
         getEnsInfo(address, chainId)
-            .then(info => setInfo(info))
+            .then((info) => setInfo(info))
             .catch(console.error)
             .finally(() => setLoading(false));
     }, [address, chainId]);

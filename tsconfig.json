@@ -15,6 +15,7 @@
         "jsx": "react-jsx",
         "lib": ["ESNext", "dom", "dom.iterable"],
         "baseUrl": "./",
+        "allowJs": true,
         "paths": {
             "document-model-libs/utils": ["./editors/utils"],
             "document-model-libs/utils/*": ["./editors/utils/*"],
@@ -28,6 +29,7 @@
         "*.config.ts",
         "postcss.config.cjs",
         "create-require.js",
+        ".storybook/**/*",
     ],
     "exclude": ["dist/", "node_modules"],
 }

@@ -54,7 +54,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
             const [state, _dispatch] = useDocumentReducer(
                 reducer,
                 args.document,
-                error => {
+                (error) => {
                     console.error(error);
                     setError(error);
                 },
@@ -129,7 +129,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                 control: 'object',
             },
         },
-    } satisfies Meta<(args: EditorArgs<S, A, L>) => JSX.Element>;
+    } satisfies Meta<(args: EditorArgs<S, A, L>) => React.JSX.Element>;
 
     const CreateDocumentStory: DocumentStory<S, A, unknown> = {
         name: 'New document',

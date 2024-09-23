@@ -20,8 +20,8 @@ export type CustomEditorProps = Pick<
     RWATabsProps,
     'onClose' | 'onExport' | 'onSwitchboardLinkClick' | 'onShowRevisionHistory'
 > & {
-    isAllowedToCreateDocuments: boolean;
-    isAllowedToEditDocuments: boolean;
+    readonly isAllowedToCreateDocuments: boolean;
+    readonly isAllowedToEditDocuments: boolean;
 };
 
 export type IProps = EditorProps<
@@ -51,16 +51,19 @@ function Editor(props: IProps) {
         {
             value: PORTFOLIO,
             label: 'Portfolio',
+            // eslint-disable-next-line react/no-unstable-nested-components
             Component: () => <Portfolio {...props} />,
         },
         {
             value: TRANSACTIONS,
             label: 'Transactions',
+            // eslint-disable-next-line react/no-unstable-nested-components
             Component: () => <Transactions {...props} />,
         },
         {
             value: OTHER,
             label: 'Other',
+            // eslint-disable-next-line react/no-unstable-nested-components
             Component: () => <Other {...props} />,
         },
     ];

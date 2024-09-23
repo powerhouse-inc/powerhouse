@@ -77,7 +77,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const movedNode = documentDrive.state.global.nodes.find(
-                node => node.id === srcFolder,
+                (node) => node.id === srcFolder,
             );
 
             expect(movedNode?.parentFolder).toBe(targetParentFolder);
@@ -94,7 +94,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const movedNode = documentDrive.state.global.nodes.find(
-                node => node.id === srcFolder,
+                (node) => node.id === srcFolder,
             );
 
             expect(movedNode?.parentFolder).toBe(null);
@@ -112,7 +112,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const movedNode = documentDrive.state.global.nodes.find(
-                node => node.id === srcFolder,
+                (node) => node.id === srcFolder,
             );
 
             expect(movedNode?.parentFolder).toBe(null);
@@ -163,7 +163,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const copiedNode = documentDrive.state.global.nodes.find(
-                node => node.id === targetId,
+                (node) => node.id === targetId,
             );
 
             expect(documentDrive.state.global.nodes.length).toBe(
@@ -186,7 +186,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const copiedNode = documentDrive.state.global.nodes.find(
-                node => node.id === targetId,
+                (node) => node.id === targetId,
             );
 
             expect(documentDrive.state.global.nodes.length).toBe(
@@ -210,7 +210,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const copiedNode = documentDrive.state.global.nodes.find(
-                node => node.id === targetId,
+                (node) => node.id === targetId,
             );
 
             expect(documentDrive.state.global.nodes.length).toBe(
@@ -270,7 +270,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const copiedNode = documentDrive.state.global.nodes.find(
-                node => node.id === targetId,
+                (node) => node.id === targetId,
             );
 
             expect(documentDrive.state.global.nodes.length).toBe(
@@ -296,7 +296,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const copiedNode = documentDrive.state.global.nodes.find(
-                node => node.id === targetId,
+                (node) => node.id === targetId,
             );
 
             expect(documentDrive.state.global.nodes.length).toBe(
@@ -323,7 +323,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const copiedNode = documentDrive.state.global.nodes.find(
-                node => node.id === targetId,
+                (node) => node.id === targetId,
             );
 
             expect(documentDrive.state.global.nodes.length).toBe(
@@ -366,7 +366,7 @@ describe('DocumentDrive Actions', () => {
             );
 
             const copiedNode = documentDrive.state.global.nodes.find(
-                node => node.id === 'testFile-copy',
+                (node) => node.id === 'testFile-copy',
             );
 
             expect(documentDrive.state.global.nodes.length).toBe(

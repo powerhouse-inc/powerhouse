@@ -19,8 +19,8 @@ export function SPVs(props: IProps) {
     const state = document.state.global;
 
     const onSubmitEdit: SPVsTableProps['onSubmitEdit'] = useCallback(
-        data => {
-            const selectedItem = state.spvs.find(s => s.id === data.id);
+        (data) => {
+            const selectedItem = state.spvs.find((s) => s.id === data.id);
             if (!selectedItem) return;
 
             const update = copy(selectedItem);
@@ -45,7 +45,7 @@ export function SPVs(props: IProps) {
     );
 
     const onSubmitCreate: SPVsTableProps['onSubmitCreate'] = useCallback(
-        data => {
+        (data) => {
             const id = utils.hashKey();
             const name = data.name;
 
@@ -70,12 +70,12 @@ export function SPVs(props: IProps) {
 
     return (
         <SPVsTable
-            state={state}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
             onSubmitDelete={onSubmitDelete}
+            onSubmitEdit={onSubmitEdit}
+            state={state}
         />
     );
 }

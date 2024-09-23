@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import type {
     Account,
     AddLineItemInput,
@@ -72,16 +73,16 @@ const LineItemForm: React.FC<{
             actual: parseFloat(formJson.actual.toString()),
             payment: parseFloat(formJson.payment.toString()),
             category: categories.find(
-                c => c.id === formJson.category.toString(),
+                (c) => c.id === formJson.category.toString(),
             )!,
-            group: groups.find(g => g.id === formJson.group.toString())!,
+            group: groups.find((g) => g.id === formJson.group.toString())!,
         });
     }
 
     return (
         <form
             key={
-                accounts.find(a => a.address === selectedAccount)?.lineItems
+                accounts.find((a) => a.address === selectedAccount)?.lineItems
                     .length
             }
             method="post"
@@ -92,14 +93,14 @@ const LineItemForm: React.FC<{
                 Select account:{' '}
                 <select
                     name="account"
-                    value={selectedAccount ?? ''}
-                    onChange={e =>
+                    onChange={(e) =>
                         setSelectedAccount(
                             (e.target as HTMLSelectElement).value,
                         )
                     }
+                    value={selectedAccount ?? ''}
                 >
-                    {accounts.map(account => (
+                    {accounts.map((account) => (
                         <option key={account.address} value={account.address}>
                             {account.name}
                         </option>
@@ -110,8 +111,8 @@ const LineItemForm: React.FC<{
             <label>
                 Category:{' '}
                 <select name="category">
-                    {categories.map(category => (
-                        <option value={category.id} key={category.id}>
+                    {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
                             {category.title}
                         </option>
                     ))}
@@ -121,8 +122,8 @@ const LineItemForm: React.FC<{
             <label>
                 Group:{' '}
                 <select name="group">
-                    {groups.map(group => (
-                        <option value={group.id} key={group.id}>
+                    {groups.map((group) => (
+                        <option key={group.id} value={group.id}>
                             {group.title}
                         </option>
                     ))}
@@ -131,15 +132,15 @@ const LineItemForm: React.FC<{
             <pre />
             <label>
                 Budget Cap:{' '}
-                <input name="budgetCap" type="number" placeholder="0" />
+                <input name="budgetCap" placeholder="0" type="number" />
             </label>
             <pre />
             <label>
-                Payment: <input name="payment" type="number" placeholder="0" />
+                Payment: <input name="payment" placeholder="0" type="number" />
             </label>
             <pre />
             <label>
-                Actual: <input name="actual" type="number" placeholder="0" />
+                Actual: <input name="actual" placeholder="0" type="number" />
             </label>
             <pre />
             <button type="submit">Submit</button>

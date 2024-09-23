@@ -16,7 +16,7 @@ type Operation = {
 };
 
 const OperationsPanel = (
-    { operations }: { operations: Array<Operation> }, // TODO export
+    { operations }: { readonly operations: Array<Operation> }, // TODO export
 ) => (
     <table
         style={{
@@ -34,7 +34,7 @@ const OperationsPanel = (
             </tr>
         </thead>
         <tbody>
-            {operations.map(op => (
+            {operations.map((op) => (
                 <tr key={op.index}>
                     <td>{op.type}</td>
                     <td>
@@ -59,7 +59,7 @@ const OperationsPanel = (
     </table>
 );
 
-addons.register(ADDON_ID, api => {
+addons.register(ADDON_ID, (api) => {
     const channel = api.getChannel();
     addons.add(PANEL_ID, {
         type: types.PANEL,
@@ -75,13 +75,13 @@ addons.register(ADDON_ID, api => {
 
             return (
                 <AddonPanel active={active ?? false}>
-                    {budgetStatement && (
+                    {budgetStatement ? (
                         <OperationsPanel
                             operations={
                                 budgetStatement.operations as unknown as Array<Operation>
                             }
                         />
-                    )}
+                    ) : null}
                 </AddonPanel>
             );
         },

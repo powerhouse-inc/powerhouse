@@ -13,14 +13,14 @@ import codegen from '../common/codegen';
 export type ScopeType = 'global' | 'local';
 
 interface IProps extends SchemaEditorProps {
-    name: string;
-    scope: ScopeType;
-    onGenerate: (created: {
+    readonly name: string;
+    readonly scope: ScopeType;
+    readonly onGenerate: (created: {
         documentName: string;
         schema: string;
         validator: () => z.AnyZodObject;
     }) => void;
-    theme: styles.ColorTheme;
+    readonly theme: styles.ColorTheme;
 }
 
 const typeRegexp = /^type (\S*State)( })?/g;
@@ -139,8 +139,8 @@ export default function EditorSchema({
 
     async function generateSchema(code: string, name: string) {
         // using callbacks instead of await due to rollup error
-        codegen(code).then(result => {
-            import(/* @vite-ignore */ result).then(validators => {
+        codegen(code).then((result) => {
+            import(/* @vite-ignore */ result).then((validators) => {
                 const schemaName = `${name}StateSchema`;
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
                 const validator = validators[schemaName];
@@ -170,13 +170,12 @@ export default function EditorSchema({
     return (
         <div>
             <Editor
-                theme={`vs-${theme}`}
-                onSchemaChange={schema => setSchema(schema)}
-                width="100%"
                 height="60vh"
+                onSchemaChange={(schema) => setSchema(schema)}
+                theme={`vs-${theme}`}
+                width="100%"
                 {...props}
-                value={code}
-                onChange={value => setCode(value ?? '')}
+                onChange={(value) => setCode(value ?? '')}
                 onMount={(editor, monaco) => {
                     editorRef.current = editor;
                     props.onMount?.(editor, monaco);
@@ -188,6 +187,7 @@ export default function EditorSchema({
                     automaticLayout: true,
                     ...props.options,
                 }}
+                value={code}
             />
         </div>
     );

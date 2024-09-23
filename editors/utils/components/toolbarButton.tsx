@@ -1,7 +1,7 @@
 import { PropsWithChildren } from 'react';
 
 interface ToolbarButtonProps {
-    onClick?: () => void;
+    readonly onClick?: () => void;
 }
 
 export function ToolbarButton(props: PropsWithChildren<ToolbarButtonProps>) {
@@ -13,8 +13,8 @@ export function ToolbarButton(props: PropsWithChildren<ToolbarButtonProps>) {
 
     return (
         <div
-            onClick={handleClick}
             className="toolbar-button"
+            onClick={handleClick}
             style={{ userSelect: 'none' }}
         >
             {props.children}

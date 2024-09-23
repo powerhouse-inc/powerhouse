@@ -13,7 +13,7 @@ const { meta, CreateDocumentStory: JSONEditor } = createDocumentStory(
         state: Document<unknown, any>,
         action: any,
         dispatch: SignalDispatch | undefined,
-    ) => baseReducer(state, action, document => document, dispatch),
+    ) => baseReducer(state, action, (document) => document, dispatch),
     utils.createExtendedState(),
 );
 

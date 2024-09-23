@@ -23,9 +23,9 @@ export function ServiceProviderFeeTypes(props: IProps) {
 
     const onSubmitEdit: ServiceProviderFeeTypesTableProps['onSubmitEdit'] =
         useCallback(
-            data => {
+            (data) => {
                 const selectedItem = state.serviceProviderFeeTypes.find(
-                    s => s.id === data.id,
+                    (s) => s.id === data.id,
                 );
                 if (!selectedItem) return;
 
@@ -56,7 +56,7 @@ export function ServiceProviderFeeTypes(props: IProps) {
 
     const onSubmitCreate: ServiceProviderFeeTypesTableProps['onSubmitCreate'] =
         useCallback(
-            data => {
+            (data) => {
                 const id = utils.hashKey();
                 const name = data.name;
                 const accountId = data.accountId;
@@ -88,7 +88,7 @@ export function ServiceProviderFeeTypes(props: IProps) {
 
     const onSubmitCreateAccount: ServiceProviderFeeTypesTableProps['onSubmitCreateAccount'] =
         useCallback(
-            data => {
+            (data) => {
                 const id = utils.hashKey();
                 const reference = data.reference;
                 const label = data.label;
@@ -107,13 +107,13 @@ export function ServiceProviderFeeTypes(props: IProps) {
 
     return (
         <ServiceProviderFeeTypesTable
-            state={state}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
-            onSubmitDelete={onSubmitDelete}
             onSubmitCreateAccount={onSubmitCreateAccount}
+            onSubmitDelete={onSubmitDelete}
+            onSubmitEdit={onSubmitEdit}
+            state={state}
         />
     );
 }

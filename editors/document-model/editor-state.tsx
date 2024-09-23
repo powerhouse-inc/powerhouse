@@ -6,12 +6,14 @@ import { SchemaResult } from './useSchemaEditor';
 import { DocumentModelAction } from 'document-model/document-model';
 
 export interface EditorStateProps {
-    name: string;
-    schemaHandlers: SchemaResult;
-    scope: OperationScope;
-    theme: styles.ColorTheme;
-    setStateSchema: (schema: string, scope: ScopeType) => void;
-    latestOperation?: Operation<DocumentModelAction | BaseAction> | null;
+    readonly name: string;
+    readonly schemaHandlers: SchemaResult;
+    readonly scope: OperationScope;
+    readonly theme: styles.ColorTheme;
+    readonly setStateSchema: (schema: string, scope: ScopeType) => void;
+    readonly latestOperation?: Operation<
+        DocumentModelAction | BaseAction
+    > | null;
 }
 
 function EditorState(props: EditorStateProps) {
@@ -46,11 +48,10 @@ function EditorState(props: EditorStateProps) {
                     {`${scopeName} State Schema`}
                 </h4>
                 <EditorSchema
-                    scope={scope}
+                    height={200}
                     name={name}
-                    value={specification?.state[scope].schema}
-                    onGenerate={schema => {
-                        setSchemaState(_state => ({
+                    onGenerate={(schema) => {
+                        setSchemaState((_state) => ({
                             ..._state,
                             ...schema,
                         }));
@@ -60,8 +61,9 @@ function EditorState(props: EditorStateProps) {
                             setStateSchema(schema.schema, scope);
                         }
                     }}
+                    scope={scope}
                     theme={theme}
-                    height={200}
+                    value={specification?.state[scope].schema}
                 />
             </div>
             <div
@@ -75,16 +77,16 @@ function EditorState(props: EditorStateProps) {
                 >{`${scopeName} Initial State`}</h4>
                 <EditorInitialState
                     height={200}
+                    onCreate={(value) => {
+                        setInitialValue(JSON.parse(value) as JSON);
+                    }}
                     setInitialValue={
                         latestOperation?.type === 'SET_INITIAL_STATE' &&
                         latestOperation.scope === scope
                     }
-                    value={specification?.state[scope].initialValue}
-                    validator={schemaState?.validator}
-                    onCreate={value => {
-                        setInitialValue(JSON.parse(value) as JSON);
-                    }}
                     theme={theme}
+                    validator={schemaState?.validator}
+                    value={specification?.state[scope].initialValue}
                 />
             </div>
         </div>

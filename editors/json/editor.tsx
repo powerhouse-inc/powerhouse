@@ -36,6 +36,14 @@ export default function Editor({ dispatch, document, context }: IProps) {
     return (
         <DocumentEditor mode={context.theme}>
             <EditorToolbar
+                center={[
+                    <ToolbarButton
+                        key="save"
+                        onClick={() => handleSave(state as JSON)}
+                    >
+                        Save
+                    </ToolbarButton>,
+                ]}
                 key="toolbar"
                 left={[
                     <ToolbarButton
@@ -51,14 +59,6 @@ export default function Editor({ dispatch, document, context }: IProps) {
                         ↻ redo
                     </ToolbarButton>,
                 ]}
-                center={[
-                    <ToolbarButton
-                        key="save"
-                        onClick={() => handleSave(state as JSON)}
-                    >
-                        Save
-                    </ToolbarButton>,
-                ]}
                 right={[
                     <ToolbarButton key="rev">revision history</ToolbarButton>,
                 ]}
@@ -67,18 +67,18 @@ export default function Editor({ dispatch, document, context }: IProps) {
                 <div style={{ marginBottom: '1em' }}>
                     <TextInput
                         key="doc-title"
+                        onSubmit={handleSetDocumentName}
                         placeholder="Document name"
-                        value={document.name}
                         size="medium"
                         theme={context.theme}
-                        onSubmit={handleSetDocumentName}
+                        value={document.name}
                     />
                 </div>
                 <JSONEditor
-                    value={state as JSON}
+                    onBlur={(value) => handleSave(value)}
+                    onChange={(value) => setState(value || {})}
                     theme={context.theme}
-                    onBlur={value => handleSave(value)}
-                    onChange={value => setState(value || {})}
+                    value={state as JSON}
                 />
             </EditorWorksheet>
         </DocumentEditor>

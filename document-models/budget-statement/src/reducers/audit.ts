@@ -8,7 +8,7 @@ import { BudgetStatementState } from '../../gen';
 import { BudgetStatementAuditOperations } from '../../gen/audit/operations';
 
 function checkDuplicatedReport(state: BudgetStatementState, report: string) {
-    if (state.auditReports.find(audit => audit.report === report)) {
+    if (state.auditReports.find((audit) => audit.report === report)) {
         throw new Error(`Audit with report ${report} already exists`);
     }
 }
@@ -18,7 +18,7 @@ export const reducer: BudgetStatementAuditOperations = {
         checkDuplicatedReport(state, action.input.report);
         if (
             !action.attachments.find(
-                attachment => attachment.hash === action.input.report,
+                (attachment) => attachment.hash === action.input.report,
             )
         ) {
             throw new Error(
@@ -32,7 +32,7 @@ export const reducer: BudgetStatementAuditOperations = {
     },
     deleteAuditReportOperation(state, action) {
         const index = state.auditReports.findIndex(
-            audit => audit.report === action.input.report,
+            (audit) => audit.report === action.input.report,
         );
         if (index > -1) {
             state.auditReports.splice(index, 1);

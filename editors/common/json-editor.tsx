@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react';
 import { styles } from 'document-model-libs/utils';
 
 type IProps = Omit<EditorProps, 'value' | 'onChange' | 'theme'> & {
-    value: JSON;
-    onChange: (value: JSON) => void;
-    theme: styles.ColorTheme;
-    onBlur?: (value: JSON) => void;
+    readonly value: JSON;
+    readonly onChange: (value: JSON) => void;
+    readonly theme: styles.ColorTheme;
+    readonly onBlur?: (value: JSON) => void;
 };
 
 export function isJSONEqual(json: JSON, text: string) {
@@ -48,11 +48,11 @@ export default function JSONEditor({
         <CodeEditor
             height="100%"
             language="json"
-            value={text}
+            onChange={(value) => setText(value ?? '')}
             theme={`vs-${theme}`}
-            onChange={value => setText(value ?? '')}
+            value={text}
             {...props}
-            onMount={editor => {
+            onMount={(editor) => {
                 editor.onDidBlurEditorText(() => {
                     onBlur?.(JSON.parse(editor.getValue()) as JSON);
                 });

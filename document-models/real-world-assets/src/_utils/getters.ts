@@ -28,23 +28,25 @@ export function getFixedIncomeTransactionsFromGroupTransactions(
 ) {
     return transactions
         .filter(
-            transaction =>
+            (transaction) =>
                 transaction.type === ASSET_PURCHASE ||
                 transaction.type === ASSET_SALE,
         )
-        .map(transaction => transaction.fixedIncomeTransaction!);
+        .map((transaction) => transaction.fixedIncomeTransaction!);
 }
 
 export function getAssetSaleTransactionsFromFixedIncomeTransactions(
     transactions: GroupTransaction[],
 ) {
-    return transactions.filter(transaction => transaction.type === ASSET_SALE);
+    return transactions.filter(
+        (transaction) => transaction.type === ASSET_SALE,
+    );
 }
 
 export function getAssetPurchaseTransactionsFromFixedIncomeTransactions(
     transactions: GroupTransaction[],
 ) {
     return transactions.filter(
-        transaction => transaction.type === ASSET_PURCHASE,
+        (transaction) => transaction.type === ASSET_PURCHASE,
     );
 }

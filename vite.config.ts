@@ -17,16 +17,16 @@ const entry: Record<string, string> = {
 };
 
 readdirSync(documentModelsDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => dirent.name)
-    .forEach(name => {
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name)
+    .forEach((name) => {
         entry[name] = resolve(documentModelsDir, name, 'index.ts');
     });
 
 readdirSync(editorsDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => dirent.name)
-    .forEach(name => {
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name)
+    .forEach((name) => {
         const editorPath = resolve(editorsDir, name, 'index.ts');
         if (existsSync(editorPath)) {
             entry[`editors/${name}`] = editorPath;
@@ -34,7 +34,12 @@ readdirSync(editorsDir, { withFileTypes: true })
     });
 
 export default defineConfig(({ mode }) => {
-    const external = ['react', 'react/jsx-runtime', 'react-dom', /^document-model\//];
+    const external = [
+        'react',
+        'react/jsx-runtime',
+        'react-dom',
+        /^document-model\//,
+    ];
 
     const test: InlineConfig = {
         globals: true,
@@ -64,30 +69,38 @@ export default defineConfig(({ mode }) => {
                 external,
                 output: {
                     manualChunks: (id) => {
-                        if (id.startsWith(path.join(__dirname, 'editors')) && id.match(/editors\/[^\/]+\/editor.tsx/)) {
+                        if (
+                            id.startsWith(path.join(__dirname, 'editors')) &&
+                            /editors\/[^/]+\/editor.tsx/.exec(id)
+                        ) {
                             const editorName = path.basename(path.dirname(id));
                             return `editors/${editorName}/editor`;
-                        } else if (id.startsWith(path.join(__dirname, 'document-models')) && id.match(/document-models\/[^\/]+\/index.ts/)) {
+                        } else if (
+                            id.startsWith(
+                                path.join(__dirname, 'document-models'),
+                            ) &&
+                            /document-models\/[^/]+\/index.ts/.exec(id)
+                        ) {
                             const modelName = path.basename(path.dirname(id));
                             return `document-models/${modelName}`;
-                        } else if (id.includes("lazy-with-preload")) {
-                            return "utils/lazy-with-preload";
+                        } else if (id.includes('lazy-with-preload')) {
+                            return 'utils/lazy-with-preload';
                         }
                     },
                     entryFileNames: '[format]/[name].js',
                     chunkFileNames: (info) => {
                         // creates named chunk for editor components, document-models and utils
                         if (info.name.startsWith('editors/')) {
-                            return `[format]/${info.name}.js`
+                            return `[format]/${info.name}.js`;
                         } else if (info.name.startsWith('document-models/')) {
-                            return `[format]/${info.name}.js`
-                        } else if (info.name.startsWith("utils")) {
-                            return `[format]/${info.name}.js`
+                            return `[format]/${info.name}.js`;
+                        } else if (info.name.startsWith('utils')) {
+                            return `[format]/${info.name}.js`;
                         } else {
-                            return '[format]/internal/[name]-[hash].js'
+                            return '[format]/internal/[name]-[hash].js';
                         }
-                    }
-                }
+                    },
+                },
             },
         },
         plugins: [

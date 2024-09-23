@@ -19,7 +19,7 @@ import { DocumentDriveNodeOperations } from '../../gen/node/operations';
 
 export const reducer: DocumentDriveNodeOperations = {
     addFileOperation(state, action, dispatch) {
-        if (state.nodes.find(node => node.id === action.input.id)) {
+        if (state.nodes.find((node) => node.id === action.input.id)) {
             throw new Error(`Node with id ${action.input.id} already exists!`);
         }
 
@@ -34,12 +34,12 @@ export const reducer: DocumentDriveNodeOperations = {
 
         const invalidSyncUnit: SynchronizationUnit | undefined =
             synchronizationUnits.find(
-                unit =>
+                (unit) =>
                     !!state.nodes.find(
-                        node =>
+                        (node) =>
                             isFileNode(node) &&
                             node.synchronizationUnits.find(
-                                fileUnit => fileUnit.syncId === unit.syncId,
+                                (fileUnit) => fileUnit.syncId === unit.syncId,
                             ),
                     ),
             );
@@ -70,7 +70,7 @@ export const reducer: DocumentDriveNodeOperations = {
         });
     },
     addFolderOperation(state, action) {
-        if (state.nodes.find(node => node.id === action.input.id)) {
+        if (state.nodes.find((node) => node.id === action.input.id)) {
             throw new Error(`Node with id ${action.input.id} already exists!`);
         }
 
@@ -88,20 +88,20 @@ export const reducer: DocumentDriveNodeOperations = {
         });
     },
     deleteNodeOperation(state, action, dispatch) {
-        const node = state.nodes.find(node => node.id === action.input.id);
+        const node = state.nodes.find((node) => node.id === action.input.id);
         if (!node) {
             throw new Error(`Node with id ${action.input.id} not found`);
         }
         const descendants = getDescendants(node, state.nodes);
         state.nodes = state.nodes.filter(
-            node =>
+            (node) =>
                 node.id !== action.input.id &&
-                !descendants.find(descendant => descendant.id === node.id),
+                !descendants.find((descendant) => descendant.id === node.id),
         );
 
         [node, ...descendants]
-            .filter(node => isFileNode(node))
-            .forEach(node => {
+            .filter((node) => isFileNode(node))
+            .forEach((node) => {
                 dispatch?.({
                     type: 'DELETE_CHILD_DOCUMENT',
                     input: {
@@ -111,7 +111,7 @@ export const reducer: DocumentDriveNodeOperations = {
             });
     },
     updateFileOperation(state, action) {
-        state.nodes = state.nodes.map(node =>
+        state.nodes = state.nodes.map((node) =>
             node.id === action.input.id
                 ? {
                       ...node,
@@ -131,7 +131,7 @@ export const reducer: DocumentDriveNodeOperations = {
         );
     },
     updateNodeOperation(state, action) {
-        state.nodes = state.nodes.map(node =>
+        state.nodes = state.nodes.map((node) =>
             node.id === action.input.id
                 ? {
                       ...node,
@@ -152,14 +152,14 @@ export const reducer: DocumentDriveNodeOperations = {
         );
     },
     copyNodeOperation(state, action, dispatch) {
-        const node = state.nodes.find(node => node.id === action.input.srcId);
+        const node = state.nodes.find((node) => node.id === action.input.srcId);
 
         if (!node) {
             throw new Error(`Node with id ${action.input.srcId} not found`);
         }
 
         const duplicatedNode = state.nodes.find(
-            node => node.id === action.input.targetId,
+            (node) => node.id === action.input.targetId,
         );
 
         if (duplicatedNode) {
@@ -193,12 +193,13 @@ export const reducer: DocumentDriveNodeOperations = {
 
             const invalidSyncUnit: SynchronizationUnit | undefined =
                 synchronizationUnits.find(
-                    unit =>
+                    (unit) =>
                         !!state.nodes.find(
-                            node =>
+                            (node) =>
                                 isFileNode(node) &&
                                 node.synchronizationUnits.find(
-                                    fileUnit => fileUnit.syncId === unit.syncId,
+                                    (fileUnit) =>
+                                        fileUnit.syncId === unit.syncId,
                                 ),
                         ),
                 );
@@ -233,7 +234,7 @@ export const reducer: DocumentDriveNodeOperations = {
         }
 
         const node = state.nodes.find(
-            node => node.id === action.input.srcFolder,
+            (node) => node.id === action.input.srcFolder,
         );
 
         if (!node) {
@@ -251,7 +252,7 @@ export const reducer: DocumentDriveNodeOperations = {
             // throw error if moving a folder to one of its descendants
             if (
                 descendants.find(
-                    descendant =>
+                    (descendant) =>
                         descendant.id === action.input.targetParentFolder,
                 )
             ) {
@@ -261,7 +262,7 @@ export const reducer: DocumentDriveNodeOperations = {
             }
         }
 
-        state.nodes = state.nodes.map(node => {
+        state.nodes = state.nodes.map((node) => {
             if (node.id === action.input.srcFolder) {
                 return {
                     ...node,

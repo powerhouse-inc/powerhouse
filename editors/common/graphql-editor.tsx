@@ -23,11 +23,11 @@ const GraphQLEditor: React.FC<IProps> = ({
 }) => {
     return (
         <SchemaEditor
-            schema="type Test { name: String }"
-            height={100}
-            theme={`vs-${theme}`}
             defaultValue={schema}
+            height={100}
             line={2}
+            schema="type Test { name: String }"
+            theme={`vs-${theme}`}
             {...props}
             onMount={(editor, monaco) => {
                 if (!restrictions) return;

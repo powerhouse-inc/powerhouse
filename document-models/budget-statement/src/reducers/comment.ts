@@ -16,7 +16,7 @@ export const reducer: BudgetStatementCommentOperations = {
         const { input } = action;
         const key = input.key ?? utils.hashKey();
 
-        const index = state.comments.findIndex(c => c.key === input.key);
+        const index = state.comments.findIndex((c) => c.key === input.key);
         if (index > -1) {
             throw new Error(`Comment with key ${key} already exists`);
         }
@@ -38,7 +38,7 @@ export const reducer: BudgetStatementCommentOperations = {
     },
     updateCommentOperation(state, action) {
         const { input } = action;
-        const index = state.comments.findIndex(c => c.key === input.key);
+        const index = state.comments.findIndex((c) => c.key === input.key);
         if (index === -1) {
             return;
         }
@@ -61,7 +61,7 @@ export const reducer: BudgetStatementCommentOperations = {
     deleteCommentOperation(state, action) {
         const { input } = action;
         state.comments = state.comments.filter(
-            comment => input.comment !== comment.key,
+            (comment) => input.comment !== comment.key,
         );
     },
 };

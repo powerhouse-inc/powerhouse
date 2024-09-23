@@ -69,7 +69,7 @@ export const Transactions = (props: IProps) => {
             const entryTime = new Date(data.entryTime).toISOString();
 
             const fees = data.fees?.length
-                ? data.fees.map(fee => ({
+                ? data.fees.map((fee) => ({
                       ...fee,
                       id: utils.hashKey(),
                   }))
@@ -144,7 +144,7 @@ export const Transactions = (props: IProps) => {
                 dispatch(
                     removeFeesFromGroupTransaction({
                         id: transaction.id,
-                        feeIds: existingFees.map(fee => fee.id),
+                        feeIds: existingFees.map((fee) => fee.id),
                     }),
                 );
                 return;
@@ -155,7 +155,7 @@ export const Transactions = (props: IProps) => {
                 throw new Error('Fees are required');
             }
 
-            const feeUpdates = feeInputs.map(fee => ({
+            const feeUpdates = feeInputs.map((fee) => ({
                 ...fee,
                 id: fee.id ?? utils.hashKey(),
                 amount: Number(fee.amount),
@@ -177,11 +177,11 @@ export const Transactions = (props: IProps) => {
             const feesToUpdate: EditTransactionFeeInput[] = [];
             const feeIdsToRemove: string[] = [];
 
-            feeDifferences.forEach(difference => {
+            feeDifferences.forEach((difference) => {
                 if (
                     difference.type === 'CREATE' &&
                     !existingFees.find(
-                        fee =>
+                        (fee) =>
                             fee.id ===
                             feeUpdates[difference.path[0] as number].id,
                     )
@@ -231,9 +231,9 @@ export const Transactions = (props: IProps) => {
 
     const onSubmitEdit: GroupTransactionsTableProps['onSubmitEdit'] =
         useCallback(
-            data => {
+            (data) => {
                 const selectedItem = state.transactions.find(
-                    t => t.id === data.id,
+                    (t) => t.id === data.id,
                 );
                 if (!selectedItem) return;
                 const newEntryTime = data.entryTime
@@ -358,7 +358,7 @@ export const Transactions = (props: IProps) => {
 
     const onSubmitCreate: GroupTransactionsTableProps['onSubmitCreate'] =
         useCallback(
-            data => {
+            (data) => {
                 const transaction =
                     createNewGroupTransactionFromFormInputs(data);
 
@@ -376,7 +376,7 @@ export const Transactions = (props: IProps) => {
         );
 
     const onSubmitCreateAsset: AssetsTableProps['onSubmitCreate'] = useCallback(
-        data => {
+        (data) => {
             const id = utils.hashKey();
             const name = data.name;
             const maturity = data.maturity
@@ -411,7 +411,7 @@ export const Transactions = (props: IProps) => {
 
     const onSubmitCreateServiceProviderFeeType: GroupTransactionsTableProps['onSubmitCreateServiceProviderFeeType'] =
         useCallback(
-            data => {
+            (data) => {
                 const id = utils.hashKey();
                 const name = data.name;
                 const accountId = data.accountId;
@@ -435,16 +435,16 @@ export const Transactions = (props: IProps) => {
 
     return (
         <TransactionsTab
-            state={state}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
-            onSubmitDelete={onSubmitDelete}
             onSubmitCreateAsset={onSubmitCreateAsset}
             onSubmitCreateServiceProviderFeeType={
                 onSubmitCreateServiceProviderFeeType
             }
+            onSubmitDelete={onSubmitDelete}
+            onSubmitEdit={onSubmitEdit}
+            state={state}
         />
     );
 };

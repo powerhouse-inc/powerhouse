@@ -19,18 +19,21 @@ export function Other(props: IProps) {
             label: 'Accounts',
             description:
                 'Add and manage accounts that can be associated with transactions and fees.',
+            // eslint-disable-next-line react/no-unstable-nested-components
             Component: () => <Accounts {...props} />,
         },
         {
             value: FIXED_INCOME_TYPES,
             label: 'Fixed Income Types',
             description: 'Add and manage fixed income asset types.',
+            // eslint-disable-next-line react/no-unstable-nested-components
             Component: () => <FixedIncomeTypes {...props} />,
         },
         {
             value: SPVS,
             label: 'Special Purpose Vehicles (SPVs)',
             description: 'Add and manage special purpose vehicles (SPVs).',
+            // eslint-disable-next-line react/no-unstable-nested-components
             Component: () => <SPVs {...props} />,
         },
         {
@@ -38,6 +41,7 @@ export function Other(props: IProps) {
             label: 'Service Provider Fee Types',
             description:
                 'Add and manage service providers and their associated fee types.',
+            // eslint-disable-next-line react/no-unstable-nested-components
             Component: () => <ServiceProviderFeeTypes {...props} />,
         },
     ];

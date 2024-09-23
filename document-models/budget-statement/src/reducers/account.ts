@@ -10,7 +10,9 @@ import { createAccount } from '../utils';
 export const reducer: BudgetStatementAccountOperations = {
     addAccountOperation(state, action) {
         const { input } = action;
-        if (state.accounts.find(account => account.address === input.address)) {
+        if (
+            state.accounts.find((account) => account.address === input.address)
+        ) {
             throw new Error(
                 `Account with address ${input.address} already exists!`,
             );
@@ -20,7 +22,7 @@ export const reducer: BudgetStatementAccountOperations = {
     updateAccountOperation(state, action) {
         const { input } = action;
         const index = state.accounts.findIndex(
-            account => account.address === input.address,
+            (account) => account.address === input.address,
         );
         if (index === -1) {
             throw new Error(`Account with adddress ${input.address} not found`);
@@ -36,7 +38,7 @@ export const reducer: BudgetStatementAccountOperations = {
     deleteAccountOperation(state, action) {
         const { input } = action;
         state.accounts = state.accounts.filter(
-            account => account.address !== input.account,
+            (account) => account.address !== input.account,
         );
     },
     sortAccountsOperation(state, action) {

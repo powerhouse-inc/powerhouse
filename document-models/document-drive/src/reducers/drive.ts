@@ -22,7 +22,7 @@ export const reducer: DocumentDriveDriveOperations = {
     addListenerOperation(state, action, dispatch) {
         if (
             state.listeners.find(
-                listener =>
+                (listener) =>
                     listener.listenerId === action.input.listener.listenerId,
             )
         ) {
@@ -34,13 +34,13 @@ export const reducer: DocumentDriveDriveOperations = {
     },
     removeListenerOperation(state, action, dispatch) {
         state.listeners = state.listeners.filter(
-            listener => listener.listenerId === action.input.listenerId,
+            (listener) => listener.listenerId === action.input.listenerId,
         );
     },
     addTriggerOperation(state, action, dispatch) {
         if (
             state.triggers.find(
-                trigger => trigger.id === action.input.trigger.id,
+                (trigger) => trigger.id === action.input.trigger.id,
             )
         ) {
             throw new Error(
@@ -51,7 +51,7 @@ export const reducer: DocumentDriveDriveOperations = {
     },
     removeTriggerOperation(state, action, dispatch) {
         state.triggers = state.triggers.filter(
-            trigger => trigger.id !== action.input.triggerId,
+            (trigger) => trigger.id !== action.input.triggerId,
         );
     },
 };

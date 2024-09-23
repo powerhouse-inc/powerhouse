@@ -2,16 +2,16 @@ import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { inputStyle, TypographySize, typographySizes } from './styles';
 
 interface TextInputProps {
-    theme: 'light' | 'dark';
-    size?: TypographySize;
-    horizontalLine?: boolean;
-    id?: string;
-    value?: string;
-    placeholder?: string;
-    autoFocus?: boolean;
-    clearOnSubmit?: boolean;
-    onSubmit?: { (value: string): void };
-    onEmpty?: { (id: string): void };
+    readonly theme: 'light' | 'dark';
+    readonly size?: TypographySize;
+    readonly horizontalLine?: boolean;
+    readonly id?: string;
+    readonly value?: string;
+    readonly placeholder?: string;
+    readonly autoFocus?: boolean;
+    readonly clearOnSubmit?: boolean;
+    readonly onSubmit?: { (value: string): void };
+    readonly onEmpty?: { (id: string): void };
 }
 
 export function TextInput(props: TextInputProps) {
@@ -22,7 +22,7 @@ export function TextInput(props: TextInputProps) {
     });
 
     useEffect(() => {
-        setState(state =>
+        setState((state) =>
             state.value !== props.value
                 ? { ...state, value: props.value || '' }
                 : state,
@@ -62,7 +62,7 @@ export function TextInput(props: TextInputProps) {
         }
     };
 
-    const onInput: React.FormEventHandler<HTMLTextAreaElement> = e => {
+    const onInput: React.FormEventHandler<HTMLTextAreaElement> = (e) => {
         if (!state.pressingEnter) {
             const target = e.target as HTMLTextAreaElement;
             setState({ ...state, value: target.value });
@@ -72,7 +72,7 @@ export function TextInput(props: TextInputProps) {
     };
 
     const setFocus = (f: boolean) => {
-        setState(state => ({ ...state, hasFocus: f }));
+        setState((state) => ({ ...state, hasFocus: f }));
 
         if (!f) {
             const newValue = ref.current?.value || '';
@@ -81,7 +81,7 @@ export function TextInput(props: TextInputProps) {
             if (newValue != origValue && props.onSubmit) {
                 props.onSubmit(newValue);
                 if (props.clearOnSubmit) {
-                    setState(state => ({ ...state, value: '' }));
+                    setState((state) => ({ ...state, value: '' }));
                 }
             }
         }
@@ -123,18 +123,18 @@ export function TextInput(props: TextInputProps) {
                 ''
             )}
             <textarea
-                key="text"
-                ref={ref}
-                placeholder={props.placeholder || ''}
                 autoFocus={props.autoFocus || false}
+                key="text"
+                onBlur={(e) => setFocus(false)}
+                onFocus={(e) => setFocus(true)}
                 onInput={onInput}
                 onKeyDown={onKeyDown}
                 onKeyUp={onKeyUp}
+                placeholder={props.placeholder || ''}
+                ref={ref}
                 style={style}
                 value={state.value}
-                onFocus={e => setFocus(true)}
-                onBlur={e => setFocus(false)}
-            ></textarea>
+            />
         </div>
     );
 }

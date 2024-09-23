@@ -48,7 +48,7 @@ describe('Node Operations', () => {
             creators.addFile(thirdInput),
         );
         const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe('test');
@@ -78,7 +78,7 @@ describe('Node Operations', () => {
             creators.addFile(thirdInput),
         );
         const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe('test');
@@ -116,7 +116,7 @@ describe('Node Operations', () => {
             creators.addFolder(thirdInput),
         );
         const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe('test');
@@ -147,7 +147,7 @@ describe('Node Operations', () => {
             creators.addFolder(thirdInput),
         );
         const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe('test');
@@ -194,7 +194,7 @@ describe('Node Operations', () => {
         const updatedDocument = reducer(document, creators.updateFile(input));
 
         const nodeNames = updatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe(existingFile1.name);
@@ -221,7 +221,7 @@ describe('Node Operations', () => {
         const updatedDocument = reducer(document, creators.updateNode(input));
 
         const nodeNames = updatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe(existingNode1.name);
@@ -307,7 +307,7 @@ describe('Node Operations', () => {
         const updatedDocument = reducer(document, creators.copyNode(input));
 
         const nodeNames = updatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe(existingNode.name);
@@ -324,7 +324,7 @@ describe('Node Operations', () => {
         const updatedDocument = reducer(document, creators.copyNode(input));
 
         const nodeNames = updatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe(existingNode.name);
@@ -340,7 +340,7 @@ describe('Node Operations', () => {
         const updatedDocument = reducer(document, creators.copyNode(input));
 
         const nodeNames = updatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe(existingNode.name);
@@ -385,7 +385,7 @@ describe('Node Operations', () => {
         const updatedDocument = reducer(document, creators.moveNode(input));
 
         const nodeNames = updatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe('test');
@@ -404,7 +404,7 @@ describe('Node Operations', () => {
         const updatedDocument = reducer(document, creators.moveNode(input));
 
         const nodeNames = updatedDocument.state.global.nodes.map(
-            node => node.name,
+            (node) => node.name,
         );
         expect(new Set(nodeNames).size).toBe(nodeNames.length);
         expect(nodeNames[0]).toBe('test');

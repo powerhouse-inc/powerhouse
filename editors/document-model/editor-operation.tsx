@@ -5,15 +5,15 @@ import { OperationScope } from 'document-model/document';
 import { ConstrainedEditorRestriction } from 'constrained-editor-plugin';
 
 interface IProps {
-    id: string;
-    name: string | null;
-    schema: string | null;
-    scope: OperationScope | null;
-    onUpdateName: (id: string, name: string) => void;
-    onDelete: (id: string) => void;
-    onUpdateSchema: (id: string, schema: string) => void;
-    onUpdateScope: (id: string, scope: OperationScope) => void;
-    theme: styles.ColorTheme;
+    readonly id: string;
+    readonly name: string | null;
+    readonly schema: string | null;
+    readonly scope: OperationScope | null;
+    readonly onUpdateName: (id: string, name: string) => void;
+    readonly onDelete: (id: string) => void;
+    readonly onUpdateSchema: (id: string, schema: string) => void;
+    readonly onUpdateScope: (id: string, scope: OperationScope) => void;
+    readonly theme: styles.ColorTheme;
 }
 
 const scopes: OperationScope[] = ['global', 'local'];
@@ -54,11 +54,11 @@ const getSchemaAndRestrictions = (
     const lines = schema.split('\n');
 
     // get the line where the input declaration is contained
-    const inputDeclarationLine = lines.find(line =>
+    const inputDeclarationLine = lines.find((line) =>
         line.includes(inputDeclaration),
     );
     const inputDeclarationStartIndex =
-        lines.findIndex(line => line.includes(inputDeclaration)) + 1;
+        lines.findIndex((line) => line.includes(inputDeclaration)) + 1;
 
     // if the input declaration is not found, return the schema as is with no restrictions
     if (!inputDeclarationLine) {
@@ -113,14 +113,14 @@ export default function EditorOperation(props: IProps) {
     return (
         <div>
             <TextInput
-                key={id + '#name'}
-                theme={theme}
                 autoFocus={false}
-                onSubmit={name => onUpdateName(id, name)}
-                onEmpty={() => onDelete(id)}
-                value={name || ''}
                 clearOnSubmit={false}
+                key={id + '#name'}
+                onEmpty={() => onDelete(id)}
+                onSubmit={(name) => onUpdateName(id, name)}
                 size="medium"
+                theme={theme}
+                value={name || ''}
             />
             <label
                 style={{ marginLeft: 22, marginBottom: 8, display: 'block' }}
@@ -128,11 +128,11 @@ export default function EditorOperation(props: IProps) {
                 Schema:
             </label>
             <GraphQLEditor
-                theme={theme}
                 key={id + '#schema'}
-                schema={normalizedSchema}
                 onSchemaChange={(schema, sdl) => onUpdateSchema(id, sdl)}
                 restrictions={restrictions}
+                schema={normalizedSchema}
+                theme={theme}
             />
             <div>
                 <label
@@ -143,15 +143,15 @@ export default function EditorOperation(props: IProps) {
                 </label>
                 <select
                     id={`select-${id}`}
-                    value={scope || 'global'}
-                    onChange={event =>
+                    onChange={(event) =>
                         onUpdateScope(
                             id,
                             event.currentTarget.value as OperationScope,
                         )
                     }
+                    value={scope || 'global'}
                 >
-                    {scopes.map(scope => (
+                    {scopes.map((scope) => (
                         <option key={scope} value={scope}>
                             {scope[0].toUpperCase()}
                             {scope.slice(1)}

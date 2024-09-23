@@ -46,7 +46,7 @@ export function useDocumentReducer<State, A extends Action, LocalState>(
         action: A | BaseAction,
         onErrorCallback?: ActionErrorCallback,
     ) => {
-        setState(_state => {
+        setState((_state) => {
             try {
                 const newState = reducer(_state, action);
 

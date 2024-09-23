@@ -1,5 +1,5 @@
 import { utils as docUtils } from 'document-model/document';
-import { readdir, rename, readFile } from 'node:fs/promises';
+import { readdir, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { RealWorldAssetsAction, reducer, utils } from '..';
 import { readFileSync } from 'node:fs';
@@ -16,13 +16,16 @@ function updateOperations(
     for (const operation of operations[scope]) {
         if (fieldsToChange) {
             for (const [key, value] of Object.entries(fieldsToChange)) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
                 const _value = typeof value === 'function' ? value() : value;
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 operation[key] = _value;
             }
         }
 
         if (fieldsToRemove) {
             for (const field of fieldsToRemove) {
+                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
                 delete operation[field];
             }
         }
@@ -51,7 +54,7 @@ const fieldsToRemove = ['resultingState'];
 for (const name of documentDirNames) {
     const path = join(srcDir, name, 'operations.json');
     const file = readFileSync(path);
-    const operations = (JSON.parse(file.toString())) as {
+    const operations = JSON.parse(file.toString()) as {
         global: Record<string, any>[];
         local: Record<string, any>[];
     };

@@ -6,10 +6,10 @@ import { styles } from 'document-model-libs/utils';
 import { isJSONEqual } from '../common/json-editor';
 
 interface IProps extends EditorProps {
-    validator?: () => z.AnyZodObject;
-    onCreate: (create: string) => void;
-    theme: styles.ColorTheme;
-    setInitialValue?: boolean;
+    readonly validator?: () => z.AnyZodObject;
+    readonly onCreate: (create: string) => void;
+    readonly theme: styles.ColorTheme;
+    readonly setInitialValue?: boolean;
 }
 
 export default function EditorInitialState({
@@ -26,7 +26,7 @@ export default function EditorInitialState({
         if (!editorRef.current) {
             return;
         }
-        editorRef.current.onDidBlurEditorText(e => {
+        editorRef.current.onDidBlurEditorText((e) => {
             const value = editorRef.current?.getValue() ?? '{}';
             onCreate(value);
         });
@@ -58,13 +58,12 @@ export default function EditorInitialState({
     return (
         <div>
             <CodeEditor
-                theme={`vs-${theme}`}
-                width="100%"
                 height="60vh"
                 language="json"
-                onChange={value => setCode(value ?? '')}
+                onChange={(value) => setCode(value ?? '')}
+                theme={`vs-${theme}`}
+                width="100%"
                 {...props}
-                value={code}
                 onMount={async (editor, monaco) => {
                     editorRef.current = editor;
                     props.onMount?.(editor, monaco);
@@ -85,6 +84,7 @@ export default function EditorInitialState({
                     automaticLayout: true,
                     ...props.options,
                 }}
+                value={code}
             />
             <p
                 style={{

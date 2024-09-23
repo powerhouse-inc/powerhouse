@@ -12,7 +12,7 @@ export function makeFixedIncomeAssetWithDerivedFields(
     state: RealWorldAssetsState,
     assetId: string,
 ) {
-    const asset = state.portfolio.find(a => a.id === assetId);
+    const asset = state.portfolio.find((a) => a.id === assetId);
     if (!asset) {
         throw new Error(`Asset with id ${assetId} does not exist!`);
     }
@@ -39,7 +39,7 @@ export function makeRwaDocumentWithAssetCurrentValues(
     const fixedIncomeTypes = documentCopy.state.global.fixedIncomeTypes;
     const portfolio = documentCopy.state.global.portfolio;
 
-    const portfolioWithCurrentValues = portfolio.map(asset => ({
+    const portfolioWithCurrentValues = portfolio.map((asset) => ({
         ...asset,
         ...(isFixedIncomeAsset(asset) && {
             currentValue: calculateCurrentValue({

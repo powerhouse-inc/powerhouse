@@ -28,7 +28,7 @@ export const reducer: ScopeFrameworkMainOperations = {
     setRootPathOperation(state, action) {
         const rootPathPattern = /^[A-Z]+$/;
 
-        if (!action.input.newRootPath.match(rootPathPattern)) {
+        if (!rootPathPattern.exec(action.input.newRootPath)) {
             throw new Error(
                 `Invalid root path format ${action.input.newRootPath}. Use one or more capital letters: 'A', 'D', 'AQ', ...`,
             );
@@ -38,7 +38,7 @@ export const reducer: ScopeFrameworkMainOperations = {
             newString = action.input.newRootPath + '.';
 
         state.rootPath = action.input.newRootPath;
-        state.elements = state.elements.map(e => ({
+        state.elements = state.elements.map((e) => ({
             ...e,
             path: e.path.replace(findString, newString),
         }));
@@ -90,33 +90,35 @@ export const reducer: ScopeFrameworkMainOperations = {
 
     updateElementTypeOperation(state, action) {
         state.elements
-            .filter(e => e.id == action.input.id)
-            .forEach(e => {
+            .filter((e) => e.id == action.input.id)
+            .forEach((e) => {
                 e.type = action.input.type;
             });
     },
 
     updateElementNameOperation(state, action) {
         state.elements
-            .filter(e => e.id == action.input.id)
-            .forEach(e => {
+            .filter((e) => e.id == action.input.id)
+            .forEach((e) => {
                 e.name = action.input.name;
             });
     },
 
     updateElementComponentsOperation(state, action) {
         state.elements
-            .filter(e => e.id == action.input.id)
-            .forEach(e => {
+            .filter((e) => e.id == action.input.id)
+            .forEach((e) => {
                 e.components = action.input.components;
             });
     },
 
     removeElementOperation(state, action) {
-        const element = state.elements.filter(e => e.id == action.input.id)[0];
+        const element = state.elements.filter(
+            (e) => e.id == action.input.id,
+        )[0];
         if (element) {
             state.elements = state.elements.filter(
-                e => !e.path.startsWith(element.path),
+                (e) => !e.path.startsWith(element.path),
             );
         }
     },

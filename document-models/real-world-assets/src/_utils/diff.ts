@@ -17,7 +17,7 @@ export function getDifferences<T extends object>(
             const keys2 = Object.keys(value2).sort();
             if (
                 JSON.stringify(keys1) !== JSON.stringify(keys2) ||
-                keys1.some(key =>
+                keys1.some((key) =>
                     compare(
                         value1[key as keyof typeof value1],
                         value2[key as keyof typeof value1],
@@ -56,6 +56,6 @@ export function getDifferences<T extends object>(
             }
             return acc;
         },
-        {} as Partial<T>,
+        {},
     );
 }

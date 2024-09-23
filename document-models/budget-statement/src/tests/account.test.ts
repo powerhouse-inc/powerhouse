@@ -153,7 +153,7 @@ describe('Budget Statement account reducer', () => {
         });
         expect(updatedDocument.operations.global[0].index).toEqual(0);
         expect(
-            updatedDocument.state.global.accounts.map(a => a.address),
+            updatedDocument.state.global.accounts.map((a) => a.address),
         ).toStrictEqual(['eth:0x02', 'eth:0x00', 'eth:0x01']);
     });
 });

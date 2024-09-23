@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { AddonPanel } from '@storybook/components';
 import { addons, types } from '@storybook/manager-api';
 import { Document } from 'document-model';
@@ -7,7 +8,7 @@ const ADDON_ID = 'Operations';
 const PANEL_ID = `${ADDON_ID}/panel`;
 
 const OperationsPanel = (
-    { operations }: { operations: Document.Document['operations'] }, // TODO export
+    { operations }: { readonly operations: Document.Document['operations'] }, // TODO export
 ) => {
     const operationsByTime = operations.global
         .concat(operations.local)
@@ -35,7 +36,7 @@ const OperationsPanel = (
                 </tr>
             </thead>
             <tbody>
-                {operationsByTime.map(op => (
+                {operationsByTime.map((op) => (
                     <tr key={op.index}>
                         <td>{op.type}</td>
                         <td>
@@ -75,7 +76,7 @@ const OperationsPanel = (
     );
 };
 
-addons.register(ADDON_ID, api => {
+addons.register(ADDON_ID, (api) => {
     const channel = api.getChannel();
     addons.add(PANEL_ID, {
         type: types.PANEL,
@@ -91,11 +92,11 @@ addons.register(ADDON_ID, api => {
 
             return (
                 <AddonPanel active={active ?? false}>
-                    {budgetStatement && (
+                    {budgetStatement ? (
                         <OperationsPanel
                             operations={budgetStatement.operations}
                         />
-                    )}
+                    ) : null}
                 </AddonPanel>
             );
         },

@@ -30,14 +30,14 @@ export const reducer: BudgetStatementLineItemOperations = {
     addLineItemOperation(state, action) {
         const { accountId, ...input } = action.input;
 
-        const account = state.accounts.find(a => a.address === accountId);
+        const account = state.accounts.find((a) => a.address === accountId);
         if (!account) {
             throw new Error(`Account with address ${accountId} not found`);
         }
 
         if (
             account.lineItems.find(
-                item =>
+                (item) =>
                     input.category?.id === item.category?.id &&
                     input.group?.id === item.group?.id,
             )
@@ -53,12 +53,12 @@ export const reducer: BudgetStatementLineItemOperations = {
     },
     updateLineItemOperation(state, action) {
         const { accountId, ...lineItemInput } = action.input;
-        const account = state.accounts.find(a => a.address === accountId);
+        const account = state.accounts.find((a) => a.address === accountId);
         if (!account) {
             throw new Error(`Account with address ${accountId} not found`);
         }
 
-        const index = account.lineItems.findIndex(lineItem =>
+        const index = account.lineItems.findIndex((lineItem) =>
             isEqual(lineItemInput, lineItem),
         );
         if (index === -1) {
@@ -78,24 +78,24 @@ export const reducer: BudgetStatementLineItemOperations = {
     },
     deleteLineItemOperation(state, action) {
         const { accountId, ...lineItemDelete } = action.input;
-        const account = state.accounts.find(a => a.address === accountId);
+        const account = state.accounts.find((a) => a.address === accountId);
         if (!account) {
             throw new Error(`Account with address ${accountId} not found`);
         }
 
         account.lineItems = account.lineItems.filter(
-            lineItem => !isEqual(lineItemDelete, lineItem),
+            (lineItem) => !isEqual(lineItemDelete, lineItem),
         );
     },
     sortLineItemsOperation(state, action) {
         const { accountId, lineItems } = action.input;
-        const account = state.accounts.find(a => a.address === accountId);
+        const account = state.accounts.find((a) => a.address === accountId);
         if (!account) {
             throw new Error(`Account with address ${accountId} not found`);
         }
         account.lineItems.sort((a, b) => {
-            const index1 = lineItems.findIndex(l => isEqual(l, a));
-            const index2 = lineItems.findIndex(l => isEqual(l, b));
+            const index1 = lineItems.findIndex((l) => isEqual(l, a));
+            const index2 = lineItems.findIndex((l) => isEqual(l, b));
             return (
                 (index1 > -1 ? index1 : Infinity) -
                 (index2 > -1 ? index2 : Infinity)

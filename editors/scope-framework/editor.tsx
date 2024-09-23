@@ -34,8 +34,8 @@ const getHighestPathWithPrefix = (prefix: string, paths: string[]) => {
     const pLength = prefix.length;
 
     paths
-        .filter(p => p.startsWith(prefix))
-        .forEach(p => {
+        .filter((p) => p.startsWith(prefix))
+        .forEach((p) => {
             const value = parseInt(p.slice(pLength).split('.', 2)[0]);
             if (value > result) {
                 result = value;
@@ -50,7 +50,7 @@ const getNextPath = (
     type: ScopeFrameworkElementType,
 ): string => {
     const result = [extendedState.state.global.rootPath],
-        paths = extendedState.state.global.elements.map(e => e.path);
+        paths = extendedState.state.global.elements.map((e) => e.path);
 
     if (type == 'Scope') {
         result.push(getHighestPathWithPrefix(result[0], paths) + 1 + '');
@@ -108,7 +108,7 @@ function ScopeFrameworkEditor(props: IProps) {
         );
 
     const handleDelete = (id: string) => {
-        const elements = state.elements.filter(e => e.id == id);
+        const elements = state.elements.filter((e) => e.id == id);
         if (elements.length == 1 && elements[0].type !== 'Scope') {
             dispatch(actions.removeElement({ id }));
         }
@@ -167,6 +167,17 @@ function ScopeFrameworkEditor(props: IProps) {
     return (
         <DocumentEditor mode={context.theme}>
             <EditorToolbar
+                center={[
+                    <ToolbarButton key="art" onClick={handleAddArticle}>
+                        ＋ add article
+                    </ToolbarButton>,
+                    <ToolbarButton key="sct" onClick={handleAddSection}>
+                        ＋ add section
+                    </ToolbarButton>,
+                    <ToolbarButton key="cor" onClick={handleAddCore}>
+                        ＋ add core
+                    </ToolbarButton>,
+                ]}
                 key="toolbar"
                 left={[
                     <ToolbarButton
@@ -182,32 +193,21 @@ function ScopeFrameworkEditor(props: IProps) {
                         ↻ redo
                     </ToolbarButton>,
                 ]}
-                center={[
-                    <ToolbarButton key="art" onClick={handleAddArticle}>
-                        ＋ add article
-                    </ToolbarButton>,
-                    <ToolbarButton key="sct" onClick={handleAddSection}>
-                        ＋ add section
-                    </ToolbarButton>,
-                    <ToolbarButton key="cor" onClick={handleAddCore}>
-                        ＋ add core
-                    </ToolbarButton>,
-                ]}
                 right={[
                     <ToolbarButton key="rev">revision history</ToolbarButton>,
                 ]}
             />
             <EditorWorksheet key="sheet">
                 <div
-                    key="header-left"
                     className="editor-worksheet--header-left"
+                    key="header-left"
                 >
                     <TextInput
                         key="doc-title"
-                        value={document.name}
+                        onSubmit={handleSetDocumentName}
                         size="huge"
                         theme={context.theme}
-                        onSubmit={handleSetDocumentName}
+                        value={document.name}
                     />
                     <p key="lastModified">
                         Last Modified:{' '}
@@ -219,26 +219,26 @@ function ScopeFrameworkEditor(props: IProps) {
                     </p>
                 </div>
                 <div
-                    key="header-right"
                     className="editor-worksheet--header-right"
+                    key="header-right"
                 >
                     <TextInput
                         key="doc-title"
-                        value={state.rootPath}
+                        onSubmit={handleSetRootPath}
                         size="medium"
                         theme={context.theme}
-                        onSubmit={handleSetRootPath}
+                        value={state.rootPath}
                     />
                 </div>
-                {state.elements.map(d => (
+                {state.elements.map((d) => (
                     <AtlasElement
-                        key={d.id}
                         element={d}
+                        key={d.id}
+                        mode={props.context.theme}
+                        onDelete={handleDelete}
+                        onUpdateComponents={handleComponentsUpdate}
                         onUpdateName={handleNameUpdate}
                         onUpdateType={handleTypeUpdate}
-                        onUpdateComponents={handleComponentsUpdate}
-                        onDelete={handleDelete}
-                        mode={props.context.theme}
                     />
                 ))}
                 {context.debug ? (

@@ -22,10 +22,10 @@ export const Portfolio = (props: IProps) => {
     const { transactions, fixedIncomeTypes } = state;
 
     const onSubmitEdit: AssetsTableProps['onSubmitEdit'] = useCallback(
-        data => {
-            const selectedItem = state.portfolio.find(f => f.id === data.id) as
-                | FixedIncome
-                | undefined;
+        (data) => {
+            const selectedItem = state.portfolio.find(
+                (f) => f.id === data.id,
+            ) as FixedIncome | undefined;
             if (!selectedItem) return;
             const update = copy(selectedItem);
             const newName = data.name;
@@ -63,7 +63,7 @@ export const Portfolio = (props: IProps) => {
     );
 
     const onSubmitCreate: AssetsTableProps['onSubmitCreate'] = useCallback(
-        data => {
+        (data) => {
             const id = utils.hashKey();
             const name = data.name;
             const maturity = data.maturity
@@ -105,7 +105,7 @@ export const Portfolio = (props: IProps) => {
 
     const onSubmitCreateFixedIncomeType: AssetsTableProps['onSubmitCreateFixedIncomeType'] =
         useCallback(
-            data => {
+            (data) => {
                 const id = utils.hashKey();
                 const name = data.name;
 
@@ -118,7 +118,7 @@ export const Portfolio = (props: IProps) => {
 
     const onSubmitCreateSpv: AssetsTableProps['onSubmitCreateSpv'] =
         useCallback(
-            data => {
+            (data) => {
                 const id = utils.hashKey();
                 const name = data.name;
 
@@ -148,15 +148,15 @@ export const Portfolio = (props: IProps) => {
 
     return (
         <PortfolioTab
-            state={state}
+            calculateCurrentValueCallback={calculateCurrentValueCallback}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
-            onSubmitDelete={onSubmitDelete}
             onSubmitCreateFixedIncomeType={onSubmitCreateFixedIncomeType}
             onSubmitCreateSpv={onSubmitCreateSpv}
-            calculateCurrentValueCallback={calculateCurrentValueCallback}
+            onSubmitDelete={onSubmitDelete}
+            onSubmitEdit={onSubmitEdit}
+            state={state}
         />
     );
 };

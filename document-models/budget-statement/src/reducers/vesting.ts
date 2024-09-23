@@ -14,7 +14,7 @@ export const reducer: BudgetStatementVestingOperations = {
         const { input } = action;
         const key = input.key ?? utils.hashKey();
 
-        const index = state.vesting.findIndex(v => v.key === input.key);
+        const index = state.vesting.findIndex((v) => v.key === input.key);
         if (index > -1) {
             throw new Error(`Vesting with key ${key} already exists`);
         }
@@ -34,7 +34,7 @@ export const reducer: BudgetStatementVestingOperations = {
     },
     updateVestingOperation(state, action) {
         const { input } = action;
-        const index = state.vesting.findIndex(v => v.key === input.key);
+        const index = state.vesting.findIndex((v) => v.key === input.key);
         if (index === -1) {
             return;
         }
@@ -54,7 +54,7 @@ export const reducer: BudgetStatementVestingOperations = {
     },
     deleteVestingOperation(state, action) {
         state.vesting = state.vesting.filter(
-            vesting => !action.input.vesting.includes(vesting.key),
+            (vesting) => !action.input.vesting.includes(vesting.key),
         );
     },
 };

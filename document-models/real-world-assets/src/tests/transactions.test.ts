@@ -1124,7 +1124,7 @@ describe('Transaction interactions with assets', () => {
             INTEREST_INCOME,
             PRINCIPAL_DRAW,
             ASSET_SALE,
-        ];
+        ] as const;
 
         for (const type of positiveTransactionTypes) {
             mockGroupTransaction.type = type;
@@ -1185,7 +1185,7 @@ describe('Transaction interactions with assets', () => {
             INTEREST_PAYMENT,
             PRINCIPAL_RETURN,
             ASSET_PURCHASE,
-        ];
+        ] as const;
 
         for (const type of negativeTransactionTypes) {
             mockGroupTransaction.type = type;

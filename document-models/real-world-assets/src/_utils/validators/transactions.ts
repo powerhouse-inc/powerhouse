@@ -148,7 +148,7 @@ export function validateInterestGroupTransaction(
     }
 
     if (transaction.type === INTEREST_INCOME) {
-        if (!state.accounts.find(a => a.id === counterPartyAccountId)) {
+        if (!state.accounts.find((a) => a.id === counterPartyAccountId)) {
             throw new Error(
                 `Counter party with account id ${counterPartyAccountId} does not exist!`,
             );
@@ -166,7 +166,7 @@ export function validateFeesGroupTransaction(
     }
 
     const serviceProviderFeeType = state.serviceProviderFeeTypes.find(
-        a => a.id === transaction.serviceProviderFeeTypeId,
+        (a) => a.id === transaction.serviceProviderFeeTypeId,
     );
 
     if (!serviceProviderFeeType) {
@@ -183,7 +183,7 @@ export function validateBaseTransaction(
     if (!transaction.assetId) {
         throw new Error(`Transaction must have an asset`);
     }
-    if (!state.portfolio.find(asset => asset.id === transaction.assetId)) {
+    if (!state.portfolio.find((asset) => asset.id === transaction.assetId)) {
         throw new Error(`Asset with id ${transaction.assetId} does not exist!`);
     }
     if (!transaction.amount) {
@@ -213,7 +213,7 @@ export function validateBaseTransaction(
     }
     if (
         transaction.accountId &&
-        !state.accounts.find(a => a.id === transaction.accountId)
+        !state.accounts.find((a) => a.id === transaction.accountId)
     ) {
         throw new Error(
             `Account with id ${transaction.accountId} does not exist!`,
@@ -221,7 +221,7 @@ export function validateBaseTransaction(
     }
     if (
         transaction.counterPartyAccountId &&
-        !state.accounts.find(a => a.id === transaction.counterPartyAccountId)
+        !state.accounts.find((a) => a.id === transaction.counterPartyAccountId)
     ) {
         throw new Error(
             `Counter party account with id ${transaction.counterPartyAccountId} does not exist!`,
@@ -241,7 +241,7 @@ export function validateFixedIncomeTransaction(
     validateBaseTransaction(state, transaction);
     if (
         !isFixedIncomeAsset(
-            state.portfolio.find(a => a.id === transaction.assetId),
+            state.portfolio.find((a) => a.id === transaction.assetId),
         )
     ) {
         throw new Error(
@@ -263,7 +263,9 @@ export function validateCashTransaction(
             `Cash transaction must have the principal lender as the counter party`,
         );
     }
-    if (!isCashAsset(state.portfolio.find(a => a.id === transaction.assetId))) {
+    if (
+        !isCashAsset(state.portfolio.find((a) => a.id === transaction.assetId))
+    ) {
         throw new Error(`Cash transaction must have a cash asset as the asset`);
     }
 }
@@ -285,7 +287,7 @@ export function validateTransactionFee(
     if (
         fee.serviceProviderFeeTypeId &&
         !state.serviceProviderFeeTypes.find(
-            serviceProvider =>
+            (serviceProvider) =>
                 serviceProvider.id === fee.serviceProviderFeeTypeId,
         )
     ) {
@@ -307,7 +309,7 @@ export function validateTransactionFees(
     if (!Array.isArray(fees)) {
         throw new Error(`Transaction fees must be an array`);
     }
-    fees.forEach(fee => {
+    fees.forEach((fee) => {
         validateTransactionFee(state, fee);
     });
 }

@@ -26,7 +26,7 @@ export function getAncestors(node: Node, allNodes: Node[]): Node[] {
         return [];
     } else {
         const parentNode = allNodes.find(
-            _node => _node.id === node.parentFolder,
+            (_node) => _node.id === node.parentFolder,
         );
         if (!parentNode) {
             throw new Error(
@@ -38,8 +38,10 @@ export function getAncestors(node: Node, allNodes: Node[]): Node[] {
 }
 
 export function getDescendants(node: Node, allNodes: Node[]): Node[] {
-    const children = allNodes.filter(_node => _node.parentFolder === node.id);
-    const descendants = children.map(child => getDescendants(child, allNodes));
+    const children = allNodes.filter((_node) => _node.parentFolder === node.id);
+    const descendants = children.map((child) =>
+        getDescendants(child, allNodes),
+    );
     return [...children, ...descendants.flat()];
 }
 
@@ -64,7 +66,7 @@ export function generateNodesCopy(
     idGenerator: GenerateNodesCopyIdGenerator,
     nodes: Node[],
 ): CopyNodeInput[] {
-    const rootNode = nodes.find(node => node.id === src.srcId);
+    const rootNode = nodes.find((node) => node.id === src.srcId);
 
     if (!rootNode) {
         throw new Error(`Node with id ${src.srcId} not found`);
@@ -98,7 +100,7 @@ export function generateNodesCopy(
         return newId;
     };
 
-    const copyNodesInput = nodesToCopy.map<CopyNodeInput>(node => ({
+    const copyNodesInput = nodesToCopy.map<CopyNodeInput>((node) => ({
         srcId: node.id,
         targetId: getNewNodeId(node.id),
         targetName: node.name,
@@ -106,7 +108,7 @@ export function generateNodesCopy(
             ? getNewNodeId(node.parentFolder)
             : null,
         synchronizationUnits: isFileNode(node)
-            ? node.synchronizationUnits.map(unit => ({
+            ? node.synchronizationUnits.map((unit) => ({
                   ...unit,
                   syncId: generateSynchronizationUnitId(nodes),
               }))
@@ -123,9 +125,11 @@ export function generateSynchronizationUnitId(
     while (
         !syncId ||
         nodes.find(
-            node =>
+            (node) =>
                 isFileNode(node) &&
-                node.synchronizationUnits.find(unit => unit.syncId === syncId),
+                node.synchronizationUnits.find(
+                    (unit) => unit.syncId === syncId,
+                ),
         )
     ) {
         syncId = generateUUID();
@@ -138,7 +142,7 @@ export function generateSynchronizationUnits(
     scopes: OperationScope[],
     branch = 'main',
 ): SynchronizationUnit[] {
-    return scopes.map(scope => ({
+    return scopes.map((scope) => ({
         scope,
         branch,
         syncId: generateSynchronizationUnitId(state.nodes),
@@ -160,7 +164,7 @@ export function generateCopyNodeAction(
     state: DocumentDriveState,
     action: Omit<CopyNodeInput, 'synchronizationUnits'>,
 ): CopyNodeAction {
-    const originalNode = state.nodes.find(node => node.id === action.srcId);
+    const originalNode = state.nodes.find((node) => node.id === action.srcId);
     if (!originalNode) {
         throw new Error(`Node with id ${action.srcId} not found`);
     }
@@ -169,7 +173,7 @@ export function generateCopyNodeAction(
 
     if (isFileNode(originalNode)) {
         synchronizationUnits = originalNode.synchronizationUnits.map(
-            syncUnit => ({
+            (syncUnit) => ({
                 ...syncUnit,
                 syncId: generateSynchronizationUnitId(state.nodes),
             }),
@@ -218,12 +222,12 @@ export function handleTargetNameCollisions(params: {
     const { nodes, targetParentFolder, srcName } = params;
 
     const targetNodeChildrenNames = nodes
-        .filter(node =>
+        .filter((node) =>
             targetParentFolder === ''
                 ? node.parentFolder === null
                 : node.parentFolder === targetParentFolder,
         )
-        .map(node => node.name);
+        .map((node) => node.name);
 
     const targetHasNodesWithSameName =
         targetNodeChildrenNames.includes(srcName);

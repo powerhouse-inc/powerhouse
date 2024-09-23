@@ -44,13 +44,13 @@ const AccountsTable: React.FC<{
                     </tr>
                 </thead>
                 <tbody>
-                    {accountStats.map(account => (
+                    {accountStats.map((account) => (
                         <tr key={account.address}>
                             <td>{account.name}</td>
                             <td>{account.address.slice(0, 10)}...</td>
                             <td>{Currency.format(account.actuals)}</td>
                             <td>{Currency.format(account.payments)}</td>
-                            {onDeleteAccount && (
+                            {onDeleteAccount ? (
                                 <td>
                                     <button
                                         onClick={() =>
@@ -60,7 +60,7 @@ const AccountsTable: React.FC<{
                                         Delete
                                     </button>
                                 </td>
-                            )}
+                            ) : null}
                         </tr>
                     ))}
                 </tbody>

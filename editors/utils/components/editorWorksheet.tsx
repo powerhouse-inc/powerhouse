@@ -1,7 +1,7 @@
 import { PropsWithChildren } from 'react';
 
 interface EditorWorksheetProps {
-    onClick?: () => void;
+    readonly onClick?: () => void;
 }
 
 export function EditorWorksheet(

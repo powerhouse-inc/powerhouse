@@ -28,14 +28,14 @@ export function validateFixedIncomeAsset(
     if (
         asset.fixedIncomeTypeId &&
         !state.fixedIncomeTypes.find(
-            fixedIncomeType => fixedIncomeType.id === asset.fixedIncomeTypeId,
+            (fixedIncomeType) => fixedIncomeType.id === asset.fixedIncomeTypeId,
         )
     ) {
         throw new Error(
             `Fixed income type with id ${asset.fixedIncomeTypeId} does not exist!`,
         );
     }
-    if (asset.spvId && !state.spvs.find(spv => spv.id === asset.spvId)) {
+    if (asset.spvId && !state.spvs.find((spv) => spv.id === asset.spvId)) {
         throw new Error(`SPV with id ${asset.spvId} does not exist!`);
     }
     if (asset.maturity && !dateValidator.safeParse(asset.maturity).success) {

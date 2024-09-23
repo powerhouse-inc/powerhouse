@@ -124,168 +124,163 @@ function Editor(props: IProps) {
     });
 
     return (
-        <>
-            <div style={{ ...style, minHeight: '70em' }}>
+        <div style={{ ...style, minHeight: '70em' }}>
+            <TextInput
+                autoFocus
+                clearOnSubmit={false}
+                key="modelName"
+                onSubmit={setModelName}
+                placeholder="Document Model Name"
+                size="larger"
+                theme={theme}
+                value={state.global.name}
+            />
+            <div style={{ width: '50%', display: 'inline-block' }}>
                 <TextInput
-                    key="modelName"
-                    theme={theme}
-                    value={state.global.name}
-                    placeholder="Document Model Name"
-                    autoFocus={true}
-                    onSubmit={setModelName}
-                    clearOnSubmit={false}
-                    size="larger"
-                />
-                <div style={{ width: '50%', display: 'inline-block' }}>
-                    <TextInput
-                        key="modelId"
-                        theme={theme}
-                        value={state.global.id}
-                        placeholder="Model Type"
-                        autoFocus={false}
-                        onSubmit={setModelId}
-                        clearOnSubmit={false}
-                        size="small"
-                    />
-                </div>
-                <TextInput
-                    key="modelDescription"
-                    theme={theme}
-                    value={state.global.description}
-                    placeholder="Model Description"
                     autoFocus={false}
-                    onSubmit={setModuleDescription}
                     clearOnSubmit={false}
-                />
-                <div style={{ width: '50%', display: 'inline-block' }}>
-                    <TextInput
-                        key="modelExtension"
-                        theme={theme}
-                        value={state.global.extension}
-                        placeholder="File Extension(s)"
-                        autoFocus={false}
-                        onSubmit={setModelExtension}
-                        clearOnSubmit={false}
-                        size="small"
-                    />
-                </div>
-                <div>
-                    <p style={{ ...styles.typographySizes.tiny }}>Author</p>
-                    <div style={{ width: '50%', display: 'inline-block' }}>
-                        <TextInput
-                            key="authorName"
-                            theme={theme}
-                            value={state.global.author.name}
-                            placeholder="Author Name"
-                            autoFocus={false}
-                            onSubmit={setAuthorName}
-                            clearOnSubmit={false}
-                            size="small"
-                        />
-                    </div>
-                    <div style={{ width: '50%', display: 'inline-block' }}>
-                        <TextInput
-                            key="authorWebsite"
-                            theme={theme}
-                            value={state.global.author.website || ''}
-                            placeholder="https://"
-                            autoFocus={false}
-                            onSubmit={setAuthorWebsite}
-                            clearOnSubmit={false}
-                            size="small"
-                        />
-                    </div>
-                </div>
-                {!globalSchema.specification ? null : (
-                    <>
-                        <EditorState
-                            scope="global"
-                            theme={theme}
-                            schemaHandlers={globalSchema}
-                            setStateSchema={setStateSchema}
-                            name={document.state.global.name}
-                            latestOperation={latestOperation}
-                        />
-                        <EditorState
-                            scope="local"
-                            theme={theme}
-                            schemaHandlers={localSchema}
-                            setStateSchema={setStateSchema}
-                            name={document.state.global.name}
-                            latestOperation={latestOperation}
-                        />
-                        {globalSchema.specification.modules.map(m => (
-                            <div key={m.id}>
-                                <TextInput
-                                    key={m.id + '#name'}
-                                    theme={theme}
-                                    placeholder="Module Name"
-                                    autoFocus={false}
-                                    onSubmit={name =>
-                                        updateModuleName(m.id, name)
-                                    }
-                                    onEmpty={() => deleteModule(m.id)}
-                                    value={m.name}
-                                    clearOnSubmit={false}
-                                    size="large"
-                                    horizontalLine={true}
-                                />
-                                <TextInput
-                                    key={m.id + '#description'}
-                                    theme={theme}
-                                    placeholder={
-                                        'Module ' + m.name + ' description'
-                                    }
-                                    autoFocus={false}
-                                    onSubmit={description =>
-                                        updateModuleDescription(
-                                            m.id,
-                                            description,
-                                        )
-                                    }
-                                    value={m.description || ''}
-                                    clearOnSubmit={false}
-                                    size="small"
-                                />
-                                {m.operations.map(op => (
-                                    <EditorOperation
-                                        key={op.id}
-                                        id={op.id}
-                                        theme={theme}
-                                        name={op.name}
-                                        schema={op.schema}
-                                        scope={op.scope}
-                                        onDelete={deleteOperation}
-                                        onUpdateName={updateOperationName}
-                                        onUpdateSchema={updateOperationSchema}
-                                        onUpdateScope={updateOperationScope}
-                                    />
-                                ))}
-                                <TextInput
-                                    key={m.id + '#newOperation'}
-                                    theme={theme}
-                                    autoFocus={false}
-                                    placeholder="Add operation..."
-                                    onSubmit={name => addOperation(m.id, name)}
-                                    clearOnSubmit={true}
-                                    size="medium"
-                                />
-                            </div>
-                        ))}
-                    </>
-                )}
-                <TextInput
-                    key="newModule"
+                    key="modelId"
+                    onSubmit={setModelId}
+                    placeholder="Model Type"
+                    size="small"
                     theme={theme}
-                    placeholder="Module Name"
-                    autoFocus={false}
-                    onSubmit={addModule}
-                    clearOnSubmit={true}
-                    size="large"
-                    horizontalLine={true}
+                    value={state.global.id}
                 />
             </div>
-        </>
+            <TextInput
+                autoFocus={false}
+                clearOnSubmit={false}
+                key="modelDescription"
+                onSubmit={setModuleDescription}
+                placeholder="Model Description"
+                theme={theme}
+                value={state.global.description}
+            />
+            <div style={{ width: '50%', display: 'inline-block' }}>
+                <TextInput
+                    autoFocus={false}
+                    clearOnSubmit={false}
+                    key="modelExtension"
+                    onSubmit={setModelExtension}
+                    placeholder="File Extension(s)"
+                    size="small"
+                    theme={theme}
+                    value={state.global.extension}
+                />
+            </div>
+            <div>
+                <p style={{ ...styles.typographySizes.tiny }}>Author</p>
+                <div style={{ width: '50%', display: 'inline-block' }}>
+                    <TextInput
+                        autoFocus={false}
+                        clearOnSubmit={false}
+                        key="authorName"
+                        onSubmit={setAuthorName}
+                        placeholder="Author Name"
+                        size="small"
+                        theme={theme}
+                        value={state.global.author.name}
+                    />
+                </div>
+                <div style={{ width: '50%', display: 'inline-block' }}>
+                    <TextInput
+                        autoFocus={false}
+                        clearOnSubmit={false}
+                        key="authorWebsite"
+                        onSubmit={setAuthorWebsite}
+                        placeholder="https://"
+                        size="small"
+                        theme={theme}
+                        value={state.global.author.website || ''}
+                    />
+                </div>
+            </div>
+            {!globalSchema.specification ? null : (
+                <>
+                    <EditorState
+                        latestOperation={latestOperation}
+                        name={document.state.global.name}
+                        schemaHandlers={globalSchema}
+                        scope="global"
+                        setStateSchema={setStateSchema}
+                        theme={theme}
+                    />
+                    <EditorState
+                        latestOperation={latestOperation}
+                        name={document.state.global.name}
+                        schemaHandlers={localSchema}
+                        scope="local"
+                        setStateSchema={setStateSchema}
+                        theme={theme}
+                    />
+                    {globalSchema.specification.modules.map((m) => (
+                        <div key={m.id}>
+                            <TextInput
+                                autoFocus={false}
+                                clearOnSubmit={false}
+                                horizontalLine
+                                key={m.id + '#name'}
+                                onEmpty={() => deleteModule(m.id)}
+                                onSubmit={(name) =>
+                                    updateModuleName(m.id, name)
+                                }
+                                placeholder="Module Name"
+                                size="large"
+                                theme={theme}
+                                value={m.name}
+                            />
+                            <TextInput
+                                autoFocus={false}
+                                clearOnSubmit={false}
+                                key={m.id + '#description'}
+                                onSubmit={(description) =>
+                                    updateModuleDescription(m.id, description)
+                                }
+                                placeholder={
+                                    'Module ' + m.name + ' description'
+                                }
+                                size="small"
+                                theme={theme}
+                                value={m.description || ''}
+                            />
+                            {m.operations.map((op) => (
+                                <EditorOperation
+                                    id={op.id}
+                                    key={op.id}
+                                    name={op.name}
+                                    onDelete={deleteOperation}
+                                    onUpdateName={updateOperationName}
+                                    onUpdateSchema={updateOperationSchema}
+                                    onUpdateScope={updateOperationScope}
+                                    schema={op.schema}
+                                    scope={op.scope}
+                                    theme={theme}
+                                />
+                            ))}
+                            <TextInput
+                                autoFocus={false}
+                                clearOnSubmit
+                                key={m.id + '#newOperation'}
+                                onSubmit={(name) => addOperation(m.id, name)}
+                                placeholder="Add operation..."
+                                size="medium"
+                                theme={theme}
+                            />
+                        </div>
+                    ))}
+                </>
+            )}
+            <TextInput
+                autoFocus={false}
+                clearOnSubmit
+                horizontalLine
+                key="newModule"
+                onSubmit={addModule}
+                placeholder="Module Name"
+                size="large"
+                theme={theme}
+            />
+        </div>
     );
 }
 

@@ -1,3 +1,3 @@
 export function createRequire() {
-    return modulePath => import(modulePath);
+    return (modulePath) => import(modulePath);
 }

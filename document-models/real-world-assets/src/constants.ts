@@ -1,15 +1,15 @@
 import { GroupTransactionType } from '..';
 
-export const PRINCIPAL_DRAW = 'PrincipalDraw' as const;
-export const PRINCIPAL_RETURN = 'PrincipalReturn' as const;
-export const ASSET_PURCHASE = 'AssetPurchase' as const;
-export const ASSET_SALE = 'AssetSale' as const;
-export const INTEREST_INCOME = 'InterestIncome' as const;
-export const INTEREST_PAYMENT = 'InterestPayment' as const;
-export const FEES_INCOME = 'FeesIncome' as const;
-export const FEES_PAYMENT = 'FeesPayment' as const;
-export const CASH_TRANSACTION = 'cashTransaction' as const;
-export const FIXED_INCOME_TRANSACTION = 'fixedIncomeTransaction' as const;
+export const PRINCIPAL_DRAW = 'PrincipalDraw';
+export const PRINCIPAL_RETURN = 'PrincipalReturn';
+export const ASSET_PURCHASE = 'AssetPurchase';
+export const ASSET_SALE = 'AssetSale';
+export const INTEREST_INCOME = 'InterestIncome';
+export const INTEREST_PAYMENT = 'InterestPayment';
+export const FEES_INCOME = 'FeesIncome';
+export const FEES_PAYMENT = 'FeesPayment';
+export const CASH_TRANSACTION = 'cashTransaction';
+export const FIXED_INCOME_TRANSACTION = 'fixedIncomeTransaction';
 
 export const principalGroupTransactionTypes = [
     PRINCIPAL_DRAW,

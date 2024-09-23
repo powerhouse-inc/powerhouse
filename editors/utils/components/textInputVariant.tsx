@@ -2,17 +2,17 @@ import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { inputStyle, TypographySize, typographySizes } from './stylesVariant';
 
 interface TextInputProps {
-    theme: 'light' | 'dark';
-    size?: TypographySize;
-    horizontalLine?: boolean;
-    id?: string;
-    value?: string;
-    placeholder?: string;
-    autoFocus?: boolean;
-    clearOnSubmit?: boolean;
-    onSubmit?: { (value: string): void };
-    onEmpty?: { (id: string): void };
-    labelStyle?: boolean;
+    readonly theme: 'light' | 'dark';
+    readonly size?: TypographySize;
+    readonly horizontalLine?: boolean;
+    readonly id?: string;
+    readonly value?: string;
+    readonly placeholder?: string;
+    readonly autoFocus?: boolean;
+    readonly clearOnSubmit?: boolean;
+    readonly onSubmit?: { (value: string): void };
+    readonly onEmpty?: { (id: string): void };
+    readonly labelStyle?: boolean;
 }
 
 export function TextInputVariant(props: TextInputProps) {
@@ -59,7 +59,7 @@ export function TextInputVariant(props: TextInputProps) {
         }
     };
 
-    const onInput: React.FormEventHandler<HTMLTextAreaElement> = e => {
+    const onInput: React.FormEventHandler<HTMLTextAreaElement> = (e) => {
         if (!state.pressingEnter) {
             const target = e.target as HTMLTextAreaElement;
             setState({ ...state, value: target.value });
@@ -132,20 +132,20 @@ export function TextInputVariant(props: TextInputProps) {
                 ''
             )}
             <textarea
-                key="text"
-                ref={ref}
-                placeholder={props.placeholder || ''}
                 autoFocus={props.autoFocus || false}
+                key="text"
+                onBlur={(e) => setFocus(false)}
+                onFocus={(e) => setFocus(true)}
                 onInput={onInput}
                 onKeyDown={onKeyDown}
                 onKeyUp={onKeyUp}
-                style={style}
-                value={state.value}
-                onFocus={e => setFocus(true)}
-                onBlur={e => setFocus(false)}
-                tabIndex={props.labelStyle ? -1 : 1}
+                placeholder={props.placeholder || ''}
+                ref={ref}
                 spellCheck={state.hasFocus}
-            ></textarea>
+                style={style}
+                tabIndex={props.labelStyle ? -1 : 1}
+                value={state.value}
+            />
         </div>
     );
 }

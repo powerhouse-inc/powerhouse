@@ -2,6 +2,7 @@ import { copy } from 'copy-anything';
 import {
     BaseTransaction,
     GroupTransaction,
+    GroupTransactionType,
     TransactionFee,
     calculateAssetProceeds,
     calculateCashBalanceChange,
@@ -114,11 +115,12 @@ describe('calculateNotional', () => {
         const transactions = copy([
             assetPurchaseMockTransaction,
             assetPurchaseMockTransaction,
+            assetPurchaseMockTransaction,
             assetSaleMockTransaction,
             assetSaleMockTransaction,
         ]) as GroupTransaction[];
         const result = calculateNotional(transactions);
-        expect(result.toNumber()).toBe(1);
+        expect(result.toNumber()).toBe(2);
     });
 });
 
@@ -200,8 +202,11 @@ describe('calculateTotalDiscount', () => {
             assetSaleMockTransaction,
             assetSaleMockTransaction,
         ]);
+        for (const tx of purchaseTransactions) {
+            tx.cashTransaction = { amount: 1 } as BaseTransaction;
+        }
         for (const tx of salesTransactions) {
-            tx.cashTransaction = { amount: 3 } as BaseTransaction;
+            tx.cashTransaction = { amount: 4 } as BaseTransaction;
         }
         const transactions = [
             ...purchaseTransactions,
@@ -211,7 +216,7 @@ describe('calculateTotalDiscount', () => {
             tx.fees = [mockFee];
         }
         const result = calculateTotalDiscount(transactions);
-        expect(result.toNumber()).toBe(1);
+        expect(result.toNumber()).toBe(2);
     });
 });
 
@@ -304,10 +309,10 @@ describe('sumCashTransactionsForType', () => {
             feesPaymentMockTransaction,
         ]) as GroupTransaction[];
 
-        const results = allGroupTransactionTypes.map(type => {
+        const results = allGroupTransactionTypes.map((type) => {
             const result = sumCashTransactionsForType(
                 transactions,
-                type,
+                type as GroupTransactionType,
             ).toNumber();
             return result;
         });

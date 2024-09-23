@@ -21,8 +21,8 @@ export function Accounts(props: IProps) {
     const state = document.state.global;
 
     const onSubmitEdit: AccountsTableProps['onSubmitEdit'] = useCallback(
-        data => {
-            const selectedItem = state.accounts.find(a => a.id === data.id);
+        (data) => {
+            const selectedItem = state.accounts.find((a) => a.id === data.id);
             if (!selectedItem) return;
 
             const update = copy(selectedItem);
@@ -49,7 +49,7 @@ export function Accounts(props: IProps) {
     );
 
     const onSubmitCreate: AccountsTableProps['onSubmitCreate'] = useCallback(
-        data => {
+        (data) => {
             const id = utils.hashKey();
             const reference = data.reference;
             const label = data.label;
@@ -67,7 +67,7 @@ export function Accounts(props: IProps) {
     );
 
     const onSubmitDelete: AccountsTableProps['onSubmitDelete'] = useCallback(
-        id => {
+        (id) => {
             dispatch(actions.deleteAccount({ id }));
         },
         [dispatch],
@@ -75,12 +75,12 @@ export function Accounts(props: IProps) {
 
     return (
         <AccountsTable
-            state={state}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
             onSubmitDelete={onSubmitDelete}
+            onSubmitEdit={onSubmitEdit}
+            state={state}
         />
     );
 }

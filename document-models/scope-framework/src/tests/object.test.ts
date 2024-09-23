@@ -122,7 +122,7 @@ describe('ScopeFramework Class', () => {
         });
 
         expect(framework.state.global.rootPath).toBe('B');
-        framework.state.global.elements.forEach(e => {
+        framework.state.global.elements.forEach((e) => {
             expect(e.path.slice(0, 2)).toBe('B.');
         });
 
@@ -135,12 +135,13 @@ describe('ScopeFramework Class', () => {
         });
 
         expect(
-            framework.state.global.elements.filter(e => e.path == 'B.1.3')
+            framework.state.global.elements.filter((e) => e.path == 'B.1.3')
                 .length,
         ).toBe(1);
 
+        // eslint-disable-next-line @typescript-eslint/prefer-find
         const elementId = framework.state.global.elements.filter(
-            e => e.path == 'B.1.3',
+            (e) => e.path == 'B.1.3',
         )[0].id;
 
         framework.updateElementType({
@@ -149,8 +150,8 @@ describe('ScopeFramework Class', () => {
         });
 
         framework.state.global.elements
-            .filter(e => e.id == elementId)
-            .forEach(e => {
+            .filter((e) => e.id == elementId)
+            .forEach((e) => {
                 expect(e.type).toBe('Section');
             });
 
@@ -160,8 +161,8 @@ describe('ScopeFramework Class', () => {
         });
 
         framework.state.global.elements
-            .filter(e => e.id == elementId)
-            .forEach(e => {
+            .filter((e) => e.id == elementId)
+            .forEach((e) => {
                 expect(e.name).toBe('NEW NAME');
             });
 
@@ -173,19 +174,20 @@ describe('ScopeFramework Class', () => {
         });
 
         framework.state.global.elements
-            .filter(e => e.id == elementId)
-            .forEach(e => {
+            .filter((e) => e.id == elementId)
+            .forEach((e) => {
                 expect((e.components as SectionComponent).content).toBe(
                     'NEW CONTENT',
                 );
             });
 
+        // eslint-disable-next-line @typescript-eslint/prefer-find
         const removeId = framework.state.global.elements.filter(
-            e => e.path == 'B.1.2',
+            (e) => e.path == 'B.1.2',
         )[0]?.id;
         framework.removeElement({ id: removeId });
         expect(
-            framework.state.global.elements.filter(e =>
+            framework.state.global.elements.filter((e) =>
                 e.path.startsWith('B.1.2'),
             ).length,
         ).toBe(0);

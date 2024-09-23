@@ -316,7 +316,7 @@ export function calculateCashBalanceChange(
 export function calculateTotalFees(
     fees: InputMaybe<TransactionFee[]>,
 ): BigNumber {
-    const feeAmounts = fees?.map(fee => fee.amount).filter(Boolean) ?? [];
+    const feeAmounts = fees?.map((fee) => fee.amount).filter(Boolean) ?? [];
 
     const totalFees = feeAmounts.reduce(
         (acc, fee) => acc.add(math.bignumber(fee)),

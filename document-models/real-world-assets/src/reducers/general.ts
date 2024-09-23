@@ -15,7 +15,7 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         if (!action.input.name) {
             throw new Error(`SPV must have a name`);
         }
-        if (state.spvs.find(spv => spv.id === action.input.id)) {
+        if (state.spvs.find((spv) => spv.id === action.input.id)) {
             throw new Error(`SPV with id ${action.input.id} already exists!`);
         }
         state.spvs.push(action.input);
@@ -24,11 +24,11 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         if (!action.input.id) {
             throw new Error(`SPV must have an id`);
         }
-        const spv = state.spvs.find(spv => spv.id === action.input.id);
+        const spv = state.spvs.find((spv) => spv.id === action.input.id);
         if (!spv) {
             throw new Error(`SPV with id ${action.input.id} does not exist!`);
         }
-        state.spvs = state.spvs.map(spv =>
+        state.spvs = state.spvs.map((spv) =>
             spv.id === action.input.id
                 ? ({
                       ...spv,
@@ -43,17 +43,17 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         if (!id) {
             throw new Error(`SPV must have an id`);
         }
-        const spv = state.spvs.find(spv => spv.id === id);
+        const spv = state.spvs.find((spv) => spv.id === id);
         if (!spv) {
             throw new Error(`SPV with id ${id} does not exist!`);
         }
-        const dependentAssets = state.portfolio.filter(a => a.spvId === id);
+        const dependentAssets = state.portfolio.filter((a) => a.spvId === id);
         if (dependentAssets.length !== 0) {
             throw new Error(
                 'Cannot delete SPV because it has assets that depend on it. Please change or delete those assets first.',
             );
         }
-        state.spvs = state.spvs.filter(spv => spv.id !== id);
+        state.spvs = state.spvs.filter((spv) => spv.id !== id);
     },
     createServiceProviderFeeTypeOperation(state, action, dispatch) {
         if (!action.input.id) {
@@ -72,7 +72,7 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         }
         if (
             !state.accounts.find(
-                account => account.id === action.input.accountId,
+                (account) => account.id === action.input.accountId,
             )
         ) {
             throw new Error(
@@ -81,7 +81,7 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         }
         if (
             state.serviceProviderFeeTypes.find(
-                spft => spft.id === action.input.id,
+                (spft) => spft.id === action.input.id,
             )
         ) {
             throw new Error(
@@ -95,7 +95,7 @@ export const reducer: RealWorldAssetsGeneralOperations = {
             throw new Error(`Service provider must have an id`);
         }
         const serviceProviderFeeType = state.serviceProviderFeeTypes.find(
-            feeType => feeType.id === action.input.id,
+            (feeType) => feeType.id === action.input.id,
         );
         if (!serviceProviderFeeType) {
             throw new Error(
@@ -105,7 +105,7 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         if (action.input.accountId) {
             if (
                 !state.accounts.find(
-                    account => account.id === action.input.accountId,
+                    (account) => account.id === action.input.accountId,
                 )
             ) {
                 throw new Error(
@@ -114,7 +114,7 @@ export const reducer: RealWorldAssetsGeneralOperations = {
             }
         }
         state.serviceProviderFeeTypes = state.serviceProviderFeeTypes.map(
-            rsp =>
+            (rsp) =>
                 rsp.id === action.input.id
                     ? ({
                           ...rsp,
@@ -131,13 +131,13 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         }
 
         const serviceProviderFeeType = state.serviceProviderFeeTypes.find(
-            s => s.id === id,
+            (s) => s.id === id,
         );
         if (!serviceProviderFeeType) {
             throw new Error(`Service provider with id ${id} does not exist!`);
         }
-        const dependentTransactions = state.transactions.filter(t =>
-            t.fees?.some(f => f.serviceProviderFeeTypeId === id),
+        const dependentTransactions = state.transactions.filter((t) =>
+            t.fees?.some((f) => f.serviceProviderFeeTypeId === id),
         );
         if (dependentTransactions.length !== 0) {
             throw new Error(
@@ -145,7 +145,7 @@ export const reducer: RealWorldAssetsGeneralOperations = {
             );
         }
         state.serviceProviderFeeTypes = state.serviceProviderFeeTypes.filter(
-            s => s.id !== id,
+            (s) => s.id !== id,
         );
     },
     createAccountOperation(state, action, dispatch) {
@@ -155,7 +155,7 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         if (!action.input.reference) {
             throw new Error(`Account must have a reference`);
         }
-        if (state.accounts.find(account => account.id === action.input.id)) {
+        if (state.accounts.find((account) => account.id === action.input.id)) {
             throw new Error(
                 `Account with id ${action.input.id} already exists!`,
             );
@@ -167,14 +167,14 @@ export const reducer: RealWorldAssetsGeneralOperations = {
             throw new Error(`Account must have an id`);
         }
         const account = state.accounts.find(
-            account => account.id === action.input.id,
+            (account) => account.id === action.input.id,
         );
         if (!account) {
             throw new Error(
                 `Account with id ${action.input.id} does not exist!`,
             );
         }
-        state.accounts = state.accounts.map(account =>
+        state.accounts = state.accounts.map((account) =>
             account.id === action.input.id
                 ? ({
                       ...account,
@@ -191,19 +191,19 @@ export const reducer: RealWorldAssetsGeneralOperations = {
         if (id === state.principalLenderAccountId) {
             throw new Error(`Cannot delete principal lender account.`);
         }
-        const account = state.accounts.find(account => account.id === id);
+        const account = state.accounts.find((account) => account.id === id);
         if (!account) {
             throw new Error(`Account with id ${id} does not exist!`);
         }
         const dependentServiceProviderFeeTypes =
-            state.serviceProviderFeeTypes.filter(s => s.accountId === id);
+            state.serviceProviderFeeTypes.filter((s) => s.accountId === id);
         if (dependentServiceProviderFeeTypes.length !== 0) {
             throw new Error(
                 'Cannot delete account because it has service provider fee types that depend on it. Please change or delete those service provider fee types first.',
             );
         }
         const dependentTransactions = state.transactions.filter(
-            t =>
+            (t) =>
                 t.fixedIncomeTransaction?.accountId === id ||
                 t.cashTransaction.accountId === id,
         );
@@ -212,6 +212,6 @@ export const reducer: RealWorldAssetsGeneralOperations = {
                 'Cannot delete account because it has transactions that depend on it. Please change or delete those transactions first.',
             );
         }
-        state.accounts = state.accounts.filter(account => account.id !== id);
+        state.accounts = state.accounts.filter((account) => account.id !== id);
     },
 };

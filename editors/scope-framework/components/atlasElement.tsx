@@ -6,16 +6,19 @@ import {
 } from '../../../document-models/scope-framework';
 
 interface AtlasElementProps {
-    element: ScopeFrameworkElement;
-    onSetRootPath?: (newRootPath: string) => void;
-    onUpdateName?: (id: string, newName: string) => void;
-    onUpdateType?: (id: string, newType: ScopeFrameworkElementType) => void;
-    onUpdateComponents?: (
+    readonly element: ScopeFrameworkElement;
+    readonly onSetRootPath?: (newRootPath: string) => void;
+    readonly onUpdateName?: (id: string, newName: string) => void;
+    readonly onUpdateType?: (
+        id: string,
+        newType: ScopeFrameworkElementType,
+    ) => void;
+    readonly onUpdateComponents?: (
         id: string,
         newComponents: Record<string, string>,
     ) => void;
-    onDelete?: (id: string) => void;
-    mode: 'light' | 'dark';
+    readonly onDelete?: (id: string) => void;
+    readonly mode: 'light' | 'dark';
 }
 
 const isFirstElement = (element: ScopeFrameworkElement) => {
@@ -63,8 +66,8 @@ function AtlasElement(props: AtlasElementProps) {
                     ? 'atlas-element atlas-element--first'
                     : 'atlas-element'
             }
-            onFocus={handleFocus}
             onBlur={handleBlur}
+            onFocus={handleFocus}
         >
             <div className="atlas-element--header">
                 <div className="atlas-element--header-component atlas-element--path">
@@ -72,41 +75,41 @@ function AtlasElement(props: AtlasElementProps) {
                 </div>
                 <div className="atlas-element--header-component atlas-element--type">
                     <TextInputVariant
-                        value={props.element.type || ''}
-                        onSubmit={handleTypeUpdate}
-                        theme={props.mode}
                         labelStyle
+                        onSubmit={handleTypeUpdate}
                         size="smaller"
+                        theme={props.mode}
+                        value={props.element.type || ''}
                     />
                 </div>
                 <div className="atlas-element--header-component atlas-element--name">
                     <TextInputVariant
-                        value={props.element.name ?? ''}
-                        onSubmit={handleNameUpdate}
                         onEmpty={handleDelete}
+                        onSubmit={handleNameUpdate}
                         size={
                             sizeMap[
                                 props.element.type || 'Section'
                             ] as stylesVariant.TypographySize
                         }
                         theme={props.mode}
+                        value={props.element.name ?? ''}
                     />
                 </div>
-                <div className="atlas-element--header-component atlas-element--version"></div>
-                <div className="atlas-element--header-component atlas-element--icons"></div>
+                <div className="atlas-element--header-component atlas-element--version" />
+                <div className="atlas-element--header-component atlas-element--icons" />
             </div>
             <div className="atlas-element--componentsList">
                 <div className="atlas-element--component">
                     <div className="atlas-element--componentLabel">Content</div>
                     <div className="atlas-element--componentInput">
                         <TextInputVariant
+                            onSubmit={handleComponentsUpdate}
+                            theme={props.mode}
                             value={
                                 components && 'content' in components
                                     ? components.content || ''
                                     : ''
                             } // TODO deal with TypeSpecificationComponent
-                            onSubmit={handleComponentsUpdate}
-                            theme={props.mode}
                         />
                     </div>
                 </div>

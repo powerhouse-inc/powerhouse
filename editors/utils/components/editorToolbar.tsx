@@ -1,12 +1,11 @@
 import { ReactElement } from 'react';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface EditorToolbarComponent {}
 
 interface EditorToolbarProps {
-    left?: ReactElement<EditorToolbarComponent>[];
-    center?: ReactElement<EditorToolbarComponent>[];
-    right?: ReactElement<EditorToolbarComponent>[];
+    readonly left?: ReactElement<EditorToolbarComponent>[];
+    readonly center?: ReactElement<EditorToolbarComponent>[];
+    readonly right?: ReactElement<EditorToolbarComponent>[];
 }
 
 export function EditorToolbar(props: EditorToolbarProps) {

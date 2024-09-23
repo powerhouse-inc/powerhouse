@@ -23,9 +23,9 @@ export function FixedIncomeTypes(props: IProps) {
 
     const onSubmitEdit: FixedIncomeTypesTableProps['onSubmitEdit'] =
         useCallback(
-            data => {
+            (data) => {
                 const selectedItem = state.fixedIncomeTypes.find(
-                    f => f.id === data.id,
+                    (f) => f.id === data.id,
                 );
                 if (!selectedItem) return;
 
@@ -52,7 +52,7 @@ export function FixedIncomeTypes(props: IProps) {
 
     const onSubmitCreate: FixedIncomeTypesTableProps['onSubmitCreate'] =
         useCallback(
-            data => {
+            (data) => {
                 const id = utils.hashKey();
                 const name = data.name;
 
@@ -73,12 +73,12 @@ export function FixedIncomeTypes(props: IProps) {
 
     return (
         <FixedIncomeTypesTable
-            state={state}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             isAllowedToEditDocuments={isAllowedToEditDocuments}
-            onSubmitEdit={onSubmitEdit}
             onSubmitCreate={onSubmitCreate}
             onSubmitDelete={onSubmitDelete}
+            onSubmitEdit={onSubmitEdit}
+            state={state}
         />
     );
 }
