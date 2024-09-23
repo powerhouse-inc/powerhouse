@@ -1,3 +1,10 @@
+# [1.0.0-alpha.180](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.179...v1.0.0-alpha.180) (2024-09-23)
+
+
+### Features
+
+* migrate eslint config ([#378](https://github.com/powerhouse-inc/design-system/issues/378)) ([768e34d](https://github.com/powerhouse-inc/design-system/commit/768e34d9a3db51a7f181d9ef20f46b8a8f998b3a))
+
 # [1.0.0-alpha.179](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.178...v1.0.0-alpha.179) (2024-09-23)
 
 
