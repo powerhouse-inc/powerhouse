@@ -1,3 +1,10 @@
+# [1.0.0-dev.129](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.128...v1.0.0-dev.129) (2024-09-23)
+
+
+### Features
+
+* export connect as cli executable ([68f59b2](https://github.com/powerhouse-inc/document-model-electron/commit/68f59b25f3eb7fdc5e7d5907bbb1db7480777419))
+
 # [1.0.0-dev.128](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.127...v1.0.0-dev.128) (2024-09-23)
 
 
