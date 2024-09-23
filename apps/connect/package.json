@@ -49,7 +49,7 @@
         "@electron-forge/publisher-electron-release-server": "^6.2.1",
         "@electron-forge/publisher-github": "^7.2.0",
         "@playwright/test": "^1.41.2",
-        "@powerhousedao/design-system": "^1.0.0-alpha.178",
+        "@powerhousedao/design-system": "^1.0.0-alpha.180",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@semantic-release/github": "^9.2.4",
