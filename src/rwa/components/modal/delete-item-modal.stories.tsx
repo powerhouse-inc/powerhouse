@@ -15,13 +15,13 @@ export const Primary: Story = {
         itemName: 'account',
         dependentItemName: 'service providers and transactions',
         dependentItemList: [
-            <div key={1} className="mb-0.5 font-semibold">
+            <div className="mb-0.5 font-semibold" key={1}>
                 Service providers:
             </div>,
             <div key={2}>Service provider 1</div>,
             <div key={3}>Service provider 2</div>,
             <div key={4}>Service provider 3</div>,
-            <div key={5} className="mb-0.5 mt-1 font-semibold">
+            <div className="mb-0.5 mt-1 font-semibold" key={5}>
                 Transactions:
             </div>,
             <div key={6}>Transaction 1</div>,

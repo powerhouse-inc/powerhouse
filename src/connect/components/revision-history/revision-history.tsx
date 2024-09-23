@@ -7,12 +7,12 @@ import { Timeline } from './timeline';
 import { Operation, Scope } from './types';
 
 type Props = {
-    documentTitle: string;
-    documentId: string;
-    globalOperations: Operation[];
-    localOperations: Operation[];
-    onClose: () => void;
-    itemsPerPage?: number;
+    readonly documentTitle: string;
+    readonly documentId: string;
+    readonly globalOperations: Operation[];
+    readonly localOperations: Operation[];
+    readonly onClose: () => void;
+    readonly itemsPerPage?: number;
 };
 
 const { garbageCollect, sortOperations } = utils.documentHelpers;
@@ -62,19 +62,19 @@ export function RevisionHistory(props: Props) {
     const PaginationComponent = showPagination ? (
         <div className="mt-4 flex w-full justify-end">
             <Pagination
-                pages={pages}
-                hiddenNextPages={hiddenNextPages}
+                firstPageLabel="First Page"
                 goToFirstPage={goToFirstPage}
                 goToLastPage={goToLastPage}
                 goToNextPage={goToNextPage}
                 goToPage={goToPage}
                 goToPreviousPage={goToPreviousPage}
+                hiddenNextPages={hiddenNextPages}
                 isNextPageAvailable={isNextPageAvailable}
                 isPreviousPageAvailable={isPreviousPageAvailable}
-                nextPageLabel="Next"
-                previousPageLabel="Previous"
-                firstPageLabel="First Page"
                 lastPageLabel="Last Page"
+                nextPageLabel="Next"
+                pages={pages}
+                previousPageLabel="Previous"
             />
         </div>
     ) : (
@@ -84,22 +84,22 @@ export function RevisionHistory(props: Props) {
     return (
         <TooltipProvider>
             <Header
-                title={documentTitle}
                 docId={documentId}
-                scope={scope}
                 onChangeScope={onChangeScope}
                 onClose={onClose}
+                scope={scope}
+                title={documentTitle}
             />
             {PaginationComponent}
             <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4">
                 {visibleOperations.length > 0 ? (
                     <div className="grid grid-cols-[minmax(min-content,1018px)]">
                         <Timeline
-                            scope={scope}
                             globalOperations={
                                 scope === 'global' ? pageItems : []
                             }
                             localOperations={scope === 'local' ? pageItems : []}
+                            scope={scope}
                         />
                     </div>
                 ) : (

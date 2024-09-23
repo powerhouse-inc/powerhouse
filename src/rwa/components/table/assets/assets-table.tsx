@@ -104,12 +104,14 @@ export function makeAssetsTableItems(
 }
 
 export type AssetsTableProps = TableWrapperProps<AssetFormInputs> & {
-    calculateCurrentValueCallback: CalculateCurrentValueCallback;
-    onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
-    onSubmitCreateSpv: (data: SPVFormInputs) => void;
-    itemsPerPage?: number;
-    pageRange?: number;
-    initialPage?: number;
+    readonly calculateCurrentValueCallback: CalculateCurrentValueCallback;
+    readonly onSubmitCreateFixedIncomeType: (
+        data: FixedIncomeTypeFormInputs,
+    ) => void;
+    readonly onSubmitCreateSpv: (data: SPVFormInputs) => void;
+    readonly itemsPerPage?: number;
+    readonly pageRange?: number;
+    readonly initialPage?: number;
 };
 
 export function AssetsTable(props: AssetsTableProps) {
@@ -197,14 +199,14 @@ export function AssetsTable(props: AssetsTableProps) {
                         <RWATableCell>Cash $USD</RWATableCell>
                     )}
                     {column.key === 'notional' && (
-                        <RWATableCell key={column.key} className="text-right">
+                        <RWATableCell className="text-right" key={column.key}>
                             {handleTableDatum(
                                 cashAssetFormattedAsTableItem[column.key],
                             )}
                         </RWATableCell>
                     )}
                     {column.key !== 'name' && column.key !== 'notional' && (
-                        <RWATableCell></RWATableCell>
+                        <RWATableCell />
                     )}
                 </Fragment>
             ))}
@@ -227,22 +229,22 @@ export function AssetsTable(props: AssetsTableProps) {
                         <RWATableCell>Totals</RWATableCell>
                     )}
                     {column.key === 'purchaseProceeds' && (
-                        <RWATableCell key={column.key} className="text-right">
+                        <RWATableCell className="text-right" key={column.key}>
                             {handleTableDatum(totalPurchaseProceeds)}
                         </RWATableCell>
                     )}
                     {column.key === 'salesProceeds' && (
-                        <RWATableCell key={column.key} className="text-right">
+                        <RWATableCell className="text-right" key={column.key}>
                             {handleTableDatum(totalSalesProceeds)}
                         </RWATableCell>
                     )}
                     {column.key === 'totalDiscount' && (
-                        <RWATableCell key={column.key} className="text-right">
+                        <RWATableCell className="text-right" key={column.key}>
                             {handleTableDatum(totalTotalDiscount)}
                         </RWATableCell>
                     )}
                     {column.key === 'realizedSurplus' && (
-                        <RWATableCell key={column.key} className="text-right">
+                        <RWATableCell className="text-right" key={column.key}>
                             {handleTableDatum(totalRealizedSurplus)}
                         </RWATableCell>
                     )}
@@ -250,9 +252,7 @@ export function AssetsTable(props: AssetsTableProps) {
                         column.key !== 'purchaseProceeds' &&
                         column.key !== 'salesProceeds' &&
                         column.key !== 'totalDiscount' &&
-                        column.key !== 'realizedSurplus' && (
-                            <RWATableCell></RWATableCell>
-                        )}
+                        column.key !== 'realizedSurplus' && <RWATableCell />}
                 </Fragment>
             ))}
         </RWATableRow>
@@ -262,44 +262,44 @@ export function AssetsTable(props: AssetsTableProps) {
         <>
             <div className="mb-2 flex w-full justify-end">
                 <Pagination
-                    pages={pages}
-                    hiddenNextPages={hiddenNextPages}
                     goToFirstPage={goToFirstPage}
                     goToLastPage={goToLastPage}
                     goToNextPage={goToNextPage}
                     goToPage={goToPage}
                     goToPreviousPage={goToPreviousPage}
+                    hiddenNextPages={hiddenNextPages}
                     isNextPageAvailable={isNextPageAvailable}
                     isPreviousPageAvailable={isPreviousPageAvailable}
                     nextPageLabel="Next"
+                    pages={pages}
                     previousPageLabel="Previous"
                 />
             </div>
             <Table
                 {...props}
-                itemName={itemName}
-                tableData={pageItems}
                 columns={columns}
-                selectedTableItem={selectedTableItem}
+                itemName={itemName}
                 operation={operation}
-                setSelectedTableItem={setSelectedTableItem}
+                selectedTableItem={selectedTableItem}
                 setOperation={setOperation}
+                setSelectedTableItem={setSelectedTableItem}
                 specialFirstRow={specialFirstRow}
                 specialLastRow={specialLastRow}
+                tableData={pageItems}
             />
-            {showForm && (
+            {showForm ? (
                 <div className="mt-4 rounded-md bg-white">
                     <AssetDetails
                         {...props}
                         itemName={itemName}
+                        operation={operation}
+                        setOperation={setOperation}
+                        setSelectedTableItem={setSelectedTableItem}
                         state={existingState}
                         tableItem={selectedTableItem}
-                        operation={operation}
-                        setSelectedTableItem={setSelectedTableItem}
-                        setOperation={setOperation}
                     />
                 </div>
-            )}
+            ) : null}
         </>
     );
 }

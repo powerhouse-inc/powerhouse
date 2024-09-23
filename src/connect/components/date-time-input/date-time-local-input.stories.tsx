@@ -27,11 +27,11 @@ export const Default: Story = {
         return (
             <DateTimeLocalInput
                 {...args}
-                value={value}
                 onChange={e => {
                     setValue(e.target.value);
                     console.log(e.target.value);
                 }}
+                value={value}
             />
         );
     },

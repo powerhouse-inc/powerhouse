@@ -1,6 +1,6 @@
 export type SkipProps = {
-    operationIndex: number;
-    skipCount: number;
+    readonly operationIndex: number;
+    readonly skipCount: number;
 };
 
 export function Skip(props: SkipProps) {

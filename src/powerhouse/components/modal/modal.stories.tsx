@@ -25,10 +25,10 @@ export const Default: Story = {
             <div className="bg-white">
                 <Modal
                     {...args}
-                    open={args.open}
                     onOpenChange={open => {
                         setArgs({ ...args, open });
                     }}
+                    open={args.open}
                 >
                     <div>
                         lorem ipsum dolor sit amet consectetur adipisicing elit.

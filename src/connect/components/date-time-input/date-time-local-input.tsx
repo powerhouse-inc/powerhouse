@@ -5,7 +5,7 @@ export type DateTimeLocalInputProps = Omit<
     ComponentPropsWithRef<'input'>,
     'type'
 > & {
-    inputType?: 'datetime-local' | 'date';
+    readonly inputType?: 'datetime-local' | 'date';
 };
 
 export const DateTimeLocalInput = forwardRef(function DateTimeLocalInput(
@@ -21,9 +21,9 @@ export const DateTimeLocalInput = forwardRef(function DateTimeLocalInput(
                 'h-8 w-full rounded-md bg-gray-100 px-3 disabled:bg-transparent disabled:p-0',
                 props.className,
             )}
-            type={inputType}
             ref={ref}
             step={props.step ?? '1'}
+            type={inputType}
         />
     );
 });

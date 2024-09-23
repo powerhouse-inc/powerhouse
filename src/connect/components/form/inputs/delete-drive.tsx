@@ -3,9 +3,9 @@ import { Button, Icon } from '@/powerhouse';
 import { useState } from 'react';
 
 export type DeleteDriveProps = {
-    uiDriveNode: UiDriveNode;
-    handleDeleteDrive: () => void;
-    onCancel: () => void;
+    readonly uiDriveNode: UiDriveNode;
+    readonly handleDeleteDrive: () => void;
+    readonly onCancel: () => void;
 };
 
 export function DeleteDrive(props: DeleteDriveProps) {
@@ -27,20 +27,20 @@ export function DeleteDrive(props: DeleteDriveProps) {
                 subfolders within it will be removed. Do you want to proceed?
             </p>
             <DriveNameInput
-                value={driveNameInput}
-                placeholder="Enter drive name..."
-                onChange={event => setDriveNameInput(event.target.value)}
                 icon={<Icon name="Lock" />}
+                onChange={event => setDriveNameInput(event.target.value)}
+                placeholder="Enter drive name..."
+                value={driveNameInput}
             />
             <div className="flex gap-3">
-                <Button onClick={onCancel} color="light" className="w-full">
+                <Button className="w-full" color="light" onClick={onCancel}>
                     Cancel
                 </Button>
                 <Button
-                    onClick={deleteDrive}
-                    disabled={!isAllowedToDelete}
-                    color="red"
                     className="w-full"
+                    color="red"
+                    disabled={!isAllowedToDelete}
+                    onClick={deleteDrive}
                 >
                     Delete
                 </Button>

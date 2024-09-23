@@ -126,11 +126,11 @@ export function makeGroupTransactionsTableItems(
 
 export type GroupTransactionsTableProps =
     TableWrapperProps<GroupTransactionFormInputs> & {
-        itemsPerPage?: number;
-        pageRange?: number;
-        initialPage?: number;
-        onSubmitCreateAsset: (data: AssetFormInputs) => void;
-        onSubmitCreateServiceProviderFeeType: (
+        readonly itemsPerPage?: number;
+        readonly pageRange?: number;
+        readonly initialPage?: number;
+        readonly onSubmitCreateAsset: (data: AssetFormInputs) => void;
+        readonly onSubmitCreateServiceProviderFeeType: (
             data: ServiceProviderFeeTypeFormInputs,
         ) => void;
     };
@@ -258,61 +258,61 @@ export function GroupTransactionsTable(props: GroupTransactionsTableProps) {
             <div className="mb-2 flex gap-2">
                 <div className="min-w-72 max-w-96">
                     <Combobox
-                        options={filterByAssetOptions}
-                        onChange={handleFilterByAssetChange}
                         isClearable
+                        onChange={handleFilterByAssetChange}
+                        options={filterByAssetOptions}
                         placeholder="Filter by Asset"
                     />
                 </div>
                 <div className="min-w-72 max-w-96">
                     <Combobox
-                        options={filterByTypeOptions}
-                        onChange={handleFilterByTypeChange}
                         isClearable
                         isMulti
+                        onChange={handleFilterByTypeChange}
+                        options={filterByTypeOptions}
                         placeholder="Filter by Type"
                     />
                 </div>
                 <div className="flex w-full justify-end">
                     <Pagination
-                        pages={pages}
-                        hiddenNextPages={hiddenNextPages}
                         goToFirstPage={goToFirstPage}
                         goToLastPage={goToLastPage}
                         goToNextPage={goToNextPage}
                         goToPage={goToPage}
                         goToPreviousPage={goToPreviousPage}
+                        hiddenNextPages={hiddenNextPages}
                         isNextPageAvailable={isNextPageAvailable}
                         isPreviousPageAvailable={isPreviousPageAvailable}
                         nextPageLabel="Next"
+                        pages={pages}
                         previousPageLabel="Previous"
                     />
                 </div>
             </div>
             <Table
                 {...props}
-                state={state}
-                itemName={itemName}
-                tableData={pageItems}
                 columns={columns}
-                selectedTableItem={selectedTableItem}
+                itemName={itemName}
                 operation={operation}
-                setSelectedTableItem={setSelectedTableItem}
+                selectedTableItem={selectedTableItem}
                 setOperation={setOperation}
+                setSelectedTableItem={setSelectedTableItem}
+                state={state}
+                tableData={pageItems}
             />
-            {showForm && (
+            {showForm ? (
                 <div className="mt-4 rounded-md bg-white">
                     <GroupTransactionDetails
                         {...props}
                         itemName={itemName}
+                        operation={operation}
+                        setOperation={setOperation}
+                        setSelectedTableItem={setSelectedTableItem}
                         state={existingState}
                         tableItem={selectedTableItem}
-                        operation={operation}
-                        setSelectedTableItem={setSelectedTableItem}
-                        setOperation={setOperation}
                     />
                 </div>
-            )}
+            ) : null}
         </>
     );
 }

@@ -14,7 +14,7 @@ export const AvailableOfflineToggle = forwardRef(
         return (
             <div className="flex items-center rounded-xl bg-gray-100 p-3 text-slate-200">
                 <div className="flex-1">
-                    <label htmlFor="availableOffline" className="font-semibold">
+                    <label className="font-semibold" htmlFor="availableOffline">
                         Make available offline
                     </label>
                     <p className="text-xs text-gray-500">

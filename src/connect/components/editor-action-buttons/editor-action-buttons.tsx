@@ -1,10 +1,10 @@
 import { Icon } from '@/powerhouse';
 
 type Props = {
-    onSwitchboardLinkClick: (() => void) | undefined;
-    onExport: () => void;
-    onClose: () => void;
-    onShowRevisionHistory: () => void;
+    readonly onSwitchboardLinkClick: (() => void) | undefined;
+    readonly onExport: () => void;
+    readonly onClose: () => void;
+    readonly onShowRevisionHistory: () => void;
 };
 export function EditorActionButtons(props: Props) {
     const { onSwitchboardLinkClick, onExport, onClose, onShowRevisionHistory } =
@@ -12,14 +12,14 @@ export function EditorActionButtons(props: Props) {
 
     return (
         <div className="flex gap-x-2">
-            {onSwitchboardLinkClick && (
+            {onSwitchboardLinkClick ? (
                 <button
                     className="flex h-8 items-center gap-x-2 rounded border border-gray-200 px-3 text-sm font-semibold text-gray-900 active:opacity-50"
                     onClick={onSwitchboardLinkClick}
                 >
                     <Icon name="Drive" size={16} />
                 </button>
-            )}
+            ) : null}
             <button
                 className="flex h-8 items-center gap-x-2 rounded border border-gray-200 px-3 text-sm font-semibold text-gray-900 active:opacity-50"
                 onClick={onExport}

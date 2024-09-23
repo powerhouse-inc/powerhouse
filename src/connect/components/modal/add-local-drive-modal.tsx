@@ -5,11 +5,11 @@ import { twMerge } from 'tailwind-merge';
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 export type AddLocalDriveModal = {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onSubmit: (data: AddLocalDriveInput) => void;
-    modalProps?: ModalProps;
-    containerProps?: DivProps;
+    readonly open: boolean;
+    readonly onOpenChange: (open: boolean) => void;
+    readonly onSubmit: (data: AddLocalDriveInput) => void;
+    readonly modalProps?: ModalProps;
+    readonly containerProps?: DivProps;
 };
 export function AddLocalDriveModal(props: AddLocalDriveModal) {
     const { open, onOpenChange, onSubmit, modalProps, containerProps } = props;
@@ -19,11 +19,11 @@ export function AddLocalDriveModal(props: AddLocalDriveModal) {
     return (
         <Modal
             {...modalProps}
-            open={open}
-            onOpenChange={onOpenChange}
             contentProps={{
                 className: 'rounded-2xl',
             }}
+            onOpenChange={onOpenChange}
+            open={open}
         >
             <div
                 {...containerProps}
@@ -44,8 +44,8 @@ export function AddLocalDriveModal(props: AddLocalDriveModal) {
                 </div>
                 <Divider className="my-4" />
                 <AddLocalDriveForm
-                    onSubmit={onSubmit}
                     onCancel={handleCancel}
+                    onSubmit={onSubmit}
                 />
             </div>
         </Modal>

@@ -11,12 +11,12 @@ import { twJoin, twMerge } from 'tailwind-merge';
 
 export type DriveViewProps = TUiNodesContext &
     NodeProps & {
-        label: ReactNode;
-        groupSharingType: SharingType;
-        disableAddDrives: boolean;
-        className?: string;
-        showAddDriveModal: (groupSharingType: SharingType) => void;
-        showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
+        readonly label: ReactNode;
+        readonly groupSharingType: SharingType;
+        readonly disableAddDrives: boolean;
+        readonly className?: string;
+        readonly showAddDriveModal: (groupSharingType: SharingType) => void;
+        readonly showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
     };
 
 export function DriveView(props: DriveViewProps) {
@@ -56,16 +56,16 @@ export function DriveView(props: DriveViewProps) {
                     {label}
                 </p>
                 <div className="size-4 text-gray-600">
-                    {!disableAddDrives && isAllowedToCreateDocuments && (
+                    {!disableAddDrives && isAllowedToCreateDocuments ? (
                         <button
-                            onClick={onShowAddDriveModal}
                             className={twMerge(
                                 'mr-2 transition hover:text-gray-800',
                             )}
+                            onClick={onShowAddDriveModal}
                         >
                             <Icon name="PlusCircle" size={16} />
                         </button>
-                    )}
+                    ) : null}
                 </div>
             </div>
             {driveNodes.map(driveNode => (

@@ -45,8 +45,8 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
             </SidebarPanel>
             <ConnectSidebarFooter
                 address={address}
-                onLogin={onLogin}
                 onClickSettings={onClickSettings}
+                onLogin={onLogin}
             />
         </Sidebar>
     );

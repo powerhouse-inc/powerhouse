@@ -34,9 +34,9 @@ const content = (
     <DropdownMenuContent className="w-64 cursor-pointer rounded border-2 border-blue-600 bg-white">
         {items.map(item => (
             <DropdownMenuItem
-                key={item.id}
-                id={item.id}
                 className="px-2 hover:bg-gray-200"
+                id={item.id}
+                key={item.id}
             >
                 {item.content}
             </DropdownMenuItem>
@@ -63,7 +63,7 @@ export const Controlled: Story = {
         }
 
         return (
-            <DropdownMenu {...args} open={open} onOpenChange={setOpen}>
+            <DropdownMenu {...args} onOpenChange={setOpen} open={open}>
                 <DropdownMenuTrigger onClick={toggleDropdown}>
                     Toggle
                 </DropdownMenuTrigger>

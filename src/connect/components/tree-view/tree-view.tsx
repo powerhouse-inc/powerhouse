@@ -35,11 +35,11 @@ import { DropIndicator } from './drop-indicator';
 
 export type ConnectTreeViewProps = TUiNodesContext &
     NodeProps & {
-        uiNode: UiNode;
-        level?: number;
-        customDocumentIconSrc?: string;
-        showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
-        onClick?: MouseEventHandler<HTMLDivElement>;
+        readonly uiNode: UiNode;
+        readonly level?: number;
+        readonly customDocumentIconSrc?: string;
+        readonly showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
+        readonly onClick?: MouseEventHandler<HTMLDivElement>;
     };
 
 export function ConnectTreeView(props: ConnectTreeViewProps) {
@@ -187,21 +187,21 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     }
 
     const folderCloseIcon = (
-        <Icon name="FolderClose" className={sharedIconStyles} size={20} />
+        <Icon className={sharedIconStyles} name="FolderClose" size={20} />
     );
 
     const folderOpenIcon = (
-        <Icon name="FolderOpen" className={sharedIconStyles} size={22} />
+        <Icon className={sharedIconStyles} name="FolderOpen" size={22} />
     );
 
     const documentTypeFileIcon = (
         <img
+            alt="file icon"
+            className="size-7 object-contain"
             src={getDocumentIconSrc(
                 uiNode.kind === FILE ? uiNode.documentType : DEFAULT,
                 customDocumentIconSrc,
             )}
-            alt="file icon"
-            className="size-7 object-contain"
         />
     );
 
@@ -212,9 +212,9 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     const publicDriveIcon =
         'icon' in uiNode && !!uiNode.icon ? (
             <img
-                src={uiNode.icon}
-                className="size-6 object-contain"
                 alt="drive icon"
+                className="size-6 object-contain"
+                src={uiNode.icon}
             />
         ) : (
             <Icon name="M" />
@@ -222,11 +222,11 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
 
     const caretIcon = (
         <Icon
-            name="Caret"
             className={twMerge(
                 isExpanded && 'rotate-90',
                 'ease pointer-events-none transition delay-75',
             )}
+            name="Caret"
         />
     );
 
@@ -235,50 +235,50 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     const readModeContent = (
         <div className="group/node grid w-full grid-cols-[1fr,auto] items-center justify-between">
             <p className="mr-1 truncate">{uiNode.name}</p>
-            {isAllowedToCreateDocuments && (
+            {isAllowedToCreateDocuments ? (
                 <ConnectDropdownMenu
-                    open={isDropdownMenuOpen}
-                    onOpenChange={setIsDropdownMenuOpen}
-                    onItemClick={onDropdownMenuOptionClick}
                     items={dropdownMenuOptions}
+                    onItemClick={onDropdownMenuOptionClick}
+                    onOpenChange={setIsDropdownMenuOpen}
+                    open={isDropdownMenuOpen}
                 >
                     <button
-                        onClick={e => {
-                            e.stopPropagation();
-                            setIsDropdownMenuOpen(true);
-                        }}
                         className={twMerge(
                             'hidden group-hover/node:block',
                             isDropdownMenuOpen && 'block',
                         )}
+                        onClick={e => {
+                            e.stopPropagation();
+                            setIsDropdownMenuOpen(true);
+                        }}
                     >
-                        <Icon name="VerticalDots" className="text-gray-600" />
+                        <Icon className="text-gray-600" name="VerticalDots" />
                     </button>
                 </ConnectDropdownMenu>
-            )}
+            ) : null}
         </div>
     );
 
     const writeModeContent = (
         <NodeInput
             defaultValue={uiNode.name}
-            onSubmit={onSubmit}
             onCancel={onCancel}
+            onSubmit={onSubmit}
         />
     );
 
     const createModeContent = (
         <div
+            className="flex cursor-pointer items-center gap-2 px-1 py-2"
             style={{
                 paddingLeft: `${(level + 1) * levelPadding + 20}px`,
             }}
-            className="flex cursor-pointer items-center gap-2 px-1 py-2"
         >
             {folderOpenIcon}
             <NodeInput
                 defaultValue="New Folder"
-                onSubmit={onSubmit}
                 onCancel={onCancel}
+                onSubmit={onSubmit}
             />
         </div>
     );
@@ -288,11 +288,11 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
             <div
                 {...dragProps}
                 {...dropProps}
-                onClick={handleClick}
                 className={twMerge(
                     'flex cursor-pointer select-none items-center rounded-lg px-1 py-2 text-gray-800 transition-colors hover:bg-gray-300',
                     isHighlighted && 'bg-gray-300 text-gray-900',
                 )}
+                onClick={handleClick}
                 // hack to allow rounded corners on item being dragged
                 // see: https://github.com/react-dnd/react-dnd/issues/788#issuecomment-367300464
                 style={{
@@ -302,7 +302,7 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
                 }}
             >
                 <DropIndicator {...props} position="before" />
-                {hasChildren && caretIcon}
+                {hasChildren ? caretIcon : null}
                 {nodeIcon}
                 {mode === READ && readModeContent}
                 {mode === WRITE && writeModeContent}
@@ -318,8 +318,8 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
                     <ConnectTreeView
                         {...props}
                         key={uiNode.id}
-                        uiNode={uiNode}
                         level={level + 1}
+                        uiNode={uiNode}
                     />
                 ))}
             </div>

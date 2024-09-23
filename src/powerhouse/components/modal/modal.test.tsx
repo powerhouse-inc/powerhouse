@@ -4,7 +4,7 @@ import { Modal } from '.';
 describe('Modal Component', () => {
     it('should match snapshot', () => {
         render(
-            <Modal open={true} data-testid="modal">
+            <Modal data-testid="modal" open>
                 <div>Modal Content</div>
             </Modal>,
         );
@@ -16,7 +16,7 @@ describe('Modal Component', () => {
 
     it('should display modal content when open', () => {
         render(
-            <Modal open={true}>
+            <Modal open>
                 <div>Modal Content</div>
             </Modal>,
         );
@@ -27,7 +27,7 @@ describe('Modal Component', () => {
     it('should call onClose callback when press esc', () => {
         const onClose = vi.fn();
         render(
-            <Modal open={true} onOpenChange={onClose}>
+            <Modal onOpenChange={onClose} open>
                 <div>Modal Content</div>
             </Modal>,
         );

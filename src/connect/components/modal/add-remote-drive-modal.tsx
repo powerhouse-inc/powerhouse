@@ -10,12 +10,12 @@ import { twMerge } from 'tailwind-merge';
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 export type AddRemoteDriveModal = {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onSubmit: (data: AddRemoteDriveInput) => void;
-    sharingType: SharingType;
-    modalProps?: ModalProps;
-    containerProps?: DivProps;
+    readonly open: boolean;
+    readonly onOpenChange: (open: boolean) => void;
+    readonly onSubmit: (data: AddRemoteDriveInput) => void;
+    readonly sharingType: SharingType;
+    readonly modalProps?: ModalProps;
+    readonly containerProps?: DivProps;
 };
 export function AddRemoteDriveModal(props: AddRemoteDriveModal) {
     const {
@@ -32,11 +32,11 @@ export function AddRemoteDriveModal(props: AddRemoteDriveModal) {
     return (
         <Modal
             {...modalProps}
-            open={open}
-            onOpenChange={onOpenChange}
             contentProps={{
                 className: 'rounded-2xl',
             }}
+            onOpenChange={onOpenChange}
+            open={open}
         >
             <div
                 {...containerProps}
@@ -57,9 +57,9 @@ export function AddRemoteDriveModal(props: AddRemoteDriveModal) {
                 </div>
                 <Divider className="my-4" />
                 <AddRemoteDriveForm
-                    sharingType={sharingType}
-                    onSubmit={onSubmit}
                     onCancel={handleCancel}
+                    onSubmit={onSubmit}
+                    sharingType={sharingType}
                 />
             </div>
         </Modal>

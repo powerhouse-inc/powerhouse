@@ -38,54 +38,54 @@ export const Pagination: React.FC<PaginationProps> = props => {
 
     return (
         <div className="flex gap-x-1">
-            {firstPageLabel && (
+            {firstPageLabel ? (
                 <PaginationButton
-                    onClick={() => goToFirstPage()}
                     disabled={!isPreviousPageAvailable}
+                    onClick={() => goToFirstPage()}
                 >
                     {firstPageLabel}
                 </PaginationButton>
-            )}
-            {previousPageLabel && (
+            ) : null}
+            {previousPageLabel ? (
                 <PaginationButton
-                    onClick={() => goToPreviousPage()}
                     disabled={!isPreviousPageAvailable}
+                    onClick={() => goToPreviousPage()}
                 >
-                    <Icon name="ChevronDown" size={16} className="rotate-90" />
+                    <Icon className="rotate-90" name="ChevronDown" size={16} />
                     {previousPageLabel}
                 </PaginationButton>
-            )}
+            ) : null}
             {pages.map(page => (
                 <PaginationButton
-                    key={page.index}
                     active={page.active}
+                    key={page.index}
                     onClick={() => goToPage(page.index)}
                 >
                     {page.number}
                 </PaginationButton>
             ))}
-            {hiddenNextPages && (
+            {hiddenNextPages ? (
                 <span className="flex items-center justify-center px-2">
                     ...
                 </span>
-            )}
-            {nextPageLabel && (
+            ) : null}
+            {nextPageLabel ? (
                 <PaginationButton
-                    onClick={() => goToNextPage()}
                     disabled={!isNextPageAvailable}
+                    onClick={() => goToNextPage()}
                 >
                     {nextPageLabel}
-                    <Icon name="ChevronDown" size={16} className="-rotate-90" />
+                    <Icon className="-rotate-90" name="ChevronDown" size={16} />
                 </PaginationButton>
-            )}
-            {lastPageLabel && (
+            ) : null}
+            {lastPageLabel ? (
                 <PaginationButton
-                    onClick={() => goToLastPage()}
                     disabled={!isNextPageAvailable}
+                    onClick={() => goToLastPage()}
                 >
                     {lastPageLabel}
                 </PaginationButton>
-            )}
+            ) : null}
         </div>
     );
 };

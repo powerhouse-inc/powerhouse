@@ -3,15 +3,15 @@ import { twJoin, twMerge } from 'tailwind-merge';
 
 type InputProps = ComponentPropsWithRef<'input'>;
 type FormInputProps = Omit<InputProps, 'className'> & {
-    icon: React.JSX.Element;
-    errorMessage?: string;
-    isTouched?: boolean;
-    isDirty?: boolean;
-    type?: 'text' | 'password' | 'email' | 'url';
-    inputClassName?: string;
-    containerClassName?: string;
-    errorMessageClassName?: string;
-    hideErrors?: boolean;
+    readonly icon: React.JSX.Element;
+    readonly errorMessage?: string;
+    readonly isTouched?: boolean;
+    readonly isDirty?: boolean;
+    readonly type?: 'text' | 'password' | 'email' | 'url';
+    readonly inputClassName?: string;
+    readonly containerClassName?: string;
+    readonly errorMessageClassName?: string;
+    readonly hideErrors?: boolean;
 };
 export const FormInput = forwardRef(function FormInput(
     props: FormInputProps,
@@ -47,12 +47,12 @@ export const FormInput = forwardRef(function FormInput(
                 </span>
                 <input
                     {...delegatedProps}
-                    type={type}
-                    ref={ref}
                     className={twMerge(
                         'w-full bg-transparent font-semibold outline-none',
                         inputClassName,
                     )}
+                    ref={ref}
+                    type={type}
                 />
             </div>
             <p

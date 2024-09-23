@@ -28,11 +28,11 @@ describe('ConnectSearchBar Component', () => {
     it('should match snapshot', () => {
         const { asFragment } = render(
             <ConnectSearchBar
-                placeholder="Search Files"
-                filterLabel="File type"
                 filterItems={filterItems}
-                value="test"
+                filterLabel="File type"
                 onChange={() => {}}
+                placeholder="Search Files"
+                value="test"
             />,
         );
 
@@ -44,12 +44,12 @@ describe('ConnectSearchBar Component', () => {
 
         render(
             <ConnectSearchBar
-                placeholder="Search Files"
-                filterLabel="File type"
-                filterItems={filterItems}
                 data-testid="search-bar"
-                value=""
+                filterItems={filterItems}
+                filterLabel="File type"
                 onChange={onChange}
+                placeholder="Search Files"
+                value=""
             />,
         );
 
@@ -64,13 +64,13 @@ describe('ConnectSearchBar Component', () => {
     it('should display filter selected in filter label', () => {
         render(
             <ConnectSearchBar
-                placeholder="Search Files"
-                filterLabel="File type"
-                filterItems={filterItems}
                 data-testid="search-bar"
-                value="test"
+                filterItems={filterItems}
+                filterLabel="File type"
                 onChange={() => {}}
+                placeholder="Search Files"
                 selectedFilter="project"
+                value="test"
             />,
         );
 

@@ -30,35 +30,33 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
             {selectedNodePath.map(node => (
                 <Breadcrumb {...props} key={node.id} node={node} />
             ))}
-            <>
-                {isAllowedToCreateDocuments && (
-                    <>
-                        {isAddingNewItem ? (
-                            <NodeInput
-                                defaultValue="New Folder"
-                                placeholder="New Folder"
-                                className="text-gray-800"
-                                onSubmit={onSubmit}
-                                onCancel={onCancel}
-                            />
-                        ) : (
-                            <button
-                                onClick={onAddNew}
-                                className="ml-1 flex items-center justify-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 transition-colors hover:bg-gray-200 hover:text-gray-800"
-                            >
-                                <Icon name="Plus" size={14} />
-                                Add new
-                            </button>
-                        )}
-                    </>
-                )}
-            </>
+            {isAllowedToCreateDocuments ? (
+                <>
+                    {isAddingNewItem ? (
+                        <NodeInput
+                            className="text-gray-800"
+                            defaultValue="New Folder"
+                            onCancel={onCancel}
+                            onSubmit={onSubmit}
+                            placeholder="New Folder"
+                        />
+                    ) : (
+                        <button
+                            className="ml-1 flex items-center justify-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 transition-colors hover:bg-gray-200 hover:text-gray-800"
+                            onClick={onAddNew}
+                        >
+                            <Icon name="Plus" size={14} />
+                            Add new
+                        </button>
+                    )}
+                </>
+            ) : null}
         </div>
     );
 }
 
 export type BreadcrumbProps = BreadcrumbsProps & {
-    node: UiNode;
+    readonly node: UiNode;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {
@@ -67,9 +65,9 @@ export function Breadcrumb(props: BreadcrumbProps) {
     return (
         <>
             <div
-                role="button"
                 className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
                 onClick={() => setSelectedNode(node)}
+                role="button"
             >
                 {node.name}
             </div>

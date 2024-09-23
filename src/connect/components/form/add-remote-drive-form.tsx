@@ -31,9 +31,9 @@ type Inputs = {
 export type AddRemoteDriveInput = RemoteDriveDetails & { url: string };
 
 type AddPublicDriveFormProps = {
-    sharingType: SharingType;
-    onSubmit: (data: AddRemoteDriveInput) => void;
-    onCancel: () => void;
+    readonly sharingType: SharingType;
+    readonly onSubmit: (data: AddRemoteDriveInput) => void;
+    readonly onCancel: () => void;
 };
 
 export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
@@ -103,11 +103,11 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
                     />
                     <Divider className="my-3" />
                     <Disclosure
-                        title="Location"
                         isOpen={showLocationSettings}
                         onOpenChange={() =>
                             setShowLocationSettings(!showLocationSettings)
                         }
+                        title="Location"
                     >
                         <LocationInfo location={SWITCHBOARD} />
                         <AvailableOfflineToggle
@@ -115,31 +115,31 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
                         />
                     </Disclosure>
                     <Divider className="my-3" />
-                    <Button type="submit" color="dark" className="mt-4 w-full">
+                    <Button className="mt-4 w-full" color="dark" type="submit">
                         Add drive
                     </Button>
                 </>
             ) : (
                 <>
                     <FormInput
-                        type="url"
+                        errorMessage={errorMessage}
                         icon={<Icon name="BrickGlobe" />}
-                        value={url}
+                        onChange={e => setUrl(e.target.value)}
                         placeholder="Drive URL"
                         required
-                        onChange={e => setUrl(e.target.value)}
-                        errorMessage={errorMessage}
+                        type="url"
+                        value={url}
                     />
                     <Divider className="mb-3" />
                     <Button
-                        type="button"
-                        color="light"
                         className="mt-4 w-full"
+                        color="light"
+                        disabled={!isUrlValid || url === ''}
                         onClick={e => {
                             e.preventDefault();
                             setHasConfirmedUrl(true);
                         }}
-                        disabled={!isUrlValid || url === ''}
+                        type="button"
                     >
                         Confirm URL
                     </Button>

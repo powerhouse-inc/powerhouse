@@ -3,8 +3,8 @@ import { ReactNode } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 type Props = RadixTooltip.TooltipProps & {
-    className?: string;
-    content: ReactNode;
+    readonly className?: string;
+    readonly content: ReactNode;
 };
 
 export function Tooltip(props: Props) {
@@ -20,10 +20,10 @@ export function Tooltip(props: Props) {
 
     return (
         <RadixTooltip.Root
-            open={open}
             defaultOpen={defaultOpen}
-            onOpenChange={onOpenChange}
             delayDuration={0}
+            onOpenChange={onOpenChange}
+            open={open}
         >
             <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
             <RadixTooltip.Portal>

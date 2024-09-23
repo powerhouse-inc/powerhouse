@@ -47,7 +47,7 @@ export const Default: Story = {
         }
 
         return (
-            <ConnectDropdownMenu {...args} open={open} onOpenChange={setOpen}>
+            <ConnectDropdownMenu {...args} onOpenChange={setOpen} open={open}>
                 <button onClick={toggleOpen}>Toggle</button>
             </ConnectDropdownMenu>
         );

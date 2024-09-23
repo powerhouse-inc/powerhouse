@@ -10,12 +10,12 @@ import { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 type Props = {
-    title?: string;
-    children?: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    overlayProps?: ComponentPropsWithoutRef<typeof Overlay>;
-    contentProps?: ComponentPropsWithoutRef<typeof Content>;
+    readonly title?: string;
+    readonly children?: React.ReactNode;
+    readonly open?: boolean;
+    readonly onOpenChange?: (open: boolean) => void;
+    readonly overlayProps?: ComponentPropsWithoutRef<typeof Overlay>;
+    readonly contentProps?: ComponentPropsWithoutRef<typeof Content>;
 };
 export function Modal(props: Props) {
     const {
@@ -28,7 +28,7 @@ export function Modal(props: Props) {
         ...delegated
     } = props;
     return (
-        <Root open={open} defaultOpen={open} onOpenChange={onOpenChange}>
+        <Root defaultOpen={open} onOpenChange={onOpenChange} open={open}>
             <Portal>
                 <Overlay
                     {...overlayProps}

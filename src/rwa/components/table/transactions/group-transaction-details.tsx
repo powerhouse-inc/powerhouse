@@ -18,7 +18,7 @@ import { Control, useWatch } from 'react-hook-form';
 import { useGroupTransactionForm } from './useGroupTransactionForm';
 
 function CashBalanceChange(props: {
-    control: Control<GroupTransactionFormInputs>;
+    readonly control: Control<GroupTransactionFormInputs>;
 }) {
     const { control } = props;
     const cashAmount = useWatch({ control, name: 'cashAmount' });
@@ -32,17 +32,15 @@ function CashBalanceChange(props: {
     );
 
     return (
-        <>
-            <div className="flex items-center justify-between border-t border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">
-                <div className="mr-6 text-sm text-gray-600">
-                    Cash Balance Change $USD
-                </div>
-                <div className="h-px flex-1 border-b border-dashed border-gray-400" />
-                <div className="pl-8 text-sm text-gray-900">
-                    <FormattedNumber value={cashBalanceChange} />
-                </div>
+        <div className="flex items-center justify-between border-t border-gray-300 bg-gray-100 p-3 font-semibold text-gray-800">
+            <div className="mr-6 text-sm text-gray-600">
+                Cash Balance Change $USD
             </div>
-        </>
+            <div className="h-px flex-1 border-b border-dashed border-gray-400" />
+            <div className="pl-8 text-sm text-gray-900">
+                <FormattedNumber value={cashBalanceChange} />
+            </div>
+        </div>
     );
 }
 
@@ -50,8 +48,8 @@ type GroupTransactionDetailsProps = Omit<
     ItemDetailsProps<GroupTransactionsTableItem, GroupTransactionFormInputs>,
     'reset' | 'submit' | 'formInputs'
 > & {
-    onSubmitCreateAsset: (data: AssetFormInputs) => void;
-    onSubmitCreateServiceProviderFeeType: (
+    readonly onSubmitCreateAsset: (data: AssetFormInputs) => void;
+    readonly onSubmitCreateServiceProviderFeeType: (
         data: ServiceProviderFeeTypeFormInputs,
     ) => void;
 };
@@ -119,25 +117,25 @@ export function _GroupTransactionDetails(props: GroupTransactionDetailsProps) {
     const formInputs = () => (
         <>
             <FormInputs inputs={inputs} />
-            {canHaveTransactionFees && (
+            {canHaveTransactionFees ? (
                 <FeeTransactionsTable
-                    register={register}
+                    append={append}
+                    control={control}
+                    errors={errors}
                     feeInputs={fields}
-                    serviceProviderFeeTypes={serviceProviderFeeTypes}
+                    isViewOnly={operation === 'view'}
+                    register={register}
+                    remove={remove}
                     serviceProviderFeeTypeOptions={
                         serviceProviderFeeTypeOptions
                     }
+                    serviceProviderFeeTypes={serviceProviderFeeTypes}
                     setShowServiceProviderFeeTypeModal={
                         setShowCreateServiceProviderFeeTypeModal
                     }
-                    control={control}
                     watch={watch}
-                    remove={remove}
-                    append={append}
-                    errors={errors}
-                    isViewOnly={operation === 'view'}
                 />
-            )}
+            ) : null}
             <CashBalanceChange control={control} />
         </>
     );
@@ -147,27 +145,27 @@ export function _GroupTransactionDetails(props: GroupTransactionDetailsProps) {
             <ItemDetails
                 {...props}
                 formInputs={formInputs}
-                submit={submit}
                 reset={reset}
+                submit={submit}
             />
-            {showCreateAssetModal && (
+            {showCreateAssetModal ? (
                 <RWACreateItemModal
                     {...props}
                     {...assetFormProps}
-                    open={showCreateAssetModal}
-                    onOpenChange={setShowCreateAssetModal}
                     itemName="Asset"
+                    onOpenChange={setShowCreateAssetModal}
+                    open={showCreateAssetModal}
                 />
-            )}
-            {showCreateServiceProviderFeeTypeModal && (
+            ) : null}
+            {showCreateServiceProviderFeeTypeModal ? (
                 <RWACreateItemModal
                     {...props}
                     {...serviceProviderFeeTypeFormProps}
-                    open={showCreateServiceProviderFeeTypeModal}
-                    onOpenChange={setShowCreateServiceProviderFeeTypeModal}
                     itemName="Service Provider Fee Type"
+                    onOpenChange={setShowCreateServiceProviderFeeTypeModal}
+                    open={showCreateServiceProviderFeeTypeModal}
                 />
-            )}
+            ) : null}
         </>
     );
 }

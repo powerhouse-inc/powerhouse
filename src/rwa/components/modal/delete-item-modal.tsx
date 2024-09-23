@@ -2,13 +2,13 @@ import { Icon, Modal } from '@/powerhouse';
 import React, { ComponentPropsWithoutRef, Fragment } from 'react';
 
 export type RWADeleteItemModalProps = ComponentPropsWithoutRef<typeof Modal> & {
-    itemName: React.ReactNode;
-    dependentItemName: React.ReactNode;
-    dependentItemList: React.ReactNode[];
-    onContinue: () => void;
+    readonly itemName: React.ReactNode;
+    readonly dependentItemName: React.ReactNode;
+    readonly dependentItemList: React.ReactNode[];
+    readonly onContinue: () => void;
 };
 
-export const RWADeleteItemModal = (props: RWADeleteItemModalProps) => {
+export function RWADeleteItemModal(props: RWADeleteItemModalProps) {
     const {
         itemName,
         dependentItemName,
@@ -20,13 +20,13 @@ export const RWADeleteItemModal = (props: RWADeleteItemModalProps) => {
 
     return (
         <Modal
-            overlayProps={{
-                className: 'top-10',
-            }}
             contentProps={{
                 className: 'rounded-3xl',
             }}
             onOpenChange={onOpenChange}
+            overlayProps={{
+                className: 'top-10',
+            }}
             {...restProps}
         >
             <div className="w-[400px] p-6 text-slate-300">
@@ -35,7 +35,7 @@ export const RWADeleteItemModal = (props: RWADeleteItemModalProps) => {
                 </div>
                 <div className="my-6 flex gap-2 rounded-md bg-orange-100 p-4 text-orange-800">
                     <div>
-                        <Icon name="Error" className="mt-1 text-orange-800" />
+                        <Icon className="mt-1 text-orange-800" name="Error" />
                     </div>
                     <div>
                         Warning! Cannot delete this {itemName} because there are{' '}
@@ -50,8 +50,8 @@ export const RWADeleteItemModal = (props: RWADeleteItemModalProps) => {
                 </div>
                 <div className="mt-8 flex justify-between gap-3">
                     <button
-                        onClick={onContinue}
                         className="min-h-12 min-w-36 flex-1 rounded-xl bg-gray-800 px-6 py-3 text-base font-semibold text-gray-50 outline-none transition-all hover:scale-105 active:opacity-75"
+                        onClick={onContinue}
                     >
                         Back
                     </button>
@@ -59,4 +59,4 @@ export const RWADeleteItemModal = (props: RWADeleteItemModalProps) => {
             </div>
         </Modal>
     );
-};
+}

@@ -36,8 +36,8 @@ export function ItemDetails<
 >(
     props: ItemDetailsProps<TItem, TFieldValues> &
         ItemDetailsFormProps<TFieldValues> & {
-            submit: (e?: React.BaseSyntheticEvent | undefined) => Promise<void>;
-            formInputs: ComponentType;
+            readonly submit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+            readonly formInputs: ComponentType;
         },
 ) {
     const {
@@ -96,16 +96,16 @@ export function ItemDetails<
     }
 
     const cancelButton = (
-        <RWAButton onClick={handleCancel} className="text-gray-600">
+        <RWAButton className="text-gray-600" onClick={handleCancel}>
             Cancel
         </RWAButton>
     );
 
     const submitButton = (
         <RWAButton
-            onClick={submit}
-            iconPosition="right"
             icon={<Icon name="Save" size={16} />}
+            iconPosition="right"
+            onClick={submit}
         >
             {isCreateOperation ? 'Save' : 'Save Edits'}
         </RWAButton>
@@ -113,18 +113,18 @@ export function ItemDetails<
 
     const deleteButton = (
         <button onClick={handleDelete}>
-            <Icon name="Trash" className="ml-3 text-red-800" size={22} />
+            <Icon className="ml-3 text-red-800" name="Trash" size={22} />
         </button>
     );
 
     const editButton = (
         <RWAButton
+            icon={<Icon name="Pencil" size={16} />}
+            iconPosition="right"
             onClick={() => {
                 setSelectedTableItem(tableItem);
                 setOperation('edit');
             }}
-            iconPosition="right"
-            icon={<Icon name="Pencil" size={16} />}
         >
             Edit {itemName}
         </RWAButton>
@@ -144,21 +144,21 @@ export function ItemDetails<
                         : `New ${itemName}`}
                 </div>
                 <div className="flex gap-x-2">
-                    {showCancelButton && cancelButton}
-                    {showSubmitButton && submitButton}
-                    {showDeleteButton && deleteButton}
-                    {showEditButton && editButton}
+                    {showCancelButton ? cancelButton : null}
+                    {showSubmitButton ? submitButton : null}
+                    {showDeleteButton ? deleteButton : null}
+                    {showEditButton ? editButton : null}
                 </div>
             </div>
             <FormInputs />
-            {dependentItemProps && (
+            {dependentItemProps ? (
                 <RWADeleteItemModal
                     {...dependentItemProps}
                     itemName={itemName.toLowerCase()}
-                    open={showDeleteModal}
                     onContinue={() => setShowDeleteModal(false)}
+                    open={showDeleteModal}
                 />
-            )}
+            ) : null}
         </div>
     );
 }

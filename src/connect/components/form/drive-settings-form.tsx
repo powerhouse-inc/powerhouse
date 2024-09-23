@@ -23,10 +23,10 @@ type Inputs = {
 };
 
 type DriveSettingsFormProps = {
-    uiDriveNode: UiDriveNode;
-    onSubmit: DriveSettingsFormSubmitHandler;
-    handleCancel: () => void;
-    handleDeleteDrive: () => void;
+    readonly uiDriveNode: UiDriveNode;
+    readonly onSubmit: DriveSettingsFormSubmitHandler;
+    readonly handleCancel: () => void;
+    readonly handleDeleteDrive: () => void;
 };
 
 export type DriveSettingsFormSubmitHandler = SubmitHandler<Inputs>;
@@ -58,25 +58,25 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             <SharingTypeFormInput control={control} />
             <Divider className="my-3" />
             <Disclosure
-                title="Location"
                 isOpen={showLocationSettings}
                 onOpenChange={() =>
                     setShowLocationSettings(!showLocationSettings)
                 }
+                title="Location"
             >
                 <LocationInfo location={location} />
                 <AvailableOfflineToggle {...register('availableOffline')} />
             </Disclosure>
             <Divider className="my-3" />
             <Disclosure
-                title="Danger zone"
                 isOpen={showDangerZone}
                 onOpenChange={() => setShowDangerZone(!showDangerZone)}
+                title="Danger zone"
             >
                 <button
-                    type="button"
                     className="flex gap-2 py-3 font-semibold text-red-900 transition hover:brightness-125"
                     onClick={() => setShowDeleteDrive(true)}
+                    type="button"
                 >
                     <Icon name="Trash" />
                     Delete drive
@@ -90,7 +90,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
             ) : (
                 <>
                     <Divider className="my-3" />
-                    <Button type="submit" className="mb-4 w-full">
+                    <Button className="mb-4 w-full" type="submit">
                         Confirm
                     </Button>
                 </>

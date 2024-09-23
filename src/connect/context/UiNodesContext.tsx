@@ -45,7 +45,7 @@ export const UiNodesContext = createContext<TUiNodesContext>(
 );
 
 export interface UiNodesContextProviderProps {
-    children: ReactNode;
+    readonly children: ReactNode;
 }
 
 export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({

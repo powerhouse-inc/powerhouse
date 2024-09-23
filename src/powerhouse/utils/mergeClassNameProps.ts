@@ -1,6 +1,5 @@
 import { twMerge } from 'tailwind-merge';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FunctionClassNameType = (values: any) => string;
 
 interface ClassNameProps {

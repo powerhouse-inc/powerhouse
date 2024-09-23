@@ -32,7 +32,7 @@ import { useSubmit } from '../hooks/useSubmit';
 
 const TransactionReference = forwardRef(function TransactionReference(
     props: ComponentPropsWithRef<typeof RWATableTextInput> & {
-        control: Control<GroupTransactionFormInputs>;
+        readonly control: Control<GroupTransactionFormInputs>;
     },
     ref: ForwardedRef<HTMLInputElement>,
 ) {
@@ -49,7 +49,7 @@ const TransactionReference = forwardRef(function TransactionReference(
     const tooltipContent = (
         <div>
             <p>{value}</p>
-            {isTransaction && (
+            {isTransaction ? (
                 <p className="mt-2 text-center">
                     <a
                         className="text-blue-900 underline"
@@ -58,7 +58,7 @@ const TransactionReference = forwardRef(function TransactionReference(
                         View on Etherscan
                     </a>
                 </p>
-            )}
+            ) : null}
         </div>
     );
 
@@ -75,8 +75,8 @@ const TransactionReference = forwardRef(function TransactionReference(
 });
 
 function UnitPrice(props: {
-    control: Control<GroupTransactionFormInputs>;
-    isViewOnly: boolean;
+    readonly control: Control<GroupTransactionFormInputs>;
+    readonly isViewOnly: boolean;
 }) {
     const { control } = props;
 
@@ -89,7 +89,7 @@ function UnitPrice(props: {
         <div className={twMerge('mt-1 w-fit', !props.isViewOnly && 'ml-auto')}>
             <span className="text-gray-600">Unit Price</span>{' '}
             <span className="text-gray-900">
-                <FormattedNumber value={unitPrice} decimalScale={6} />
+                <FormattedNumber decimalScale={6} value={unitPrice} />
             </span>
         </div>
     );
@@ -128,7 +128,7 @@ export function useGroupTransactionForm(
         value: fixedIncome.id,
     }));
 
-    const createDefaultValues = {
+    const createDefaultValues: GroupTransactionFormInputs = {
         type: allGroupTransactionTypes[0],
         entryTime: convertToDateTimeLocalFormat(new Date()),
         cashAmount: null,
@@ -139,7 +139,7 @@ export function useGroupTransactionForm(
         txRef: null,
     };
 
-    const editDefaultValues = item
+    const editDefaultValues: GroupTransactionFormInputs = item
         ? {
               id: item.id,
               type: item.type,
@@ -226,13 +226,13 @@ export function useGroupTransactionForm(
             label: 'Transaction Type',
             Input: () => (
                 <RWATableSelect
+                    aria-invalid={errors.type ? 'true' : 'false'}
                     control={control}
-                    name="type"
                     disabled={operation === 'view'}
+                    errorMessage={errors.type?.message}
+                    name="type"
                     options={transactionTypeOptions}
                     rules={{ required: 'Transaction type is required' }}
-                    aria-invalid={errors.type ? 'true' : 'false'}
-                    errorMessage={errors.type?.message}
                 />
             ),
         },
@@ -256,10 +256,6 @@ export function useGroupTransactionForm(
                   label: 'Service Provider',
                   Input: () => (
                       <RWATableSelect
-                          control={control}
-                          name="serviceProviderFeeTypeId"
-                          disabled={operation === 'view'}
-                          options={serviceProviderFeeTypeOptions}
                           addItemButtonProps={{
                               onClick: () =>
                                   setShowCreateServiceProviderFeeTypeModal(
@@ -267,6 +263,10 @@ export function useGroupTransactionForm(
                                   ),
                               label: 'Add Service Provider',
                           }}
+                          control={control}
+                          disabled={operation === 'view'}
+                          name="serviceProviderFeeTypeId"
+                          options={serviceProviderFeeTypeOptions}
                       />
                   ),
               }
@@ -276,17 +276,17 @@ export function useGroupTransactionForm(
                   label: 'Asset name',
                   Input: () => (
                       <RWATableSelect
-                          control={control}
-                          name="fixedIncomeId"
-                          disabled={operation === 'view'}
-                          options={fixedIncomeOptions}
                           addItemButtonProps={{
                               onClick: () => setShowCreateAssetModal(true),
                               label: 'Create Asset',
                           }}
-                          rules={{ required: 'Asset name is required' }}
                           aria-invalid={errors.type ? 'true' : 'false'}
+                          control={control}
+                          disabled={operation === 'view'}
                           errorMessage={errors.type?.message}
+                          name="fixedIncomeId"
+                          options={fixedIncomeOptions}
+                          rules={{ required: 'Asset name is required' }}
                       />
                   ),
               }
@@ -296,7 +296,14 @@ export function useGroupTransactionForm(
                   label: 'Quantity',
                   Input: () => (
                       <RWANumberInput
+                          aria-invalid={
+                              errors.fixedIncomeAmount ? 'true' : 'false'
+                          }
+                          control={control}
+                          disabled={operation === 'view'}
+                          errorMessage={errors.fixedIncomeAmount?.message}
                           name="fixedIncomeAmount"
+                          placeholder="E.g. 1,000.00"
                           rules={{
                               required: 'Quantity is required',
                               validate: {
@@ -305,13 +312,6 @@ export function useGroupTransactionForm(
                                       'Asset proceeds must be greater than zero',
                               },
                           }}
-                          disabled={operation === 'view'}
-                          control={control}
-                          aria-invalid={
-                              errors.fixedIncomeAmount ? 'true' : 'false'
-                          }
-                          errorMessage={errors.fixedIncomeAmount?.message}
-                          placeholder="E.g. 1,000.00"
                       />
                   ),
               }
@@ -321,7 +321,13 @@ export function useGroupTransactionForm(
             Input: () => (
                 <>
                     <RWANumberInput
+                        aria-invalid={errors.cashAmount ? 'true' : 'false'}
+                        control={control}
+                        currency="USD"
+                        disabled={operation === 'view'}
+                        errorMessage={errors.cashAmount?.message}
                         name="cashAmount"
+                        placeholder="E.g. $1,000.00"
                         rules={{
                             required: 'Asset proceeds is required',
                             validate: {
@@ -330,19 +336,13 @@ export function useGroupTransactionForm(
                                     'Asset proceeds must be greater than zero',
                             },
                         }}
-                        currency="USD"
-                        disabled={operation === 'view'}
-                        control={control}
-                        aria-invalid={errors.cashAmount ? 'true' : 'false'}
-                        errorMessage={errors.cashAmount?.message}
-                        placeholder="E.g. $1,000.00"
                     />
-                    {isAssetTransaction && (
+                    {isAssetTransaction ? (
                         <UnitPrice
                             control={control}
                             isViewOnly={operation === 'view'}
                         />
-                    )}
+                    ) : null}
                 </>
             ),
         },
@@ -353,8 +353,8 @@ export function useGroupTransactionForm(
                     {...register('txRef', {
                         disabled: operation === 'view',
                     })}
-                    control={control}
                     aria-invalid={errors.txRef ? 'true' : 'false'}
+                    control={control}
                     errorMessage={errors.txRef?.message}
                     placeholder="E.g. 0x123..."
                 />

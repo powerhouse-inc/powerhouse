@@ -3,7 +3,7 @@ import { DivProps } from '@/powerhouse';
 import { twMerge } from 'tailwind-merge';
 
 type LocationInfoProps = DivProps & {
-    location: DriveLocation;
+    readonly location: DriveLocation;
 };
 
 export function LocationInfo(props: LocationInfoProps) {

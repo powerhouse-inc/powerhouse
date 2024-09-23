@@ -26,8 +26,8 @@ import { twMerge } from 'tailwind-merge';
 
 export type FolderItemProps = TUiNodesContext &
     NodeProps & {
-        uiNode: UiFolderNode;
-        className?: string;
+        readonly uiNode: UiFolderNode;
+        readonly className?: string;
     };
 
 export function FolderItem(props: FolderItemProps) {
@@ -113,54 +113,54 @@ export function FolderItem(props: FolderItemProps) {
     );
 
     return (
-        <div onClick={onClick} className="relative w-64">
+        <div className="relative w-64" onClick={onClick}>
             <div {...dragProps} {...dropProps} className={containerStyles}>
                 <div className="flex items-center overflow-hidden">
                     <div className="p-1">
                         <div className="relative">
                             <Icon name="FolderClose" size={24} />
                             {isReadMode &&
-                                isRemoteDrive &&
-                                uiNode.syncStatus && (
-                                    <div className="absolute bottom-[-3px] right-[-2px] size-3 rounded-full bg-white">
-                                        <div className="absolute left-[-2px] top-[-2px]">
-                                            <SyncStatusIcon
-                                                syncStatus={uiNode.syncStatus}
-                                                overrideSyncIcons={{
-                                                    SUCCESS: 'CheckCircleFill',
-                                                }}
-                                            />
-                                        </div>
+                            isRemoteDrive &&
+                            uiNode.syncStatus ? (
+                                <div className="absolute bottom-[-3px] right-[-2px] size-3 rounded-full bg-white">
+                                    <div className="absolute left-[-2px] top-[-2px]">
+                                        <SyncStatusIcon
+                                            overrideSyncIcons={{
+                                                SUCCESS: 'CheckCircleFill',
+                                            }}
+                                            syncStatus={uiNode.syncStatus}
+                                        />
                                     </div>
-                                )}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                     {content}
                 </div>
-                {isReadMode && isAllowedToCreateDocuments && (
+                {isReadMode && isAllowedToCreateDocuments ? (
                     <ConnectDropdownMenu
-                        open={isDropdownMenuOpen}
-                        onOpenChange={setIsDropdownMenuOpen}
-                        onItemClick={onDropdownMenuOptionClick}
                         items={dropdownMenuOptions}
+                        onItemClick={onDropdownMenuOptionClick}
+                        onOpenChange={setIsDropdownMenuOpen}
+                        open={isDropdownMenuOpen}
                     >
                         <button
-                            onClick={e => {
-                                e.stopPropagation();
-                                setIsDropdownMenuOpen(true);
-                            }}
                             className={twMerge(
                                 'ml-auto hidden group-hover:block',
                                 isDropdownMenuOpen && 'block',
                             )}
+                            onClick={e => {
+                                e.stopPropagation();
+                                setIsDropdownMenuOpen(true);
+                            }}
                         >
                             <Icon
-                                name="VerticalDots"
                                 className="text-gray-600"
+                                name="VerticalDots"
                             />
                         </button>
                     </ConnectDropdownMenu>
-                )}
+                ) : null}
             </div>
         </div>
     );

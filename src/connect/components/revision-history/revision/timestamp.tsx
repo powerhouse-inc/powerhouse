@@ -2,7 +2,7 @@ import { Tooltip } from '@/connect';
 import { format } from 'date-fns';
 
 export type TimestampProps = {
-    timestamp: number | string;
+    readonly timestamp: number | string;
 };
 
 export function Timestamp(props: TimestampProps) {

@@ -15,7 +15,7 @@ export type ServiceProviderFeeTypeDetailsProps = ItemDetailsProps<
     ServiceProviderFeeTypeTableItem,
     ServiceProviderFeeTypeFormInputs
 > & {
-    onSubmitCreateAccount: (data: AccountFormInputs) => void;
+    readonly onSubmitCreateAccount: (data: AccountFormInputs) => void;
 };
 
 export function _ServiceProviderFeeTypeDetails(
@@ -74,23 +74,23 @@ export function _ServiceProviderFeeTypeDetails(
         <>
             <ItemDetails
                 {...props}
-                formInputs={formInputs}
                 dependentItemProps={dependentItemProps}
-                submit={submit}
-                reset={reset}
+                formInputs={formInputs}
                 onSubmitCreate={onSubmitCreate}
-                onSubmitEdit={onSubmitEdit}
                 onSubmitDelete={onSubmitDelete}
+                onSubmitEdit={onSubmitEdit}
+                reset={reset}
+                submit={submit}
             />
-            {showCreateAccountModal && (
+            {showCreateAccountModal ? (
                 <RWACreateItemModal
                     {...props}
                     {...createAccountModalProps}
-                    open={showCreateAccountModal}
-                    onOpenChange={setShowCreateAccountModal}
                     itemName="Account"
+                    onOpenChange={setShowCreateAccountModal}
+                    open={showCreateAccountModal}
                 />
-            )}
+            ) : null}
         </>
     );
 }

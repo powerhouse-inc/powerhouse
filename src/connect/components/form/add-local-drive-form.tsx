@@ -21,8 +21,8 @@ export type AddLocalDriveInput = {
 };
 
 type AddLocalDriveFormProps = {
-    onSubmit: CreateDriveFormSubmitHandler;
-    onCancel: () => void;
+    readonly onSubmit: CreateDriveFormSubmitHandler;
+    readonly onCancel: () => void;
 };
 
 type CreateDriveFormSubmitHandler = SubmitHandler<AddLocalDriveInput>;
@@ -59,16 +59,16 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
             <SharingTypeFormInput control={control} />
             <Divider className="my-3" />
             <Disclosure
-                title="Upload from device"
                 isOpen={showUpload}
                 onOpenChange={() => setShowUpload(!showUpload)}
+                title="Upload from device"
             >
                 <div className="mt-3 grid h-[117px] w-full place-items-center rounded-xl bg-gray-200">
                     <div className="rounded-xl bg-white p-3 text-xs">
                         <Icon
+                            className="mr-2 inline-block"
                             name="ArrowUp"
                             size={20}
-                            className="mr-2 inline-block"
                         />
                         Click or drop folder
                     </div>
@@ -76,17 +76,17 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
             </Disclosure>
             <Divider className="my-3" />
             <Disclosure
-                title="Location"
                 isOpen={showLocationSettings}
                 onOpenChange={() =>
                     setShowLocationSettings(!showLocationSettings)
                 }
+                title="Location"
             >
                 <LocationInfo location={SWITCHBOARD} />
                 <AvailableOfflineToggle {...register('availableOffline')} />
             </Disclosure>
             <Divider className="my-3" />
-            <Button type="submit" className="mb-4 w-full">
+            <Button className="mb-4 w-full" type="submit">
                 Create new drive
             </Button>
         </form>

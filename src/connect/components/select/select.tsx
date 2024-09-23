@@ -3,11 +3,11 @@ import { CSSProperties, ForwardedRef, useState } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
 
 export type SelectItem<TValue extends string> = {
-    value: TValue;
-    displayValue?: React.ReactNode;
-    description?: React.ReactNode;
-    icon?: React.JSX.Element;
-    disabled?: boolean;
+    readonly value: TValue;
+    readonly displayValue?: React.ReactNode;
+    readonly description?: React.ReactNode;
+    readonly icon?: React.JSX.Element;
+    readonly disabled?: boolean;
 };
 
 export type SelectProps<TValue extends string> = {
@@ -57,47 +57,47 @@ export const Select = fixedForwardRef(function Select<TValue extends string>(
                 absolutePositionMenu && 'relative',
                 containerClassName,
             )}
+            data-open={showItems}
             ref={ref}
             style={{
                 borderRadius: showItems
                     ? `${borderRadius} ${borderRadius} 0 0`
                     : borderRadius,
             }}
-            data-open={showItems}
         >
             <div
-                onClick={() => setShowItems(!showItems)}
-                id={id}
                 className={twMerge(
                     'flex min-w-[360px] cursor-pointer items-center justify-between pr-3 text-gray-800 outline-none',
                     menuClassName,
                 )}
+                id={id}
+                onClick={() => setShowItems(!showItems)}
             >
                 <ItemContainer {...selectedItem} className={itemClassName} />
                 <Icon
-                    name="ChevronDown"
                     className={twJoin(
                         'transition',
                         showItems ? '' : '-rotate-90',
                     )}
+                    name="ChevronDown"
                 />
             </div>
             <div
-                style={{
-                    borderRadius: `0 0 ${borderRadius} ${borderRadius}`,
-                }}
                 className={twMerge(
                     'max-h-0 w-full overflow-hidden bg-inherit transition-[max-height] ease-in-out',
                     showItems && 'max-h-screen',
                     absolutePositionMenu && 'absolute',
                 )}
+                style={{
+                    borderRadius: `0 0 ${borderRadius} ${borderRadius}`,
+                }}
             >
                 {itemsToShow.map(item => (
                     <ItemContainer
                         key={item.value}
                         {...item}
-                        onItemClick={() => onItemClick(item)}
                         className={itemClassName}
+                        onItemClick={() => onItemClick(item)}
                     />
                 ))}
             </div>
@@ -107,8 +107,8 @@ export const Select = fixedForwardRef(function Select<TValue extends string>(
 
 function ItemContainer<TValue extends string>(
     props: SelectItem<TValue> & {
-        onItemClick?: () => void;
-        className?: string;
+        readonly onItemClick?: () => void;
+        readonly className?: string;
     },
 ) {
     const {

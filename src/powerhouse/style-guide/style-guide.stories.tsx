@@ -17,8 +17,8 @@ export const Colors: StoryObj<typeof meta> = {
 
                     return (
                         <div
-                            key={key}
                             className="grid aspect-square w-[30%] max-w-[200px] place-items-center"
+                            key={key}
                             style={{ backgroundColor: `var(${colorVar})` }}
                         >
                             <div className="bg-white p-1 text-xs">{key}</div>
@@ -48,7 +48,7 @@ export const TextSizes: StoryObj<typeof meta> = {
             <div className="mx-auto flex max-w-[650px] flex-wrap gap-1 bg-white p-6">
                 {textSizes.map(key => {
                     return (
-                        <p key={key} className={twJoin(key, 'mb-2')}>
+                        <p className={twJoin(key, 'mb-2')} key={key}>
                             {key} — Lorem ipsus dolor amet
                         </p>
                     );

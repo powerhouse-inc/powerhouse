@@ -18,17 +18,17 @@ import {
 import { twMerge } from 'tailwind-merge';
 
 type Props = {
-    feeInputs: FieldArrayWithId<GroupTransactionFormInputs, 'fees'>[];
-    serviceProviderFeeTypes: ServiceProviderFeeType[];
-    serviceProviderFeeTypeOptions: { label: string; value: string }[];
-    setShowServiceProviderFeeTypeModal: (show: boolean) => void;
-    register: UseFormRegister<GroupTransactionFormInputs>;
-    control: Control<GroupTransactionFormInputs>;
-    watch: UseFormWatch<GroupTransactionFormInputs>;
-    append: UseFieldArrayAppend<GroupTransactionFormInputs, 'fees'>;
-    remove: UseFieldArrayRemove;
-    errors: FieldErrors<GroupTransactionFormInputs>;
-    isViewOnly: boolean;
+    readonly feeInputs: FieldArrayWithId<GroupTransactionFormInputs, 'fees'>[];
+    readonly serviceProviderFeeTypes: ServiceProviderFeeType[];
+    readonly serviceProviderFeeTypeOptions: { label: string; value: string }[];
+    readonly setShowServiceProviderFeeTypeModal: (show: boolean) => void;
+    readonly register: UseFormRegister<GroupTransactionFormInputs>;
+    readonly control: Control<GroupTransactionFormInputs>;
+    readonly watch: UseFormWatch<GroupTransactionFormInputs>;
+    readonly append: UseFieldArrayAppend<GroupTransactionFormInputs, 'fees'>;
+    readonly remove: UseFieldArrayRemove;
+    readonly errors: FieldErrors<GroupTransactionFormInputs>;
+    readonly isViewOnly: boolean;
 };
 
 export function FeeTransactionsTable(props: Props) {
@@ -43,13 +43,13 @@ export function FeeTransactionsTable(props: Props) {
                             <tr>
                                 {headings.map(heading => (
                                     <th
-                                        key={heading}
                                         className={twMerge(
                                             'py-2 text-left font-medium text-gray-600',
                                             heading === 'Amount' &&
                                                 !props.isViewOnly &&
                                                 'text-right',
                                         )}
+                                        key={heading}
                                     >
                                         {heading}
                                     </th>
@@ -60,19 +60,9 @@ export function FeeTransactionsTable(props: Props) {
                             {props.feeInputs.map((feeInput, index) => {
                                 return (
                                     <tr key={feeInput.id}>
-                                        <td className="w-52"></td>
+                                        <td className="w-52" />
                                         <td className="w-96">
                                             <RWATableSelect
-                                                rules={{
-                                                    required:
-                                                        'Service provider is required',
-                                                }}
-                                                control={props.control}
-                                                name={`fees.${index}.serviceProviderFeeTypeId`}
-                                                disabled={props.isViewOnly}
-                                                options={
-                                                    props.serviceProviderFeeTypeOptions
-                                                }
                                                 addItemButtonProps={{
                                                     onClick: () =>
                                                         props.setShowServiceProviderFeeTypeModal(
@@ -86,10 +76,33 @@ export function FeeTransactionsTable(props: Props) {
                                                         ? 'true'
                                                         : 'false'
                                                 }
+                                                control={props.control}
+                                                disabled={props.isViewOnly}
+                                                name={`fees.${index}.serviceProviderFeeTypeId`}
+                                                options={
+                                                    props.serviceProviderFeeTypeOptions
+                                                }
+                                                rules={{
+                                                    required:
+                                                        'Service provider is required',
+                                                }}
                                             />
                                         </td>
                                         <td className="w-52">
                                             <RWANumberInput
+                                                aria-invalid={
+                                                    props.errors.fees?.[index]
+                                                        ?.amount
+                                                        ? 'true'
+                                                        : 'false'
+                                                }
+                                                control={props.control}
+                                                currency="USD"
+                                                disabled={props.isViewOnly}
+                                                name={
+                                                    `fees.${index}.amount` as Path<GroupTransactionFormInputs>
+                                                }
+                                                placeholder="E.g. $1,000.00"
                                                 rules={{
                                                     required:
                                                         'Amount is required',
@@ -101,33 +114,20 @@ export function FeeTransactionsTable(props: Props) {
                                                             'Fee amount must be greater than zero',
                                                     },
                                                 }}
-                                                name={
-                                                    `fees.${index}.amount` as Path<GroupTransactionFormInputs>
-                                                }
-                                                control={props.control}
-                                                disabled={props.isViewOnly}
-                                                currency="USD"
-                                                aria-invalid={
-                                                    props.errors.fees?.[index]
-                                                        ?.amount
-                                                        ? 'true'
-                                                        : 'false'
-                                                }
-                                                placeholder="E.g. $1,000.00"
                                             />
                                         </td>
                                         <td className="">
                                             {!props.isViewOnly && (
                                                 <button
-                                                    type="button"
+                                                    className="flex items-center"
                                                     onClick={() =>
                                                         props.remove(index)
                                                     }
-                                                    className="flex items-center"
+                                                    type="button"
                                                 >
                                                     <Icon
-                                                        name="Xmark"
                                                         className="text-gray-900"
+                                                        name="Xmark"
                                                     />
                                                 </button>
                                             )}
@@ -141,6 +141,7 @@ export function FeeTransactionsTable(props: Props) {
             )}
             {!props.isViewOnly && (
                 <button
+                    className="ml-[234px] mt-1 flex w-fit items-center justify-center gap-x-2 rounded-lg bg-white pb-6 text-sm font-semibold text-gray-900"
                     onClick={() =>
                         props.append({
                             amount: null,
@@ -148,7 +149,6 @@ export function FeeTransactionsTable(props: Props) {
                                 props.serviceProviderFeeTypes[0]?.id,
                         })
                     }
-                    className="ml-[234px] mt-1 flex w-fit items-center justify-center gap-x-2 rounded-lg bg-white pb-6 text-sm font-semibold text-gray-900"
                 >
                     <span>Add Fee</span>
                     <Icon name="Plus" size={16} />

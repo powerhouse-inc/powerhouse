@@ -2,8 +2,8 @@ import { Tooltip } from '@/connect';
 import { Icon } from '@/powerhouse';
 
 export type OperationProps = {
-    operationType: string;
-    operationInput: Record<string, any>;
+    readonly operationType: string;
+    readonly operationInput: Record<string, any>;
 };
 
 export function Operation(props: OperationProps) {
@@ -19,7 +19,7 @@ export function Operation(props: OperationProps) {
         <Tooltip content={tooltipContent}>
             <span className="flex cursor-pointer items-center gap-2 text-xs">
                 {operationType}
-                <Icon name="Braces" className="text-gray-300" size={16} />
+                <Icon className="text-gray-300" name="Braces" size={16} />
             </span>
         </Tooltip>
     );

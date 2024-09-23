@@ -69,7 +69,7 @@ export function verifyPackageJsonFields(
 }
 
 type Props = {
-    packageJson: unknown;
+    readonly packageJson: unknown;
 };
 export function DependencyVersions(props: Props) {
     const [isOpen, setIsOpen] = useState(false);
@@ -84,9 +84,9 @@ export function DependencyVersions(props: Props) {
 
     return (
         <Disclosure
-            title={`App version: ${packageJson.version}`}
             isOpen={isOpen}
             onOpenChange={() => setIsOpen(!isOpen)}
+            title={`App version: ${packageJson.version}`}
         >
             <ul className="text-gray-800">
                 <li className="my-1 flex justify-between pr-1">

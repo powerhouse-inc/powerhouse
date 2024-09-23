@@ -3,11 +3,11 @@ import React, { ComponentPropsWithoutRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export type SettingsModalProps = ComponentPropsWithoutRef<typeof Modal> & {
-    title: React.ReactNode;
-    body: React.ReactNode;
-    cancelLabel: string;
-    saveLabel: string;
-    onSave: () => void;
+    readonly title: React.ReactNode;
+    readonly body: React.ReactNode;
+    readonly cancelLabel: string;
+    readonly saveLabel: string;
+    readonly onSave: () => void;
 };
 
 export const SettingsModal: React.FC<SettingsModalProps> = props => {
@@ -26,15 +26,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
 
     return (
         <Modal
-            overlayProps={{
-                ...overlayProps,
-                className: twMerge('top-10', overlayProps?.className),
-            }}
             contentProps={{
                 ...contentProps,
                 className: twMerge('rounded-2xl', contentProps?.className),
             }}
             onOpenChange={onOpenChange}
+            overlayProps={{
+                ...overlayProps,
+                className: twMerge('top-10', overlayProps?.className),
+            }}
             {...restProps}
         >
             <div className="w-[432px] p-4 text-gray-900">
@@ -53,8 +53,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                 <div className="mt-4 flex flex-col gap-y-4">{children}</div>
                 <div className="mt-4 flex justify-end gap-x-4">
                     <Button
-                        color="light"
                         className="text-gray-900"
+                        color="light"
                         onClick={() => onOpenChange?.(false)}
                     >
                         {cancelLabel}

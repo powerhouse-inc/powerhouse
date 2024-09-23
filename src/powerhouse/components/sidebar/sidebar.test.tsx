@@ -5,7 +5,7 @@ import { Sidebar, SidebarFooter, SidebarHeader, SidebarPanel } from '.';
 describe('Sidebar Component', () => {
     it('should match snapshot', () => {
         const { asFragment } = render(
-            <Sidebar collapsed={false} maxWidth={'300px'} minWidth={'100px'}>
+            <Sidebar collapsed={false} maxWidth="300px" minWidth="100px">
                 <SidebarPanel>
                     <SidebarHeader />
                 </SidebarPanel>
@@ -18,10 +18,10 @@ describe('Sidebar Component', () => {
     it('should render correctly', () => {
         render(
             <Sidebar
+                collapsed
                 data-testid="sidebar"
-                collapsed={true}
-                maxWidth={'300px'}
-                minWidth={'100px'}
+                maxWidth="300px"
+                minWidth="100px"
             />,
         );
         expect(screen.getByTestId('sidebar')).toBeInTheDocument();
@@ -30,10 +30,10 @@ describe('Sidebar Component', () => {
     it('should render expanded', () => {
         render(
             <Sidebar
-                data-testid="sidebar"
                 collapsed={false}
-                maxWidth={'300px'}
-                minWidth={'100px'}
+                data-testid="sidebar"
+                maxWidth="300px"
+                minWidth="100px"
             />,
         );
         expect(screen.getByTestId('sidebar')).toHaveStyle({ width: '300px' });
@@ -42,10 +42,10 @@ describe('Sidebar Component', () => {
     it('should render collapsed', () => {
         render(
             <Sidebar
+                collapsed
                 data-testid="sidebar"
-                collapsed={true}
-                maxWidth={'300px'}
-                minWidth={'100px'}
+                maxWidth="300px"
+                minWidth="100px"
             />,
         );
         expect(screen.getByTestId('sidebar')).toHaveStyle({ width: '100px' });

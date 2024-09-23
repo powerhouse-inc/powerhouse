@@ -41,9 +41,9 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
                 options.type = 'success';
                 options.icon = (
                     <Icon
-                        size={24}
-                        name="CheckCircleFill"
                         className="text-green-800"
+                        name="CheckCircleFill"
+                        size={24}
                     />
                 );
                 break;
@@ -51,9 +51,9 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
                 options.type = 'warning';
                 options.icon = (
                     <Icon
-                        size={24}
-                        name="WarningFill"
                         className="text-gray-600"
+                        name="WarningFill"
+                        size={24}
                     />
                 );
                 break;
@@ -61,16 +61,16 @@ function getDefaultOptions(type: ExtendedTypeOptions): ToastOptions {
                 options.type = 'default';
                 options.icon = (
                     <Icon
-                        size={24}
-                        name="ClockFill"
                         className="text-gray-600"
+                        name="ClockFill"
+                        size={24}
                     />
                 );
                 break;
             case 'connect-deleted':
                 options.type = 'error';
                 options.icon = (
-                    <Icon size={24} name="TrashFill" className="text-red-800" />
+                    <Icon className="text-red-800" name="TrashFill" size={24} />
                 );
                 break;
         }
@@ -90,8 +90,8 @@ export function toast(content: ToastContent, options?: ConnectToastOptions) {
 
 const CloseButton: ToastContainerProps['closeButton'] = ({ closeToast }) => (
     <button
-        onClick={closeToast}
         className="flex items-center text-gray-500 hover:text-gray-600"
+        onClick={closeToast}
     >
         <Icon name="XmarkLight" size={16} />
     </button>

@@ -13,8 +13,8 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({ address }) => {
 
     const usernameAndAddressLoader = (
         <>
-            <p className="mb-2 h-4 w-4/5 animate-pulse rounded bg-gray-400"></p>
-            <p className="h-3 w-4/5 animate-pulse rounded bg-gray-400"></p>
+            <p className="mb-2 h-4 w-4/5 animate-pulse rounded bg-gray-400" />
+            <p className="h-3 w-4/5 animate-pulse rounded bg-gray-400" />
         </>
     );
 
@@ -42,7 +42,7 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({ address }) => {
         >
             <ENSAvatar address={address} size="40px" />
             <div className="grid w-full items-center font-semibold collapsed:hidden expanding:hidden">
-                {loadingUser && usernameAndAddressLoader}
+                {loadingUser ? usernameAndAddressLoader : null}
                 {!loadingUser && !!ensName && ensNameAndAddress}
                 {!loadingUser && !ensName && addressOnly}
             </div>

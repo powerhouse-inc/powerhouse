@@ -3,9 +3,9 @@ import { CSSProperties } from 'react';
 import { useEnsAvatar, useEnsName } from 'wagmi';
 
 type Props = {
-    address: `0x${string}`;
-    chainId?: number;
-    size?: CSSProperties['width'];
+    readonly address: `0x${string}`;
+    readonly chainId?: number;
+    readonly size?: CSSProperties['width'];
 };
 export function ENSAvatar(props: Props) {
     const { address, chainId = 1, size = '14px' } = props;
@@ -22,17 +22,17 @@ export function ENSAvatar(props: Props) {
     if (isLoading)
         return (
             <div
-                style={style}
                 className="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
-            ></div>
+                style={style}
+            />
         );
 
     return (
         <img
+            alt="ENS Avatar"
+            className="flex-none rounded-full object-contain"
             src={avatarUrl}
             style={style}
-            className="flex-none rounded-full object-contain"
-            alt="ENS Avatar"
         />
     );
 }

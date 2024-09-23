@@ -10,11 +10,11 @@ exports[`Sidebar Component > should match snapshot 1`] = `
       class="no-scrollbar flex-1 overflow-auto text-gray-900 transition-shadow"
     >
       <div
-        class="flex-shrink-0"
+        class="shrink-0"
       />
     </div>
     <div
-      class="flex-shrink-0"
+      class="shrink-0"
     />
   </div>
 </DocumentFragment>

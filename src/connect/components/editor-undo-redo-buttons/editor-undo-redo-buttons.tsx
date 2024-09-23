@@ -2,10 +2,10 @@ import { Icon } from '@/powerhouse';
 import { twMerge } from 'tailwind-merge';
 
 type Props = {
-    canUndo: boolean;
-    canRedo: boolean;
-    undo: () => void;
-    redo: () => void;
+    readonly canUndo: boolean;
+    readonly canRedo: boolean;
+    readonly undo: () => void;
+    readonly redo: () => void;
 };
 export function EditorUndoRedoButtons(props: Props) {
     const { canUndo, canRedo, undo, redo } = props;
@@ -13,21 +13,21 @@ export function EditorUndoRedoButtons(props: Props) {
         'w-8 h-8 tab-shadow rounded-lg flex justify-center items-center';
     return (
         <div className="flex gap-x-2 text-gray-500">
-            <button onClick={undo} disabled={!canUndo} className={buttonStyles}>
+            <button className={buttonStyles} disabled={!canUndo} onClick={undo}>
                 <Icon
-                    name="RedoArrow"
                     className={twMerge(
-                        'scale-x-[-1]',
+                        '-scale-x-100',
                         canUndo ? 'active:opacity-50' : 'text-gray-500',
                     )}
+                    name="RedoArrow"
                 />
             </button>
-            <button onClick={redo} disabled={!canRedo} className={buttonStyles}>
+            <button className={buttonStyles} disabled={!canRedo} onClick={redo}>
                 <Icon
-                    name="RedoArrow"
                     className={twMerge(
                         canRedo ? 'active:opacity-50' : 'text-gray-500',
                     )}
+                    name="RedoArrow"
                 />
             </button>
         </div>

@@ -3,7 +3,7 @@ import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export interface PaginationButtonProps extends ButtonProps {
-    active?: boolean;
+    readonly active?: boolean;
 }
 
 export const PaginationButton: React.FC<PaginationButtonProps> = ({

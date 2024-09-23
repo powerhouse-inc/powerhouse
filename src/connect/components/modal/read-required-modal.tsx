@@ -13,18 +13,18 @@ const buttonStyles =
 type ButtonProps = ComponentPropsWithoutRef<'button'>;
 
 export type ReadRequiredModalProps = ComponentPropsWithoutRef<typeof Modal> & {
-    header: React.ReactNode;
-    body?: React.ReactNode;
-    onContinue: () => void;
-    closeLabel: string;
-    bodyProps?: DivProps;
-    continueButtonProps?: ButtonProps;
-    headerProps?: DivProps;
-    buttonContainerProps?: DivProps;
-    containerProps?: DivProps;
+    readonly header: React.ReactNode;
+    readonly body?: React.ReactNode;
+    readonly onContinue: () => void;
+    readonly closeLabel: string;
+    readonly bodyProps?: DivProps;
+    readonly continueButtonProps?: ButtonProps;
+    readonly headerProps?: DivProps;
+    readonly buttonContainerProps?: DivProps;
+    readonly containerProps?: DivProps;
 };
 
-export const ReadRequiredModal = (props: ReadRequiredModalProps) => {
+export function ReadRequiredModal(props: ReadRequiredModalProps) {
     const {
         body,
         header,
@@ -83,10 +83,6 @@ export const ReadRequiredModal = (props: ReadRequiredModalProps) => {
 
     return (
         <Modal
-            overlayProps={{
-                ...overlayProps,
-                className: overlayProps?.className,
-            }}
             contentProps={{
                 ...contentProps,
                 className: twMerge(
@@ -95,6 +91,10 @@ export const ReadRequiredModal = (props: ReadRequiredModalProps) => {
                 ),
             }}
             onOpenChange={onOpenChange}
+            overlayProps={{
+                ...overlayProps,
+                className: overlayProps?.className,
+            }}
             {...restProps}
         >
             <div
@@ -128,8 +128,8 @@ export const ReadRequiredModal = (props: ReadRequiredModalProps) => {
                     )}
                 >
                     <button
-                        onClick={onContinue}
                         disabled={disableClose}
+                        onClick={onContinue}
                         {...mergeClassNameProps(
                             continueButtonProps,
                             twMerge(
@@ -146,4 +146,4 @@ export const ReadRequiredModal = (props: ReadRequiredModalProps) => {
             </div>
         </Modal>
     );
-};
+}

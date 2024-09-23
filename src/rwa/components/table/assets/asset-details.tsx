@@ -14,8 +14,10 @@ import {
 import { memo } from 'react';
 
 type AssetDetailsProps = ItemDetailsProps<AssetsTableItem, AssetFormInputs> & {
-    onSubmitCreateFixedIncomeType: (data: FixedIncomeTypeFormInputs) => void;
-    onSubmitCreateSpv: (data: SPVFormInputs) => void;
+    readonly onSubmitCreateFixedIncomeType: (
+        data: FixedIncomeTypeFormInputs,
+    ) => void;
+    readonly onSubmitCreateSpv: (data: SPVFormInputs) => void;
 };
 
 export function _AssetDetails(props: AssetDetailsProps) {
@@ -89,29 +91,29 @@ export function _AssetDetails(props: AssetDetailsProps) {
         <>
             <ItemDetails
                 {...props}
-                formInputs={formInputs}
                 dependentItemProps={dependentItemProps}
-                submit={submit}
+                formInputs={formInputs}
                 reset={reset}
+                submit={submit}
             />
-            {showCreateFixedIncomeTypeModal && (
+            {showCreateFixedIncomeTypeModal ? (
                 <RWACreateItemModal
                     {...createFixedIncomeTypeModalProps}
-                    state={state}
+                    itemName="Fixed Income Type"
                     onOpenChange={setShowCreateFixedIncomeTypeModal}
                     open={showCreateFixedIncomeTypeModal}
-                    itemName="Fixed Income Type"
+                    state={state}
                 />
-            )}
-            {showCreateSpvModal && (
+            ) : null}
+            {showCreateSpvModal ? (
                 <RWACreateItemModal
                     {...createSpvModalProps}
-                    state={state}
+                    itemName="SPV"
                     onOpenChange={setShowCreateSpvModal}
                     open={showCreateSpvModal}
-                    itemName="SPV"
+                    state={state}
                 />
-            )}
+            ) : null}
         </>
     );
 }

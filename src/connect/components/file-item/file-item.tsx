@@ -26,9 +26,9 @@ import { SyncStatusIcon } from '../status-icon';
 
 export type FileItemProps = TUiNodesContext &
     NodeProps & {
-        uiNode: UiFileNode;
-        customDocumentIconSrc?: string;
-        className?: string;
+        readonly uiNode: UiFileNode;
+        readonly customDocumentIconSrc?: string;
+        readonly className?: string;
     };
 
 export function FileItem(props: FileItemProps) {
@@ -108,22 +108,22 @@ export function FileItem(props: FileItemProps) {
     const iconNode = (
         <div className="relative">
             <img
-                src={iconSrc}
                 alt="file icon"
                 className="max-w-none"
-                width={32}
                 height={34}
+                src={iconSrc}
+                width={32}
             />
-            {isReadMode && isRemoteDrive && uiNode.syncStatus && (
+            {isReadMode && isRemoteDrive && uiNode.syncStatus ? (
                 <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
                     <div className="absolute left-[-2px] top-[-2px]">
                         <SyncStatusIcon
-                            syncStatus={uiNode.syncStatus}
                             overrideSyncIcons={{ SUCCESS: 'CheckCircleFill' }}
+                            syncStatus={uiNode.syncStatus}
                         />
                     </div>
                 </div>
-            )}
+            ) : null}
         </div>
     );
 
@@ -143,27 +143,27 @@ export function FileItem(props: FileItemProps) {
                     {nodePath.map(node => node.name).join(' / ')}
                 </div>
             </div>
-            {isAllowedToCreateDocuments && (
+            {isAllowedToCreateDocuments ? (
                 <ConnectDropdownMenu
-                    open={isDropdownMenuOpen}
-                    onOpenChange={setIsDropdownMenuOpen}
-                    onItemClick={onDropdownMenuOptionClick}
                     items={dropdownMenuOptions}
+                    onItemClick={onDropdownMenuOptionClick}
+                    onOpenChange={setIsDropdownMenuOpen}
+                    open={isDropdownMenuOpen}
                 >
                     <button
-                        onClick={e => {
-                            e.stopPropagation();
-                            setIsDropdownMenuOpen(true);
-                        }}
                         className={twMerge(
                             'hidden group-hover:block',
                             isDropdownMenuOpen && 'block',
                         )}
+                        onClick={e => {
+                            e.stopPropagation();
+                            setIsDropdownMenuOpen(true);
+                        }}
                     >
-                        <Icon name="VerticalDots" className="text-gray-600" />
+                        <Icon className="text-gray-600" name="VerticalDots" />
                     </button>
                 </ConnectDropdownMenu>
-            )}
+            ) : null}
         </div>
     ) : (
         <NodeInput
@@ -175,7 +175,7 @@ export function FileItem(props: FileItemProps) {
     );
 
     return (
-        <div onClick={onClick} className="relative w-64">
+        <div className="relative w-64" onClick={onClick}>
             <div {...dragProps} className={containerStyles}>
                 <div className="flex items-center">
                     <div className="mr-1.5">{iconNode}</div>

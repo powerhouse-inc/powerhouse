@@ -88,9 +88,9 @@ export const Default: Story = {
             <div className="bg-white p-10">
                 <Breadcrumbs
                     {...args}
+                    onAddAndSelectNewFolder={onAddAndSelectNewFolder}
                     selectedNodePath={selectedNodePath}
                     setSelectedNode={setSelectedNode}
-                    onAddAndSelectNewFolder={onAddAndSelectNewFolder}
                 />
             </div>
         );

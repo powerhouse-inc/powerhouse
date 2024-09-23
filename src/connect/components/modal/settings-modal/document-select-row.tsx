@@ -25,11 +25,11 @@ export const DocumentSelectSettingsRow: React.FC<
     return (
         <SettingsRow {...restProps}>
             <MultiSelect
+                className={twMerge('checkbox-container w-[200px]', className)}
                 labelledBy="Select"
-                value={selected}
                 onChange={onChange}
                 options={options}
-                className={twMerge('checkbox-container w-[200px]', className)}
+                value={selected}
                 {...selectProps}
             />
         </SettingsRow>

@@ -10,9 +10,9 @@ import { WagmiProvider, WagmiProviderProps } from 'wagmi';
 const defaultQueryClient = new QueryClient();
 
 type Props = {
-    wagmiProviderProps?: WagmiProviderProps;
-    queryClientProviderProps?: QueryClientProviderProps;
-    children: ReactNode;
+    readonly wagmiProviderProps?: WagmiProviderProps;
+    readonly queryClientProviderProps?: QueryClientProviderProps;
+    readonly children: ReactNode;
 };
 export function WagmiContext(props: Props) {
     const { children, wagmiProviderProps, queryClientProviderProps } = props;

@@ -94,15 +94,15 @@ export const locationInfoByLocation = {
 export const debugNodeOptionsMap: Record<DebugNodeOption, OptionMetadata> = {
     [ADD_TRIGGER]: {
         label: 'Add Trigger',
-        icon: <Icon name="Plus" className="text-orange-900" />,
+        icon: <Icon className="text-orange-900" name="Plus" />,
     },
     [REMOVE_TRIGGER]: {
         label: 'Remove Trigger',
-        icon: <Icon name="Xmark" className="text-orange-900" />,
+        icon: <Icon className="text-orange-900" name="Xmark" />,
     },
     [ADD_INVALID_TRIGGER]: {
         label: 'Add Trigger',
-        icon: <Icon name="Exclamation" className="text-orange-900" />,
+        icon: <Icon className="text-orange-900" name="Exclamation" />,
     },
 } as const;
 

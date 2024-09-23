@@ -5,13 +5,13 @@ describe('UpgradeDriveModal Component', () => {
     it('should match snapshot', () => {
         render(
             <ConnectUpgradeDriveModal
-                open={true}
-                data-testid="upgrade-drive-modal"
                 body="You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
                 cancelLabel="Cancel"
                 continueLabel="Continue"
+                data-testid="upgrade-drive-modal"
                 header="Upgrade to cloud drive"
                 onContinue={() => {}}
+                open
             />,
         );
 
@@ -29,13 +29,13 @@ describe('UpgradeDriveModal Component', () => {
 
         render(
             <ConnectUpgradeDriveModal
-                open={true}
-                data-testid="upgrade-drive-modal"
                 body={bodyText}
                 cancelLabel={cancelLabel}
                 continueLabel={continueLabel}
+                data-testid="upgrade-drive-modal"
                 header={headerText}
                 onContinue={() => {}}
+                open
             />,
         );
 
@@ -56,14 +56,14 @@ describe('UpgradeDriveModal Component', () => {
 
         render(
             <ConnectUpgradeDriveModal
-                open={true}
-                onOpenChange={onClose}
-                data-testid="upgrade-drive-modal"
-                cancelLabel={cancelLabel}
                 body="You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
+                cancelLabel={cancelLabel}
                 continueLabel="Continue"
+                data-testid="upgrade-drive-modal"
                 header="Upgrade to cloud drive"
                 onContinue={() => {}}
+                onOpenChange={onClose}
+                open
             />,
         );
 
@@ -78,13 +78,13 @@ describe('UpgradeDriveModal Component', () => {
 
         render(
             <ConnectUpgradeDriveModal
-                open={true}
-                data-testid="upgrade-drive-modal"
                 body="You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
                 cancelLabel="Cancel"
                 continueLabel={continueLabel}
+                data-testid="upgrade-drive-modal"
                 header="Upgrade to cloud drive"
                 onContinue={onDelete}
+                open
             />,
         );
 

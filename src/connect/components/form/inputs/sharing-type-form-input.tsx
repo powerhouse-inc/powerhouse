@@ -6,7 +6,7 @@ type SharingTypeFormInputProps<T extends { sharingType: SharingType }> = Omit<
     ComponentPropsWithRef<typeof Select>,
     'id' | 'items' | 'value' | 'onChange'
 > & {
-    control: Control<T>;
+    readonly control: Control<T>;
 };
 export function SharingTypeFormInput<T extends { sharingType: SharingType }>(
     props: SharingTypeFormInputProps<T>,
@@ -15,8 +15,8 @@ export function SharingTypeFormInput<T extends { sharingType: SharingType }>(
 
     return (
         <Controller
-            name={'sharingType' as Path<T>}
             control={control}
+            name={'sharingType' as Path<T>}
             render={({ field }) => (
                 <Select
                     {...delegatedProps}

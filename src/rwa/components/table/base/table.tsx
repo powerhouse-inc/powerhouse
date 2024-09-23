@@ -101,12 +101,12 @@ export function Table<
                         {column.key !== 'itemNumber' &&
                             column.key !== 'moreDetails' && (
                                 <RWATableCell
-                                    key={column.key}
                                     className={
                                         column.isNumberColumn
                                             ? 'text-right'
                                             : ''
                                     }
+                                    key={column.key}
                                 >
                                     {tableItem.customTransform?.(
                                         tableItem[column.key],
@@ -144,28 +144,26 @@ export function Table<
     return (
         <>
             <TableBase
+                columns={columnsToShow}
+                hasSelectedItem={!!selectedTableItem}
+                headerRef={headerRef}
+                maxHeight={maxHeight}
                 onClickSort={sortHandler}
                 ref={tableContainerRef}
-                headerRef={headerRef}
-                tableData={sortedItems}
-                columns={columnsToShow}
-                maxHeight={maxHeight}
-                hasSelectedItem={!!selectedTableItem}
                 renderRow={renderRow}
                 specialFirstRow={specialFirstRow}
                 specialLastRow={specialLastRow}
+                tableData={sortedItems}
             />
-            {isAllowedToCreateDocuments && !operation && (
-                <>
-                    <button
-                        onClick={onCreateItemClick}
-                        className="mt-4 flex h-11 w-full items-center justify-center gap-x-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900"
-                    >
-                        <span>Create {itemName}</span>
-                        <Icon name="Plus" size={14} />
-                    </button>
-                </>
-            )}
+            {isAllowedToCreateDocuments && !operation ? (
+                <button
+                    className="mt-4 flex h-11 w-full items-center justify-center gap-x-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900"
+                    onClick={onCreateItemClick}
+                >
+                    <span>Create {itemName}</span>
+                    <Icon name="Plus" size={14} />
+                </button>
+            ) : null}
         </>
     );
 }

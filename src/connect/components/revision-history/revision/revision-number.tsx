@@ -3,9 +3,9 @@ import { Icon } from '@/powerhouse';
 import { useCopyToClipboard } from 'usehooks-ts';
 
 export type RevisionNumberProps = {
-    operationIndex: number;
-    eventId: string;
-    stateHash: string;
+    readonly operationIndex: number;
+    readonly eventId: string;
+    readonly stateHash: string;
 };
 export function RevisionNumber(props: RevisionNumberProps) {
     const { operationIndex, eventId, stateHash } = props;
@@ -14,14 +14,14 @@ export function RevisionNumber(props: RevisionNumberProps) {
 
     const tooltipContent = (
         <button
-            onClick={handleCopy(stateHash)}
             className="flex items-center gap-1"
+            onClick={handleCopy(stateHash)}
         >
             Revision {revisionNumber} - Event ID: {eventId} - State Hash:{' '}
             {stateHash}
             <Icon
-                name="FilesEarmark"
                 className="inline-block text-gray-600"
+                name="FilesEarmark"
                 size={16}
             />
         </button>
@@ -40,9 +40,9 @@ export function RevisionNumber(props: RevisionNumberProps) {
                 Revision {revisionNumber}.
                 <a>
                     <Icon
+                        className="cursor-pointer text-slate-100"
                         name="Ellipsis"
                         size={14}
-                        className="cursor-pointer text-slate-100"
                     />
                 </a>
             </span>

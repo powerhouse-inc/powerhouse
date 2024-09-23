@@ -2,7 +2,7 @@ import { Icon } from '@/powerhouse';
 import { useCopyToClipboard } from 'usehooks-ts';
 
 type Props = {
-    docId: string;
+    readonly docId: string;
 };
 export function DocId(props: Props) {
     const { docId } = props;

@@ -3,8 +3,8 @@ import { Icon } from '@/powerhouse';
 import { useCopyToClipboard } from 'usehooks-ts';
 
 export type AddressProps = {
-    address: `0x${string}` | undefined;
-    chainId: number | undefined;
+    readonly address: `0x${string}` | undefined;
+    readonly chainId: number | undefined;
 };
 
 export function Address(props: AddressProps) {
@@ -25,13 +25,13 @@ export function Address(props: AddressProps) {
 
     const tooltipContent = (
         <button
-            onClick={handleCopy(address)}
             className="flex items-center gap-1"
+            onClick={handleCopy(address)}
         >
             {address}
             <Icon
-                name="FilesEarmark"
                 className="inline-block text-gray-600"
+                name="FilesEarmark"
                 size={16}
             />
         </button>

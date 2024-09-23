@@ -104,17 +104,17 @@ export function useServiceProviderFeeTypeForm(
                 label: 'Account',
                 Input: () => (
                     <RWATableSelect
-                        control={control}
-                        name="accountId"
-                        disabled={operation === 'view'}
-                        options={makeAccountOptions(accounts)}
                         addItemButtonProps={{
                             onClick: () => setShowCreateAccountModal(true),
                             label: 'Create Account',
                         }}
-                        rules={{ required: 'Account is required' }}
                         aria-invalid={errors.accountId ? 'true' : 'false'}
+                        control={control}
+                        disabled={operation === 'view'}
                         errorMessage={errors.accountId?.message}
+                        name="accountId"
+                        options={makeAccountOptions(accounts)}
+                        rules={{ required: 'Account is required' }}
                     />
                 ),
             },

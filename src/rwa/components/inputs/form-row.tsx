@@ -2,8 +2,8 @@ import { DivProps, mergeClassNameProps } from '@/powerhouse';
 import React from 'react';
 
 export interface RWAFormRowProps extends DivProps {
-    label?: React.ReactNode;
-    value?: React.ReactNode;
+    readonly label?: React.ReactNode;
+    readonly value?: React.ReactNode;
 }
 
 export const RWAFormRow: React.FC<RWAFormRowProps> = ({

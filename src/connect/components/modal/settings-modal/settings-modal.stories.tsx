@@ -23,7 +23,6 @@ export const Primary: Story = {
         children: (
             <>
                 <DocumentSelectSettingsRow
-                    title="Document Models"
                     description="Documents enabled"
                     onChange={() => {}}
                     options={[
@@ -34,16 +33,17 @@ export const Primary: Story = {
                         { label: 'Pear', value: 'pear' },
                         { label: 'Peach', value: 'peach' },
                     ]}
-                    selected={[]}
                     selectProps={{
                         labelledBy: 'Select',
                         className: 'w-[200px]',
                     }}
+                    selected={[]}
+                    title="Document Models"
                 />
                 <ClearStorageSettingsRow
-                    onClearStorage={() => {}}
-                    description="Delete previous session data"
                     buttonLabel="Clear Storage"
+                    description="Delete previous session data"
+                    onClearStorage={() => {}}
                 />
                 <DependencyVersions packageJson={mockPackageJson} />
             </>

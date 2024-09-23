@@ -3,9 +3,9 @@ import { ReactNode } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
 
 type DisclosureProps = DivProps & {
-    title: ReactNode;
-    isOpen: boolean;
-    onOpenChange: () => void;
+    readonly title: ReactNode;
+    readonly isOpen: boolean;
+    readonly onOpenChange: () => void;
 };
 export function Disclosure(props: DisclosureProps) {
     const { title, isOpen, onOpenChange, children, className, ...divProps } =
@@ -18,8 +18,8 @@ export function Disclosure(props: DisclosureProps) {
             >
                 <h2 className=" font-semibold text-gray-500">{title}</h2>
                 <Icon
-                    name="ChevronDown"
                     className={twJoin('transition', isOpen ? '' : '-rotate-90')}
+                    name="ChevronDown"
                 />
             </div>
             <div

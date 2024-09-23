@@ -7,8 +7,8 @@ import {
 } from './confirmation-modal';
 
 export interface ConnectDeleteDriveModalProps extends ConfirmationModalProps {
-    inputPlaceholder: string;
-    driveName: string;
+    readonly inputPlaceholder: string;
+    readonly driveName: string;
 }
 
 export const ConnectDeleteDriveModal: React.FC<
@@ -38,11 +38,11 @@ export const ConnectDeleteDriveModal: React.FC<
                 </div>
                 <div>
                     <FormInput
-                        value={inputName}
-                        icon={<Icon name="Lock" />}
-                        placeholder={inputPlaceholder}
-                        onChange={e => setInputName(e.target.value)}
                         hideErrors
+                        icon={<Icon name="Lock" />}
+                        onChange={e => setInputName(e.target.value)}
+                        placeholder={inputPlaceholder}
+                        value={inputName}
                     />
                 </div>
             </div>

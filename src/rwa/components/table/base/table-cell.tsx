@@ -12,13 +12,13 @@ export const RWATableCell: React.FC<ComponentPropsWithoutRef<'td'>> = props => (
     />
 );
 
-export function ItemNumberCell(props: { itemNumber: number }) {
+export function ItemNumberCell(props: { readonly itemNumber: number }) {
     return <RWATableCell className="w-4">{props.itemNumber}</RWATableCell>;
 }
 
 export function MoreDetailsCell(props: {
-    isSelected: boolean;
-    onClick: () => void;
+    readonly isSelected: boolean;
+    readonly onClick: () => void;
 }) {
     const { isSelected, onClick } = props;
 
@@ -29,12 +29,12 @@ export function MoreDetailsCell(props: {
                 onClick={onClick}
             >
                 <Icon
-                    name="CaretDown"
-                    size={16}
                     className={twMerge(
                         'text-gray-600',
                         isSelected && 'rotate-180',
                     )}
+                    name="CaretDown"
+                    size={16}
                 />
             </button>
         </RWATableCell>

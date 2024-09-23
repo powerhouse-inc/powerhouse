@@ -1,12 +1,12 @@
 import { mergeClassNameProps } from '@/powerhouse';
 
 type FooterLinkProps<E extends React.ElementType> = {
-    as?: E;
+    readonly as?: E;
 } & React.ComponentPropsWithRef<E>;
 
-export const FooterLink = <E extends React.ElementType = 'a'>(
+export function FooterLink<E extends React.ElementType = 'a'>(
     props: FooterLinkProps<E>,
-) => {
+) {
     const { as: Component = 'a', ...restProps } = props;
 
     return (
@@ -17,4 +17,4 @@ export const FooterLink = <E extends React.ElementType = 'a'>(
             )}
         />
     );
-};
+}

@@ -7,7 +7,7 @@ type Input = {
     inputLabel?: string | null;
 };
 type Props = {
-    inputs: Input[];
+    readonly inputs: Input[];
 };
 export function FormInputs(props: Props) {
     const { inputs } = props;
@@ -15,20 +15,20 @@ export function FormInputs(props: Props) {
         <div className="bg-white text-xs font-medium">
             {inputs.map(({ label, Input, inputLabel }, index) => (
                 <div
-                    key={label}
                     className={twJoin(
                         'grid min-h-11 grid-cols-[208px,380px] items-center px-6 text-gray-600',
                         index % 2 !== 0 && 'bg-gray-50',
                     )}
+                    key={label}
                 >
                     <div>{label}</div>
                     <div className="h-max py-2 text-gray-900" key={index}>
                         <Input />
-                        {inputLabel && (
+                        {inputLabel ? (
                             <div className="text-left text-gray-500">
                                 {inputLabel}
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             ))}

@@ -46,13 +46,13 @@ export const CookieBanner: React.FC<CookieBannerProps> = props => {
             <div className="text-center">{children}</div>
             <div className="my-8 flex gap-x-16 text-sm font-medium">
                 {cookiesValue.map(cookie => (
-                    <div key={cookie.id} className="cursor-pointer">
+                    <div className="cursor-pointer" key={cookie.id}>
                         <input
-                            type="checkbox"
-                            id={cookie.id}
                             checked={cookie.value}
-                            onChange={handleOnChange}
                             className="mr-1 size-3 cursor-pointer rounded-sm border-2 border-gray-900 accent-gray-900 focus:outline-none"
+                            id={cookie.id}
+                            onChange={handleOnChange}
+                            type="checkbox"
                         />
                         <label
                             className="cursor-pointer select-none"
@@ -66,16 +66,16 @@ export const CookieBanner: React.FC<CookieBannerProps> = props => {
             <div className="flex gap-x-8">
                 <Button
                     className={buttonStyles}
-                    size="small"
                     color="light"
                     onClick={() => onReject()}
+                    size="small"
                 >
                     {rejectLabel}
                 </Button>
                 <Button
                     className={buttonStyles}
-                    size="small"
                     onClick={() => onSubmit(cookiesValue)}
+                    size="small"
                 >
                     {submitLabel}
                 </Button>

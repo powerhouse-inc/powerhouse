@@ -48,20 +48,20 @@ export function SidebarPanel({
                     'no-scrollbar flex-1 overflow-auto text-gray-900 transition-shadow',
                     className,
                 )}
-                ref={containerRef}
                 onScroll={e => checkContentScroll(e.currentTarget)}
+                ref={containerRef}
                 {...props}
             >
                 {children}
             </div>
-            {hasScroll && (
+            {hasScroll ? (
                 <div
                     className="pointer-events-none z-10 -mt-12 h-12 w-full"
                     style={{
                         boxShadow: 'inset 0px -33px 32px -16px rgba(0,0,0,0.1)',
                     }}
                 />
-            )}
+            ) : null}
         </>
     );
 }

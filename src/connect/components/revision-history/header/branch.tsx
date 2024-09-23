@@ -1,7 +1,7 @@
 import { Icon } from '@/powerhouse';
 
 type Props = {
-    branch?: string;
+    readonly branch?: string;
 };
 export function Branch(props: Props) {
     const { branch = 'main' } = props;

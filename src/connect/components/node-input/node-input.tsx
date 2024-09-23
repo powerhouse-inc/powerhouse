@@ -3,14 +3,14 @@ import { twMerge } from 'tailwind-merge';
 import { useEventListener, useOnClickOutside } from 'usehooks-ts';
 
 type Props = {
-    name?: string;
-    defaultValue?: string;
-    placeholder?: string;
-    'aria-label'?: string;
-    className?: string;
-    minLength?: number;
-    onSubmit: (value: string) => void;
-    onCancel: () => void;
+    readonly name?: string;
+    readonly defaultValue?: string;
+    readonly placeholder?: string;
+    readonly 'aria-label'?: string;
+    readonly className?: string;
+    readonly minLength?: number;
+    readonly onSubmit: (value: string) => void;
+    readonly onCancel: () => void;
 };
 export function NodeInput(props: Props) {
     const {
@@ -53,17 +53,17 @@ export function NodeInput(props: Props) {
     return (
         <input
             {...inputProps}
-            required
             autoFocus
-            type="text"
-            ref={ref}
-            value={value}
-            minLength={minLength}
             className={twMerge(
                 'bg-inherit text-inherit outline-none',
                 className,
             )}
+            minLength={minLength}
             onChange={e => setValue(e.target.value)}
+            ref={ref}
+            required
+            type="text"
+            value={value}
         />
     );
 }

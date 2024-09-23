@@ -2,10 +2,10 @@ import { ComponentPropsWithRef, ForwardedRef, forwardRef } from 'react';
 import { twJoin, twMerge } from 'tailwind-merge';
 
 export type ButtonProps = ComponentPropsWithRef<'button'> & {
-    color?: 'light' | 'dark' | 'red' | 'blue';
-    size?: 'small' | 'medium';
-    icon?: React.JSX.Element;
-    iconPosition?: 'left' | 'right';
+    readonly color?: 'light' | 'dark' | 'red' | 'blue';
+    readonly size?: 'small' | 'medium';
+    readonly icon?: React.JSX.Element;
+    readonly iconPosition?: 'left' | 'right';
 };
 
 export const Button = forwardRef(function Button(
@@ -43,7 +43,7 @@ export const Button = forwardRef(function Button(
     );
 
     return (
-        <button ref={ref} className={finalClassName} {...delegatedProps}>
+        <button className={finalClassName} ref={ref} {...delegatedProps}>
             {iconPosition === 'left' && icon}
             {children}
             {iconPosition === 'right' && icon}

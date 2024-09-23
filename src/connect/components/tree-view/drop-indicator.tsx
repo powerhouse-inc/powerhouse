@@ -3,9 +3,9 @@ import { twMerge } from 'tailwind-merge';
 
 type Props = TUiNodesContext &
     NodeProps & {
-        uiNode: UiNode;
-        position: 'before' | 'after';
-        className?: string;
+        readonly uiNode: UiNode;
+        readonly position: 'before' | 'after';
+        readonly className?: string;
     };
 
 export function DropIndicator(props: Props) {

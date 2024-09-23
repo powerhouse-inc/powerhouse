@@ -5,11 +5,11 @@ import {
 
 export interface ConnectDeleteItemModalProps
     extends Omit<ConfirmationModalProps, 'onContinue' | 'continueLabel'> {
-    onDelete: () => void;
-    deleteLabel: string;
+    readonly onDelete: () => void;
+    readonly deleteLabel: string;
 }
 
-export const ConnectDeleteItemModal = (props: ConnectDeleteItemModalProps) => {
+export function ConnectDeleteItemModal(props: ConnectDeleteItemModalProps) {
     const { onDelete, deleteLabel, ...restProps } = props;
 
     return (
@@ -19,8 +19,8 @@ export const ConnectDeleteItemModal = (props: ConnectDeleteItemModalProps) => {
             continueButtonProps={{
                 className: 'bg-red-900',
             }}
-            onContinue={onDelete}
             continueLabel={deleteLabel}
+            onContinue={onDelete}
         />
     );
-};
+}

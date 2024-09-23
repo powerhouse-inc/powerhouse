@@ -119,8 +119,8 @@ export function useAssetForm(
                         })}
                         aria-invalid={errors.name ? 'true' : 'false'}
                         errorMessage={errors.name?.message}
-                        placeholder="E.g. My Asset"
                         inputClassName="text-left"
+                        placeholder="E.g. My Asset"
                     />
                 ),
             },
@@ -147,8 +147,8 @@ export function useAssetForm(
                                     message: 'CUSIP must be alphanumeric',
                                 },
                             })}
-                            errorMessage={errors.CUSIP?.message}
                             aria-invalid={errors.CUSIP ? 'true' : 'false'}
+                            errorMessage={errors.CUSIP?.message}
                             placeholder="E.g. A2345B789"
                         />
                     ),
@@ -176,8 +176,8 @@ export function useAssetForm(
                                     message: 'ISIN must be alphanumeric',
                                 },
                             })}
-                            errorMessage={errors.ISIN?.message}
                             aria-invalid={errors.ISIN ? 'true' : 'false'}
+                            errorMessage={errors.ISIN?.message}
                             placeholder="E.g. 123456789ABC"
                         />
                     ),
@@ -193,8 +193,8 @@ export function useAssetForm(
                                 return value as string;
                             },
                         })}
-                        name="maturity"
                         inputType="date"
+                        name="maturity"
                     />
                 ),
                 inputLabel: maturityInputValue
@@ -205,24 +205,24 @@ export function useAssetForm(
                 label: 'Asset Type',
                 Input: () => (
                     <RWATableSelect
-                        control={control}
-                        name="fixedIncomeTypeId"
-                        disabled={operation === 'view'}
-                        options={fixedIncomeTypes.map(t => ({
-                            ...t,
-                            value: t.id,
-                            label: t.name,
-                        }))}
                         addItemButtonProps={{
                             onClick: () =>
                                 setShowCreateFixedIncomeTypeModal(true),
                             label: 'Create Fixed Income Type',
                         }}
-                        rules={{ required: 'Asset type is required' }}
                         aria-invalid={
                             errors.fixedIncomeTypeId ? 'true' : 'false'
                         }
+                        control={control}
+                        disabled={operation === 'view'}
                         errorMessage={errors.fixedIncomeTypeId?.message}
+                        name="fixedIncomeTypeId"
+                        options={fixedIncomeTypes.map(t => ({
+                            ...t,
+                            value: t.id,
+                            label: t.name,
+                        }))}
+                        rules={{ required: 'Asset type is required' }}
                     />
                 ),
             },
@@ -230,21 +230,21 @@ export function useAssetForm(
                 label: 'SPV',
                 Input: () => (
                     <RWATableSelect
+                        addItemButtonProps={{
+                            onClick: () => setShowCreateSpvModal(true),
+                            label: 'Create SPV',
+                        }}
+                        aria-invalid={errors.spvId ? 'true' : 'false'}
                         control={control}
-                        name="spvId"
                         disabled={operation === 'view'}
+                        errorMessage={errors.spvId?.message}
+                        name="spvId"
                         options={spvs.map(t => ({
                             ...t,
                             value: t.id,
                             label: t.name,
                         }))}
-                        addItemButtonProps={{
-                            onClick: () => setShowCreateSpvModal(true),
-                            label: 'Create SPV',
-                        }}
                         rules={{ required: 'SPV is required' }}
-                        aria-invalid={errors.spvId ? 'true' : 'false'}
-                        errorMessage={errors.spvId?.message}
                     />
                 ),
             },

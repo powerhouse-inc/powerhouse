@@ -9,10 +9,10 @@ const buttonStyles =
 export type CreateDocumentModalProps = ComponentPropsWithoutRef<
     typeof Modal
 > & {
-    onContinue: (nodeName: string) => void;
+    readonly onContinue: (nodeName: string) => void;
 };
 
-export const CreateDocumentModal = (props: CreateDocumentModalProps) => {
+export function CreateDocumentModal(props: CreateDocumentModalProps) {
     const {
         onOpenChange,
         onContinue,
@@ -25,15 +25,15 @@ export const CreateDocumentModal = (props: CreateDocumentModalProps) => {
 
     return (
         <Modal
-            overlayProps={{
-                ...overlayProps,
-                className: overlayProps?.className,
-            }}
             contentProps={{
                 ...contentProps,
                 className: twMerge('rounded-3xl', contentProps?.className),
             }}
             onOpenChange={onOpenChange}
+            overlayProps={{
+                ...overlayProps,
+                className: overlayProps?.className,
+            }}
             {...restProps}
         >
             <div className="w-[400px] p-6 text-slate-300">
@@ -43,28 +43,28 @@ export const CreateDocumentModal = (props: CreateDocumentModalProps) => {
                 <div className="my-6">
                     <FormInput
                         icon={<Icon name="BrickGlobe" />}
-                        value={nodeName}
+                        onChange={e => setNodeName(e.target.value)}
                         placeholder="Document name"
                         required
-                        onChange={e => setNodeName(e.target.value)}
+                        value={nodeName}
                     />
                 </div>
                 <div className="mt-8 flex justify-between gap-3">
                     <button
-                        onClick={() => onOpenChange?.(false)}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-slate-50 text-slate-800',
                         )}
+                        onClick={() => onOpenChange?.(false)}
                     >
                         Cancel
                     </button>
                     <Button
-                        onClick={() => onContinue(nodeName)}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-gray-800 text-gray-50',
                         )}
+                        onClick={() => onContinue(nodeName)}
                     >
                         Create
                     </Button>
@@ -72,4 +72,4 @@ export const CreateDocumentModal = (props: CreateDocumentModalProps) => {
             </div>
         </Modal>
     );
-};
+}

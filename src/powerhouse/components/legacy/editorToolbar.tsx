@@ -1,9 +1,9 @@
 import { ReactElement } from 'react';
 
 interface EditorToolbarProps {
-    left?: ReactElement<ReactElement>[];
-    center?: ReactElement<ReactElement>[];
-    right?: ReactElement<ReactElement>[];
+    readonly left?: ReactElement<ReactElement>[];
+    readonly center?: ReactElement<ReactElement>[];
+    readonly right?: ReactElement<ReactElement>[];
 }
 
 export function EditorToolbar(props: EditorToolbarProps) {

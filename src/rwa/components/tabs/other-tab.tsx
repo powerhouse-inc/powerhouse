@@ -1,7 +1,7 @@
 import { OtherTableComponents } from '@/rwa/types';
 
 type Props = {
-    otherTableComponents: OtherTableComponents;
+    readonly otherTableComponents: OtherTableComponents;
 };
 
 export function OtherTab(props: Props) {

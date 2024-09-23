@@ -8,21 +8,21 @@ const buttonStyles =
 type ButtonProps = ComponentPropsWithoutRef<'button'>;
 
 export type ConfirmationModalProps = ComponentPropsWithoutRef<typeof Modal> & {
-    header: React.ReactNode;
-    body?: React.ReactNode;
-    onCancel: () => void;
-    onContinue: () => void;
-    cancelLabel: string;
-    continueLabel: string;
-    bodyProps?: DivProps;
-    cancelButtonProps?: ButtonProps;
-    continueButtonProps?: ButtonProps;
-    headerProps?: DivProps;
-    buttonContainerProps?: DivProps;
-    containerProps?: DivProps;
+    readonly header: React.ReactNode;
+    readonly body?: React.ReactNode;
+    readonly onCancel: () => void;
+    readonly onContinue: () => void;
+    readonly cancelLabel: string;
+    readonly continueLabel: string;
+    readonly bodyProps?: DivProps;
+    readonly cancelButtonProps?: ButtonProps;
+    readonly continueButtonProps?: ButtonProps;
+    readonly headerProps?: DivProps;
+    readonly buttonContainerProps?: DivProps;
+    readonly containerProps?: DivProps;
 };
 
-export const ConnectConfirmationModal = (props: ConfirmationModalProps) => {
+export function ConnectConfirmationModal(props: ConfirmationModalProps) {
     const {
         body,
         header,
@@ -45,15 +45,15 @@ export const ConnectConfirmationModal = (props: ConfirmationModalProps) => {
 
     return (
         <Modal
-            overlayProps={{
-                ...overlayProps,
-                className: overlayProps?.className,
-            }}
             contentProps={{
                 ...contentProps,
                 className: twMerge('rounded-3xl', contentProps?.className),
             }}
             onOpenChange={onOpenChange}
+            overlayProps={{
+                ...overlayProps,
+                className: overlayProps?.className,
+            }}
             {...restProps}
         >
             <div
@@ -113,4 +113,4 @@ export const ConnectConfirmationModal = (props: ConfirmationModalProps) => {
             </div>
         </Modal>
     );
-};
+}

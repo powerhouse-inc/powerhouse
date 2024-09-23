@@ -49,7 +49,7 @@ export function _AccountDetails(
         }))
         .filter(
             t =>
-                t.cashTransaction?.accountId === tableItem?.id ||
+                t.cashTransaction.accountId === tableItem?.id ||
                 t.fixedIncomeTransaction?.accountId === tableItem?.id,
         );
 
@@ -62,7 +62,7 @@ export function _AccountDetails(
 
     const dependentServiceProviderList = dependentServiceProviderFeeTypes.length
         ? [
-              <div key={1} className="mb-0.5 font-semibold">
+              <div className="mb-0.5 font-semibold" key={1}>
                   Service providers:
               </div>,
               ...dependentServiceProviderFeeTypes.map((s, index) => (
@@ -73,7 +73,7 @@ export function _AccountDetails(
 
     const dependentTransactionsList = dependentTransactions.length
         ? [
-              <div key={5} className="mb-0.5 mt-1 font-semibold">
+              <div className="mb-0.5 mt-1 font-semibold" key={5}>
                   Transactions:
               </div>,
               ...dependentTransactions.map(t => (

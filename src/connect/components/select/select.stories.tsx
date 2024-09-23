@@ -51,6 +51,6 @@ export const Default: Story = {
     render: function Wrapper(args) {
         const [value, setValue] = useState(args.items[0].value);
 
-        return <Select {...args} value={value} onChange={setValue} />;
+        return <Select {...args} onChange={setValue} value={value} />;
     },
 };

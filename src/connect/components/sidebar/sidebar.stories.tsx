@@ -104,48 +104,48 @@ export const Expanded: Story = {
             <ConnectSidebar
                 {...args}
                 collapsed={collapsed}
-                onToggle={() => setCollapsed(!collapsed)}
                 headerContent={
                     <div className="flex h-full items-center">
                         <img
-                            src={connectLogo}
                             alt="Connect logo"
                             className="h-5 object-contain"
+                            src={connectLogo}
                         />
                     </div>
                 }
+                onToggle={() => setCollapsed(!collapsed)}
             >
                 <DriveView
                     {...uiNodesContext}
                     {...nodeHandlers}
+                    disableAddDrives={false}
                     driveNodes={driveNodesByType[PUBLIC]}
-                    label="Public Drives"
                     groupSharingType={PUBLIC}
-                    disableAddDrives={false}
                     isAllowedToCreateDocuments
                     isRemoteDrive
+                    label="Public Drives"
                     nodeOptions={mockNodeOptions}
                 />
                 <DriveView
                     {...uiNodesContext}
                     {...nodeHandlers}
+                    disableAddDrives={false}
                     driveNodes={driveNodesByType[CLOUD]}
-                    label="Secure Cloud Drives"
                     groupSharingType={CLOUD}
-                    disableAddDrives={false}
                     isAllowedToCreateDocuments
                     isRemoteDrive
+                    label="Secure Cloud Drives"
                     nodeOptions={mockNodeOptions}
                 />
                 <DriveView
                     {...uiNodesContext}
                     {...nodeHandlers}
-                    driveNodes={driveNodesByType[LOCAL]}
-                    label="My Local Drives"
-                    groupSharingType={LOCAL}
                     disableAddDrives={false}
+                    driveNodes={driveNodesByType[LOCAL]}
+                    groupSharingType={LOCAL}
                     isAllowedToCreateDocuments
                     isRemoteDrive={false}
+                    label="My Local Drives"
                     nodeOptions={mockNodeOptions}
                 />
             </ConnectSidebar>

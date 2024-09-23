@@ -7,16 +7,16 @@ import { ModalFormInputs } from './modal-form-inputs';
 
 export type RWACreateItemModalProps<TFieldValues extends FieldValues> =
     ComponentPropsWithoutRef<typeof Modal> & {
-        state: RealWorldAssetsState;
-        open: boolean;
-        itemName: string;
-        inputs: {
+        readonly state: RealWorldAssetsState;
+        readonly open: boolean;
+        readonly itemName: string;
+        readonly inputs: {
             label: string;
-            Input: () => string | JSX.Element;
+            Input: () => string | React.JSX.Element;
         }[];
-        onOpenChange: (open: boolean) => void;
-        submit: (e?: React.BaseSyntheticEvent | undefined) => Promise<void>;
-        reset: UseFormReset<TFieldValues>;
+        readonly onOpenChange: (open: boolean) => void;
+        readonly submit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+        readonly reset: UseFormReset<TFieldValues>;
     };
 
 export function RWACreateItemModal<TFieldValues extends FieldValues>(
@@ -43,14 +43,14 @@ export function RWACreateItemModal<TFieldValues extends FieldValues>(
 
     return (
         <Modal
-            open={open}
-            overlayProps={{
-                className: 'top-10',
-            }}
             contentProps={{
                 className: 'rounded-3xl',
             }}
             onOpenChange={onOpenChange}
+            open={open}
+            overlayProps={{
+                className: 'top-10',
+            }}
             {...restProps}
         >
             <div className="w-[400px] p-6 text-slate-300">
@@ -67,20 +67,20 @@ export function RWACreateItemModal<TFieldValues extends FieldValues>(
                 <ModalFormInputs inputs={inputs} />
                 <div className="mt-8 flex justify-between gap-3">
                     <button
-                        onClick={handleCancel}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-slate-50 text-slate-800',
                         )}
+                        onClick={handleCancel}
                     >
                         Cancel
                     </button>
                     <button
-                        onClick={submit}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-gray-800 text-gray-50',
                         )}
+                        onClick={submit}
                     >
                         Save
                     </button>

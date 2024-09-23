@@ -3,7 +3,7 @@ import { Icon } from '@/powerhouse';
 import { twMerge } from 'tailwind-merge';
 
 export type ErrorsProps = {
-    errors: string[] | undefined;
+    readonly errors: string[] | undefined;
 };
 
 export function Errors(props: ErrorsProps) {
@@ -37,7 +37,7 @@ export function Errors(props: ErrorsProps) {
     );
 
     const tooltipContent = errors?.map((message, index) => (
-        <p key={index} className="text-red-800">
+        <p className="text-red-800" key={index}>
             Error: {message}
         </p>
     ));

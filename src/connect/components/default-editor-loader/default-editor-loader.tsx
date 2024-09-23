@@ -2,7 +2,7 @@ import { AnimatedLoader } from '@/connect';
 import { DivProps } from '@/powerhouse';
 
 type DefaultEditorLoaderProps = DivProps & {
-    message?: string;
+    readonly message?: string;
 };
 
 export function DefaultEditorLoader(props: DefaultEditorLoaderProps) {

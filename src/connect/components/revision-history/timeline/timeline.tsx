@@ -7,9 +7,9 @@ import { makeRows } from '../utils';
 import { Day } from './day';
 
 export type TimelineProps = {
-    localOperations: Operation[];
-    globalOperations: Operation[];
-    scope: Scope;
+    readonly localOperations: Operation[];
+    readonly globalOperations: Operation[];
+    readonly scope: Scope;
 };
 
 export function Timeline(props: TimelineProps) {
@@ -64,14 +64,14 @@ export function Timeline(props: TimelineProps) {
 
     return (
         <div
+            className="border-l border-slate-100
+            "
             ref={parentRef}
             style={{
                 height: `${rowVirtualizer.getTotalSize()}px`,
                 width: '100%',
                 position: 'relative',
             }}
-            className="border-l border-slate-100
-            "
         >
             {rowVirtualizer.getVirtualItems().map(virtualRow => {
                 const row = rows[virtualRow.index];
@@ -88,17 +88,15 @@ export function Timeline(props: TimelineProps) {
                             transform: `translateY(${virtualRow.start}px)`,
                         }}
                     >
-                        <>
-                            {row.type === 'revision' && (
-                                <Revision {...row} key={virtualRow.key} />
-                            )}
-                            {row.type === 'skip' && (
-                                <Skip key={virtualRow.key} {...row} />
-                            )}
-                            {row.type === 'day' && (
-                                <Day key={virtualRow.key} {...row} />
-                            )}
-                        </>
+                        {row.type === 'revision' && (
+                            <Revision {...row} key={virtualRow.key} />
+                        )}
+                        {row.type === 'skip' && (
+                            <Skip key={virtualRow.key} {...row} />
+                        )}
+                        {row.type === 'day' && (
+                            <Day key={virtualRow.key} {...row} />
+                        )}
                     </div>
                 );
             })}

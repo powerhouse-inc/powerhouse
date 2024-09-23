@@ -11,7 +11,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       class="no-scrollbar flex-1 overflow-auto text-gray-900 transition-shadow"
     >
       <div
-        class="flex-shrink-0 mb-4 flex justify-between gap-4 px-4 pt-11 collapsed:justify-center"
+        class="shrink-0 mb-4 flex justify-between gap-4 px-4 pt-11 collapsed:justify-center"
       >
         <div
           class="collapsed:hidden expanding:hidden"
@@ -48,7 +48,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       />
     </div>
     <div
-      class="flex-shrink-0 bg-gray-50 p-4 collapsed:px-1 expanding:px-1"
+      class="shrink-0 bg-gray-50 p-4 collapsed:px-1 expanding:px-1"
     >
       <div
         class="collapsed:bg-transparent collapsing:bg-transparent expanding:bg-transparent"

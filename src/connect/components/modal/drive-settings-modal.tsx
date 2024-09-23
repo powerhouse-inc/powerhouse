@@ -12,21 +12,21 @@ import { twMerge } from 'tailwind-merge';
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 
 export type DriveSettingsModalProps = {
-    uiDriveNode: UiDriveNode;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onRenameDrive: (uiDriveNode: UiDriveNode, newName: string) => void;
-    onDeleteDrive: (uiDriveNode: UiDriveNode) => void;
-    onChangeSharingType: (
+    readonly uiDriveNode: UiDriveNode;
+    readonly open: boolean;
+    readonly onOpenChange: (open: boolean) => void;
+    readonly onRenameDrive: (uiDriveNode: UiDriveNode, newName: string) => void;
+    readonly onDeleteDrive: (uiDriveNode: UiDriveNode) => void;
+    readonly onChangeSharingType: (
         uiDriveNode: UiDriveNode,
         newSharingType: SharingType,
     ) => void;
-    onChangeAvailableOffline: (
+    readonly onChangeAvailableOffline: (
         uiDriveNode: UiDriveNode,
         newAvailableOffline: boolean,
     ) => void;
-    modalProps?: ModalProps;
-    containerProps?: DivProps;
+    readonly modalProps?: ModalProps;
+    readonly containerProps?: DivProps;
 };
 export function DriveSettingsModal(props: DriveSettingsModalProps) {
     const {
@@ -66,11 +66,11 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
     return (
         <Modal
             {...modalProps}
-            open={open}
-            onOpenChange={onOpenChange}
             contentProps={{
                 className: 'rounded-2xl',
             }}
+            onOpenChange={onOpenChange}
+            open={open}
         >
             <div
                 {...containerProps}
@@ -91,10 +91,10 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
                 </div>
                 <Divider className="my-4" />
                 <DriveSettingsForm
-                    uiDriveNode={uiDriveNode}
-                    onSubmit={onSubmit}
-                    handleDeleteDrive={handleDeleteDrive}
                     handleCancel={handleCancel}
+                    handleDeleteDrive={handleDeleteDrive}
+                    onSubmit={onSubmit}
+                    uiDriveNode={uiDriveNode}
                 />
             </div>
         </Modal>

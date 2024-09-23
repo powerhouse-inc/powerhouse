@@ -12,8 +12,8 @@ export const RWATableRow = forwardRef(function RWATableRow(
     return (
         <tr
             {...delegated}
-            ref={ref}
             className={twMerge('odd:bg-white even:bg-gray-50', className)}
+            ref={ref}
         >
             {children}
         </tr>

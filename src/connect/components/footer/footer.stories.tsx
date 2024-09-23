@@ -25,9 +25,9 @@ export const Default: Story = {
                 <FooterLink>
                     Built with
                     <Icon
+                        className="mx-1"
                         name="PowerhouseLogoSmall"
                         size={16}
-                        className="mx-1"
                     />
                     Powerhouse
                 </FooterLink>

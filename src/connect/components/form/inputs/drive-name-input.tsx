@@ -6,7 +6,7 @@ type DriveNameInputProps = Omit<
     ComponentPropsWithRef<typeof FormInput>,
     'icon' | 'id'
 > & {
-    icon?: React.JSX.Element;
+    readonly icon?: React.JSX.Element;
 };
 
 export const DriveNameInput = forwardRef(function DriveNameInput(
@@ -16,10 +16,10 @@ export const DriveNameInput = forwardRef(function DriveNameInput(
     return (
         <FormInput
             {...props}
-            ref={ref}
             icon={props.icon ?? <Icon name="Drive" />}
             id="driveName"
             placeholder="Drive name"
+            ref={ref}
         />
     );
 });

@@ -1,7 +1,7 @@
 import { PropsWithChildren } from 'react';
 
 interface DocumentEditorProps {
-    mode: 'light' | 'dark';
+    readonly mode: 'light' | 'dark';
 }
 
 export function DocumentEditor(props: PropsWithChildren<DocumentEditorProps>) {

@@ -20,10 +20,11 @@ const config: StorybookConfig = {
     docs: {
         autodocs: false,
     },
-    async viteFinal(config) {
+    viteFinal(config) {
         return {
             ...config,
             plugins: config.plugins?.filter(
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
                 plugin => !['vite:dts'].includes((plugin as any)?.name),
             ),
         };

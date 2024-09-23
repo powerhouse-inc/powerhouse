@@ -2,7 +2,7 @@ import { DivProps } from '@/powerhouse';
 import React from 'react';
 
 export interface RWATableHeaderLabelProps extends DivProps {
-    label?: React.ReactNode;
+    readonly label?: React.ReactNode;
 }
 
 export const RWATableHeaderLabel: React.FC<

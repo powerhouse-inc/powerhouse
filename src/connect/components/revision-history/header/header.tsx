@@ -7,11 +7,11 @@ import { DocId } from './doc-id';
 import { Scope } from './scope';
 
 interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
-    title: ReactNode;
-    docId: string;
-    scope: TScope;
-    onChangeScope: (scope: TScope) => void;
-    onClose: () => void;
+    readonly title: ReactNode;
+    readonly docId: string;
+    readonly scope: TScope;
+    readonly onChangeScope: (scope: TScope) => void;
+    readonly onClose: () => void;
 }
 
 export function Header(props: Props) {
@@ -34,8 +34,8 @@ export function Header(props: Props) {
         >
             <div className="flex items-center gap-3">
                 <button
-                    onClick={onClose}
                     className="rounded-lg bg-gray-50 p-1 text-slate-100 shadow-button"
+                    onClick={onClose}
                 >
                     <Icon name="VariantArrowLeft" />
                 </button>
@@ -44,7 +44,7 @@ export function Header(props: Props) {
             <div className="flex items-center gap-2">
                 <DocId docId={docId} />
                 <Branch />
-                <Scope value={scope} onChange={onChangeScope} />
+                <Scope onChange={onChangeScope} value={scope} />
             </div>
         </header>
     );

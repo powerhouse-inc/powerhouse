@@ -59,8 +59,8 @@ export const TableBase = fixedForwardRef(function TableBase<
             >
                 <table className="w-full">
                     <thead
-                        ref={headerRef}
                         className="sticky top-0 isolate select-none text-nowrap border-b border-gray-300 bg-gray-100"
+                        ref={headerRef}
                     >
                         <tr>
                             {columns.map(column => (
@@ -70,6 +70,7 @@ export const TableBase = fixedForwardRef(function TableBase<
                                         column.allowSorting &&
                                             'cursor-pointer hover:text-gray-900',
                                     )}
+                                    key={column.key}
                                     onClick={() => {
                                         if (!column.allowSorting) return;
                                         let sortDir: Order = 'asc';
@@ -86,7 +87,6 @@ export const TableBase = fixedForwardRef(function TableBase<
 
                                         onClickSort(column.key, sortDir);
                                     }}
-                                    key={column.key}
                                 >
                                     <div
                                         className={twMerge(
@@ -96,10 +96,8 @@ export const TableBase = fixedForwardRef(function TableBase<
                                         )}
                                     >
                                         {column.label}
-                                        {column.allowSorting && (
+                                        {column.allowSorting ? (
                                             <Icon
-                                                name="ArrowFilledRight"
-                                                size={6}
                                                 className={twMerge(
                                                     'invisible ml-1 rotate-90',
                                                     sortKey === column.key &&
@@ -107,8 +105,10 @@ export const TableBase = fixedForwardRef(function TableBase<
                                                     sortDirection === 'asc' &&
                                                         'rotate-[270deg]',
                                                 )}
+                                                name="ArrowFilledRight"
+                                                size={6}
                                             />
-                                        )}
+                                        ) : null}
                                     </div>
                                 </th>
                             ))}

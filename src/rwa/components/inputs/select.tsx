@@ -13,13 +13,13 @@ export type RWATableSelectProps<ControlInputs extends FieldValues> = Omit<
     ComponentPropsWithoutRef<typeof Combobox>,
     'options' | 'required'
 > & {
-    options: { label: string; value: string }[];
-    disabled?: boolean;
-    name: Path<ControlInputs>;
-    control: Control<ControlInputs>;
-    rules?: ControllerProps<ControlInputs>['rules'];
-    errorMessage?: string;
-    errorMessageClassName?: string;
+    readonly options: { label: string; value: string }[];
+    readonly disabled?: boolean;
+    readonly name: Path<ControlInputs>;
+    readonly control: Control<ControlInputs>;
+    readonly rules?: ControllerProps<ControlInputs>['rules'];
+    readonly errorMessage?: string;
+    readonly errorMessageClassName?: string;
 };
 
 export function RWATableSelect<ControlInputs extends FieldValues>(
@@ -40,45 +40,45 @@ export function RWATableSelect<ControlInputs extends FieldValues>(
 
     return (
         <Controller
-            name={name}
             control={control}
-            rules={rules}
+            name={name}
             render={({ field: { onChange, onBlur, value } }) =>
                 disabled ? (
                     <>{options.find(option => option.value === value)?.label}</>
                 ) : (
                     <>
                         <Combobox
-                            options={options}
-                            onBlur={onBlur}
-                            value={
-                                options.find(
-                                    option => option.value === value,
-                                ) ?? null
-                            }
                             isDisabled={disabled}
+                            onBlur={onBlur}
                             onChange={option =>
                                 !!option &&
                                 typeof option === 'object' &&
                                 'value' in option &&
                                 onChange(option.value)
                             }
+                            options={options}
+                            value={
+                                options.find(
+                                    option => option.value === value,
+                                ) ?? null
+                            }
                             {...restProps}
                         />
-                        {invalid && !!errorMessage && (
+                        {invalid && !!errorMessage ? (
                             <p
-                                role="alert"
                                 className={twMerge(
                                     'text-sm text-red-900',
                                     errorMessageClassName,
                                 )}
+                                role="alert"
                             >
                                 {errorMessage}
                             </p>
-                        )}
+                        ) : null}
                     </>
                 )
             }
+            rules={rules}
         />
     );
 }

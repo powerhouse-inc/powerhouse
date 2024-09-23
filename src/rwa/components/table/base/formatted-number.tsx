@@ -5,7 +5,7 @@ type Props = Omit<
     ComponentPropsWithoutRef<typeof NumericFormat>,
     'displayType'
 > & {
-    currency?: 'USD';
+    readonly currency?: 'USD';
 };
 
 export function FormattedNumber(props: Props) {
@@ -21,12 +21,12 @@ export function FormattedNumber(props: Props) {
 
     return (
         <NumericFormat
-            displayType="text"
-            value={value}
-            prefix={prefix}
             decimalScale={decimalScale}
-            thousandSeparator={thousandSeparator}
+            displayType="text"
             fixedDecimalScale={fixedDecimalScale}
+            prefix={prefix}
+            thousandSeparator={thousandSeparator}
+            value={value}
         />
     );
 }

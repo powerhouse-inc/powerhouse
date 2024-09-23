@@ -6,8 +6,8 @@ type Props<TFieldValues extends FieldValues> = Omit<
     ComponentPropsWithRef<'input'>,
     'type' | 'name' | 'value'
 > & {
-    name: Path<TFieldValues>;
-    control: Control<TFieldValues>;
+    readonly name: Path<TFieldValues>;
+    readonly control: Control<TFieldValues>;
 };
 export function ImageInput<TFieldValues extends FieldValues>(
     props: Props<TFieldValues>,
@@ -50,8 +50,8 @@ export function ImageInput<TFieldValues extends FieldValues>(
 
     return (
         <Controller
-            name={name}
             control={control}
+            name={name}
             render={({ field: { onBlur, onChange, value } }) => (
                 <div
                     className={twMerge(
@@ -62,26 +62,26 @@ export function ImageInput<TFieldValues extends FieldValues>(
                 >
                     <div className="shrink-0">
                         <img
-                            src={value}
-                            className="size-7 object-cover"
                             alt="Preview"
+                            className="size-7 object-cover"
+                            src={value}
                         />
                     </div>
                     <span className="font-semibold">Change Drive Icon</span>
                     <input
+                        accept="image/*"
+                        className="hidden"
                         id={id}
-                        ref={fileInputRef}
                         onBlur={onBlur}
                         onChange={async e => {
                             const base64String = await getBase64File(e);
                             onChange(base64String);
                         }}
+                        ref={fileInputRef}
                         type="file"
-                        accept="image/*"
-                        className="hidden"
                     />
                 </div>
             )}
-        ></Controller>
+        />
     );
 }

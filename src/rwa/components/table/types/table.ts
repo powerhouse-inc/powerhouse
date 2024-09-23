@@ -5,7 +5,7 @@ import {
     RealWorldAssetsState,
     ServiceProviderFeeType,
 } from '@/rwa';
-import { ReactNode, RefObject } from 'react';
+import React, { ReactNode, RefObject } from 'react';
 import { FieldValues } from 'react-hook-form';
 
 export type ColumnCountByTableWidth = Record<number, number>;
@@ -22,7 +22,7 @@ export type TableItem<TItem extends Item> = TItem & {
     customTransform?: (
         itemData: ItemData,
         columnKey: string,
-    ) => JSX.Element | ReactNode | undefined;
+    ) => React.JSX.Element | ReactNode | undefined;
     moreDetails?: null;
 };
 

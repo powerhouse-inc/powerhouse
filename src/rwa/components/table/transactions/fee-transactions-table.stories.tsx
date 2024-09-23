@@ -43,14 +43,14 @@ export const Empty: Story = {
         return (
             <FeeTransactionsTable
                 {...args}
-                setShowServiceProviderFeeTypeModal={() => {}}
+                append={append}
+                control={control}
+                errors={errors}
                 feeInputs={fields}
                 register={register}
-                control={control}
-                watch={watch}
-                append={append}
                 remove={remove}
-                errors={errors}
+                setShowServiceProviderFeeTypeModal={() => {}}
+                watch={watch}
             />
         );
     },

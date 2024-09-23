@@ -3,7 +3,7 @@ import { getDimensions, Size } from '@/powerhouse';
 import { ComponentPropsWithoutRef, CSSProperties } from 'react';
 
 type Props = Omit<ComponentPropsWithoutRef<'img'>, 'src'> & {
-    size?: Size;
+    readonly size?: Size;
 };
 export function AnimatedLoader(props: Props) {
     const { style, size = 100, alt = 'Loading...', ...delegatedProps } = props;
@@ -19,8 +19,8 @@ export function AnimatedLoader(props: Props) {
     return (
         <img
             {...delegatedProps}
-            src={ConnectLoaderImg}
             alt={alt}
+            src={ConnectLoaderImg}
             style={_style}
         />
     );

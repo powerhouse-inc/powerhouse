@@ -20,7 +20,7 @@ export const Default: Story = {
         return (
             <div className="flex flex-col flex-wrap gap-4">
                 {syncStatuses.map(status => (
-                    <p key={status} className="flex items-center gap-2">
+                    <p className="flex items-center gap-2" key={status}>
                         {capitalCase(status)}{' '}
                         <SyncStatusIcon syncStatus={status} />
                     </p>
@@ -38,11 +38,11 @@ export const WithDifferentSizes: Story = {
         return (
             <div className="flex flex-col flex-wrap gap-4">
                 {syncStatuses.map((status, index) => (
-                    <p key={status} className="flex items-center gap-2">
+                    <p className="flex items-center gap-2" key={status}>
                         {capitalCase(status)}{' '}
                         <SyncStatusIcon
-                            syncStatus={status}
                             size={(index + 1) * 24}
+                            syncStatus={status}
                         />
                     </p>
                 ))}
@@ -59,11 +59,11 @@ export const WithDifferentColors: Story = {
         return (
             <div className="flex flex-col flex-wrap gap-4">
                 {syncStatuses.map(status => (
-                    <p key={status} className="flex items-center gap-2">
+                    <p className="flex items-center gap-2" key={status}>
                         {capitalCase(status)}{' '}
                         <SyncStatusIcon
-                            syncStatus={status}
                             className="text-gray-900"
+                            syncStatus={status}
                         />
                     </p>
                 ))}

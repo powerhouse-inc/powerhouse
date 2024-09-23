@@ -3,9 +3,9 @@ import { Color, getDimensions, IconName, Size } from '@/powerhouse';
 import { ComponentPropsWithoutRef } from 'react';
 
 export type IconProps = ComponentPropsWithoutRef<'svg'> & {
-    name: IconName;
-    size?: Size;
-    color?: Color;
+    readonly name: IconName;
+    readonly size?: Size;
+    readonly color?: Color;
 };
 
 export function Icon({ name, size = 24, color, style, ...props }: IconProps) {

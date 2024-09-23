@@ -8,11 +8,11 @@ describe('Connect Sidebar Component', () => {
         const { asFragment } = render(
             <WagmiContext>
                 <ConnectSidebar
-                    data-testid="sidebar"
-                    onToggle={() => {}}
                     address="0x123"
                     collapsed={false}
+                    data-testid="sidebar"
                     onLogin={() => {}}
+                    onToggle={() => {}}
                 />
             </WagmiContext>,
         );
@@ -23,11 +23,11 @@ describe('Connect Sidebar Component', () => {
         render(
             <WagmiContext>
                 <ConnectSidebar
-                    data-testid="sidebar"
-                    onToggle={() => {}}
                     address="0x123"
                     collapsed={false}
+                    data-testid="sidebar"
                     onLogin={() => {}}
+                    onToggle={() => {}}
                 />
             </WagmiContext>,
         );
@@ -38,11 +38,11 @@ describe('Connect Sidebar Component', () => {
         render(
             <WagmiContext>
                 <ConnectSidebar
-                    data-testid="sidebar"
-                    onToggle={() => {}}
                     address="0x123"
                     collapsed={false}
+                    data-testid="sidebar"
                     onLogin={() => {}}
+                    onToggle={() => {}}
                 />
             </WagmiContext>,
         );
@@ -53,11 +53,11 @@ describe('Connect Sidebar Component', () => {
         render(
             <WagmiContext>
                 <ConnectSidebar
-                    data-testid="sidebar"
-                    onToggle={() => {}}
                     address="0x123"
-                    collapsed={true}
+                    collapsed
+                    data-testid="sidebar"
                     onLogin={() => {}}
+                    onToggle={() => {}}
                 />
             </WagmiContext>,
         );

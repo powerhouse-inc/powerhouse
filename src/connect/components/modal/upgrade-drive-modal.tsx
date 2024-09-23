@@ -8,16 +8,14 @@ const buttonStyles =
 export type ConnectUpgradeDriveModalProps = ComponentPropsWithoutRef<
     typeof Modal
 > & {
-    header: React.ReactNode;
-    body: React.ReactNode;
-    onContinue: () => void;
-    cancelLabel: string;
-    continueLabel: string;
+    readonly header: React.ReactNode;
+    readonly body: React.ReactNode;
+    readonly onContinue: () => void;
+    readonly cancelLabel: string;
+    readonly continueLabel: string;
 };
 
-export const ConnectUpgradeDriveModal = (
-    props: ConnectUpgradeDriveModalProps,
-) => {
+export function ConnectUpgradeDriveModal(props: ConnectUpgradeDriveModalProps) {
     const {
         body,
         header,
@@ -32,15 +30,15 @@ export const ConnectUpgradeDriveModal = (
 
     return (
         <Modal
-            overlayProps={{
-                ...overlayProps,
-                className: overlayProps?.className,
-            }}
             contentProps={{
                 ...contentProps,
                 className: twMerge('rounded-3xl', contentProps?.className),
             }}
             onOpenChange={onOpenChange}
+            overlayProps={{
+                ...overlayProps,
+                className: overlayProps?.className,
+            }}
             {...restProps}
         >
             <div className="w-[400px] p-6 text-slate-300">
@@ -52,20 +50,20 @@ export const ConnectUpgradeDriveModal = (
                 </div>
                 <div className="mt-8 flex justify-between gap-3">
                     <button
-                        onClick={() => onOpenChange?.(false)}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-slate-50 text-slate-800',
                         )}
+                        onClick={() => onOpenChange?.(false)}
                     >
                         {cancelLabel}
                     </button>
                     <button
-                        onClick={onContinue}
                         className={twMerge(
                             buttonStyles,
                             'flex-1 bg-gray-800 text-gray-50',
                         )}
+                        onClick={onContinue}
                     >
                         {continueLabel}
                     </button>
@@ -73,4 +71,4 @@ export const ConnectUpgradeDriveModal = (
             </div>
         </Modal>
     );
-};
+}

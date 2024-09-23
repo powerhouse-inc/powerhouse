@@ -13,14 +13,14 @@ import { twMerge } from 'tailwind-merge';
 type Props<ControlInputs extends FieldValues> = ComponentPropsWithRef<
     typeof RWATableTextInput
 > & {
-    name: Path<ControlInputs>;
-    control: Control<ControlInputs>;
-    disabled?: boolean;
-    currency?: 'USD';
-    numericFormatProps?: ComponentPropsWithRef<typeof NumericFormat>;
-    rules?: ControllerProps<ControlInputs>['rules'];
-    errorMessage?: string;
-    errorMessageClassName?: string;
+    readonly name: Path<ControlInputs>;
+    readonly control: Control<ControlInputs>;
+    readonly disabled?: boolean;
+    readonly currency?: 'USD';
+    readonly numericFormatProps?: ComponentPropsWithRef<typeof NumericFormat>;
+    readonly rules?: ControllerProps<ControlInputs>['rules'];
+    readonly errorMessage?: string;
+    readonly errorMessageClassName?: string;
 };
 
 export function RWANumberInput<ControlInputs extends FieldValues>(
@@ -52,36 +52,36 @@ export function RWANumberInput<ControlInputs extends FieldValues>(
 
     return (
         <Controller
-            name={name}
             control={control}
-            rules={rules}
+            name={name}
             render={({ field: { onChange, value, ref } }) => (
                 <>
                     <NumericFormat
                         {...inputProps}
-                        getInputRef={ref}
-                        prefix={prefix}
                         allowNegative={allowNegative}
-                        decimalScale={decimalScale}
-                        onValueChange={({ floatValue }) => onChange(floatValue)}
-                        value={value}
                         customInput={RWATableTextInput}
-                        thousandSeparator={thousandSeparator}
+                        decimalScale={decimalScale}
                         fixedDecimalScale={fixedDecimalScale}
+                        getInputRef={ref}
+                        onValueChange={({ floatValue }) => onChange(floatValue)}
+                        prefix={prefix}
+                        thousandSeparator={thousandSeparator}
+                        value={value}
                     />
-                    {invalid && !!errorMessage && (
+                    {invalid && !!errorMessage ? (
                         <p
-                            role="alert"
                             className={twMerge(
                                 'text-sm text-red-900',
                                 errorMessageClassName,
                             )}
+                            role="alert"
                         >
                             {errorMessage}
                         </p>
-                    )}
+                    ) : null}
                 </>
             )}
+            rules={rules}
         />
     );
 }

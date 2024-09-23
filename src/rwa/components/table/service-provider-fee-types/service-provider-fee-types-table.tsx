@@ -47,7 +47,7 @@ export function makeServiceProviderFeeTypesTableItems(
 
 export type ServiceProviderFeeTypesTableProps =
     TableWrapperProps<ServiceProviderFeeTypeFormInputs> & {
-        onSubmitCreateAccount: (data: AccountFormInputs) => void;
+        readonly onSubmitCreateAccount: (data: AccountFormInputs) => void;
     };
 
 export function ServiceProviderFeeTypesTable(
@@ -75,27 +75,27 @@ export function ServiceProviderFeeTypesTable(
         <>
             <Table
                 {...props}
-                itemName={itemName}
-                tableData={tableData}
                 columns={columns}
-                selectedTableItem={selectedTableItem}
+                itemName={itemName}
                 operation={operation}
-                setSelectedTableItem={setSelectedTableItem}
+                selectedTableItem={selectedTableItem}
                 setOperation={setOperation}
+                setSelectedTableItem={setSelectedTableItem}
+                tableData={tableData}
             />
-            {showForm && (
+            {showForm ? (
                 <div className="mt-4 rounded-md bg-white">
                     <ServiceProviderFeeTypeDetails
                         {...props}
                         itemName={itemName}
+                        operation={operation}
+                        setOperation={setOperation}
+                        setSelectedTableItem={setSelectedTableItem}
                         state={existingState}
                         tableItem={selectedTableItem}
-                        operation={operation}
-                        setSelectedTableItem={setSelectedTableItem}
-                        setOperation={setOperation}
                     />
                 </div>
-            )}
+            ) : null}
         </>
     );
 }

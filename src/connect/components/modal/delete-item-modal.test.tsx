@@ -5,14 +5,14 @@ describe('Modal Component', () => {
     it('should match snapshot', () => {
         render(
             <ConnectDeleteItemModal
-                open={true}
-                data-testid="delete-modal"
                 body="Are you sure you want to delete this folder? All files and subfolders within it will be removed."
                 cancelLabel="Cancel"
+                data-testid="delete-modal"
                 deleteLabel="Delete"
                 header="Delete “Ecosystem Actors” folder?"
-                onDelete={() => {}}
                 onCancel={() => {}}
+                onDelete={() => {}}
+                open
             />,
         );
 
@@ -30,14 +30,14 @@ describe('Modal Component', () => {
 
         render(
             <ConnectDeleteItemModal
-                open={true}
-                data-testid="delete-modal"
                 body={bodyText}
                 cancelLabel={cancelLabel}
+                data-testid="delete-modal"
                 deleteLabel={deleteLabel}
                 header={headerText}
-                onDelete={() => {}}
                 onCancel={() => {}}
+                onDelete={() => {}}
+                open
             />,
         );
 
@@ -58,14 +58,14 @@ describe('Modal Component', () => {
 
         render(
             <ConnectDeleteItemModal
-                open={true}
-                data-testid="delete-modal"
                 body="Are you sure you want to delete this folder? All files and subfolders within it will be removed."
                 cancelLabel={cancelLabel}
+                data-testid="delete-modal"
                 deleteLabel="Delete"
                 header="Delete “Ecosystem Actors” folder?"
-                onDelete={() => {}}
                 onCancel={onClose}
+                onDelete={() => {}}
+                open
             />,
         );
 
@@ -80,14 +80,14 @@ describe('Modal Component', () => {
 
         render(
             <ConnectDeleteItemModal
-                open={true}
-                data-testid="delete-modal"
                 body="Are you sure you want to delete this folder? All files and subfolders within it will be removed."
                 cancelLabel="Cancel"
+                data-testid="delete-modal"
                 deleteLabel={deleteLabel}
                 header="Delete “Ecosystem Actors” folder?"
-                onDelete={onDelete}
                 onCancel={() => {}}
+                onDelete={onDelete}
+                open
             />,
         );
 

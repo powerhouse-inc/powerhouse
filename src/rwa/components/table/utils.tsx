@@ -38,7 +38,7 @@ export function handleTableDatum(
     if (datum === null || datum === undefined) return '--';
 
     if (typeof datum === 'number')
-        return <FormattedNumber value={datum} decimalScale={decimalScale} />;
+        return <FormattedNumber decimalScale={decimalScale} value={datum} />;
 
     return handleDateInTable(datum, displayTime);
 }

@@ -16,27 +16,27 @@ export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
             >
                 <span>Login with</span>
                 <img
-                    src={renown}
                     className="ml-2 h-5 group-hover/sidebar-footer:hidden"
+                    src={renown}
                 />
                 <img
-                    src={renownHover}
                     className="ml-2 hidden h-5 group-hover/sidebar-footer:block"
+                    src={renownHover}
                 />
             </button>
             {/* small version for collapsed */}
             <button
+                aria-label="Login with Renown"
                 className="group/sidebar-footer hidden w-full cursor-pointer place-items-center p-1 collapsed:grid"
                 onClick={onLogin}
-                aria-label="Login with Renown"
             >
                 <img
-                    src={renownShort}
                     className="group-hover/sidebar-footer:hidden"
+                    src={renownShort}
                 />
                 <img
-                    src={renownShortHover}
                     className="hidden group-hover/sidebar-footer:block"
+                    src={renownShortHover}
                 />
             </button>
         </>

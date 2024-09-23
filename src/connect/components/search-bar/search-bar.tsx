@@ -44,7 +44,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
     );
 
     const filterLabelContent = selectedItemFilter ? (
-        <FilterItem item={selectedItemFilter} className="gap-x-1" />
+        <FilterItem className="gap-x-1" item={selectedItemFilter} />
     ) : (
         filterLabel && (
             <div className="mr-2 text-sm font-semibold text-slate-200">
@@ -59,14 +59,14 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
 
     return (
         <div className="flex items-center">
-            <Icon name="Search" className="mr-3" />
+            <Icon className="mr-3" name="Search" />
             <input
-                value={value}
-                onChange={handleChange}
-                placeholder={placeholder}
                 className={twMerge(
                     'flex h-[52px] min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-slate-200 outline-none',
                 )}
+                onChange={handleChange}
+                placeholder={placeholder}
+                value={value}
             />
             <DropdownMenu>
                 <DropdownMenuTrigger className="ml-3 flex h-full flex-row items-center outline-none">
@@ -75,9 +75,9 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = props => {
                 <DropdownMenuContent className="rounded-xl border border-gray-100 bg-gray-50 p-2">
                     {items.map(item => (
                         <DropdownMenuItem
-                            key={item.id}
-                            id={item.id}
                             className="h-10 cursor-pointer overflow-hidden rounded-lg hover:bg-gray-100"
+                            id={item.id}
+                            key={item.id}
                             onSelect={() => onFilterSelect(item.id)}
                         >
                             {item.content}

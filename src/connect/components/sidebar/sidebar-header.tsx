@@ -22,8 +22,8 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
             <div className="collapsed:hidden expanding:hidden">
                 {children || (
                     <input
-                        placeholder="Create new document"
                         className="flex-1 rounded-md border border-gray-100 px-5 py-3 leading-none text-gray-600 placeholder-shown:bg-transparent"
+                        placeholder="Create new document"
                     />
                 )}
             </div>
@@ -34,7 +34,7 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
                 expanding:hidden"
                 onClick={() => onToggle()}
             >
-                <Icon name="ArrowLeft" size={16} className="text-gray-600" />
+                <Icon className="text-gray-600" name="ArrowLeft" size={16} />
             </button>
         </SidebarHeader>
     );
