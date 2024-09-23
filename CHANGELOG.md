@@ -1,3 +1,10 @@
+## [1.90.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.90.0...v1.90.1) (2024-09-23)
+
+
+### Bug Fixes
+
+* remove listener ([#211](https://github.com/powerhouse-inc/document-model-libs/issues/211)) ([2000dc4](https://github.com/powerhouse-inc/document-model-libs/commit/2000dc42df1b275c1dfaf01520e2fb747d162579))
+
 # [1.90.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.89.0...v1.90.0) (2024-09-23)
 
 
