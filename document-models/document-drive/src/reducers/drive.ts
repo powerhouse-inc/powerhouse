@@ -34,7 +34,7 @@ export const reducer: DocumentDriveDriveOperations = {
     },
     removeListenerOperation(state, action, dispatch) {
         state.listeners = state.listeners.filter(
-            (listener) => listener.listenerId === action.input.listenerId,
+            (listener) => listener.listenerId !== action.input.listenerId,
         );
     },
     addTriggerOperation(state, action, dispatch) {
