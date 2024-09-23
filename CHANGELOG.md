@@ -1,3 +1,10 @@
+# [1.90.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.89.0...v1.90.0) (2024-09-23)
+
+
+### Features
+
+* migrate eslint config ([#210](https://github.com/powerhouse-inc/document-model-libs/issues/210)) ([956920b](https://github.com/powerhouse-inc/document-model-libs/commit/956920ba789ab6cf782b5af976c1febc50db973d))
+
 # [1.89.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.88.0...v1.89.0) (2024-09-16)
 
 
