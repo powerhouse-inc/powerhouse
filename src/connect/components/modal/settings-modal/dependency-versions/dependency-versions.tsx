@@ -3,7 +3,7 @@ import { Disclosure } from '../../../disclosure';
 
 export type ConnectAppPackageJson = {
     version: string;
-    dependencies: {
+    devDependencies: {
         '@powerhousedao/design-system': string;
         'document-drive': string;
         'document-model': string;
@@ -20,20 +20,11 @@ export function verifyPackageJsonFields(
     if (!('version' in packageJson)) {
         throw new Error('Missing version field in package.json');
     }
-    if (!('dependencies' in packageJson)) {
-        throw new Error('Missing dependencies field in package.json');
-    }
     if (!('devDependencies' in packageJson)) {
         throw new Error('Missing devDependencies field in package.json');
     }
     if (typeof packageJson.version !== 'string') {
         throw new Error('Invalid version field in package.json');
-    }
-    if (
-        !packageJson.dependencies ||
-        typeof packageJson.dependencies !== 'object'
-    ) {
-        throw new Error('Invalid dependencies field in package.json');
     }
     if (
         !packageJson.devDependencies ||
@@ -42,27 +33,27 @@ export function verifyPackageJsonFields(
         throw new Error('Invalid devDependencies field in package.json');
     }
     if (
-        !('@powerhousedao/design-system' in packageJson.dependencies) ||
-        typeof packageJson.dependencies['@powerhousedao/design-system'] !==
+        !('@powerhousedao/design-system' in packageJson.devDependencies) ||
+        typeof packageJson.devDependencies['@powerhousedao/design-system'] !==
             'string'
     ) {
         throw new Error('Invalid @powerhousedao/design-system dependency');
     }
     if (
-        !('document-drive' in packageJson.dependencies) ||
-        typeof packageJson.dependencies['document-drive'] !== 'string'
+        !('document-drive' in packageJson.devDependencies) ||
+        typeof packageJson.devDependencies['document-drive'] !== 'string'
     ) {
         throw new Error('Invalid document-drive dependency');
     }
     if (
-        !('document-model' in packageJson.dependencies) ||
-        typeof packageJson.dependencies['document-model'] !== 'string'
+        !('document-model' in packageJson.devDependencies) ||
+        typeof packageJson.devDependencies['document-model'] !== 'string'
     ) {
         throw new Error('Invalid document-model dependency');
     }
     if (
-        !('document-model-libs' in packageJson.dependencies) ||
-        typeof packageJson.dependencies['document-model-libs'] !== 'string'
+        !('document-model-libs' in packageJson.devDependencies) ||
+        typeof packageJson.devDependencies['document-model-libs'] !== 'string'
     ) {
         throw new Error('Invalid document-model-libs dependency');
     }
@@ -93,7 +84,7 @@ export function DependencyVersions(props: Props) {
                     <span>design-system:</span>
                     <span className="font-medium">
                         {
-                            packageJson.dependencies[
+                            packageJson.devDependencies[
                                 '@powerhousedao/design-system'
                             ]
                         }
@@ -102,19 +93,19 @@ export function DependencyVersions(props: Props) {
                 <li className="my-1 flex justify-between pr-1">
                     <span>document-drive:</span>{' '}
                     <span className="font-medium">
-                        {packageJson.dependencies['document-drive']}
+                        {packageJson.devDependencies['document-drive']}
                     </span>
                 </li>
                 <li className="my-1 flex justify-between pr-1">
                     <span>document-model:</span>{' '}
                     <span className="font-medium">
-                        {packageJson.dependencies['document-model']}
+                        {packageJson.devDependencies['document-model']}
                     </span>
                 </li>
                 <li className="my-1 flex justify-between pr-1">
                     <span>document-model-libs:</span>{' '}
                     <span className="font-medium">
-                        {packageJson.dependencies['document-model-libs']}
+                        {packageJson.devDependencies['document-model-libs']}
                     </span>
                 </li>
             </ul>
