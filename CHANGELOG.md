@@ -1,3 +1,10 @@
+# [1.0.0-alpha.181](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.180...v1.0.0-alpha.181) (2024-09-23)
+
+
+### Bug Fixes
+
+* updated dependencies check to check Connect dev dependencies ([4a53be0](https://github.com/powerhouse-inc/design-system/commit/4a53be0597b309eec07e2246acd56a06a2e308f0))
+
 # [1.0.0-alpha.180](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.179...v1.0.0-alpha.180) (2024-09-23)
 
 
