@@ -13,8 +13,7 @@ import * as DocumentModel from './document-model';
  * documents
  * - Various utility functions to be used by Document Models.
  */
-export { Document };
-export { DocumentModel };
+export { Document, DocumentModel };
 
 export const DocumentModels = {
     'powerhouse/document': Document,
