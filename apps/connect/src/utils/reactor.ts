@@ -50,7 +50,7 @@ export const getReactorDefaultDrivesConfig = (): Pick<
             removeOldRemoteDrives:
                 defaultDrivesUrl.length > 0
                     ? {
-                          strategy: 'preserve-by-url',
+                          strategy: 'preserve-by-url-and-detach',
                           urls: defaultDrivesUrl,
                       }
                     : { strategy: 'preserve-all' },
