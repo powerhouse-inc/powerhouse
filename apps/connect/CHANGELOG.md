@@ -1,3 +1,10 @@
+# [1.0.0-dev.132](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.131...v1.0.0-dev.132) (2024-09-24)
+
+
+### Features
+
+* added detach strategy for old drives ([abb819b](https://github.com/powerhouse-inc/document-model-electron/commit/abb819b46fa66711ef8e57d6d8d7171bab7b1259))
+
 # [1.0.0-dev.131](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.130...v1.0.0-dev.131) (2024-09-24)
 
 
