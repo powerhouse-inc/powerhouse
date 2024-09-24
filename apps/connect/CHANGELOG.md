@@ -1,3 +1,10 @@
+# [1.0.0-dev.131](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.130...v1.0.0-dev.131) (2024-09-24)
+
+
+### Bug Fixes
+
+* env router basename ([4bc9267](https://github.com/powerhouse-inc/document-model-electron/commit/4bc9267bc55902ce7a6631eb76ffc8c4472892ff))
+
 # [1.0.0-dev.130](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.129...v1.0.0-dev.130) (2024-09-23)
 
 
