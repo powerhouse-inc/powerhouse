@@ -1,0 +1,64 @@
+name: Check PR
+
+on:
+    push:
+        branches: ['main']
+    pull_request:
+        branches: ['main']
+        types: [opened, synchronize]
+
+jobs:
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        container: node:22
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: Lint
+              run: pnpm run lint
+
+            - name: Check types
+              run: pnpm run check-types
+
+    test:
+        name: Test
+        runs-on: ubuntu-latest
+        container: node:22
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: Test
+              run: pnpm run test
+
+    build:
+        name: Build
+        timeout-minutes: 15
+        runs-on: ubuntu-latest
+        container: node:22
+        needs: [lint, test]
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: Build
+              run: pnpm run build
