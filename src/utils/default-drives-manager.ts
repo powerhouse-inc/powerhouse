@@ -5,6 +5,7 @@ import {
     IBaseDocumentDriveServer,
     IReadModeDriveServer,
     RemoteDriveAccessLevel,
+    RemoveDriveStrategy,
     RemoveOldRemoteDrivesOption
 } from '../server';
 import { DriveNotFoundError } from '../server/error';
@@ -13,6 +14,7 @@ import { logger } from './logger';
 
 export interface IServerDelegateDrivesManager {
     emit: (...args: Parameters<DriveEvents['defaultRemoteDrive']>) => void;
+    detachDrive: (driveId: string) => Promise<void>;
 }
 
 function isReadModeDriveServer(obj: unknown): obj is IReadModeDriveServer {
@@ -75,8 +77,9 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
     }
 
     private async preserveDrivesById(
-        drivesIdsToRemove: string[],
-        drives: string[]
+        driveIdsToPreserve: string[],
+        drives: string[],
+        removeStrategy: RemoveDriveStrategy = 'detach'
     ) {
         const getAllDrives = drives.map(driveId =>
             this.server.getDrive(driveId)
@@ -89,11 +92,16 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
                     drive.state.local.triggers.length > 0
             )
             .filter(
-                drive => !drivesIdsToRemove.includes(drive.state.global.id)
+                drive => !driveIdsToPreserve.includes(drive.state.global.id)
             );
 
         const driveIds = drivesToRemove.map(drive => drive.state.global.id);
-        await this.removeDrivesById(driveIds);
+
+        if (removeStrategy === 'detach') {
+            await this.detachDrivesById(driveIds);
+        } else {
+            await this.removeDrivesById(driveIds);
+        }
     }
 
     private async removeDrivesById(driveIds: string[]) {
@@ -102,18 +110,41 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
         }
     }
 
+    private async detachDrivesById(driveIds: string[]) {
+        const detachDrivesPromises = driveIds.map(driveId =>
+            this.delegate.detachDrive(driveId)
+        );
+
+        await Promise.all(detachDrivesPromises);
+    }
+
     async removeOldremoteDrives() {
         const driveids = await this.server.getDrives();
 
         switch (this.removeOldRemoteDrivesConfig.strategy) {
+            case 'preserve-by-id-and-detach':
             case 'preserve-by-id': {
+                const detach: RemoveDriveStrategy =
+                    this.removeOldRemoteDrivesConfig.strategy ===
+                    'preserve-by-id-and-detach'
+                        ? 'detach'
+                        : 'remove';
+
                 await this.preserveDrivesById(
                     this.removeOldRemoteDrivesConfig.ids,
-                    driveids
+                    driveids,
+                    detach
                 );
                 break;
             }
+            case 'preserve-by-url-and-detach':
             case 'preserve-by-url': {
+                const detach: RemoveDriveStrategy =
+                    this.removeOldRemoteDrivesConfig.strategy ===
+                    'preserve-by-url-and-detach'
+                        ? 'detach'
+                        : 'remove';
+
                 const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
                     url => requestPublicDrive(url)
                 );
@@ -122,7 +153,11 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
                     await Promise.all(getDrivesInfo)
                 ).map(driveInfo => driveInfo.id);
 
-                await this.preserveDrivesById(drivesIdsToPreserve, driveids);
+                await this.preserveDrivesById(
+                    drivesIdsToPreserve,
+                    driveids,
+                    detach
+                );
                 break;
             }
             case 'remove-by-id': {
@@ -161,6 +196,35 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
                     .map(drive => drive.state.global.id);
 
                 await this.removeDrivesById(drivesToRemove);
+                break;
+            }
+            case 'detach-by-id': {
+                const drivesIdsToRemove =
+                    this.removeOldRemoteDrivesConfig.ids.filter(driveId =>
+                        driveids.includes(driveId)
+                    );
+                const detachDrivesPromises = drivesIdsToRemove.map(driveId =>
+                    this.delegate.detachDrive(driveId)
+                );
+
+                await Promise.all(detachDrivesPromises);
+                break;
+            }
+            case 'detach-by-url': {
+                const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
+                    driveUrl => requestPublicDrive(driveUrl)
+                );
+                const drivesInfo = await Promise.all(getDrivesInfo);
+
+                const drivesIdsToRemove = drivesInfo
+                    .map(driveInfo => driveInfo.id)
+                    .filter(driveId => driveids.includes(driveId));
+
+                const detachDrivesPromises = drivesIdsToRemove.map(driveId =>
+                    this.delegate.detachDrive(driveId)
+                );
+
+                await Promise.all(detachDrivesPromises);
                 break;
             }
         }

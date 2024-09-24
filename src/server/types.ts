@@ -231,6 +231,27 @@ export type DefaultRemoteDriveInfo = DefaultRemoteDriveInput & {
     metadata?: DriveInfo;
 };
 
+export type RemoveDriveStrategy = 'remove' | 'detach';
+
+/**
+ * Options for removing old remote drives.
+ *
+ * Allows specifying different strategies for handling old remote drives:
+ *
+ * - `remove-all`: Remove all remote drives.
+ * - `preserve-all`: Preserve all remote drives (this is the default behavior).
+ * - `remove-by-id`: Remove the remote drives specified by their IDs.
+ * - `remove-by-url`: Remove the remote drives specified by their URLs.
+ * - `preserve-by-id`: Preserve remote drives by their IDs and remove the rest.
+ * - `preserve-by-url`: Preserve remote drives by their URLs and remove the rest.
+ * - `detach-by-id`: Detach remote drives by their IDs (changes the remote drive to a local drive).
+ * - `detach-by-url`: Detach remote drives by their URLs (changes the remote drive to a local drive).
+ * - `preserve-by-id-and-detach`: Preserve the remote drives specified by their IDs and detach the rest.
+ * - `preserve-by-url-and-detach`: Preserve the remote drives specified by their URLs and detach the rest.
+ *
+ * Each strategy is represented by an object with a `strategy` property and,
+ * depending on the strategy, additional properties such as `ids` or `urls`.
+ */
 export type RemoveOldRemoteDrivesOption =
     | {
           strategy: 'remove-all';
@@ -252,6 +273,22 @@ export type RemoveOldRemoteDrivesOption =
       }
     | {
           strategy: 'preserve-by-url';
+          urls: string[];
+      }
+    | {
+          strategy: 'detach-by-id';
+          ids: string[];
+      }
+    | {
+          strategy: 'detach-by-url';
+          urls: string[];
+      }
+    | {
+          strategy: 'preserve-by-id-and-detach';
+          ids: string[];
+      }
+    | {
+          strategy: 'preserve-by-url-and-detach';
           urls: string[];
       };
 

@@ -549,6 +549,7 @@ export class BaseDocumentDriveServer
     }
 
     private defaultDrivesManagerDelegate = {
+        detachDrive: this.detachDrive.bind(this),
         emit: (...args: Parameters<DriveEvents['defaultRemoteDrive']>) =>
             this.emit('defaultRemoteDrive', ...args)
     };
@@ -2310,6 +2311,31 @@ export class BaseDocumentDriveServer
 
         transmitter.setReceiver(receiver);
         return transmitter;
+    }
+
+    async detachDrive(driveId: string) {
+        const documentDrive = await this.getDrive(driveId);
+        const listeners = documentDrive.state.local.listeners || [];
+        const triggers = documentDrive.state.local.triggers || [];
+
+        for (const listener of listeners) {
+            await this.addDriveAction(
+                driveId,
+                actions.removeListener({ listenerId: listener.listenerId })
+            );
+        }
+
+        for (const trigger of triggers) {
+            await this.addDriveAction(
+                driveId,
+                actions.removeTrigger({ triggerId: trigger.id })
+            );
+        }
+
+        await this.addDriveAction(
+            driveId,
+            actions.setSharingType({ type: 'LOCAL' })
+        );
     }
 
     private async addListener(

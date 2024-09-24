@@ -1,3 +1,4 @@
+import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { DocumentModel as BaseDocumentModel } from 'document-model/document';
 import { module as DocumentModelLib } from 'document-model/document-model';
@@ -247,6 +248,33 @@ describe('default remote drives', () => {
 });
 
 describe('remove old drives', () => {
+    const expectPublicDrive = (drive: DocumentDriveDocument) => {
+        expect(drive.state.local.listeners).toHaveLength(1);
+        expect(drive.state.local.triggers).toHaveLength(1);
+        expect(drive.operations.local).toHaveLength(0);
+    };
+
+    const expectDetachedDrive = (drive: DocumentDriveDocument) => {
+        expect(drive.state.local.listeners).toHaveLength(0);
+        expect(drive.state.local.triggers).toHaveLength(0);
+        expect(drive.operations.local).toMatchObject([
+            {
+                type: 'REMOVE_LISTENER',
+                index: 0
+            },
+            {
+                type: 'REMOVE_TRIGGER',
+                index: 1
+            },
+            {
+                type: 'SET_SHARING_TYPE',
+                input: { type: 'LOCAL' },
+                index: 2
+            }
+        ]);
+        expect(drive.state.local.sharingType).toBe('LOCAL');
+    };
+
     const documentDriveServerOptions: DocumentDriveServerOptions = {
         defaultDrives: {
             remoteDrives: [
@@ -418,5 +446,149 @@ describe('remove old drives', () => {
         const drives = await server.getDrives();
         expect(drives).toHaveLength(2);
         expect(drives).toMatchObject([drive3.id, drive4.id]);
+    });
+
+    it('should detach remote drives by id', async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'detach-by-id',
+                        ids: [drive1.id, drive2.id]
+                    }
+                }
+            }
+        );
+
+        let docDrive1 = await server.getDrive(drive1.id);
+        let docDrive2 = await server.getDrive(drive2.id);
+
+        expectPublicDrive(docDrive1);
+        expectPublicDrive(docDrive2);
+
+        await server.initialize();
+
+        docDrive1 = await server.getDrive(drive1.id);
+        docDrive2 = await server.getDrive(drive2.id);
+        const docDrive3 = await server.getDrive(drive3.id);
+        const docDrive4 = await server.getDrive(drive4.id);
+
+        expectDetachedDrive(docDrive1);
+        expectDetachedDrive(docDrive2);
+        expectPublicDrive(docDrive3);
+        expectPublicDrive(docDrive4);
+    });
+
+    it('should detach remote drives by url', async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'detach-by-url',
+                        urls: [drive1.url, drive2.url]
+                    }
+                }
+            }
+        );
+
+        let docDrive1 = await server.getDrive(drive1.id);
+        let docDrive2 = await server.getDrive(drive2.id);
+
+        expectPublicDrive(docDrive1);
+        expectPublicDrive(docDrive2);
+
+        await server.initialize();
+
+        docDrive1 = await server.getDrive(drive1.id);
+        docDrive2 = await server.getDrive(drive2.id);
+        const docDrive3 = await server.getDrive(drive3.id);
+        const docDrive4 = await server.getDrive(drive4.id);
+
+        expectDetachedDrive(docDrive1);
+        expectDetachedDrive(docDrive2);
+        expectPublicDrive(docDrive3);
+        expectPublicDrive(docDrive4);
+    });
+
+    it("should preserve only remote drives specified when 'preserve-by-id-and-detach' strategy is used", async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'preserve-by-id-and-detach',
+                        ids: [drive1.id, drive2.id]
+                    }
+                }
+            }
+        );
+
+        let docDrive3 = await server.getDrive(drive3.id);
+        let docDrive4 = await server.getDrive(drive4.id);
+
+        expectPublicDrive(docDrive3);
+        expectPublicDrive(docDrive4);
+
+        await server.initialize();
+
+        docDrive3 = await server.getDrive(drive3.id);
+        docDrive4 = await server.getDrive(drive4.id);
+        const docDrive1 = await server.getDrive(drive1.id);
+        const docDrive2 = await server.getDrive(drive2.id);
+
+        expectPublicDrive(docDrive1);
+        expectPublicDrive(docDrive2);
+        expectDetachedDrive(docDrive3);
+        expectDetachedDrive(docDrive4);
+    });
+
+    it("should preserve only remote drives specified when 'preserve-by-url-and-detach' strategy is used", async () => {
+        const storage = await generatePopulatedStorage();
+        const server = new DocumentDriveServer(
+            documentModels,
+            storage,
+            undefined,
+            undefined,
+            {
+                defaultDrives: {
+                    removeOldRemoteDrives: {
+                        strategy: 'preserve-by-url-and-detach',
+                        urls: [drive1.url, drive2.url]
+                    }
+                }
+            }
+        );
+
+        let docDrive3 = await server.getDrive(drive3.id);
+        let docDrive4 = await server.getDrive(drive4.id);
+
+        expectPublicDrive(docDrive3);
+        expectPublicDrive(docDrive4);
+
+        await server.initialize();
+
+        docDrive3 = await server.getDrive(drive3.id);
+        docDrive4 = await server.getDrive(drive4.id);
+        const docDrive1 = await server.getDrive(drive1.id);
+        const docDrive2 = await server.getDrive(drive2.id);
+
+        expectPublicDrive(docDrive1);
+        expectPublicDrive(docDrive2);
+        expectDetachedDrive(docDrive3);
+        expectDetachedDrive(docDrive4);
     });
 });
