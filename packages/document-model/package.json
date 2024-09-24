@@ -18,9 +18,7 @@
         "build": "NODE_ENV=production npm run build:browser && npm run build:node",
         "build:browser": "vite build --mode browser",
         "build:node": "vite build --mode node",
-        "test": "vitest run",
-        "prepare": "husky install",
-        "release": "semantic-release"
+        "test": "vitest run"
     },
     "exports": {
         ".": {
