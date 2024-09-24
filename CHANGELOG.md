@@ -1,3 +1,10 @@
+# [1.0.0-alpha.99](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.98...v1.0.0-alpha.99) (2024-09-24)
+
+
+### Features
+
+* added detach strategy for old drives ([#305](https://github.com/powerhouse-inc/document-drive/issues/305)) ([a436492](https://github.com/powerhouse-inc/document-drive/commit/a4364925addaa031da91f5e678e49b29eebe0c32))
+
 # [1.0.0-alpha.98](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.97...v1.0.0-alpha.98) (2024-09-20)
 
 
