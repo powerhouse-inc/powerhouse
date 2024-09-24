@@ -13,6 +13,7 @@ on:
           - '@pgph/pkg-b'
           - '@pgph/pkg-c'
           - '@pgph/pkg-d'
+          - 'document-model'
           - 'packages/*'
 
 jobs:
