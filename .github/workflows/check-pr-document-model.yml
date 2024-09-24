@@ -1,14 +1,15 @@
 name: Check PR
 
 on:
+    workflow_dispatch:
     push:
         branches: ['main']
         paths:
-          - 'packages/document-model/**'
+            - 'packages/document-model/**'
     pull_request:
         branches: ['main']
         paths:
-          - 'packages/document-model/**'
+            - 'packages/document-model/**'
         types: [opened, synchronize]
 
 jobs:
@@ -27,10 +28,10 @@ jobs:
                   run_install: true
 
             - name: Lint
-              run: pnpm run lint
+              run: npx nx lint document-model
 
             - name: Check types
-              run: pnpm run check-types
+              run: npx nx check-types document-model
 
     test:
         name: Test
@@ -47,7 +48,7 @@ jobs:
                   run_install: true
 
             - name: Test
-              run: pnpm run test
+              run: npx nx test document-model
 
     build:
         name: Build
@@ -65,4 +66,4 @@ jobs:
                   run_install: true
 
             - name: Build
-              run: pnpm run build
+              run: npx nx build document-model
