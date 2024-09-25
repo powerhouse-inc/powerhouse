@@ -9,10 +9,6 @@ on:
         default: 'packages/*'
         type: choice
         options:
-          - '@pgph/pkg-a'
-          - '@pgph/pkg-b'
-          - '@pgph/pkg-c'
-          - '@pgph/pkg-d'
           - 'document-model'
           - 'packages/*'
 
