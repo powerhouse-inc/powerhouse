@@ -1,3 +1,15 @@
+## 2.0.1 (2024-09-25)
+
+
+### 🩹 Fixes
+
+- **document-model:** update .gitignore ([d0c9329](https://github.com/powerhouse-inc/ph-monorepo/commit/d0c9329))
+
+
+### ❤️  Thank You
+
+- Guillermo Puente @gpuente
+
 # 2.0.0 (2024-09-24)
 
 
