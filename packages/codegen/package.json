@@ -1,0 +1,67 @@
+{
+    "name": "@powerhousedao/codegen",
+    "version": "0.0.15",
+    "license": "AGPL-3.0-only",
+    "private": false,
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "bin": {
+        "powerhouse": "./dist/cli.js",
+        "create-document-model-lib": "./dist/create-lib/index.js"
+    },
+    "files": [
+        "/dist"
+    ],
+    "scripts": {
+        "clean": "rimraf dist/",
+        "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
+        "build": "yarn clean && tsc && yarn copy-files",
+        "prepublishOnly": "yarn build",
+        "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
+        "publish:create-lib": "yarn publish --cwd ./src/create-lib/",
+        "start": "ts-node src/cli.ts",
+        "check-types": "tsc --noEmit",
+        "lint": "eslint . && yarn check-types",
+        "lint:fix": "eslint . --fix"
+    },
+    "dependencies": {
+        "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
+        "@anatine/zod-mock": "^3.13.3",
+        "@faker-js/faker": "^8.3.1",
+        "@graphql-codegen/cli": "^5.0.0",
+        "@graphql-codegen/typescript": "^4.0.1",
+        "@types/node": "^20.11.2",
+        "arg": "^5.0.2",
+        "change-case": "^4.1.2",
+        "document-model": "^1.0.29",
+        "enquirer": "^2.4.1",
+        "execa": "^8.0.1",
+        "hygen": "^6.2.11",
+        "typescript": "^5.3.3"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^18.4.4",
+        "@commitlint/config-conventional": "^18.4.4",
+        "@total-typescript/ts-reset": "^0.5.1",
+        "@typescript-eslint/eslint-plugin": "^6.19.0",
+        "@typescript-eslint/parser": "^6.19.0",
+        "copyfiles": "^2.4.1",
+        "eslint": "^8.56.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-prettier": "^5.1.3",
+        "graphql": "^16.8.1",
+        "husky": "^8.0.3",
+        "lint-staged": "^15.2.0",
+        "prettier": "^3.2.4",
+        "prettier-plugin-organize-imports": "^3.2.4",
+        "rimraf": "^5.0.5",
+        "ts-node": "^10.9.2"
+    },
+    "peerDependencies": {
+        "graphql": "^16.8.1"
+    },
+    "resolutions": {
+        "string-width": "4.2.3",
+        "strip-ansi": "6.0.0"
+    }
+}
