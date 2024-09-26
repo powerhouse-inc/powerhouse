@@ -19,7 +19,9 @@
         "build:watch": "NODE_ENV=production npm run build:browser -- --watch && npm run build:node -- --watch",
         "build:browser": "vite build --mode browser",
         "build:node": "vite build --mode node",
-        "test": "vitest run"
+        "test": "vitest run",
+        "clean": "rimraf dist",
+        "clean:node_modules": "rimraf node_modules"
     },
     "exports": {
         ".": {

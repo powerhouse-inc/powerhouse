@@ -22,7 +22,8 @@
         "start": "ts-node src/cli.ts",
         "check-types": "tsc --noEmit",
         "lint": "eslint . && yarn check-types",
-        "lint:fix": "eslint . --fix"
+        "lint:fix": "eslint . --fix",
+        "clean:node_modules": "rimraf node_modules"
     },
     "dependencies": {
         "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
