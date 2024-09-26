@@ -1,0 +1,52 @@
+name: Check PR
+
+on:
+    workflow_dispatch:
+    push:
+        branches: ['main']
+        paths:
+            - 'packages/codegen/**'
+    pull_request:
+        branches: ['main']
+        paths:
+            - 'packages/codegen/**'
+        types: [opened, synchronize]
+
+jobs:
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        container: node:22
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: Lint
+              run: npx nx lint @powerhousedao/codegen
+
+            - name: Check types
+              run: npx nx check-types @powerhousedao/codegen
+
+
+    build:
+        name: Build
+        timeout-minutes: 15
+        runs-on: ubuntu-latest
+        container: node:22
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: Build
+              run: npx nx build @powerhousedao/codegen
