@@ -15,7 +15,7 @@
     "@commitlint/cli": "^19.3.0",
     "@commitlint/config-conventional": "^19.2.2",
     "@jscutlery/semver": "^5.2.2",
-    "@nx/js": "19.5.3",
+    "@nx/js": "19.8.2",
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",

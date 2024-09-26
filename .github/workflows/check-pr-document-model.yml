@@ -1,4 +1,4 @@
-name: Check PR
+name: Check PR document-model
 
 on:
     workflow_dispatch:
@@ -11,6 +11,9 @@ on:
         paths:
             - 'packages/document-model/**'
         types: [opened, synchronize]
+
+env:
+  NX_ISOLATE_PLUGINS: false
 
 jobs:
     lint:
@@ -25,7 +28,10 @@ jobs:
               uses: pnpm/action-setup@v3
               with:
                   version: latest-8
-                  run_install: true
+                  run_install: false
+
+            - name: Install Dependencies
+              run: pnpm install --no-frozen-lockfile
 
             - name: Lint
               run: npx nx lint document-model
@@ -45,7 +51,10 @@ jobs:
               uses: pnpm/action-setup@v3
               with:
                   version: latest-8
-                  run_install: true
+                  run_install: false
+
+            - name: Install Dependencies
+              run: pnpm install --no-frozen-lockfile
 
             - name: Test
               run: npx nx test document-model
