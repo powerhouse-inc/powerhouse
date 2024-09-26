@@ -38,5 +38,9 @@
     "prettier": "^3.2.5",
     "prettier-plugin-organize-imports": "^3.2.4",
     "rimraf": "^6.0.1"
+  },
+  "resolutions": {
+    "string-width": "4.2.3",
+    "strip-ansi": "6.0.0"
   }
 }
