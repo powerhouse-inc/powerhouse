@@ -124,7 +124,7 @@ export default tseslint.config(
         },
     },
     {
-        files: ['**/*.stories.tsx', '**/*.text.ts', '**/*.test.tsx'],
+        files: ['**/*.stories.tsx', '**/*.test.ts', '**/*.test.tsx'],
         rules: {
             'react/jsx-props-no-spreading': [
                 'warn',
