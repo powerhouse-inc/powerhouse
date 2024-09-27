@@ -10,6 +10,7 @@ import { ModalManager } from 'src/components/modal';
 import { ReadModeContextProvider } from 'src/context/read-mode';
 import { RootProvider } from 'src/context/root-provider';
 import atoms from 'src/store';
+import Analytics from './analytics';
 
 const Router = React.lazy(async () => {
     const createRouterComponent = await import('./router');
@@ -37,6 +38,7 @@ export default (
                             <ModalManager>
                                 <Router />
                                 <CookieBanner />
+                                <Analytics />
                             </ModalManager>
                         </UiNodesContextProvider>
                     </ReadModeContextProvider>

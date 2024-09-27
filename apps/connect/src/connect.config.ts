@@ -38,6 +38,8 @@ const PH_CONNECT_SENTRY_ENV = import.meta.env.PH_CONNECT_SENTRY_ENV || 'dev';
 const PH_CONNECT_SENTRY_TRACING_ENABLED =
     import.meta.env.PH_CONNECT_SENTRY_TRACING_ENABLED || 'false';
 
+const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
+
 export default {
     appVersion: APP_VERSION,
     routerBasename: PH_CONNECT_ROUTER_BASENAME,
@@ -70,4 +72,5 @@ export default {
             },
         },
     },
+    gaTrackingId: GA_TRACKING_ID,
 };
