@@ -1,3 +1,15 @@
+## 1.0.0-alpha.100 (2024-09-30)
+
+
+### 🚀 Features
+
+- **document-drive:** initial package setup ([0595bd1](https://github.com/powerhouse-inc/powerhouse/commit/0595bd1))
+
+
+### ❤️  Thank You
+
+- Guillermo Puente @gpuente
+
 # [1.0.0-alpha.99](https://github.com/powerhouse-inc/document-drive/compare/v1.0.0-alpha.98...v1.0.0-alpha.99) (2024-09-24)
 
 
