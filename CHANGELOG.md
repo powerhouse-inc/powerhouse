@@ -1,3 +1,10 @@
+# [1.91.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.90.1...v1.91.0) (2024-10-01)
+
+
+### Features
+
+* fix rules of hooks violation ([#212](https://github.com/powerhouse-inc/document-model-libs/issues/212)) ([c76e96d](https://github.com/powerhouse-inc/document-model-libs/commit/c76e96dd1f893bb5de5a6d88ee2039e46f6ac278))
+
 ## [1.90.1](https://github.com/powerhouse-inc/document-model-libs/compare/v1.90.0...v1.90.1) (2024-09-23)
 
 
