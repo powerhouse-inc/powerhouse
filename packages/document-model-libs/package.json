@@ -84,7 +84,7 @@
         "@eslint/js": "^9.11.0",
         "@monaco-editor/react": "^4.6.0",
         "@mui/material": "^5.15.5",
-        "@powerhousedao/codegen": "workspace:*",
+        "@powerhousedao/codegen": "0.0.15",
         "@powerhousedao/design-system": "1.0.0-alpha.175",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
