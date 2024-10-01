@@ -32,7 +32,7 @@ jobs:
 
             - name: Install Dependencies
               run: pnpm install --no-frozen-lockfile
-
+              
             - name: Generate
               run: npx nx run document-model-libs:generate
             

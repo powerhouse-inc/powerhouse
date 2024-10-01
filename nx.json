@@ -18,6 +18,9 @@
         ]
     },
     "targetDefaults": {
+        "generate": {
+            "dependsOn": ["^build"]
+        },
         "dev": {
             "dependsOn": ["^build"]
         },
