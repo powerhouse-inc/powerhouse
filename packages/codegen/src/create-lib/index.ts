@@ -4,13 +4,12 @@ import { execSync } from 'child_process';
 import { prompt } from 'enquirer';
 import fs from 'fs';
 import path from 'path';
-import util from 'util';
 import {
     DEFAULT_CONFIG,
     configSpec,
     parseArgs,
     promptDirectories,
-} from '../utils';
+} from '../utils/cli';
 import { getPackageManager } from './command';
 
 const BOILERPLATE_REPO =
