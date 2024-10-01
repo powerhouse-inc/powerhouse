@@ -1,3 +1,15 @@
+## 1.92.0 (2024-10-01)
+
+
+### 🚀 Features
+
+- **document-model-libs:** initial package setup ([39ab0a6](https://github.com/powerhouse-inc/powerhouse/commit/39ab0a6))
+
+
+### ❤️  Thank You
+
+- Guillermo Puente @gpuente
+
 # [1.91.0](https://github.com/powerhouse-inc/document-model-libs/compare/v1.90.1...v1.91.0) (2024-10-01)
 
 
