@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import { useArgs, useChannel } from '@storybook/preview-api';
 import { Meta, ReactRenderer } from '@storybook/react';
 import { type StoryAnnotations } from '@storybook/types';
@@ -10,6 +9,7 @@ import {
     ExtendedState,
     Reducer,
     utils,
+    Document,
 } from 'document-model/document';
 import React, { useState } from 'react';
 import { useDocumentReducer } from '../reducer';
@@ -46,8 +46,34 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
 ) {
     const meta = {
         component: wrapEditor(Editor),
-        render: () => {
-            const [args, setArgs] = useArgs<EditorArgs<S, A, L>>();
+        decorators: [
+            (Story, { args }) => {
+                const darkTheme = args.theme === 'dark';
+                return (
+                    <div
+                        style={{
+                            padding: '0',
+                            height: '100vh',
+                            color: darkTheme ? 'white' : 'black',
+                            backgroundColor: darkTheme ? '#1A1D1F' : 'white',
+                        }}
+                    >
+                        <Story />
+                    </div>
+                );
+            },
+            (Story) => {
+                const [, setArgs] = useArgs<EditorArgs<S, A, L>>();
+                const emit = useChannel({
+                    DOCUMENT: (document: Document<S, A, L>) => {
+                        setArgs({ document });
+                    },
+                });
+
+                return <Story emit={emit} />;
+            },
+        ],
+        render: function Render(args) {
             const [error, setError] = useState<unknown>();
             const emit = useChannel({});
 
@@ -85,29 +111,14 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
             //  resets the budget state in the reducer when the prop changes
             React.useEffect(() => {
                 if (state) {
-                    setArgs({ document: state });
                     emit('DOCUMENT', state);
                 }
                 setError(undefined);
             }, [state]);
 
-            const darkTheme = args.theme === 'dark';
             const WrappedEditor = wrapEditor(Editor);
             return (
-                <div
-                    style={{
-                        padding: '0',
-                        height: '100vh',
-                        color: darkTheme ? 'white' : 'black',
-                        backgroundColor: darkTheme ? '#1A1D1F' : 'white',
-                    }}
-                >
-                    <WrappedEditor
-                        {...args}
-                        dispatch={dispatch}
-                        error={error}
-                    />
-                </div>
+                <WrappedEditor {...args} dispatch={dispatch} error={error} />
             );
         },
         argTypes: {
