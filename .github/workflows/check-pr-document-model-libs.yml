@@ -1,0 +1,88 @@
+name: Check PR document-model-libs
+
+on:
+    workflow_dispatch:
+    push:
+        branches: ['main']
+        paths:
+            - 'packages/document-model-libs/**'
+    pull_request:
+        branches: ['main']
+        paths:
+            - 'packages/document-model-libs/**'
+        types: [opened, synchronize]
+
+env:
+  NX_ISOLATE_PLUGINS: false
+
+jobs:
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        container: node:22
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: false
+
+            - name: Install Dependencies
+              run: pnpm install --no-frozen-lockfile
+
+            - name: Generate
+              run: npx nx run document-model-libs:generate
+            
+            - name: Format generated
+              run: npx nx run document-model-libs:format-generated
+
+            - name: Lint
+              run: npx nx run document-model-libs:lint
+
+
+    build:
+        name: Build
+        timeout-minutes: 15
+        runs-on: ubuntu-latest
+        container: node:22
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: false
+
+            - name: Install Dependencies
+              run: pnpm install --no-frozen-lockfile
+
+            - name: Build
+              run: npx nx run document-model-libs:build
+
+    # TODO: ADD CHROMATIC_PROJECT_TOKEN to secrets
+    # chromatic:
+    #     runs-on: ubuntu-latest
+    #     steps:
+    #       - name: Checkout code
+    #         uses: actions/checkout@v4
+    #         with:
+    #           fetch-depth: 0
+
+    #       - name: Install dependencies
+    #         uses: pnpm/action-setup@v3
+    #         with:
+    #           version: latest-8
+    #           run_install: false
+
+    #       - name: Install dependencies
+    #         run: pnpm install --no-frozen-lockfile
+
+    #       - name: Publish to Chromatic
+    #         uses: chromaui/action@latest
+    #         with:
+    #           # ⚠️ Make sure to configure a `CHROMATIC_PROJECT_TOKEN` repository secret
+    #           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

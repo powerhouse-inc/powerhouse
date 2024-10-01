@@ -1,4 +1,4 @@
-name: Check PR Codegen
+name: Check PR document-drive
 
 on:
     workflow_dispatch:

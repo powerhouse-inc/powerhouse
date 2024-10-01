@@ -11,6 +11,8 @@ on:
         options:
           - 'document-model'
           - '@powerhousedao/codegen'
+          - 'document-drive'
+          - 'document-model-libs'
           - 'packages/*'
 
 jobs:
