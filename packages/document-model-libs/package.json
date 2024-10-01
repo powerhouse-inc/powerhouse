@@ -1,0 +1,170 @@
+{
+    "name": "document-model-libs",
+    "version": "1.91.0",
+    "license": "AGPL-3.0-only",
+    "types": "dist/index.d.ts",
+    "main": "dist/cjs/index.cjs",
+    "module": "dist/es/index.js",
+    "type": "module",
+    "files": [
+        "/dist"
+    ],
+    "exports": {
+        ".": {
+            "import": "./dist/es/index.js",
+            "require": "./dist/cjs/index.cjs",
+            "types": "./dist/index.d.ts"
+        },
+        "./editors": {
+            "import": "./dist/es/editors.js",
+            "require": "./dist/cjs/editors.cjs",
+            "types": "./dist/editors.d.ts"
+        },
+        "./document-models": {
+            "import": "./dist/es/document-models.js",
+            "require": "./dist/cjs/document-models.cjs",
+            "types": "./dist/document-models.d.ts"
+        },
+        "./budget-statement": {
+            "import": "./dist/es/budget-statement.js",
+            "require": "./dist/cjs/budget-statement.cjs",
+            "types": "./dist/budget-statement.d.ts"
+        },
+        "./scope-framework": {
+            "import": "./dist/es/scope-framework.js",
+            "require": "./dist/cjs/scope-framework.cjs",
+            "types": "./dist/scope-framework.d.ts"
+        },
+        "./account-snapshot": {
+            "import": "./dist/es/account-snapshot.js",
+            "require": "./dist/cjs/account-snapshot.cjs",
+            "types": "./dist/account-snapshot.d.ts"
+        },
+        "./document-drive": {
+            "import": "./dist/es/document-drive.js",
+            "require": "./dist/cjs/document-drive.cjs",
+            "types": "./dist/document-drive.d.ts"
+        },
+        "./real-world-assets": {
+            "import": "./dist/es/real-world-assets.js",
+            "require": "./dist/cjs/real-world-assets.cjs",
+            "types": "./dist/real-world-assets.d.ts"
+        },
+        "./utils": {
+            "import": "./dist/es/utils.js",
+            "require": "./dist/cjs/utils.cjs",
+            "types": "./dist/utils.d.ts"
+        }
+    },
+    "scripts": {
+        "generate": "powerhouse generate",
+        "format-generated": "npx prettier '**/gen/**/*' --write --config ./prettier.config.js --ignore-path /dev/null",
+        "postgenerate": "npm run format-generated",
+        "check-types": "tsc",
+        "postlint": "npm run check-types",
+        "lint": "eslint",
+        "lint-staged": "lint-staged",
+        "build": "npm run generate && vite build",
+        "storybook": "npm run generate && storybook dev -p 6006",
+        "build-storybook": "npm run generate && storybook build",
+        "test": "vitest run",
+        "test:nogen": "vitest run",
+        "test:watch": "vitest",
+        "chromatic": "npx chromatic --project-token chpt_7f618da80620e4d",
+        "release": "semantic-release",
+        "prepublishOnly": "npm run build"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^18.6.1",
+        "@commitlint/config-conventional": "^18.6.3",
+        "@emotion/react": "^11.11.3",
+        "@emotion/styled": "^11.11.0",
+        "@eslint/compat": "^1.1.1",
+        "@eslint/eslintrc": "^3.1.0",
+        "@eslint/js": "^9.11.0",
+        "@monaco-editor/react": "^4.6.0",
+        "@mui/material": "^5.15.5",
+        "@powerhousedao/codegen": "0.0.15",
+        "@powerhousedao/design-system": "1.0.0-alpha.175",
+        "@semantic-release/changelog": "^6.0.3",
+        "@semantic-release/git": "^10.0.1",
+        "@storybook/addon-essentials": "^8.3.2",
+        "@storybook/addon-interactions": "^8.3.2",
+        "@storybook/addon-links": "^8.3.2",
+        "@storybook/blocks": "^8.3.2",
+        "@storybook/components": "^8.3.2",
+        "@storybook/manager-api": "^8.3.2",
+        "@storybook/preview-api": "^8.3.2",
+        "@storybook/react": "^8.3.2",
+        "@storybook/react-vite": "^8.3.2",
+        "@storybook/types": "^8.3.2",
+        "@theguild/editor": "^1.3.9",
+        "@total-typescript/ts-reset": "^0.6.1",
+        "@types/eslint__js": "^8.42.3",
+        "@types/node": "^22.5.5",
+        "@types/react": "^18.3.8",
+        "@types/uuid": "^10.0.0",
+        "@typescript-eslint/eslint-plugin": "^8.6.0",
+        "@typescript-eslint/parser": "^8.6.0",
+        "@vitest/coverage-v8": "^2.1.1",
+        "autoprefixer": "^10.4.20",
+        "change-case": "^5.4.4",
+        "chromatic": "^11.10.2",
+        "constrained-editor-plugin": "^1.3.0",
+        "crypto-browserify": "^3.12.0",
+        "document-model": "^1.8.0",
+        "document-model-editors": "^1.0.1",
+        "dspot-powerhouse-components": "^1.1.0",
+        "eslint": "^9.11.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-prettier": "^5.2.1",
+        "eslint-plugin-react": "^7.36.1",
+        "eslint-plugin-react-hooks": "^4.6.2",
+        "eslint-plugin-storybook": "^0.8.0",
+        "eslint-plugin-tailwindcss": "^3.17.4",
+        "globals": "^15.9.0",
+        "graphql": "^16.9.0",
+        "husky": "^9.1.6",
+        "lint-staged": "^15.2.10",
+        "microdiff": "^1.3.2",
+        "monaco-editor": "^0.45.0",
+        "path-browserify": "^1.0.1",
+        "postcss": "^8.4.47",
+        "prettier": "^3.3.3",
+        "prettier-plugin-organize-imports": "^4.1.0",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-lazy-with-preload": "^2.2.1",
+        "semantic-release": "^23.1.1",
+        "storybook": "^8.3.2",
+        "storybook-mock-date-decorator": "^2.0.6",
+        "tailwind-merge": "^2.5.2",
+        "tailwindcss": "^3.4.12",
+        "typescript": "^5.6.2",
+        "typescript-eslint": "^8.6.0",
+        "uuid": "^9.0.1",
+        "viem": "^2.9.18",
+        "vite": "^5.2.9",
+        "vite-plugin-dts": "^3.8.3",
+        "vite-plugin-generate-file": "^0.1.1",
+        "vitest": "^1.6.0",
+        "zod": "^3.22.4"
+    },
+    "peerDependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
+    },
+    "dependencies": {
+        "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
+        "@graphql-codegen/core": "^4.0.2",
+        "@graphql-codegen/typescript": "^4.0.6",
+        "@internationalized/date": "^3.5.1",
+        "@storybook/test": "^8.0.2",
+        "copy-anything": "^3.0.5",
+        "date-fns": "^3.3.1",
+        "deep-object-diff": "^1.1.9",
+        "jsonc-parser": "^3.2.1",
+        "jszip": "^3.10.1",
+        "mathjs": "^13.0.0"
+    }
+}

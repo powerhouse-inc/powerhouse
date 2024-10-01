@@ -1,0 +1,25 @@
+#import * from "../schema.graphql"
+
+input AddVestingInput {
+    key: String
+    date: String
+    amount: String
+    amountOld: String
+    comment: String
+    currency: String
+    vested: Boolean
+}
+
+input UpdateVestingInput {
+    key: String!
+    date: String
+    amount: String
+    amountOld: String
+    comment: String
+    currency: String
+    vested: Boolean
+}
+
+input DeleteVestingInput {
+    vesting: String!
+}

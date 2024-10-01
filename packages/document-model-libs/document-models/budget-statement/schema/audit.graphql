@@ -1,0 +1,19 @@
+#import * from "../schema.graphql"
+
+input DocumentFileInput {
+    hash: String!
+    data: String!
+    mimeType: String!
+    extension: String
+    fileName: String
+}
+
+input AddAuditReportInput {
+    timestamp: DateTime
+    report: Attachment!
+    status: AuditReportStatus!
+}
+
+input DeleteAuditReportInput {
+    report: String!
+}

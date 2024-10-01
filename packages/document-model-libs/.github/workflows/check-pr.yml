@@ -1,0 +1,78 @@
+name: Check PR
+
+on:
+    push:
+        branches: ['main']
+    pull_request:
+        branches: ['main']
+        types: [opened, synchronize]
+
+jobs:
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+            - uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: Generate
+              run: pnpm run generate
+
+            - name: Format generated
+              run: pnpm run format-generated
+
+            - name: Lint
+              run: pnpm run lint
+
+    test:
+        name: Test
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+            - uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: Test
+              run: pnpm run test
+
+    build:
+        name: Build
+        timeout-minutes: 15
+        runs-on: ubuntu-latest
+        needs: [lint, test]
+        steps:
+            - uses: actions/checkout@v3
+            - uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: true
+
+            - name: Build
+              run: pnpm run build
+    
+    chromatic:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
+            with:
+              fetch-depth: 0
+
+          - name: Install dependencies
+            uses: pnpm/action-setup@v3
+            with:
+              version: latest-8
+              run_install: true
+
+          - name: Publish to Chromatic
+            uses: chromaui/action@latest
+            with:
+              # ⚠️ Make sure to configure a `CHROMATIC_PROJECT_TOKEN` repository secret
+              projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

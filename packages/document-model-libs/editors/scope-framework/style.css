@@ -1,0 +1,60 @@
+.atlas-element {
+    display: block;
+    margin: 1rem 0;
+    padding: 1rem 0 0 0;
+}
+
+.atlas-element--first {
+    border-top: 1px solid #323337;
+    padding: 5rem 0 0 0;
+}
+
+.atlas-element--header-component,
+.atlas-element--componentLabel,
+.atlas-element--componentInput {
+    display: inline-block;
+    vertical-align: top;
+    box-sizing: border-box;
+    padding: 0 0.5rem;
+}
+
+.atlas-element--path {
+    width: 15%;
+    text-align: right;
+}
+
+.atlas-element--type {
+    width: 10%;
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: small;
+}
+
+.atlas-element--name {
+    width: 75%;
+    font-size: 150%;
+    font-weight: bold;
+}
+
+.atlas-element--version {
+    width: 10%;
+    display: none;
+}
+
+.atlas-element--icons {
+    width: 10%;
+    display: none;
+}
+
+.atlas-element--componentLabel {
+    width: 25%;
+    text-align: right;
+    color: #aaa;
+    font-size: small;
+}
+
+.atlas-element--componentInput {
+    width: 75%;
+    text-align: left;
+}
