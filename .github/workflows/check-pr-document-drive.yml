@@ -84,5 +84,4 @@ jobs:
               working-directory: packages/document-drive
 
             - name: Test
-              run: pnpm test
-              working-directory: packages/document-drive
+              run: npx nx run document-drive:test
