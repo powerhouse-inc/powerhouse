@@ -1,3 +1,10 @@
+# [1.0.0-dev.133](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.132...v1.0.0-dev.133) (2024-10-02)
+
+
+### Features
+
+* add support for setting google tag id ([be6a447](https://github.com/powerhouse-inc/document-model-electron/commit/be6a447eddf4698210826f2e038025f3c2ebbad3))
+
 # [1.0.0-dev.132](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.131...v1.0.0-dev.132) (2024-09-24)
 
 
