@@ -1,6 +1,5 @@
 import { useArgs, useChannel } from '@storybook/preview-api';
-import { Meta, ReactRenderer } from '@storybook/react';
-import { type StoryAnnotations } from '@storybook/types';
+import { Meta, StoryObj } from '@storybook/react';
 import {
     Action,
     ActionContext,
@@ -14,41 +13,39 @@ import {
 import React, { useState } from 'react';
 import { useDocumentReducer } from '../reducer';
 
-export type DocumentStory<S, A extends Action, LocalState> = StoryAnnotations<
-    ReactRenderer,
-    EditorArgs<S, A, LocalState>
->;
+type EditorStoryArgs = Partial<{
+    isAllowedToCreateDocuments: boolean;
+    isAllowedToEditDocuments: boolean;
+    canUndo: boolean;
+    canRedo: boolean;
+    onSwitchboardLinkClick: (() => void) | undefined;
+    onExport: () => void;
+    onClose: () => void;
+    onShowRevisionHistory: () => void;
+}>;
 
-type EditorComponent<S, A extends Action, L = unknown> = (
-    props: EditorProps<S, A, L>,
+type EditorStoryProps<S, A extends Action, L = unknown> = EditorProps<S, A, L> &
+    EditorStoryArgs;
+
+export type EditorStoryComponent<S, A extends Action, L = unknown> = (
+    props: EditorStoryProps<S, A, L>,
 ) => React.JSX.Element;
 
-type EditorArgs<S, A extends Action, L = unknown> = Omit<
-    EditorProps<S, A, L>,
-    'context'
-> &
-    Pick<EditorProps<S, A, L>['context'], 'theme' | 'user'>;
-
-function wrapEditor<S, A extends Action, L = unknown>(
-    Editor: EditorComponent<S, A, L>,
-) {
-    const WrappedEditor = (args: EditorArgs<S, A, L>) => {
-        const { theme, user, ...restArgs } = args;
-        return <Editor {...restArgs} context={{ theme, user }} />;
-    };
-    return WrappedEditor;
-}
+export type DocumentStory<S, A extends Action, LocalState> = StoryObj<
+    EditorStoryComponent<S, A, LocalState>
+>;
 
 export function createDocumentStory<S, A extends Action, L = unknown>(
-    Editor: (props: EditorProps<S, A, L>) => React.JSX.Element,
+    Editor: EditorStoryComponent<S, A, L>,
     reducer: Reducer<S, A, L>,
     initialState: ExtendedState<Partial<S>>,
+    additionalStoryArgs?: EditorStoryArgs,
 ) {
     const meta = {
-        component: wrapEditor(Editor),
+        component: Editor,
         decorators: [
             (Story, { args }) => {
-                const darkTheme = args.theme === 'dark';
+                const darkTheme = args.context.theme === 'dark';
                 return (
                     <div
                         style={{
@@ -62,8 +59,8 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                     </div>
                 );
             },
-            (Story) => {
-                const [, setArgs] = useArgs<EditorArgs<S, A, L>>();
+            (Story, { args }) => {
+                const [, setArgs] = useArgs<typeof args>();
                 const emit = useChannel({
                     DOCUMENT: (document: Document<S, A, L>) => {
                         setArgs({ document });
@@ -77,7 +74,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
             const [error, setError] = useState<unknown>();
             const emit = useChannel({});
 
-            const [state, _dispatch] = useDocumentReducer(
+            const [document, _dispatch] = useDocumentReducer(
                 reducer,
                 args.document,
                 (error) => {
@@ -88,12 +85,12 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
 
             function dispatch(action: A | BaseAction) {
                 const context: ActionContext = {};
-                if (args.user) {
+                if (args.context.user) {
                     context.signer = {
                         user: {
-                            address: args.user.address,
-                            networkId: args.user.networkId,
-                            chainId: args.user.chainId,
+                            address: args.context.user.address,
+                            networkId: args.context.user.networkId,
+                            chainId: args.context.user.chainId,
                         },
                         app: {
                             name: 'storybook',
@@ -110,15 +107,21 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
 
             //  resets the budget state in the reducer when the prop changes
             React.useEffect(() => {
-                if (state) {
-                    emit('DOCUMENT', state);
+                if (document) {
+                    emit('DOCUMENT', document);
                 }
                 setError(undefined);
-            }, [state]);
+            }, [document, emit]);
 
-            const WrappedEditor = wrapEditor(Editor);
             return (
-                <WrappedEditor {...args} dispatch={dispatch} error={error} />
+                <Editor
+                    context={args.context}
+                    dispatch={dispatch}
+                    document={document}
+                    error={error}
+                    isAllowedToCreateDocuments
+                    isAllowedToEditDocuments
+                />
             );
         },
         argTypes: {
@@ -130,33 +133,38 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
                     disable: true,
                 },
             },
-            theme: {
-                name: 'Theme',
-                options: ['light', 'dark'],
-                defaultValue: 'light',
-                control: 'inline-radio',
-            },
-            user: {
-                control: 'object',
+            context: {
+                theme: {
+                    name: 'Theme',
+                    options: ['light', 'dark'],
+                    defaultValue: 'light',
+                    control: 'inline-radio',
+                },
+                user: {
+                    control: 'object',
+                },
             },
         },
-    } satisfies Meta<(args: EditorArgs<S, A, L>) => React.JSX.Element>;
+    } satisfies Meta<typeof Editor>;
 
     const CreateDocumentStory: DocumentStory<S, A, unknown> = {
         name: 'New document',
         args: {
             document: utils.createDocument(initialState),
-            theme: 'light',
-            user: {
-                address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
-                networkId: 'eip155',
-                chainId: 1,
-                ens: {
-                    name: 'vitalik.eth',
-                    avatarUrl:
-                        'https://ipfs.io/ipfs/QmSP4nq9fnN9dAiCj42ug9Wa79rqmQerZXZch82VqpiH7U/image.gif',
+            context: {
+                theme: 'light',
+                user: {
+                    address: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
+                    networkId: 'eip155',
+                    chainId: 1,
+                    ens: {
+                        name: 'vitalik.eth',
+                        avatarUrl:
+                            'https://ipfs.io/ipfs/QmSP4nq9fnN9dAiCj42ug9Wa79rqmQerZXZch82VqpiH7U/image.gif',
+                    },
                 },
             },
+            ...additionalStoryArgs,
         },
     };
 
