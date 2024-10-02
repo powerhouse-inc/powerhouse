@@ -137,6 +137,20 @@ describe('Read mode methods', () => {
                         timestamp
                         type
                         inputText
+                        context {
+                            signer {
+                                user {
+                                    address
+                                    networkId
+                                    chainId
+                                }
+                                app {
+                                    name
+                                    key
+                                }
+                                signatures
+                            }
+                        }
                     }
                     ... on DocumentDrive {
                         state {

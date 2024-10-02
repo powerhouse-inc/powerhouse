@@ -34,7 +34,8 @@
         "test": "vitest run --coverage --exclude \"test/flaky/**\"",
         "test:watch": "vitest watch",
         "clean": "rimraf dist",
-        "clean:node_modules": "rimraf node_modules"
+        "clean:node_modules": "rimraf node_modules",
+        "build": " "
     },
     "peerDependencies": {
         "document-model": "^1.8.0",
