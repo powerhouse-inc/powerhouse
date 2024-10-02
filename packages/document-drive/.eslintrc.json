@@ -40,6 +40,17 @@
         "@typescript-eslint/no-extraneous-class": "warn",
         "@typescript-eslint/await-thenable": "warn",
         "@typescript-eslint/no-dynamic-delete": "warn",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/no-unsafe-argument": "off",
+        "@typescript-eslint/no-unsafe-return": "off",
+        "@typescript-eslint/no-unsafe-call": "off",
+        "@typescript-eslint/restrict-plus-operands": "off",
+        "@typescript-eslint/no-redundant-type-constituents": "off",
+        "react-hooks/rules-of-hooks": "off",
+        "@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
+        "@typescript-eslint/prefer-optional-chain": "off",
+        "@typescript-eslint/no-unnecessary-type-assertion": "off",
         "@typescript-eslint/no-unused-vars": [
             1,
             { "ignoreRestSiblings": true }
