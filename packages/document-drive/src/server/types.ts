@@ -202,6 +202,8 @@ export interface DriveEvents {
         status: number,
         errorMessage: string
     ) => void;
+    driveAdded: (id: string, state: DocumentDriveState) => void;
+    driveDeleted: (id: string) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -254,43 +256,43 @@ export type RemoveDriveStrategy = 'remove' | 'detach';
  */
 export type RemoveOldRemoteDrivesOption =
     | {
-          strategy: 'remove-all';
-      }
+        strategy: 'remove-all';
+    }
     | {
-          strategy: 'preserve-all';
-      }
+        strategy: 'preserve-all';
+    }
     | {
-          strategy: 'remove-by-id';
-          ids: string[];
-      }
+        strategy: 'remove-by-id';
+        ids: string[];
+    }
     | {
-          strategy: 'remove-by-url';
-          urls: string[];
-      }
+        strategy: 'remove-by-url';
+        urls: string[];
+    }
     | {
-          strategy: 'preserve-by-id';
-          ids: string[];
-      }
+        strategy: 'preserve-by-id';
+        ids: string[];
+    }
     | {
-          strategy: 'preserve-by-url';
-          urls: string[];
-      }
+        strategy: 'preserve-by-url';
+        urls: string[];
+    }
     | {
-          strategy: 'detach-by-id';
-          ids: string[];
-      }
+        strategy: 'detach-by-id';
+        ids: string[];
+    }
     | {
-          strategy: 'detach-by-url';
-          urls: string[];
-      }
+        strategy: 'detach-by-url';
+        urls: string[];
+    }
     | {
-          strategy: 'preserve-by-id-and-detach';
-          ids: string[];
-      }
+        strategy: 'preserve-by-id-and-detach';
+        ids: string[];
+    }
     | {
-          strategy: 'preserve-by-url-and-detach';
-          urls: string[];
-      };
+        strategy: 'preserve-by-url-and-detach';
+        urls: string[];
+    };
 
 export type DocumentDriveServerOptions = {
     defaultDrives: {
