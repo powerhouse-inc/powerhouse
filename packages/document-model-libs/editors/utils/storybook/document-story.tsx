@@ -115,12 +115,10 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
 
             return (
                 <Editor
-                    context={args.context}
+                    {...args}
                     dispatch={dispatch}
                     document={document}
                     error={error}
-                    isAllowedToCreateDocuments
-                    isAllowedToEditDocuments
                 />
             );
         },
