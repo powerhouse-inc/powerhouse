@@ -202,6 +202,7 @@ export interface DriveEvents {
         status: number,
         errorMessage: string
     ) => void;
+    documentModels: (documentModels: DocumentModel[]) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -294,6 +295,7 @@ export type RemoveOldRemoteDrivesOption =
 
 export type DocumentDriveServerOptions = {
     defaultDrives: {
+        loadOnInit?: boolean; // defaults to true
         remoteDrives?: Array<DefaultRemoteDriveInput>;
         removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
     };
@@ -313,6 +315,8 @@ export type GetStrandsOptions = {
 
 export abstract class AbstractDocumentDriveServer {
     /** Public methods **/
+    abstract initialize(): Promise<Error[] | null>;
+    abstract setDocumentModels(models: DocumentModel[]): void;
     abstract getDrives(): Promise<string[]>;
     abstract addDrive(drive: DriveInput): Promise<DocumentDriveDocument>;
     abstract addRemoteDrive(

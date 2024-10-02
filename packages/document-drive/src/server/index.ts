@@ -184,6 +184,15 @@ export class BaseDocumentDriveServer
         this.initializePromise = this._initialize();
     }
 
+    setDocumentModels(models: DocumentModel[]): void {
+        this.documentModels = [...models];
+        this.emit('documentModels', [...models]);
+    }
+
+    initializeDefaultRemoteDrives() {
+        return this.defaultDrivesManager.initializeDefaultRemoteDrives();
+    }
+
     getDefaultRemoteDrives() {
         return this.defaultDrivesManager.getDefaultRemoteDrives();
     }
@@ -191,6 +200,7 @@ export class BaseDocumentDriveServer
     setDefaultDriveAccessLevel(url: string, level: RemoteDriveAccessLevel) {
         return this.defaultDrivesManager.setDefaultDriveAccessLevel(url, level);
     }
+
     setAllDefaultDrivesAccessLevel(level: RemoteDriveAccessLevel) {
         return this.defaultDrivesManager.setAllDefaultDrivesAccessLevel(level);
     }
@@ -626,7 +636,9 @@ export class BaseDocumentDriveServer
             });
         }
 
-        await this.defaultDrivesManager.initializeDefaultRemoteDrives();
+        if (this.options.defaultDrives.loadOnInit !== false) {
+            await this.defaultDrivesManager.initializeDefaultRemoteDrives();
+        }
 
         // if network connect comes back online
         // then triggers the listeners update

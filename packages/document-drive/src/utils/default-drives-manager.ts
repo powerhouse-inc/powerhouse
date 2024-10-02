@@ -22,6 +22,7 @@ function isReadModeDriveServer(obj: unknown): obj is IReadModeDriveServer {
 }
 
 export interface IDefaultDrivesManager {
+    initializeDefaultRemoteDrives(): Promise<void>;
     getDefaultRemoteDrives(): Map<string, DefaultRemoteDriveInfo>;
     setDefaultDriveAccessLevel(
         url: string,
