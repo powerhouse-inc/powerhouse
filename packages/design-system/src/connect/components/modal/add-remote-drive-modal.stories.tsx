@@ -18,6 +18,13 @@ export const Default: Story = {
         onSubmit() {},
         onOpenChange() {},
         sharingType: LOCAL,
+        requestPublicDrive(url) {
+            return Promise.resolve({
+                id: '1',
+                name: 'Public Drive',
+                url,
+            });
+        },
     },
     render: function Wrapper(args) {
         const [, setArgs] = useArgs<typeof args>();

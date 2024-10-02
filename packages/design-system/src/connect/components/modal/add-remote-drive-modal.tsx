@@ -1,4 +1,5 @@
 import {
+    AddPublicDriveFormProps,
     AddRemoteDriveForm,
     AddRemoteDriveInput,
     Divider,
@@ -16,7 +17,7 @@ export type AddRemoteDriveModal = {
     readonly sharingType: SharingType;
     readonly modalProps?: ModalProps;
     readonly containerProps?: DivProps;
-};
+} & Pick<AddPublicDriveFormProps, 'requestPublicDrive'>;
 export function AddRemoteDriveModal(props: AddRemoteDriveModal) {
     const {
         open,
@@ -25,6 +26,7 @@ export function AddRemoteDriveModal(props: AddRemoteDriveModal) {
         sharingType,
         modalProps,
         containerProps,
+        requestPublicDrive,
     } = props;
     function handleCancel() {
         onOpenChange(false);
@@ -59,6 +61,7 @@ export function AddRemoteDriveModal(props: AddRemoteDriveModal) {
                 <AddRemoteDriveForm
                     onCancel={handleCancel}
                     onSubmit={onSubmit}
+                    requestPublicDrive={requestPublicDrive}
                     sharingType={sharingType}
                 />
             </div>

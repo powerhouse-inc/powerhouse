@@ -11,7 +11,6 @@ import {
     SWITCHBOARD,
 } from '@/connect';
 import { Button, Icon } from '@/powerhouse';
-import { requestPublicDrive } from 'document-drive/utils/graphql';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useDebounceValue } from 'usehooks-ts';
@@ -30,14 +29,17 @@ type Inputs = {
 
 export type AddRemoteDriveInput = RemoteDriveDetails & { url: string };
 
-type AddPublicDriveFormProps = {
+export type AddPublicDriveFormProps = {
     readonly sharingType: SharingType;
     readonly onSubmit: (data: AddRemoteDriveInput) => void;
     readonly onCancel: () => void;
+    readonly requestPublicDrive: (
+        url: string,
+    ) => Promise<{ id: string; name: string }>;
 };
 
 export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
-    const { sharingType = PUBLIC } = props;
+    const { sharingType = PUBLIC, requestPublicDrive } = props;
     const [remoteDriveDetails, setPublicDriveDetails] =
         useState<RemoteDriveDetails>();
     const [showLocationSettings, setShowLocationSettings] = useState(false);
