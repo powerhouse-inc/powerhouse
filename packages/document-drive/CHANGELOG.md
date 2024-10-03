@@ -1,3 +1,15 @@
+## 1.0.0-alpha.102 (2024-10-03)
+
+
+### 🚀 Features
+
+- **document-drive:** update peer dependencies ([534bf37](https://github.com/powerhouse-inc/powerhouse/commit/534bf37))
+
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-alpha.101 (2024-10-03)
 
 
