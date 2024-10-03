@@ -1,3 +1,202 @@
+## 1.0.0-alpha.101 (2024-10-03)
+
+
+### 🚀 Features
+
+- Added account snapshot base model document + base operations tests ([24ca99e](https://github.com/powerhouse-inc/powerhouse/commit/24ca99e))
+
+- added Editor for account snapshot ([5824db0](https://github.com/powerhouse-inc/powerhouse/commit/5824db0))
+
+- changed moved dspot deps to devDeps ([025344c](https://github.com/powerhouse-inc/powerhouse/commit/025344c))
+
+- allow user to only edit the content of the operation type ([79af391](https://github.com/powerhouse-inc/powerhouse/commit/79af391))
+
+- bump lint packages ([3ddc239](https://github.com/powerhouse-inc/powerhouse/commit/3ddc239))
+
+- install ts-reset lib ([cfa8620](https://github.com/powerhouse-inc/powerhouse/commit/cfa8620))
+
+- use new codegen lib name ([ba6ad45](https://github.com/powerhouse-inc/powerhouse/commit/ba6ad45))
+
+- bump document model ([c8a2318](https://github.com/powerhouse-inc/powerhouse/commit/c8a2318))
+
+- add real world assets portfolio document model ([#33](https://github.com/powerhouse-inc/powerhouse/pull/33))
+
+- add fixed income type reducers ([#66](https://github.com/powerhouse-inc/powerhouse/pull/66))
+
+- RWA Editor integration with RWA document ([#65](https://github.com/powerhouse-inc/powerhouse/pull/65))
+
+- handle skew icon and move table components to design system ([#79](https://github.com/powerhouse-inc/powerhouse/pull/79))
+
+- enabled rwa editor controls ([#80](https://github.com/powerhouse-inc/powerhouse/pull/80))
+
+- update design system dep ([6bb65b2](https://github.com/powerhouse-inc/powerhouse/commit/6bb65b2))
+
+- enabled support for switchboard link in RWA editor ([#82](https://github.com/powerhouse-inc/powerhouse/pull/82))
+
+- added release ghub action ([#85](https://github.com/powerhouse-inc/powerhouse/pull/85))
+
+- use mock date in stories ([#88](https://github.com/powerhouse-inc/powerhouse/pull/88))
+
+- add real-word-assets export ([1b69471](https://github.com/powerhouse-inc/powerhouse/commit/1b69471))
+
+- added missing rwa types export ([68117ae](https://github.com/powerhouse-inc/powerhouse/commit/68117ae))
+
+- add transactions editor ([#94](https://github.com/powerhouse-inc/powerhouse/pull/94))
+
+- fix object references and temp hack for state delay bug ([#99](https://github.com/powerhouse-inc/powerhouse/pull/99))
+
+- treat cash balance change as input ([#102](https://github.com/powerhouse-inc/powerhouse/pull/102))
+
+- bump design system ([#103](https://github.com/powerhouse-inc/powerhouse/pull/103))
+
+- added error handling support for Editor components and dispatch function ([#104](https://github.com/powerhouse-inc/powerhouse/pull/104))
+
+- implement teeps feedback ([#107](https://github.com/powerhouse-inc/powerhouse/pull/107))
+
+- bump design system ([1bcba8f](https://github.com/powerhouse-inc/powerhouse/commit/1bcba8f))
+
+- add other tab ([#111](https://github.com/powerhouse-inc/powerhouse/pull/111))
+
+- bump libs ([0f0d30a](https://github.com/powerhouse-inc/powerhouse/commit/0f0d30a))
+
+- use uuid to generate sync id ([b322b0c](https://github.com/powerhouse-inc/powerhouse/commit/b322b0c))
+
+- implement teep's feedback 2 ([#120](https://github.com/powerhouse-inc/powerhouse/pull/120))
+
+- add remaining transaction types ([#121](https://github.com/powerhouse-inc/powerhouse/pull/121))
+
+- implement teep's feeback 4 ([#122](https://github.com/powerhouse-inc/powerhouse/pull/122))
+
+- set sync unit ids on actions ([3c1489a](https://github.com/powerhouse-inc/powerhouse/commit/3c1489a))
+
+- add cash asset row ([#124](https://github.com/powerhouse-inc/powerhouse/pull/124))
+
+- added user to editor context ([fed9c6e](https://github.com/powerhouse-inc/powerhouse/commit/fed9c6e))
+
+- added support for setting the user in the editor story ([b1ff8d6](https://github.com/powerhouse-inc/powerhouse/commit/b1ff8d6))
+
+- added networkId to user ([58b5af1](https://github.com/powerhouse-inc/powerhouse/commit/58b5af1))
+
+- added ens utils ([c3c69e1](https://github.com/powerhouse-inc/powerhouse/commit/c3c69e1))
+
+- handle moving folder to descendent ([#129](https://github.com/powerhouse-inc/powerhouse/pull/129))
+
+- update document-model lib version ([#133](https://github.com/powerhouse-inc/powerhouse/pull/133))
+
+- updated document-model dep ([4eb5a03](https://github.com/powerhouse-inc/powerhouse/commit/4eb5a03))
+
+- fix failing imports ([#136](https://github.com/powerhouse-inc/powerhouse/pull/136))
+
+- added separate bundles for es and cjs ([4ffb17f](https://github.com/powerhouse-inc/powerhouse/commit/4ffb17f))
+
+- changed document-model to dependency ([43f8033](https://github.com/powerhouse-inc/powerhouse/commit/43f8033))
+
+- update document-model 1.0.53 ([#142](https://github.com/powerhouse-inc/powerhouse/pull/142))
+
+- handle name collisions ([#139](https://github.com/powerhouse-inc/powerhouse/pull/139))
+
+- bump design system ([#146](https://github.com/powerhouse-inc/powerhouse/pull/146))
+
+- update transaction types and fix double count ([#148](https://github.com/powerhouse-inc/powerhouse/pull/148))
+
+- bump design system ([b3e3937](https://github.com/powerhouse-inc/powerhouse/commit/b3e3937))
+
+- add allow list props to rwa document editors ([#154](https://github.com/powerhouse-inc/powerhouse/pull/154))
+
+- handle principal lender account ([#156](https://github.com/powerhouse-inc/powerhouse/pull/156))
+
+- added entry chunks for editors ([8095e34](https://github.com/powerhouse-inc/powerhouse/commit/8095e34))
+
+- handle orphans ([#157](https://github.com/powerhouse-inc/powerhouse/pull/157))
+
+- bump design system ([#159](https://github.com/powerhouse-inc/powerhouse/pull/159))
+
+- allow item creation from other forms ([#164](https://github.com/powerhouse-inc/powerhouse/pull/164))
+
+- bump libs and update props ([#168](https://github.com/powerhouse-inc/powerhouse/pull/168))
+
+- bump deps ([e0f5580](https://github.com/powerhouse-inc/powerhouse/commit/e0f5580))
+
+- updated document-model ([a44a12b](https://github.com/powerhouse-inc/powerhouse/commit/a44a12b))
+
+- update-document-model ver ([#170](https://github.com/powerhouse-inc/powerhouse/pull/170))
+
+- add income transaction types ([#179](https://github.com/powerhouse-inc/powerhouse/pull/179))
+
+- use math lib for calculations ([#182](https://github.com/powerhouse-inc/powerhouse/pull/182))
+
+- qa updates 6 ([#183](https://github.com/powerhouse-inc/powerhouse/pull/183))
+
+- bump design system ([#186](https://github.com/powerhouse-inc/powerhouse/pull/186))
+
+- integrate revision history button ([#188](https://github.com/powerhouse-inc/powerhouse/pull/188))
+
+- make maturity optional ([#190](https://github.com/powerhouse-inc/powerhouse/pull/190))
+
+- bump design system ([b29bc57](https://github.com/powerhouse-inc/powerhouse/commit/b29bc57))
+
+- bump design system ([#193](https://github.com/powerhouse-inc/powerhouse/pull/193))
+
+- remove react aria ([#197](https://github.com/powerhouse-inc/powerhouse/pull/197))
+
+- make script path relative ([521e588](https://github.com/powerhouse-inc/powerhouse/commit/521e588))
+
+- add exclusion in the script itself ([8febd72](https://github.com/powerhouse-inc/powerhouse/commit/8febd72))
+
+- remove copy icons script ([79729b8](https://github.com/powerhouse-inc/powerhouse/commit/79729b8))
+
+- add current value ([#198](https://github.com/powerhouse-inc/powerhouse/pull/198))
+
+- update current value calculation ([6b52c3f](https://github.com/powerhouse-inc/powerhouse/commit/6b52c3f))
+
+- bump design system ([ac59906](https://github.com/powerhouse-inc/powerhouse/commit/ac59906))
+
+- update design-system 1.0.0-alpha.160 ([#202](https://github.com/powerhouse-inc/powerhouse/pull/202))
+
+- updated document-model ([e03647f](https://github.com/powerhouse-inc/powerhouse/commit/e03647f))
+
+- update document-model-libs v166 ([#205](https://github.com/powerhouse-inc/powerhouse/pull/205))
+
+- update design-system v170 ([#206](https://github.com/powerhouse-inc/powerhouse/pull/206))
+
+- update design-system v171 ([#207](https://github.com/powerhouse-inc/powerhouse/pull/207))
+
+- update design-system v174 ([#208](https://github.com/powerhouse-inc/powerhouse/pull/208))
+
+- update design-system v175 ([#209](https://github.com/powerhouse-inc/powerhouse/pull/209))
+
+- migrate eslint config ([#210](https://github.com/powerhouse-inc/powerhouse/pull/210))
+
+- add support for dynamic document models and controlled ([e167334](https://github.com/powerhouse-inc/powerhouse/commit/e167334))
+
+- **document-drive:** added test var ([fcb2410](https://github.com/powerhouse-inc/powerhouse/commit/fcb2410))
+
+
+### 🩹 Fixes
+
+- re-add script that got lost in merge ([51e520c](https://github.com/powerhouse-inc/powerhouse/commit/51e520c))
+
+- re-add dep that got lost in merge ([f763523](https://github.com/powerhouse-inc/powerhouse/commit/f763523))
+
+- install missing deps ([f288ec9](https://github.com/powerhouse-inc/powerhouse/commit/f288ec9))
+
+- file name in scripts ([7fdfb41](https://github.com/powerhouse-inc/powerhouse/commit/7fdfb41))
+
+- update doc model libs ([ee714e0](https://github.com/powerhouse-inc/powerhouse/commit/ee714e0))
+
+- **document-drive:** disable unused eslint rules ([75fd5a5](https://github.com/powerhouse-inc/powerhouse/commit/75fd5a5))
+
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+- semantic-release-bot
+
 ## 1.0.0-alpha.100 (2024-09-30)
 
 
