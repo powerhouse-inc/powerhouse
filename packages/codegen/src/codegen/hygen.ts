@@ -25,15 +25,16 @@ async function run(args: string[], { watch = false, format = false } = {}) {
     });
     if (format) {
         const execa = await import('execa');
-        result.actions
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+        const actions = result.actions as { status: string; subject: string }[];
+        actions
             .filter(action => ['added', 'inject'].includes(action.status))
             .forEach(action => {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                 execa.$`prettier --ignore-path --write ${action.subject.replace(
                     '.',
                     process.cwd(),
-                )}`;
+                )}`.catch((err: unknown) => {
+                    console.log(err);
+                });
             });
     }
 
