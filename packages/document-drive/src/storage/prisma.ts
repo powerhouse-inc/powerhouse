@@ -485,6 +485,7 @@ export class PrismaStorage implements IDriveStorage {
                 DocumentDriveState,
                 DocumentDriveLocalState
             >,
+            // @ts-expect-error TODO: fix as this should not be undefined
             state: undefined,
             lastModified: new Date(dbDoc.lastModified).toISOString(),
             operations: operationsByScope,

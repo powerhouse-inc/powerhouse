@@ -73,6 +73,10 @@ export class SequelizeStorage implements IDriveStorage {
                 type: DataTypes.STRING,
                 primaryKey: true,
                 unique: 'unique_operation'
+            },
+            skip: {
+                type: DataTypes.INTEGER,
+                defaultValue: 0
             }
         });
 
@@ -292,6 +296,7 @@ export class SequelizeStorage implements IDriveStorage {
         return count > 0;
     }
 
+    // @ts-expect-error TODO: fix as this should not be undefined
     async getDocument(driveId: string, id: string) {
         const Document = this.db.models.document;
         if (!Document) {
@@ -326,6 +331,7 @@ export class SequelizeStorage implements IDriveStorage {
                     type: string;
                     scope: string;
                     opId?: string;
+                    skip: number;
                 }
             ];
             revision: Required<Record<OperationScope, number>>;
@@ -343,26 +349,17 @@ export class SequelizeStorage implements IDriveStorage {
             throw new Error('Operation model not found');
         }
 
-        const operations = document.operations.map(
-            (op: {
-                hash: string;
-                index: number;
-                timestamp: Date;
-                input: JSON;
-                type: string;
-                scope: string;
-                opId?: string;
-            }) => ({
-                hash: op.hash,
-                index: op.index,
-                timestamp: new Date(op.timestamp).toISOString(),
-                input: op.input,
-                type: op.type,
-                scope: op.scope as OperationScope,
-                id: op.opId
-                // attachments: fileRegistry
-            })
-        );
+        const operations: Operation[] = document.operations.map(op => ({
+            hash: op.hash,
+            index: op.index,
+            timestamp: new Date(op.timestamp).toISOString(),
+            input: op.input,
+            type: op.type,
+            scope: op.scope as OperationScope,
+            id: op.opId,
+            skip: op.skip
+            // attachments: fileRegistry
+        }));
 
         const doc = {
             created: document.createdAt.toISOString(),
