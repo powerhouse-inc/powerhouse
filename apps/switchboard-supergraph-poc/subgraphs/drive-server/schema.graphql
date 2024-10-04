@@ -1,8 +1,6 @@
-input DocumentDriveStateInput {
-    name: String,
-    id: String,
-    slug: String,
-    icon: String,
+type Query {
+    drives: [String!]!
+    driveIdBySlug(slug: String!): String
 }
 
 type Mutation {
@@ -12,7 +10,9 @@ type Mutation {
     setDriveName(id: String!, name: String!): Boolean
 }
 
-type Query {
-    drives: [String!]!
-    driveIdBySlug(slug: String!): String
+input DocumentDriveStateInput {
+    name: String
+    id: String
+    slug: String
+    icon: String
 }
