@@ -7,6 +7,7 @@ settings:
 overrides:
   string-width: 4.2.3
   strip-ansi: 6.0.0
+  jackspeak: 2.1.1
 
 importers:
 
@@ -4071,18 +4072,6 @@ packages:
     dependencies:
       '@swc/helpers': 0.5.13
     dev: false
-
-  /@isaacs/cliui@8.0.2:
-    resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
-    engines: {node: '>=12'}
-    dependencies:
-      string-width: 4.2.3
-      string-width-cjs: /string-width@4.2.3
-      strip-ansi: 6.0.0
-      strip-ansi-cjs: /strip-ansi@6.0.1
-      wrap-ansi: 8.1.0
-      wrap-ansi-cjs: /wrap-ansi@7.0.0
-    dev: true
 
   /@isaacs/ttlcache@1.4.1:
     resolution: {integrity: sha512-RQgQ4uQ+pLbqXfOmieB91ejmLwvSgv9nLx6sT6sD83s7umBypgg+OIBOBbEUiJXrfpnp9j0mRhYYdzp9uqq3lA==}
@@ -14133,7 +14122,7 @@ packages:
     hasBin: true
     dependencies:
       foreground-child: 3.3.0
-      jackspeak: 3.4.3
+      jackspeak: 2.1.1
       minimatch: 9.0.5
       minipass: 7.1.2
       package-json-from-dist: 1.0.1
@@ -14146,7 +14135,7 @@ packages:
     hasBin: true
     dependencies:
       foreground-child: 3.3.0
-      jackspeak: 4.0.2
+      jackspeak: 2.1.1
       minimatch: 10.0.1
       minipass: 7.1.2
       package-json-from-dist: 1.0.1
@@ -15469,19 +15458,13 @@ packages:
       set-function-name: 2.0.2
     dev: true
 
-  /jackspeak@3.4.3:
-    resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
+  /jackspeak@2.1.1:
+    resolution: {integrity: sha512-juf9stUEwUaILepraGOWIJTLwg48bUnBmRqd2ln2Os1sW987zeoj/hzhbvRB95oMuS2ZTpjULmdwHNX4rzZIZw==}
+    engines: {node: '>=14'}
     dependencies:
-      '@isaacs/cliui': 8.0.2
+      cliui: 8.0.1
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
-    dev: true
-
-  /jackspeak@4.0.2:
-    resolution: {integrity: sha512-bZsjR/iRjl1Nk1UkjGpAzLNfQtzuijhn2g+pbZb98HQ1Gk8vM9hfbxeMBP+M2/UUdwj0RqGG3mlvk2MsAqwvEw==}
-    engines: {node: 20 || >=22}
-    dependencies:
-      '@isaacs/cliui': 8.0.2
     dev: true
 
   /jake@10.9.2:
@@ -20396,13 +20379,6 @@ packages:
     dependencies:
       ansi-regex: 5.0.1
 
-  /strip-ansi@6.0.1:
-    resolution: {integrity: sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==}
-    engines: {node: '>=8'}
-    dependencies:
-      ansi-regex: 5.0.1
-    dev: true
-
   /strip-bom@3.0.0:
     resolution: {integrity: sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA==}
     engines: {node: '>=4'}
@@ -22478,15 +22454,6 @@ packages:
       ansi-styles: 4.3.0
       string-width: 4.2.3
       strip-ansi: 6.0.0
-
-  /wrap-ansi@8.1.0:
-    resolution: {integrity: sha512-si7QWI6zUMq56bESFvagtmzMdGOtoxfR+Sez11Mobfc7tm+VkUckk9bW2UeffTGVUbOksxmSw0AA2gs8g71NCQ==}
-    engines: {node: '>=12'}
-    dependencies:
-      ansi-styles: 6.2.1
-      string-width: 4.2.3
-      strip-ansi: 6.0.0
-    dev: true
 
   /wrap-ansi@9.0.0:
     resolution: {integrity: sha512-G8ura3S+3Z2G+mkgNRq8dqaFZAuxfsxpBB8OCTGRTCtp+l/v9nbFNmCUP1BZMts3G1142MsZfn6eeUKrr4PD1Q==}
