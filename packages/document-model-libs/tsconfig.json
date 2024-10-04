@@ -31,5 +31,5 @@
         "create-require.js",
         ".storybook/**/*",
     ],
-    "exclude": ["dist/", "node_modules"],
+    "exclude": ["dist/", "node_modules", "vite.config.ts"],
 }

@@ -61,7 +61,7 @@
         "format-generated": "npx prettier '**/gen/**/*' --write --config ./prettier.config.js --ignore-path /dev/null",
         "postgenerate": "npm run format-generated",
         "check-types": "tsc",
-        "postlint": "npm run check-types",
+        "postlint": "pnpm run check-types",
         "lint": "eslint",
         "lint-staged": "lint-staged",
         "build": "npm run generate && vite build",

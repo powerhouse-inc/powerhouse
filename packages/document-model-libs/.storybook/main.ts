@@ -1,6 +1,5 @@
 import { getConfig } from '@powerhousedao/codegen';
 import type { StorybookConfig } from '@storybook/react-vite';
-import { InlineConfig, mergeConfig } from 'vite';
 
 const { editorsDir } = getConfig();
 
@@ -18,6 +17,9 @@ const config: StorybookConfig = {
     },
     docs: {
         autodocs: 'tag',
+    },
+    typescript: {
+        reactDocgen: false,
     },
 };
 export default config;
