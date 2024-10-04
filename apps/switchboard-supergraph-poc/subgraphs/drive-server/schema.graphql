@@ -8,8 +8,11 @@ input DocumentDriveStateInput {
 type Mutation {
     addDrive(global: DocumentDriveStateInput!): DocumentDriveState
     deleteDrive(id: ID!): Boolean
+    setDriveIcon(id: String!, icon: String!): Boolean
+    setDriveName(id: String!, name: String!): Boolean
 }
 
 type Query {
     drives: [String!]!
+    driveIdBySlug(slug: String!): String
 }

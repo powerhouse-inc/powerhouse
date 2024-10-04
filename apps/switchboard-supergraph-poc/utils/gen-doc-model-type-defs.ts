@@ -17,6 +17,20 @@ export const getDocumentModelTypeDefs = (documentDriveServer: BaseDocumentDriveS
 
         ).join('\n')};
 
+        ${documentModel.specifications.map(
+            specification =>
+                specification.state.local.schema
+                    .replaceAll(' Account ', ` ${documentModel.name}Account `)
+                    .replaceAll(`: Account`, `: ${documentModel.name}Account`)
+                    .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+                    .replaceAll('scalar DateTime', '')
+                    .replaceAll(/\input (.*?) {[\s\S]*?}/g, '')
+                    .replaceAll('type AccountSnapshotLocalState', '')
+                    .replaceAll('type BudgetStatementLocalState', '')
+                    .replaceAll('type ScopeFrameworkLocalState', '')
+
+        ).join('\n')};
+
         type ${documentModel.name} implements IDocument {
             id: ID!
             name: String!

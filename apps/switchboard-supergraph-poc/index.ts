@@ -11,9 +11,10 @@ import { module as DocumentModelLib } from 'document-model/document-model';
 import express from 'express';
 import http from 'http';
 
-import { getSchema as getDriveSchema } from './subgraphs/drive/subgraph';
-import { getSchema as getSystemSchema } from './subgraphs/system/subgraph';
-
+import { getSchema as getDriveSchema, getSchema } from './subgraphs/drive/subgraph';
+import { getSchema as getSystemSchema } from './subgraphs/drive-server/subgraph';
+// import { getSchema as getRwaReadModelSchema } from './subgraphs/rwa-read-model/subgraph'
+import { getSchema as getAuthSchema } from './subgraphs/auth/subgraph';
 
 export const SUBGRAPH_REGISTRY = [
     {
@@ -21,8 +22,12 @@ export const SUBGRAPH_REGISTRY = [
         getSchema: getSystemSchema
     },
     {
-        name: ':drive',
+        name: 'drive',
         getSchema: getDriveSchema
+    },
+    {
+        name: 'auth',
+        getSchema: getAuthSchema
     }
 ];
 
@@ -34,10 +39,10 @@ const driveServer = new DocumentDriveServer([
 
 // regex to replace all input {\n ... \n} with empty string
 
-const getLocalSubgraphConfig = (subgraphName) =>
+const getLocalSubgraphConfig = (subgraphName: string) =>
     SUBGRAPH_REGISTRY.find(it => it.name === subgraphName);
 
-export const startSubgraphs = async (httpPort) => {
+export const startSubgraphs = async (httpPort: Number) => {
     // Create a monolith express app for all subgraphs
     const app = express();
     const httpServer = http.createServer(app);
@@ -70,7 +75,7 @@ export const startSubgraphs = async (httpPort) => {
     }
 
     // Start entire monolith at given port
-    await new Promise((resolve) => httpServer.listen({ port: serverPort }, resolve));
+    await new Promise((resolve) => httpServer.listen({ port: serverPort }, () => resolve(true)));
 
     console.log('All subgraphs started.')
 };
@@ -82,4 +87,6 @@ export const startSubgraphs = async (httpPort) => {
     // start subgraphs
     // let port = process.env.NODE_ENV === 'dev' ? undefined : 4001;
     await startSubgraphs(4001);
+
+    // generate supergraph.yml
 })();
