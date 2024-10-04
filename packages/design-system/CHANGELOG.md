@@ -1,3 +1,15 @@
+## 1.0.0-alpha.182 (2024-10-04)
+
+
+### 🚀 Features
+
+- **design-system:** remove document-drive dependency ([de1831c9](https://github.com/powerhouse-inc/powerhouse/commit/de1831c9))
+
+
+### ❤️  Thank You
+
+- Guillermo Puente @gpuente
+
 # [1.0.0-alpha.181](https://github.com/powerhouse-inc/design-system/compare/v1.0.0-alpha.180...v1.0.0-alpha.181) (2024-09-23)
 
 
