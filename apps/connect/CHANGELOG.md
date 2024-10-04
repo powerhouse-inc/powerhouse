@@ -1,3 +1,10 @@
+# [1.0.0-dev.134](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.133...v1.0.0-dev.134) (2024-10-04)
+
+
+### Features
+
+* Connect Dev Studio ([17e6e60](https://github.com/powerhouse-inc/document-model-electron/commit/17e6e6026a4a4ab4ff697d7bb869eb9e0c814ceb))
+
 # [1.0.0-dev.133](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.132...v1.0.0-dev.133) (2024-10-02)
 
 
