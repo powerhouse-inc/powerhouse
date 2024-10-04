@@ -60,7 +60,7 @@ jobs:
               run: npx nx run @powerhousedao/design-system:test
 
     storybook:
-        name: Test
+        name: Storybook
         runs-on: ubuntu-latest
         container: node:22
 

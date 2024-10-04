@@ -18,6 +18,12 @@
         ]
     },
     "targetDefaults": {
+        "build-storybook": {
+            "dependsOn": ["^build"]
+        },
+        "lint": {
+            "dependsOn": ["^build"]
+        },
         "generate": {
             "dependsOn": ["^build"]
         },
