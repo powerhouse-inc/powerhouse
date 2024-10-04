@@ -1,3 +1,10 @@
+# [1.0.0-dev.135](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.134...v1.0.0-dev.135) (2024-10-04)
+
+
+### Features
+
+* release studio ([90661ce](https://github.com/powerhouse-inc/document-model-electron/commit/90661ceaa0ee93f994ef1d7ae3f9e1f2b0253bb8))
+
 # [1.0.0-dev.134](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.133...v1.0.0-dev.134) (2024-10-04)
 
 
