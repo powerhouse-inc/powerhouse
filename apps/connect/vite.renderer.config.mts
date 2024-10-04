@@ -106,6 +106,7 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
+                external: ['node:crypto'],
             },
         },
         resolve: {
