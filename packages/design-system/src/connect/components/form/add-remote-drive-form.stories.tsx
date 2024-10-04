@@ -18,6 +18,13 @@ const Template: Story = {
         },
         sharingType: PUBLIC,
         onCancel: () => {},
+        requestPublicDrive(url) {
+            return Promise.resolve({
+                id: '1',
+                name: 'Public Drive',
+                url,
+            });
+        },
     },
     decorators: [
         Story => (
