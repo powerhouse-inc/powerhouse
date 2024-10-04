@@ -1,6 +1,6 @@
 {
     "name": "document-drive",
-    "version": "1.0.0-alpha.100",
+    "version": "1.0.0-alpha.102",
     "license": "AGPL-3.0-only",
     "type": "module",
     "module": "./src/index.ts",
@@ -34,11 +34,12 @@
         "test": "vitest run --coverage --exclude \"test/flaky/**\"",
         "test:watch": "vitest watch",
         "clean": "rimraf dist",
-        "clean:node_modules": "rimraf node_modules"
+        "clean:node_modules": "rimraf node_modules",
+        "build": " "
     },
     "peerDependencies": {
-        "document-model": "^1.8.0",
-        "document-model-libs": "^1.90.1"
+        "document-model": "^2.1.0",
+        "document-model-libs": "^1.92.0"
     },
     "optionalDependencies": {
         "@prisma/client": "^5.18.0",
