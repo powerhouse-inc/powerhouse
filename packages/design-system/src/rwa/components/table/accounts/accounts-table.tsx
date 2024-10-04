@@ -1,92 +1,47 @@
 import { Icon } from '@/powerhouse';
-import {
-    Account,
-    AccountDetails,
-    AccountFormInputs,
-    ItemData,
-    Table,
-    TableItem,
-    TableWrapperProps,
-    makeTableData,
-    useDocumentOperationState,
-} from '@/rwa';
-import { useMemo, useState } from 'react';
+import { tableNames } from '@/rwa/constants';
+import { useEditorContext } from '@/rwa/context';
+import { TableColumn } from '@/rwa/types';
+import { useCallback } from 'react';
+import { Fragment } from 'react/jsx-runtime';
+import { RWATableCell, RWATableRow, TableWithForm } from '../base';
 
-const columns = [
-    { key: 'label' as const, label: 'Label', allowSorting: true },
-    { key: 'reference' as const, label: 'Reference', allowSorting: true },
-];
-
-function makeAccountsTableItems(
-    accounts: Account[],
-    principalLenderAccountId: string,
-) {
-    const tableItems = makeTableData(accounts);
-
-    const withCustomTransform = tableItems.map(account => {
-        const customTransform = (itemData: ItemData, columnKey: string) => {
-            if (
-                account.id === principalLenderAccountId &&
-                columnKey === 'label'
-            )
-                return (
-                    <>
-                        {itemData}{' '}
-                        <span className="ml-2 inline-flex items-center gap-1 rounded bg-green-100 px-1 font-extralight">
-                            Lender <Icon name="CheckCircle" size={14} />
-                        </span>
-                    </>
-                );
-        };
-        return {
-            ...account,
-            customTransform,
-        };
-    });
-
-    return withCustomTransform;
-}
-
-export type AccountsTableProps = TableWrapperProps<AccountFormInputs>;
-
-export function AccountsTable(props: AccountsTableProps) {
-    const { state } = props;
-    const { accounts, principalLenderAccountId } = state;
-    const itemName = 'Account';
-    const tableData = useMemo(
-        () => makeAccountsTableItems(accounts, principalLenderAccountId),
-        [accounts, principalLenderAccountId],
+export function AccountsTable() {
+    const { accounts, principalLenderAccountId } = useEditorContext();
+    const principalLenderAccount = accounts.find(
+        account => account.id === principalLenderAccountId,
     );
-    const [selectedTableItem, setSelectedTableItem] =
-        useState<TableItem<Account>>();
-    const { operation, setOperation, showForm, existingState } =
-        useDocumentOperationState({ state });
+
+    const renderPrincipalLenderRow = useCallback(
+        (c: TableColumn[]) => (
+            <RWATableRow>
+                {c.map(column => (
+                    <Fragment key={column.key}>
+                        {column.key === 'label' ? (
+                            <RWATableCell>
+                                {principalLenderAccount?.label}
+                                <span className="ml-2 inline-flex items-center gap-1 rounded bg-green-100 px-1 font-extralight">
+                                    Lender <Icon name="CheckCircle" size={14} />
+                                </span>
+                            </RWATableCell>
+                        ) : (
+                            <RWATableCell />
+                        )}
+                    </Fragment>
+                ))}
+            </RWATableRow>
+        ),
+        [principalLenderAccount?.label],
+    );
+
+    const specialFirstRow = principalLenderAccount?.label
+        ? renderPrincipalLenderRow
+        : undefined;
 
     return (
-        <>
-            <Table
-                {...props}
-                columns={columns}
-                itemName={itemName}
-                operation={operation}
-                selectedTableItem={selectedTableItem}
-                setOperation={setOperation}
-                setSelectedTableItem={setSelectedTableItem}
-                tableData={tableData}
-            />
-            {showForm ? (
-                <div className="mt-4 rounded-md bg-white">
-                    <AccountDetails
-                        {...props}
-                        itemName={itemName}
-                        operation={operation}
-                        setOperation={setOperation}
-                        setSelectedTableItem={setSelectedTableItem}
-                        state={existingState}
-                        tableItem={selectedTableItem}
-                    />
-                </div>
-            ) : null}
-        </>
+        <TableWithForm
+            specialFirstRow={specialFirstRow}
+            tableName={tableNames.ACCOUNT}
+        />
     );
 }

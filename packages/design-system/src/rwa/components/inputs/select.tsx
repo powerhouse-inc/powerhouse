@@ -1,4 +1,4 @@
-import { Combobox } from '@/connect/components/combobox';
+import { Combobox } from '@/connect';
 import { ComponentPropsWithoutRef } from 'react';
 import {
     Control,

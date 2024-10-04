@@ -26,7 +26,7 @@ export function useDrop(props: Props) {
 
             const droppedFiles = getDroppedFiles(event.dataTransfer.items);
             if (droppedFiles.length) {
-                for await (const file of droppedFiles) {
+                for (const file of droppedFiles) {
                     await onAddFile(file, uiNode);
                 }
             } else {

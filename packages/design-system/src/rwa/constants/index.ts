@@ -1,3 +1,5 @@
-export * from './other';
-export * from './tabs';
+export * from './columns';
+export * from './dependent-items';
+export * from './names';
+export * from './table';
 export * from './transactions';

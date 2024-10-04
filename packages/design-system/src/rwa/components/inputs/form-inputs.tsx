@@ -12,11 +12,11 @@ type Props = {
 export function FormInputs(props: Props) {
     const { inputs } = props;
     return (
-        <div className="bg-white text-xs font-medium">
+        <div className="rounded-md bg-white text-xs font-medium">
             {inputs.map(({ label, Input, inputLabel }, index) => (
                 <div
                     className={twJoin(
-                        'grid min-h-11 grid-cols-[208px,380px] items-center px-6 text-gray-600',
+                        'grid min-h-11 grid-cols-[208px,380px] items-center px-6 text-gray-600 last:rounded-b-md',
                         index % 2 !== 0 && 'bg-gray-50',
                     )}
                     key={label}
