@@ -1,0 +1,20 @@
+# type Mutation {
+#     # registerPullResponder(name: String!, url: String!): Boolean
+#     # pushUpdates(updates: [Update!]!): Boolean
+#     # acknowledge(updateId: ID!): Boolean
+# }
+
+# type System {
+#     sync: Sync
+# }
+
+# type Sync {
+#     strands(since: String): [UpdateStatus!]!
+# }
+
+type Query {
+    # system: System
+    drive: DocumentDriveState
+    document(id: ID!): IDocument
+    documents: [IDocument!]!
+}

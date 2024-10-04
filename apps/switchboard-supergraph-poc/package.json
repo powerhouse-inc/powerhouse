@@ -1,0 +1,30 @@
+{
+  "name": "@powerhouse/switchboard",
+  "type": "module",
+  "version": "2.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npm run dev:subgraphs & npm run dev:router",
+    "dev:subgraphs": "NODE_ENV=dev vite-node index.ts",
+    "dev:router": "rover dev --supergraph-config supergraph.yml --router-config router-config-dev.yml",
+    "start": "vite-node index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@apollo/server": "^4.11.0",
+    "@apollo/subgraph": "^2.9.2",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
+    "express": "^4.21.0",
+    "graphql": "^16.9.0",
+    "http": "0.0.1-security",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vite-node": "^2.1.2"
+  }
+}

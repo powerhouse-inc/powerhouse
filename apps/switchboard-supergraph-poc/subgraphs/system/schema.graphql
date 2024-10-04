@@ -1,0 +1,15 @@
+input DocumentDriveStateInput {
+    name: String,
+    id: String,
+    slug: String,
+    icon: String,
+}
+
+type Mutation {
+    addDrive(global: DocumentDriveStateInput!): DocumentDriveState
+    deleteDrive(id: ID!): Boolean
+}
+
+type Query {
+    drives: [String!]!
+}
