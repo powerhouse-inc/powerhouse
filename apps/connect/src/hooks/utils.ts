@@ -43,7 +43,11 @@ export const isLatestVersion = async () => {
     const deployed = await fetchLatestVersion();
 
     if (deployed) {
-        return deployed === currentVersion;
+        return {
+            isLatest: deployed === currentVersion,
+            currentVersion,
+            latestVersion: deployed,
+        };
     }
 
     return null;

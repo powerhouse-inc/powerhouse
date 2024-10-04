@@ -2,6 +2,8 @@ import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
 import { version } from '../package.json';
 
 const APP_VERSION = import.meta.env.APP_VERSION || version;
+const PH_CONNECT_STUDIO_MODE =
+    import.meta.env.PH_CONNECT_STUDIO_MODE || 'false';
 
 const DISABLE_ADD_PUBLIC_DRIVES =
     import.meta.env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES || undefined;
@@ -42,6 +44,7 @@ const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
 
 export default {
     appVersion: APP_VERSION,
+    studioMode: PH_CONNECT_STUDIO_MODE.toString() === 'true',
     routerBasename: PH_CONNECT_ROUTER_BASENAME,
     sentry: {
         dsn: PH_CONNECT_SENTRY_DSN,

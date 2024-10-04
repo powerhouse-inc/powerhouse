@@ -28,11 +28,13 @@
     },
     "include": [
         "src",
+        "studio",
         "e2e-tests",
         "*.config.ts",
         "*.config.mts",
         "*.config.js",
         "reset.d.ts",
+        "esbuild.studio.config.mjs"
     ],
-    "files": ["custom.d.ts", "index.js", "cli.js"]
+    "files": ["custom.d.ts"]
 }

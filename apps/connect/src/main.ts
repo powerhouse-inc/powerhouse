@@ -23,7 +23,7 @@ import {
 } from './services/crypto/electron';
 import { initRenownElectron } from './services/renown/electron';
 import { Theme, isTheme } from './store/';
-import { documentModels } from './store/document-model';
+import { baseDocumentModels } from './store/document-model';
 const isMac = process.platform === 'darwin';
 
 async function initApp() {
@@ -76,7 +76,7 @@ async function initApp() {
 
         // initializes document drive server
         await initDocumentDrive(
-            documentModels,
+            baseDocumentModels,
             app.getPath('userData'),
             ipcMain,
         );

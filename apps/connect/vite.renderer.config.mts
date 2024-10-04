@@ -7,9 +7,9 @@ import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
-import pkg from './package.json';
-
 import clientConfig from './client.config';
+import pkg from './package.json';
+import { viteConnectDevStudioPlugin } from './studio/vite-plugin';
 
 export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
@@ -38,6 +38,7 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const plugins: PluginOption[] = [
+        viteConnectDevStudioPlugin(env),
         react({
             include: 'src/**/*.tsx',
             babel: {
@@ -100,11 +101,10 @@ export default defineConfig(({ mode }) => {
                 },
                 output: {
                     // Ensure the service worker file goes to the root of the dist folder
-                    entryFileNames: chunk => {
-                        return ['service-worker'].includes(chunk.name)
+                    entryFileNames: chunk =>
+                        ['service-worker'].includes(chunk.name)
                             ? `${chunk.name}.js`
-                            : 'assets/[name].[hash].js';
-                    },
+                            : 'assets/[name].[hash].js',
                 },
             },
         },

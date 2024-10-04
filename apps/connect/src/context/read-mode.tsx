@@ -27,7 +27,7 @@ import {
 import { drivesToHash } from 'src/hooks/useDocumentDrives';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { logger } from 'src/services/logger';
-import { DefaultDocumentDriveServer } from 'src/utils/document-drive-server';
+import { useReactorAsync } from '../store/reactor';
 
 export interface IReadModeContext extends IReadModeDriveServer {
     readDrives: ReadDrive[];
@@ -165,7 +165,7 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     /* eslint-enable @typescript-eslint/no-non-null-assertion */
 }
 
-const ReadModeInstance = new ReadModeContextImpl(DefaultDocumentDriveServer);
+const ReadModeInstance = new ReadModeContextImpl();
 
 export const ReadModeContext = createContext<IReadModeContext>({
     ...(ReadModeInstance as Omit<IReadModeContext, 'readDrives'>),
@@ -191,8 +191,19 @@ async function getReadDrives(
 export const ReadModeContextProvider: FC<
     ReadModeContextProviderProps
 > = props => {
+    const reactorPromise = useReactorAsync();
     const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
     const userPermissions = useUserPermissions();
+    const [ready, setReady] = useState(false);
+
+    useEffect(() => {
+        reactorPromise
+            .then(reactor => {
+                ReadModeInstance.setDocumentDrive(reactor);
+                setReady(true);
+            })
+            .catch(logger.error);
+    }, [reactorPromise]);
 
     // updates drive access level when user permissions change
     const readMode =
@@ -204,7 +215,7 @@ export const ReadModeContextProvider: FC<
               );
     useMemo(() => {
         // wait for user initial load
-        if (readMode === undefined) {
+        if (!ready || readMode === undefined) {
             return;
         }
 
@@ -220,9 +231,13 @@ export const ReadModeContextProvider: FC<
                 .setAllDefaultDrivesAccessLevel(accessLevel)
                 .catch(logger.error);
         }
-    }, [readMode]);
+    }, [readMode, ready]);
 
     useEffect(() => {
+        if (!ready) {
+            return;
+        }
+
         getReadDrives(ReadModeInstance)
             .then(drives => setReadDrives(drives))
             .catch(logger.error);
@@ -238,7 +253,7 @@ export const ReadModeContextProvider: FC<
         return () => {
             unsubscribe.then(unsub => unsub?.()).catch(logger.error);
         };
-    }, []);
+    }, [ready]);
 
     const context = useMemo(() => {
         return {

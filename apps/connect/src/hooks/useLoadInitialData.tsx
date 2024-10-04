@@ -13,8 +13,9 @@ import { useTranslation } from 'react-i18next';
 import { ReloadConnectToast } from 'src/components/toast/reload-connect-toast';
 import { useReadModeContext } from 'src/context/read-mode';
 import { useUiNodes } from 'src/hooks/useUiNodes';
-import { DefaultDocumentDriveServer as server } from 'src/utils/document-drive-server';
+import { useUnwrappedReactor } from 'src/store/reactor';
 import { useClientErrorHandler } from './useClientErrorHandler';
+import { useConnectConfig } from './useConnectConfig';
 import { useDocumentDrives } from './useDocumentDrives';
 import { isLatestVersion } from './utils';
 
@@ -29,21 +30,33 @@ export const useLoadInitialData = () => {
     } = useUiNodes();
     const prevDrivesState = useRef([...driveNodes]);
     const drivesWithError = useRef<UiDriveNode[]>([]);
-    const [, , serverSubscribeUpdates] = useDocumentDrives(server);
+    const [, , serverSubscribeUpdates] = useDocumentDrives();
     const { readDrives } = useReadModeContext();
     const clientErrorHandler = useClientErrorHandler();
+    const reactor = useUnwrappedReactor();
+    const [connectConfig] = useConnectConfig();
 
     async function checkLatestVersion() {
         const result = await isLatestVersion();
         if (result === null) return;
-        if (!result) {
+        if (result.isLatest) {
+            return true;
+        }
+
+        if (
+            import.meta.env.MODE === 'development' ||
+            connectConfig.studioMode
+        ) {
+            console.warn(
+                `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,
+            );
+        } else {
             toast(<ReloadConnectToast />, {
                 type: 'connect-warning',
                 toastId: 'outdated-app',
                 autoClose: false,
             });
         }
-        return result;
     }
 
     useEffect(() => {
@@ -132,7 +145,11 @@ export const useLoadInitialData = () => {
     }, [documentDrives, readDrives, updateUiDriveNodes]);
 
     useEffect(() => {
+        if (!reactor) {
+            return;
+        }
+
         const unsub = onSyncStatus(() => updateUiDriveNodes(documentDrives));
         return unsub;
-    }, [documentDrives, onSyncStatus, updateUiDriveNodes]);
+    }, [reactor, documentDrives, onSyncStatus, updateUiDriveNodes]);
 };

@@ -50,6 +50,7 @@ const Content = () => {
 
     // preload document editors
     useEffect(() => {
+        if (!documentModels) return;
         // waits 1 second to preload editors
         const requestIC = window.requestIdleCallback ?? setTimeout;
         const cancelIC = window.cancelIdleCallback ?? clearTimeout;
@@ -181,7 +182,7 @@ const Content = () => {
                                         New document
                                     </h3>
                                     <div className="flex w-full flex-wrap gap-4">
-                                        {documentModels.map(doc => (
+                                        {documentModels?.map(doc => (
                                             <Button
                                                 key={doc.documentModel.id}
                                                 aria-details={

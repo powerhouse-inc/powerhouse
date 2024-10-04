@@ -5,6 +5,7 @@ import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
 import { logger } from 'src/services/logger';
+import { useUnwrappedReactor } from 'src/store/reactor';
 import { ClientErrorHandler } from './useClientErrorHandler';
 
 // map of DocumentDriveServer objects and their Document Drives
@@ -26,11 +27,14 @@ export function drivesToHash(drives: DocumentDriveDocument[]): string {
 }
 
 // creates a derived atom that encapsulates the Map of Document Drives
-const readWriteDocumentDrivesAtom = (server: IDocumentDriveServer) => () =>
+const readWriteDocumentDrivesAtom = (server?: IDocumentDriveServer) => () =>
     atom(
-        get => get(documentDrivesAtom).get(server) ?? [],
+        get => (server ? (get(documentDrivesAtom).get(server) ?? []) : []),
         (_get, set, newDrives: DocumentDriveDocument[]) => {
             set(documentDrivesAtom, map => {
+                if (!server) {
+                    return new Map();
+                }
                 const currentDrives = map.get(server) ?? [];
                 if (
                     currentDrives.length !== newDrives.length ||
@@ -51,19 +55,24 @@ export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
 
 // returns an array with the document drives of a
 // server and a method to fetch the document drives
-export function useDocumentDrives(server: IDocumentDriveServer) {
+export function useDocumentDrives() {
+    const reactor = useUnwrappedReactor();
     const [documentDrives, setDocumentDrives] = useAtom(
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        useMemo(readWriteDocumentDrivesAtom(server), [server]),
+        useMemo(readWriteDocumentDrivesAtom(reactor), [reactor]),
     );
 
     const refreshDocumentDrives = useCallback(async () => {
+        if (!reactor) {
+            return;
+        }
+
         const documentDrives: DocumentDriveDocument[] = [];
         try {
-            const driveIds = await server.getDrives();
+            const driveIds = await reactor.getDrives();
             for (const id of driveIds) {
                 try {
-                    const drive = await server.getDrive(id);
+                    const drive = await reactor.getDrive(id);
                     documentDrives.push(drive);
                 } catch (error) {
                     logger.error(error);
@@ -74,12 +83,12 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
         } finally {
             setDocumentDrives(documentDrives);
         }
-    }, [server]);
+    }, [reactor]);
 
     // if the server has not been initialized then
     // fetches the drives for the first time
     const [status, setStatus] = useAtom(
-        documentDrivesInitializedMapAtomFamily(server),
+        documentDrivesInitializedMapAtomFamily(reactor),
     );
 
     if (status === 'INITIAL') {
@@ -91,7 +100,10 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
 
     const serverSubscribeUpdates = useCallback(
         (clientErrorhandler: ClientErrorHandler) => {
-            const unsub1 = server.on(
+            if (!reactor) {
+                return;
+            }
+            const unsub1 = reactor.on(
                 'syncStatus',
                 async (_event, _status, error) => {
                     if (error) {
@@ -100,15 +112,15 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
                     await refreshDocumentDrives();
                 },
             );
-            const unsub2 = server.on('strandUpdate', () =>
+            const unsub2 = reactor.on('strandUpdate', () =>
                 refreshDocumentDrives(),
             );
-            const unsubOnSyncError = server.on(
+            const unsubOnSyncError = reactor.on(
                 'clientStrandsError',
                 clientErrorhandler.strandsErrorHandler,
             );
 
-            const unsub3 = server.on('defaultRemoteDrive', () =>
+            const unsub3 = reactor.on('defaultRemoteDrive', () =>
                 refreshDocumentDrives(),
             );
 
@@ -119,7 +131,7 @@ export function useDocumentDrives(server: IDocumentDriveServer) {
                 unsub3();
             };
         },
-        [server, refreshDocumentDrives],
+        [reactor, refreshDocumentDrives],
     );
 
     return useMemo(

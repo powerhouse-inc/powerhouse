@@ -1,4 +1,3 @@
-import connectConfig from 'connect-config';
 import InMemoryCache from 'document-drive/cache/memory';
 import { BaseQueueManager } from 'document-drive/queue/base';
 import {
@@ -8,12 +7,7 @@ import {
 } from 'document-drive/server';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { DocumentDriveAction } from 'document-model-libs/document-drive';
-import {
-    BaseAction,
-    DocumentModel,
-    Operation,
-    utils,
-} from 'document-model/document';
+import { BaseAction, DocumentModel, Operation } from 'document-model/document';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
 import { logger } from 'src/services/logger';
@@ -34,34 +28,6 @@ export default (
 
     const promise = documentDrive
         .initialize()
-        .then(() =>
-            documentDrive
-                .getDrives()
-                .then(drives => {
-                    if (
-                        !drives.length &&
-                        connectConfig.drives.sections.LOCAL.enabled
-                    ) {
-                        documentDrive
-                            .addDrive({
-                                global: {
-                                    id: utils.hashKey(),
-                                    name: 'My Local Drive',
-                                    icon: null,
-                                    slug: 'my-local-drive',
-                                },
-                                local: {
-                                    availableOffline: false,
-                                    sharingType: 'private',
-                                    listeners: [],
-                                    triggers: [],
-                                },
-                            })
-                            .catch(logger.error);
-                    }
-                })
-                .catch(logger.error),
-        )
         .then(() => bindEvents(documentDrive))
         .catch(logger.error);
 

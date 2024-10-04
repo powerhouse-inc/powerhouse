@@ -20,9 +20,13 @@ export const useEditorsAsync = () => {
     return useAtomValue(editorsAtom);
 };
 
-const getEditor = (documentType: string, editors: ExtendedEditor[]) =>
-    editors.find(e => e.documentTypes.includes(documentType)) ||
-    editors.find(e => e.documentTypes.includes('*'));
+const getEditor = (documentType: string, editors: ExtendedEditor[]) => {
+    const editor =
+        editors.find(e => e.documentTypes.includes(documentType)) ||
+        editors.find(e => e.documentTypes.includes('*'));
+
+    return editor;
+};
 
 export const useEditor = (documentType: string) => {
     const editors = useEditorsAsync();

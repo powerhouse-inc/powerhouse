@@ -3,13 +3,13 @@ import {
     UiNodesContextProvider,
     WagmiContext,
 } from '@powerhousedao/design-system';
-import { useAtomValue } from 'jotai';
+import { Provider, useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import { CookieBanner } from 'src/components/cookie-banner';
 import { ModalManager } from 'src/components/modal';
 import { ReadModeContextProvider } from 'src/context/read-mode';
 import { RootProvider } from 'src/context/root-provider';
-import atoms from 'src/store';
+import atoms, { atomStore } from 'src/store';
 import Analytics from './analytics';
 
 const Router = React.lazy(async () => {
@@ -29,21 +29,23 @@ const Preloader = () => {
 export default (
     <React.StrictMode>
         <Suspense fallback={<>{/* TODO loading */}</>}>
-            <Preloader />
-            <WagmiContext>
-                <RootProvider>
-                    <ReadModeContextProvider>
-                        <UiNodesContextProvider>
-                            <ToastContainer position="bottom-right" />
-                            <ModalManager>
-                                <Router />
-                                <CookieBanner />
-                                <Analytics />
-                            </ModalManager>
-                        </UiNodesContextProvider>
-                    </ReadModeContextProvider>
-                </RootProvider>
-            </WagmiContext>
+            <Provider store={atomStore}>
+                <Preloader />
+                <WagmiContext>
+                    <RootProvider>
+                        <ReadModeContextProvider>
+                            <UiNodesContextProvider>
+                                <ToastContainer position="bottom-right" />
+                                <ModalManager>
+                                    <Router />
+                                    <CookieBanner />
+                                    <Analytics />
+                                </ModalManager>
+                            </UiNodesContextProvider>
+                        </ReadModeContextProvider>
+                    </RootProvider>
+                </WagmiContext>
+            </Provider>
         </Suspense>
     </React.StrictMode>
 );

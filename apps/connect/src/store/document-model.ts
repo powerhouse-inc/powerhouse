@@ -2,22 +2,82 @@ import * as DocumentModels from 'document-model-libs/document-models';
 import { Action, DocumentModel } from 'document-model/document';
 import { module as DocumentModelLib } from 'document-model/document-model';
 import { atom, useAtomValue } from 'jotai';
+import { unwrap } from 'jotai/utils';
 import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
+import { atomStore } from '.';
 
-export const documentModels = [
-    DocumentModelLib,
-    ...Object.values(DocumentModels),
-] as DocumentModel[];
+export const LOCAL_DOCUMENT_MODELS = import.meta.env.LOCAL_DOCUMENT_MODELS;
 
-export const documentModelsAtom = atom(documentModels);
+async function loadDynamicModels() {
+    if (!LOCAL_DOCUMENT_MODELS) {
+        return [];
+    }
+    try {
+        const localModules = (await import(
+            'LOCAL_DOCUMENT_MODELS'
+        )) as unknown as Record<string, DocumentModel>;
+        console.log('Loaded local document models:', localModules);
+        return Object.values(localModules);
+    } catch (e) {
+        console.error('Error loading local document models', e);
+        return [];
+    }
+}
 
+export const baseDocumentModelsMap: Record<string, DocumentModel> = {
+    DocumentModel: DocumentModelLib as DocumentModel,
+    ...(DocumentModels as Record<string, DocumentModel>),
+};
+
+export const baseDocumentModels = Object.values(baseDocumentModelsMap);
+
+const dynamicDocumentModels = loadDynamicModels();
+
+const dynamicDocumentModelsAtom = atom<Promise<DocumentModel[]>>(
+    dynamicDocumentModels,
+);
+
+export const documentModelsAtom = atom(async get => {
+    const dynamicDocumentModels = await get(dynamicDocumentModelsAtom);
+    const newDocumentModelIds = dynamicDocumentModels.map(
+        dm => dm.documentModel.id,
+    );
+    return [
+        ...baseDocumentModels.filter(
+            dm => !newDocumentModelIds.includes(dm.documentModel.id),
+        ),
+        ...dynamicDocumentModels,
+    ];
+});
+
+// blocks rendering until document models are loaded.
 export const useDocumentModels = () => useAtomValue(documentModelsAtom);
+
+const unrappedDocumentModelsAtom = unwrap(documentModelsAtom);
+// will return undefined until document models are initialized. Does not block rendering.
+export const useUnwrappedDocumentModels = () =>
+    useAtomValue(unrappedDocumentModelsAtom);
+
+export const useDocumentModelsAsync = () => dynamicDocumentModels;
+
+export const subscribeDocumentModels = function (
+    listener: (documentModels: DocumentModel[]) => void,
+) {
+    return atomStore.sub(documentModelsAtom, () => {
+        atomStore
+            .get(documentModelsAtom)
+            .then(listener)
+            .catch(e => {
+                throw e;
+            });
+    });
+};
 
 function getDocumentModel<S = unknown, A extends Action = Action>(
     documentType: string,
-    documentModels: DocumentModel[],
+    documentModels: DocumentModel[] | undefined,
 ) {
-    return documentModels.find(d => d.documentModel.id === documentType) as
+    return documentModels?.find(d => d.documentModel.id === documentType) as
         | DocumentModel<S, A>
         | undefined;
 }
@@ -25,12 +85,12 @@ function getDocumentModel<S = unknown, A extends Action = Action>(
 export function useDocumentModel<S = unknown, A extends Action = Action>(
     documentType: string,
 ) {
-    const documentModels = useDocumentModels();
+    const documentModels = useUnwrappedDocumentModels();
     return getDocumentModel<S, A>(documentType, documentModels);
 }
 
 export const useGetDocumentModel = () => {
-    const documentModels = useDocumentModels();
+    const documentModels = useUnwrappedDocumentModels();
     return (documentType: string) =>
         getDocumentModel(documentType, documentModels);
 };
@@ -44,11 +104,15 @@ export const useGetDocumentModel = () => {
  * @returns {Array<DocumentModel>} The filtered document models.
  */
 export const useFilteredDocumentModels = () => {
-    const _documentModels = useDocumentModels();
+    const documentModels = useUnwrappedDocumentModels();
     const { config } = useFeatureFlag();
     const { enabledEditors, disabledEditors } = config.editors;
 
-    const documentModels = _documentModels.filter(
+    if (!documentModels) {
+        return undefined;
+    }
+
+    const filteredDocumentModels = documentModels.filter(
         model => model.documentModel.id !== 'powerhouse/document-drive',
     );
 
@@ -61,16 +125,16 @@ export const useFilteredDocumentModels = () => {
     }
 
     if (disabledEditors) {
-        return documentModels.filter(
+        return filteredDocumentModels.filter(
             d => !disabledEditors.includes(d.documentModel.id),
         );
     }
 
     if (enabledEditors) {
-        return documentModels.filter(d =>
+        return filteredDocumentModels.filter(d =>
             enabledEditors.includes(d.documentModel.id),
         );
     }
 
-    return documentModels;
+    return filteredDocumentModels;
 };

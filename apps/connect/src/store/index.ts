@@ -1,5 +1,9 @@
-import { atom } from 'jotai';
+import { atom, createStore } from 'jotai';
 import { atomWithStorage } from 'src/store/utils';
+
+export type Store = ReturnType<typeof createStore>;
+
+export const atomStore: Store = createStore();
 
 export const sidebarCollapsedAtom = atomWithStorage('sidebar-collapsed', false);
 export const sidebarDisableHoverStyles = atom(false);

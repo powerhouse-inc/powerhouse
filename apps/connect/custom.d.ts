@@ -4,3 +4,5 @@ declare module '*.svg' {
     >;
     export { ReactComponent };
 }
+
+declare module 'LOCAL_DOCUMENT_MODELS' {}
