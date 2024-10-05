@@ -12,7 +12,7 @@ import express from 'express';
 import http from 'http';
 
 import { getSchema as getDriveSchema, getSchema } from './subgraphs/drive/subgraph';
-import { getSchema as getSystemSchema } from './subgraphs/drive-server/subgraph';
+import { getSchema as getSystemSchema } from './subgraphs/system/subgraph';
 // import { getSchema as getRwaReadModelSchema } from './subgraphs/rwa-read-model/subgraph'
 import { getSchema as getAuthSchema } from './subgraphs/auth/subgraph';
 
@@ -22,13 +22,13 @@ export const SUBGRAPH_REGISTRY = [
         getSchema: getSystemSchema
     },
     {
-        name: 'drive',
+        name: ':drive',
         getSchema: getDriveSchema
     },
-    {
-        name: 'auth',
-        getSchema: getAuthSchema
-    }
+    // {
+    //     name: 'auth',
+    //     getSchema: getAuthSchema
+    // }
 ];
 
 // start document drive server with all available document models

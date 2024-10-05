@@ -1,4 +1,5 @@
-import { BaseDocumentDriveServer } from "document-drive";
+import { BaseDocumentDriveServer, generateUUID, PullResponderTransmitter } from "document-drive";
+import { actions, TransmitterType } from "document-model-libs/document-drive";
 
 export const resolvers = {
     Query: {
@@ -13,22 +14,68 @@ export const resolvers = {
         document: async (_, { id }, ctx) => {
             const document = await (ctx.driveServer as BaseDocumentDriveServer).getDocument(ctx.driveId, id);
             return document;
+        },
+        system: {
+            sync: {
+                strands: async (_, { listenerId, since }, ctx) => {
+                    const listener = (await (ctx.driveServer as BaseDocumentDriveServer).getTransmitter(ctx.driveId, listenerId)) as PullResponderTransmitter
+                    const strands = await listener.getStrands({ since })
+                    return strands.map(e => ({
+                        driveId: e.driveId,
+                        documentId: e.documentId,
+                        scope: e.scope,
+                        branch: e.branch,
+                        operations: e.operations.map(o => ({
+                            index: o.index,
+                            skip: o.skip,
+                            name: o.type,
+                            input: JSON.stringify(o.input),
+                            hash: o.hash,
+                            timestamp: o.timestamp,
+                            type: o.type,
+                            context: o.context,
+                            id: o.id
+                        }))
+                    }));
+                }
+            }
         }
     },
     Mutation: {
-        registerPullResponder: async (_, { filter }, ctx) => {
-            const result = await ctx.driveServer.registerPullResponderListener(
-                ctx.driveId ?? '1',
-                {
-                    branch: (filter.branch?.filter(b => !!b) as string[]) ?? [],
-                    documentId: (filter.documentId?.filter(b => !!b) as string[]) ?? [],
-                    documentType:
-                        (filter.documentType?.filter(b => !!b) as string[]) ?? [],
-                    scope: (filter.scope?.filter(b => !!b) as string[]) ?? []
-                }
+        registerPullResponderListener: async (_, { filter }, ctx) => {
+            const uuid = generateUUID();
+            const listener = {
+                block: false,
+                callInfo: {
+                    data: '',
+                    name: 'PullResponder',
+                    transmitterType: 'PullResponder' as TransmitterType
+                },
+                filter: {
+                    branch: filter.branch ?? [],
+                    documentId: filter.documentId ?? [],
+                    documentType: filter.documentType ?? [],
+                    scope: filter.scope ?? []
+                },
+                label: `Pullresponder #${uuid}`,
+                listenerId: uuid,
+                system: false,
+                driveId: ctx.driveId
+            };
+
+            const result = await ctx.driveServer.queueDriveAction(
+                ctx.driveId,
+                actions.addListener({ listener })
             );
 
-            return result;
+            console.log(result);
+            if (result.status !== 'SUCCESS') {
+                throw new Error(
+                    `Listener couldn't be registered: ${result.error || result.status}`
+                );
+            }
+
+            return listener;
         },
         pushUpdates: async (_, { strands }, ctx) => {
             const listenerRevisions = await Promise.all(
@@ -42,11 +89,18 @@ export const resolvers = {
                             branch: 'main'
                         })) ?? [];
 
-                    const result = await ctx.driveServer.pushUpdates(
-                        s.driveId,
-                        operations,
-                        s.documentId ?? undefined
-                    );
+
+                    const result = await (s.documentId ?
+                        ctx.driveServer.queueOperations(
+                            s.driveId,
+                            s.documentId,
+                            operations
+                        )
+                        : ctx.driveServer.queueDriveOperations(
+                            s.driveId,
+                            operations
+                        ));
+
 
                     const revision =
                         result.document?.operations[s.scope].slice().pop()

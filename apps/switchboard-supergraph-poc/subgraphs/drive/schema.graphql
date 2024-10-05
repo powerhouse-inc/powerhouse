@@ -1,4 +1,24 @@
+type Query {
+    system: System
+    drive: DocumentDriveState
+    document(id: ID!): IDocument
+    documents: [String!]!
+}
+
+type Mutation {
+    registerPullResponderListener(filter: InputListenerFilter!): Listener
+    pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
+    acknowledge(listenerId: ID!, revisions: [ListenerRevisionInput!]!): Boolean
+}
+
+
 input InputOperationSignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type OperationSignerUser {
   address: String!
   networkId: String!
   chainId: Int!
@@ -9,9 +29,33 @@ input InputOperationSignerApp {
   key: String!
 }
 
+type OperationSignerApp {
+  name: String!
+  key: String!
+}
+
+input InputListenerFilter {
+  documentType: [String!]
+  documentId: [String!]
+  scope: [String!]
+  branch: [String!]
+}
+
+
+type OperationSigner {
+  app: OperationSignerApp
+  user: OperationSignerUser
+  signatures: [String!]!
+}
+
 input InputOperationSigner {
   app: InputOperationSignerApp
   user: InputOperationSignerUser
+  signatures: [String!]!
+}
+
+type OperationContext {
+    signer: OperationSigner
 }
 
 input InputOperationContext {
@@ -28,6 +72,26 @@ input InputOperationUpdate {
   timestamp: String!
   error: String
   context: InputOperationContext
+}
+
+type OperationUpdate {
+  index: Int!
+  skip: Int
+  type: String!
+  id: String!
+  input: String!
+  hash: String!
+  timestamp: String!
+  error: String
+  context: OperationContext
+}
+
+type StrandUpdate {
+  driveId: String!
+  documentId: String!
+  scope: String!
+  branch: String!
+  operations: [OperationUpdate!]!
 }
 
 input InputStrandUpdate {
@@ -71,23 +135,10 @@ type ListenerRevision {
     error: String
 }
 
-type Mutation {
-    registerPullResponder(name: String!, url: String!): Listener
-    pushUpdates(strands: [InputStrandUpdate!]!): [ListenerRevision!]!
-    acknowledge(listenerId: ID!, revisions: [ListenerRevisionInput!]!): Boolean
-}
-
 type System {
     sync: Sync
 }
 
 type Sync {
-    strands(since: String): [UpdateStatus!]!
-}
-
-type Query {
-    system: System
-    drive: DocumentDriveState
-    document(id: ID!): IDocument
-    documents: [String!]!
+    strands(listenerId: ID!, since: String): [StrandUpdate!]!
 }
