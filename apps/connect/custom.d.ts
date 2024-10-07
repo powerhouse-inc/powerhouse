@@ -6,3 +6,4 @@ declare module '*.svg' {
 }
 
 declare module 'LOCAL_DOCUMENT_MODELS' {}
+declare module 'LOCAL_DOCUMENT_EDITORS' {}

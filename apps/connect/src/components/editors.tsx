@@ -91,9 +91,10 @@ export function DocumentEditor(props: EditorProps) {
     const isLoadingDocument =
         fileNodeDocument?.status === 'LOADING' || !document;
     const isLoadingEditor =
-        !!editor &&
-        !!document &&
-        !editor.documentTypes.includes(document.documentType);
+        editor === undefined ||
+        (!!document &&
+            editor &&
+            !editor.documentTypes.includes(document.documentType));
     const canUndo =
         !!document &&
         (document.revision.global > 0 || document.revision.local > 0);
@@ -181,7 +182,7 @@ export function DocumentEditor(props: EditorProps) {
         );
     }
 
-    if (!editor) {
+    if (editor === null) {
         return (
             <EditorError
                 message={`No editor available for document of type '${documentType}'`}

@@ -62,8 +62,7 @@ export async function loadFile(
     path: string | File,
     getDocumentModel: (documentType: string) => DocumentModel | undefined,
 ) {
-    const Document = await import('document-model/document');
-    const baseDocument = await Document.utils.loadFromInput(
+    const baseDocument = await utils.loadFromInput(
         path,
         (state: Document) => state,
         { checkHashes: true },

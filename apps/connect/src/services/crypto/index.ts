@@ -185,7 +185,7 @@ export class ConnectCrypto implements IConnectCrypto {
             const arrayBuffer = await subtleCrypto.sign(
                 ConnectCrypto.signAlgorithm,
                 this.#keyPair.privateKey,
-                data.buffer,
+                data.buffer as ArrayBuffer,
             );
 
             return new Uint8Array(arrayBuffer);
