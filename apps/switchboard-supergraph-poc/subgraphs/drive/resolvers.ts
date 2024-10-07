@@ -36,7 +36,25 @@ export const resolvers = {
             const document = await (
                 ctx.driveServer as BaseDocumentDriveServer
             ).getDocument(ctx.driveId, id);
-            return document;
+
+            const dms = ctx.driveServer.getDocumentModels();
+            const dm = dms.find(({ documentModel }) => documentModel.id === document.documentType)
+            const globalState = document.state.global;
+            if (!globalState) throw new Error("Document not found")
+            const response = {
+                ...document,
+                id,
+                revision: document.revision.global,
+                state: document.state.global,
+                operations: document.operations.global.map(op => ({
+                    ...op,
+                    inputText:
+                        typeof op.input === 'string' ? op.input : JSON.stringify(op.input)
+                })),
+                initialState: document.initialState.state.global, __typename: dm?.documentModel.name
+            };
+            console.log(response);
+            return response;
         },
         system: () => ({ sync: {} }),
     },

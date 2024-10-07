@@ -44,7 +44,6 @@ const app = express();
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 
-
 export const updateRouter = async () => {
     const newRouter = express.Router();
     // Run each subgraph on the same http server, but at different paths
