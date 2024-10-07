@@ -42,12 +42,19 @@ const driveServer = new DocumentDriveServer([
 const getLocalSubgraphConfig = (subgraphName: string) =>
     SUBGRAPH_REGISTRY.find(it => it.name === subgraphName);
 
-export const startSubgraphs = async (httpPort: Number) => {
-    // Create a monolith express app for all subgraphs
-    const app = express();
-    const httpServer = http.createServer(app);
-    const serverPort = process.env.PORT ?? httpPort;
+// Create a monolith express app for all subgraphs
+// @ts-ignore
+let router: express.Router;
+const app = express();
+const serverPort = Number(process.env.PORT) ?? 4001;
+const httpServer = http.createServer(app);
+app.use(router);
+httpServer.listen({ port: serverPort }, () => {
+    console.log(`Subgraph server listening on port ${serverPort}`);
+});
 
+export const updateRouter = async () => {
+    const newRouter = express.Router();
     // Run each subgraph on the same http server, but at different paths
     for (const subgraph of SUBGRAPH_REGISTRY) {
         const subgraphConfig = getLocalSubgraphConfig(subgraph.name);
@@ -62,7 +69,7 @@ export const startSubgraphs = async (httpPort: Number) => {
         await server.start();
 
         const path = `/${subgraphConfig.name}/graphql`;
-        app.use(
+        newRouter.use(
             path,
             cors(),
             bodyParser.json(),
@@ -75,7 +82,7 @@ export const startSubgraphs = async (httpPort: Number) => {
     }
 
     // Start entire monolith at given port
-    await new Promise((resolve) => httpServer.listen({ port: serverPort }, () => resolve(true)));
+    router = newRouter;
 
     console.log('All subgraphs started.')
 };
@@ -83,10 +90,9 @@ export const startSubgraphs = async (httpPort: Number) => {
 (async () => {
     // init drive server
     await driveServer.initialize();
+    await updateRouter();
 
-    // start subgraphs
-    // let port = process.env.NODE_ENV === 'dev' ? undefined : 4001;
-    await startSubgraphs(4001);
-
-    // generate supergraph.yml
+    driveServer.on("documentModels", async (documentModels) => {
+        await updateRouter();
+    });
 })();

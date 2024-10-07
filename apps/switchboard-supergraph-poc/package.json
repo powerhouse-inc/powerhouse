@@ -8,8 +8,7 @@
     "dev:subgraphs": "NODE_ENV=dev vite-node index.ts",
     "dev:router": "rover dev --supergraph-config supergraph.yml --router-config router-config-dev.yml",
     "start": "vite-node index.ts",
-    "codegen": "gql-gen --config codegen.yml",
-    "postinstall": "npm run codegen"
+    "codegen": "gql-gen --config codegen.yml"
   },
   "author": "",
   "license": "ISC",
