@@ -10,11 +10,8 @@ import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from 'document-model/document-model';
 import express from 'express';
 import http from 'http';
-
-import { getSchema as getDriveSchema, getSchema } from './subgraphs/drive/subgraph';
+import { getSchema as getDriveSchema } from './subgraphs/drive/subgraph';
 import { getSchema as getSystemSchema } from './subgraphs/system/subgraph';
-// import { getSchema as getRwaReadModelSchema } from './subgraphs/rwa-read-model/subgraph'
-import { getSchema as getAuthSchema } from './subgraphs/auth/subgraph';
 
 export const SUBGRAPH_REGISTRY = [
     {
@@ -37,8 +34,6 @@ const driveServer = new DocumentDriveServer([
     ...Object.values(DocumentModelsLibs)
 ] as DocumentModel[]);
 
-// regex to replace all input {\n ... \n} with empty string
-
 const getLocalSubgraphConfig = (subgraphName: string) =>
     SUBGRAPH_REGISTRY.find(it => it.name === subgraphName);
 
@@ -46,12 +41,9 @@ const getLocalSubgraphConfig = (subgraphName: string) =>
 // @ts-ignore
 let router: express.Router;
 const app = express();
-const serverPort = Number(process.env.PORT) ?? 4001;
+const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
-app.use(router);
-httpServer.listen({ port: serverPort }, () => {
-    console.log(`Subgraph server listening on port ${serverPort}`);
-});
+
 
 export const updateRouter = async () => {
     const newRouter = express.Router();
@@ -80,17 +72,20 @@ export const updateRouter = async () => {
 
         console.log(`Setting up [${subgraphConfig.name}] subgraph at http://localhost:${serverPort}${path}`);
     }
-
-    // Start entire monolith at given port
     router = newRouter;
-
     console.log('All subgraphs started.')
 };
+
+
+httpServer.listen({ port: serverPort }, () => {
+    console.log(`Subgraph server listening on port ${serverPort}`);
+});
 
 (async () => {
     // init drive server
     await driveServer.initialize();
     await updateRouter();
+    app.use(router);
 
     driveServer.on("documentModels", async (documentModels) => {
         await updateRouter();
