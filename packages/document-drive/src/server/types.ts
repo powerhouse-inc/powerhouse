@@ -203,6 +203,8 @@ export interface DriveEvents {
         errorMessage: string
     ) => void;
     documentModels: (documentModels: DocumentModel[]) => void;
+    driveAdded: (drive: DocumentDriveDocument) => void;
+    driveDeleted: (driveId: string) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

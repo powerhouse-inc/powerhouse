@@ -75,8 +75,8 @@
         "sqlite3": "^5.1.7",
         "typescript": "^5.5.3",
         "vitest": "^2.0.5",
-        "webdriverio": "^9.0.9",
-        "vitest-fetch-mock": "^0.3.0"
+        "vitest-fetch-mock": "^0.3.0",
+        "webdriverio": "^9.0.9"
     },
     "packageManager": "pnpm@9.1.4+sha256.30a1801ac4e723779efed13a21f4c39f9eb6c9fbb4ced101bce06b422593d7c9"
 }
