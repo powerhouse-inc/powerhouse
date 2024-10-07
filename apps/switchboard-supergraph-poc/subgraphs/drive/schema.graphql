@@ -8,9 +8,8 @@ type Query {
 type Mutation {
     registerPullResponderListener(filter: InputListenerFilter!): Listener
     pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
-    acknowledge(listenerId: ID!, revisions: [ListenerRevisionInput!]!): Boolean
+    acknowledge(listenerId: String!, revisions: [ListenerRevisionInput]): Boolean
 }
-
 
 input InputOperationSignerUser {
   address: String!

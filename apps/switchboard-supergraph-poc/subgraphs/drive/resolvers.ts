@@ -15,31 +15,7 @@ export const resolvers = {
             const document = await (ctx.driveServer as BaseDocumentDriveServer).getDocument(ctx.driveId, id);
             return document;
         },
-        system: {
-            sync: {
-                strands: async (_, { listenerId, since }, ctx) => {
-                    const listener = (await (ctx.driveServer as BaseDocumentDriveServer).getTransmitter(ctx.driveId, listenerId)) as PullResponderTransmitter
-                    const strands = await listener.getStrands({ since })
-                    return strands.map(e => ({
-                        driveId: e.driveId,
-                        documentId: e.documentId,
-                        scope: e.scope,
-                        branch: e.branch,
-                        operations: e.operations.map(o => ({
-                            index: o.index,
-                            skip: o.skip,
-                            name: o.type,
-                            input: JSON.stringify(o.input),
-                            hash: o.hash,
-                            timestamp: o.timestamp,
-                            type: o.type,
-                            context: o.context,
-                            id: o.id
-                        }))
-                    }));
-                }
-            }
-        }
+        system: () => ({ sync: {} }),
     },
     Mutation: {
         registerPullResponderListener: async (_, { filter }, ctx) => {
@@ -141,5 +117,35 @@ export const resolvers = {
 
             return result;
         },
+    },
+    System: {
+
+    },
+    Sync: {
+        strands: async (_, { listenerId, since }, ctx) => {
+            const listener = (await (ctx.driveServer as BaseDocumentDriveServer).getTransmitter(ctx.driveId, listenerId)) as PullResponderTransmitter
+            const strands = await listener.getStrands({ since })
+            return strands.map(e => ({
+                driveId: e.driveId,
+                documentId: e.documentId,
+                scope: e.scope,
+                branch: e.branch,
+                operations: e.operations.map(o => ({
+                    index: o.index,
+                    skip: o.skip,
+                    name: o.type,
+                    input: JSON.stringify(o.input),
+                    hash: o.hash,
+                    timestamp: o.timestamp,
+                    type: o.type,
+                    context: o.context,
+                    id: o.id
+                }))
+            }));
+        }
     }
+
+
+
+
 };
