@@ -1,5 +1,5 @@
 #! /usr/bin/env node
-import { DocumentModelState, utils, z } from 'document-model/document-model';
+import { DocumentModelState } from 'document-model/document-model';
 import {
     generateAll,
     generateEditor as _generateEditor,
