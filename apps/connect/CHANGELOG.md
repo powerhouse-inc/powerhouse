@@ -1,3 +1,10 @@
+# [1.0.0-dev.137](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.136...v1.0.0-dev.137) (2024-10-08)
+
+
+### Features
+
+* support local editors in dev mode ([b7898ca](https://github.com/powerhouse-inc/document-model-electron/commit/b7898ca91cb6c858588108697752a3dd3980ab48))
+
 # [1.0.0-dev.136](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.135...v1.0.0-dev.136) (2024-10-04)
 
 
