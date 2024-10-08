@@ -11,7 +11,6 @@ import {
     GroupTransaction,
     GroupTransactionFormInputs,
     isCashAsset,
-    RealWorldAssetsState,
     ServiceProviderFeeType,
     ServiceProviderFeeTypeFormInputs,
     SPV,
@@ -38,6 +37,7 @@ import {
     validateTransactionFees,
     actions,
     isFixedIncomeAsset,
+    RealWorldAssetsState,
 } from '../../../document-models/real-world-assets';
 
 type Args = {
@@ -362,10 +362,7 @@ export function useEditorDispatcher(args: Args) {
                 }));
 
                 if (!existingFees?.length) {
-                    validateTransactionFees(
-                        serviceProviderFeeTypes,
-                        feeUpdates,
-                    );
+                    validateTransactionFees(state, feeUpdates);
                     dispatch(
                         addFeesToGroupTransaction({
                             id: transaction.id,
@@ -406,10 +403,7 @@ export function useEditorDispatcher(args: Args) {
                 });
 
                 if (newFeesToCreate.length) {
-                    validateTransactionFees(
-                        serviceProviderFeeTypes,
-                        newFeesToCreate,
-                    );
+                    validateTransactionFees(state, newFeesToCreate);
                     dispatch(
                         addFeesToGroupTransaction({
                             id: transaction.id,
