@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/<%= <%= h.changeCase.param(name) %> %>.stories.tsx"
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/<%= h.changeCase.param(name) %>.stories.tsx"
 unless_exists: true
 ---
 import Editor from './editor';
