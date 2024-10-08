@@ -1,25 +1,22 @@
 #! /usr/bin/env node
 
-import { exec as _exec } from 'child_process';
+import { execSync } from 'child_process';
 import { prompt } from 'enquirer';
 import fs from 'fs';
 import path from 'path';
-import util from 'util';
 import {
     DEFAULT_CONFIG,
     configSpec,
     parseArgs,
     promptDirectories,
-} from '../utils';
-
-const exec = util.promisify(_exec);
+} from '../utils/cli';
+import { getPackageManager } from './command';
 
 const BOILERPLATE_REPO =
     'https://github.com/powerhouse-inc/document-model-boilerplate.git';
 
-function isUsingYarn() {
-    return (process.env.npm_config_user_agent || '').startsWith('yarn');
-}
+const packageManager = getPackageManager(process.env.npm_config_user_agent);
+const isNpm = packageManager === 'npm';
 
 function buildPackageJson(appPath: string, projectName: string) {
     const packageJson = JSON.parse(
@@ -73,11 +70,9 @@ function buildIndex(
     );
 }
 
-async function runCmd(command: string) {
+function runCmd(command: string) {
     try {
-        const { stdout, stderr } = await exec(command);
-        console.log(stdout);
-        console.log(stderr);
+        execSync(command, { stdio: 'inherit' });
     } catch (error) {
         console.log('\x1b[31m', error, '\x1b[0m');
     }
@@ -128,29 +123,27 @@ async function init() {
     createProject(projectName, documentModelsDir, editorsDir);
 }
 
-async function createProject(
+function createProject(
     projectName: string,
     documentModelsDir: string,
     editorsDir: string,
 ) {
     try {
-        const useYarn = isUsingYarn();
         console.log(
             '\x1b[33m',
             'Downloading the project structure...',
             '\x1b[0m',
         );
-        await runCmd(`git clone --depth 1 ${BOILERPLATE_REPO} ${projectName}`);
+        runCmd(`git clone --depth 1 ${BOILERPLATE_REPO} ${projectName}`);
 
         const appPath = path.join(process.cwd(), projectName);
         process.chdir(appPath);
 
         console.log('\x1b[34m', 'Installing dependencies...', '\x1b[0m');
-        await runCmd(useYarn ? 'yarn install' : 'npm install');
-        console.log();
+        runCmd(`${packageManager} install`);
 
         fs.rmSync(path.join(appPath, './.git'), { recursive: true });
-        await runCmd('git init');
+        runCmd('git init');
 
         try {
             fs.mkdirSync(path.join(appPath, documentModelsDir));
@@ -170,10 +163,9 @@ async function createProject(
         console.log('\x1b[34m', 'You can start by typing:');
         console.log(`    cd ${projectName}`);
         console.log(
-            useYarn ? '    yarn generate' : '    npm run generate',
+            isNpm ? '    npm run generate' : `    ${packageManager} generate`,
             '\x1b[0m',
         );
-        console.log();
     } catch (error) {
         console.log(error);
     }

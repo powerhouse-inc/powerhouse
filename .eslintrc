@@ -1,4 +1,5 @@
 {
+    "ignorePatterns": ["*.esm.ts"],
     "env": {
         "browser": true,
         "es2021": true,
@@ -19,7 +20,7 @@
         "ecmaVersion": "latest",
         "sourceType": "module",
         "tsconfigRootDir": ".",
-        "project": true
+        "project": true,
     },
     "plugins": ["react", "@typescript-eslint"],
     "rules": {
