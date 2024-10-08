@@ -147,7 +147,9 @@ function createProject(
 
         try {
             fs.mkdirSync(path.join(appPath, documentModelsDir));
+            fs.mkdirSync(path.join(appPath, documentModelsDir, 'index.ts'));
             fs.mkdirSync(path.join(appPath, editorsDir));
+            fs.mkdirSync(path.join(appPath, editorsDir, 'index.ts'));
         } catch (error) {
             if (!(error as Error).message.includes('EEXIST')) {
                 throw error;
