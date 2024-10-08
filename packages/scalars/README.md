@@ -14,12 +14,19 @@ To add a new scalar to this repository, follow these steps:
 2. **Define the Scalar**:
 
     - Implement the scalar using the `GraphQLScalarType` from `graphql` library or custom logic.
-    - Ensure you export the scalar properly.
+    - Ensure you export this 4 objects from your new Scalar file:
+        - `typedef`: This is the gql type definition `scalar MyScalar`
+        - `schema`: The zod schema validation for your new scalar
+        - `config`: The graphql config for your scalar (`GraphQLScalarTypeConfig` type)
+        - `scalar`: The graphql scalar object (`GraphQLScalarTypeConfig` type)
 
     ```typescript
-    import { GraphQLScalarType, Kind } from 'graphql';
+    import { GraphQLScalarType, GraphQLScalarTypeConfig, Kind } from 'graphql';
+    import { z } from 'zod';
 
-    const MyScalar = new GraphQLScalarType({
+    export const typedef = 'scalar MyScalar';
+    export const schema = z.string();
+    export const config: GraphQLScalarTypeConfig<any, any> = {
         name: 'MyScalar',
         description: 'Description of MyScalar',
         serialize(value: any): any {
@@ -34,45 +41,43 @@ To add a new scalar to this repository, follow these steps:
             }
             return null;
         },
-    });
+    };
 
-    export default MyScalar;
+    export const scalar = new GraphQLScalarType(config);
     ```
 
 3. **Update `src/scalars/index.ts`**:
 
-    - Add a new export for your custom Scalar
-    - Make sure to include your new Scalar into the `resolvers` object.
+    1. Create a new namespace import for your scalar file
+    2. Include your scalar alias into the exported object
+    3. Update the resolvers object and include your scalar
+    4. Update the typeDefs array and inlcude your scalar typedef
 
     ```typescript
-    ...
-    import { MyScalar } from './MyScalar';
+    import * as EmailAddress from './EmailAddress';
+    import * as MyScalar from './MyScalar'; // 1.- namespace import
 
-    export * from './MyScalar';
-
-    export const resolvers = {
-        ...
-        MyScalar: MyScalar,
+    export {
+        EmailAddress,
+        MyScalar, // 2.- Update exported object
     };
 
+    export const resolvers = {
+        EmailAddress: EmailAddress.scalar,
+        MyScalar: MyScalar.scalar, // 3.- Update resolvers object
+    };
+
+    export const typeDefs = [
+        EmailAddress.typedef,
+        MyScalar.typedef, // 4.- Update typeDefs object
+    ];
     ```
 
-4. **Update the `src/typeDefs.ts` file**:
-
-    - Create a Type definition for your new Scalar.
-    - Include your Scalar type definition into the `typeDefs` array.
-
-    ```typescript
-    export const MyScalarTypeDefinition = 'scalar MyScalar';
-
-    export const typeDefs = [..., MyScalarTypeDefinition];
-    ```
-
-5. **Write Tests**:
+4. **Write Tests**:
 
     - Add tests for your new scalar to ensure it works as expected.
     - Place your tests in the `tests` directory.
 
-6. **Update Documentation**:
+5. **Update Documentation**:
     - Update this README with information about the new scalar.
     - Provide examples and usage instructions.

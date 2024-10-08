@@ -6,23 +6,22 @@ import {
 } from 'graphql';
 import { z } from 'zod';
 
-export const emailSchema = z.string().email();
+export const typedef = 'scalar EmailAddress';
+
+export const schema = z.string().email();
 
 const emailValidation = (value: unknown): string => {
     if (typeof value !== 'string') {
         throw new GraphQLError(`Value is not string: ${JSON.stringify(value)}`);
     }
 
-    const result = emailSchema.safeParse(value);
+    const result = schema.safeParse(value);
 
     if (result.success) return result.data;
     throw new GraphQLError(result.error.message);
 };
 
-export const GraphQLEmailAddressConfig: GraphQLScalarTypeConfig<
-    string,
-    string
-> = {
+export const config: GraphQLScalarTypeConfig<string, string> = {
     name: 'EmailAddress',
     description:
         'A field whose value conforms to the standard internet email address format as specified in RFC822: https://www.w3.org/Protocols/rfc822/.',
@@ -40,6 +39,4 @@ export const GraphQLEmailAddressConfig: GraphQLScalarTypeConfig<
     },
 };
 
-export const GraphQLEmailAddress = new GraphQLScalarType(
-    GraphQLEmailAddressConfig,
-);
+export const scalar = new GraphQLScalarType(config);

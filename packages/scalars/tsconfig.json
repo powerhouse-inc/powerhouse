@@ -21,6 +21,7 @@
         "*.config.js",
         "reset.d.ts",
         "modules.d.ts",
-    ],
-    "exclude": ["vite.config.ts", "vite.config.ts"]
+        "vite.config.ts",
+        "vitest.config.ts"
+    ]
 }

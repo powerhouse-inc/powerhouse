@@ -1,7 +1,9 @@
-import { GraphQLEmailAddress } from './EmailAddress';
+import * as EmailAddress from './EmailAddress';
 
-export * from './EmailAddress';
+export { EmailAddress };
 
 export const resolvers = {
-    EmailAddress: GraphQLEmailAddress,
+    EmailAddress: EmailAddress.scalar,
 };
+
+export const typeDefs = [EmailAddress.typedef];
