@@ -1,5 +1,5 @@
 type Query {
-    rwaPortfolio(id: ID!): RWA
+    rwaPortfolio: RWA
 }
 
 type RWA {

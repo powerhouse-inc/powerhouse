@@ -22,12 +22,12 @@ export const SUBGRAPH_REGISTRY = [
         getSchema: getSystemSchema
     },
     {
-        name: 'rwa-read-model',
-        getSchema: getRwaReadModelSchema
-    },
-    {
         name: 'auth',
         getSchema: getAuthSchema
+    },
+    {
+        name: ':drive/rwa-read-model',
+        getSchema: getRwaReadModelSchema
     },
     {
         name: ':drive',
