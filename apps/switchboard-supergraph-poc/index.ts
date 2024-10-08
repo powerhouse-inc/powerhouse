@@ -14,6 +14,7 @@ import { getSchema as getDriveSchema } from './subgraphs/drive/subgraph';
 import { getSchema as getRwaReadModelSchema } from './subgraphs/rwa-read-model/subgraph';
 import { getSchema as getSystemSchema } from './subgraphs/system/subgraph';
 import { InternalListenerManager } from './utils/internal-listener-manager';
+import { getSchema as getAuthSchema } from './subgraphs/auth/subgraph';
 
 export const SUBGRAPH_REGISTRY = [
     {
@@ -23,6 +24,10 @@ export const SUBGRAPH_REGISTRY = [
     {
         name: 'rwa-read-model',
         getSchema: getRwaReadModelSchema
+    },
+    {
+        name: 'auth',
+        getSchema: getAuthSchema
     },
     {
         name: ':drive',
@@ -72,7 +77,7 @@ export const updateRouter = async () => {
             cors(),
             bodyParser.json(),
             expressMiddleware(server, {
-                context: async ({ req }) => ({ headers: req.headers, driveId: req.params.drive ?? undefined, driveServer })
+                context: async ({ req }) => ({ user: req.headers.authorization?.replace('Bearer ', ''), driveId: req.params.drive ?? undefined, driveServer })
             })
         );
 

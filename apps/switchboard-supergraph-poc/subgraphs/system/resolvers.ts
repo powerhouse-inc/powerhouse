@@ -11,6 +11,10 @@ export const resolvers = {
     Mutation: {
         addDrive: async (parent: unknown, args: DriveInput, ctx: Context) => {
             try {
+                if (!ctx.user) {
+                    throw new Error("Unauthorized");
+                }
+
                 const drive = await (ctx.driveServer as BaseDocumentDriveServer).addDrive(args);
                 return drive.state.global;
             } catch (e) {
