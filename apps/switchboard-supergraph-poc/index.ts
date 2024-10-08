@@ -11,7 +11,9 @@ import { module as DocumentModelLib } from 'document-model/document-model';
 import express from 'express';
 import http from 'http';
 import { getSchema as getDriveSchema } from './subgraphs/drive/subgraph';
+import { getSchema as getRwaReadModelSchema } from './subgraphs/rwa-read-model/subgraph';
 import { getSchema as getSystemSchema } from './subgraphs/system/subgraph';
+import { InternalListenerManager } from './utils/internal-listener-manager';
 
 export const SUBGRAPH_REGISTRY = [
     {
@@ -19,13 +21,13 @@ export const SUBGRAPH_REGISTRY = [
         getSchema: getSystemSchema
     },
     {
+        name: 'rwa-read-model',
+        getSchema: getRwaReadModelSchema
+    },
+    {
         name: ':drive',
         getSchema: getDriveSchema
-    },
-    // {
-    //     name: 'auth',
-    //     getSchema: getAuthSchema
-    // }
+    }
 ];
 
 // start document drive server with all available document models
@@ -38,7 +40,6 @@ const getLocalSubgraphConfig = (subgraphName: string) =>
     SUBGRAPH_REGISTRY.find(it => it.name === subgraphName);
 
 // Create a monolith express app for all subgraphs
-// @ts-ignore
 let router: express.Router;
 const app = express();
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
@@ -50,15 +51,21 @@ export const updateRouter = async () => {
     for (const subgraph of SUBGRAPH_REGISTRY) {
         const subgraphConfig = getLocalSubgraphConfig(subgraph.name);
         if (!subgraphConfig) continue;
+
+        // get schema
         const schema = subgraphConfig.getSchema(driveServer);
+
+        // create apollo server
         const server = new ApolloServer({
             schema,
             introspection: true,
             plugins: [ApolloServerPluginDrainHttpServer({ httpServer }), ApolloServerPluginInlineTraceDisabled()]
         });
 
+        // start apollo server
         await server.start();
 
+        // setup path
         const path = `/${subgraphConfig.name}/graphql`;
         newRouter.use(
             path,
@@ -75,17 +82,24 @@ export const updateRouter = async () => {
     console.log('All subgraphs started.')
 };
 
-
-httpServer.listen({ port: serverPort }, () => {
-    console.log(`Subgraph server listening on port ${serverPort}`);
-});
-
 (async () => {
     // init drive server
     await driveServer.initialize();
+
+    // init listener manager
+    const listenerManager = new InternalListenerManager(driveServer);
+    await listenerManager.init();
+
+    // init router
     await updateRouter();
     app.use(router);
 
+    // start http server
+    httpServer.listen({ port: serverPort }, () => {
+        console.log(`Subgraph server listening on port ${serverPort}`);
+    });
+
+    // update router with new document models on document models change
     driveServer.on("documentModels", async (documentModels) => {
         await updateRouter();
     });

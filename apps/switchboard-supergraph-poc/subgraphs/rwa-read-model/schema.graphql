@@ -1,0 +1,7 @@
+type Query {
+    rwaPortfolio(id: ID!): RWA
+}
+
+type RWA {
+    amountOfAccounts: Int!
+}
