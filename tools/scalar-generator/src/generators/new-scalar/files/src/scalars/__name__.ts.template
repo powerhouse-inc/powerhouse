@@ -1,0 +1,30 @@
+import {
+    GraphQLError,
+    GraphQLScalarType,
+    GraphQLScalarTypeConfig,
+    Kind,
+} from 'graphql';
+import { z } from 'zod';
+
+export const typedef = 'scalar <%= name %>';
+
+export const schema = z.string(); // Update this code accordingly
+
+export const config: GraphQLScalarTypeConfig<any, any> = {
+    name: '<%= name %>',
+    description: '',
+    serialize: () => {},
+    parseValue: () => {},
+    parseLiteral: value => {
+        if (value.kind !== Kind.STRING) {
+            throw new GraphQLError(
+                'some error message',
+                { nodes: value },
+            );
+        }
+
+        return value; // Upate this code accordingly
+    },
+};
+
+export const scalar = new GraphQLScalarType(config);
