@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= name %>/editor.tsx"
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/editor.tsx"
 unless_exists: true
 ---
 <% if(!documentTypes.length){ %>import { Action, EditorProps } from 'document-model/document';<% } else { %>import { EditorProps } from 'document-model/document';<% } %>

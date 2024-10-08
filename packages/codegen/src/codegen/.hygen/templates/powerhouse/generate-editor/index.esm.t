@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= name %>/index.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { type Editor as EditorModule<% if(!documentTypes.length){ %>, Action<% } %> } from 'document-model/document';
