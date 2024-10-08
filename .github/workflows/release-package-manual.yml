@@ -11,9 +11,13 @@ on:
         options:
           - 'document-model'
           - '@powerhousedao/codegen'
+          - '@powerhousedao/design-system'
           - 'document-drive'
           - 'document-model-libs'
           - 'packages/*'
+
+env:
+  NX_ISOLATE_PLUGINS: false
 
 jobs:
   test:
