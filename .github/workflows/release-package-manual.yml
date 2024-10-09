@@ -55,7 +55,7 @@ jobs:
           if [ "${{ github.event.inputs.package }}" == "packages/*" ]; then
             npx nx run-many -t build -p packages/*
           else
-            npx build:all
+            npm run build:all
           fi
         shell: bash
 
