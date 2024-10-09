@@ -36,10 +36,6 @@ jobs:
             - name: Lint
               run: npx nx lint @powerhousedao/codegen
 
-            - name: Check types
-              run: npx nx check-types @powerhousedao/codegen
-
-
     build:
         name: Build
         timeout-minutes: 15

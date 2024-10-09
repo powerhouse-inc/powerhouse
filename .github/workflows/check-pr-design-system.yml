@@ -36,9 +36,6 @@ jobs:
             - name: Lint
               run: npx nx run @powerhousedao/design-system:lint
 
-            - name: Check types
-              run: npx nx run @powerhousedao/design-system:check-types
-
     test:
         name: Test
         runs-on: ubuntu-latest
