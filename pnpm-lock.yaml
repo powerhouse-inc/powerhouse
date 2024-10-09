@@ -21133,7 +21133,7 @@ snapshots:
       nullthrows: 1.1.1
       serialize-error: 2.1.0
       source-map: 0.5.7
-      strip-ansi: 6.0.0
+      strip-ansi: 6.0.1
       throat: 5.0.0
       ws: 7.5.10(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       yargs: 17.7.2

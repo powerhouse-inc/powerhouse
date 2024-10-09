@@ -2,10 +2,6 @@
     "name": "root",
     "private": true,
     "type": "module",
-    "workspaces": [
-        "packages/*",
-        "apps/*"
-    ],
     "scripts": {
         "clean": "nx run-many --target=clean --all --parallel",
         "clean:node_modules": "nx run-many --target=clean:node_modules --all --parallel && rimraf node_modules",
