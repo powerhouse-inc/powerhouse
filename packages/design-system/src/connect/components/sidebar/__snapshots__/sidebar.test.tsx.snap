@@ -11,7 +11,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       class="no-scrollbar flex-1 overflow-auto text-gray-900 transition-shadow"
     >
       <div
-        class="shrink-0 collapsed:justify-center mb-4 flex justify-between gap-4 px-4 pt-11"
+        class="shrink-0 mb-4 flex justify-between gap-4 px-4 pt-11 collapsed:justify-center"
       >
         <div
           class="collapsed:hidden expanding:hidden"
@@ -22,10 +22,10 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           />
         </div>
         <button
-          class="collapsed:rotate-180 collapsed:border-gray-100/10 collapsed:bg-gray-100 collapsed:shadow-sidebar collapsed:hover:bg-slate-50 expanding:hidden
-                rounded-md border border-gray-100
-                p-3 outline-none
-                hover:bg-slate-50"
+          class="rounded-md border border-gray-100 p-3 outline-none hover:bg-slate-50
+                collapsed:rotate-180 collapsed:border-gray-100/10 collapsed:bg-gray-100
+                collapsed:shadow-sidebar collapsed:hover:bg-slate-50
+                expanding:hidden"
         >
           <svg
             class="text-gray-600"
@@ -44,25 +44,25 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
         </button>
       </div>
       <div
-        class="expanded:block hidden"
+        class="hidden expanded:block"
       />
     </div>
     <div
-      class="shrink-0 collapsed:px-1 expanding:px-1 bg-gray-50 p-4"
+      class="shrink-0 bg-gray-50 p-4 collapsed:px-1 expanding:px-1"
     >
       <div
         class="collapsed:bg-transparent collapsing:bg-transparent expanding:bg-transparent"
       >
         <div
-          class="collapsed:justify-center collapsed:px-1 expanding:justify-center expanding:px-1 flex
-            gap-2 rounded-sm py-2.5"
+          class="flex gap-2 rounded-sm py-2.5 collapsed:justify-center
+            collapsed:px-1 expanding:justify-center expanding:px-1"
         >
           <div
-            class="fade-out flex-none animate-pulse rounded-full bg-gray-400"
+            class="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
             style="width: 40px; height: 40px;"
           />
           <div
-            class="collapsed:hidden expanding:hidden grid w-full items-center font-semibold"
+            class="grid w-full items-center font-semibold collapsed:hidden expanding:hidden"
           >
             <p
               class="mb-2 h-4 w-4/5 animate-pulse rounded bg-gray-400"
@@ -74,7 +74,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
         </div>
       </div>
       <button
-        class="collapsed:px-3 expanding:px-3 mt-3 flex w-full cursor-pointer gap-3 outline-none"
+        class="mt-3 flex w-full cursor-pointer gap-3 outline-none collapsed:px-3 expanding:px-3"
       >
         <svg
           class="text-gray-600"
@@ -94,7 +94,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           />
         </svg>
         <span
-          class="collapsed:hidden expanding:hidden text-sm font-semibold leading-6 text-gray-800"
+          class="text-sm font-semibold leading-6 text-gray-800 collapsed:hidden expanding:hidden"
         >
           Settings
         </span>
