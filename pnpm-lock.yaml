@@ -393,7 +393,7 @@ importers:
         specifier: workspace:*
         version: link:../document-model
       document-model-libs:
-        specifier: workspace:*
+        specifier: 1.93.0
         version: link:../document-model-libs
       fake-indexeddb:
         specifier: ^5.0.2
