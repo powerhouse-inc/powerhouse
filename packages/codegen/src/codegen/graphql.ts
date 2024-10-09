@@ -1,4 +1,5 @@
 import { type CodegenConfig, generate } from "@graphql-codegen/cli";
+import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
 import { readdirSync } from "fs";
 
 const getDirectories = (source: string) =>
@@ -6,8 +7,7 @@ const getDirectories = (source: string) =>
     .filter((dirent) => dirent.isDirectory())
     .map((dirent) => dirent.name);
 
-const tsConfig = {
-  strict: true,
+const tsConfig: TypeScriptPluginConfig = {
   strictScalars: true,
   scalars: {
     Unknown: "unknown",
@@ -20,8 +20,6 @@ const tsConfig = {
   avoidOptionals: {
     field: true,
   },
-  useIndexSignature: true,
-  noSchemaStitching: true,
   skipTypename: true,
   // maybeValue: "T | null | undefined",
   inputMaybeValue: "T | null | undefined",
