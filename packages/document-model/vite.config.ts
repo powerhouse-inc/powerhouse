@@ -1,4 +1,4 @@
-import { Plugin, defineConfig } from "vite";
+import { Plugin, UserConfig, defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 import generateFile from "vite-plugin-generate-file";
 
@@ -68,5 +68,5 @@ export default defineConfig(({ mode = "node" }) => {
         },
       ]),
     ],
-  };
+  } as UserConfig;
 });

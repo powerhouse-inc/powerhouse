@@ -2,7 +2,7 @@ import { getConfig } from "@powerhousedao/codegen";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { resolve } from "path";
-import { defineConfig } from "vite";
+import { defineConfig, UserConfig } from "vite";
 import dts from "vite-plugin-dts";
 import generateFile from "vite-plugin-generate-file";
 
@@ -118,5 +118,5 @@ export default defineConfig(({ mode }) => {
       "process.env.NODE_ENV": JSON.stringify(mode),
       __vite_process_env_NODE_ENV: JSON.stringify(mode),
     },
-  };
+  } as UserConfig;
 });

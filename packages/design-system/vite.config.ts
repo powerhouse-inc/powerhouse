@@ -1,6 +1,6 @@
 import react from "@vitejs/plugin-react";
 import path, { resolve } from "path";
-import { defineConfig } from "vite";
+import { defineConfig, UserConfig } from "vite";
 import dts from "vite-plugin-dts";
 import pkg from "./package.json";
 
@@ -36,5 +36,5 @@ export default defineConfig(() => {
         },
       },
     },
-  };
+  } as UserConfig;
 });
