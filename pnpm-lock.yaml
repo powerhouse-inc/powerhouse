@@ -393,7 +393,7 @@ importers:
         specifier: workspace:*
         version: link:../document-model
       document-model-libs:
-        specifier: 1.93.0
+        specifier: 1.93.1
         version: link:../document-model-libs
       fake-indexeddb:
         specifier: ^5.0.2
@@ -524,7 +524,7 @@ importers:
         specifier: 0.0.15
         version: 0.0.15(graphql@16.9.0)(zod@3.23.8)
       '@powerhousedao/design-system':
-        specifier: workspace:*
+        specifier: 1.0.0-alpha.183
         version: link:../design-system
       '@semantic-release/changelog':
         specifier: ^6.0.3

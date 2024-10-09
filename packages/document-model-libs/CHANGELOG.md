@@ -1,3 +1,9 @@
+## 1.93.1 (2024-10-09)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/design-system to 1.0.0-alpha.183
+
 ## 1.93.0 (2024-10-09)
 
 ### 🚀 Features
