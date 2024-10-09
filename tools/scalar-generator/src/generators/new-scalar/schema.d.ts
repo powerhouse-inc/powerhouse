@@ -1,3 +1,3 @@
 export interface NewScalarGeneratorSchema {
-    name: string;
+  name: string;
 }
