@@ -71,7 +71,10 @@
     ],
     "projectsRelationship": "independent",
     "version": {
-      "conventionalCommits": true
+      "conventionalCommits": true,
+      "generatorOptions": {
+        "installIgnoreScripts": true
+      }
     },
     "changelog": {
       "projectChangelogs": {
