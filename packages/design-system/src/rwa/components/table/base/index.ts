@@ -5,3 +5,4 @@ export * from './table';
 export * from './table-base';
 export * from './table-cell';
 export * from './table-row';
+export * from './table-with-form';

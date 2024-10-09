@@ -1,15 +1,14 @@
 import {
+    BaseTransaction,
+    FEES_PAYMENT,
+    GroupTransaction,
+    allGroupTransactionTypes,
+    calculateCashBalanceChange,
+    isAssetGroupTransactionType,
     mockAccounts,
     mockFixedIncomes,
     mockPrincipalLenderAccountId,
-} from '.';
-import { calculateCashBalanceChange } from '../components';
-import {
-    FEES_PAYMENT,
-    allGroupTransactionTypes,
-} from '../constants/transactions';
-import { BaseTransaction, GroupTransaction } from '../types';
-import { isAssetGroupTransactionType } from '../utils';
+} from '@/rwa';
 
 export const mockFixedIncomeTransaction: BaseTransaction = {
     id: 'fixed-income-transaction-1',

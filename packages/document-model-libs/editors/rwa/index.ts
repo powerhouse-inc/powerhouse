@@ -1,4 +1,4 @@
-import type { CustomEditorProps } from './editor';
+import { RWAEditorContextProps } from '@powerhousedao/design-system';
 import type {
     RealWorldAssetsState,
     RealWorldAssetsLocalState,
@@ -11,7 +11,7 @@ export const module: ExtendedEditor<
     RealWorldAssetsState,
     RealWorldAssetsAction,
     RealWorldAssetsLocalState,
-    CustomEditorProps
+    RWAEditorContextProps
 > = {
     Component: lazyWithPreload(() => import('./editor')),
     documentTypes: ['makerdao/rwa-portfolio'],

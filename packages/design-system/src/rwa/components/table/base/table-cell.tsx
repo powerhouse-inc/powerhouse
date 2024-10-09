@@ -1,5 +1,6 @@
 import { Icon } from '@/powerhouse';
-import React, { ComponentPropsWithoutRef } from 'react';
+import { TableItemType, TableName, useEditorContext } from '@/rwa';
+import React, { ComponentPropsWithoutRef, useCallback } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export const RWATableCell: React.FC<ComponentPropsWithoutRef<'td'>> = props => (
@@ -18,9 +19,19 @@ export function ItemNumberCell(props: { readonly itemNumber: number }) {
 
 export function MoreDetailsCell(props: {
     readonly isSelected: boolean;
-    readonly onClick: () => void;
+    readonly tableName: TableName;
+    readonly tableItem: TableItemType<TableName>;
 }) {
-    const { isSelected, onClick } = props;
+    const { isSelected, tableName, tableItem } = props;
+    const { viewItem, clearSelected } = useEditorContext();
+
+    const onClick = useCallback(() => {
+        if (isSelected) {
+            clearSelected();
+            return;
+        }
+        viewItem(tableItem, tableName);
+    }, [clearSelected, isSelected, tableItem, tableName, viewItem]);
 
     return (
         <RWATableCell className="w-4">

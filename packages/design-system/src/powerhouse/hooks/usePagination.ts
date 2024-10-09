@@ -54,7 +54,7 @@ export function usePagination<T>(
     items: T[],
     options?: UsePaginationOptions,
 ): UsePaginationResult<T> {
-    const { itemsPerPage = 10, initialPage = 0, pageRange = 5 } = options || {};
+    const { itemsPerPage = 20, initialPage = 0, pageRange = 3 } = options || {};
 
     const [currentPage, setCurrentPage] = useState(initialPage);
 

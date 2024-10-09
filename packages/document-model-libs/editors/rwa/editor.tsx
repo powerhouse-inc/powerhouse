@@ -1,74 +1,65 @@
-import {
-    OTHER,
-    PORTFOLIO,
-    RWATabs,
-    RWATabsProps,
-    TabComponents,
-    TRANSACTIONS,
-} from '@powerhousedao/design-system';
 import { actions, EditorProps } from 'document-model/document';
 import {
     RealWorldAssetsAction,
     RealWorldAssetsLocalState,
     RealWorldAssetsState,
 } from '../../document-models/real-world-assets';
-import { Other } from './other';
-import { Portfolio } from './portfolio';
-import { Transactions } from './transactions';
-
-export type CustomEditorProps = Pick<
-    RWATabsProps,
-    'onClose' | 'onExport' | 'onSwitchboardLinkClick' | 'onShowRevisionHistory'
-> & {
-    readonly isAllowedToCreateDocuments: boolean;
-    readonly isAllowedToEditDocuments: boolean;
-};
+import { useEditorDispatcher } from './hooks/useEditorDispatcher';
+import { useCallback } from 'react';
+import {
+    RWAEditor,
+    RWAEditorContextProps,
+    RWAEditorContextProvider,
+} from '@powerhousedao/design-system';
 
 export type IProps = EditorProps<
     RealWorldAssetsState,
     RealWorldAssetsAction,
     RealWorldAssetsLocalState
 > &
-    CustomEditorProps;
+    RWAEditorContextProps;
 
 function Editor(props: IProps) {
     const {
-        document: {
-            revision: { global, local },
-            clipboard,
-        },
+        document,
         dispatch,
+        isAllowedToCreateDocuments,
+        isAllowedToEditDocuments,
+        onExport,
+        onClose,
+        onSwitchboardLinkClick,
+        onShowRevisionHistory,
     } = props;
+    const state = document.state.global;
 
-    const undoProps = {
-        undo: () => dispatch(actions.undo()),
-        redo: () => dispatch(actions.redo()),
-        canUndo: global > 0 || local > 0,
-        canRedo: clipboard.length > 0,
-    };
+    const undo = useCallback(() => dispatch(actions.undo()), [dispatch]);
+    const redo = useCallback(() => dispatch(actions.redo()), [dispatch]);
+    const canUndo = document.revision.global > 0 || document.revision.local > 0;
+    const canRedo = document.clipboard.length > 0;
 
-    const tabComponents: TabComponents = [
-        {
-            value: PORTFOLIO,
-            label: 'Portfolio',
-            // eslint-disable-next-line react/no-unstable-nested-components
-            Component: () => <Portfolio {...props} />,
-        },
-        {
-            value: TRANSACTIONS,
-            label: 'Transactions',
-            // eslint-disable-next-line react/no-unstable-nested-components
-            Component: () => <Transactions {...props} />,
-        },
-        {
-            value: OTHER,
-            label: 'Other',
-            // eslint-disable-next-line react/no-unstable-nested-components
-            Component: () => <Other {...props} />,
-        },
-    ];
+    const editorDispatcher = useEditorDispatcher({
+        dispatch,
+        state,
+    });
 
-    return <RWATabs {...props} {...undoProps} tabComponents={tabComponents} />;
+    return (
+        <RWAEditorContextProvider
+            canRedo={canRedo}
+            canUndo={canUndo}
+            editorDispatcher={editorDispatcher}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            isAllowedToEditDocuments={isAllowedToEditDocuments}
+            onClose={onClose}
+            onExport={onExport}
+            onShowRevisionHistory={onShowRevisionHistory}
+            onSwitchboardLinkClick={onSwitchboardLinkClick}
+            redo={redo}
+            state={state}
+            undo={undo}
+        >
+            <RWAEditor />
+        </RWAEditorContextProvider>
+    );
 }
 
 export default Editor;

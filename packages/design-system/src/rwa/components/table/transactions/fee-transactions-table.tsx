@@ -5,38 +5,43 @@ import {
     RWATableSelect,
     ServiceProviderFeeType,
 } from '@/rwa';
-import {
-    Control,
-    FieldArrayWithId,
-    FieldErrors,
-    Path,
-    UseFieldArrayAppend,
-    UseFieldArrayRemove,
-    UseFormRegister,
-    UseFormWatch,
-} from 'react-hook-form';
+import { Control, FieldErrors, Path, useFieldArray } from 'react-hook-form';
 import { twMerge } from 'tailwind-merge';
 
 type Props = {
-    readonly feeInputs: FieldArrayWithId<GroupTransactionFormInputs, 'fees'>[];
+    readonly canHaveTransactionFees: boolean;
     readonly serviceProviderFeeTypes: ServiceProviderFeeType[];
     readonly serviceProviderFeeTypeOptions: { label: string; value: string }[];
-    readonly setShowServiceProviderFeeTypeModal: (show: boolean) => void;
-    readonly register: UseFormRegister<GroupTransactionFormInputs>;
+    readonly showCreateServiceProviderFeeTypeModal: () => void;
     readonly control: Control<GroupTransactionFormInputs>;
-    readonly watch: UseFormWatch<GroupTransactionFormInputs>;
-    readonly append: UseFieldArrayAppend<GroupTransactionFormInputs, 'fees'>;
-    readonly remove: UseFieldArrayRemove;
     readonly errors: FieldErrors<GroupTransactionFormInputs>;
     readonly isViewOnly: boolean;
 };
 
 export function FeeTransactionsTable(props: Props) {
     const headings = ['Fees', 'Service Provider', 'Amount', ''] as const;
+    const {
+        canHaveTransactionFees,
+        serviceProviderFeeTypes,
+        serviceProviderFeeTypeOptions,
+        control,
+        errors,
+        isViewOnly,
+        showCreateServiceProviderFeeTypeModal,
+    } = props;
+
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: 'fees',
+    });
+
+    if (!canHaveTransactionFees) {
+        return null;
+    }
 
     return (
         <>
-            {props.feeInputs.length > 0 && (
+            {fields.length > 0 && (
                 <div className="bg-gray-50 pl-5 pt-3">
                     <table className="w-full border-separate text-xs font-medium">
                         <thead className="mb-2">
@@ -46,7 +51,7 @@ export function FeeTransactionsTable(props: Props) {
                                         className={twMerge(
                                             'py-2 text-left font-medium text-gray-600',
                                             heading === 'Amount' &&
-                                                !props.isViewOnly &&
+                                                !isViewOnly &&
                                                 'text-right',
                                         )}
                                         key={heading}
@@ -57,30 +62,28 @@ export function FeeTransactionsTable(props: Props) {
                             </tr>
                         </thead>
                         <tbody>
-                            {props.feeInputs.map((feeInput, index) => {
+                            {fields.map((feeInput, index) => {
                                 return (
                                     <tr key={feeInput.id}>
                                         <td className="w-52" />
                                         <td className="w-96">
                                             <RWATableSelect
                                                 addItemButtonProps={{
-                                                    onClick: () =>
-                                                        props.setShowServiceProviderFeeTypeModal(
-                                                            true,
-                                                        ),
+                                                    onClick:
+                                                        showCreateServiceProviderFeeTypeModal,
                                                     label: 'Add Service Provider',
                                                 }}
                                                 aria-invalid={
-                                                    props.errors.fees?.[index]
+                                                    errors.fees?.[index]
                                                         ?.serviceProviderFeeTypeId
                                                         ? 'true'
                                                         : 'false'
                                                 }
-                                                control={props.control}
-                                                disabled={props.isViewOnly}
+                                                control={control}
+                                                disabled={isViewOnly}
                                                 name={`fees.${index}.serviceProviderFeeTypeId`}
                                                 options={
-                                                    props.serviceProviderFeeTypeOptions
+                                                    serviceProviderFeeTypeOptions
                                                 }
                                                 rules={{
                                                     required:
@@ -91,14 +94,13 @@ export function FeeTransactionsTable(props: Props) {
                                         <td className="w-52">
                                             <RWANumberInput
                                                 aria-invalid={
-                                                    props.errors.fees?.[index]
-                                                        ?.amount
+                                                    errors.fees?.[index]?.amount
                                                         ? 'true'
                                                         : 'false'
                                                 }
-                                                control={props.control}
+                                                control={control}
                                                 currency="USD"
-                                                disabled={props.isViewOnly}
+                                                disabled={isViewOnly}
                                                 name={
                                                     `fees.${index}.amount` as Path<GroupTransactionFormInputs>
                                                 }
@@ -117,11 +119,11 @@ export function FeeTransactionsTable(props: Props) {
                                             />
                                         </td>
                                         <td className="">
-                                            {!props.isViewOnly && (
+                                            {!isViewOnly && (
                                                 <button
                                                     className="flex items-center"
                                                     onClick={() =>
-                                                        props.remove(index)
+                                                        remove(index)
                                                     }
                                                     type="button"
                                                 >
@@ -139,14 +141,14 @@ export function FeeTransactionsTable(props: Props) {
                     </table>
                 </div>
             )}
-            {!props.isViewOnly && (
+            {!isViewOnly && (
                 <button
                     className="ml-[234px] mt-1 flex w-fit items-center justify-center gap-x-2 rounded-lg bg-white pb-6 text-sm font-semibold text-gray-900"
                     onClick={() =>
-                        props.append({
+                        append({
                             amount: null,
                             serviceProviderFeeTypeId:
-                                props.serviceProviderFeeTypes[0]?.id,
+                                serviceProviderFeeTypes[0]?.id,
                         })
                     }
                 >

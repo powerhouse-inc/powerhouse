@@ -1,15 +1,12 @@
-import { GroupTransactionsTable, GroupTransactionsTableProps } from '../table';
-import { TabContent } from './tab-content';
+import { GroupTransactionsTable, TabContent } from '@/rwa';
 
-export function TransactionsTab(props: GroupTransactionsTableProps) {
-    const tabProps = {
-        label: 'Transactions',
-        description:
-            'Details on the distribution of assets among different financial institutions or investment vehicles.',
-    };
+export function TransactionsTab() {
     return (
-        <TabContent {...tabProps}>
-            <GroupTransactionsTable {...props} />
+        <TabContent
+            description="Details on the distribution of assets among different financial institutions or investment vehicles."
+            label="Transactions"
+        >
+            <GroupTransactionsTable />
         </TabContent>
     );
 }

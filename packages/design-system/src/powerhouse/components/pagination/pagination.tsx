@@ -30,10 +30,10 @@ export const Pagination: React.FC<PaginationProps> = props => {
         isNextPageAvailable,
         isPreviousPageAvailable,
         hiddenNextPages,
-        firstPageLabel,
-        lastPageLabel,
-        nextPageLabel,
-        previousPageLabel,
+        firstPageLabel = 'First',
+        lastPageLabel = 'Last',
+        nextPageLabel = 'Next',
+        previousPageLabel = 'Previous',
     } = props;
 
     return (
