@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.0.0-alpha.103",
+  "version": "1.0.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "module": "./src/index.ts",
@@ -61,7 +61,7 @@
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",
-    "document-model": "workspace:*",
+    "document-model": "2.2.0",
     "document-model-libs": "1.93.1",
     "fake-indexeddb": "^5.0.2",
     "localforage": "^1.10.0",
