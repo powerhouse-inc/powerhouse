@@ -10,6 +10,9 @@ const exportResolvers =
 const exportTypedefs =
     '// export typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT';
 
+const exportScalarType =
+    '// export types -- DO NOT REMOVE OR EDIT THIS COMMENT';
+
 export async function newScalarGenerator(
     tree: Tree,
     options: NewScalarGeneratorSchema,
@@ -39,6 +42,11 @@ export async function newScalarGenerator(
     newContents = newContents.replace(
         exportTypedefs,
         `${exportTypedefs}\n    ${options.name}.typedef,`,
+    );
+
+    newContents = newContents.replace(
+        exportScalarType,
+        `${exportScalarType}\nexport type { ScalarType as ${options.name}ScalarType } from './${options.name}';`,
     );
 
     tree.write(filePath, newContents);

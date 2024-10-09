@@ -6,6 +6,11 @@ import {
 } from 'graphql';
 import { z } from 'zod';
 
+export type ScalarType = {
+    input: string;
+    output: string;
+};
+
 export const typedef = 'scalar EmailAddress';
 
 export const schema = z.string().email();
