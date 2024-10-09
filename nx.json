@@ -71,6 +71,7 @@
     ],
     "projectsRelationship": "independent",
     "version": {
+      "skipLockFileUpdate": true,
       "conventionalCommits": true
     },
     "changelog": {
