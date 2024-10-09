@@ -22,7 +22,7 @@ export function ENSAvatar(props: Props) {
   if (isLoading)
     return (
       <div
-        className="fade-out flex-none animate-pulse rounded-full bg-gray-400"
+        className="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
         style={style}
       />
     );

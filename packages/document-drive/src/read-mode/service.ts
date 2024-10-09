@@ -181,16 +181,13 @@ export class ReadModeService implements IReadModeDriveService {
   async getReadDriveBySlug(
     slug: string,
   ): Promise<ReadDrive | ReadDriveSlugNotFoundError> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const readDrive = [...this.#drives.values()].find(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       ({ drive }) => drive.state.global.slug === slug,
     );
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
     return Promise.resolve(
       readDrive
-        ? // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-          { ...readDrive.drive, readContext: readDrive.context }
+        ? { ...readDrive.drive, readContext: readDrive.context }
         : new ReadDriveSlugNotFoundError(slug),
     );
   }

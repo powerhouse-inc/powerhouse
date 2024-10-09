@@ -30,7 +30,7 @@ export function Tooltip(props: Props) {
         <RadixTooltip.Content
           {...rest}
           className={twMerge(
-            "shadow-tooltip rounded-lg border border-gray-200 bg-white p-2 text-xs",
+            "rounded-lg border border-gray-200 bg-white p-2 text-xs shadow-tooltip",
             className,
           )}
         >
