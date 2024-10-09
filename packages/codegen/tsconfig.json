@@ -1,6 +1,5 @@
 {
     "compilerOptions": {
-        "lib": ["es2017"],
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "strict": true,
@@ -18,5 +17,5 @@
         "experimentalDecorators": true,
         "declaration": true
     },
-    "include": ["src/**/*.ts", "src/**/.hygen/**/*.ts", "reset.d.ts"]
+    "include": ["src/**/*", "src/**/.hygen/**/*"],
 }

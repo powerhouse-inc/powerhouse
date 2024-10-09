@@ -1,34 +1,22 @@
 {
-    "compilerOptions": {
-        "module": "ESNext",
-        "moduleResolution": "Bundler",
-        "declaration": true,
-        "outDir": "./dist",
-        "esModuleInterop": true,
-        "forceConsistentCasingInFileNames": true,
-        "strict": true,
-        "noImplicitAny": true,
-        "skipLibCheck": true,
-        "emitDeclarationOnly": true,
-        "jsx": "react-jsx",
-        "paths": {
-            "@/*": ["./src/*"]
-        },
-        "types": ["vite/client", "vitest/globals"],
-        "allowJs": true
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "declaration": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "emitDeclarationOnly": true,
+    "jsx": "react-jsx",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./src/*"]
     },
-
-    "types": ["@testing-library/jest-dom"],
-    "include": [
-        "src/**/*.ts",
-        "src/**/*.tsx",
-        ".storybook/**/*.ts",
-        ".storybook/**/*.tsx",
-        "*.config.ts",
-        "*.config.js",
-        "*.config.mjs",
-        "scripts/**/*.ts",
-        "reset.d.ts"
-    ],
-    "exclude": ["dist", "node_modules"]
+    "types": ["vite/client", "vitest/globals"],
+    "allowJs": true
+  },
+  "types": ["@testing-library/jest-dom"],
 }
