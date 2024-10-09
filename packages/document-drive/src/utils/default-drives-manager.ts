@@ -1,366 +1,341 @@
 import {
-    DefaultRemoteDriveInfo,
-    DocumentDriveServerOptions,
-    DriveEvents,
-    IBaseDocumentDriveServer,
-    IReadModeDriveServer,
-    RemoteDriveAccessLevel,
-    RemoveDriveStrategy,
-    RemoveOldRemoteDrivesOption
-} from '../server';
-import { DriveNotFoundError } from '../server/error';
-import { requestPublicDrive } from './graphql';
-import { logger } from './logger';
+  DefaultRemoteDriveInfo,
+  DocumentDriveServerOptions,
+  DriveEvents,
+  IBaseDocumentDriveServer,
+  IReadModeDriveServer,
+  RemoteDriveAccessLevel,
+  RemoveDriveStrategy,
+  RemoveOldRemoteDrivesOption,
+} from "../server";
+import { DriveNotFoundError } from "../server/error";
+import { requestPublicDrive } from "./graphql";
+import { logger } from "./logger";
 
 export interface IServerDelegateDrivesManager {
-    emit: (...args: Parameters<DriveEvents['defaultRemoteDrive']>) => void;
-    detachDrive: (driveId: string) => Promise<void>;
+  emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) => void;
+  detachDrive: (driveId: string) => Promise<void>;
 }
 
 function isReadModeDriveServer(obj: unknown): obj is IReadModeDriveServer {
-    return typeof (obj as IReadModeDriveServer).getReadDrives === 'function';
+  return typeof (obj as IReadModeDriveServer).getReadDrives === "function";
 }
 
 export interface IDefaultDrivesManager {
-    initializeDefaultRemoteDrives(): Promise<void>;
-    getDefaultRemoteDrives(): Map<string, DefaultRemoteDriveInfo>;
-    setDefaultDriveAccessLevel(
-        url: string,
-        level: RemoteDriveAccessLevel
-    ): Promise<void>;
-    setAllDefaultDrivesAccessLevel(
-        level: RemoteDriveAccessLevel
-    ): Promise<void>;
+  initializeDefaultRemoteDrives(): Promise<void>;
+  getDefaultRemoteDrives(): Map<string, DefaultRemoteDriveInfo>;
+  setDefaultDriveAccessLevel(
+    url: string,
+    level: RemoteDriveAccessLevel,
+  ): Promise<void>;
+  setAllDefaultDrivesAccessLevel(level: RemoteDriveAccessLevel): Promise<void>;
 }
 
 export class DefaultDrivesManager implements IDefaultDrivesManager {
-    private defaultRemoteDrives = new Map<string, DefaultRemoteDriveInfo>();
-    private removeOldRemoteDrivesConfig: RemoveOldRemoteDrivesOption;
+  private defaultRemoteDrives = new Map<string, DefaultRemoteDriveInfo>();
+  private removeOldRemoteDrivesConfig: RemoveOldRemoteDrivesOption;
 
-    constructor(
-        private server:
-            | IBaseDocumentDriveServer
-            | (IBaseDocumentDriveServer & IReadModeDriveServer),
-        private delegate: IServerDelegateDrivesManager,
-        options?: Pick<DocumentDriveServerOptions, 'defaultDrives'>
-    ) {
-        if (options?.defaultDrives.remoteDrives) {
-            for (const defaultDrive of options.defaultDrives.remoteDrives) {
-                this.defaultRemoteDrives.set(defaultDrive.url, {
-                    ...defaultDrive,
-                    status: 'PENDING'
-                });
-            }
-        }
-
-        this.removeOldRemoteDrivesConfig = options?.defaultDrives
-            .removeOldRemoteDrives || {
-            strategy: 'preserve-all'
-        };
+  constructor(
+    private server:
+      | IBaseDocumentDriveServer
+      | (IBaseDocumentDriveServer & IReadModeDriveServer),
+    private delegate: IServerDelegateDrivesManager,
+    options?: Pick<DocumentDriveServerOptions, "defaultDrives">,
+  ) {
+    if (options?.defaultDrives.remoteDrives) {
+      for (const defaultDrive of options.defaultDrives.remoteDrives) {
+        this.defaultRemoteDrives.set(defaultDrive.url, {
+          ...defaultDrive,
+          status: "PENDING",
+        });
+      }
     }
 
-    getDefaultRemoteDrives() {
-        return new Map(
-            JSON.parse(
-                JSON.stringify(Array.from(this.defaultRemoteDrives))
-            ) as Iterable<[string, DefaultRemoteDriveInfo]>
+    this.removeOldRemoteDrivesConfig = options?.defaultDrives
+      .removeOldRemoteDrives || {
+      strategy: "preserve-all",
+    };
+  }
+
+  getDefaultRemoteDrives() {
+    return new Map(
+      JSON.parse(
+        JSON.stringify(Array.from(this.defaultRemoteDrives)),
+      ) as Iterable<[string, DefaultRemoteDriveInfo]>,
+    );
+  }
+
+  private async deleteDriveById(driveId: string) {
+    try {
+      await this.server.deleteDrive(driveId);
+    } catch (error) {
+      if (!(error instanceof DriveNotFoundError)) {
+        logger.error(error);
+      }
+    }
+  }
+
+  private async preserveDrivesById(
+    driveIdsToPreserve: string[],
+    drives: string[],
+    removeStrategy: RemoveDriveStrategy = "detach",
+  ) {
+    const getAllDrives = drives.map((driveId) => this.server.getDrive(driveId));
+
+    const drivesToRemove = (await Promise.all(getAllDrives))
+      .filter(
+        (drive) =>
+          drive.state.local.listeners.length > 0 ||
+          drive.state.local.triggers.length > 0,
+      )
+      .filter((drive) => !driveIdsToPreserve.includes(drive.state.global.id));
+
+    const driveIds = drivesToRemove.map((drive) => drive.state.global.id);
+
+    if (removeStrategy === "detach") {
+      await this.detachDrivesById(driveIds);
+    } else {
+      await this.removeDrivesById(driveIds);
+    }
+  }
+
+  private async removeDrivesById(driveIds: string[]) {
+    for (const driveId of driveIds) {
+      await this.deleteDriveById(driveId);
+    }
+  }
+
+  private async detachDrivesById(driveIds: string[]) {
+    const detachDrivesPromises = driveIds.map((driveId) =>
+      this.delegate.detachDrive(driveId),
+    );
+
+    await Promise.all(detachDrivesPromises);
+  }
+
+  async removeOldremoteDrives() {
+    const driveids = await this.server.getDrives();
+
+    switch (this.removeOldRemoteDrivesConfig.strategy) {
+      case "preserve-by-id-and-detach":
+      case "preserve-by-id": {
+        const detach: RemoveDriveStrategy =
+          this.removeOldRemoteDrivesConfig.strategy ===
+          "preserve-by-id-and-detach"
+            ? "detach"
+            : "remove";
+
+        await this.preserveDrivesById(
+          this.removeOldRemoteDrivesConfig.ids,
+          driveids,
+          detach,
         );
-    }
+        break;
+      }
+      case "preserve-by-url-and-detach":
+      case "preserve-by-url": {
+        const detach: RemoveDriveStrategy =
+          this.removeOldRemoteDrivesConfig.strategy ===
+          "preserve-by-url-and-detach"
+            ? "detach"
+            : "remove";
 
-    private async deleteDriveById(driveId: string) {
-        try {
-            await this.server.deleteDrive(driveId);
-        } catch (error) {
-            if (!(error instanceof DriveNotFoundError)) {
-                logger.error(error);
-            }
-        }
-    }
-
-    private async preserveDrivesById(
-        driveIdsToPreserve: string[],
-        drives: string[],
-        removeStrategy: RemoveDriveStrategy = 'detach'
-    ) {
-        const getAllDrives = drives.map(driveId =>
-            this.server.getDrive(driveId)
+        const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map((url) =>
+          requestPublicDrive(url),
         );
 
-        const drivesToRemove = (await Promise.all(getAllDrives))
-            .filter(
-                drive =>
-                    drive.state.local.listeners.length > 0 ||
-                    drive.state.local.triggers.length > 0
-            )
-            .filter(
-                drive => !driveIdsToPreserve.includes(drive.state.global.id)
-            );
+        const drivesIdsToPreserve = (await Promise.all(getDrivesInfo)).map(
+          (driveInfo) => driveInfo.id,
+        );
 
-        const driveIds = drivesToRemove.map(drive => drive.state.global.id);
+        await this.preserveDrivesById(drivesIdsToPreserve, driveids, detach);
+        break;
+      }
+      case "remove-by-id": {
+        const drivesIdsToRemove = this.removeOldRemoteDrivesConfig.ids.filter(
+          (driveId) => driveids.includes(driveId),
+        );
 
-        if (removeStrategy === 'detach') {
-            await this.detachDrivesById(driveIds);
-        } else {
-            await this.removeDrivesById(driveIds);
-        }
-    }
+        await this.removeDrivesById(drivesIdsToRemove);
+        break;
+      }
+      case "remove-by-url": {
+        const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
+          (driveUrl) => requestPublicDrive(driveUrl),
+        );
+        const drivesInfo = await Promise.all(getDrivesInfo);
 
-    private async removeDrivesById(driveIds: string[]) {
-        for (const driveId of driveIds) {
-            await this.deleteDriveById(driveId);
-        }
-    }
+        const drivesIdsToRemove = drivesInfo
+          .map((driveInfo) => driveInfo.id)
+          .filter((driveId) => driveids.includes(driveId));
 
-    private async detachDrivesById(driveIds: string[]) {
-        const detachDrivesPromises = driveIds.map(driveId =>
-            this.delegate.detachDrive(driveId)
+        await this.removeDrivesById(drivesIdsToRemove);
+        break;
+      }
+      case "remove-all": {
+        const getDrives = driveids.map((driveId) =>
+          this.server.getDrive(driveId),
+        );
+        const drives = await Promise.all(getDrives);
+        const drivesToRemove = drives
+          .filter(
+            (drive) =>
+              drive.state.local.listeners.length > 0 ||
+              drive.state.local.triggers.length > 0,
+          )
+          .map((drive) => drive.state.global.id);
+
+        await this.removeDrivesById(drivesToRemove);
+        break;
+      }
+      case "detach-by-id": {
+        const drivesIdsToRemove = this.removeOldRemoteDrivesConfig.ids.filter(
+          (driveId) => driveids.includes(driveId),
+        );
+        const detachDrivesPromises = drivesIdsToRemove.map((driveId) =>
+          this.delegate.detachDrive(driveId),
         );
 
         await Promise.all(detachDrivesPromises);
+        break;
+      }
+      case "detach-by-url": {
+        const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
+          (driveUrl) => requestPublicDrive(driveUrl),
+        );
+        const drivesInfo = await Promise.all(getDrivesInfo);
+
+        const drivesIdsToRemove = drivesInfo
+          .map((driveInfo) => driveInfo.id)
+          .filter((driveId) => driveids.includes(driveId));
+
+        const detachDrivesPromises = drivesIdsToRemove.map((driveId) =>
+          this.delegate.detachDrive(driveId),
+        );
+
+        await Promise.all(detachDrivesPromises);
+        break;
+      }
     }
+  }
 
-    async removeOldremoteDrives() {
-        const driveids = await this.server.getDrives();
+  async setAllDefaultDrivesAccessLevel(level: RemoteDriveAccessLevel) {
+    const drives = this.defaultRemoteDrives.values();
+    for (const drive of drives) {
+      await this.setDefaultDriveAccessLevel(drive.url, level);
+    }
+  }
 
-        switch (this.removeOldRemoteDrivesConfig.strategy) {
-            case 'preserve-by-id-and-detach':
-            case 'preserve-by-id': {
-                const detach: RemoveDriveStrategy =
-                    this.removeOldRemoteDrivesConfig.strategy ===
-                    'preserve-by-id-and-detach'
-                        ? 'detach'
-                        : 'remove';
+  async setDefaultDriveAccessLevel(url: string, level: RemoteDriveAccessLevel) {
+    const drive = this.defaultRemoteDrives.get(url);
+    if (drive && drive.options.accessLevel !== level) {
+      const newDriveValue = {
+        ...drive,
+        options: { ...drive.options, accessLevel: level },
+      };
+      this.defaultRemoteDrives.set(url, newDriveValue);
+      await this.initializeDefaultRemoteDrives([newDriveValue]);
+    }
+  }
 
-                await this.preserveDrivesById(
-                    this.removeOldRemoteDrivesConfig.ids,
-                    driveids,
-                    detach
-                );
-                break;
-            }
-            case 'preserve-by-url-and-detach':
-            case 'preserve-by-url': {
-                const detach: RemoveDriveStrategy =
-                    this.removeOldRemoteDrivesConfig.strategy ===
-                    'preserve-by-url-and-detach'
-                        ? 'detach'
-                        : 'remove';
+  async initializeDefaultRemoteDrives(
+    defaultDrives: DefaultRemoteDriveInfo[] = Array.from(
+      this.defaultRemoteDrives.values(),
+    ),
+  ) {
+    const drives = await this.server.getDrives();
+    const readServer = isReadModeDriveServer(this.server)
+      ? (this.server as IReadModeDriveServer)
+      : undefined;
+    const readDrives = await readServer?.getReadDrives();
 
-                const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
-                    url => requestPublicDrive(url)
-                );
+    for (const remoteDrive of defaultDrives) {
+      let remoteDriveInfo = { ...remoteDrive };
 
-                const drivesIdsToPreserve = (
-                    await Promise.all(getDrivesInfo)
-                ).map(driveInfo => driveInfo.id);
+      try {
+        const driveInfo =
+          remoteDrive.metadata ?? (await requestPublicDrive(remoteDrive.url));
 
-                await this.preserveDrivesById(
-                    drivesIdsToPreserve,
-                    driveids,
-                    detach
-                );
-                break;
-            }
-            case 'remove-by-id': {
-                const drivesIdsToRemove =
-                    this.removeOldRemoteDrivesConfig.ids.filter(driveId =>
-                        driveids.includes(driveId)
-                    );
+        remoteDriveInfo = { ...remoteDrive, metadata: driveInfo };
 
-                await this.removeDrivesById(drivesIdsToRemove);
-                break;
-            }
-            case 'remove-by-url': {
-                const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
-                    driveUrl => requestPublicDrive(driveUrl)
-                );
-                const drivesInfo = await Promise.all(getDrivesInfo);
+        this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
 
-                const drivesIdsToRemove = drivesInfo
-                    .map(driveInfo => driveInfo.id)
-                    .filter(driveId => driveids.includes(driveId));
+        const driveIsAdded = drives.includes(driveInfo.id);
+        const readDriveIsAdded = readDrives?.includes(driveInfo.id);
 
-                await this.removeDrivesById(drivesIdsToRemove);
-                break;
-            }
-            case 'remove-all': {
-                const getDrives = driveids.map(driveId =>
-                    this.server.getDrive(driveId)
-                );
-                const drives = await Promise.all(getDrives);
-                const drivesToRemove = drives
-                    .filter(
-                        drive =>
-                            drive.state.local.listeners.length > 0 ||
-                            drive.state.local.triggers.length > 0
-                    )
-                    .map(drive => drive.state.global.id);
+        const hasAccessLevel = remoteDrive.options.accessLevel !== undefined;
+        const readMode =
+          readServer && remoteDrive.options.accessLevel === "READ";
+        const isAdded = readMode ? readDriveIsAdded : driveIsAdded;
 
-                await this.removeDrivesById(drivesToRemove);
-                break;
-            }
-            case 'detach-by-id': {
-                const drivesIdsToRemove =
-                    this.removeOldRemoteDrivesConfig.ids.filter(driveId =>
-                        driveids.includes(driveId)
-                    );
-                const detachDrivesPromises = drivesIdsToRemove.map(driveId =>
-                    this.delegate.detachDrive(driveId)
-                );
-
-                await Promise.all(detachDrivesPromises);
-                break;
-            }
-            case 'detach-by-url': {
-                const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
-                    driveUrl => requestPublicDrive(driveUrl)
-                );
-                const drivesInfo = await Promise.all(getDrivesInfo);
-
-                const drivesIdsToRemove = drivesInfo
-                    .map(driveInfo => driveInfo.id)
-                    .filter(driveId => driveids.includes(driveId));
-
-                const detachDrivesPromises = drivesIdsToRemove.map(driveId =>
-                    this.delegate.detachDrive(driveId)
-                );
-
-                await Promise.all(detachDrivesPromises);
-                break;
-            }
+        // if the read mode has changed then existing drives
+        // in the previous mode should be deleted
+        const driveToDelete =
+          hasAccessLevel && (readMode ? driveIsAdded : readDriveIsAdded);
+        if (driveToDelete) {
+          try {
+            await (readMode
+              ? this.server.deleteDrive(driveInfo.id)
+              : readServer?.deleteReadDrive(driveInfo.id));
+          } catch (e) {
+            logger.error(e);
+          }
         }
-    }
 
-    async setAllDefaultDrivesAccessLevel(level: RemoteDriveAccessLevel) {
-        const drives = this.defaultRemoteDrives.values();
-        for (const drive of drives) {
-            await this.setDefaultDriveAccessLevel(drive.url, level);
+        if (isAdded) {
+          remoteDriveInfo.status = "ALREADY_ADDED";
+
+          this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
+          this.delegate.emit(
+            "ALREADY_ADDED",
+            this.defaultRemoteDrives,
+            remoteDriveInfo,
+            driveInfo.id,
+            driveInfo.name,
+          );
+          continue;
         }
-    }
 
-    async setDefaultDriveAccessLevel(
-        url: string,
-        level: RemoteDriveAccessLevel
-    ) {
-        const drive = this.defaultRemoteDrives.get(url);
-        if (drive && drive.options.accessLevel !== level) {
-            const newDriveValue = {
-                ...drive,
-                options: { ...drive.options, accessLevel: level }
-            };
-            this.defaultRemoteDrives.set(url, newDriveValue);
-            await this.initializeDefaultRemoteDrives([newDriveValue]);
+        remoteDriveInfo.status = "ADDING";
+
+        this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
+        this.delegate.emit("ADDING", this.defaultRemoteDrives, remoteDriveInfo);
+
+        if ((!hasAccessLevel && readServer) || readMode) {
+          await readServer.addReadDrive(remoteDrive.url, {
+            ...remoteDrive.options,
+            expectedDriveInfo: driveInfo,
+          });
+        } else {
+          await this.server.addRemoteDrive(remoteDrive.url, {
+            ...remoteDrive.options,
+            expectedDriveInfo: driveInfo,
+          });
         }
+
+        remoteDriveInfo.status = "SUCCESS";
+
+        this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
+        this.delegate.emit(
+          "SUCCESS",
+          this.defaultRemoteDrives,
+          remoteDriveInfo,
+          driveInfo.id,
+          driveInfo.name,
+        );
+      } catch (error) {
+        remoteDriveInfo.status = "ERROR";
+
+        this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
+        this.delegate.emit(
+          "ERROR",
+          this.defaultRemoteDrives,
+          remoteDriveInfo,
+          undefined,
+          undefined,
+          error as Error,
+        );
+      }
     }
-
-    async initializeDefaultRemoteDrives(
-        defaultDrives: DefaultRemoteDriveInfo[] = Array.from(
-            this.defaultRemoteDrives.values()
-        )
-    ) {
-        const drives = await this.server.getDrives();
-        const readServer = isReadModeDriveServer(this.server)
-            ? (this.server as IReadModeDriveServer)
-            : undefined;
-        const readDrives = await readServer?.getReadDrives();
-
-        for (const remoteDrive of defaultDrives) {
-            let remoteDriveInfo = { ...remoteDrive };
-
-            try {
-                const driveInfo =
-                    remoteDrive.metadata ??
-                    (await requestPublicDrive(remoteDrive.url));
-
-                remoteDriveInfo = { ...remoteDrive, metadata: driveInfo };
-
-                this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
-
-                const driveIsAdded = drives.includes(driveInfo.id);
-                const readDriveIsAdded = readDrives?.includes(driveInfo.id);
-
-                const hasAccessLevel =
-                    remoteDrive.options.accessLevel !== undefined;
-                const readMode =
-                    readServer && remoteDrive.options.accessLevel === 'READ';
-                const isAdded = readMode ? readDriveIsAdded : driveIsAdded;
-
-                // if the read mode has changed then existing drives
-                // in the previous mode should be deleted
-                const driveToDelete =
-                    hasAccessLevel &&
-                    (readMode ? driveIsAdded : readDriveIsAdded);
-                if (driveToDelete) {
-                    try {
-                        await (readMode
-                            ? this.server.deleteDrive(driveInfo.id)
-                            : readServer?.deleteReadDrive(driveInfo.id));
-                    } catch (e) {
-                        logger.error(e);
-                    }
-                }
-
-                if (isAdded) {
-                    remoteDriveInfo.status = 'ALREADY_ADDED';
-
-                    this.defaultRemoteDrives.set(
-                        remoteDrive.url,
-                        remoteDriveInfo
-                    );
-                    this.delegate.emit(
-                        'ALREADY_ADDED',
-                        this.defaultRemoteDrives,
-                        remoteDriveInfo,
-                        driveInfo.id,
-                        driveInfo.name
-                    );
-                    continue;
-                }
-
-                remoteDriveInfo.status = 'ADDING';
-
-                this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
-                this.delegate.emit(
-                    'ADDING',
-                    this.defaultRemoteDrives,
-                    remoteDriveInfo
-                );
-
-                // if no access level is defined and read mode
-                // is supported then uses read mode
-                (!hasAccessLevel && readServer) || readMode
-                    ? await readServer.addReadDrive(remoteDrive.url, {
-                          ...remoteDrive.options,
-                          expectedDriveInfo: driveInfo
-                      })
-                    : await this.server.addRemoteDrive(remoteDrive.url, {
-                          ...remoteDrive.options,
-                          expectedDriveInfo: driveInfo
-                      });
-
-                remoteDriveInfo.status = 'SUCCESS';
-
-                this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
-                this.delegate.emit(
-                    'SUCCESS',
-                    this.defaultRemoteDrives,
-                    remoteDriveInfo,
-                    driveInfo.id,
-                    driveInfo.name
-                );
-            } catch (error) {
-                remoteDriveInfo.status = 'ERROR';
-
-                this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
-                this.delegate.emit(
-                    'ERROR',
-                    this.defaultRemoteDrives,
-                    remoteDriveInfo,
-                    undefined,
-                    undefined,
-                    error as Error
-                );
-            }
-        }
-    }
+  }
 }

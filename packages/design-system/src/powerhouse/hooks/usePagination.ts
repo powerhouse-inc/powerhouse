@@ -1,32 +1,32 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from "react";
 
 export type PageItem = {
-    index: number;
-    number: number;
-    active: boolean;
+  index: number;
+  number: number;
+  active: boolean;
 };
 
 export interface UsePaginationOptions {
-    pageRange?: number;
-    initialPage?: number;
-    itemsPerPage?: number;
+  pageRange?: number;
+  initialPage?: number;
+  itemsPerPage?: number;
 }
 
 export interface UsePaginationBaseResult {
-    pages: PageItem[];
-    goToPage: (page: number) => void;
-    pageCount: number;
-    currentPage: number;
-    goToLastPage: () => void;
-    goToFirstPage: () => void;
-    goToNextPage: () => void;
-    goToPreviousPage: () => void;
-    isNextPageAvailable: boolean;
-    isPreviousPageAvailable: boolean;
-    hiddenNextPages: boolean;
+  pages: PageItem[];
+  goToPage: (page: number) => void;
+  pageCount: number;
+  currentPage: number;
+  goToLastPage: () => void;
+  goToFirstPage: () => void;
+  goToNextPage: () => void;
+  goToPreviousPage: () => void;
+  isNextPageAvailable: boolean;
+  isPreviousPageAvailable: boolean;
+  hiddenNextPages: boolean;
 }
 export interface UsePaginationResult<T> extends UsePaginationBaseResult {
-    pageItems: T[];
+  pageItems: T[];
 }
 
 /**
@@ -51,86 +51,86 @@ export interface UsePaginationResult<T> extends UsePaginationBaseResult {
  */
 
 export function usePagination<T>(
-    items: T[],
-    options?: UsePaginationOptions,
+  items: T[],
+  options?: UsePaginationOptions,
 ): UsePaginationResult<T> {
-    const { itemsPerPage = 20, initialPage = 0, pageRange = 3 } = options || {};
+  const { itemsPerPage = 20, initialPage = 0, pageRange = 3 } = options || {};
 
-    const [currentPage, setCurrentPage] = useState(initialPage);
+  const [currentPage, setCurrentPage] = useState(initialPage);
 
-    const pageCount = Math.ceil(items.length / itemsPerPage);
-    const isNextPageAvailable = currentPage < pageCount - 1;
-    const isPreviousPageAvailable = currentPage > 0;
+  const pageCount = Math.ceil(items.length / itemsPerPage);
+  const isNextPageAvailable = currentPage < pageCount - 1;
+  const isPreviousPageAvailable = currentPage > 0;
 
-    const goToNextPage = useCallback(() => {
-        if (isNextPageAvailable) {
-            setCurrentPage(prev => prev + 1);
-        }
-    }, [isNextPageAvailable, setCurrentPage]);
+  const goToNextPage = useCallback(() => {
+    if (isNextPageAvailable) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  }, [isNextPageAvailable, setCurrentPage]);
 
-    const goToPreviousPage = useCallback(() => {
-        if (isPreviousPageAvailable) {
-            setCurrentPage(prev => prev - 1);
-        }
-    }, [isPreviousPageAvailable, setCurrentPage]);
+  const goToPreviousPage = useCallback(() => {
+    if (isPreviousPageAvailable) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  }, [isPreviousPageAvailable, setCurrentPage]);
 
-    const goToLastPage = useCallback(() => {
-        setCurrentPage(pageCount - 1);
-    }, [pageCount]);
+  const goToLastPage = useCallback(() => {
+    setCurrentPage(pageCount - 1);
+  }, [pageCount]);
 
-    const goToFirstPage = useCallback(() => {
-        setCurrentPage(0);
-    }, []);
+  const goToFirstPage = useCallback(() => {
+    setCurrentPage(0);
+  }, []);
 
-    const goToPage = useCallback(
-        (page: number) => {
-            if (page >= 0 && page < pageCount) {
-                setCurrentPage(page);
-            }
-        },
-        [pageCount],
-    );
+  const goToPage = useCallback(
+    (page: number) => {
+      if (page >= 0 && page < pageCount) {
+        setCurrentPage(page);
+      }
+    },
+    [pageCount],
+  );
 
-    const pageOffset = Math.floor((pageRange - 1) / 2);
-    const availableRange = Math.min(pageRange, pageCount);
-    const maxStartIndex = Math.max(pageCount - availableRange);
-    const startIndex = Math.min(
-        maxStartIndex,
-        Math.max(currentPage - pageOffset, 0),
-    );
+  const pageOffset = Math.floor((pageRange - 1) / 2);
+  const availableRange = Math.min(pageRange, pageCount);
+  const maxStartIndex = Math.max(pageCount - availableRange);
+  const startIndex = Math.min(
+    maxStartIndex,
+    Math.max(currentPage - pageOffset, 0),
+  );
 
-    const pages = useMemo(() => {
-        const range: PageItem[] = [];
-        for (let i = startIndex; i < availableRange + startIndex; i++) {
-            range.push({
-                index: i,
-                active: i === currentPage,
-                number: i + 1,
-            });
-        }
-        return range;
-    }, [availableRange, startIndex, currentPage]);
+  const pages = useMemo(() => {
+    const range: PageItem[] = [];
+    for (let i = startIndex; i < availableRange + startIndex; i++) {
+      range.push({
+        index: i,
+        active: i === currentPage,
+        number: i + 1,
+      });
+    }
+    return range;
+  }, [availableRange, startIndex, currentPage]);
 
-    const pageItems = items.slice(
-        currentPage * itemsPerPage,
-        (currentPage + 1) * itemsPerPage,
-    );
+  const pageItems = items.slice(
+    currentPage * itemsPerPage,
+    (currentPage + 1) * itemsPerPage,
+  );
 
-    const hiddenNextPages =
-        pages.length > 0 && pages.slice(-1)[0].index < pageCount - 1;
+  const hiddenNextPages =
+    pages.length > 0 && pages.slice(-1)[0].index < pageCount - 1;
 
-    return {
-        pages,
-        goToPage,
-        pageItems,
-        pageCount,
-        currentPage,
-        goToLastPage,
-        goToFirstPage,
-        goToNextPage,
-        hiddenNextPages,
-        goToPreviousPage,
-        isNextPageAvailable,
-        isPreviousPageAvailable,
-    };
+  return {
+    pages,
+    goToPage,
+    pageItems,
+    pageCount,
+    currentPage,
+    goToLastPage,
+    goToFirstPage,
+    goToNextPage,
+    hiddenNextPages,
+    goToPreviousPage,
+    isNextPageAvailable,
+    isPreviousPageAvailable,
+  };
 }

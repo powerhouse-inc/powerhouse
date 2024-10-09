@@ -1,5 +1,5 @@
 function managerEntries(entry = []) {
-    return [...entry, require.resolve('./operations.tsx')];
+  return [...entry, require.resolve("./operations.tsx")];
 }
 
 export default { managerEntries };

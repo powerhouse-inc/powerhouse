@@ -1,39 +1,39 @@
-import { create, castDraft, Draft, unsafe } from 'mutative';
-import { v4 as uuid } from 'uuid';
+import { create, castDraft, Draft, unsafe } from "mutative";
+import { v4 as uuid } from "uuid";
 import {
-    loadStateOperation,
-    pruneOperation,
-    redoOperation,
-    setNameOperation,
-    undoOperation,
-} from './actions';
+  loadStateOperation,
+  pruneOperation,
+  redoOperation,
+  setNameOperation,
+  undoOperation,
+} from "./actions";
 import {
-    BaseAction,
-    LOAD_STATE,
-    PRUNE,
-    REDO,
-    SET_NAME,
-    UNDO,
-} from './actions/types';
-import { UndoRedoAction, z } from './schema';
+  BaseAction,
+  LOAD_STATE,
+  PRUNE,
+  REDO,
+  SET_NAME,
+  UNDO,
+} from "./actions/types";
+import { UndoRedoAction, z } from "./schema";
 import {
-    Action,
-    Document,
-    ImmutableStateReducer,
-    Operation,
-    OperationScope,
-    ReducerOptions,
-    State,
-} from './types';
+  Action,
+  Document,
+  ImmutableStateReducer,
+  Operation,
+  OperationScope,
+  ReducerOptions,
+  State,
+} from "./types";
 import {
-    isBaseAction,
-    hashDocument,
-    replayOperations,
-    isUndoRedo,
-    isUndo,
-} from './utils/base';
-import { SignalDispatch } from './signal';
-import { documentHelpers, parseResultingState } from './utils';
+  isBaseAction,
+  hashDocument,
+  replayOperations,
+  isUndoRedo,
+  isUndo,
+} from "./utils/base";
+import { SignalDispatch } from "./signal";
+import { documentHelpers, parseResultingState } from "./utils";
 
 /**
  * Gets the next revision number based on the provided action.
@@ -43,18 +43,18 @@ import { documentHelpers, parseResultingState } from './utils';
  * @returns The next revision number.
  */
 function getNextRevision(
-    document: Document,
-    action: Action | Operation,
+  document: Document,
+  action: Action | Operation,
 ): number {
-    let latestOperation: Operation | undefined;
+  let latestOperation: Operation | undefined;
 
-    if ('index' in action) {
-        latestOperation = { ...action };
-    } else {
-        latestOperation = document.operations[action.scope].at(-1);
-    }
+  if ("index" in action) {
+    latestOperation = { ...action };
+  } else {
+    latestOperation = document.operations[action.scope].at(-1);
+  }
 
-    return (latestOperation?.index ?? -1) + 1;
+  return (latestOperation?.index ?? -1) + 1;
 }
 
 /**
@@ -66,17 +66,17 @@ function getNextRevision(
  * @returns The updated document state.
  */
 export function updateHeader<T extends Document>(
-    document: T,
-    action: Action,
+  document: T,
+  action: Action,
 ): T {
-    return {
-        ...document,
-        revision: {
-            ...document.revision,
-            [action.scope]: getNextRevision(document, action),
-        },
-        lastModified: new Date().toISOString(),
-    };
+  return {
+    ...document,
+    revision: {
+      ...document.revision,
+      [action.scope]: getNextRevision(document, action),
+    },
+    lastModified: new Date().toISOString(),
+  };
 }
 
 /**
@@ -89,58 +89,58 @@ export function updateHeader<T extends Document>(
  * @returns The updated document state.
  */
 function updateOperations<T extends Document>(
-    document: T,
-    action: Action | Operation,
-    skip = 0,
-    reuseLastOperationIndex = false,
+  document: T,
+  action: Action | Operation,
+  skip = 0,
+  reuseLastOperationIndex = false,
 ): T {
-    // UNDO, REDO and PRUNE are meta operations
-    // that alter the operations history themselves
-    if ([UNDO, REDO, PRUNE].includes(action.type)) {
-        return document;
+  // UNDO, REDO and PRUNE are meta operations
+  // that alter the operations history themselves
+  if ([UNDO, REDO, PRUNE].includes(action.type)) {
+    return document;
+  }
+
+  const { scope } = action;
+  const operations = document.operations[scope].slice();
+  let operationId: string | undefined;
+
+  const latestOperation = operations.at(-1);
+  const lastOperationIndex = latestOperation?.index ?? -1;
+
+  let nextIndex = reuseLastOperationIndex
+    ? lastOperationIndex
+    : lastOperationIndex + 1;
+
+  if ("index" in action) {
+    if (action.index - skip > nextIndex) {
+      throw new Error(
+        `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${action.index} with skip ${skip}`,
+      );
     }
 
-    const { scope } = action;
-    const operations = document.operations[scope].slice();
-    let operationId: string | undefined;
+    nextIndex = action.index;
+    operationId = action.id;
+  } else {
+    operationId = "id" in action ? (action.id as string) : uuid();
+  }
 
-    const latestOperation = operations.at(-1);
-    const lastOperationIndex = latestOperation?.index ?? -1;
+  operations.push({
+    ...action,
+    id: operationId,
+    index: nextIndex,
+    timestamp: new Date().toISOString(),
+    hash: "",
+    scope,
+    skip,
+    error: undefined,
+  });
 
-    let nextIndex = reuseLastOperationIndex
-        ? lastOperationIndex
-        : lastOperationIndex + 1;
-
-    if ('index' in action) {
-        if (action.index - skip > nextIndex) {
-            throw new Error(
-                `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${action.index} with skip ${skip}`,
-            );
-        }
-
-        nextIndex = action.index;
-        operationId = action.id;
-    } else {
-        operationId = 'id' in action ? (action.id as string) : uuid();
-    }
-
-    operations.push({
-        ...action,
-        id: operationId,
-        index: nextIndex,
-        timestamp: new Date().toISOString(),
-        hash: '',
-        scope,
-        skip,
-        error: undefined,
-    });
-
-    // adds the action to the operations history with
-    // the latest index and current timestamp
-    return {
-        ...document,
-        operations: { ...document.operations, [scope]: operations },
-    };
+  // adds the action to the operations history with
+  // the latest index and current timestamp
+  return {
+    ...document,
+    operations: { ...document.operations, [scope]: operations },
+  };
 }
 
 /**
@@ -153,19 +153,19 @@ function updateOperations<T extends Document>(
  * @returns The updated document state.
  */
 export function updateDocument<T extends Document>(
-    document: T,
-    action: Action,
-    skip = 0,
-    reuseLastOperationIndex = false,
+  document: T,
+  action: Action,
+  skip = 0,
+  reuseLastOperationIndex = false,
 ) {
-    let newDocument = updateOperations(
-        document,
-        action,
-        skip,
-        reuseLastOperationIndex,
-    );
-    newDocument = updateHeader(newDocument, action);
-    return newDocument;
+  let newDocument = updateOperations(
+    document,
+    action,
+    skip,
+    reuseLastOperationIndex,
+  );
+  newDocument = updateHeader(newDocument, action);
+  return newDocument;
 }
 
 /**
@@ -177,30 +177,30 @@ export function updateDocument<T extends Document>(
  * @returns The updated document state.
  */
 function _baseReducer<T, A extends Action, L>(
-    document: Document<T, A, L>,
-    action: BaseAction,
-    wrappedReducer: ImmutableStateReducer<T, A, L>,
+  document: Document<T, A, L>,
+  action: BaseAction,
+  wrappedReducer: ImmutableStateReducer<T, A, L>,
 ): Document<T, A, L> {
-    // throws if action is not valid base action
-    z.BaseActionSchema().parse(action);
+  // throws if action is not valid base action
+  z.BaseActionSchema().parse(action);
 
-    switch (action.type) {
-        case SET_NAME:
-            return setNameOperation(document, action.input);
-        case PRUNE:
-            return pruneOperation(document, action, wrappedReducer);
-        case LOAD_STATE:
-            return loadStateOperation(document, action.input.state);
-        default:
-            return document;
-    }
+  switch (action.type) {
+    case SET_NAME:
+      return setNameOperation(document, action.input);
+    case PRUNE:
+      return pruneOperation(document, action, wrappedReducer);
+    case LOAD_STATE:
+      return loadStateOperation(document, action.input.state);
+    default:
+      return document;
+  }
 }
 
 type UndoRedoProcessResult<T, A extends Action, L> = {
-    document: Document<T, A, L>;
-    action: A | BaseAction;
-    skip: number;
-    reuseLastOperationIndex: boolean;
+  document: Document<T, A, L>;
+  action: A | BaseAction;
+  skip: number;
+  reuseLastOperationIndex: boolean;
 };
 
 /**
@@ -212,18 +212,18 @@ type UndoRedoProcessResult<T, A extends Action, L> = {
  * @returns The updated document, calculated skip value and transformed action (if apply).
  */
 export function processUndoRedo<T, A extends Action, L>(
-    document: Document<T, A, L>,
-    action: UndoRedoAction,
-    skip: number,
+  document: Document<T, A, L>,
+  action: UndoRedoAction,
+  skip: number,
 ): UndoRedoProcessResult<T, A, L> {
-    switch (action.type) {
-        case UNDO:
-            return undoOperation(document, action, skip);
-        case REDO:
-            return redoOperation(document, action, skip);
-        default:
-            return { document, action, skip, reuseLastOperationIndex: false };
-    }
+  switch (action.type) {
+    case UNDO:
+      return undoOperation(document, action, skip);
+    case REDO:
+      return redoOperation(document, action, skip);
+    default:
+      return { document, action, skip, reuseLastOperationIndex: false };
+  }
 }
 
 /**
@@ -239,126 +239,121 @@ export function processUndoRedo<T, A extends Action, L>(
  * @returns {Document<T, A, L>} - The updated document after processing the skip operation.
  */
 function processSkipOperation<
-    T,
-    A extends Action,
-    L,
-    D extends Document<T, A, L>,
+  T,
+  A extends Action,
+  L,
+  D extends Document<T, A, L>,
 >(
-    document: D,
-    action: A | BaseAction | Operation,
-    customReducer: ImmutableStateReducer<T, A, L>,
-    skipValue: number,
-    reuseOperationResultingState = false,
-    resultingStateParser = parseResultingState,
+  document: D,
+  action: A | BaseAction | Operation,
+  customReducer: ImmutableStateReducer<T, A, L>,
+  skipValue: number,
+  reuseOperationResultingState = false,
+  resultingStateParser = parseResultingState,
 ): D {
-    const scope = action.scope;
+  const scope = action.scope;
 
-    const latestOperation = document.operations[scope].at(-1);
+  const latestOperation = document.operations[scope].at(-1);
 
-    if (!latestOperation) return document;
+  if (!latestOperation) return document;
 
-    const documentOperations = documentHelpers.garbageCollectDocumentOperations(
-        {
-            ...document.operations,
-            [scope]: documentHelpers.skipHeaderOperations(
-                document.operations[scope],
-                latestOperation,
-            ),
-        },
+  const documentOperations = documentHelpers.garbageCollectDocumentOperations({
+    ...document.operations,
+    [scope]: documentHelpers.skipHeaderOperations(
+      document.operations[scope],
+      latestOperation,
+    ),
+  });
+
+  let scopeState: T | L | undefined = undefined;
+  const lastRemainingOperation = documentOperations[scope].at(-1);
+
+  // if the last operation has the resulting state and
+  // reuseOperationResultingState is true then reuses it
+  // instead of replaying the operations from the beginning
+  if (reuseOperationResultingState && lastRemainingOperation?.resultingState) {
+    scopeState = resultingStateParser(lastRemainingOperation.resultingState) as
+      | T
+      | L;
+  } else {
+    const { state } = replayOperations(
+      document.initialState,
+      documentOperations,
+      customReducer,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        reuseHash: true,
+        reuseOperationResultingState,
+        operationResultingStateParser: resultingStateParser,
+      },
     );
+    scopeState = state[scope];
+  }
 
-    let scopeState: T | L | undefined = undefined;
-    const lastRemainingOperation = documentOperations[scope].at(-1);
-
-    // if the last operation has the resulting state and
-    // reuseOperationResultingState is true then reuses it
-    // instead of replaying the operations from the beginning
-    if (
-        reuseOperationResultingState &&
-        lastRemainingOperation?.resultingState
-    ) {
-        scopeState = resultingStateParser(
-            lastRemainingOperation.resultingState,
-        ) as T | L;
-    } else {
-        const { state } = replayOperations(
-            document.initialState,
-            documentOperations,
-            customReducer,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            {
-                reuseHash: true,
-                reuseOperationResultingState,
-                operationResultingStateParser: resultingStateParser,
-            },
-        );
-        scopeState = state[scope];
-    }
-
-    return {
-        ...document,
-        state: {
-            ...document.state,
-            [scope]: scopeState,
-        },
-        operations: documentHelpers.garbageCollectDocumentOperations({
-            ...document.operations,
-        }),
-    };
+  return {
+    ...document,
+    state: {
+      ...document.state,
+      [scope]: scopeState,
+    },
+    operations: documentHelpers.garbageCollectDocumentOperations({
+      ...document.operations,
+    }),
+  };
 }
 
 function processUndoOperation<
-    T,
-    A extends Action,
-    L,
-    D extends Document<T, A, L>,
+  T,
+  A extends Action,
+  L,
+  D extends Document<T, A, L>,
 >(
-    document: D,
-    scope: OperationScope,
-    customReducer: ImmutableStateReducer<T, A, L>,
-    reuseOperationResultingState = false,
-    resultingStateParser = parseResultingState,
+  document: D,
+  scope: OperationScope,
+  customReducer: ImmutableStateReducer<T, A, L>,
+  reuseOperationResultingState = false,
+  resultingStateParser = parseResultingState,
 ): Document<T, A, L> {
-    const operations = [...document.operations[scope]];
-    const sortedOperations = documentHelpers.sortOperations(operations);
+  const operations = [...document.operations[scope]];
+  const sortedOperations = documentHelpers.sortOperations(operations);
 
-    sortedOperations.pop();
+  sortedOperations.pop();
 
-    const documentOperations = documentHelpers.garbageCollectDocumentOperations(
-        { ...document.operations },
-    );
+  const documentOperations = documentHelpers.garbageCollectDocumentOperations({
+    ...document.operations,
+  });
 
-    const clearedOperations = [...documentOperations[scope]];
-    const diff = documentHelpers.diffOperations(
-        documentHelpers.garbageCollect(sortedOperations),
-        clearedOperations,
-    );
+  const clearedOperations = [...documentOperations[scope]];
+  const diff = documentHelpers.diffOperations(
+    documentHelpers.garbageCollect(sortedOperations),
+    clearedOperations,
+  );
 
-    const doc = replayOperations(
-        document.initialState,
-        documentOperations,
-        customReducer,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        {
-            reuseHash: true,
-            reuseOperationResultingState,
-            operationResultingStateParser: resultingStateParser,
-        },
-    );
+  const doc = replayOperations(
+    document.initialState,
+    documentOperations,
+    customReducer,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    {
+      reuseHash: true,
+      reuseOperationResultingState,
+      operationResultingStateParser: resultingStateParser,
+    },
+  );
 
-    const clipboard = documentHelpers
-        .sortOperations(
-            [...document.clipboard, ...diff].filter(op => op.type !== 'NOOP'),
-        )
-        .reverse();
+  const clipboard = documentHelpers
+    .sortOperations(
+      [...document.clipboard, ...diff].filter((op) => op.type !== "NOOP"),
+    )
+    .reverse();
 
-    return { ...doc, clipboard };
+  return { ...doc, clipboard };
 }
 
 /**
@@ -374,173 +369,171 @@ function processUndoOperation<
  * @returns The new state of the document.
  */
 export function baseReducer<T, A extends Action, L>(
-    document: Document<T, A, L>,
-    action: A | BaseAction | Operation,
-    customReducer: ImmutableStateReducer<T, A, L>,
-    dispatch?: SignalDispatch,
-    options: ReducerOptions = {},
+  document: Document<T, A, L>,
+  action: A | BaseAction | Operation,
+  customReducer: ImmutableStateReducer<T, A, L>,
+  dispatch?: SignalDispatch,
+  options: ReducerOptions = {},
 ) {
+  const {
+    skip,
+    ignoreSkipOperations = false,
+    reuseHash = false,
+    reuseOperationResultingState = false,
+    operationResultingStateParser,
+  } = options;
+
+  let _action = { ...action };
+  let skipValue = skip || 0;
+  let newDocument: Document<T, A, L> = { ...document };
+  let reuseLastOperationIndex = false;
+
+  const shouldProcessSkipOperation =
+    !ignoreSkipOperations &&
+    (skipValue > 0 || ("index" in _action && _action.skip > 0));
+
+  if (isUndoRedo(_action)) {
     const {
-        skip,
-        ignoreSkipOperations = false,
-        reuseHash = false,
-        reuseOperationResultingState = false,
-        operationResultingStateParser,
-    } = options;
+      skip: calculatedSkip,
+      action: transformedAction,
+      document: processedDocument,
+      reuseLastOperationIndex: reuseIndex,
+    } = processUndoRedo(document, _action, skipValue);
 
-    let _action = { ...action };
-    let skipValue = skip || 0;
-    let newDocument: Document<T, A, L> = { ...document };
-    let reuseLastOperationIndex = false;
+    _action = transformedAction;
+    skipValue = calculatedSkip;
+    newDocument = processedDocument;
+    reuseLastOperationIndex = reuseIndex;
+  } else {
+    newDocument = {
+      ...newDocument,
+      clipboard: [],
+    };
+  }
 
-    const shouldProcessSkipOperation =
-        !ignoreSkipOperations &&
-        (skipValue > 0 || ('index' in _action && _action.skip > 0));
+  // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
+  // then runs the base reducer first
+  if (isBaseAction(_action)) {
+    newDocument = _baseReducer(newDocument, _action, customReducer);
+  }
 
-    if (isUndoRedo(_action)) {
-        const {
-            skip: calculatedSkip,
-            action: transformedAction,
-            document: processedDocument,
-            reuseLastOperationIndex: reuseIndex,
-        } = processUndoRedo(document, _action, skipValue);
+  // updates the document revision number, last modified date
+  // and operation history
+  newDocument = updateDocument(
+    newDocument,
+    _action,
+    skipValue,
+    reuseLastOperationIndex,
+  );
 
-        _action = transformedAction;
-        skipValue = calculatedSkip;
-        newDocument = processedDocument;
-        reuseLastOperationIndex = reuseIndex;
-    } else {
-        newDocument = {
-            ...newDocument,
-            clipboard: [],
-        };
-    }
+  const isUndoAction = isUndo(action);
 
-    // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
-    // then runs the base reducer first
-    if (isBaseAction(_action)) {
-        newDocument = _baseReducer(newDocument, _action, customReducer);
-    }
-
-    // updates the document revision number, last modified date
-    // and operation history
-    newDocument = updateDocument(
-        newDocument,
-        _action,
-        skipValue,
-        reuseLastOperationIndex,
+  if (isUndoAction) {
+    const result = processUndoOperation(
+      newDocument,
+      action.scope,
+      customReducer,
     );
 
-    const isUndoAction = isUndo(action);
+    return result;
+  }
 
-    if (isUndoAction) {
-        const result = processUndoOperation(
-            newDocument,
-            action.scope,
-            customReducer,
-        );
+  if (shouldProcessSkipOperation) {
+    newDocument = processSkipOperation(
+      newDocument,
+      _action,
+      customReducer,
+      skipValue,
+      reuseOperationResultingState,
+      operationResultingStateParser,
+    );
+  }
 
-        return result;
+  // wraps the custom reducer with Mutative to avoid
+  // mutation bugs and allow writing reducers with
+  // mutating code
+  newDocument = create(newDocument, (draft) => {
+    // the reducer runs on a immutable version of
+    // provided state
+    try {
+      const newState = customReducer(draft.state, _action as A, dispatch);
+
+      // const clipboardValue = isUndoRedo(action) ? [...clipboard] : [];
+
+      // if the reducer creates a new state object instead
+      // of mutating the draft then returns the new state
+      if (newState) {
+        // Object.assign(draft.state, newState);
+        unsafe(() => {
+          // casts new state as draft to comply with typescript
+          draft.state = castDraft(newState);
+          // clipboard: [...clipboardValue],
+        });
+      } else {
+        // unsafe(() => {
+        // draft.clipboard = castDraft([...clipboardValue]);
+        // });
+      }
+    } catch (error) {
+      // if the reducer throws an error then we should keep the previous state (before replayOperations)
+      // and remove skip number from action/operation
+      const lastOperationIndex =
+        newDocument.operations[_action.scope].length - 1;
+      draft.operations[_action.scope][lastOperationIndex].error = (
+        error as Error
+      ).message;
+
+      draft.operations[_action.scope][lastOperationIndex].skip = 0;
+
+      if (shouldProcessSkipOperation) {
+        draft.state = castDraft<State<T, L>>({ ...document.state });
+        draft.operations = castDraft({
+          ...document.operations,
+          [_action.scope]: [
+            ...document.operations[_action.scope],
+            {
+              ...draft.operations[_action.scope][lastOperationIndex],
+            },
+          ],
+        });
+      }
     }
-
-    if (shouldProcessSkipOperation) {
-        newDocument = processSkipOperation(
-            newDocument,
-            _action,
-            customReducer,
-            skipValue,
-            reuseOperationResultingState,
-            operationResultingStateParser,
-        );
-    }
-
-    // wraps the custom reducer with Mutative to avoid
-    // mutation bugs and allow writing reducers with
-    // mutating code
-    newDocument = create(newDocument, draft => {
-        // the reducer runs on a immutable version of
-        // provided state
-        try {
-            const newState = customReducer(draft.state, _action as A, dispatch);
-
-            // const clipboardValue = isUndoRedo(action) ? [...clipboard] : [];
-
-            // if the reducer creates a new state object instead
-            // of mutating the draft then returns the new state
-            if (newState) {
-                // Object.assign(draft.state, newState);
-                unsafe(() => {
-                    // casts new state as draft to comply with typescript
-                    draft.state = castDraft(newState);
-                    // clipboard: [...clipboardValue],
-                });
-            } else {
-                // unsafe(() => {
-                // draft.clipboard = castDraft([...clipboardValue]);
-                // });
-            }
-        } catch (error) {
-            // if the reducer throws an error then we should keep the previous state (before replayOperations)
-            // and remove skip number from action/operation
-            const lastOperationIndex =
-                newDocument.operations[_action.scope].length - 1;
-            draft.operations[_action.scope][lastOperationIndex].error = (
-                error as Error
-            ).message;
-
-            draft.operations[_action.scope][lastOperationIndex].skip = 0;
-
-            if (shouldProcessSkipOperation) {
-                draft.state = castDraft<State<T, L>>({ ...document.state });
-                draft.operations = castDraft({
-                    ...document.operations,
-                    [_action.scope]: [
-                        ...document.operations[_action.scope],
-                        {
-                            ...draft.operations[_action.scope][
-                                lastOperationIndex
-                            ],
-                        },
-                    ],
-                });
-            }
-        }
-    });
-    // updates the document history
-    // meta operations are not added to the operations history
-    if ([UNDO, REDO, PRUNE].includes(_action.type)) {
-        return newDocument;
-    }
-
-    // if reuseHash is true, checks if the action has
-    // an hash and uses it instead of generating it
-    const scope = _action.scope || 'global';
-    const hash =
-        reuseHash && Object.prototype.hasOwnProperty.call(_action, 'hash')
-            ? (_action as Operation).hash
-            : hashDocument(newDocument, scope);
-
-    // updates the last operation with the hash of the resulting state
-    const lastOperation = newDocument.operations[scope].at(-1);
-    if (lastOperation) {
-        lastOperation.hash = hash;
-
-        if (reuseOperationResultingState) {
-            lastOperation.resultingState = newDocument.state[scope];
-        }
-
-        // if the action has attachments then adds them to the document
-        if (!isBaseAction(_action) && _action.attachments) {
-            _action.attachments.forEach(attachment => {
-                const { hash, ...file } = attachment;
-                newDocument.attachments[hash] = {
-                    ...file,
-                };
-            });
-        }
-    }
-
+  });
+  // updates the document history
+  // meta operations are not added to the operations history
+  if ([UNDO, REDO, PRUNE].includes(_action.type)) {
     return newDocument;
+  }
+
+  // if reuseHash is true, checks if the action has
+  // an hash and uses it instead of generating it
+  const scope = _action.scope || "global";
+  const hash =
+    reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
+      ? (_action as Operation).hash
+      : hashDocument(newDocument, scope);
+
+  // updates the last operation with the hash of the resulting state
+  const lastOperation = newDocument.operations[scope].at(-1);
+  if (lastOperation) {
+    lastOperation.hash = hash;
+
+    if (reuseOperationResultingState) {
+      lastOperation.resultingState = newDocument.state[scope];
+    }
+
+    // if the action has attachments then adds them to the document
+    if (!isBaseAction(_action) && _action.attachments) {
+      _action.attachments.forEach((attachment) => {
+        const { hash, ...file } = attachment;
+        newDocument.attachments[hash] = {
+          ...file,
+        };
+      });
+    }
+  }
+
+  return newDocument;
 }
 
 /**
@@ -556,115 +549,112 @@ export function baseReducer<T, A extends Action, L>(
  * @returns The new state of the document.
  */
 export function mutableBaseReducer<T, A extends Action, L>(
-    document: Document<T, A, L>,
-    action: A | BaseAction | Operation,
-    customReducer: ImmutableStateReducer<T, A, L>,
-    dispatch?: SignalDispatch,
-    options: ReducerOptions = {},
+  document: Document<T, A, L>,
+  action: A | BaseAction | Operation,
+  customReducer: ImmutableStateReducer<T, A, L>,
+  dispatch?: SignalDispatch,
+  options: ReducerOptions = {},
 ) {
-    const {
-        skip,
-        ignoreSkipOperations = false,
-        reuseHash = false,
-        reuseOperationResultingState = false,
-        operationResultingStateParser,
-    } = options;
+  const {
+    skip,
+    ignoreSkipOperations = false,
+    reuseHash = false,
+    reuseOperationResultingState = false,
+    operationResultingStateParser,
+  } = options;
 
-    const _action = { ...action };
-    const skipValue = skip || 0;
-    let newDocument: Document<T, A, L> = { ...document };
-    // let clipboard = [...document.clipboard];
+  const _action = { ...action };
+  const skipValue = skip || 0;
+  let newDocument: Document<T, A, L> = { ...document };
+  // let clipboard = [...document.clipboard];
 
-    const shouldProcessSkipOperation =
-        !ignoreSkipOperations &&
-        (skipValue > 0 || ('index' in _action && _action.skip > 0));
+  const shouldProcessSkipOperation =
+    !ignoreSkipOperations &&
+    (skipValue > 0 || ("index" in _action && _action.skip > 0));
 
-    // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
-    // then runs the base reducer first
-    if (isBaseAction(_action)) {
-        newDocument = _baseReducer(newDocument, _action, customReducer);
+  // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
+  // then runs the base reducer first
+  if (isBaseAction(_action)) {
+    newDocument = _baseReducer(newDocument, _action, customReducer);
+  }
+
+  // updates the document revision number, last modified date
+  // and operation history
+  newDocument = updateDocument(newDocument, _action, skipValue);
+
+  if (shouldProcessSkipOperation) {
+    newDocument = processSkipOperation(
+      newDocument,
+      _action,
+      customReducer,
+      skipValue,
+      reuseOperationResultingState,
+      operationResultingStateParser,
+    );
+  }
+
+  try {
+    const newState = customReducer(
+      newDocument.state as Draft<State<T, L>>,
+      _action as A,
+      dispatch,
+    );
+    if (newState) {
+      newDocument.state = newState;
     }
-
-    // updates the document revision number, last modified date
-    // and operation history
-    newDocument = updateDocument(newDocument, _action, skipValue);
+  } catch (error) {
+    // if the reducer throws an error then we should keep the previous state (before replayOperations)
+    // and remove skip number from action/operation
+    const lastOperationIndex = newDocument.operations[_action.scope].length - 1;
+    newDocument.operations[_action.scope][lastOperationIndex].error = (
+      error as Error
+    ).message;
+    newDocument.operations[_action.scope][lastOperationIndex].skip = 0;
 
     if (shouldProcessSkipOperation) {
-        newDocument = processSkipOperation(
-            newDocument,
-            _action,
-            customReducer,
-            skipValue,
-            reuseOperationResultingState,
-            operationResultingStateParser,
-        );
+      newDocument.state = { ...document.state };
+      newDocument.operations = {
+        ...document.operations,
+        [_action.scope]: [
+          ...document.operations[_action.scope],
+          {
+            ...newDocument.operations[_action.scope][lastOperationIndex],
+          },
+        ],
+      };
     }
+  }
 
-    try {
-        const newState = customReducer(
-            newDocument.state as Draft<State<T, L>>,
-            _action as A,
-            dispatch,
-        );
-        if (newState) {
-            newDocument.state = newState;
-        }
-    } catch (error) {
-        // if the reducer throws an error then we should keep the previous state (before replayOperations)
-        // and remove skip number from action/operation
-        const lastOperationIndex =
-            newDocument.operations[_action.scope].length - 1;
-        newDocument.operations[_action.scope][lastOperationIndex].error = (
-            error as Error
-        ).message;
-        newDocument.operations[_action.scope][lastOperationIndex].skip = 0;
-
-        if (shouldProcessSkipOperation) {
-            newDocument.state = { ...document.state };
-            newDocument.operations = {
-                ...document.operations,
-                [_action.scope]: [
-                    ...document.operations[_action.scope],
-                    {
-                        ...newDocument.operations[_action.scope][
-                            lastOperationIndex
-                        ],
-                    },
-                ],
-            };
-        }
-    }
-
-    if ([UNDO, REDO, PRUNE].includes(_action.type)) {
-        return newDocument;
-    }
-
-    // if reuseHash is true, checks if the action has
-    // an hash and uses it instead of generating it
-    const scope = _action.scope || 'global';
-    const hash =
-        reuseHash && Object.prototype.hasOwnProperty.call(_action, 'hash')
-            ? (_action as Operation).hash
-            : hashDocument(newDocument, scope);
-
-    // updates the last operation with the hash of the resulting state
-    const lastOperation = newDocument.operations[scope].at(-1);
-    if (lastOperation) {
-        lastOperation.hash = hash;
-
-        if (reuseOperationResultingState) {
-            lastOperation.resultingState = newDocument.state[scope];
-        }
-
-        // if the action has attachments then adds them to the document
-        if (!isBaseAction(_action) && _action.attachments) {
-            _action.attachments.forEach(attachment => {
-                const { hash, ...file } = attachment;
-                newDocument.attachments[hash] = {
-                    ...file,
-                };
-            });
-        }
-    }
+  if ([UNDO, REDO, PRUNE].includes(_action.type)) {
     return newDocument;
+  }
+
+  // if reuseHash is true, checks if the action has
+  // an hash and uses it instead of generating it
+  const scope = _action.scope || "global";
+  const hash =
+    reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
+      ? (_action as Operation).hash
+      : hashDocument(newDocument, scope);
+
+  // updates the last operation with the hash of the resulting state
+  const lastOperation = newDocument.operations[scope].at(-1);
+  if (lastOperation) {
+    lastOperation.hash = hash;
+
+    if (reuseOperationResultingState) {
+      lastOperation.resultingState = newDocument.state[scope];
+    }
+
+    // if the action has attachments then adds them to the document
+    if (!isBaseAction(_action) && _action.attachments) {
+      _action.attachments.forEach((attachment) => {
+        const { hash, ...file } = attachment;
+        newDocument.attachments[hash] = {
+          ...file,
+        };
+      });
+    }
+  }
+  return newDocument;
 }

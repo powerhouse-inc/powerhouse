@@ -1,13 +1,13 @@
-import { ExtendedState, OperationScope, z } from '../types';
-import { createAction } from '../utils/base';
+import { ExtendedState, OperationScope, z } from "../types";
+import { createAction } from "../utils/base";
 import {
-    LoadStateAction,
-    PruneAction,
-    RedoAction,
-    SetNameAction,
-    UndoAction,
-    NOOPAction,
-} from './types';
+  LoadStateAction,
+  PruneAction,
+  RedoAction,
+  SetNameAction,
+  UndoAction,
+  NOOPAction,
+} from "./types";
 
 /**
  * Changes the name of the document.
@@ -16,13 +16,13 @@ import {
  * @category Actions
  */
 export const setName = (name: string) =>
-    createAction<SetNameAction>(
-        'SET_NAME',
-        name,
-        undefined,
-        z.SetNameActionInputSchema,
-        undefined,
-    );
+  createAction<SetNameAction>(
+    "SET_NAME",
+    name,
+    undefined,
+    z.SetNameActionInputSchema,
+    undefined,
+  );
 
 /**
  * Cancels the last `count` operations.
@@ -30,14 +30,14 @@ export const setName = (name: string) =>
  * @param count - Number of operations to cancel
  * @category Actions
  */
-export const undo = (skip = 1, scope: OperationScope = 'global') =>
-    createAction<UndoAction>(
-        'UNDO',
-        skip,
-        undefined,
-        z.UndoActionInputSchema,
-        scope,
-    );
+export const undo = (skip = 1, scope: OperationScope = "global") =>
+  createAction<UndoAction>(
+    "UNDO",
+    skip,
+    undefined,
+    z.UndoActionInputSchema,
+    scope,
+  );
 
 /**
  * Cancels the last `count` {@link undo | UNDO} operations.
@@ -45,14 +45,14 @@ export const undo = (skip = 1, scope: OperationScope = 'global') =>
  * @param count - Number of UNDO operations to cancel
  * @category Actions
  */
-export const redo = (count = 1, scope: OperationScope = 'global') =>
-    createAction<RedoAction>(
-        'REDO',
-        count,
-        undefined,
-        z.RedoActionInputSchema,
-        scope,
-    );
+export const redo = (count = 1, scope: OperationScope = "global") =>
+  createAction<RedoAction>(
+    "REDO",
+    count,
+    undefined,
+    z.RedoActionInputSchema,
+    scope,
+  );
 
 /**
  * Joins multiple operations into a single {@link loadState | LOAD_STATE} operation.
@@ -66,17 +66,17 @@ export const redo = (count = 1, scope: OperationScope = 'global') =>
  * @category Actions
  */
 export const prune = (
-    start?: number | undefined,
-    end?: number | undefined,
-    scope: OperationScope = 'global',
+  start?: number | undefined,
+  end?: number | undefined,
+  scope: OperationScope = "global",
 ) =>
-    createAction<PruneAction>(
-        'PRUNE',
-        { start, end },
-        undefined,
-        z.PruneActionInputSchema,
-        scope,
-    );
+  createAction<PruneAction>(
+    "PRUNE",
+    { start, end },
+    undefined,
+    z.PruneActionInputSchema,
+    scope,
+  );
 
 /**
  * Replaces the state of the document.
@@ -89,15 +89,15 @@ export const prune = (
  * @category Actions
  */
 export const loadState = <S, T>(
-    state: Pick<ExtendedState<S, T>, 'state' | 'name'>,
-    operations: number,
+  state: Pick<ExtendedState<S, T>, "state" | "name">,
+  operations: number,
 ) =>
-    createAction<LoadStateAction>(
-        'LOAD_STATE',
-        { state, operations },
-        undefined,
-        z.LoadStateActionInputSchema,
-    );
+  createAction<LoadStateAction>(
+    "LOAD_STATE",
+    { state, operations },
+    undefined,
+    z.LoadStateActionInputSchema,
+  );
 
-export const noop = (scope: OperationScope = 'global') =>
-    createAction<NOOPAction>('NOOP', {}, undefined, undefined, scope);
+export const noop = (scope: OperationScope = "global") =>
+  createAction<NOOPAction>("NOOP", {}, undefined, undefined, scope);

@@ -1,1 +1,1 @@
-export * from './useEnsInfo';
+export * from "./useEnsInfo";

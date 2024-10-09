@@ -1,35 +1,24 @@
 {
-    "compilerOptions": {
-        "target": "ESNext",
-        "module": "ESNext",
-        "moduleResolution": "Bundler",
-        "types": ["node", "vitest/globals"],
-        "declaration": false,
-        "outDir": "./dist",
-        "allowSyntheticDefaultImports": true,
-        "esModuleInterop": true,
-        "forceConsistentCasingInFileNames": true,
-        "strict": true,
-        "noImplicitAny": true,
-        "skipLibCheck": true,
-        "jsx": "react-jsx",
-        "lib": ["ESNext", "dom", "dom.iterable"],
-        "baseUrl": "./",
-        "allowJs": true,
-        "paths": {
-            "document-model-libs/utils": ["./editors/utils"],
-            "document-model-libs/utils/*": ["./editors/utils/*"],
-        },
-    },
-    "include": [
-        "./index.ts",
-        "**/*.ts",
-        "**/*.tsx",
-        "*.config.js",
-        "*.config.ts",
-        "postcss.config.cjs",
-        "create-require.js",
-        ".storybook/**/*",
-    ],
-    "exclude": ["dist/", "node_modules", "vite.config.ts"],
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node", "vitest/globals"],
+    "declaration": false,
+    "outDir": "./dist",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "baseUrl": "./",
+    "allowJs": true,
+    "paths": {
+      "document-model-libs/utils": ["./editors/utils"],
+      "document-model-libs/utils/*": ["./editors/utils/*"]
+    }
+  }
 }

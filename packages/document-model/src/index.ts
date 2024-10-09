@@ -1,5 +1,5 @@
-import * as Document from './document';
-import * as DocumentModel from './document-model';
+import * as Document from "./document";
+import * as DocumentModel from "./document-model";
 
 /**
  * This module exports all the public types, functions, and objects
@@ -16,8 +16,8 @@ import * as DocumentModel from './document-model';
 export { Document, DocumentModel };
 
 export const DocumentModels = {
-    'powerhouse/document': Document,
-    'powerhouse/document-model': DocumentModel,
+  "powerhouse/document": Document,
+  "powerhouse/document-model": DocumentModel,
 };
 
 export default { Document, DocumentModel };

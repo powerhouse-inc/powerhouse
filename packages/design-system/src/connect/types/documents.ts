@@ -1,4 +1,4 @@
-import { documentTypes } from '@/connect';
+import { documentTypes } from "@/connect";
 
 export type DocumentTypes = typeof documentTypes;
 

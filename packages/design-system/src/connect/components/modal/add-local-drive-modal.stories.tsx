@@ -1,10 +1,10 @@
-import { useArgs } from '@storybook/preview-api';
-import { Meta, StoryObj } from '@storybook/react';
-import { AddLocalDriveModal } from './add-local-drive-modal';
+import { useArgs } from "@storybook/preview-api";
+import { Meta, StoryObj } from "@storybook/react";
+import { AddLocalDriveModal } from "./add-local-drive-modal";
 
 const meta = {
-    title: 'Connect/Components/Create Drive Modal',
-    component: AddLocalDriveModal,
+  title: "Connect/Components/Create Drive Modal",
+  component: AddLocalDriveModal,
 } satisfies Meta<typeof AddLocalDriveModal>;
 
 export default meta;
@@ -12,40 +12,40 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-    args: {
-        open: true,
-        onSubmit() {},
-        onOpenChange() {},
-    },
-    render: function Wrapper(args) {
-        const [, setArgs] = useArgs<typeof args>();
+  args: {
+    open: true,
+    onSubmit() {},
+    onOpenChange() {},
+  },
+  render: function Wrapper(args) {
+    const [, setArgs] = useArgs<typeof args>();
 
-        return (
-            <div className="grid size-full place-items-center">
-                <button
-                    className="rounded-lg bg-red-500 p-4 text-white"
-                    onClick={() => {
-                        setArgs({
-                            ...args,
-                            open: true,
-                        });
-                    }}
-                >
-                    Open Modal
-                </button>
-                <AddLocalDriveModal
-                    {...args}
-                    modalProps={{
-                        ...args.modalProps,
-                        onOpenChange: open => {
-                            setArgs({
-                                ...args,
-                                open,
-                            });
-                        },
-                    }}
-                />
-            </div>
-        );
-    },
+    return (
+      <div className="grid size-full place-items-center">
+        <button
+          className="rounded-lg bg-red-500 p-4 text-white"
+          onClick={() => {
+            setArgs({
+              ...args,
+              open: true,
+            });
+          }}
+        >
+          Open Modal
+        </button>
+        <AddLocalDriveModal
+          {...args}
+          modalProps={{
+            ...args.modalProps,
+            onOpenChange: (open) => {
+              setArgs({
+                ...args,
+                open,
+              });
+            },
+          }}
+        />
+      </div>
+    );
+  },
 };

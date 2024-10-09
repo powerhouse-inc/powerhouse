@@ -4,25 +4,25 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { AccountSnapshotSnapshotOperations } from '../../gen/snapshot/operations';
+import { AccountSnapshotSnapshotOperations } from "../../gen/snapshot/operations";
 
 export const reducer: AccountSnapshotSnapshotOperations = {
-    setIdOperation(state, action) {
-        state.id = action.input.id;
-    },
-    setOwnerIdOperation(state, action) {
-        state.ownerId = action.input.ownerId;
-    },
-    setOwnerTypeOperation(state, action) {
-        state.ownerType = action.input.ownerType;
-    },
-    setPeriodOperation(state, action) {
-        state.period = action.input.period;
-    },
-    setStartOperation(state, action) {
-        state.start = action.input.start;
-    },
-    setEndOperation(state, action) {
-        state.end = action.input.end;
-    },
+  setIdOperation(state, action) {
+    state.id = action.input.id;
+  },
+  setOwnerIdOperation(state, action) {
+    state.ownerId = action.input.ownerId;
+  },
+  setOwnerTypeOperation(state, action) {
+    state.ownerType = action.input.ownerType;
+  },
+  setPeriodOperation(state, action) {
+    state.period = action.input.period;
+  },
+  setStartOperation(state, action) {
+    state.start = action.input.start;
+  },
+  setEndOperation(state, action) {
+    state.end = action.input.end;
+  },
 };

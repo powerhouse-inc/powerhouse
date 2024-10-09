@@ -1,4 +1,4 @@
 {
-    "documentModelsDir": "./document-models",
-    "editorsDir": "./editors"
+  "documentModelsDir": "./document-models",
+  "editorsDir": "./editors"
 }

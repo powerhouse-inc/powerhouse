@@ -26,16 +26,15 @@
         "./src"
     ],
     "scripts": {
-        "check-types": "tsc --noemit --emitDeclarationOnly false --project tsconfig.json",
-        "lint": "eslint src --ext .js,.jsx,.ts,.tsx && pnpm run check-types",
-        "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
-        "format": "prettier . --write",
+        "check-types": "tsc --noEmit",
+        "postlint": "npm run check-types",
+        "lint": "eslint",
         "release": "semantic-release",
         "test": "vitest run --coverage --exclude \"test/flaky/**\"",
         "test:watch": "vitest watch",
         "clean": "rimraf dist",
         "clean:node_modules": "rimraf node_modules",
-        "build": " "
+        "build": "prisma generate"
     },
     "peerDependencies": {
         "document-model": "^2.1.0",
@@ -60,11 +59,8 @@
     },
     "devDependencies": {
         "@prisma/client": "5.17.0",
-        "@total-typescript/ts-reset": "^0.5.1",
         "@types/node": "^20.14.11",
         "@types/uuid": "^9.0.8",
-        "@vitest/browser": "^2.0.5",
-        "@vitest/coverage-v8": "^2.0.5",
         "document-model": "workspace:*",
         "document-model-libs": "workspace:*",
         "fake-indexeddb": "^5.0.2",
@@ -73,8 +69,6 @@
         "prisma": "^5.18.0",
         "sequelize": "^6.37.2",
         "sqlite3": "^5.1.7",
-        "typescript": "^5.5.3",
-        "vitest": "^2.0.5",
         "webdriverio": "^9.0.9",
         "vitest-fetch-mock": "^0.3.0"
     },

@@ -1,10 +1,10 @@
-import { Meta, StoryObj } from '@storybook/react';
-import { Button } from '.';
-import { Icon } from '..';
+import { Meta, StoryObj } from "@storybook/react";
+import { Button } from ".";
+import { Icon } from "..";
 
 const meta = {
-    title: 'Powerhouse/Components/Button',
-    component: Button,
+  title: "Powerhouse/Components/Button",
+  component: Button,
 } satisfies Meta<typeof Button>;
 
 export default meta;
@@ -12,170 +12,170 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const Template: Story = {
-    args: {
-        children: 'Button',
-    },
-    decorators: [
-        Story => (
-            <div className="grid h-screen place-items-center bg-white">
-                <Story />
-            </div>
-        ),
-    ],
+  args: {
+    children: "Button",
+  },
+  decorators: [
+    (Story) => (
+      <div className="grid h-screen place-items-center bg-white">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 export const Default: Story = {
-    ...Template,
+  ...Template,
 };
 
 export const DefaultHover: Story = {
-    ...Default,
-    parameters: {
-        pseudo: {
-            hover: true,
-        },
+  ...Default,
+  parameters: {
+    pseudo: {
+      hover: true,
     },
+  },
 };
 
 export const DefaultActive: Story = {
-    ...Default,
-    parameters: {
-        pseudo: {
-            active: true,
-        },
+  ...Default,
+  parameters: {
+    pseudo: {
+      active: true,
     },
+  },
 };
 
 export const DefaultDisabled: Story = {
-    ...Default,
-    args: {
-        ...Default.args,
-        disabled: true,
-    },
+  ...Default,
+  args: {
+    ...Default.args,
+    disabled: true,
+  },
 };
 
 export const Light: Story = {
-    ...Template,
-    args: {
-        ...Template.args,
-        color: 'light',
-    },
+  ...Template,
+  args: {
+    ...Template.args,
+    color: "light",
+  },
 };
 
 export const LightHover: Story = {
-    ...Light,
-    parameters: {
-        pseudo: {
-            hover: true,
-        },
+  ...Light,
+  parameters: {
+    pseudo: {
+      hover: true,
     },
+  },
 };
 
 export const LightActive: Story = {
-    ...Light,
-    parameters: {
-        pseudo: {
-            active: true,
-        },
+  ...Light,
+  parameters: {
+    pseudo: {
+      active: true,
     },
+  },
 };
 
 export const LightDisabled: Story = {
-    ...Light,
-    args: {
-        ...Light.args,
-        disabled: true,
-    },
+  ...Light,
+  args: {
+    ...Light.args,
+    disabled: true,
+  },
 };
 
 export const Red: Story = {
-    ...Template,
-    args: {
-        ...Template.args,
-        color: 'red',
-    },
+  ...Template,
+  args: {
+    ...Template.args,
+    color: "red",
+  },
 };
 
 export const RedHover: Story = {
-    ...Red,
-    parameters: {
-        pseudo: {
-            hover: true,
-        },
+  ...Red,
+  parameters: {
+    pseudo: {
+      hover: true,
     },
+  },
 };
 
 export const RedActive: Story = {
-    ...Red,
-    parameters: {
-        pseudo: {
-            active: true,
-        },
+  ...Red,
+  parameters: {
+    pseudo: {
+      active: true,
     },
+  },
 };
 
 export const RedDisabled: Story = {
-    ...Red,
-    args: {
-        ...Red.args,
-        disabled: true,
-    },
+  ...Red,
+  args: {
+    ...Red.args,
+    disabled: true,
+  },
 };
 
 export const Blue: Story = {
-    ...Template,
-    args: {
-        ...Template.args,
-        color: 'blue',
-    },
+  ...Template,
+  args: {
+    ...Template.args,
+    color: "blue",
+  },
 };
 
 export const BlueHover: Story = {
-    ...Blue,
-    parameters: {
-        pseudo: {
-            hover: true,
-        },
+  ...Blue,
+  parameters: {
+    pseudo: {
+      hover: true,
     },
+  },
 };
 
 export const BlueActive: Story = {
-    ...Blue,
-    parameters: {
-        pseudo: {
-            active: true,
-        },
+  ...Blue,
+  parameters: {
+    pseudo: {
+      active: true,
     },
+  },
 };
 
 export const BlueDisabled: Story = {
-    ...Blue,
-    args: {
-        ...Blue.args,
-        disabled: true,
-    },
+  ...Blue,
+  args: {
+    ...Blue.args,
+    disabled: true,
+  },
 };
 
 export const Small: Story = {
-    ...Template,
-    args: {
-        ...Template.args,
-        size: 'small',
-    },
+  ...Template,
+  args: {
+    ...Template.args,
+    size: "small",
+  },
 };
 
 export const WithIcon: Story = {
-    ...Template,
-    args: {
-        ...Template.args,
-        icon: <Icon name="Plus" size={20} />,
-    },
+  ...Template,
+  args: {
+    ...Template.args,
+    icon: <Icon name="Plus" size={20} />,
+  },
 };
 
 export const SmallWithIcon: Story = {
-    ...Small,
-    args: {
-        ...Small.args,
-        icon: <Icon name="Plus" size={16} />,
-    },
+  ...Small,
+  args: {
+    ...Small.args,
+    icon: <Icon name="Plus" size={16} />,
+  },
 };

@@ -1,11 +1,11 @@
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren } from "react";
 
 interface DocumentEditorProps {
-    readonly mode: 'light' | 'dark';
+  readonly mode: "light" | "dark";
 }
 
 export function DocumentEditor(props: PropsWithChildren<DocumentEditorProps>) {
-    const classes = ['document-editor', `${props.mode}-mode`];
+  const classes = ["document-editor", `${props.mode}-mode`];
 
-    return <div className={classes.join(' ')}>{props.children}</div>;
+  return <div className={classes.join(" ")}>{props.children}</div>;
 }

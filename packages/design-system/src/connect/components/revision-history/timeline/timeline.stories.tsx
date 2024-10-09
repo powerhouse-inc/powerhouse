@@ -1,11 +1,11 @@
-import { Meta, StoryObj } from '@storybook/react';
-import { TooltipProvider } from '../../tooltip';
-import { globalOperations, localOperations } from '../mocks';
-import { Timeline } from './timeline';
+import { Meta, StoryObj } from "@storybook/react";
+import { TooltipProvider } from "../../tooltip";
+import { globalOperations, localOperations } from "../mocks";
+import { Timeline } from "./timeline";
 
 const meta = {
-    title: 'Connect/Components/Revision History/Timeline',
-    component: Timeline,
+  title: "Connect/Components/Revision History/Timeline",
+  component: Timeline,
 } satisfies Meta<typeof Timeline>;
 
 export default meta;
@@ -13,16 +13,16 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-    args: {
-        globalOperations,
-        localOperations,
-        scope: 'global',
-    },
-    render(args) {
-        return (
-            <TooltipProvider>
-                <Timeline {...args} />
-            </TooltipProvider>
-        );
-    },
+  args: {
+    globalOperations,
+    localOperations,
+    scope: "global",
+  },
+  render(args) {
+    return (
+      <TooltipProvider>
+        <Timeline {...args} />
+      </TooltipProvider>
+    );
+  },
 };

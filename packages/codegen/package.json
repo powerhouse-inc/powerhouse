@@ -13,16 +13,16 @@
         "/dist"
     ],
     "scripts": {
+        "check-types": "tsc --noEmit",
+        "postlint": "npm run check-types",
+        "lint": "eslint",
         "clean": "rimraf dist/",
         "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
-        "build": "yarn clean && tsc && yarn copy-files",
+        "build": "npm run clean && npm run copy-files",
         "prepublishOnly": "yarn build",
         "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
         "publish:create-lib": "yarn publish --cwd ./src/create-lib/",
         "start": "ts-node src/cli.ts",
-        "check-types": "tsc --noEmit",
-        "lint": "eslint . && yarn check-types",
-        "lint:fix": "eslint . --fix",
         "clean:node_modules": "rimraf node_modules"
     },
     "dependencies": {
@@ -37,11 +37,9 @@
         "document-model": "1.0.29",
         "enquirer": "^2.4.1",
         "execa": "^8.0.1",
-        "hygen": "^6.2.11",
-        "typescript": "^5.3.3"
+        "hygen": "^6.2.11"
     },
     "devDependencies": {
-        "@total-typescript/ts-reset": "^0.5.1",
         "copyfiles": "^2.4.1",
         "graphql": "^16.8.1",
         "husky": "^8.0.3",
