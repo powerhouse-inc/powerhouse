@@ -1,21 +1,24 @@
 export type Args = {
-    name: string;
-    rootDir: string;
-    documentModelsDir: string;
-    documentTypes: string;
-    documentTypesMap: string;
+  name: string;
+  rootDir: string;
+  documentModelsDir: string;
+  documentTypes: string;
+  documentTypesMap: string;
 };
 
 export default {
-    params: ({ args }: { args: Args }) => {
-        return {
-            rootDir: args.rootDir,
-            documentModelsDir: args.documentModelsDir,
-            name: args.name,
-            documentTypes: args.documentTypes
-                .split(',')
-                .filter(type => type !== ''),
-            documentTypesMap: JSON.parse(args.documentTypesMap),
-        };
-    },
+  params: ({ args }: { args: Args }) => {
+    return {
+      rootDir: args.rootDir,
+      documentModelsDir: args.documentModelsDir,
+      name: args.name,
+      documentTypes: args.documentTypes
+        .split(",")
+        .filter((type) => type !== ""),
+      documentTypesMap: JSON.parse(args.documentTypesMap) as Record<
+        string,
+        string
+      >,
+    };
+  },
 };

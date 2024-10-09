@@ -1,9 +1,9 @@
-import { ModalManager, RWATabs } from '@/rwa';
+import { ModalManager, RWATabs } from "@/rwa";
 
 export function RWAEditor() {
-    return (
-        <ModalManager>
-            <RWATabs />
-        </ModalManager>
-    );
+  return (
+    <ModalManager>
+      <RWATabs />
+    </ModalManager>
+  );
 }

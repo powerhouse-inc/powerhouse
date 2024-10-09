@@ -1,17 +1,17 @@
-import { mergeClassNameProps } from '@/powerhouse';
+import { mergeClassNameProps } from "@/powerhouse";
 
 export const Footer: React.FC<React.HTMLAttributes<HTMLElement>> = ({
-    children,
-    ...props
+  children,
+  ...props
 }) => {
-    return (
-        <footer
-            {...mergeClassNameProps(
-                props,
-                'flex items-center gap-x-6 text-xs font-medium text-[#9DA6B9]',
-            )}
-        >
-            {children}
-        </footer>
-    );
+  return (
+    <footer
+      {...mergeClassNameProps(
+        props,
+        "flex items-center gap-x-6 text-xs font-medium text-[#9DA6B9]",
+      )}
+    >
+      {children}
+    </footer>
+  );
 };

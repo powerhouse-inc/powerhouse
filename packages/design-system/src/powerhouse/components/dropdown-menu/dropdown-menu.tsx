@@ -1,28 +1,28 @@
 import {
-    Content,
-    DropdownMenuContentProps,
-    Item,
-    Label,
-    Portal,
-    Root,
-    Trigger,
-} from '@radix-ui/react-dropdown-menu';
-import { ForwardedRef, forwardRef } from 'react';
+  Content,
+  DropdownMenuContentProps,
+  Item,
+  Label,
+  Portal,
+  Root,
+  Trigger,
+} from "@radix-ui/react-dropdown-menu";
+import { ForwardedRef, forwardRef } from "react";
 
 export const DropdownMenu = Root;
 export const DropdownMenuTrigger = Trigger;
 
 export const DropdownMenuContent = forwardRef(function DropdownMenuContent(
-    { children, ...delegatedProps }: DropdownMenuContentProps,
-    forwardedRef: ForwardedRef<HTMLDivElement>,
+  { children, ...delegatedProps }: DropdownMenuContentProps,
+  forwardedRef: ForwardedRef<HTMLDivElement>,
 ) {
-    return (
-        <Portal>
-            <Content {...delegatedProps} ref={forwardedRef}>
-                {children}
-            </Content>
-        </Portal>
-    );
+  return (
+    <Portal>
+      <Content {...delegatedProps} ref={forwardedRef}>
+        {children}
+      </Content>
+    </Portal>
+  );
 });
 
 export const DropdownMenuLabel = Label;

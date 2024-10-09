@@ -1,16 +1,16 @@
-import { Meta, StoryObj } from '@storybook/react';
-import { DefaultEditorLoader } from './default-editor-loader';
+import { Meta, StoryObj } from "@storybook/react";
+import { DefaultEditorLoader } from "./default-editor-loader";
 
 const meta: Meta = {
-    title: 'Connect/Components/Default Editor Loader',
-    component: DefaultEditorLoader,
-    decorators: [
-        Story => (
-            <div className="mx-auto h-screen w-4/5">
-                <Story />
-            </div>
-        ),
-    ],
+  title: "Connect/Components/Default Editor Loader",
+  component: DefaultEditorLoader,
+  decorators: [
+    (Story) => (
+      <div className="mx-auto h-screen w-4/5">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 export default meta;

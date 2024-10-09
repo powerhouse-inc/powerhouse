@@ -1,15 +1,15 @@
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren } from "react";
 
 interface EditorWorksheetProps {
-    readonly onClick?: () => void;
+  readonly onClick?: () => void;
 }
 
 export function EditorWorksheet(
-    props: PropsWithChildren<EditorWorksheetProps>,
+  props: PropsWithChildren<EditorWorksheetProps>,
 ) {
-    return (
-        <div className="editor-worksheet">
-            <div className="editor-worksheet--page">{props.children}</div>
-        </div>
-    );
+  return (
+    <div className="editor-worksheet">
+      <div className="editor-worksheet--page">{props.children}</div>
+    </div>
+  );
 }

@@ -1,4 +1,4 @@
-@import url('../node_modules/@powerhousedao/design-system/dist/style.css');
+@import url("../node_modules/@powerhousedao/design-system/dist/style.css");
 
 @tailwind base;
 @tailwind components;

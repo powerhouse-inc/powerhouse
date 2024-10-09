@@ -104,7 +104,7 @@ export default tseslint.config(
       "packages/*/gen/",
       "packages/*/docs/",
       "packages/*/.storybook/",
-      "packages/document-drive/test/",
+      "packages/document-drive/test/*",
     ],
   },
   {

@@ -1,2 +1,2 @@
-export * from './footer';
-export * from './footer-link';
+export * from "./footer";
+export * from "./footer-link";

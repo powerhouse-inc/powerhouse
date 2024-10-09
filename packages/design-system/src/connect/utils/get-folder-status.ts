@@ -1,4 +1,4 @@
-import { SyncStatus } from '../types';
+import { SyncStatus } from "../types";
 
 export type FileStatus = { path: string; status?: SyncStatus };
 
@@ -10,16 +10,16 @@ export type FileStatus = { path: string; status?: SyncStatus };
  * @returns The sync status of the folder.
  */
 export const getFolderStatus = (
-    folderPath: string,
-    sortedFiles: FileStatus[],
+  folderPath: string,
+  sortedFiles: FileStatus[],
 ): SyncStatus => {
-    for (const file of sortedFiles) {
-        if (file.path.startsWith(folderPath)) {
-            return file.status || 'SUCCESS';
-        }
+  for (const file of sortedFiles) {
+    if (file.path.startsWith(folderPath)) {
+      return file.status || "SUCCESS";
     }
+  }
 
-    return 'SUCCESS';
+  return "SUCCESS";
 };
 
 /**
@@ -35,21 +35,21 @@ export const getFolderStatus = (
  * @returns The sorted array of files.
  */
 export const sortFilesByStatus = (files: FileStatus[]) => {
-    return files.sort((a, b) => {
-        const statusOrder = [
-            'ERROR',
-            'CONFLICT',
-            'SYNCING',
-            'MISSING',
-            'SYNCING',
-            'SUCCESS',
-        ];
+  return files.sort((a, b) => {
+    const statusOrder = [
+      "ERROR",
+      "CONFLICT",
+      "SYNCING",
+      "MISSING",
+      "SYNCING",
+      "SUCCESS",
+    ];
 
-        return (
-            statusOrder.indexOf(a.status || 'SUCCESS') -
-            statusOrder.indexOf(b.status || 'SUCCESS')
-        );
-    });
+    return (
+      statusOrder.indexOf(a.status || "SUCCESS") -
+      statusOrder.indexOf(b.status || "SUCCESS")
+    );
+  });
 };
 
 /**
@@ -58,5 +58,5 @@ export const sortFilesByStatus = (files: FileStatus[]) => {
  * @returns A new array containing only the FileStatus objects with a status other than 'SUCCESS'.
  */
 export const removeSuccessFiles = (files: FileStatus[]) => {
-    return files.filter(file => file.status !== 'SUCCESS');
+  return files.filter((file) => file.status !== "SUCCESS");
 };

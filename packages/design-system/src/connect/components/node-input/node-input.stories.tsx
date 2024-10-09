@@ -1,9 +1,9 @@
-import { Meta, StoryObj } from '@storybook/react';
-import { NodeInput } from './node-input';
+import { Meta, StoryObj } from "@storybook/react";
+import { NodeInput } from "./node-input";
 
 const meta: Meta<typeof NodeInput> = {
-    title: 'Connect/Components/Node Input',
-    component: NodeInput,
+  title: "Connect/Components/Node Input",
+  component: NodeInput,
 };
 
 export default meta;

@@ -1,2 +1,2 @@
-export * from './manager';
-export * from './transmitter';
+export * from "./manager";
+export * from "./transmitter";

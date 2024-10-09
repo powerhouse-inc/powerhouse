@@ -1,82 +1,82 @@
-import stringify from 'json-stringify-deterministic';
-import { gql, requestGraphql } from '../../../utils/graphql';
-import { logger } from '../../../utils/logger';
+import stringify from "json-stringify-deterministic";
+import { gql, requestGraphql } from "../../../utils/graphql";
+import { logger } from "../../../utils/logger";
 import {
-    IBaseDocumentDriveServer,
-    Listener,
-    ListenerRevision,
-    StrandUpdate
-} from '../../types';
-import { ITransmitter, StrandUpdateSource } from './types';
+  IBaseDocumentDriveServer,
+  Listener,
+  ListenerRevision,
+  StrandUpdate,
+} from "../../types";
+import { ITransmitter, StrandUpdateSource } from "./types";
 
 export class SwitchboardPushTransmitter implements ITransmitter {
-    private drive: IBaseDocumentDriveServer;
-    private listener: Listener;
-    private targetURL: string;
+  private drive: IBaseDocumentDriveServer;
+  private listener: Listener;
+  private targetURL: string;
 
-    constructor(listener: Listener, drive: IBaseDocumentDriveServer) {
-        this.listener = listener;
-        this.drive = drive;
-        this.targetURL = listener.callInfo!.data!;
+  constructor(listener: Listener, drive: IBaseDocumentDriveServer) {
+    this.listener = listener;
+    this.drive = drive;
+    this.targetURL = listener.callInfo!.data!;
+  }
+
+  async transmit(
+    strands: StrandUpdate[],
+    source: StrandUpdateSource,
+  ): Promise<ListenerRevision[]> {
+    if (
+      source.type === "trigger" &&
+      source.trigger.data?.url === this.targetURL
+    ) {
+      return strands.map((strand) => ({
+        driveId: strand.driveId,
+        documentId: strand.documentId,
+        scope: strand.scope,
+        branch: strand.branch,
+        status: "SUCCESS",
+        revision: strand.operations.at(-1)?.index ?? -1,
+      }));
     }
 
-    async transmit(
-        strands: StrandUpdate[],
-        source: StrandUpdateSource
-    ): Promise<ListenerRevision[]> {
-        if (
-            source.type === 'trigger' &&
-            source.trigger.data?.url === this.targetURL
-        ) {
-            return strands.map(strand => ({
-                driveId: strand.driveId,
-                documentId: strand.documentId,
-                scope: strand.scope,
-                branch: strand.branch,
-                status: 'SUCCESS',
-                revision: strand.operations.at(-1)?.index ?? -1
-            }));
-        }
-
-        // Send Graphql mutation to switchboard
-        try {
-            const { pushUpdates } = await requestGraphql<{
-                pushUpdates: ListenerRevision[];
-            }>(
-                this.targetURL,
-                gql`
-                    mutation pushUpdates($strands: [InputStrandUpdate!]) {
-                        pushUpdates(strands: $strands) {
-                            driveId
-                            documentId
-                            scope
-                            branch
-                            status
-                            revision
-                            error
-                        }
-                    }
-                `,
-                {
-                    strands: strands.map(strand => ({
-                        ...strand,
-                        operations: strand.operations.map(op => ({
-                            ...op,
-                            input: stringify(op.input)
-                        }))
-                    }))
-                }
-            );
-
-            if (!pushUpdates) {
-                throw new Error("Couldn't update listener revision");
+    // Send Graphql mutation to switchboard
+    try {
+      const { pushUpdates } = await requestGraphql<{
+        pushUpdates: ListenerRevision[];
+      }>(
+        this.targetURL,
+        gql`
+          mutation pushUpdates($strands: [InputStrandUpdate!]) {
+            pushUpdates(strands: $strands) {
+              driveId
+              documentId
+              scope
+              branch
+              status
+              revision
+              error
             }
+          }
+        `,
+        {
+          strands: strands.map((strand) => ({
+            ...strand,
+            operations: strand.operations.map((op) => ({
+              ...op,
+              input: stringify(op.input),
+            })),
+          })),
+        },
+      );
 
-            return pushUpdates;
-        } catch (e) {
-            logger.error(e);
-            throw e;
-        }
-        return [];
+      if (!pushUpdates) {
+        throw new Error("Couldn't update listener revision");
+      }
+
+      return pushUpdates;
+    } catch (e) {
+      logger.error(e);
+      throw e;
     }
+    return [];
+  }
 }
