@@ -1,6 +1,6 @@
 {
   "name": "document-model-libs",
-  "version": "1.93.1",
+  "version": "1.93.2",
   "license": "AGPL-3.0-only",
   "types": "dist/index.d.ts",
   "main": "dist/cjs/index.cjs",
@@ -81,7 +81,7 @@
     "@monaco-editor/react": "^4.6.0",
     "@mui/material": "^5.15.5",
     "@powerhousedao/codegen": "0.0.15",
-    "@powerhousedao/design-system": "1.0.0",
+    "@powerhousedao/design-system": "1.1.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@storybook/addon-essentials": "^8.3.2",
