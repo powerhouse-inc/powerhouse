@@ -50,7 +50,7 @@ export default defineConfig(() => {
           chunkFileNames: "[name].[hash].js",
           assetFileNames: (info) =>
             // eslint-disable-next-line @typescript-eslint/no-deprecated
-            info.name === "style.css" || info.names.includes("style.css")
+            info.name === "style.css" || info.names?.includes("style.css")
               ? "style.css"
               : "[name].[hash][extname]",
           preserveModules: true,

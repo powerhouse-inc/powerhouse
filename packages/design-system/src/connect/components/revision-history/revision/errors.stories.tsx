@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from "@storybook/react";
+import { TooltipProvider } from "@/connect";
 import { Errors } from "./errors";
 
 const meta = {
@@ -22,6 +23,11 @@ export const WithOneError: Story = {
       "Data mismatch detected in this signature which needs to be resolved.",
     ],
   },
+  render: (props) => (
+    <TooltipProvider>
+      <Errors {...props} />,
+    </TooltipProvider>
+  ),
 };
 
 export const WithMultipleErrors: Story = {
@@ -32,4 +38,9 @@ export const WithMultipleErrors: Story = {
       "Data mismatch detected in this signature which needs to be resolved.",
     ],
   },
+  render: (props) => (
+    <TooltipProvider>
+      <Errors {...props} />,
+    </TooltipProvider>
+  ),
 };

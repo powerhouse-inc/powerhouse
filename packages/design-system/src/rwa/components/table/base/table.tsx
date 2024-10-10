@@ -9,6 +9,7 @@ import {
   TableItemType,
   TableName,
   TableProps,
+  SortDirection,
   columnsByTableName,
   defaultColumnCountByTableWidth,
   handleTableDatum,
@@ -115,7 +116,9 @@ export function Table(props: TableProps) {
         hasSelectedItem={!!selectedTableItem}
         headerRef={headerRef}
         maxHeight={maxHeight}
-        onClickSort={sortHandler}
+        onClickSort={
+          sortHandler as (key: string, direction: SortDirection) => void
+        }
         ref={tableContainerRef}
         renderRow={renderRow}
         specialFirstRow={specialFirstRow}
