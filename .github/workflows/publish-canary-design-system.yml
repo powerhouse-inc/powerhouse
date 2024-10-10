@@ -1,0 +1,62 @@
+name: Release DSPOT Design System
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["dspot-scalars"]
+
+env:
+  NX_ISOLATE_PLUGINS: false
+
+jobs:
+  release:
+    name: Release DSPOT Design System to NPM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write # needed for provenance data generati
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags
+          ref: ${{ github.ref }} # Make sure the correct branch is being checked out
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest-8
+          run_install: false
+
+      - name: git config
+        shell: bash
+        run: |
+          git config user.name "Github Actions Bot"
+          git config user.email "-"
+
+      - name: Bump canary version
+        run: pnpm version prerelease --preid=canary --no-git-tag-version
+        working-directory: packages/design-system
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Commit version bump
+        run: |
+          git add packages/design-system/package.json
+          git add pnpm-lock.yaml
+          git commit -m "chore(design-system): bump canary version"
+          git push origin
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build packages
+        run: npx nx run-many --target=build --all --skip-nx-cache
+
+      - name: Publish canary package
+        run: |
+          pnpm config set //registry.npmjs.org/:_authToken ${NODE_AUTH_TOKEN}
+          pnpm publish --filter @powerhousedao/design-system --access public --tag canary --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
