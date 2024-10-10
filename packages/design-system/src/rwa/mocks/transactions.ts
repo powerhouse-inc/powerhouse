@@ -5,10 +5,12 @@ import {
   allGroupTransactionTypes,
   calculateCashBalanceChange,
   isAssetGroupTransactionType,
+} from "@/rwa";
+import {
   mockAccounts,
   mockFixedIncomes,
   mockPrincipalLenderAccountId,
-} from "@/rwa";
+} from "./assets";
 
 export const mockFixedIncomeTransaction: BaseTransaction = {
   id: "fixed-income-transaction-1",

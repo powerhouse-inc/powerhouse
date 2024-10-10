@@ -3,7 +3,7 @@ import {
   mockLocalDrive,
   mockNodeOptions,
   mockPublicDrive,
-} from "@/connect/utils";
+} from "@/connect/utils/mocks";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect } from "react";
 import {

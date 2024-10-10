@@ -1,7 +1,6 @@
 import {
   DRIVE,
   FOLDER,
-  mockDriveNodes,
   SUCCESS,
   UiFolderNode,
   UiNodesContextProvider,
@@ -10,6 +9,7 @@ import {
 import { Meta, StoryObj } from "@storybook/react";
 import { useEffect } from "react";
 import { Breadcrumbs } from ".";
+import { mockDriveNodes } from "@/connect/utils/mocks/ui-drive-node";
 
 const meta: Meta<typeof Breadcrumbs> = {
   title: "Connect/Components/Breadcrumbs",

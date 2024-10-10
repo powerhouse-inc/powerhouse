@@ -1,11 +1,12 @@
 import {
   Content,
-  DialogTitle,
+  Description,
   Overlay,
   Portal,
   Root,
+  Title,
 } from "@radix-ui/react-dialog";
-import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+import { Root as VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
@@ -45,9 +46,10 @@ export function Modal(props: Props) {
               contentProps?.className,
             )}
           >
-            <VisuallyHidden.Root>
-              <DialogTitle>{title}</DialogTitle>
-            </VisuallyHidden.Root>
+            <VisuallyHidden>
+              <Title>{title || "Modal"}</Title>
+              <Description>{title || "Modal"}</Description>
+            </VisuallyHidden>
             {children}
           </Content>
         </Overlay>

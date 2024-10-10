@@ -1,10 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitForElementToBeRemoved,
+} from "@testing-library/react";
 
 import { WagmiContext } from "@/connect/context/WagmiContext";
 import { ConnectSidebar } from ".";
 
 describe("Connect Sidebar Component", () => {
-  it("should match snapshot", () => {
+  it("should match snapshot", async () => {
     const { asFragment } = render(
       <WagmiContext>
         <ConnectSidebar
@@ -16,6 +20,11 @@ describe("Connect Sidebar Component", () => {
         />
       </WagmiContext>,
     );
+
+    await waitForElementToBeRemoved(() =>
+      screen.getAllByTestId("icon-fallback"),
+    );
+
     expect(asFragment()).toMatchSnapshot();
   });
 

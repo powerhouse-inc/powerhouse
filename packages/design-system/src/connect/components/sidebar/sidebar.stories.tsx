@@ -7,11 +7,14 @@ import {
 } from "@/connect";
 import { CLOUD, LOCAL, PUBLIC } from "@/connect/constants";
 import { SharingType } from "@/connect/types";
-import { mockDriveNodes, mockNodeOptions } from "@/connect/utils";
 import { useEffect } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ComponentPropsWithoutRef, useState } from "react";
 import { ConnectSidebar, DriveView } from "..";
+import {
+  mockDriveNodes,
+  mockNodeOptions,
+} from "@/connect/utils/mocks/ui-drive-node";
 
 type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
   driveNodes?: UiDriveNode[];

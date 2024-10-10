@@ -1,5 +1,5 @@
-import { format } from "date-fns";
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz/formatInTimeZone";
+import { format } from "date-fns/format";
 
 /**
  * The html datetime local input requires this specific format

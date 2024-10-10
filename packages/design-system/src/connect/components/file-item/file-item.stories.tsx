@@ -3,7 +3,7 @@ import {
   mockNodeOptions,
   mockUiFileNode,
   mockUiFolderNode,
-} from "@/connect/utils";
+} from "@/connect/utils/mocks";
 import { Meta, StoryObj } from "@storybook/react";
 import { FileItem } from "./file-item";
 

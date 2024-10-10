@@ -1,8 +1,15 @@
-import * as RadixTooltip from "@radix-ui/react-tooltip";
+import {
+  Content,
+  Portal,
+  Provider,
+  Root,
+  TooltipProps,
+  Trigger,
+} from "@radix-ui/react-tooltip";
 import { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 
-type Props = RadixTooltip.TooltipProps & {
+type Props = TooltipProps & {
   readonly className?: string;
   readonly content: ReactNode;
 };
@@ -19,15 +26,15 @@ export function Tooltip(props: Props) {
   } = props;
 
   return (
-    <RadixTooltip.Root
+    <Root
       defaultOpen={defaultOpen}
       delayDuration={0}
       onOpenChange={onOpenChange}
       open={open}
     >
-      <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
-      <RadixTooltip.Portal>
-        <RadixTooltip.Content
+      <Trigger asChild>{children}</Trigger>
+      <Portal>
+        <Content
           {...rest}
           className={twMerge(
             "rounded-lg border border-gray-200 bg-white p-2 text-xs shadow-tooltip",
@@ -35,10 +42,10 @@ export function Tooltip(props: Props) {
           )}
         >
           {content}
-        </RadixTooltip.Content>
-      </RadixTooltip.Portal>
-    </RadixTooltip.Root>
+        </Content>
+      </Portal>
+    </Root>
   );
 }
 
-export const TooltipProvider = RadixTooltip.Provider;
+export const TooltipProvider = Provider;
