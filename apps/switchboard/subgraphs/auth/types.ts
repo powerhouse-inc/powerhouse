@@ -1,6 +1,7 @@
 export interface SessionInput {
     name: string;
     allowedOrigins: string[];
+    expiresAt?: string;
 }
 
 export interface SessionOutput {

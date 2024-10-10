@@ -36,7 +36,7 @@ interface AuthStore {
     setSessions: (sessions: Session[]) => void;
 }
 
-export const authStore = create<AuthStore>((set, get) => ({
+export const authStore = create<AuthStore>(set => ({
     gqlToken: undefined,
     isLoading: true,
     address: '',

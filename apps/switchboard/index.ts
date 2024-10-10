@@ -19,6 +19,7 @@ import { InternalListenerManager } from './utils/internal-listener-manager';
 
 import dotenv from 'dotenv';
 import { DrizzleD1Database } from 'drizzle-orm/d1';
+import { Context } from './types';
 
 dotenv.config();
 
@@ -91,9 +92,9 @@ export const updateRouter = async () => {
             cors(),
             bodyParser.json(),
             expressMiddleware(server, {
-                context: ({ req }) =>
+                context: ({ req }): Promise<Context> =>
                     Promise.resolve({
-                        user: req.headers.authorization?.replace('Bearer ', ''),
+                        headers: req.headers,
                         driveId: req.params.drive ?? undefined,
                         driveServer,
                         db,
@@ -138,7 +139,7 @@ const main = async () => {
         });
 
         // update router with new document models on document models change
-        driveServer.on('documentModels', async documentModels => {
+        driveServer.on('documentModels', async () => {
             await updateRouter();
         });
     } catch (e) {

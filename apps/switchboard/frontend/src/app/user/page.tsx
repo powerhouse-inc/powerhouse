@@ -46,7 +46,7 @@ const User = () => {
                 </div>
             </div>
             <TokenForm />
-            <div className="flex-flex-col gap-4 bg-white p-5">
+            <div className="flex flex-col gap-4 bg-white p-5">
                 <div className="mb-4  font-semibold">Existing Tokens</div>
                 <TokensTable />
             </div>

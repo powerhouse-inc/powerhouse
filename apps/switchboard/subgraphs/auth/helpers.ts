@@ -7,6 +7,7 @@ import wildcard from 'wildcard-match';
 import z from 'zod';
 import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from './env';
 import { sessionTable } from './schema';
+import { SessionInput } from './types';
 
 const jwtSchema = z.object({
     sessionId: z.string(),
@@ -107,22 +108,15 @@ export function validateOriginAgainstAllowed(
 
 export const generateTokenAndSession = async (
     db: DrizzleD1Database,
+    session: SessionInput,
     userId: string,
-    session: {
-        expiryDurationSeconds?: number | null;
-        name: string;
-        allowedOrigins: string;
-    },
-    isUserCreated = false,
+    isUserCreated: boolean,
 ) => {
     const sessionId = randomUUID();
-    const generatedToken = generateToken(
-        sessionId,
-        session.expiryDurationSeconds,
-    );
+    const generatedToken = generateToken(sessionId, Number(session.expiresAt));
     const referenceExpiryDate = getExpiryDateFromToken(generatedToken);
     const referenceTokenId = formatToken(generatedToken);
-    const allowedOrigins = parseOriginMarkup(session.allowedOrigins);
+    const allowedOrigins = parseOriginMarkup(session.allowedOrigins.join(','));
     const createdSession = await db
         .insert(sessionTable)
         .values({
@@ -131,7 +125,7 @@ export const generateTokenAndSession = async (
             allowedOrigins,
             referenceExpiryDate: referenceExpiryDate?.toISOString(),
             referenceTokenId,
-            isUserCreated,
+            isUserCreated: isUserCreated,
             createdBy: userId,
         })
         .returning();

@@ -1,24 +1,35 @@
-import { GraphQLError } from "graphql";
-import { JWT_EXPIRATION_PERIOD } from "../env";
+import { and, eq } from 'drizzle-orm';
+import { DrizzleD1Database } from 'drizzle-orm/d1';
+import { GraphQLError } from 'graphql';
 import ms from 'ms';
-import { DrizzleD1Database } from "drizzle-orm/d1";
-import { sessionTable } from "../schema";
-import { and, eq } from "drizzle-orm";
-import { generateTokenAndSession, validateOriginAgainstAllowed, verifyToken } from "../helpers";
-import { SiweMessage } from "siwe";
+import { SiweMessage } from 'siwe';
+import { Context } from '../../../types';
+import { JWT_EXPIRATION_PERIOD } from '../env';
+import {
+    generateTokenAndSession,
+    validateOriginAgainstAllowed,
+    verifyToken,
+} from '../helpers';
+import { sessionTable } from '../schema';
 
 export const createAuthenticationSession = async (
     db: DrizzleD1Database,
     userId: string,
-    allowedOrigins: string = '*'
+    allowedOrigins = ['*'],
 ) => {
-    return generateTokenAndSession(db, userId, {
-        expiryDurationSeconds: ms(JWT_EXPIRATION_PERIOD) / 1000,
-        name: 'Sign in/Sign up',
-        allowedOrigins
-    });
-}
-
+    return generateTokenAndSession(
+        db,
+        {
+            expiresAt: new Date(
+                new Date().getTime() + ms(JWT_EXPIRATION_PERIOD),
+            ).toISOString(),
+            name: 'Sign in/Sign up',
+            allowedOrigins,
+        },
+        userId,
+        true,
+    );
+};
 
 export const createCustomSession = async (
     db: DrizzleD1Database,
@@ -26,68 +37,120 @@ export const createCustomSession = async (
     session: {
         expiryDurationSeconds?: number | null;
         name: string;
-        allowedOrigins: string;
+        allowedOrigins: string[];
     },
-    isUserCreated: boolean = false
+    isUserCreated = false,
 ) => {
-    return generateTokenAndSession(db, userId, session, isUserCreated);
-}
+    return generateTokenAndSession(db, session, userId, isUserCreated);
+};
 
 export const listSessions = async (db: DrizzleD1Database, userId: string) => {
-    return db.select().from(sessionTable).where(eq(sessionTable.createdBy, userId));
-}
+    return db
+        .select()
+        .from(sessionTable)
+        .where(eq(sessionTable.createdBy, userId));
+};
 
-export const revoke = async (db: DrizzleD1Database, sessionId: string, userId: string) => {
-    const [session] = await db.select().from(sessionTable).where(and(eq(sessionTable.id, sessionId), eq(sessionTable.createdBy, userId)));
+export const revoke = async (
+    db: DrizzleD1Database,
+    sessionId: string,
+    userId: string,
+) => {
+    const [session] = await db
+        .select()
+        .from(sessionTable)
+        .where(
+            and(
+                eq(sessionTable.id, sessionId),
+                eq(sessionTable.createdBy, userId),
+            ),
+        );
 
     if (!session) {
         throw new GraphQLError('Session not found', {
-            extensions: { code: 'SESSION_NOT_FOUND' }
+            extensions: { code: 'SESSION_NOT_FOUND' },
         });
     }
     if (session.revokedAt !== null) {
         throw new GraphQLError('Session already revoked', {
-            extensions: { code: 'SESSION_ALREADY_REVOKED' }
+            extensions: { code: 'SESSION_ALREADY_REVOKED' },
         });
     }
-    return db.update(sessionTable).set({
-        revokedAt: new Date().toISOString()
-    }).where(eq(sessionTable.id, sessionId));
-}
+    return db
+        .update(sessionTable)
+        .set({
+            revokedAt: new Date().toISOString(),
+        })
+        .where(eq(sessionTable.id, sessionId));
+};
 
-export const getSessionByToken = async (db: DrizzleD1Database, origin?: string, token?: string) => {
+export const authenticate = async (context: Context) => {
+    const authorization = context.headers.authorization;
+    const db = context.db;
+    if (!authorization) {
+        throw new GraphQLError('Not authenticated', {
+            extensions: { code: 'NOT_AUTHENTICATED' },
+        });
+    }
+    const token = authorization.replace('Bearer ', '');
+    const origin = context.headers.origin;
+    const session = await getSessionByToken(
+        db as DrizzleD1Database,
+        origin,
+        token,
+    );
+    return session;
+};
+
+export const getSessionByToken = async (
+    db: DrizzleD1Database,
+    origin?: string,
+    token?: string,
+) => {
     if (!token) {
         throw new GraphQLError('Not authenticated', {
-            extensions: { code: 'NOT_AUTHENTICATED' }
+            extensions: { code: 'NOT_AUTHENTICATED' },
         });
     }
     const verificationTokenResult = verifyToken(token);
+    if (!verificationTokenResult) {
+        throw new GraphQLError('Invalid token', {
+            extensions: { code: 'INVALID_TOKEN' },
+        });
+    }
     const { sessionId } = verificationTokenResult;
-    const [session] = await db.select().from(sessionTable).where(eq(sessionTable.id, sessionId))
+    const [session] = await db
+        .select()
+        .from(sessionTable)
+        .where(eq(sessionTable.id, sessionId));
     if (!session) {
         throw new GraphQLError('Session not found', {
-            extensions: { code: 'SESSION_NOT_FOUND' }
+            extensions: { code: 'SESSION_NOT_FOUND' },
         });
     }
     if (session.revokedAt) {
         throw new GraphQLError('Session expired', {
-            extensions: { code: 'SESSION_EXPIRED' }
+            extensions: { code: 'SESSION_EXPIRED' },
         });
     }
-    if (origin && session.allowedOrigins !== '*' && !session.allowedOrigins.includes(origin)) {
+    if (
+        origin &&
+        session.allowedOrigins !== '*' &&
+        !session.allowedOrigins.includes(origin)
+    ) {
         validateOriginAgainstAllowed(session.allowedOrigins, origin);
     }
     return session;
-}
+};
 
 export const verifySignature = async (
     parsedMessage: SiweMessage,
-    signature: string
+    signature: string,
 ) => {
     try {
         const response = await parsedMessage.verify({
             time: new Date().toISOString(),
-            signature
+            signature,
         });
         return response;
     } catch (error) {
