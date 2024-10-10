@@ -19,8 +19,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history for all branches and tags
-          ref: ${{ github.ref }} # Make sure the correct branch is being checked out
+          fetch-depth: 0
+          ref: ${{ github.ref }}
 
       - name: Install PNPM
         uses: pnpm/action-setup@v3
