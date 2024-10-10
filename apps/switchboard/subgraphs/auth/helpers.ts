@@ -1,17 +1,16 @@
 import { randomUUID } from 'crypto';
+import { DrizzleD1Database } from 'drizzle-orm/d1';
 import { GraphQLError } from 'graphql';
 import jwt from 'jsonwebtoken';
 import ms from 'ms';
 import wildcard from 'wildcard-match';
 import z from 'zod';
-import { DrizzleD1Database } from 'drizzle-orm/d1';
+import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from './env';
 import { sessionTable } from './schema';
-import { JWT_EXPIRATION_PERIOD } from './env';
-import { JWT_SECRET } from './env';
 
 const jwtSchema = z.object({
     sessionId: z.string(),
-    exp: z.optional(z.number())
+    exp: z.optional(z.number()),
 });
 
 export const formatToken = (token: string) =>
@@ -23,8 +22,8 @@ export const formatToken = (token: string) =>
  */
 const generateToken = (
     sessionId: string,
-    expiryDurationSeconds?: number | null
-) => {
+    expiryDurationSeconds?: number | null,
+): string => {
     if (expiryDurationSeconds === null) {
         return jwt.sign({ sessionId }, JWT_SECRET);
     }
@@ -35,7 +34,7 @@ const generateToken = (
     return jwt.sign({ sessionId }, JWT_SECRET, { expiresIn });
 };
 
-const getExpiryDateFromToken = (token: string) => {
+const getExpiryDateFromToken = (token: string): Date | null => {
     const { exp } = jwtSchema.parse(jwt.verify(token, JWT_SECRET));
     if (!exp) {
         return null;
@@ -43,18 +42,23 @@ const getExpiryDateFromToken = (token: string) => {
     return new Date(exp * 1000);
 };
 
-export const verifyToken = (token: string) => {
-    const verified = jwt.verify(token, JWT_SECRET, (err: Error, decoded: unknown) => {
+export const verifyToken = (
+    token: string,
+): { sessionId: string } | undefined => {
+    const verified = jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
             throw new GraphQLError(
                 err.name === 'TokenExpiredError'
                     ? 'Token expired'
                     : 'Invalid authentication token',
-                { extensions: { code: 'AUTHENTICATION_TOKEN_ERROR' } }
+                { extensions: { code: 'AUTHENTICATION_TOKEN_ERROR' } },
             );
         }
         return decoded;
-    }) as any;
+    }) as { sessionId: string } | undefined;
+    if (!verified) {
+        return undefined;
+    }
     const validated = jwtSchema.parse(verified);
     return validated;
 };
@@ -67,9 +71,12 @@ function parseOriginMarkup(originParam: string): string {
     const origins = trimmedOriginParam.split(',').map(origin => origin.trim());
     origins.forEach(origin => {
         if (!origin.startsWith('http://') && !origin.startsWith('https://')) {
-            throw new GraphQLError("Origin must start with 'http://' or 'https://'", {
-                extensions: { code: 'INVALID_ORIGIN_PROTOCOL' }
-            });
+            throw new GraphQLError(
+                "Origin must start with 'http://' or 'https://'",
+                {
+                    extensions: { code: 'INVALID_ORIGIN_PROTOCOL' },
+                },
+            );
         }
     });
     return origins.join(',');
@@ -77,14 +84,14 @@ function parseOriginMarkup(originParam: string): string {
 
 export function validateOriginAgainstAllowed(
     allowedOrigins: string,
-    originReceived?: string
+    originReceived?: string,
 ) {
     if (allowedOrigins === '*') {
         return;
     }
     if (!originReceived) {
         throw new GraphQLError('Origin not provided', {
-            extensions: { code: 'ORIGIN_HEADER_MISSING' }
+            extensions: { code: 'ORIGIN_HEADER_MISSING' },
         });
     }
     const allowedOriginsSplit = allowedOrigins.split(',');
@@ -92,8 +99,8 @@ export function validateOriginAgainstAllowed(
         throw new GraphQLError(
             `Access denied due to origin restriction: ${allowedOrigins}, ${originReceived}`,
             {
-                extensions: { code: 'ORIGIN_FORBIDDEN' }
-            }
+                extensions: { code: 'ORIGIN_FORBIDDEN' },
+            },
         );
     }
 }
@@ -106,27 +113,30 @@ export const generateTokenAndSession = async (
         name: string;
         allowedOrigins: string;
     },
-    isUserCreated: boolean = false
+    isUserCreated = false,
 ) => {
     const sessionId = randomUUID();
     const generatedToken = generateToken(
         sessionId,
-        session.expiryDurationSeconds
+        session.expiryDurationSeconds,
     );
     const referenceExpiryDate = getExpiryDateFromToken(generatedToken);
     const referenceTokenId = formatToken(generatedToken);
     const allowedOrigins = parseOriginMarkup(session.allowedOrigins);
-    const createdSession = await db.insert(sessionTable).values({
-        id: sessionId,
-        name: session.name,
-        allowedOrigins,
-        referenceExpiryDate: referenceExpiryDate?.toISOString(),
-        referenceTokenId,
-        isUserCreated,
-        createdBy: userId
-    }).returning();
+    const createdSession = await db
+        .insert(sessionTable)
+        .values({
+            id: sessionId,
+            name: session.name,
+            allowedOrigins,
+            referenceExpiryDate: referenceExpiryDate?.toISOString(),
+            referenceTokenId,
+            isUserCreated,
+            createdBy: userId,
+        })
+        .returning();
     return {
         token: generatedToken,
-        session: createdSession
+        session: createdSession,
     };
 };
