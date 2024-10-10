@@ -11,14 +11,17 @@
   "publishConfig": {
     "access": "public"
   },
+  "sideEffects": false,
   "scripts": {
     "check-types": "tsc --noEmit",
     "postlint": "npm run check-types",
     "lint": "eslint",
-    "create-icon-components": "tsx scripts/create-icon-components.ts && eslint src/assets/icon-components.tsx --fix",
+    "create-icon-components": "tsx scripts/create-icon-components.ts && eslint src/assets/icon-components --no-ignore --fix",
+    "postinstall": "npm run create-icon-components",
     "prepublish": "npm run create-icon-components",
     "build": "vite build",
     "build:watch": "vite build --watch",
+    "build:report": "BUNDLE_REPORT=\"true\" vite build",
     "prebuild": "npm run create-icon-components",
     "storybook": "storybook dev -p 6006",
     "prestorybook": "npm run create-icon-components",
@@ -26,7 +29,6 @@
     "prebuild-storybook": "npm run create-icon-components",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "prepare": "husky install",
     "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
@@ -70,21 +72,19 @@
     "document-model": "2.2.0",
     "fast-xml-parser": "^4.3.4",
     "jsdom": "^24.0.0",
-    "natural-orderby": "^3.0.2",
+    "lightningcss": "^1.27.0",
     "postcss": "^8.4.35",
     "react": "^18.3.1",
-    "react-dom": "^18.2.0",
+    "react-dom": "^18.3.1",
+    "rollup-plugin-visualizer": "^5.12.0",
     "storybook": "^8.3.4",
     "storybook-addon-pseudo-states": "^4.0.2",
-    "tailwind-merge": "^2.5.2",
-    "tailwindcss": "^3.4.13",
-    "tailwindcss-animate": "^1.0.7",
-    "tsx": "^4.7.1",
-    "usehooks-ts": "^3.1.0"
+    "tsx": "^4.7.1"
   },
   "peerDependencies": {
+    "document-model": "^2.1.0",
     "react": "^18.3.1",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.3.1"
   },
   "dependencies": {
     "@internationalized/date": "^3.5.6",
@@ -99,12 +99,17 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "mathjs": "^13.1.1",
+    "natural-orderby": "^4.0.0",
     "react-hook-form": "^7.53.0",
     "react-multi-select-component": "^4.3.4",
     "react-number-format": "^5.4.2",
     "react-select": "^5.8.0",
     "react-toastify": "^10.0.4",
+    "tailwind-merge": "^2.5.2",
+    "tailwindcss": "^3.4.12",
+    "tailwindcss-animate": "^1.0.7",
+    "usehooks-ts": "^3.1.0",
     "viem": "^2.16.1",
-    "wagmi": "^2.10.8"
+    "wagmi": "^2.12.17"
   }
 }

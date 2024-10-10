@@ -1,4 +1,4 @@
-import { mockLocalDrive } from "@/connect/utils";
+import { mockLocalDrive } from "@/connect/utils/mocks";
 import { useArgs } from "@storybook/preview-api";
 import { Meta, StoryObj } from "@storybook/react";
 import { DriveSettingsModal } from ".";

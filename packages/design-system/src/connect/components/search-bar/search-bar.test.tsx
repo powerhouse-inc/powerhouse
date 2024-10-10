@@ -1,4 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitForElementToBeRemoved,
+} from "@testing-library/react";
 import { ConnectSearchBar, ConnectSearchBarProps } from "./search-bar";
 
 const filterItems: ConnectSearchBarProps["filterItems"] = [
@@ -25,7 +30,7 @@ const filterItems: ConnectSearchBarProps["filterItems"] = [
 ];
 
 describe("ConnectSearchBar Component", () => {
-  it("should match snapshot", () => {
+  it("should match snapshot", async () => {
     const { asFragment } = render(
       <ConnectSearchBar
         filterItems={filterItems}
@@ -34,6 +39,10 @@ describe("ConnectSearchBar Component", () => {
         placeholder="Search Files"
         value="test"
       />,
+    );
+
+    await waitForElementToBeRemoved(() =>
+      screen.getAllByTestId("icon-fallback"),
     );
 
     expect(asFragment()).toMatchSnapshot();
