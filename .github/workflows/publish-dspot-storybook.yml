@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - dspot-scalars
-  pull_request:
-    branches: ['dspot-scalars']
-    types: [opened, synchronize]
   workflow_dispatch:
 
 env:
