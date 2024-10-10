@@ -1,35 +1,44 @@
-import { BaseDocumentDriveServer } from "document-drive";
-import { parse } from "graphql";
+import { BaseDocumentDriveServer } from 'document-drive';
+import { parse } from 'graphql';
 
-export const getDocumentModelTypeDefs = (documentDriveServer: BaseDocumentDriveServer, typeDefs: string) => {
+export const getDocumentModelTypeDefs = (
+    documentDriveServer: BaseDocumentDriveServer,
+    typeDefs: string,
+) => {
     const documentModels = documentDriveServer.getDocumentModels();
-    let dmSchema = ''
+    let dmSchema = '';
     documentModels.forEach(({ documentModel }) => {
         dmSchema += `
-        ${documentModel.specifications.map(
-            specification =>
+        ${documentModel.specifications
+            .map(specification =>
                 specification.state.global.schema
                     .replaceAll(' Account ', ` ${documentModel.name}Account `)
                     .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-                    .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+                    .replaceAll(
+                        `[Account!]!`,
+                        `[${documentModel.name}Account!]!`,
+                    )
                     .replaceAll('scalar DateTime', '')
-                    .replaceAll(/\input (.*?) {[\s\S]*?}/g, '')
+                    .replaceAll(/input (.*?) {[\s\S]*?}/g, ''),
+            )
+            .join('\n')};
 
-        ).join('\n')};
-
-        ${documentModel.specifications.map(
-            specification =>
+        ${documentModel.specifications
+            .map(specification =>
                 specification.state.local.schema
                     .replaceAll(' Account ', ` ${documentModel.name}Account `)
                     .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-                    .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+                    .replaceAll(
+                        `[Account!]!`,
+                        `[${documentModel.name}Account!]!`,
+                    )
                     .replaceAll('scalar DateTime', '')
-                    .replaceAll(/\input (.*?) {[\s\S]*?}/g, '')
+                    .replaceAll(/input (.*?) {[\s\S]*?}/g, '')
                     .replaceAll('type AccountSnapshotLocalState', '')
                     .replaceAll('type BudgetStatementLocalState', '')
-                    .replaceAll('type ScopeFrameworkLocalState', '')
-
-        ).join('\n')};
+                    .replaceAll('type ScopeFrameworkLocalState', ''),
+            )
+            .join('\n')};
 
         type ${documentModel.name} implements IDocument {
             id: ID!
@@ -38,8 +47,9 @@ export const getDocumentModelTypeDefs = (documentDriveServer: BaseDocumentDriveS
             revision: Int!
             created: DateTime!
             lastModified: DateTime!
-            ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ''}
-        }\n`});
+            ${documentModel.name !== 'DocumentModel' ? `state: ${documentModel.name}State!` : ''}
+        }\n`;
+    });
 
     // add the mutation and query types
     const schema = `

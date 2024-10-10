@@ -103,7 +103,7 @@ export const updateRouter = async () => {
         );
 
         console.log(
-            `Setting up [${subgraphConfig.name}] subgraph at http://localhost:${serverPort}${path}`,
+            `Setting up [${subgraphConfig.name}] subgraph at http://localhost:${serverPort}/graphql${path}`,
         );
     }
     router = newRouter;

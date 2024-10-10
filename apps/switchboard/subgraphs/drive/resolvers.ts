@@ -1,5 +1,4 @@
 import {
-    BaseDocumentDriveServer,
     generateUUID,
     ListenerRevision,
     PullResponderTransmitter,
@@ -12,35 +11,33 @@ import {
     ListenerFilter,
     TransmitterType,
 } from 'document-model-libs/document-drive';
-import { BaseAction, Operation, OperationScope } from 'document-model/document';
+import { BaseAction, Operation } from 'document-model/document';
+import { DocumentModelInput } from 'document-model/document-model';
 import { Context } from '../../types';
 
 export const resolvers = {
     Query: {
         drive: async (_: unknown, args: unknown, ctx: Context) => {
             if (!ctx.driveId) throw new Error('Drive ID is required');
-            const drive = await (
-                ctx.driveServer as BaseDocumentDriveServer
-            ).getDrive(ctx.driveId);
+            const drive = await ctx.driveServer.getDrive(ctx.driveId);
             return drive.state.global;
         },
         documents: async (_: unknown, args: unknown, ctx: Context) => {
             if (!ctx.driveId) throw new Error('Drive ID is required');
-            const documents = await (
-                ctx.driveServer as BaseDocumentDriveServer
-            ).getDocuments(ctx.driveId);
+            const documents = await ctx.driveServer.getDocuments(ctx.driveId);
             return documents;
         },
         document: async (_: unknown, { id }: { id: string }, ctx: Context) => {
             if (!ctx.driveId) throw new Error('Drive ID is required');
-            const document = await (
-                ctx.driveServer as BaseDocumentDriveServer
-            ).getDocument(ctx.driveId, id);
+            const document = await ctx.driveServer.getDocument(ctx.driveId, id);
 
             const dms = ctx.driveServer.getDocumentModels();
-            const dm = dms.find(({ documentModel }) => documentModel.id === document.documentType)
+            const dm = dms.find(
+                ({ documentModel }) =>
+                    documentModel.id === document.documentType,
+            );
             const globalState = document.state.global;
-            if (!globalState) throw new Error("Document not found")
+            if (!globalState) throw new Error('Document not found');
             const response = {
                 ...document,
                 id,
@@ -49,9 +46,12 @@ export const resolvers = {
                 operations: document.operations.global.map(op => ({
                     ...op,
                     inputText:
-                        typeof op.input === 'string' ? op.input : JSON.stringify(op.input)
+                        typeof op.input === 'string'
+                            ? op.input
+                            : JSON.stringify(op.input),
                 })),
-                initialState: document.initialState.state.global, __typename: dm?.documentModel.name
+                initialState: document.initialState.state.global,
+                __typename: dm?.documentModel.name,
             };
             console.log(response);
             return response;
@@ -107,9 +107,9 @@ export const resolvers = {
             const listenerRevisions: ListenerRevision[] = await Promise.all(
                 strands.map(async s => {
                     const operations =
-                        s.operations?.map(o => ({
+                        s.operations.map(o => ({
                             ...o,
-                            input: JSON.parse(o.input),
+                            input: JSON.parse(o.input) as DocumentModelInput,
                             skip: o.skip ?? 0,
                             scope: s.scope,
                             branch: 'main',
@@ -117,18 +117,19 @@ export const resolvers = {
 
                     const result = await (s.documentId !== undefined
                         ? ctx.driveServer.queueOperations(
-                            s.driveId,
-                            s.documentId,
-                            operations,
-                        )
+                              s.driveId,
+                              s.documentId,
+                              operations,
+                          )
                         : ctx.driveServer.queueDriveOperations(
-                            s.driveId,
-                            operations as Operation<
-                                DocumentDriveAction | BaseAction
-                            >[],
-                        ));
+                              s.driveId,
+                              operations as Operation<
+                                  DocumentDriveAction | BaseAction
+                              >[],
+                          ));
 
-                    const scopeOperations = result.document?.operations[s.scope as OperationScope] ?? [];
+                    const scopeOperations =
+                        result.document?.operations[s.scope] ?? [];
                     if (scopeOperations.length === 0) {
                         return {
                             revision: -1,
@@ -137,11 +138,10 @@ export const resolvers = {
                             driveId: s.driveId,
                             scope: s.scope,
                             status: result.status,
-                        }
+                        };
                     }
 
-                    const revision = scopeOperations.slice().pop()?.index as number;
-
+                    const revision = scopeOperations.slice().pop()?.index ?? -1;
                     return {
                         revision,
                         branch: s.branch,
@@ -169,16 +169,16 @@ export const resolvers = {
             const validEntries = revisions
                 .filter(r => r !== null)
                 .map(e => ({
-                    driveId: e!.driveId,
-                    documentId: e!.documentId,
-                    scope: e!.scope,
-                    branch: e!.branch,
-                    revision: e!.revision,
-                    status: e!.status,
+                    driveId: e.driveId,
+                    documentId: e.documentId,
+                    scope: e.scope,
+                    branch: e.branch,
+                    revision: e.revision,
+                    status: e.status,
                 }));
 
             const transmitter = (await ctx.driveServer.getTransmitter(
-                ctx.driveId!,
+                ctx.driveId,
                 listenerId,
             )) as PullResponderTransmitter;
             const result = await transmitter.processAcknowledge(
@@ -201,9 +201,7 @@ export const resolvers = {
             ctx: Context,
         ) => {
             if (!ctx.driveId) throw new Error('Drive ID is required');
-            const listener = (await (
-                ctx.driveServer as BaseDocumentDriveServer
-            ).getTransmitter(
+            const listener = (await ctx.driveServer.getTransmitter(
                 ctx.driveId,
                 listenerId,
             )) as PullResponderTransmitter;

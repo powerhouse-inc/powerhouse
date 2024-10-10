@@ -1,14 +1,15 @@
-import { InternalTransmitterUpdate, Listener, OperationUpdate } from 'document-drive';
 import {
-    DocumentDriveDocument
-} from 'document-model-libs/document-drive';
+    InternalTransmitterUpdate,
+    Listener,
+    OperationUpdate,
+} from 'document-drive';
+import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import {
     CreateAccountInput,
     DeleteAccountInput,
     RealWorldAssetsDocument,
-    RealWorldAssetsState
+    RealWorldAssetsState,
 } from 'document-model-libs/real-world-assets';
-
 
 const logger = {
     info: (msg: string) => console.log(msg),
@@ -16,7 +17,7 @@ const logger = {
     error: (msg: string) => console.log(msg),
     warn: (msg: string) => console.log(msg),
     fatal: (msg: string) => console.log(msg),
-}
+};
 
 export const options: Omit<Listener, 'driveId'> = {
     listenerId: 'real-world-assets',
@@ -24,7 +25,7 @@ export const options: Omit<Listener, 'driveId'> = {
         branch: ['main'],
         documentId: ['*'],
         documentType: ['makerdao/rwa-portfolio'],
-        scope: ['*']
+        scope: ['*'],
     },
     block: false,
     label: 'real-world-assets',
@@ -35,118 +36,98 @@ export async function transmit(
     strands: InternalTransmitterUpdate<
         RealWorldAssetsDocument | DocumentDriveDocument,
         'global'
-    >[]
+    >[],
 ) {
     // logger.debug(strands);
     for (const strand of strands) {
-        await handleRwaDocumentStrand(
+        handleRwaDocumentStrand(
             strand as InternalTransmitterUpdate<
                 RealWorldAssetsDocument,
                 'global'
-            >
+            >,
         );
     }
-}
 
+    return Promise.resolve();
+}
 
 function strandStartsFromOpZero(
     strand: InternalTransmitterUpdate<
         DocumentDriveDocument | RealWorldAssetsDocument,
         'global'
-    >
+    >,
 ) {
+    const lastOperation = strand.operations[strand.operations.length - 1];
+    const firstOperation = strand.operations[0];
     const resetNeeded =
-        strand.operations.length > 0 &&
-        (strand.operations[0]!.index === 0 ||
-            strand.operations[strand.operations.length - 1]!.index -
-            strand.operations[strand.operations.length - 1]!.skip ===
-            0);
+        firstOperation &&
+        (firstOperation.index === 0 ||
+            (lastOperation && lastOperation.index - lastOperation.skip === 0));
     logger.debug(`Reset needed: ${resetNeeded}`);
     return resetNeeded;
 }
 
 const listenerState = {
-    amountOfAccounts: 0
-}
+    amountOfAccounts: 0,
+};
 
-async function rebuildRwaPortfolio(
+function rebuildRwaPortfolio(
     driveId: string,
     documentId: string,
-    state: RealWorldAssetsState
+    state: RealWorldAssetsState,
 ) {
-    const {
-        accounts
-    } = state;
+    const { accounts } = state;
 
     listenerState.amountOfAccounts = accounts.length;
 }
 
-const surgicalOperations: Record<
-    string,
-    (
-        input: any
-    ) => Promise<void>
-> = {
-
-    CREATE_ACCOUNT: async (
-        input: CreateAccountInput,
-    ) => {
+const surgicalOperations: Record<string, (input: any) => void> = {
+    CREATE_ACCOUNT: (input: CreateAccountInput) => {
         logger.debug('Creating account');
         listenerState.amountOfAccounts++;
     },
-    DELETE_ACCOUNT: async (
-        input: DeleteAccountInput,
-    ) => {
+    DELETE_ACCOUNT: (input: DeleteAccountInput) => {
         logger.debug('Deleting account');
         listenerState.amountOfAccounts--;
     },
-
 };
 
-async function handleRwaDocumentStrand(
-    strand: InternalTransmitterUpdate<RealWorldAssetsDocument, 'global'>
+function handleRwaDocumentStrand(
+    strand: InternalTransmitterUpdate<RealWorldAssetsDocument, 'global'>,
 ) {
     logger.debug(
-        `Received strand for document ${strand.documentId} with operations: ${strand.operations.map(op => op.type).join(', ')}`
+        `Received strand for document ${strand.documentId} with operations: ${strand.operations.map(op => op.type).join(', ')}`,
     );
 
     if (
         strandStartsFromOpZero(strand) ||
         !allOperationsAreSurgical(strand, surgicalOperations)
     ) {
-        await rebuildRwaPortfolio(
-            strand.driveId,
-            strand.documentId,
-            strand.state
-        );
+        rebuildRwaPortfolio(strand.driveId, strand.documentId, strand.state);
         return;
     }
 
     for (const operation of strand.operations) {
-        await doSurgicalRwaPortfolioUpdate(operation);
+        doSurgicalRwaPortfolioUpdate(operation);
     }
 }
 
-async function doSurgicalRwaPortfolioUpdate(
-    operation: OperationUpdate
-) {
+function doSurgicalRwaPortfolioUpdate(operation: OperationUpdate) {
     logger.debug('Doing surgical rwa portfolio update');
-    await surgicalOperations[operation.type]!(operation.input);
+    surgicalOperations[operation.type]?.(operation.input);
 }
 
 function allOperationsAreSurgical(
     strand: InternalTransmitterUpdate<RealWorldAssetsDocument, 'global'>,
     surgicalOperations: Record<
         string,
-        (
-            input: any,
-            portfolio: RealWorldAssetsState
-        ) => void
-    >
+        (input: any, portfolio: RealWorldAssetsState) => void
+    >,
 ) {
     const allOperationsAreSurgical =
-        strand.operations.filter(op => surgicalOperations[op.type] === undefined)
-            .length === 0;
+        strand.operations.filter(
+            op => surgicalOperations[op.type] === undefined,
+        ).length === 0;
     logger.debug(`All operations are surgical: ${allOperationsAreSurgical}`);
     return allOperationsAreSurgical;
 }
