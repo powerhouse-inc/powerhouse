@@ -11,6 +11,8 @@ export type ScalarType = {
     output: string;
 };
 
+export const type = 'string'; // TS type in string form
+
 export const typedef = 'scalar EmailAddress';
 
 export const schema = z.string().email();

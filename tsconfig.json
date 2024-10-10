@@ -35,6 +35,6 @@
     "packages/*/storybook-static/",
     "packages/*/coverage/",
     "packages/*/gen/",
-    "packages/*/docs/",
+    "packages/*/docs/"
   ]
 }

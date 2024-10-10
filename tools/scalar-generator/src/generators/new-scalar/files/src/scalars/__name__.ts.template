@@ -11,6 +11,8 @@ export type ScalarType = {
     output: any; // Update this accordingly
 };
 
+export const type = 'any'; // TS type in string form, update this accordingly
+
 export const typedef = 'scalar <%= name %>';
 
 export const schema = z.string(); // Update this code accordingly
