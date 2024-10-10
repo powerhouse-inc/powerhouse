@@ -8,13 +8,17 @@ import { DocumentDriveServer } from 'document-drive';
 import * as DocumentModelsLibs from 'document-model-libs/document-models';
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from 'document-model/document-model';
+import { drizzle } from "drizzle-orm/connect";
 import express from 'express';
 import http from 'http';
+import { getSchema as getAuthSchema } from './subgraphs/auth/subgraph';
 import { getSchema as getDriveSchema } from './subgraphs/drive/subgraph';
 import { getSchema as getRwaReadModelSchema } from './subgraphs/rwa-read-model/subgraph';
 import { getSchema as getSystemSchema } from './subgraphs/system/subgraph';
 import { InternalListenerManager } from './utils/internal-listener-manager';
-import { getSchema as getAuthSchema } from './subgraphs/auth/subgraph';
+
+import dotenv from "dotenv";
+dotenv.config();
 
 export const SUBGRAPH_REGISTRY = [
     {
@@ -50,6 +54,8 @@ const app = express();
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 
+const db = process.env.DATABASE_URL !== "" ? drizzle("node-postgres", process.env.DATABASE_URL as string) : drizzle('pglite');
+
 export const updateRouter = async () => {
     const newRouter = express.Router();
     // Run each subgraph on the same http server, but at different paths
@@ -77,7 +83,12 @@ export const updateRouter = async () => {
             cors(),
             bodyParser.json(),
             expressMiddleware(server, {
-                context: async ({ req }) => ({ user: req.headers.authorization?.replace('Bearer ', ''), driveId: req.params.drive ?? undefined, driveServer })
+                context: async ({ req }) => ({
+                    user: req.headers.authorization?.replace('Bearer ', ''),
+                    driveId: req.params.drive ?? undefined,
+                    driveServer,
+                    db
+                })
             })
         );
 
