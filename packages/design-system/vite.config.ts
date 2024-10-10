@@ -47,9 +47,11 @@ export default defineConfig(() => {
       sourcemap: true,
       rollupOptions: {
         output: {
-          entryFileNames: "[name].[hash].js",
           chunkFileNames: "[name].[hash].js",
-          assetFileNames: "[name].[hash][extname]",
+          assetFileNames: (info) =>
+            info.name === "style.css" || info.names?.includes("style.css")
+              ? "style.css"
+              : "[name].[hash][extname]",
           preserveModules: true,
         },
         external: (id) => {

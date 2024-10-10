@@ -12,6 +12,13 @@
     "access": "public"
   },
   "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.js",
+    "./style.css": {
+      "import": "./dist/style.css",
+      "require": "./dist/style.css"
+    }
+  },
   "scripts": {
     "check-types": "tsc --noEmit",
     "postlint": "npm run check-types",
