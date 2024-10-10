@@ -549,7 +549,7 @@ importers:
         specifier: 0.0.15
         version: 0.0.15(graphql@16.9.0)(zod@3.23.8)
       '@powerhousedao/design-system':
-        specifier: 1.2.0
+        specifier: workspace:*
         version: link:../design-system
       '@semantic-release/changelog':
         specifier: ^6.0.3
