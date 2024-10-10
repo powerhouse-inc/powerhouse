@@ -118,7 +118,7 @@ const main = async () => {
             db = await drizzle('node-postgres', process.env.DATABASE_URL);
         } else {
             // @ts-expect-error: linter doesnt see that drizzle returns a promise
-            db = await drizzle('pglite');
+            db = await drizzle('pglite', './dev.db');
         }
 
         // init drive server
