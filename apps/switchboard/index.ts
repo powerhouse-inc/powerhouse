@@ -130,7 +130,6 @@ const main = async () => {
 
         // init router
         await updateRouter();
-
         app.use('/graphql', router);
 
         // start http server

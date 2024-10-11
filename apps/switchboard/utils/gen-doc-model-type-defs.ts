@@ -53,15 +53,15 @@ export const getDocumentModelTypeDefs = (
 
     // add the mutation and query types
     const schema = `
-            scalar DateTime
-            interface IDocument {
-    name: String!
-    documentType: String!
-    revision: Int!
-    created: DateTime!
-    lastModified: DateTime!
-    
-}
+    scalar DateTime
+    interface IDocument {
+        name: String!
+        documentType: String!
+        revision: Int!
+        created: DateTime!
+        lastModified: DateTime!
+        
+    }
     ${dmSchema}
 
     ${typeDefs}
