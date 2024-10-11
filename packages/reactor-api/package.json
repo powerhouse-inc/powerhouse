@@ -14,6 +14,8 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "devDependencies": {
+    "@types/body-parser": "^1.19.5",
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
@@ -24,6 +26,12 @@
     "document-model": "^2.2.0"
   },
   "dependencies": {
-    "express": "^4.21.1"
+    "@apollo/server": "^4.11.0",
+    "@apollo/subgraph": "^2.9.2",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "document-model-libs": "1.93.2",
+    "express": "^4.21.1",
+    "graphql": "^16.9.0"
   }
 }
