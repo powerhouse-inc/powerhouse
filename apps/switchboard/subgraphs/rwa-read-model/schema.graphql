@@ -1,7 +1,7 @@
 type Query {
-    rwaPortfolio: RWA
+  rwaPortfolio: RWA
 }
 
 type RWA {
-    amountOfAccounts: Int!
+  amountOfAccounts: Int!
 }

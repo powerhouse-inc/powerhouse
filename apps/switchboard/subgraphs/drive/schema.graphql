@@ -1,14 +1,14 @@
 type Query {
-    system: System
-    drive: DocumentDriveState
-    document(id: ID!): IDocument
-    documents: [String!]!
+  system: System
+  drive: DocumentDriveState
+  document(id: ID!): IDocument
+  documents: [String!]!
 }
 
 type Mutation {
-    registerPullResponderListener(filter: InputListenerFilter!): Listener
-    pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
-    acknowledge(listenerId: String!, revisions: [ListenerRevisionInput]): Boolean
+  registerPullResponderListener(filter: InputListenerFilter!): Listener
+  pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
+  acknowledge(listenerId: String!, revisions: [ListenerRevisionInput]): Boolean
 }
 
 input InputOperationSignerUser {
@@ -40,7 +40,6 @@ input InputListenerFilter {
   branch: [String!]
 }
 
-
 type OperationSigner {
   app: OperationSignerApp
   user: OperationSignerUser
@@ -54,11 +53,11 @@ input InputOperationSigner {
 }
 
 type OperationContext {
-    signer: OperationSigner
+  signer: OperationSigner
 }
 
 input InputOperationContext {
-    signer: InputOperationSigner
+  signer: InputOperationSigner
 }
 
 input InputOperationUpdate {
@@ -125,19 +124,19 @@ input ListenerRevisionInput {
 }
 
 type ListenerRevision {
-    driveId: String!
-    documentId: String!
-    scope: String!
-    branch: String!
-    status: UpdateStatus!
-    revision: Int!
-    error: String
+  driveId: String!
+  documentId: String!
+  scope: String!
+  branch: String!
+  status: UpdateStatus!
+  revision: Int!
+  error: String
 }
 
 type System {
-    sync: Sync
+  sync: Sync
 }
 
 type Sync {
-    strands(listenerId: ID!, since: String): [StrandUpdate!]!
+  strands(listenerId: ID!, since: String): [StrandUpdate!]!
 }

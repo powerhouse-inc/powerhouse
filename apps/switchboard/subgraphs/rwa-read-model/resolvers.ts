@@ -1,12 +1,12 @@
-import { getState } from './listener';
+import { getState } from "./listener";
 
 export const resolvers = {
-    Query: {
-        rwaPortfolio: () => {
-            const state = getState();
-            return {
-                amountOfAccounts: state.amountOfAccounts,
-            };
-        },
+  Query: {
+    rwaPortfolio: () => {
+      const state = getState();
+      return {
+        amountOfAccounts: state.amountOfAccounts,
+      };
     },
+  },
 };
