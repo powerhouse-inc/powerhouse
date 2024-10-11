@@ -1,240 +1,231 @@
-import { DocumentDriveAction } from 'document-model-libs/document-drive';
+import { DocumentDriveAction } from "document-model-libs/document-drive";
 import {
-    Action,
-    BaseAction,
-    Document,
-    NOOPAction,
-    Operation,
-    Reducer
-} from 'document-model/document';
-import { DocumentModelDocument } from 'document-model/document-model';
-import { ExpectStatic } from 'vitest';
-import { BaseDocumentDriveServer } from '../src';
+  Action,
+  BaseAction,
+  Document,
+  NOOPAction,
+  Operation,
+  Reducer,
+} from "document-model/document";
+import { DocumentModelDocument } from "document-model/document-model";
+import { ExpectStatic } from "vitest";
+import { BaseDocumentDriveServer } from "../src";
 
 export function expectUUID(expect: ExpectStatic): unknown {
-    return expect.stringMatching(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    );
+  return expect.stringMatching(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  );
 }
 
 export function expectUTCTimestamp(expect: ExpectStatic): unknown {
-    return expect.stringMatching(
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/i
-    );
+  return expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/i);
 }
 
 export function buildOperation(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    reducer: Reducer<any, any, any>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    document: Document<any, any, any>,
-    action: Action,
-    index?: number
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  reducer: Reducer<any, any, any>,
+
+  document: Document<any, any, any>,
+  action: Action,
+  index?: number,
 ): Operation<NOOPAction & Action> {
-    const newDocument = reducer(document, action);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-non-null-assertion
-    const operation = newDocument.operations[action.scope]
-        .slice()
-        .pop()! as Operation;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    return { ...operation, index: index ?? operation.index } as Operation<
-        NOOPAction & Action
-    >;
+  const newDocument = reducer(document, action);
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const operation = newDocument.operations[action.scope]
+    .slice()
+    .pop()! as Operation;
+
+  return { ...operation, index: index ?? operation.index } as Operation<
+    NOOPAction & Action
+  >;
 }
 
 export function buildOperations(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    reducer: Reducer<any, any, any>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    document: Document<any, any, any>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    actions: Array<Action>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  reducer: Reducer<any, any, any>,
+
+  document: Document<any, any, any>,
+
+  actions: Array<Action>,
 ): Operation<NOOPAction & Action>[] {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const operations: Operation<NOOPAction & Action>[] = [];
-    for (const action of actions) {
-        document = reducer(document, action);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const operation = document.operations[action.scope]
-            .slice()
-            .pop()! as Operation<NOOPAction & Action>;
-        operations.push(operation);
-    }
-    return operations;
+  const operations: Operation<NOOPAction & Action>[] = [];
+  for (const action of actions) {
+    document = reducer(document, action);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const operation = document.operations[action.scope]
+      .slice()
+      .pop()! as Operation<NOOPAction & Action>;
+    operations.push(operation);
+  }
+  return operations;
 }
 
 export function buildOperationAndDocument(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    reducer: Reducer<any, any, any>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    document: Document<any, any, any>,
-    action: Action,
-    index?: number
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  reducer: Reducer<any, any, any>,
+
+  document: Document<any, any, any>,
+  action: Action,
+  index?: number,
 ) {
-    const newDocument = reducer(document, action);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-non-null-assertion
-    const operation = newDocument.operations[action.scope]
-        .slice()
-        .pop()! as Operation;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    return {
-        document: newDocument,
-        operation: {
-            ...operation,
-            index: index ?? operation.index
-        } as Operation<NOOPAction & Action>
-    };
+  const newDocument = reducer(document, action);
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const operation = newDocument.operations[action.scope]
+    .slice()
+    .pop()! as Operation;
+
+  return {
+    document: newDocument,
+    operation: {
+      ...operation,
+      index: index ?? operation.index,
+    } as Operation<NOOPAction & Action>,
+  };
 }
 
 export class BasicClient {
-    private unsyncedOperations: Operation[] = [];
+  private unsyncedOperations: Operation[] = [];
 
-    constructor(
-        private server: BaseDocumentDriveServer,
-        private driveId: string,
-        private documentId: string,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        private document: Document<any, any, any>,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        private reducer: Reducer<any, any, any>
-    ) {}
+  constructor(
+    private server: BaseDocumentDriveServer,
+    private driveId: string,
+    private documentId: string,
 
-    getDocument() {
-        return this.document;
+    private document: Document<any, any, any>,
+
+    private reducer: Reducer<any, any, any>,
+  ) {}
+
+  getDocument() {
+    return this.document;
+  }
+
+  clearUnsyncedOperations() {
+    this.unsyncedOperations = [];
+  }
+
+  async pushOperationsToServer() {
+    const result = await this.server.addOperations(
+      this.driveId,
+      this.documentId,
+      this.unsyncedOperations,
+    );
+
+    if (result.status === "SUCCESS") {
+      this.unsyncedOperations = [];
     }
 
-    clearUnsyncedOperations() {
-        this.unsyncedOperations = [];
-    }
+    return result;
+  }
 
-    async pushOperationsToServer() {
-        const result = await this.server.addOperations(
-            this.driveId,
-            this.documentId,
-            this.unsyncedOperations
-        );
+  async syncDocument() {
+    this.clearUnsyncedOperations();
 
-        if (result.status === 'SUCCESS') {
-            this.unsyncedOperations = [];
-        }
+    const remoteDocument = (await this.server.getDocument(
+      this.driveId,
+      this.documentId,
+    )) as DocumentModelDocument;
 
-        return result;
-    }
+    const remoteDocumentOperations = Object.values(
+      remoteDocument.operations,
+    ).flat();
 
-    async syncDocument() {
-        this.clearUnsyncedOperations();
+    const result = await this.server._processOperations(
+      this.driveId,
+      this.documentId,
+      this.document,
+      remoteDocumentOperations,
+    );
 
-        const remoteDocument = (await this.server.getDocument(
-            this.driveId,
-            this.documentId
-        )) as DocumentModelDocument;
+    this.document = result.document;
+    return this.document;
+  }
 
-        const remoteDocumentOperations = Object.values(
-            remoteDocument.operations
-        ).flat();
+  dispatchDocumentAction(action: Action) {
+    const result = buildOperationAndDocument(
+      this.reducer,
+      this.document,
+      action,
+    );
 
-        const result = await this.server._processOperations(
-            this.driveId,
-            this.documentId,
-            this.document,
-            remoteDocumentOperations
-        );
+    this.document = { ...result.document };
+    this.unsyncedOperations.push({ ...result.operation });
 
-        this.document = result.document;
-        return this.document;
-    }
-
-    dispatchDocumentAction(action: Action) {
-        const result = buildOperationAndDocument(
-            this.reducer,
-            this.document,
-            action
-        );
-
-        this.document = { ...result.document };
-        this.unsyncedOperations.push({ ...result.operation });
-
-        return result;
-    }
+    return result;
+  }
 }
 
 export class DriveBasicClient {
-    private unsyncedOperations: Operation<DocumentDriveAction | BaseAction>[] =
-        [];
+  private unsyncedOperations: Operation<DocumentDriveAction | BaseAction>[] =
+    [];
 
-    constructor(
-        private server: BaseDocumentDriveServer,
-        private driveId: string,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        private document: Document<any, any, any>,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        private reducer: Reducer<any, any, any>
-    ) {}
+  constructor(
+    private server: BaseDocumentDriveServer,
+    private driveId: string,
 
-    getDocument() {
-        return this.document;
+    private document: Document<any, any, any>,
+
+    private reducer: Reducer<any, any, any>,
+  ) {}
+
+  getDocument() {
+    return this.document;
+  }
+
+  getUnsyncedOperations() {
+    return this.unsyncedOperations;
+  }
+
+  setUnsyncedOperations(
+    operations: Operation<DocumentDriveAction | BaseAction>[],
+  ) {
+    this.unsyncedOperations = operations;
+  }
+
+  clearUnsyncedOperations() {
+    this.unsyncedOperations = [];
+  }
+
+  async pushOperationsToServer() {
+    const result = await this.server.addDriveOperations(
+      this.driveId,
+      this.unsyncedOperations,
+    );
+
+    if (result.status === "SUCCESS") {
+      this.unsyncedOperations = [];
     }
 
-    getUnsyncedOperations() {
-        return this.unsyncedOperations;
-    }
+    return result;
+  }
 
-    setUnsyncedOperations(
-        operations: Operation<DocumentDriveAction | BaseAction>[]
-    ) {
-        this.unsyncedOperations = operations;
-    }
+  async syncDocument() {
+    this.clearUnsyncedOperations();
 
-    clearUnsyncedOperations() {
-        this.unsyncedOperations = [];
-    }
+    const remoteDocument = await this.server.getDrive(this.driveId);
 
-    async pushOperationsToServer() {
-        const result = await this.server.addDriveOperations(
-            this.driveId,
-            this.unsyncedOperations
-        );
+    const remoteDocumentOperations = Object.values(
+      remoteDocument.operations,
+    ).flat();
 
-        if (result.status === 'SUCCESS') {
-            this.unsyncedOperations = [];
-        }
+    const result = await this.server._processOperations(
+      this.driveId,
+      undefined,
+      this.document,
+      remoteDocumentOperations,
+    );
 
-        return result;
-    }
+    this.document = result.document;
+    return this.document;
+  }
 
-    async syncDocument() {
-        this.clearUnsyncedOperations();
+  dispatchDriveAction(action: Action) {
+    const result = buildOperationAndDocument(
+      this.reducer,
+      this.document,
+      action,
+    );
 
-        const remoteDocument = await this.server.getDrive(this.driveId);
+    this.document = { ...result.document };
+    this.unsyncedOperations.push({ ...result.operation });
 
-        const remoteDocumentOperations = Object.values(
-            remoteDocument.operations
-        ).flat();
-
-        const result = await this.server._processOperations(
-            this.driveId,
-            undefined,
-            this.document,
-            remoteDocumentOperations
-        );
-
-        this.document = result.document;
-        return this.document;
-    }
-
-    dispatchDriveAction(action: Action) {
-        const result = buildOperationAndDocument(
-            this.reducer,
-            this.document,
-            action
-        );
-
-        this.document = { ...result.document };
-        this.unsyncedOperations.push({ ...result.operation });
-
-        return result;
-    }
+    return result;
+  }
 }

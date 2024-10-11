@@ -1,62 +1,62 @@
 type ScopeComponent {
-    content: String
+  content: String
 }
-                    
-type  ArticleComponent {
-    content: String
+
+type ArticleComponent {
+  content: String
 }
-                    
-type  SectionComponent {
-    content: String
+
+type SectionComponent {
+  content: String
 }
-                    
-type  CoreComponent {
-    content: String
+
+type CoreComponent {
+  content: String
 }
-                    
+
 enum TypeSpecificationComponentCategory {
-    Primary
-    Supporting
-    Immutable
-    Accessory
+  Primary
+  Supporting
+  Immutable
+  Accessory
 }
-                    
-type  TypeSpecificationComponent {
-    name: String
-    overview: String
-    category: TypeSpecificationComponentCategory
-    documentIdentifierRules: String
-    typeAuthority: String
-    additionalLogic: String
+
+type TypeSpecificationComponent {
+  name: String
+  overview: String
+  category: TypeSpecificationComponentCategory
+  documentIdentifierRules: String
+  typeAuthority: String
+  additionalLogic: String
 }
-                    
-union ElementComponents = 
-        ScopeComponent
-    |   ArticleComponent
-    |   SectionComponent
-    |   CoreComponent
-    |   TypeSpecificationComponent
-                    
+
+union ElementComponents =
+  | ScopeComponent
+  | ArticleComponent
+  | SectionComponent
+  | CoreComponent
+  | TypeSpecificationComponent
+
 enum ScopeFrameworkElementType {
-    Scope
-    Article
-    Section
-    Core
-    TypeSpecification
+  Scope
+  Article
+  Section
+  Core
+  TypeSpecification
 }
-                    
-type  ScopeFrameworkElement {
-    id: ID!
-    path: String!
-    version: Int!
-    name: String
-    type: ScopeFrameworkElementType
-    components: ElementComponents
+
+type ScopeFrameworkElement {
+  id: ID!
+  path: String!
+  version: Int!
+  name: String
+  type: ScopeFrameworkElementType
+  components: ElementComponents
 }
-                    
-type  ScopeFrameworkState {
-    rootPath: String!
-    elements: [ScopeFrameworkElement!]!
+
+type ScopeFrameworkState {
+  rootPath: String!
+  elements: [ScopeFrameworkElement!]!
 }
 
 type ScopeFrameworkLocalState
@@ -64,42 +64,42 @@ type ScopeFrameworkLocalState
 # main
 
 type SetRootPathInput {
-    newRootPath: String!
+  newRootPath: String!
 }
 
 type AddElementInput {
-    id: String!
-    path: String!
-    type: ScopeFrameworkElementType!
-    name: String
-    components: ElementComponents
+  id: String!
+  path: String!
+  type: ScopeFrameworkElementType!
+  name: String
+  components: ElementComponents
 }
 
 type UpdateElementTypeInput {
-    id: ID!
-    type: ScopeFrameworkElementType!
+  id: ID!
+  type: ScopeFrameworkElementType!
 }
 
 type UpdateElementNameInput {
-    id: ID!
-    name: String
+  id: ID!
+  name: String
 }
 
 type UpdateElementComponentsInput {
-    id: ID!
-    components: ElementComponents
+  id: ID!
+  components: ElementComponents
 }
 
 type RemoveElementInput {
-    id: ID!
+  id: ID!
 }
 
 type ReorderElementsInput {
-    parentElementId: ID!
-    order: [ID!]!
+  parentElementId: ID!
+  order: [ID!]!
 }
 
 type MoveElementInput {
-    id: ID!
-    newParentId: ID!
+  id: ID!
+  newParentId: ID!
 }

@@ -1,0 +1,10 @@
+/dist
+/node_modules
+/coverage
+/storybook-static
+
+.yalc/
+yalc.lock
+
+public/icons.svg
+build-storybook.log

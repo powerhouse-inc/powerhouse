@@ -1,63 +1,63 @@
 type AccountSnapshotState {
-	id: ID!
-    ownerId: ID
-    ownerType: String
-    period: String
-    start: String
-    end: String
-    actualsComparison: [ActualsComparison]
-    snapshotAccount: [SnapshotAccount]
+  id: ID!
+  ownerId: ID
+  ownerType: String
+  period: String
+  start: String
+  end: String
+  actualsComparison: [ActualsComparison]
+  snapshotAccount: [SnapshotAccount]
 }
 
 type ActualsComparison {
-    currency: String
-    month: String
-    reportedActuals: Float
-    netExpenses: ActualsComparisonNetExpenses
+  currency: String
+  month: String
+  reportedActuals: Float
+  netExpenses: ActualsComparisonNetExpenses
 }
 
 type ActualsComparisonNetExpenses {
-    offChainIncluded: ActualsComparisonNetExpensesItem
-    onChainOnly: ActualsComparisonNetExpensesItem!
+  offChainIncluded: ActualsComparisonNetExpensesItem
+  onChainOnly: ActualsComparisonNetExpensesItem!
 }
 
 type ActualsComparisonNetExpensesItem {
-    amount: Float
-    difference: Float
+  amount: Float
+  difference: Float
 }
 
 type SnapshotAccount {
-    accountAddress: String
-    accountLabel: String
-    accountType: String
-    groupAccountId: ID
-    id: ID!
-    offChain: Boolean
-    upstreamAccountId: ID
-    snapshotAccountBalance: [SnapshotAccountBalance]
-    snapshotAccountTransaction: [SnapshotAccountTransaction]
+  accountAddress: String
+  accountLabel: String
+  accountType: String
+  groupAccountId: ID
+  id: ID!
+  offChain: Boolean
+  upstreamAccountId: ID
+  snapshotAccountBalance: [SnapshotAccountBalance]
+  snapshotAccountTransaction: [SnapshotAccountTransaction]
 }
 
 type SnapshotAccountBalance {
-    id: ID
-    includesOffChain: Boolean
-    inflow: Float
-    initialBalance: Float
-    newBalance: Float
-    outflow: Float
-    token: String
+  id: ID
+  includesOffChain: Boolean
+  inflow: Float
+  initialBalance: Float
+  newBalance: Float
+  outflow: Float
+  token: String
 }
 
 type SnapshotAccountTransaction {
-    amount: Float
-    block: Int
-    counterParty: String
-    counterPartyName: String
-    id: ID!
-    timestamp: String
-    token: String
-    txHash: String
-    txLabel: String
+  amount: Float
+  block: Int
+  counterParty: String
+  counterPartyName: String
+  id: ID!
+  timestamp: String
+  token: String
+  txHash: String
+  txLabel: String
 }
 
 type AccountSnapshotLocalState
@@ -65,25 +65,25 @@ type AccountSnapshotLocalState
 # Snapshot
 
 input SetIdInput {
-    id: ID!
+  id: ID!
 }
 
 input SetOwnerIdInput {
-    ownerId: ID!
+  ownerId: ID!
 }
 
 input SetOwnerTypeInput {
-    ownerType: String!
+  ownerType: String!
 }
 
 input SetPeriodInput {
-    period: String!
+  period: String!
 }
 
 input SetStartInput {
-    start: String!
+  start: String!
 }
 
 input SetEndInput {
-    end: String!
+  end: String!
 }

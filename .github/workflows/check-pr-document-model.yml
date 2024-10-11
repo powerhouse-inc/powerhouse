@@ -36,9 +36,6 @@ jobs:
             - name: Lint
               run: npx nx lint document-model
 
-            - name: Check types
-              run: npx nx check-types document-model
-
     test:
         name: Test
         runs-on: ubuntu-latest

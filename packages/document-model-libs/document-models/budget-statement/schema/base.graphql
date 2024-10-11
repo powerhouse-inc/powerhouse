@@ -1,23 +1,23 @@
 input SetOwnerInput {
-    ref: String
-    id: String
-    title: String
+  ref: String
+  id: String
+  title: String
 }
 
 input SetMonthInput {
-    month: String!
+  month: String!
 }
 
 input SetQuoteCurrencyInput {
-    quoteCurrency: String!
+  quoteCurrency: String!
 }
 
 input FtesForecastInput {
-    month: String!
-    value: Float!
+  month: String!
+  value: Float!
 }
 
 input SetFtesInput {
-    value: Float!
-    forecast: [FtesForecastInput!]!
+  value: Float!
+  forecast: [FtesForecastInput!]!
 }

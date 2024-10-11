@@ -1,253 +1,251 @@
-import { utils } from 'document-model-libs/document-drive';
-import * as DocumentModelsLibs from 'document-model-libs/document-models';
-import { DocumentModel } from 'document-model/document';
-import * as DocumentModelLib from 'document-model/document-model';
-import { beforeEach, describe, expect, test, vi, vitest } from 'vitest';
-import { DocumentDriveServer, IReceiver } from '../src';
-import { expectUTCTimestamp, expectUUID } from './utils';
+import { utils } from "document-model-libs/document-drive";
+import * as DocumentModelsLibs from "document-model-libs/document-models";
+import { DocumentModel } from "document-model/document";
+import * as DocumentModelLib from "document-model/document-model";
+import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
+import { DocumentDriveServer, IReceiver } from "../src";
+import { expectUTCTimestamp, expectUUID } from "./utils";
 
-describe('Internal Listener', () => {
-    const documentModels = [
-        DocumentModelLib,
-        ...Object.values(DocumentModelsLibs)
-    ] as DocumentModel[];
+describe("Internal Listener", () => {
+  const documentModels = [
+    DocumentModelLib,
+    ...Object.values(DocumentModelsLibs),
+  ] as DocumentModel[];
 
-    async function buildServer(receiver: IReceiver) {
-        const server = new DocumentDriveServer(documentModels);
-        await server.initialize();
+  async function buildServer(receiver: IReceiver) {
+    const server = new DocumentDriveServer(documentModels);
+    await server.initialize();
 
-        await server.addDrive({
-            global: {
-                id: 'drive',
-                name: 'Global Drive',
-                icon: '',
-                slug: 'global'
-            },
-            local: {
-                availableOffline: false,
-                listeners: [],
-                sharingType: 'private',
-                triggers: []
-            }
-        });
-        await server.addInternalListener('drive', receiver, {
-            block: true,
-            filter: {
-                branch: ['main'],
-                documentId: ['*'],
-                documentType: ['*'],
-                scope: ['global']
-            },
-            label: 'Internal',
-            listenerId: 'internal'
-        });
-        return server;
-    }
+    await server.addDrive({
+      global: {
+        id: "drive",
+        name: "Global Drive",
+        icon: "",
+        slug: "global",
+      },
+      local: {
+        availableOffline: false,
+        listeners: [],
+        sharingType: "private",
+        triggers: [],
+      },
+    });
+    await server.addInternalListener("drive", receiver, {
+      block: true,
+      filter: {
+        branch: ["main"],
+        documentId: ["*"],
+        documentType: ["*"],
+        scope: ["global"],
+      },
+      label: "Internal",
+      listenerId: "internal",
+    });
+    return server;
+  }
 
-    beforeEach(() => {
-        vi.setSystemTime(new Date('2024-01-01'));
+  beforeEach(() => {
+    vi.setSystemTime(new Date("2024-01-01"));
+  });
+
+  test("should call transmit function of listener and acknowledge", async () => {
+    const transmitFn = vitest.fn(() => {
+      return Promise.resolve();
     });
 
-    test('should call transmit function of listener and acknowledge', async () => {
-        const transmitFn = vitest.fn(() => {
-            return Promise.resolve();
-        });
+    const server = await buildServer({
+      transmit: transmitFn,
+      disconnect: () => Promise.resolve(),
+    });
+    const drive = await server.getDrive("drive");
 
-        const server = await buildServer({
-            transmit: transmitFn,
-            disconnect: () => Promise.resolve()
-        });
-        const drive = await server.getDrive('drive');
+    const action = utils.generateAddNodeAction(
+      drive.state.global,
+      {
+        id: "1",
+        name: "test",
+        documentType: "powerhouse/document-model",
+      },
+      ["global", "local"],
+    );
+    await server.addDriveAction("drive", action);
 
-        const action = utils.generateAddNodeAction(
-            drive.state.global,
+    await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
+    expect(transmitFn).toHaveBeenCalledWith([
+      {
+        branch: "main",
+        documentId: "",
+        driveId: "drive",
+        operations: [
+          {
+            hash: expect.any(String) as string,
+            context: undefined,
+            id: expectUUID(expect),
+            index: 0,
+            input: action.input,
+            skip: 0,
+            timestamp: "2024-01-01T00:00:00.000Z",
+            type: "ADD_FILE",
+          },
+        ],
+        state: {
+          icon: "",
+          id: "drive",
+          name: "Global Drive",
+          nodes: [
             {
-                id: '1',
-                name: 'test',
-                documentType: 'powerhouse/document-model'
+              documentType: "powerhouse/document-model",
+              id: "1",
+              kind: "file",
+              name: "test",
+              parentFolder: null,
+              synchronizationUnits: [
+                {
+                  branch: "main",
+                  scope: "global",
+                  syncId: action.input.synchronizationUnits[0]?.syncId,
+                },
+                {
+                  branch: "main",
+                  scope: "local",
+                  syncId: action.input.synchronizationUnits[1]?.syncId,
+                },
+              ],
             },
-            ['global', 'local']
-        );
-        await server.addDriveAction('drive', action);
+          ],
+          slug: "global",
+        },
+        scope: "global",
+      },
+    ]);
 
-        await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
-        expect(transmitFn).toHaveBeenCalledWith([
+    await server.addAction(
+      "drive",
+      "1",
+      DocumentModelLib.actions.setModelName({ name: "test" }),
+    );
+
+    await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
+    expect(transmitFn).toHaveBeenLastCalledWith([
+      {
+        branch: "main",
+        documentId: "1",
+        driveId: "drive",
+        operations: [
+          {
+            hash: "nWKpqR6ns0l8C/Khwrl+SyKy0sA=",
+            context: undefined,
+            id: expectUUID(expect),
+            index: 0,
+            input: {
+              name: "test",
+            },
+            skip: 0,
+            timestamp: expectUTCTimestamp(expect),
+            type: "SET_MODEL_NAME",
+          },
+        ],
+        state: {
+          author: {
+            name: "",
+            website: "",
+          },
+          description: "",
+          extension: "",
+          id: "",
+          name: "test",
+          specifications: [
             {
-                branch: 'main',
-                documentId: '',
-                driveId: 'drive',
-                operations: [
-                    {
-                        hash: expect.any(String) as string,
-                        context: undefined,
-                        id: expectUUID(expect),
-                        index: 0,
-                        input: action.input,
-                        skip: 0,
-                        timestamp: '2024-01-01T00:00:00.000Z',
-                        type: 'ADD_FILE'
-                    }
-                ],
-                state: {
-                    icon: '',
-                    id: 'drive',
-                    name: 'Global Drive',
-                    nodes: [
-                        {
-                            documentType: 'powerhouse/document-model',
-                            id: '1',
-                            kind: 'file',
-                            name: 'test',
-                            parentFolder: null,
-                            synchronizationUnits: [
-                                {
-                                    branch: 'main',
-                                    scope: 'global',
-                                    syncId: action.input.synchronizationUnits[0]
-                                        ?.syncId
-                                },
-                                {
-                                    branch: 'main',
-                                    scope: 'local',
-                                    syncId: action.input.synchronizationUnits[1]
-                                        ?.syncId
-                                }
-                            ]
-                        }
-                    ],
-                    slug: 'global'
+              changeLog: [],
+              modules: [],
+              state: {
+                global: {
+                  examples: [],
+                  initialValue: "",
+                  schema: "",
                 },
-                scope: 'global'
-            }
-        ]);
+                local: {
+                  examples: [],
+                  initialValue: "",
+                  schema: "",
+                },
+              },
+              version: 1,
+            },
+          ],
+        },
+        scope: "global",
+      },
+    ]);
 
-        await server.addAction(
-            'drive',
-            '1',
-            DocumentModelLib.actions.setModelName({ name: 'test' })
-        );
+    await server.addAction(
+      "drive",
+      "1",
+      DocumentModelLib.actions.setModelName({ name: "test 2" }),
+    );
 
-        await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
-        expect(transmitFn).toHaveBeenLastCalledWith([
+    await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
+    expect(transmitFn).toHaveBeenLastCalledWith([
+      {
+        branch: "main",
+        documentId: "1",
+        driveId: "drive",
+        operations: [
+          {
+            hash: "s7RBcer0JqjSGvNb12gqpeeJGRY=",
+            context: undefined,
+            id: expectUUID(expect),
+            index: 1,
+            input: {
+              name: "test 2",
+            },
+            skip: 0,
+            timestamp: expectUTCTimestamp(expect),
+            type: "SET_MODEL_NAME",
+          },
+        ],
+        state: {
+          author: {
+            name: "",
+            website: "",
+          },
+          description: "",
+          extension: "",
+          id: "",
+          name: "test 2",
+          specifications: [
             {
-                branch: 'main',
-                documentId: '1',
-                driveId: 'drive',
-                operations: [
-                    {
-                        hash: 'nWKpqR6ns0l8C/Khwrl+SyKy0sA=',
-                        context: undefined,
-                        id: expectUUID(expect),
-                        index: 0,
-                        input: {
-                            name: 'test'
-                        },
-                        skip: 0,
-                        timestamp: expectUTCTimestamp(expect),
-                        type: 'SET_MODEL_NAME'
-                    }
-                ],
-                state: {
-                    author: {
-                        name: '',
-                        website: ''
-                    },
-                    description: '',
-                    extension: '',
-                    id: '',
-                    name: 'test',
-                    specifications: [
-                        {
-                            changeLog: [],
-                            modules: [],
-                            state: {
-                                global: {
-                                    examples: [],
-                                    initialValue: '',
-                                    schema: ''
-                                },
-                                local: {
-                                    examples: [],
-                                    initialValue: '',
-                                    schema: ''
-                                }
-                            },
-                            version: 1
-                        }
-                    ]
+              changeLog: [],
+              modules: [],
+              state: {
+                global: {
+                  examples: [],
+                  initialValue: "",
+                  schema: "",
                 },
-                scope: 'global'
-            }
-        ]);
-
-        await server.addAction(
-            'drive',
-            '1',
-            DocumentModelLib.actions.setModelName({ name: 'test 2' })
-        );
-
-        await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
-        expect(transmitFn).toHaveBeenLastCalledWith([
-            {
-                branch: 'main',
-                documentId: '1',
-                driveId: 'drive',
-                operations: [
-                    {
-                        hash: 's7RBcer0JqjSGvNb12gqpeeJGRY=',
-                        context: undefined,
-                        id: expectUUID(expect),
-                        index: 1,
-                        input: {
-                            name: 'test 2'
-                        },
-                        skip: 0,
-                        timestamp: expectUTCTimestamp(expect),
-                        type: 'SET_MODEL_NAME'
-                    }
-                ],
-                state: {
-                    author: {
-                        name: '',
-                        website: ''
-                    },
-                    description: '',
-                    extension: '',
-                    id: '',
-                    name: 'test 2',
-                    specifications: [
-                        {
-                            changeLog: [],
-                            modules: [],
-                            state: {
-                                global: {
-                                    examples: [],
-                                    initialValue: '',
-                                    schema: ''
-                                },
-                                local: {
-                                    examples: [],
-                                    initialValue: '',
-                                    schema: ''
-                                }
-                            },
-                            version: 1
-                        }
-                    ]
+                local: {
+                  examples: [],
+                  initialValue: "",
+                  schema: "",
                 },
-                scope: 'global'
-            }
-        ]);
+              },
+              version: 1,
+            },
+          ],
+        },
+        scope: "global",
+      },
+    ]);
+  });
+
+  test("should call disconnect function of lreceiver", async () => {
+    const disconnectFn = vitest.fn(() => Promise.resolve());
+
+    const server = await buildServer({
+      transmit: () => Promise.resolve(),
+      disconnect: disconnectFn,
     });
-
-    test('should call disconnect function of lreceiver', async () => {
-        const disconnectFn = vitest.fn(() => Promise.resolve());
-
-        const server = await buildServer({
-            transmit: () => Promise.resolve(),
-            disconnect: disconnectFn
-        });
-        await server.deleteDrive('drive');
-        expect(disconnectFn).toHaveBeenCalled();
-    });
+    await server.deleteDrive("drive");
+    expect(disconnectFn).toHaveBeenCalled();
+  });
 });

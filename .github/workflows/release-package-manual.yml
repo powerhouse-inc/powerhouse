@@ -2,18 +2,9 @@ name: Release Package Manual
 
 on:
   workflow_dispatch:
-    inputs:
-      package:
-        description: 'Choose a package'
-        required: true
-        default: 'packages/*'
-        type: choice
-        options:
-          - 'document-model'
-          - '@powerhousedao/codegen'
-          - 'document-drive'
-          - 'document-model-libs'
-          - 'packages/*'
+
+env:
+  NX_ISOLATE_PLUGINS: false
 
 jobs:
   test:
@@ -46,13 +37,8 @@ jobs:
         run: pnpm install --no-frozen-lockfile
         shell: bash
 
-      - name: Build selected package
-        run: |
-          if [ "${{ github.event.inputs.package }}" == "packages/*" ]; then
-            npx nx run-many -t build -p packages/*
-          else
-            npx nx build ${{ github.event.inputs.package }}
-          fi
+      - name: Build packages
+        run: npx nx run-many -t build -p packages/*
         shell: bash
 
       - name: Print Environment Info
@@ -66,27 +52,15 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: npx nx release --projects=${{ github.event.inputs.package }} --skip-publish
+        run: npx nx release --projects='packages/*' --skip-publish
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
-      # - name: Push changes to the branch
-      #   run: git push origin
-      #   shell: bash
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Push tags
-      #   run: git push origin --tags
-      #   shell: bash
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish to npm
-        run: npx nx release publish --projects=${{ github.event.inputs.package }}
+        run: npx nx release publish --projects='packages/*'
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
