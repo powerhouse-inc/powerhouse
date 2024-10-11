@@ -12,7 +12,10 @@
     "noImplicitAny": true,
     "skipLibCheck": true,
     "baseUrl": "./",
-    "allowJs": true
+    "allowJs": true,
+    "paths": {
+      "scalar-generator": ["tools/scalar-generator/src/index.ts"]
+    }
   },
   "include": ["*.config.js", "*.json", "packages/**/*"],
   "exclude": [
@@ -32,6 +35,6 @@
     "packages/*/storybook-static/",
     "packages/*/coverage/",
     "packages/*/gen/",
-    "packages/*/docs/",
+    "packages/*/docs/"
   ]
 }
