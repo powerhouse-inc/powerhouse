@@ -47,7 +47,7 @@ export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
     );
 
     console.log(
-      `Setting up [${subgraphConfig.name}] subgraph at http://localhost:${serverPort}/graphql${path}`
+      `Setting up [${subgraphConfig.name}] subgraph at /graphql${path}`
     );
   }
   router = newRouter;

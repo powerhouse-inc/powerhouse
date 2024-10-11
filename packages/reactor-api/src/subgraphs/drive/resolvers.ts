@@ -12,7 +12,10 @@ import {
   TransmitterType,
 } from "document-model-libs/document-drive";
 import { BaseAction, Operation } from "document-model/document";
-import { DocumentModelInput } from "document-model/document-model";
+import {
+  DocumentModelInput,
+  DocumentModelState,
+} from "document-model/document-model";
 import { Context } from "../../../../../../apps/switchboard/types";
 
 export const resolvers = {
@@ -33,7 +36,8 @@ export const resolvers = {
 
       const dms = ctx.driveServer.getDocumentModels();
       const dm = dms.find(
-        ({ documentModel }) => documentModel.id === document.documentType
+        ({ documentModel }: { documentModel: DocumentModelState }) =>
+          documentModel.id === document.documentType
       );
       const globalState = document.state.global;
       if (!globalState) throw new Error("Document not found");
@@ -42,7 +46,7 @@ export const resolvers = {
         id,
         revision: document.revision.global,
         state: document.state.global,
-        operations: document.operations.global.map((op) => ({
+        operations: document.operations.global.map((op: Operation) => ({
           ...op,
           inputText:
             typeof op.input === "string" ? op.input : JSON.stringify(op.input),
