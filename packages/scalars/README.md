@@ -48,6 +48,11 @@ To add a new scalar to this repository, follow these steps:
 
 3. **Update `src/scalars/index.ts`**:
 
+    You can auto generate/update this files using the command:
+    ```bash
+    npx nx generate scalar-generator:new-scalar
+    ```
+
     1. Create a new namespace import for your scalar file
     2. Include your scalar alias into the exported object
     3. Update the resolvers object and include your scalar
