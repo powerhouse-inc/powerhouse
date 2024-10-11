@@ -1,5 +1,3 @@
-import { Prisma, PrismaClient } from "@prisma/client";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import {
   DocumentDriveAction,
   DocumentDriveLocalState,
@@ -28,16 +26,27 @@ import {
   IDriveStorage,
   IStorageDelegate,
 } from "./types";
+import {
+  PgDatabase,
+  PgQueryResultHKT,
+  PgTransaction,
+} from "drizzle-orm/pg-core";
+import {
+  attachmentsTable,
+  documentsTable,
+  drivesTable,
+  operationsTable,
+  synchronizationUnitsTable,
+} from "./drizzle/schema";
+import { randomUUID } from "crypto";
+import { and, count, DrizzleError, eq, inArray, ne, sql } from "drizzle-orm";
 
 type Transaction =
-  | Omit<
-      PrismaClient<Prisma.PrismaClientOptions, never>,
-      "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
-    >
-  | PrismaClient;
+  | PgTransaction<PgQueryResultHKT, Record<string, unknown>>
+  | PgDatabase<any, any, any>;
 
 function storageToOperation(
-  op: Prisma.$OperationPayload["scalars"] & {
+  op: typeof operationsTable.$inferSelect & {
     attachments?: AttachmentInput[];
   },
   scope: OperationScope
@@ -57,19 +66,22 @@ function storageToOperation(
     attachments: op.attachments,
   };
   if (op.context) {
-    operation.context = op.context as Prisma.JsonObject;
+    operation.context = op.context;
   }
   return operation;
 }
 
-export type PrismaStorageOptions = Record<string, never>;
+export type DrizzleStorageOptions = Record<string, never>;
 
-export class PrismaStorage implements IDriveStorage {
-  private db: PrismaClient;
+export class DrizzleStorage implements IDriveStorage {
+  private db: PgDatabase<PgQueryResultHKT, Record<string, unknown>>;
   private delegate: IStorageDelegate | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  constructor(db: PrismaClient, _options?: PrismaStorageOptions) {
+  constructor(
+    db: PgDatabase<PgQueryResultHKT, Record<string, unknown>>,
+    _options?: DrizzleStorageOptions
+  ) {
     this.db = db;
   }
 
@@ -91,18 +103,17 @@ export class PrismaStorage implements IDriveStorage {
         branch: "main",
       },
     ]);
-    await this.db.drive.upsert({
-      where: {
-        slug: drive.initialState.state.global.slug ?? id,
-      },
-      create: {
-        id: id,
-        slug: drive.initialState.state.global.slug ?? id,
-      },
-      update: {
+
+    await this.db
+      .insert(drivesTable)
+      .values({
         id,
-      },
-    });
+        slug: drive.initialState.state.global.slug ?? id,
+      })
+      .onConflictDoUpdate({
+        target: [drivesTable.slug],
+        set: { slug: drive.initialState.state.global.slug ?? id },
+      });
   }
   async addDriveOperations(
     id: string,
@@ -132,25 +143,29 @@ export class PrismaStorage implements IDriveStorage {
     document: DocumentStorage,
     synchronizationUnits: SynchronizationUnit[]
   ): Promise<void> {
-    await this.db.document.create({
-      data: {
-        name: document.name,
-        documentType: document.documentType,
-        driveId: drive,
-        initialState: JSON.stringify(document.initialState),
-        lastModified: document.lastModified,
-        id,
-        synchronizationUnits: {
-          createMany: {
-            data: synchronizationUnits.map((sync) => ({
-              syncId: sync.syncId,
-              scope: sync.scope,
-              branch: sync.branch,
-            })),
-          },
-        },
-      },
+    // create document
+    this.db.insert(documentsTable).values({
+      created: new Date().toISOString(),
+      name: document.name,
+      documentType: document.documentType,
+      driveId: drive,
+      initialState: JSON.stringify(document.initialState),
+      lastModified: document.lastModified,
+      id,
     });
+
+    // create synchronization units
+    await this.db.insert(synchronizationUnitsTable).values(
+      synchronizationUnits.map((sync) => ({
+        syncId: sync.syncId,
+        scope: sync.scope,
+        branch: sync.branch,
+        documentId: id,
+        driveId: drive,
+        id: randomUUID(),
+        revision: -1,
+      }))
+    );
   }
 
   private async _addDocumentOperations(
@@ -163,19 +178,19 @@ export class PrismaStorage implements IDriveStorage {
     // TODO all operations should belong to the same sync unit
     const groupedOperations = groupOperationsBySyncUnit(operations);
     for (const { scope, branch, operations } of groupedOperations) {
-      const syncUnit = await tx.synchronizationUnit.findUnique({
-        where: {
-          driveId_documentId_scope_branch: {
-            driveId: drive,
-            documentId: id,
-            scope,
-            branch,
-          },
-        },
-        select: {
-          version: true,
-        },
-      });
+      const syncUnit = await tx
+        .select()
+        .from(synchronizationUnitsTable)
+        .where(
+          and(
+            eq(synchronizationUnitsTable.driveId, drive),
+            eq(synchronizationUnitsTable.documentId, id),
+            eq(synchronizationUnitsTable.scope, scope),
+            eq(synchronizationUnitsTable.branch, branch)
+          )
+        )
+        .then(([result]) => result);
+
       if (!syncUnit) {
         throw new Error(
           `Could not find sync unit for scope: ${JSON.stringify({ driveId: drive, documentId: id, scope, branch })}`
@@ -186,75 +201,71 @@ export class PrismaStorage implements IDriveStorage {
         -1
       );
 
-      await tx.synchronizationUnit.update({
-        where: {
-          driveId_documentId_scope_branch: {
-            driveId: drive,
-            documentId: id,
-            scope,
-            branch,
-          },
-          version: syncUnit.version, // optimistic update
-        },
-        data: {
+      await tx
+        .update(synchronizationUnitsTable)
+        .set({
           lastModified: operations.at(-1)?.timestamp,
           revision: revision,
-          version: { increment: 1 },
-          operations: {
-            createMany: {
-              data: operations.map((op) => ({
-                opId: op.id,
-                index: op.index,
-                skip: op.skip,
-                hash: op.hash,
-                timestamp: op.timestamp,
-                type: op.type,
-                input: JSON.stringify(op.input),
-                context: op.context,
-                resultingState: op.resultingState
-                  ? Buffer.from(JSON.stringify(op.resultingState))
-                  : undefined,
-              })),
-            },
-          },
-        },
-      });
+          version: sql`${synchronizationUnitsTable.version} + 1`,
+        })
+        .where(
+          and(
+            eq(synchronizationUnitsTable.driveId, drive),
+            eq(synchronizationUnitsTable.documentId, id),
+            eq(synchronizationUnitsTable.scope, scope),
+            eq(synchronizationUnitsTable.branch, branch)
+          )
+        )
+        .returning({
+          version: synchronizationUnitsTable.version,
+        });
 
-      await tx.document.update({
-        where: {
-          id_driveId: {
-            id,
-            driveId: drive,
-          },
-        },
-        data: {
-          lastModified: header.lastModified,
-        },
-      });
+      // create operations
+      await tx.insert(operationsTable).values(
+        operations.map((op) => ({
+          id: randomUUID(),
+          clipboard: false,
+          driveId: drive,
+          documentId: id,
+          scope,
+          branch,
+          opId: op.id,
+          index: op.index,
+          skip: op.skip,
+          hash: op.hash,
+          timestamp: op.timestamp,
+          type: op.type,
+          input: JSON.stringify(op.input),
+          context: op.context,
+          resultingState: op.resultingState
+            ? Buffer.from(JSON.stringify(op.resultingState))
+            : undefined,
+        }))
+      );
+
+      await tx
+        .update(documentsTable)
+        .set({ lastModified: header.lastModified })
+        .where(
+          and(eq(documentsTable.id, id), eq(documentsTable.driveId, drive))
+        );
 
       await Promise.all(
-        operations
-          .filter((o) => o.attachments?.length)
-          .map((op) => {
-            return tx.operation.update({
-              where: {
-                driveId_documentId_scope_branch_index: {
-                  driveId: drive,
-                  documentId: id,
-                  index: op.index,
-                  scope: op.scope,
-                  branch: "main",
-                },
-              },
-              data: {
-                attachments: {
-                  createMany: {
-                    data: op.attachments ?? [],
-                  },
-                },
-              },
-            });
-          })
+        operations.map((op) => {
+          op.attachments &&
+            op.attachments.length > 0 &&
+            this.db.insert(attachmentsTable).values(
+              op.attachments.map((a) => ({
+                data: a.data,
+                hash: a.hash,
+                id: randomUUID(),
+                mimeType: a.mimeType,
+                operationId: op.id!,
+                filename: a.fileName,
+                extension: a.extension,
+              }))
+            );
+        })
       );
     }
   }
@@ -275,7 +286,7 @@ export class PrismaStorage implements IDriveStorage {
     } | null = null;
 
     try {
-      await this.db.$transaction(
+      await this.db.transaction(
         async (tx) => {
           const document = await this.getDocument(drive, id, tx);
           if (!document) {
@@ -287,14 +298,13 @@ export class PrismaStorage implements IDriveStorage {
           return this._addDocumentOperations(tx, drive, id, operations, header);
         },
         {
-          isolationLevel: "ReadCommitted",
-          maxWait: 10000,
-          timeout: 20000,
+          isolationLevel: "read committed",
+          accessMode: "read write",
         }
       );
     } catch (e) {
       // if optimistic update fails, retry with new state
-      if (e instanceof PrismaClientKnownRequestError && e.code === "P2025") {
+      if (e instanceof DrizzleError && e.cause === "P2025") {
         // TODO add exponential backoff?
         return this.addDocumentOperationsWithTransaction(drive, id, callback);
       } else {
@@ -320,43 +330,41 @@ export class PrismaStorage implements IDriveStorage {
   }
 
   async getDocuments(drive: string) {
-    const docs = await this.db.document.findMany({
-      select: {
-        id: true,
-      },
-      where: {
-        AND: {
-          driveId: drive,
-          NOT: {
-            id: "drives",
-          },
-        },
-      },
-    });
+    const docs = await this.db
+      .select({ id: documentsTable.id })
+      .from(documentsTable)
+      .where(
+        and(eq(documentsTable.driveId, drive), ne(documentsTable.id, "drives"))
+      );
 
     return docs.map((doc) => doc.id);
   }
 
   async checkDocumentExists(driveId: string, id: string) {
-    const count = await this.db.document.count({
-      where: {
-        id: id,
-        driveId: driveId,
-      },
-    });
-    return count > 0;
+    const [result] = await this.db
+      .select({
+        count: count(),
+      })
+      .from(documentsTable)
+      .where(
+        and(eq(documentsTable.id, id), eq(documentsTable.driveId, driveId))
+      );
+
+    if (result?.count && result?.count > 0) {
+      return true;
+    }
+
+    return false;
   }
 
   async getDocument(driveId: string, id: string, tx?: Transaction) {
-    const prisma = tx ?? this.db;
-    const result = await prisma.document.findUnique({
-      where: {
-        id_driveId: {
-          driveId,
-          id,
-        },
-      },
-    });
+    const db = tx ?? this.db;
+    const [result] = await db
+      .select()
+      .from(documentsTable)
+      .where(
+        and(eq(documentsTable.id, id), eq(documentsTable.driveId, driveId))
+      );
 
     if (result === null) {
       throw new Error(`Document with id ${id} not found`);
@@ -392,13 +400,7 @@ export class PrismaStorage implements IDriveStorage {
     // retrieves operations with resulting state
     // for the last operation of each scope
     // TODO prevent SQL injection
-    const queryOperations = await prisma.$queryRawUnsafe<
-      (Prisma.$OperationPayload["scalars"] &
-        Pick<
-          Prisma.$SynchronizationUnitPayload["scalars"],
-          "scope" | "branch"
-        >)[]
-    >(
+    const queryOperations = await db.execute(
       `
             SELECT
                 s."syncId" as syncId,
@@ -421,25 +423,22 @@ export class PrismaStorage implements IDriveStorage {
                     "Operation" o JOIN "SynchronizationUnit" s
                     ON o."driveId" = s."driveId" AND o."documentId" = s."documentId"
                     AND o."scope" = s."scope" AND o."branch" = s."branch"
-                WHERE s."driveId" = $1 AND s."documentId" = $2
+                WHERE s."driveId" = ${driveId} AND s."documentId" = ${id}
                     AND (${conditions.join(" OR ")})
                 ORDER BY
                     scope,
                     branch,
                     index;
-        `,
-      driveId,
-      id
+        `
     );
 
-    const operationIds = queryOperations.map((o) => o.id);
-    const attachments = await prisma.attachment.findMany({
-      where: {
-        operationId: {
-          in: operationIds,
-        },
-      },
-    });
+    const operationIds = queryOperations
+      .filter((o) => !!o)
+      .map((o: { id: string }) => o.id ?? "");
+    const attachments = await db
+      .select()
+      .from(attachmentsTable)
+      .where(inArray(attachmentsTable.operationId, operationIds));
 
     const fileRegistry: FileRegistry = {};
 
@@ -452,9 +451,7 @@ export class PrismaStorage implements IDriveStorage {
         });
       });
 
-    const operationsByScope = queryOperations.reduce<
-      DocumentOperations<Action>
-    >((acc, operation) => {
+    const operationsByScope = queryOperations.reduce((acc, operation) => {
       const scope = operation.scope as OperationScope;
       if (!acc[scope]) {
         acc[scope] = [];
@@ -471,8 +468,11 @@ export class PrismaStorage implements IDriveStorage {
     }, cachedOperations);
 
     const dbDoc = result;
+    if (!dbDoc) {
+      throw new Error(`Document with id ${id} not found`);
+    }
     const doc: Document = {
-      created: dbDoc.created.toISOString(),
+      created: dbDoc.created,
       name: dbDoc.name ? dbDoc.name : "",
       documentType: dbDoc.documentType,
       initialState: JSON.parse(dbDoc.initialState) as ExtendedState<
@@ -484,33 +484,15 @@ export class PrismaStorage implements IDriveStorage {
       operations: operationsByScope,
       clipboard: [],
       attachments: fileRegistry,
+      revision: dbDoc.revision,
     };
     return doc;
   }
 
   async deleteDocument(drive: string, id: string) {
-    try {
-      await this.db.document.deleteMany({
-        where: {
-          driveId: drive,
-          id: id,
-        },
-      });
-    } catch (e: unknown) {
-      const prismaError = e as { code?: string; message?: string };
-      // Ignore Error: P2025: An operation failed because it depends on one or more records that were required but not found.
-      if (
-        (prismaError.code && prismaError.code === "P2025") ||
-        (prismaError.message &&
-          prismaError.message.includes(
-            "An operation failed because it depends on one or more records that were required but not found."
-          ))
-      ) {
-        return;
-      }
-
-      throw e;
-    }
+    await this.db
+      .delete(documentsTable)
+      .where(and(eq(documentsTable.driveId, drive), eq(documentsTable.id, id)));
   }
 
   async getDrives() {
@@ -528,11 +510,10 @@ export class PrismaStorage implements IDriveStorage {
   }
 
   async getDriveBySlug(slug: string) {
-    const driveEntity = await this.db.drive.findFirst({
-      where: {
-        slug,
-      },
-    });
+    const [driveEntity] = await this.db
+      .select()
+      .from(drivesTable)
+      .where(eq(drivesTable.slug, slug));
 
     if (!driveEntity) {
       throw new Error(`Drive with slug ${slug} not found`);
@@ -543,21 +524,13 @@ export class PrismaStorage implements IDriveStorage {
 
   async deleteDrive(id: string) {
     // delete drive and associated slug
-    await this.db.drive.deleteMany({
-      where: {
-        id,
-      },
-    });
+    await this.db.delete(drivesTable).where(eq(drivesTable.id, id));
 
     // delete drive document and its operations
     await this.deleteDocument("drives", id);
 
     // deletes all documents of the drive
-    await this.db.document.deleteMany({
-      where: {
-        driveId: id,
-      },
-    });
+    await this.db.delete(documentsTable).where(eq(documentsTable.driveId, id));
   }
 
   async getOperationResultingState(
@@ -567,17 +540,20 @@ export class PrismaStorage implements IDriveStorage {
     scope: string,
     branch: string
   ): Promise<unknown> {
-    const operation = await this.db.operation.findFirst({
-      where: {
-        SynchronizationUnit: {
-          driveId,
-          documentId,
-          scope,
-          branch,
-        },
-        index,
-      },
-    });
+    const [operation] = await this.db
+      .select({
+        resultingState: operationsTable.resultingState,
+      })
+      .from(operationsTable)
+      .where(
+        and(
+          eq(operationsTable.driveId, driveId),
+          eq(operationsTable.documentId, documentId),
+          eq(operationsTable.scope, scope),
+          eq(operationsTable.branch, branch),
+          eq(operationsTable.index, index)
+        )
+      );
     return operation?.resultingState?.toString();
   }
 
@@ -628,7 +604,7 @@ export class PrismaStorage implements IDriveStorage {
         unit.scope,
       ])
       .flat();
-    const results = await this.db.$queryRawUnsafe<
+    const results = await this.db.execute<
       {
         driveId: string;
         documentId: string;
@@ -648,7 +624,7 @@ export class PrismaStorage implements IDriveStorage {
 
   // migrates all stored operations from legacy signature to signatures array
   async migrateOperationSignatures() {
-    const count = await this.db.$executeRaw`
+    const count = await this.db.execute(sql`
             UPDATE "Operation"
             SET context = jsonb_set(
                 context #- '{signer,signature}',  -- Remove the old 'signature' field
@@ -659,7 +635,7 @@ export class PrismaStorage implements IDriveStorage {
                 END
             )
             WHERE context->'signer' ? 'signature'  -- Check if the 'signature' key exists
-        `;
+        `);
     logger.info(`Migrated ${count} operations`);
     return;
   }

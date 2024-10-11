@@ -1,37 +1,29 @@
 import { relations } from "drizzle-orm/relations";
-import { operation, attachment, document, syncronizationUnit } from "./schema";
+import { document, synchronizationUnit, operation, attachment } from "./schema";
 
-export const attachmentRelations = relations(attachment, ({ one }) => ({
-  operation: one(operation, {
-    fields: [attachment.operationId],
-    references: [operation.id],
-  }),
+export const synchronizationUnitRelations = relations(synchronizationUnit, ({one, many}) => ({
+	document: one(document, {
+		fields: [synchronizationUnit.driveId],
+		references: [document.id]
+	}),
+	operations: many(operation),
 }));
 
-export const operationRelations = relations(operation, ({ one, many }) => ({
-  attachments: many(attachment),
-  document: one(document, {
-    fields: [operation.driveId],
-    references: [document.id],
-  }),
-  syncronizationUnit: one(syncronizationUnit, {
-    fields: [operation.driveId],
-    references: [syncronizationUnit.id],
-  }),
+export const documentRelations = relations(document, ({many}) => ({
+	synchronizationUnits: many(synchronizationUnit),
 }));
 
-export const documentRelations = relations(document, ({ many }) => ({
-  operations: many(operation),
-  syncronizationUnits: many(syncronizationUnit),
+export const attachmentRelations = relations(attachment, ({one}) => ({
+	operation: one(operation, {
+		fields: [attachment.operationId],
+		references: [operation.id]
+	}),
 }));
 
-export const syncronizationUnitRelations = relations(
-  syncronizationUnit,
-  ({ one, many }) => ({
-    operations: many(operation),
-    document: one(document, {
-      fields: [syncronizationUnit.driveId],
-      references: [document.id],
-    }),
-  }),
-);
+export const operationRelations = relations(operation, ({one, many}) => ({
+	attachments: many(attachment),
+	synchronizationUnit: one(synchronizationUnit, {
+		fields: [operation.driveId],
+		references: [synchronizationUnit.driveId]
+	}),
+}));

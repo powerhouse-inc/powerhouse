@@ -3,23 +3,16 @@ import {
   text,
   boolean,
   jsonb,
-  foreignKey,
+  index,
   uniqueIndex,
+  foreignKey,
   integer,
   timestamp,
   primaryKey,
-  customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-// Custom type for bytea from https://stackoverflow.com/a/76499742
-const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
-  dataType() {
-    return "bytea";
-  },
-});
-
-export const listener = pgTable("Listener", {
+export const listenersTable = pgTable("Listener", {
   listenerId: text().primaryKey().notNull(),
   driveId: text().notNull(),
   label: text(),
@@ -29,12 +22,63 @@ export const listener = pgTable("Listener", {
   callInfo: jsonb().notNull(),
 });
 
-export const drive = pgTable("Drive", {
+export const synchronizationUnitsTable = pgTable(
+  "SynchronizationUnit",
+  {
+    id: text().notNull(),
+    syncId: text().notNull(),
+    driveId: text().notNull(),
+    documentId: text().notNull(),
+    scope: text().notNull(),
+    branch: text().notNull(),
+    version: integer().default(0).notNull(),
+    revision: integer()
+      .default(sql`'-1'`)
+      .notNull(),
+    lastModified: timestamp({ precision: 3, mode: "string" })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => {
+    return {
+      driveIdDocumentIdScopeBranchRevisioIdx: index(
+        "SynchronizationUnit_driveId_documentId_scope_branch_revisio_idx"
+      ).using(
+        "btree",
+        table.driveId.asc().nullsLast(),
+        table.documentId.asc().nullsLast(),
+        table.scope.asc().nullsLast(),
+        table.branch.asc().nullsLast(),
+        table.revision.asc().nullsLast()
+      ),
+      driveIdSyncIdKey: uniqueIndex(
+        "SynchronizationUnit_driveId_syncId_key"
+      ).using(
+        "btree",
+        table.driveId.asc().nullsLast(),
+        table.syncId.asc().nullsLast()
+      ),
+      idKey: uniqueIndex("SynchronizationUnit_id_key").using(
+        "btree",
+        table.id.asc().nullsLast()
+      ),
+      synchronizationUnitDocumentIdDriveIdFkey: foreignKey({
+        columns: [table.driveId, table.documentId],
+        foreignColumns: [documentsTable.id, documentsTable.driveId],
+        name: "SynchronizationUnit_documentId_driveId_fkey",
+      })
+        .onUpdate("cascade")
+        .onDelete("cascade"),
+    };
+  }
+);
+
+export const drivesTable = pgTable("Drive", {
   slug: text().primaryKey().notNull(),
   id: text().notNull(),
 });
 
-export const attachment = pgTable(
+export const attachmentsTable = pgTable(
   "Attachment",
   {
     id: text().primaryKey().notNull(),
@@ -49,16 +93,16 @@ export const attachment = pgTable(
     return {
       attachmentOperationIdFkey: foreignKey({
         columns: [table.operationId],
-        foreignColumns: [operation.id],
+        foreignColumns: [operationsTable.id],
         name: "Attachment_operationId_fkey",
       })
         .onUpdate("cascade")
         .onDelete("cascade"),
     };
-  },
+  }
 );
 
-export const operation = pgTable(
+export const operationsTable = pgTable(
   "Operation",
   {
     id: text().primaryKey().notNull(),
@@ -73,69 +117,40 @@ export const operation = pgTable(
     timestamp: timestamp({ precision: 3, mode: "string" }).notNull(),
     input: text().notNull(),
     type: text().notNull(),
-    syncId: text(),
     clipboard: boolean().default(false),
     context: jsonb(),
     // TODO: failed to parse database type 'bytea'
-    resultingState: bytea("resultingState"),
+    resultingState: unknown("resultingState"),
   },
   (table) => {
     return {
       driveIdDocumentIdScopeBranchIndexKey: uniqueIndex(
-        "Operation_driveId_documentId_scope_branch_index_key",
+        "Operation_driveId_documentId_scope_branch_index_key"
       ).using(
         "btree",
         table.driveId.asc().nullsLast(),
         table.documentId.asc().nullsLast(),
         table.scope.asc().nullsLast(),
         table.branch.asc().nullsLast(),
-        table.index.asc().nullsLast(),
+        table.index.desc().nullsFirst()
       ),
-      operationDriveIdDocumentIdFkey: foreignKey({
-        columns: [table.driveId, table.documentId],
-        foreignColumns: [document.id, document.driveId],
-        name: "Operation_driveId_documentId_fkey",
-      })
-        .onUpdate("cascade")
-        .onDelete("cascade"),
-      operationSyncIdDriveIdFkey: foreignKey({
-        columns: [table.driveId, table.syncId],
-        foreignColumns: [syncronizationUnit.id, syncronizationUnit.driveId],
-        name: "Operation_syncId_driveId_fkey",
+      operationDriveIdDocumentIdScopeBranchFkey: foreignKey({
+        columns: [table.driveId, table.documentId, table.scope, table.branch],
+        foreignColumns: [
+          synchronizationUnitsTable.driveId,
+          synchronizationUnitsTable.documentId,
+          synchronizationUnitsTable.scope,
+          synchronizationUnitsTable.branch,
+        ],
+        name: "Operation_driveId_documentId_scope_branch_fkey",
       })
         .onUpdate("cascade")
         .onDelete("cascade"),
     };
-  },
+  }
 );
 
-export const syncronizationUnit = pgTable(
-  "SyncronizationUnit",
-  {
-    id: text().notNull(),
-    driveId: text().notNull(),
-    documentId: text().notNull(),
-    scope: text().notNull(),
-    branch: text().notNull(),
-  },
-  (table) => {
-    return {
-      syncronizationUnitDocumentIdDriveIdFkey: foreignKey({
-        columns: [table.driveId, table.documentId],
-        foreignColumns: [document.id, document.driveId],
-        name: "SyncronizationUnit_documentId_driveId_fkey",
-      })
-        .onUpdate("cascade")
-        .onDelete("cascade"),
-      syncronizationUnitPkey: primaryKey({
-        columns: [table.id, table.driveId],
-        name: "SyncronizationUnit_pkey",
-      }),
-    };
-  },
-);
-
-export const document = pgTable(
+export const documentsTable = pgTable(
   "Document",
   {
     id: text().notNull(),
@@ -146,17 +161,20 @@ export const document = pgTable(
     lastModified: timestamp({ precision: 3, mode: "string" })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    revision: text().notNull(),
     name: text(),
     initialState: text().notNull(),
     documentType: text().notNull(),
   },
   (table) => {
     return {
+      driveIdIdx: index("Document_driveId_idx").using(
+        "btree",
+        table.driveId.asc().nullsLast()
+      ),
       documentPkey: primaryKey({
         columns: [table.id, table.driveId],
         name: "Document_pkey",
       }),
     };
-  },
+  }
 );
