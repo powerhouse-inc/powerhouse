@@ -1,0 +1,29 @@
+{
+  "name": "reactor-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "tsup": "^8.3.0"
+  },
+  "peerDependencies": {
+    "document-drive": "^1.0.1",
+    "document-model": "^2.2.0"
+  },
+  "dependencies": {
+    "express": "^4.21.1"
+  }
+}
