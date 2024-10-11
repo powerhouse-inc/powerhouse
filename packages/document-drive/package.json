@@ -49,6 +49,8 @@
   },
   "dependencies": {
     "change-case": "^5.4.4",
+    "drizzle-kit": "^0.25.0",
+    "drizzle-orm": "^0.34.1",
     "exponential-backoff": "^3.1.1",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
@@ -69,7 +71,7 @@
     "prisma": "^5.18.0",
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
-    "webdriverio": "^9.0.9",
-    "vitest-fetch-mock": "^0.3.0"
+    "vitest-fetch-mock": "^0.3.0",
+    "webdriverio": "^9.0.9"
   }
 }

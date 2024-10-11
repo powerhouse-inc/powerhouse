@@ -9,8 +9,15 @@ import {
   integer,
   timestamp,
   primaryKey,
+  customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+
+const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 export const listenersTable = pgTable("Listener", {
   listenerId: text().primaryKey().notNull(),
@@ -119,8 +126,7 @@ export const operationsTable = pgTable(
     type: text().notNull(),
     clipboard: boolean().default(false),
     context: jsonb(),
-    // TODO: failed to parse database type 'bytea'
-    resultingState: unknown("resultingState"),
+    resultingState: bytea("resultingState"),
   },
   (table) => {
     return {
