@@ -404,6 +404,7 @@ export class DrizzleStorage implements IDriveStorage {
       `
             SELECT
                 s."syncId" as syncId,
+                s."revision" as revision,
                 o.id as id,
                 "opId",
                 o.scope,
@@ -433,7 +434,7 @@ export class DrizzleStorage implements IDriveStorage {
     );
 
     const operationIds = queryOperations
-      .filter((o) => !!o)
+      .filter((o: typeof operationsTable.$inferSelect) => !!o)
       .map((o: { id: string }) => o.id ?? "");
     const attachments = await db
       .select()
@@ -451,21 +452,27 @@ export class DrizzleStorage implements IDriveStorage {
         });
       });
 
-    const operationsByScope = queryOperations.reduce((acc, operation) => {
-      const scope = operation.scope as OperationScope;
-      if (!acc[scope]) {
-        acc[scope] = [];
-      }
-      const result = storageToOperation(operation, scope);
-      result.attachments = attachments.filter(
-        (a) => a.operationId === operation.id
-      );
-      result.attachments.forEach(({ hash, ...file }) => {
-        fileRegistry[hash] = file;
-      });
-      acc[scope].push(result);
-      return acc;
-    }, cachedOperations);
+    const operationsByScope = queryOperations.reduce(
+      (
+        acc: Record<OperationScope, Operation[]>,
+        operation: typeof operationsTable.$inferSelect
+      ) => {
+        const scope = operation.scope as OperationScope;
+        if (!acc[scope]) {
+          acc[scope] = [];
+        }
+        const result = storageToOperation(operation, scope);
+        result.attachments = attachments.filter(
+          (a) => a.operationId === operation.id
+        );
+        result.attachments.forEach(({ hash, ...file }) => {
+          fileRegistry[hash] = file;
+        });
+        acc[scope].push(result);
+        return acc;
+      },
+      cachedOperations
+    );
 
     const dbDoc = result;
     if (!dbDoc) {
@@ -484,7 +491,14 @@ export class DrizzleStorage implements IDriveStorage {
       operations: operationsByScope,
       clipboard: [],
       attachments: fileRegistry,
-      revision: dbDoc.revision,
+      revision: {
+        global:
+          operationsByScope.global[operationsByScope.global.length - 1]
+            ?.revision ?? -1,
+        local:
+          operationsByScope.local[operationsByScope.local.length - 1]
+            ?.revision ?? -1,
+      },
     };
     return doc;
   }
@@ -597,29 +611,16 @@ export class DrizzleStorage implements IDriveStorage {
             GROUP BY "driveId", "documentId", "scope", "branch"
         `;
 
-    const params = units
-      .map((unit) => [
-        unit.documentId ? unit.driveId : "drives",
-        unit.documentId || unit.driveId,
-        unit.scope,
-      ])
-      .flat();
-    const results = await this.db.execute<
-      {
-        driveId: string;
-        documentId: string;
-        lastUpdated: string;
-        scope: OperationScope;
-        branch: string;
-        revision: number;
-      }[]
-    >(query, ...params);
-    return results.map((row) => ({
-      ...row,
-      driveId: row.driveId === "drives" ? row.documentId : row.driveId,
-      documentId: row.driveId === "drives" ? "" : row.documentId,
-      lastUpdated: new Date(row.lastUpdated).toISOString(),
-    }));
+    const results = await this.db.execute(sql`${query}`);
+    if (Array.isArray(results)) {
+      return results.map((row) => ({
+        ...row,
+        driveId: row.driveId === "drives" ? row.documentId : row.driveId,
+        documentId: row.driveId === "drives" ? "" : row.documentId,
+        lastUpdated: new Date(row.lastUpdated).toISOString(),
+      }));
+    }
+    return [];
   }
 
   // migrates all stored operations from legacy signature to signatures array
