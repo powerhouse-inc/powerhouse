@@ -897,7 +897,7 @@ export class BaseDocumentDriveServer
 
   getDocumentModels() {
     return [...this.documentModels];
-}
+  }
 
   async addDrive(drive: DriveInput): Promise<DocumentDriveDocument> {
     const id = drive.global.id || generateUUID();

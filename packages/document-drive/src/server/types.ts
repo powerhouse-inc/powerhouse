@@ -482,6 +482,7 @@ export abstract class AbstractDocumentDriveServer {
   protected abstract deleteDocument(drive: string, id: string): Promise<void>;
 
   protected abstract getDocumentModel(documentType: string): DocumentModel;
+  abstract getDocumentModels(): DocumentModel[];
 
   /** Event methods **/
   protected abstract emit<K extends keyof DriveEvents>(
