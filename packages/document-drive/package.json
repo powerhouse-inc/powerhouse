@@ -48,6 +48,7 @@
     "sqlite3": "^5.1.7"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.2.11",
     "change-case": "^5.4.4",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1",
@@ -56,12 +57,14 @@
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
     "nanoevents": "^9.0.0",
+    "pg": "^8.13.0",
     "sanitize-filename": "^1.6.3",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
+    "@types/pg": "^8.11.10",
     "@types/uuid": "^9.0.8",
     "document-model": "2.2.0",
     "document-model-libs": "1.94.0",

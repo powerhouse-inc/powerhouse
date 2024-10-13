@@ -1,15 +1,14 @@
+import { randomUUID } from "crypto";
 import {
   DocumentDriveAction,
   DocumentDriveLocalState,
   DocumentDriveState,
 } from "document-model-libs/document-drive";
 import type {
-  Action,
   AttachmentInput,
   BaseAction,
   Document,
   DocumentHeader,
-  DocumentOperations,
   ExtendedState,
   FileRegistry,
   Operation,
@@ -17,20 +16,15 @@ import type {
   State,
   SynchronizationUnit,
 } from "document-model/document";
-import type { SynchronizationUnitQuery } from "../server/types";
-import { groupOperationsBySyncUnit } from "../server/utils";
-import { logger } from "../utils/logger";
-import {
-  DocumentDriveStorage,
-  DocumentStorage,
-  IDriveStorage,
-  IStorageDelegate,
-} from "./types";
+import { and, count, DrizzleError, eq, inArray, ne, sql } from "drizzle-orm";
 import {
   PgDatabase,
   PgQueryResultHKT,
   PgTransaction,
 } from "drizzle-orm/pg-core";
+import type { SynchronizationUnitQuery } from "../server/types";
+import { groupOperationsBySyncUnit } from "../server/utils";
+import { logger } from "../utils/logger";
 import {
   attachmentsTable,
   documentsTable,
@@ -38,8 +32,12 @@ import {
   operationsTable,
   synchronizationUnitsTable,
 } from "./drizzle/schema";
-import { randomUUID } from "crypto";
-import { and, count, DrizzleError, eq, inArray, ne, sql } from "drizzle-orm";
+import {
+  DocumentDriveStorage,
+  DocumentStorage,
+  IDriveStorage,
+  IStorageDelegate,
+} from "./types";
 
 type Transaction =
   | PgTransaction<PgQueryResultHKT, Record<string, unknown>>
@@ -112,7 +110,7 @@ export class DrizzleStorage implements IDriveStorage {
       })
       .onConflictDoUpdate({
         target: [drivesTable.slug],
-        set: { slug: drive.initialState.state.global.slug ?? id },
+        set: { id, slug: drive.initialState.state.global.slug ?? id },
       });
   }
   async addDriveOperations(
@@ -144,7 +142,7 @@ export class DrizzleStorage implements IDriveStorage {
     synchronizationUnits: SynchronizationUnit[]
   ): Promise<void> {
     // create document
-    this.db.insert(documentsTable).values({
+    await this.db.insert(documentsTable).values({
       created: new Date().toISOString(),
       name: document.name,
       documentType: document.documentType,
@@ -162,7 +160,6 @@ export class DrizzleStorage implements IDriveStorage {
         branch: sync.branch,
         documentId: id,
         driveId: drive,
-        id: randomUUID(),
         revision: -1,
       }))
     );
@@ -178,7 +175,7 @@ export class DrizzleStorage implements IDriveStorage {
     // TODO all operations should belong to the same sync unit
     const groupedOperations = groupOperationsBySyncUnit(operations);
     for (const { scope, branch, operations } of groupedOperations) {
-      const syncUnit = await tx
+      const [syncUnit] = await tx
         .select()
         .from(synchronizationUnitsTable)
         .where(
@@ -188,8 +185,7 @@ export class DrizzleStorage implements IDriveStorage {
             eq(synchronizationUnitsTable.scope, scope),
             eq(synchronizationUnitsTable.branch, branch)
           )
-        )
-        .then(([result]) => result);
+        );
 
       if (!syncUnit) {
         throw new Error(
@@ -208,14 +204,7 @@ export class DrizzleStorage implements IDriveStorage {
           revision: revision,
           version: sql`${synchronizationUnitsTable.version} + 1`,
         })
-        .where(
-          and(
-            eq(synchronizationUnitsTable.driveId, drive),
-            eq(synchronizationUnitsTable.documentId, id),
-            eq(synchronizationUnitsTable.scope, scope),
-            eq(synchronizationUnitsTable.branch, branch)
-          )
-        )
+        .where(eq(synchronizationUnitsTable.id, syncUnit.id))
         .returning({
           version: synchronizationUnitsTable.version,
         });
@@ -227,6 +216,7 @@ export class DrizzleStorage implements IDriveStorage {
           clipboard: false,
           driveId: drive,
           documentId: id,
+          syncId: syncUnit.id,
           scope,
           branch,
           opId: op.id,
@@ -240,6 +230,7 @@ export class DrizzleStorage implements IDriveStorage {
           resultingState: op.resultingState
             ? Buffer.from(JSON.stringify(op.resultingState))
             : undefined,
+          synchronizationUnitId: syncUnit.id,
         }))
       );
 
@@ -333,9 +324,7 @@ export class DrizzleStorage implements IDriveStorage {
     const docs = await this.db
       .select({ id: documentsTable.id })
       .from(documentsTable)
-      .where(
-        and(eq(documentsTable.driveId, drive), ne(documentsTable.id, "drives"))
-      );
+      .where(and(eq(documentsTable.driveId, drive)));
 
     return docs.map((doc) => doc.id);
   }
@@ -390,7 +379,7 @@ export class DrizzleStorage implements IDriveStorage {
     );
 
     const conditions = Object.entries(scopeIndex).map(
-      ([scope, index]) => `(o.scope = '${scope}' AND index > ${index})`
+      ([scope, index]) => `(o.scope = '${scope}' AND o.index > ${index})`
     );
     conditions.push(
       `(o.scope NOT IN (${Object.keys(cachedOperations)
@@ -421,10 +410,9 @@ export class DrizzleStorage implements IDriveStorage {
                     ELSE NULL 
                 END AS "resultingState"
                 FROM 
-                    "Operation" o JOIN "SynchronizationUnit" s
-                    ON o."driveId" = s."driveId" AND o."documentId" = s."documentId"
-                    AND o."scope" = s."scope" AND o."branch" = s."branch"
-                WHERE s."driveId" = ${driveId} AND s."documentId" = ${id}
+                    "Operation" o LEFT JOIN "SynchronizationUnit" s
+                    ON o."syncId" = s."id"
+                WHERE s."driveId" = '${driveId}' AND s."documentId" = '${id}'
                     AND (${conditions.join(" OR ")})
                 ORDER BY
                     scope,
@@ -433,7 +421,7 @@ export class DrizzleStorage implements IDriveStorage {
         `
     );
 
-    const operationIds = queryOperations
+    const operationIds = queryOperations.rows
       .filter((o: typeof operationsTable.$inferSelect) => !!o)
       .map((o: { id: string }) => o.id ?? "");
     const attachments = await db
@@ -452,7 +440,7 @@ export class DrizzleStorage implements IDriveStorage {
         });
       });
 
-    const operationsByScope = queryOperations.reduce(
+    const operationsByScope = queryOperations.rows.reduce(
       (
         acc: Record<OperationScope, Operation[]>,
         operation: typeof operationsTable.$inferSelect

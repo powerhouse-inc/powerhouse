@@ -32,6 +32,10 @@ import { expectUUID } from "./utils";
 import { DrizzleStorage } from "../src/storage/drizzle";
 import { drizzle } from "drizzle-orm/connect";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drivesTable } from "../src/storage/drizzle/schema";
+import { eq, ne } from "drizzle-orm";
+import util from "util";
+const exec = util.promisify(require("child_process").exec);
 
 const documentModels = [
   DocumentModelLib,
@@ -40,13 +44,13 @@ const documentModels = [
 
 const FileStorageDir = path.join(__dirname, "./file-storage");
 const prismaClient = new PrismaClient();
-const drizzleClient = drizzle("pglite");
+let drizzleClient;
 const storageLayers = [
   [
     "DrizzleStorage",
     async () => {
-      const client = await drizzle("pglite");
-      return new DrizzleStorage(client);
+      drizzleClient = await drizzle("pglite", "./dev.db");
+      return new DrizzleStorage(drizzleClient);
     },
   ],
   ["MemoryStorage", async () => new MemoryStorage()],
@@ -80,8 +84,14 @@ try {
 describe.each(storageLayers)(
   "Document Drive Server with %s",
   (storageName, buildStorage) => {
-    beforeEach(() => {
+    beforeEach(async () => {
       vi.setSystemTime(new Date("2024-01-01"));
+      if (storageName === "DrizzleStorage") {
+        await exec("rm -rf ./dev.db");
+        await exec(
+          "DATABASE_URL='' npx drizzle-kit push --force --config ./drizzle.test.ts"
+        );
+      }
     });
 
     afterEach(async () => {
@@ -118,7 +128,9 @@ describe.each(storageLayers)(
           triggers: [],
         },
       });
+      console.log("getDrive");
       const drive = await server.getDrive("1");
+      console.log(drive);
       expect(drive.state).toStrictEqual(
         DocumentDriveUtils.createState({
           global: {
@@ -694,7 +706,7 @@ describe.each(storageLayers)(
             name: "name",
             key: "key",
           },
-          signature: "test",
+          signatures: [["test", "test", "test", "test", "test"]],
         },
       };
 
@@ -780,7 +792,7 @@ describe.each(storageLayers)(
           id,
           name: "name",
           parentFolder: null,
-          documentType: file.documentType,
+          documentType: file!.documentType,
 
           document: file,
         },
@@ -903,7 +915,7 @@ describe.each(storageLayers)(
             name: "name",
             key: "key",
           },
-          signature: "test",
+          signatures: [["test", "test", "test", "test", "test"]],
         },
       };
 
@@ -921,7 +933,7 @@ describe.each(storageLayers)(
         context,
       });
 
-      await server.addDriveOperation("1", drive.operations.global[0]!, false);
+      await server.addDriveOperation("1", drive.operations.global[0]!);
       const storedDrive = await server.getDrive("1");
       expect(storedDrive.operations.global[0]).toMatchObject(
         drive.operations.global[0]!
