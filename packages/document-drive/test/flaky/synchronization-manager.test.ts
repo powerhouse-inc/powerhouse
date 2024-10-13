@@ -8,10 +8,10 @@ import {
   DocumentDriveServer,
   PullResponderTransmitter,
   generateUUID,
-} from "../src";
-import InMemoryCache from "../src/cache/memory";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaStorage } from "../src/storage/prisma";
+} from "../../src";
+import InMemoryCache from "../../src/cache/memory";
+import { MemoryStorage } from "../../src/storage/memory";
+import { PrismaStorage } from "../../src/storage/prisma";
 import {
   buildOperation,
   buildOperations,
@@ -97,9 +97,9 @@ describe("Synchronization Units", () => {
               name: "test",
               documentType: "powerhouse/document-model",
             },
-            ["global", "local"],
-          ),
-        ),
+            ["global", "local"]
+          )
+        )
       );
 
       const getDocumentSpy = vi.spyOn(storage, "getDocument");
@@ -154,9 +154,9 @@ describe("Synchronization Units", () => {
               name: "test2",
               documentType: "powerhouse/document-model",
             },
-            ["global", "local"],
-          ),
-        ),
+            ["global", "local"]
+          )
+        )
       );
 
       const syncUnits2 = await server.getSynchronizationUnits("1");
@@ -244,9 +244,9 @@ describe("Synchronization Units", () => {
               name: "test",
               documentType: "powerhouse/document-model",
             },
-            ["global", "local"],
-          ),
-        ),
+            ["global", "local"]
+          )
+        )
       );
       await server.addDriveOperation(
         "1",
@@ -260,9 +260,9 @@ describe("Synchronization Units", () => {
               name: "test",
               documentType: "powerhouse/document-model",
             },
-            ["global", "local"],
-          ),
-        ),
+            ["global", "local"]
+          )
+        )
       );
 
       await server.addDriveOperation(
@@ -288,8 +288,8 @@ describe("Synchronization Units", () => {
               listenerId: "listenerId",
               system: false,
             },
-          }),
-        ),
+          })
+        )
       );
       const revisions = await storage.getSynchronizationUnitsRevision([
         {
@@ -323,7 +323,7 @@ describe("Synchronization Units", () => {
 
       const transmitter = (await server.getTransmitter(
         "1",
-        "listenerId",
+        "listenerId"
       )) as PullResponderTransmitter;
       const storageSpy = vi.spyOn(storage, "getDocument");
       const cacheSpy = vi.spyOn(cache, "getDocument");
@@ -375,8 +375,8 @@ describe("Synchronization Units", () => {
                 scope: "global",
               },
             ],
-          }),
-        ),
+          })
+        )
       );
       const result = await server.addDriveOperations("1", operations);
       expect(result.status).toBe("SUCCESS");
@@ -404,8 +404,8 @@ describe("Synchronization Units", () => {
               listenerId: "listenerId",
               system: false,
             },
-          }),
-        ),
+          })
+        )
       );
 
       const revisions = await storage.getSynchronizationUnitsRevision([
@@ -432,7 +432,7 @@ describe("Synchronization Units", () => {
 
       const transmitter = (await server.getTransmitter(
         "1",
-        "listenerId",
+        "listenerId"
       )) as PullResponderTransmitter;
       const storageSpy = vi.spyOn(storage, "getDocument");
       const cacheSpy = vi.spyOn(cache, "getDocument");
@@ -448,7 +448,7 @@ describe("Synchronization Units", () => {
               expect.objectContaining({
                 index: i,
                 type: "ADD_FILE",
-              }) as Operation,
+              }) as Operation
           ),
         },
       ]);
@@ -531,9 +531,9 @@ describe("Synchronization Units", () => {
               name: "test",
               documentType: "powerhouse/document-model",
             },
-            ["global", "local"],
-          ),
-        ),
+            ["global", "local"]
+          )
+        )
       );
 
       const getDocumentSpy = vi.spyOn(storage, "getDocument");
@@ -588,9 +588,9 @@ describe("Synchronization Units", () => {
               name: "test2",
               documentType: "powerhouse/document-model",
             },
-            ["global", "local"],
-          ),
-        ),
+            ["global", "local"]
+          )
+        )
       );
 
       const syncUnits2 = await server.getSynchronizationUnits("1");
@@ -678,9 +678,9 @@ describe("Synchronization Units", () => {
               name: "test",
               documentType: "powerhouse/document-model",
             },
-            ["global", "local"],
-          ),
-        ),
+            ["global", "local"]
+          )
+        )
       );
       await server.addDriveOperation(
         "1",
@@ -694,9 +694,9 @@ describe("Synchronization Units", () => {
               name: "test",
               documentType: "powerhouse/document-model",
             },
-            ["global", "local"],
-          ),
-        ),
+            ["global", "local"]
+          )
+        )
       );
 
       await server.addDriveOperation(
@@ -722,8 +722,8 @@ describe("Synchronization Units", () => {
               listenerId: "listenerId",
               system: false,
             },
-          }),
-        ),
+          })
+        )
       );
       const revisions = await storage.getSynchronizationUnitsRevision([
         {
@@ -757,7 +757,7 @@ describe("Synchronization Units", () => {
 
       const transmitter = (await server.getTransmitter(
         "1",
-        "listenerId",
+        "listenerId"
       )) as PullResponderTransmitter;
       const storageSpy = vi.spyOn(storage, "getDocument");
       const cacheSpy = vi.spyOn(cache, "getDocument");
@@ -809,8 +809,8 @@ describe("Synchronization Units", () => {
                 scope: "global",
               },
             ],
-          }),
-        ),
+          })
+        )
       );
       const result = await server.addDriveOperations("1", operations);
       expect(result.status).toBe("SUCCESS");
@@ -838,8 +838,8 @@ describe("Synchronization Units", () => {
               listenerId: "listenerId",
               system: false,
             },
-          }),
-        ),
+          })
+        )
       );
 
       const revisions = await storage.getSynchronizationUnitsRevision([
@@ -866,7 +866,7 @@ describe("Synchronization Units", () => {
 
       const transmitter = (await server.getTransmitter(
         "1",
-        "listenerId",
+        "listenerId"
       )) as PullResponderTransmitter;
       const storageSpy = vi.spyOn(storage, "getDocument");
       const cacheSpy = vi.spyOn(cache, "getDocument");
@@ -882,7 +882,7 @@ describe("Synchronization Units", () => {
               expect.objectContaining({
                 index: i,
                 type: "ADD_FILE",
-              }) as Operation,
+              }) as Operation
           ),
         },
       ]);
