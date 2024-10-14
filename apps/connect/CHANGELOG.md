@@ -1,3 +1,10 @@
+# [1.0.0-dev.139](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.138...v1.0.0-dev.139) (2024-10-14)
+
+
+### Features
+
+* support dynamic editor components ([997d649](https://github.com/powerhouse-inc/document-model-electron/commit/997d649df0c74ee70215d128fb81d234ad3e3956))
+
 # [1.0.0-dev.138](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.137...v1.0.0-dev.138) (2024-10-10)
 
 
