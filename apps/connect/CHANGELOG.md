@@ -1,3 +1,10 @@
+# [1.0.0-dev.141](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.140...v1.0.0-dev.141) (2024-10-14)
+
+
+### Bug Fixes
+
+* fixed ci publish ([909cb61](https://github.com/powerhouse-inc/document-model-electron/commit/909cb610ebd3286cc9c3fadb9ceefeb8ddfe28d0))
+
 # [1.0.0-dev.140](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.139...v1.0.0-dev.140) (2024-10-14)
 
 
