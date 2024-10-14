@@ -1,5 +1,5 @@
 import { DocumentModelState, utils, z } from "document-model/document-model";
-import fs from "fs";
+import fs from "node:fs";
 
 export async function loadDocumentModel(
   path: string,

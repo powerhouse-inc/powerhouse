@@ -2,7 +2,7 @@
 
 import { execSync } from "child_process";
 import { prompt } from "enquirer";
-import fs from "fs";
+import fs from "node:fs";
 import path from "path";
 import {
   DEFAULT_CONFIG,

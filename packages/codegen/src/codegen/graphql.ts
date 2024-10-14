@@ -1,6 +1,6 @@
 import { type CodegenConfig, generate } from "@graphql-codegen/cli";
 import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
-import { readdirSync } from "fs";
+import { readdirSync } from "node:fs";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })

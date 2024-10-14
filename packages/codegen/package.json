@@ -18,10 +18,8 @@
     "lint": "eslint",
     "clean": "rimraf dist/",
     "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
-    "prebuild": "npm run clean",
-    "build": "tsc",
-    "postbuild": "npm run copy-files",
-    "prepublishOnly": "yarn build",
+    "build": "tsup",
+    "prepublishOnly": "npm run build",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "ts-node src/cli.ts",
@@ -46,7 +44,8 @@
     "graphql": "^16.8.1",
     "husky": "^8.0.3",
     "rimraf": "^5.0.5",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "tsup": "^8.3.0"
   },
   "peerDependencies": {
     "graphql": "^16.8.1"

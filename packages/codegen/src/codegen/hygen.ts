@@ -1,5 +1,5 @@
 import { DocumentModel } from "document-model";
-import fs from "fs";
+import fs from "node:fs";
 import { Logger, runner } from "hygen";
 import path from "path";
 import { loadDocumentModel } from "./utils";

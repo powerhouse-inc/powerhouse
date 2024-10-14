@@ -7,7 +7,7 @@ import {
 } from "./hygen";
 import { generateSchemas, generateSchema } from "./graphql";
 import type { PowerhouseConfig } from "../utils";
-import fs from "fs";
+import fs from "node:fs";
 import { join, resolve } from "path";
 import { paramCase, pascalCase } from "change-case";
 import { loadDocumentModel } from "./utils";

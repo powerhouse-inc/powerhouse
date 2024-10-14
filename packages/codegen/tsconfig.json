@@ -4,7 +4,6 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
-    "rootDir": "./src",
     "outDir": "./dist",
     "composite": false,
     "esModuleInterop": true,
@@ -18,6 +17,11 @@
     "experimentalDecorators": true,
     "declaration": true
   },
-  "include": ["src/**/*.ts", "src/**/.hygen/**/*.ts", "reset.d.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/.hygen/**/*.ts",
+    "reset.d.ts",
+    "*.config.ts"
+  ],
   "exclude": ["**/*.esm.t"]
 }
