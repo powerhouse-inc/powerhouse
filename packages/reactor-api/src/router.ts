@@ -1,13 +1,12 @@
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { BaseDocumentDriveServer } from "document-drive";
 import { IRouter, Router } from "express";
 import { SUBGRAPH_REGISTRY } from "./subgraphs";
 import { Context } from "./types";
 
-export let router: IRouter = Router();
+export let reactorRouter: IRouter = Router();
 
 const getLocalSubgraphConfig = (subgraphName: string) =>
   SUBGRAPH_REGISTRY.find((it) => it.name === subgraphName);
@@ -46,10 +45,26 @@ export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
       })
     );
 
-    console.log(
-      `Setting up [${subgraphConfig.name}] subgraph at /graphql${path}`
-    );
+    console.log(`Setting up [${subgraphConfig.name}] subgraph at /${path}`);
   }
-  router = newRouter;
+  reactorRouter = newRouter;
   console.log("All subgraphs started.");
+};
+
+export const initReactorRouter = async (
+  driveServer: BaseDocumentDriveServer
+) => {
+  const models = driveServer.getDocumentModels();
+  const driveModel = models.find(
+    (it) => it.documentModel.name === "DocumentDrive"
+  );
+
+  if (!driveModel) {
+    throw new Error("DocumentDrive model required");
+  }
+
+  await updateRouter(driveServer);
+  driveServer.on("documentModels", () => {
+    updateRouter(driveServer);
+  });
 };
