@@ -33,12 +33,6 @@ jobs:
           cache: 'pnpm'
           registry-url: https://registry.npmjs.org/
 
-      - name: pnpm - Output bin stubs
-        run: |
-          mkdir -p ./packages/codegen/dist/create-lib
-          echo "#! /usr/bin/env node" > ./packages/codegen/dist/cli.js
-          echo "#! /usr/bin/env node" > ./packages/codegen/dist/create-lib/index.js
-
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
         shell: bash

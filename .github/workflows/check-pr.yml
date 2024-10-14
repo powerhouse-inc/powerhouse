@@ -26,12 +26,6 @@ jobs:
                   version: latest-8
                   run_install: false
 
-            - name: pnpm - Output bin stubs
-              run: |
-                mkdir -p ./packages/codegen/dist/create-lib
-                echo "#! /usr/bin/env node" > ./packages/codegen/dist/cli.js
-                echo "#! /usr/bin/env node" > ./packages/codegen/dist/create-lib/index.js
-
             - name: Install Dependencies
               run: pnpm install --frozen-lockfile
 
