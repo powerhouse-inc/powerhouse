@@ -1,3 +1,17 @@
+## 0.5.0 (2024-10-14)
+
+### 🚀 Features
+
+- added codegen build step ([66523278](https://github.com/powerhouse-inc/powerhouse/commit/66523278))
+- **scalars:** setup scalars project ([#370](https://github.com/powerhouse-inc/powerhouse/pull/370))
+- **design-system:** create icon components in prepare install of postinstall ([f302d65f](https://github.com/powerhouse-inc/powerhouse/commit/f302d65f))
+- **design-system:** improve bundle size and tree shaking support ([ffb68cfc](https://github.com/powerhouse-inc/powerhouse/commit/ffb68cfc))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 0.4.0 (2024-10-09)
 
 ### 🚀 Features
