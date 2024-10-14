@@ -8,6 +8,17 @@
     </head>
     <body>
         <div id="app"></div>
+        <script type="importmap">
+            {
+                "imports": 
+                {
+                    "react": "https://esm.sh/react",
+                    "react/": "https://esm.sh/react/",
+                    "react-dom": "https://esm.sh/react-dom",
+                    "react-dom/": "https://esm.sh/react-dom/"
+                }
+            }
+        </script>
         <script type="module" src="/src/renderer.ts"></script>
     </body>
 </html>

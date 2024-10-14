@@ -65,9 +65,6 @@ export async function startServer() {
             port: PORT,
             open: true,
         },
-        optimizeDeps: {
-            include: [],
-        },
         plugins: [
             viteConnectDevStudioPlugin(),
             viteEnvs({

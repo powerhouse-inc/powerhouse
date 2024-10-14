@@ -1,8 +1,11 @@
 import { build } from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const dirname = import.meta.dirname;
+const dirname =
+    import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
+
 const outdir = path.resolve(dirname, '../dist/studio');
 
 function copyCLIScript() {
