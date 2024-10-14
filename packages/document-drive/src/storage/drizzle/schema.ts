@@ -53,11 +53,7 @@ export const attachmentsTable = pgTable(
 export const synchronizationUnitsTable = pgTable(
   "SynchronizationUnit",
   {
-    id: text()
-      .notNull()
-      .primaryKey()
-      .$default(() => sql`gen_random_uuid()`),
-    syncId: text().notNull(),
+    id: text().notNull().primaryKey(), // sync Id
     driveId: text().notNull(),
     documentId: text().notNull(),
     scope: text().notNull(),
@@ -87,7 +83,7 @@ export const synchronizationUnitsTable = pgTable(
       ).using(
         "btree",
         table.driveId.asc().nullsLast(),
-        table.syncId.asc().nullsLast()
+        table.id.asc().nullsLast()
       ),
       synchronizationUnitDocumentIdDriveIdFkey: foreignKey({
         columns: [table.driveId, table.documentId],
