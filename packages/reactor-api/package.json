@@ -19,6 +19,9 @@
     "@types/express": "^5.0.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "esbuild": "^0.24.0",
+    "graphql": "^16.9.0",
+    "graphql-tag": "^2.12.6",
     "tsup": "^8.3.0"
   },
   "peerDependencies": {
@@ -31,7 +34,6 @@
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "document-model-libs": "1.93.2",
-    "express": "^4.21.1",
-    "graphql": "^16.9.0"
+    "express": "^4.21.1"
   }
 }

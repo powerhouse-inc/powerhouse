@@ -67,4 +67,6 @@ export const initReactorRouter = async (
   driveServer.on("documentModels", () => {
     updateRouter(driveServer);
   });
+
+  return reactorRouter;
 };

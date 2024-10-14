@@ -7,6 +7,11 @@ export default defineConfig({
   clean: true,
   format: "esm",
   treeshake: true,
+  noExternal: ["document-drive"],
   target: "node20",
+
+  loader: {
+    ".graphql": "file",
+  },
   dts: true,
 });
