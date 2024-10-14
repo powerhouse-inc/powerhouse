@@ -14,4 +14,7 @@ export default defineConfig({
     ".graphql": "file",
   },
   dts: true,
+  banner: {
+    js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+  },
 });
