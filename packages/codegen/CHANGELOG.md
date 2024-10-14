@@ -1,3 +1,18 @@
+## 0.6.0 (2024-10-14)
+
+### 🚀 Features
+
+- **codegen:** bundle with tsup ([3cccbdf9](https://github.com/powerhouse-inc/powerhouse/commit/3cccbdf9))
+- **document-model-libs:** update codegen dependency ([f5330139](https://github.com/powerhouse-inc/powerhouse/commit/f5330139))
+
+### 🩹 Fixes
+
+- **document-model-libs:** added type annotation for createDocumentStory ([6c5441f3](https://github.com/powerhouse-inc/powerhouse/commit/6c5441f3))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+
 ## 0.5.0 (2024-10-14)
 
 ### 🚀 Features
