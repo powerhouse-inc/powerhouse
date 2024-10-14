@@ -9,12 +9,8 @@ export default defineConfig({
   treeshake: true,
   noExternal: ["document-drive"],
   target: "node20",
-
   loader: {
     ".graphql": "file",
   },
   dts: true,
-  banner: {
-    js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
-  },
 });
