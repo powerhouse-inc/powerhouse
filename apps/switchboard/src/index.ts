@@ -4,6 +4,7 @@ import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import { drizzle } from "drizzle-orm/connect";
+import { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import express from "express";
 import http from "http";
 import { initReactorRouter, reactorRouter } from "reactor-api";
@@ -21,15 +22,13 @@ const driveServer = new DocumentDriveServer([
 const app = express();
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
-
+let db: any;
 const main = async () => {
   try {
     // init db
     if (process.env.DATABASE_URL && process.env.DATABASE_URL !== "") {
-      // @ts-expect-error: linter doesnt see that drizzle returns a promise
       db = await drizzle("node-postgres", process.env.DATABASE_URL);
     } else {
-      // @ts-expect-error: linter doesnt see that drizzle returns a promise
       db = await drizzle("pglite", "./dev.db");
     }
 

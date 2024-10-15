@@ -7,7 +7,7 @@
     "dev": "npm run dev:subgraphs & npm run dev:router",
     "dev:subgraphs": "NODE_ENV=dev vite-node index.ts",
     "dev:router": "rover dev --supergraph-config supergraph.yml --router-config router-config-dev.yml",
-    "start": "vite-node index.ts",
+    "start": "vite-node src/index.ts",
     "codegen": "gql-gen --config codegen.yml"
   },
   "author": "",
