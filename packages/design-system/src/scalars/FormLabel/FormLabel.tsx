@@ -30,8 +30,12 @@ export const FormLabel: React.FC<FormLabelProps> = ({
     className,
   );
 
+  const extraProps = {
+    ...htmlLabelProps,
+  };
+
   return (
-    <label className={classes} {...htmlLabelProps}>
+    <label role="label" className={classes} {...extraProps}>
       {children}
 
       {description && (

@@ -1,22 +1,47 @@
 import React from "react";
 import { twMerge } from "tailwind-merge";
 
-export interface FormMessageProps extends React.PropsWithChildren {
-  type: "error" | "info" | "warning";
-}
+export type FormMessageType = "error" | "info" | "warning";
 
-export const FormMessage: React.FC<FormMessageProps> = ({ children, type }) => {
-  const typeClasses: Record<FormMessageProps["type"], string> = {
+type FormMessageOwnProps<E extends React.ElementType = React.ElementType> = {
+  type?: FormMessageType;
+  as?: E;
+  className?: string;
+};
+
+export type FormMessageProps<E extends React.ElementType> =
+  FormMessageOwnProps<E> &
+    Omit<React.ComponentPropsWithoutRef<E>, keyof FormMessageOwnProps>;
+
+const defaultElement = "p";
+
+export const FormMessage: <E extends React.ElementType = typeof defaultElement>(
+  props: FormMessageProps<E>
+) => React.ReactElement | null = ({
+  children,
+  type = "info",
+  as,
+  className,
+  ...props
+}) => {
+  const Component = as || defaultElement;
+
+  const typeClasses: Record<FormMessageType, string> = {
     error: "text-red-900 dark:text-red-700",
     info: "text-blue-900 dark:text-blue-900",
     warning: "text-orange-900 dark:text-orange-900",
   };
 
   const classes = twMerge(
-    "inline-flex items-center text-xs font-medium",
+    "mb-0 inline-flex items-center text-xs font-medium",
     typeClasses[type],
+    className
   );
 
   // TODO: add icon
-  return <div className={classes}>{children}</div>;
+  return (
+    <Component className={classes} {...props}>
+      {children}
+    </Component>
+  );
 };
