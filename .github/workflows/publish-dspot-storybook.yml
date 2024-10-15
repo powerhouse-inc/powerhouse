@@ -39,3 +39,5 @@ jobs:
         with:
           projectToken: ${{ secrets.CHROMATIC_DSPOT_PROJECT_TOKEN }}
           workingDir: packages/design-system
+          exitZeroOnChanges: false # fail on changes
+          onlyChanged: true # enable TurboSnap https://www.chromatic.com/docs/turbosnap
