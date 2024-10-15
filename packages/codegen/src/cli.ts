@@ -2,7 +2,7 @@
 import { generate, generateEditor, generateFromFile } from "./codegen/index";
 import { parseArgs, getConfig, promptDirectories, parseConfig } from "./utils";
 
-async function parseCommand(argv: string[]) {
+function parseCommand(argv: string[]) {
   const args = parseArgs(argv, {
     "--editor": String,
     "-e": "--editor",
@@ -27,10 +27,13 @@ async function main() {
     Object.assign(config, result);
   }
 
-  const command = await parseCommand(argv);
+  const command = parseCommand(argv);
   if (command.editor) {
+    if (!command.editorName) {
+      throw new Error("Editor name is required (--editor or -e)");
+    }
     await generateEditor(
-      command.editorName!,
+      command.editorName,
       command.documentTypes?.split(/[|,;]/g) ?? [],
       config,
     );
@@ -41,4 +44,6 @@ async function main() {
   }
 }
 
-main();
+main().catch((e: unknown) => {
+  throw e;
+});
