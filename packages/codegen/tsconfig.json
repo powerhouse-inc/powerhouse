@@ -15,7 +15,8 @@
     "preserveWatchOutput": true,
     "skipLibCheck": true,
     "experimentalDecorators": true,
-    "declaration": true
+    "declaration": true,
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*.ts",

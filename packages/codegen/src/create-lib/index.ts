@@ -170,4 +170,6 @@ function createProject(
   }
 }
 
-init();
+init().catch((e: unknown) => {
+  throw e;
+});

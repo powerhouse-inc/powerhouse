@@ -16,9 +16,9 @@ function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
     documentModel.specifications[documentModel.specifications.length - 1];
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!spec) {
-    console.log(`No spec found for ${documentModel.id}`);
-    return;
+    throw new Error(`No spec found for ${documentModel.id}`);
   }
 
   const {

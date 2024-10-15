@@ -12,6 +12,13 @@
   "files": [
     "/dist"
   ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./graphql": "./dist/codegen/graphql.js",
+    "./hygen": "./dist/codegen/hygen.js",
+    "./create-lib": "./dist/create-lib/index.js",
+    "./utils": "./dist/utils/index.js"
+  },
   "scripts": {
     "check-types": "tsc --noEmit",
     "postlint": "npm run check-types",
