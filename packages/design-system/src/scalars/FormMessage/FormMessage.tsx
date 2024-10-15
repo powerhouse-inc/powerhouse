@@ -16,7 +16,7 @@ export type FormMessageProps<E extends React.ElementType> =
 const defaultElement = "p";
 
 export const FormMessage: <E extends React.ElementType = typeof defaultElement>(
-  props: FormMessageProps<E>
+  props: FormMessageProps<E>,
 ) => React.ReactElement | null = ({
   children,
   type = "info",
@@ -35,7 +35,7 @@ export const FormMessage: <E extends React.ElementType = typeof defaultElement>(
   const classes = twMerge(
     "mb-0 inline-flex items-center text-xs font-medium",
     typeClasses[type],
-    className
+    className,
   );
 
   // TODO: add icon

@@ -34,7 +34,7 @@ describe("FormMessage", () => {
     render(
       <FormMessage type="info" role="alert">
         Info message
-      </FormMessage>
+      </FormMessage>,
     );
     const message = screen.getByText("Info message");
     expect(message).toHaveAttribute("role", "alert");

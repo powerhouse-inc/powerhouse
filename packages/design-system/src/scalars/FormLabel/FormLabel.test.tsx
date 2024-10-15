@@ -4,7 +4,7 @@ import { FormLabel } from "./FormLabel";
 describe("FormLabel Component", () => {
   it("should match snapshot", () => {
     const { asFragment } = render(
-      <FormLabel data-testid="form-label">label</FormLabel>
+      <FormLabel data-testid="form-label">label</FormLabel>,
     );
     expect(asFragment()).toMatchSnapshot();
   });
@@ -32,7 +32,7 @@ describe("FormLabel Component", () => {
     render(
       <FormLabel>
         Label <span data-testid="child-element">Child</span>
-      </FormLabel>
+      </FormLabel>,
     );
     expect(screen.getByText("Label")).toBeInTheDocument();
     expect(screen.getByTestId("child-element")).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe("FormLabel Component", () => {
     render(
       <FormLabel description="This is a description">
         Label with Description
-      </FormLabel>
+      </FormLabel>,
     );
     const icon = screen.getByTestId("icon-fallback");
     expect(icon).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("FormLabel Component", () => {
     render(
       <FormLabel data-testid="styled-label" style={customStyle}>
         Styled Label
-      </FormLabel>
+      </FormLabel>,
     );
     const label = screen.getByTestId("styled-label");
     expect(label.style.color).toBe(customStyle.color);

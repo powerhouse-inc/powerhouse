@@ -8,7 +8,7 @@ describe("FormGroup", () => {
       <FormGroup>
         <input type="text" placeholder="Enter text" />
         <label>Sample Label</label>
-      </FormGroup>
+      </FormGroup>,
     );
     expect(asFragment()).toMatchSnapshot();
   });
@@ -18,7 +18,7 @@ describe("FormGroup", () => {
       <FormGroup>
         <input type="text" data-testid="child-input" />
         <label>Test Label</label>
-      </FormGroup>
+      </FormGroup>,
     );
 
     expect(screen.getByTestId("child-input")).toBeInTheDocument();
