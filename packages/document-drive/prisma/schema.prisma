@@ -20,52 +20,53 @@ model Document {
   driveId             String
   created             DateTime             @default(now())
   lastModified        DateTime             @default(now())
-  revision            String
   name                String?
-  operations          Operation[]
   initialState        String // json object with the scope as keys of the root object
   documentType        String
-  syncronizationUnits SyncronizationUnit[]
+  synchronizationUnits SynchronizationUnit[]
 
   @@id([id, driveId])
+  @@index(driveId)
+}
+
+model SynchronizationUnit {
+  id           String      @unique @default(uuid())
+  syncId       String
+  driveId      String
+  documentId   String
+  Document     Document    @relation(fields: [documentId, driveId], references: [id, driveId], onDelete: Cascade)
+  scope        String
+  branch       String
+  operations   Operation[]
+  version      Int         @default(0)
+  revision      Int         @default(-1)
+  lastModified DateTime    @default(now())
+
+  @@unique([driveId, syncId])
+  @@unique([driveId, documentId, scope, branch])
+  @@index([driveId, documentId, scope, branch, revision])
 }
 
 model Operation {
-  id          String       @id @default(uuid())
-  opId        String?
-  driveId     String
-  Document    Document?    @relation(fields: [driveId, documentId], references: [driveId, id], onDelete: Cascade)
-  documentId  String
-  scope       String
-  branch      String
-  index       Int
-  skip        Int
-  hash        String
-  timestamp   DateTime
-  input       String
-  type        String
-  attachments Attachment[]
-  syncId      String?
-  clipboard   Boolean?     @default(false)
-  context     Json?
-  resultingState Bytes?
+  id                 String             @id @default(uuid())
+  driveId            String
+  documentId         String
+  scope              String
+  branch             String
+  SynchronizationUnit SynchronizationUnit @relation(fields: [driveId, documentId, scope, branch], references: [driveId, documentId, scope, branch], onDelete: Cascade)
+  opId               String?
+  index              Int
+  skip               Int
+  hash               String
+  timestamp          DateTime
+  input              String
+  type               String
+  attachments        Attachment[]
+  clipboard          Boolean?           @default(false)
+  context            Json?
+  resultingState     Bytes?
 
-  SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
-
-  @@unique([driveId, documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
-}
-
-model SyncronizationUnit {
-  id         String
-  driveId    String
-  documentId String
-
-  Document   Document    @relation(fields: [documentId, driveId], references: [id, driveId], onDelete: Cascade)
-  scope      String
-  branch     String
-  operations Operation[]
-
-  @@id([id, driveId])
+  @@unique([driveId, documentId, scope, branch, index(sort: Desc)])
 }
 
 model Attachment {
