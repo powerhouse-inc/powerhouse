@@ -1,13 +1,14 @@
+import { buildSubgraphSchema } from "@apollo/subgraph";
 import { DocumentDriveServer } from "document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import { drizzle } from "drizzle-orm/connect";
-import { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import express from "express";
 import http from "http";
-import { initReactorRouter, reactorRouter } from "reactor-api";
+import { addSubgraph, initReactorRouter } from "reactor-api";
+import { getDocumentModelTypeDefs } from "./utils/gen-doc-model-type-defs";
 import { InternalListenerManager } from "./utils/internal-listener-manager";
 
 dotenv.config();
@@ -40,12 +41,42 @@ const main = async () => {
     await listenerManager.init();
 
     // init router
-    await initReactorRouter(driveServer);
-    app.use("/graphql", reactorRouter);
+    await initReactorRouter("/graphql", app, driveServer);
 
     // start http server
     httpServer.listen({ port: serverPort }, () => {
       console.log(`Subgraph server listening on port ${serverPort}`);
+
+      // add example subgraph
+      addSubgraph(
+        {
+          name: "example",
+          getSchema: (driveServer) =>
+            buildSubgraphSchema([
+              {
+                typeDefs: getDocumentModelTypeDefs(
+                  driveServer,
+                  `
+              type Example {
+                id: ID!
+                name: String
+              }
+              `
+                ),
+                resolvers: {
+                  Query: {
+                    examples: async () => {
+                      return [{ id: "1", name: "Example" }];
+                    },
+                  },
+                },
+              },
+            ]),
+        },
+        driveServer
+      ).then(() => {
+        console.log(app.routes);
+      });
     });
   } catch (e) {
     console.error("App crashed", e);
