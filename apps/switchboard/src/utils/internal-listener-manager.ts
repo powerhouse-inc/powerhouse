@@ -5,13 +5,13 @@ import {
   Listener,
 } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import * as rwaListener from "../subgraphs/rwa-read-model/listener";
+import * as searchListener from "../subgraphs/search/listener";
 
 type InternalListenerModule = {
   name: string;
   options: Omit<Listener, "driveId">;
   transmit: (
-    strands: InternalTransmitterUpdate<DocumentDriveDocument, "global">[],
+    strands: InternalTransmitterUpdate<DocumentDriveDocument, "global">[]
   ) => Promise<void>;
 };
 
@@ -19,9 +19,9 @@ export class InternalListenerManager {
   private driveServer: BaseDocumentDriveServer;
   private modules: InternalListenerModule[] = [
     {
-      name: "rwa-read-model",
-      options: rwaListener.options,
-      transmit: rwaListener.transmit,
+      name: "search",
+      options: searchListener.options,
+      transmit: searchListener.transmit,
     },
   ];
 
@@ -50,14 +50,14 @@ export class InternalListenerManager {
               return Promise.resolve();
             },
           },
-          { ...module.options, label: module.options.label ?? "" },
-        ),
-      ),
+          { ...module.options, label: module.options.label ?? "" }
+        )
+      )
     );
 
     console.log(
       "listener added",
-      this.modules.map((module) => module.name),
+      this.modules.map((module) => module.name)
     );
   }
 
@@ -76,7 +76,7 @@ export class InternalListenerManager {
           const drive = await this.driveServer.getDrive(driveId);
           const moduleRegistered =
             drive.state.local.listeners.filter(
-              (l) => l.listenerId === listenerId,
+              (l) => l.listenerId === listenerId
             ).length > 0;
           if (!moduleRegistered) {
             continue;
@@ -84,7 +84,7 @@ export class InternalListenerManager {
 
           const transmitter = await this.driveServer.getTransmitter(
             driveId,
-            listenerId,
+            listenerId
           );
           if (transmitter instanceof InternalTransmitter) {
             transmitter.setReceiver({
@@ -92,7 +92,7 @@ export class InternalListenerManager {
                 strands: InternalTransmitterUpdate<
                   DocumentDriveDocument,
                   "global"
-                >[],
+                >[]
               ) => {
                 await transmit(strands);
                 return Promise.resolve();
@@ -106,7 +106,7 @@ export class InternalListenerManager {
         } catch (e) {
           console.error(
             `Error while initializing listener ${options.listenerId} for drive ${driveId}`,
-            e,
+            e
           );
         }
       }

@@ -1,4 +1,3 @@
-import { buildSubgraphSchema } from "@apollo/subgraph";
 import { DocumentDriveServer } from "document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
@@ -8,9 +7,8 @@ import { drizzle } from "drizzle-orm/connect";
 import express from "express";
 import http from "http";
 import { addSubgraph, initReactorRouter } from "reactor-api";
-import { getDocumentModelTypeDefs } from "./utils/gen-doc-model-type-defs";
+import { getSchema as getSearchSchema } from "./subgraphs/search/subgraph";
 import { InternalListenerManager } from "./utils/internal-listener-manager";
-
 dotenv.config();
 
 // start document drive server with all available document models
@@ -50,33 +48,11 @@ const main = async () => {
       // add example subgraph
       addSubgraph(
         {
-          name: "example",
-          getSchema: (driveServer) =>
-            buildSubgraphSchema([
-              {
-                typeDefs: getDocumentModelTypeDefs(
-                  driveServer,
-                  `
-              type Example {
-                id: ID!
-                name: String
-              }
-              `
-                ),
-                resolvers: {
-                  Query: {
-                    examples: async () => {
-                      return [{ id: "1", name: "Example" }];
-                    },
-                  },
-                },
-              },
-            ]),
+          name: ":drive/search",
+          getSchema: (driveServer) => getSearchSchema(driveServer),
         },
         driveServer
-      ).then(() => {
-        console.log(app.routes);
-      });
+      );
     });
   } catch (e) {
     console.error("App crashed", e);

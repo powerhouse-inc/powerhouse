@@ -5,7 +5,8 @@ import { like, or } from "drizzle-orm";
 
 export const resolvers = {
   Query: {
-    search: async (_, { query }, ctx) => {
+    search: async (root, { query }, ctx) => {
+      console.log(root);
       const db: PgDatabase = await getDb();
       const results = await db
         .select()
