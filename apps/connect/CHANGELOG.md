@@ -1,3 +1,10 @@
+# [1.0.0-dev.143](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.142...v1.0.0-dev.143) (2024-10-16)
+
+
+### Bug Fixes
+
+* use single instance of react dependencies on studio mode ([96ea1c3](https://github.com/powerhouse-inc/document-model-electron/commit/96ea1c364156dd36fa22d02f6c840acb6ab3a783))
+
 # [1.0.0-dev.142](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.141...v1.0.0-dev.142) (2024-10-15)
 
 
