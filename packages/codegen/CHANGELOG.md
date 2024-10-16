@@ -1,3 +1,18 @@
+## 0.7.0 (2024-10-16)
+
+### 🚀 Features
+
+- **codegen:** improved package exports ([21059412](https://github.com/powerhouse-inc/powerhouse/commit/21059412))
+
+### 🩹 Fixes
+
+- **codegen:** export create-lib methods ([#403](https://github.com/powerhouse-inc/powerhouse/pull/403))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 0.6.0 (2024-10-14)
 
 ### 🚀 Features
