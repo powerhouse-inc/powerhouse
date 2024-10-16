@@ -12,7 +12,7 @@ import {
 // matches react, react-dom, and all it's sub-imports like react-dom/client
 export const externalIds = /^react(-dom)?(\/.*)?$/;
 // used to find react imports in the code for text replacement
-export const externalImports = /react(-dom)?(\/.*)?/;
+export const externalImports = /react(-dom)?/;
 
 export const LOCAL_DOCUMENT_MODELS_IMPORT = 'LOCAL_DOCUMENT_MODELS';
 export const LOCAL_DOCUMENT_EDITORS_IMPORT = 'LOCAL_DOCUMENT_EDITORS';
@@ -114,12 +114,11 @@ function viteIgnoreStaticImport(importKeys: (string | RegExp)[]): Plugin {
         // vite will still append /@id/ to an external import
         // so this will rewrite the 'vite:import-analysis' prefix
         configResolved(resolvedConfig) {
-            const VALID_ID_PREFIX = `/@id/`;
             const values = importKeys.map(key =>
                 typeof key === 'string' ? key : key.source,
             );
             const reg = new RegExp(
-                `("|')${VALID_ID_PREFIX}${values.length === 1 ? values[0] : `(${values.join('|')})("|')`}`,
+                `("|')\\/@id\\/(${values.join('|')})(\\/[^"'\\\\]*)?\\1`,
                 'g',
             );
 
