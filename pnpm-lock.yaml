@@ -675,6 +675,22 @@ importers:
         specifier: ^3.22.4
         version: 3.23.8
 
+  packages/ph-cli:
+    dependencies:
+      '@powerhousedao/codegen':
+        specifier: workspace:*
+        version: link:../codegen
+      commander:
+        specifier: ^12.1.0
+        version: 12.1.0
+    devDependencies:
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@swc/core@1.5.29)(@types/node@20.16.11)(typescript@5.6.3)
+      tsup:
+        specifier: ^8.3.0
+        version: 8.3.0(@swc/core@1.5.29)(typescript@5.6.3)
+
   packages/scalars:
     devDependencies:
       '@typescript-eslint/parser':
@@ -11399,6 +11415,11 @@ packages:
 
   /command-exists@1.2.9:
     resolution: {integrity: sha512-LTQ/SGc+s0Xc0Fu5WaKnR0YiygZkm9eKFvyS+fRsU7/ZWFF8ykFM6Pc9aCVf1+xasOOZpO3BAVgVrKvsqKHV7w==}
+    dev: false
+
+  /commander@12.1.0:
+    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
+    engines: {node: '>=18'}
     dev: false
 
   /commander@2.20.3:
