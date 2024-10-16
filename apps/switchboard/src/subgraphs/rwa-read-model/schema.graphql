@@ -1,7 +1,0 @@
-type Query {
-  rwaPortfolio: RWA
-}
-
-type RWA {
-  amountOfAccounts: Int!
-}
