@@ -1,3 +1,10 @@
+# [1.0.0-dev.144](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.143...v1.0.0-dev.144) (2024-10-16)
+
+
+### Bug Fixes
+
+* fixed external import regex ([5754adf](https://github.com/powerhouse-inc/document-model-electron/commit/5754adf0be4c4663ae661a1d5a507a863f71cc4e))
+
 # [1.0.0-dev.143](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.142...v1.0.0-dev.143) (2024-10-16)
 
 
