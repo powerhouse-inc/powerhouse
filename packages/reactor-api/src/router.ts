@@ -5,7 +5,9 @@ import { BaseDocumentDriveServer } from "document-drive";
 import { IRouter, Router } from "express";
 import { SUBGRAPH_REGISTRY } from "./subgraphs";
 import { Context } from "./types";
-
+import bodyParser from "body-parser";
+import cors from "cors";
+import express from "express";
 export let reactorRouter: IRouter = Router();
 
 const getLocalSubgraphConfig = (subgraphName: string) =>
@@ -13,6 +15,8 @@ const getLocalSubgraphConfig = (subgraphName: string) =>
 
 export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
   const newRouter = Router();
+  newRouter.use(cors());
+  newRouter.use(bodyParser.json());
   // Run each subgraph on the same http server, but at different paths
   for (const subgraph of SUBGRAPH_REGISTRY) {
     const subgraphConfig = getLocalSubgraphConfig(subgraph.name);
@@ -45,15 +49,19 @@ export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
       })
     );
 
-    console.log(`Setting up [${subgraphConfig.name}] subgraph at /${path}`);
+    console.log(`Setting up [${subgraphConfig.name}] subgraph at ${path}`);
   }
   reactorRouter = newRouter;
   console.log("All subgraphs started.");
 };
 
+let docDriveServer: BaseDocumentDriveServer;
 export const initReactorRouter = async (
+  path: string,
+  app: express.Express,
   driveServer: BaseDocumentDriveServer
 ) => {
+  docDriveServer = driveServer;
   const models = driveServer.getDocumentModels();
   const driveModel = models.find(
     (it) => it.documentModel.name === "DocumentDrive"
@@ -68,5 +76,12 @@ export const initReactorRouter = async (
     updateRouter(driveServer);
   });
 
-  return reactorRouter;
+  app.use(path, (req, res, next) => reactorRouter(req, res, next));
+};
+
+export const addSubgraph = async (
+  subgraph: (typeof SUBGRAPH_REGISTRY)[number]
+) => {
+  SUBGRAPH_REGISTRY.unshift(subgraph);
+  await updateRouter(docDriveServer);
 };

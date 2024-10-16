@@ -1,5 +1,3 @@
-import bodyParser from "body-parser";
-import cors from "cors";
 import { BaseDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
 import { initReactorRouter, reactorRouter } from "./router";
@@ -17,11 +15,8 @@ export async function startAPI(
 ) {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
-  app.use(cors());
-  app.use(bodyParser.json());
 
-  await initReactorRouter(reactor);
-  app.use("/graphql", reactorRouter);
+  await initReactorRouter("/graphql", app, reactor);
 
   app.listen(port);
 }
