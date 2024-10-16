@@ -4,9 +4,15 @@ import {
     Alias,
     AliasOptions,
     Plugin,
+    PluginOption,
     ViteDevServer,
     normalizePath,
 } from 'vite';
+
+// matches react, react-dom, and all it's sub-imports like react-dom/client
+export const externalIds = /^react(-dom)?(\/.*)?$/;
+// used to find react imports in the code for text replacement
+export const externalImports = /react(-dom)?(\/.*)?/;
 
 export const LOCAL_DOCUMENT_MODELS_IMPORT = 'LOCAL_DOCUMENT_MODELS';
 export const LOCAL_DOCUMENT_EDITORS_IMPORT = 'LOCAL_DOCUMENT_EDITORS';
@@ -98,9 +104,66 @@ export function watchLocalFiles(
     }
 }
 
+// https://github.com/vitejs/vite/issues/6393#issuecomment-1006819717
+// vite dev server doesn't support setting dependencies as external
+// as when building the app.
+function viteIgnoreStaticImport(importKeys: (string | RegExp)[]): Plugin {
+    return {
+        name: 'vite-plugin-ignore-static-import',
+        enforce: 'pre',
+        // vite will still append /@id/ to an external import
+        // so this will rewrite the 'vite:import-analysis' prefix
+        configResolved(resolvedConfig) {
+            const VALID_ID_PREFIX = `/@id/`;
+            const values = importKeys.map(key =>
+                typeof key === 'string' ? key : key.source,
+            );
+            const reg = new RegExp(
+                `("|')${VALID_ID_PREFIX}${values.length === 1 ? values[0] : `(${values.join('|')})("|')`}`,
+                'g',
+            );
+
+            (resolvedConfig.plugins as Plugin[]).push({
+                name: 'vite-plugin-ignore-static-import-replace-idprefix',
+                transform: code => {
+                    const matches = code.matchAll(reg);
+                    for (const match of matches) {
+                        code = code.replaceAll(
+                            match[0],
+                            match[0].replace('/@id/', ''),
+                        );
+                    }
+                    return code;
+                },
+            });
+        },
+        // prevents the external import from being transformed to 'node_modules/...'
+        resolveId: id => {
+            if (
+                importKeys.some(key =>
+                    typeof key === 'string' ? key === id : key.test(id),
+                )
+            ) {
+                return { id, external: true };
+            }
+        },
+        // returns empty string to prevent "Pre-transform error: Failed to load url"
+        load(id) {
+            if (
+                importKeys.some(key =>
+                    typeof key === 'string' ? key === id : key.test(id),
+                )
+            ) {
+                return '';
+            }
+        },
+    };
+}
+
 export function viteConnectDevStudioPlugin(
+    enabled = false,
     env?: Record<string, string>,
-): Plugin {
+): PluginOption[] {
     const studioConfig = getStudioConfig(env);
     const importKeys = [
         LOCAL_DOCUMENT_MODELS_IMPORT,
@@ -110,64 +173,67 @@ export function viteConnectDevStudioPlugin(
     const localDocumentEditorsPath =
         studioConfig[LOCAL_DOCUMENT_EDITORS_IMPORT];
 
-    return {
-        name: 'vite-plugin-connect-dev-studio',
-        enforce: 'pre',
-        config(config) {
-            if (!localDocumentModelsPath && !localDocumentEditorsPath) {
-                return;
-            }
-
-            // adds the provided paths to be resolved by vite
-            const resolve = config.resolve ?? {};
-            const alias = resolve.alias;
-            let resolvedAlias: AliasOptions | undefined;
-            if (Array.isArray(alias)) {
-                const arrayAlias = [...(alias as Alias[])];
-
-                if (localDocumentModelsPath) {
-                    arrayAlias.push({
-                        find: LOCAL_DOCUMENT_MODELS_IMPORT,
-                        replacement: localDocumentModelsPath,
-                    });
+    return [
+        enabled && viteIgnoreStaticImport([externalImports]),
+        {
+            name: 'vite-plugin-connect-dev-studio',
+            enforce: 'pre',
+            config(config) {
+                if (!localDocumentModelsPath && !localDocumentEditorsPath) {
+                    return;
                 }
 
-                if (localDocumentEditorsPath) {
-                    arrayAlias.push({
-                        find: LOCAL_DOCUMENT_EDITORS_IMPORT,
-                        replacement: localDocumentEditorsPath,
-                    });
-                }
-                resolvedAlias = arrayAlias;
-            } else if (typeof alias === 'object') {
-                resolvedAlias = { ...alias, ...studioConfig };
-            } else if (typeof alias === 'undefined') {
-                resolvedAlias = { ...studioConfig };
-            } else {
-                console.error('resolve.alias was not recognized');
-            }
+                // adds the provided paths to be resolved by vite
+                const resolve = config.resolve ?? {};
+                const alias = resolve.alias;
+                let resolvedAlias: AliasOptions | undefined;
+                if (Array.isArray(alias)) {
+                    const arrayAlias = [...(alias as Alias[])];
 
-            if (resolvedAlias) {
-                resolve.alias = resolvedAlias;
-                config.resolve = resolve;
-            }
+                    if (localDocumentModelsPath) {
+                        arrayAlias.push({
+                            find: LOCAL_DOCUMENT_MODELS_IMPORT,
+                            replacement: localDocumentModelsPath,
+                        });
+                    }
+
+                    if (localDocumentEditorsPath) {
+                        arrayAlias.push({
+                            find: LOCAL_DOCUMENT_EDITORS_IMPORT,
+                            replacement: localDocumentEditorsPath,
+                        });
+                    }
+                    resolvedAlias = arrayAlias;
+                } else if (typeof alias === 'object') {
+                    resolvedAlias = { ...alias, ...studioConfig };
+                } else if (typeof alias === 'undefined') {
+                    resolvedAlias = { ...studioConfig };
+                } else {
+                    console.error('resolve.alias was not recognized');
+                }
+
+                if (resolvedAlias) {
+                    resolve.alias = resolvedAlias;
+                    config.resolve = resolve;
+                }
+            },
+            configureServer(server) {
+                watchLocalFiles(
+                    server,
+                    localDocumentModelsPath,
+                    localDocumentEditorsPath,
+                );
+            },
+            resolveId: id => {
+                // if the path was not provided then declares the local
+                // imports as external so that vite ignores them
+                if (importKeys.includes(id)) {
+                    return {
+                        id,
+                        external: true,
+                    };
+                }
+            },
         },
-        configureServer(server) {
-            watchLocalFiles(
-                server,
-                localDocumentModelsPath,
-                localDocumentEditorsPath,
-            );
-        },
-        resolveId: id => {
-            // if the path was not provided then declares the local
-            // imports as external so that vite ignores them
-            if (importKeys.includes(id)) {
-                return {
-                    id,
-                    external: true,
-                };
-            }
-        },
-    };
+    ];
 }

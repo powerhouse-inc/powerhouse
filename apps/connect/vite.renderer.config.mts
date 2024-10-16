@@ -9,7 +9,7 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 import pkg from './package.json';
-import { viteConnectDevStudioPlugin } from './studio/vite-plugin';
+import { externalIds, viteConnectDevStudioPlugin } from './studio/vite-plugin';
 
 export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const plugins: PluginOption[] = [
-        viteConnectDevStudioPlugin(env),
+        viteConnectDevStudioPlugin(false, env),
         react({
             include: 'src/**/*.tsx',
             babel: {
@@ -106,14 +106,7 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: [
-                    'node:crypto',
-                    'react',
-                    'react/jsx-runtime',
-                    'react/jsx-dev-runtime',
-                    'react-dom',
-                    'react-dom/client',
-                ],
+                external: ['node:crypto', externalIds],
             },
         },
         resolve: {

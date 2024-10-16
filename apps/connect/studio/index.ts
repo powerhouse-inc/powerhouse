@@ -66,13 +66,18 @@ export async function startServer() {
             open: true,
         },
         plugins: [
-            viteConnectDevStudioPlugin(),
+            viteConnectDevStudioPlugin(true),
             viteEnvs({
                 declarationFile: join(studioDirname, '../.env'),
                 computedEnv: studioConfig,
             }),
             runShellScriptPlugin(viteEnvsScript),
         ],
+        build: {
+            rollupOptions: {
+                input: 'index.html',
+            },
+        },
     };
 
     const server = await createServer(config);
