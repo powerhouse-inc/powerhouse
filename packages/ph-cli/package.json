@@ -1,10 +1,13 @@
 {
-  "name": "ph-cli",
+  "name": "@powerhousedao/ph-cli",
   "version": "0.0.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "types": "dist/index.d.ts",
   "main": "dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "ph": "dist/cli.js"
   },
