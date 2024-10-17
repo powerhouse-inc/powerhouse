@@ -7,7 +7,7 @@ export const SUBGRAPH_REGISTRY = [
     getSchema: getSystemSchema,
   },
   {
-    name: ":drive",
+    name: "d/:drive",
     getSchema: getDriveSchema,
   },
 ];
