@@ -5,7 +5,7 @@ import {
   Listener,
 } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import * as searchListener from "../subgraphs/search/listener";
+import * as searchListener from "../subgraphs/general-document-indexer/listener";
 import { Document } from "document-model/document";
 
 type InternalListenerModule = {

@@ -6,6 +6,8 @@ import {
 import {
   AddFileInput,
   CopyNodeInput,
+  DeleteNodeInput,
+  UpdateNodeInput,
 } from "document-model-libs/document-drive";
 import { getDb } from "../../db";
 
@@ -21,7 +23,7 @@ const logger = {
 };
 
 export const options: Omit<Listener, "driveId"> = {
-  listenerId: "search",
+  listenerId: "general-document-indexer",
   filter: {
     branch: ["*"],
     documentId: ["*"],
@@ -29,7 +31,7 @@ export const options: Omit<Listener, "driveId"> = {
     scope: ["*"],
   },
   block: false,
-  label: "search-indexer",
+  label: "general-document-indexer",
   system: true,
 };
 
@@ -72,7 +74,7 @@ async function handleStrand(strand: InternalTransmitterUpdate) {
         .where(
           and(
             eq(searchTable.driveId, strand.driveId),
-            eq(searchTable.documentId, strand.documentId)
+            eq(searchTable.documentId, (op.input as CopyNodeInput).srcId)
           )
         );
 
@@ -82,7 +84,7 @@ async function handleStrand(strand: InternalTransmitterUpdate) {
 
       return db.insert(searchTable).values({
         driveId: strand.driveId,
-        documentId: strand.documentId,
+        documentId: (op.input as CopyNodeInput).targetId,
         objectId: (op.input as CopyNodeInput).targetId,
         label: (op.input as CopyNodeInput).targetName ?? "unnamed",
         type: file.type,
@@ -90,19 +92,27 @@ async function handleStrand(strand: InternalTransmitterUpdate) {
     } else if (op.type === "UPDATE_NODE") {
       console.log(op.input);
       // const typedOp = op.input as UpdateNodeInput;
-
-      // db.update(searchTable).set({
-      //   label: typedOp.name ?? "unnamed",
-      //   description: op.input.description,
-      // }).where(and(eq(searchTable.driveId, strand.driveId),
-      //       eq(searchTable.documentId, strand.documentId),
-      //     )
-      //   );
+      const fieldsToUpdate: Record<string, any> = {};
+      if ("name" in op.input) {
+        fieldsToUpdate.label = (op.input as UpdateNodeInput).name ?? "unnamed";
+      }
+      db.update(searchTable)
+        .set({
+          ...fieldsToUpdate,
+        })
+        .where(
+          and(
+            eq(searchTable.driveId, strand.driveId),
+            eq(searchTable.documentId, (op.input as UpdateNodeInput).id),
+            eq(searchTable.objectId, (op.input as UpdateNodeInput).id)
+          )
+        );
     } else if (op.type === "DELETE_NODE") {
       db.delete(searchTable).where(
         and(
           eq(searchTable.driveId, strand.driveId),
-          eq(searchTable.documentId, strand.documentId)
+          eq(searchTable.documentId, (op.input as DeleteNodeInput).id),
+          eq(searchTable.objectId, (op.input as DeleteNodeInput).id)
         )
       );
     }

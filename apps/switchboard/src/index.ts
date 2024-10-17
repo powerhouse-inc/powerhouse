@@ -7,7 +7,7 @@ import { drizzle } from "drizzle-orm/connect";
 import express from "express";
 import http from "http";
 import { addSubgraph, initReactorRouter } from "reactor-api";
-import { getSchema as getSearchSchema } from "./subgraphs/search/subgraph";
+import { getSchema as getSearchSchema } from "./subgraphs/general-document-indexer/subgraph";
 import { InternalListenerManager } from "./utils/internal-listener-manager";
 dotenv.config();
 
