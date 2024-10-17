@@ -922,6 +922,8 @@ export class BaseDocumentDriveServer
 
     await this._initializeDrive(id);
 
+    this.emit("driveAdded", document);
+
     return document;
   }
 
@@ -2312,7 +2314,6 @@ export class BaseDocumentDriveServer
     event: K,
     ...args: Parameters<DriveEvents[K]>
   ): void {
-    logger.debug(`Emitting event ${event}`, args);
     return this.emitter.emit(event, ...args);
   }
 }
