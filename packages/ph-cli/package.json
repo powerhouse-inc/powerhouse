@@ -30,6 +30,8 @@
   },
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/connect": "develop",
+    "colorette": "^2.0.20",
     "commander": "^12.1.0"
   }
 }
