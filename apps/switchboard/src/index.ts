@@ -39,20 +39,15 @@ const main = async () => {
     await listenerManager.init();
 
     // init router
-    await initReactorRouter("/graphql", app, driveServer);
+    await initReactorRouter("/", app, driveServer);
+    await addSubgraph({
+      name: "search/:drive",
+      getSchema: (driveServer) => getSearchSchema(driveServer),
+    });
 
     // start http server
     httpServer.listen({ port: serverPort }, () => {
       console.log(`Subgraph server listening on port ${serverPort}`);
-
-      // add example subgraph
-      addSubgraph(
-        {
-          name: ":drive/search",
-          getSchema: (driveServer) => getSearchSchema(driveServer),
-        },
-        driveServer
-      );
     });
   } catch (e) {
     console.error("App crashed", e);

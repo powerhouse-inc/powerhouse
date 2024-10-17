@@ -6,13 +6,12 @@ import {
 } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
 import * as searchListener from "../subgraphs/search/listener";
+import { Document } from "document-model/document";
 
 type InternalListenerModule = {
   name: string;
   options: Omit<Listener, "driveId">;
-  transmit: (
-    strands: InternalTransmitterUpdate<DocumentDriveDocument, "global">[]
-  ) => Promise<void>;
+  transmit: (strands: InternalTransmitterUpdate[]) => Promise<void>;
 };
 
 export class InternalListenerManager {
@@ -39,7 +38,7 @@ export class InternalListenerManager {
   }
 
   async #onDriveAdded(drive: DocumentDriveDocument) {
-    await Promise.all(
+    const listeners = await Promise.all(
       this.modules.map((module) =>
         this.driveServer.addInternalListener(
           drive.state.global.id,
@@ -55,10 +54,7 @@ export class InternalListenerManager {
       )
     );
 
-    console.log(
-      "listener added",
-      this.modules.map((module) => module.name)
-    );
+    console.log("listener added");
   }
 
   async init() {
@@ -88,12 +84,7 @@ export class InternalListenerManager {
           );
           if (transmitter instanceof InternalTransmitter) {
             transmitter.setReceiver({
-              transmit: async (
-                strands: InternalTransmitterUpdate<
-                  DocumentDriveDocument,
-                  "global"
-                >[]
-              ) => {
+              transmit: async (strands: InternalTransmitterUpdate[]) => {
                 await transmit(strands);
                 return Promise.resolve();
               },

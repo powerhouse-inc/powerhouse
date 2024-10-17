@@ -1,27 +1,31 @@
-import { PgDatabase } from "drizzle-orm/pg-core";
-import { getState } from "./listener";
-import { searchSchema } from "./db.schema";
 import { like, or } from "drizzle-orm";
+import { getDb } from "../../db";
+import { searchTable } from "./schema";
 
 export const resolvers = {
   Query: {
-    search: async (root, { query }, ctx) => {
-      console.log(root);
-      const db: PgDatabase = await getDb();
+    search: async (_: null, { query }: { query: string }) => {
+      const db = await getDb();
       const results = await db
         .select()
-        .from(searchSchema)
+        .from(searchTable)
         .where(
           or(
-            like(searchSchema.label, `%${query}%`),
-            like(searchSchema.description, `%${query}%`),
-            like(searchSchema.objectId, `%${query}%`),
-            like(searchSchema.driveId, `%${query}%`),
-            like(searchSchema.documentId, `%${query}%`)
+            like(searchTable.label, `%${query}%`),
+            like(searchTable.type, `%${query}%`),
+            like(searchTable.objectId, `%${query}%`),
+            like(searchTable.driveId, `%${query}%`),
+            like(searchTable.documentId, `%${query}%`)
           )
         );
 
-      return [...results];
+      return results.map((result) => ({
+        driveId: result.driveId,
+        documentId: result.documentId,
+        objectId: result.objectId,
+        label: result.label,
+        type: result.type,
+      }));
     },
   },
 };

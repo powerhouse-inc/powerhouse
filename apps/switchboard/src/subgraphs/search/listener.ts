@@ -3,14 +3,14 @@ import {
   Listener,
   OperationUpdate,
 } from "document-drive";
-import { DocumentDriveDocument } from "document-model-libs/document-drive";
 import {
-  CreateAccountInput,
-  DeleteAccountInput,
-  RealWorldAssetsDocument,
-  RealWorldAssetsState,
-} from "document-model-libs/real-world-assets";
-import { Document } from "document-model/document";
+  AddFileInput,
+  CopyNodeInput,
+} from "document-model-libs/document-drive";
+import { getDb } from "../../db";
+
+import { and, eq } from "drizzle-orm";
+import { searchTable } from "./schema";
 
 const logger = {
   info: (msg: string) => console.log(msg),
@@ -23,22 +23,17 @@ const logger = {
 export const options: Omit<Listener, "driveId"> = {
   listenerId: "search",
   filter: {
-    branch: ["main"],
+    branch: ["*"],
     documentId: ["*"],
-    documentType: ["makerdao/rwa-portfolio"],
+    documentType: ["*"],
     scope: ["*"],
   },
   block: false,
-  label: "real-world-assets",
+  label: "search-indexer",
   system: true,
 };
 
-export async function transmit(
-  strands: InternalTransmitterUpdate<
-    Document | DocumentDriveDocument,
-    "global"
-  >[]
-) {
+export async function transmit(strands: InternalTransmitterUpdate[]) {
   // logger.debug(strands);
   for (const strand of strands) {
     handleStrand(strand);
@@ -47,84 +42,69 @@ export async function transmit(
   return Promise.resolve();
 }
 
-function strandStartsFromOpZero(
-  strand: InternalTransmitterUpdate<
-    DocumentDriveDocument | RealWorldAssetsDocument,
-    "global"
-  >
-) {
-  const lastOperation = strand.operations[strand.operations.length - 1];
-  const firstOperation = strand.operations[0];
-  const resetNeeded =
-    firstOperation &&
-    (firstOperation.index === 0 ||
-      (lastOperation && lastOperation.index - lastOperation.skip === 0));
-  logger.debug(`Reset needed: ${resetNeeded}`);
-  return resetNeeded;
-}
-
-const listenerState = {
-  amountOfAccounts: 0,
-};
-
-function rebuildRwaPortfolio(
-  driveId: string,
-  documentId: string,
-  state: RealWorldAssetsState
-) {
-  const { accounts } = state;
-
-  listenerState.amountOfAccounts = accounts.length;
-}
-
-const surgicalOperations: Record<string, (input: any) => void> = {
-  CREATE_ACCOUNT: (input: CreateAccountInput) => {
-    logger.debug("Creating account");
-    listenerState.amountOfAccounts++;
-  },
-  DELETE_ACCOUNT: (input: DeleteAccountInput) => {
-    logger.debug("Deleting account");
-    listenerState.amountOfAccounts--;
-  },
-};
-
-function handleStrand(strand: InternalTransmitterUpdate<Document, "global">) {
+async function handleStrand(strand: InternalTransmitterUpdate) {
   logger.debug(
     `Received strand for document ${strand.documentId} with operations: ${strand.operations.map((op) => op.type).join(", ")}`
   );
 
-  if (
-    strandStartsFromOpZero(strand) ||
-    !allOperationsAreSurgical(strand, surgicalOperations)
-  ) {
-    rebuildRwaPortfolio(strand.driveId, strand.documentId, strand.state);
-    return;
+  const db = await getDb();
+  const firstOp = strand.operations[0];
+  if (firstOp?.index === 0) {
+    await db.delete(searchTable);
   }
 
-  for (const operation of strand.operations) {
-    doSurgicalRwaPortfolioUpdate(operation);
-  }
-}
+  // ADD_FILE COPY_NODE, UPDATE_NODE, DELETE_NODE
+  strand.operations.map(async (op: OperationUpdate) => {
+    // AddFileInput --> insert into db
+    if (op.type === "ADD_FILE") {
+      const result = await db.insert(searchTable).values({
+        driveId: strand.driveId,
+        documentId: (op.input as AddFileInput).id,
+        objectId: (op.input as AddFileInput).id,
+        label: (op.input as AddFileInput).name,
+        type: (op.input as AddFileInput).documentType,
+      });
+      console.log(result);
+    } else if (op.type === "COPY_NODE") {
+      const [file] = await db
+        .select()
+        .from(searchTable)
+        .where(
+          and(
+            eq(searchTable.driveId, strand.driveId),
+            eq(searchTable.documentId, strand.documentId)
+          )
+        );
 
-function doSurgicalRwaPortfolioUpdate(operation: OperationUpdate) {
-  logger.debug("Doing surgical rwa portfolio update");
-  surgicalOperations[operation.type]?.(operation.input);
-}
+      if (!file) {
+        return false;
+      }
 
-function allOperationsAreSurgical(
-  strand: InternalTransmitterUpdate<RealWorldAssetsDocument, "global">,
-  surgicalOperations: Record<
-    string,
-    (input: any, portfolio: RealWorldAssetsState) => void
-  >
-) {
-  const allOperationsAreSurgical =
-    strand.operations.filter((op) => surgicalOperations[op.type] === undefined)
-      .length === 0;
-  logger.debug(`All operations are surgical: ${allOperationsAreSurgical}`);
-  return allOperationsAreSurgical;
-}
+      return db.insert(searchTable).values({
+        driveId: strand.driveId,
+        documentId: strand.documentId,
+        objectId: (op.input as CopyNodeInput).targetId,
+        label: (op.input as CopyNodeInput).targetName ?? "unnamed",
+        type: file.type,
+      });
+    } else if (op.type === "UPDATE_NODE") {
+      console.log(op.input);
+      // const typedOp = op.input as UpdateNodeInput;
 
-export function getState() {
-  return listenerState;
+      // db.update(searchTable).set({
+      //   label: typedOp.name ?? "unnamed",
+      //   description: op.input.description,
+      // }).where(and(eq(searchTable.driveId, strand.driveId),
+      //       eq(searchTable.documentId, strand.documentId),
+      //     )
+      //   );
+    } else if (op.type === "DELETE_NODE") {
+      db.delete(searchTable).where(
+        and(
+          eq(searchTable.driveId, strand.driveId),
+          eq(searchTable.documentId, strand.documentId)
+        )
+      );
+    }
+  });
 }

@@ -7,6 +7,5 @@ type SearchResult {
   documentId: String!
   objectId: String!
   label: String!
-  description: String!
-  image: String!
+  type: String!
 }
