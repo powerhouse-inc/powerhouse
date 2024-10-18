@@ -2,13 +2,23 @@ import { Command } from "commander";
 import path from "path";
 import { spawn } from "child_process";
 import { green, red } from "colorette";
+import fs from "fs";
 
 import { CommandActionType } from "../types";
 
-export const dev: CommandActionType<[]> = () => {
-  const packagePath = require.resolve("@powerhousedao/connect/package.json");
-  const packageDir = path.dirname(packagePath);
-  const binPath = path.join(packageDir, "node_modules/.bin/connect");
+const CONNECT_BIN_PATH = "node_modules/.bin/connect";
+
+export const dev: CommandActionType<[{ projectPath?: string }]> = ({
+  projectPath,
+}) => {
+  let binPath = path.join(projectPath || ".", "node_modules/.bin/connect");
+
+  if (!fs.existsSync(binPath)) {
+    const packagePath = require.resolve("@powerhousedao/connect/package.json");
+    const packageDir = path.dirname(packagePath);
+
+    binPath = path.join(packageDir, CONNECT_BIN_PATH);
+  }
 
   const child = spawn(binPath);
 
@@ -27,5 +37,9 @@ export const dev: CommandActionType<[]> = () => {
 };
 
 export function devCommand(program: Command) {
-  program.command("dev").description("Starts dev environment").action(dev);
+  program
+    .command("dev")
+    .description("Starts dev environment")
+    .option("--project-path <type>", "path to the project")
+    .action(dev);
 }
