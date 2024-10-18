@@ -34,4 +34,4 @@ jobs:
               run: pnpm install --frozen-lockfile
 
             - name: Lint
-              run: npx nx run ph-cli:lint
+              run: npx nx run @powerhousedao/ph-cli:lint
