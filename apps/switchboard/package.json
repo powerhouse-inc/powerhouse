@@ -4,9 +4,6 @@
   "version": "2.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run dev:subgraphs & npm run dev:router",
-    "dev:subgraphs": "NODE_ENV=dev vite-node index.ts",
-    "dev:router": "rover dev --supergraph-config supergraph.yml --router-config router-config-dev.yml",
     "start": "vite-node src/index.ts",
     "codegen": "gql-gen --config codegen.yml"
   },
@@ -20,6 +17,7 @@
     "@electric-sql/pglite": "^0.2.12",
     "@heroicons/react": "^2.1.5",
     "@libsql/client": "^0.14.0",
+    "@powerhousedao/switchboard-gui": "workspace:*",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "document-drive": "workspace:*",

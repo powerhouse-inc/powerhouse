@@ -9,6 +9,7 @@ import http from "http";
 import { addSubgraph, initReactorRouter } from "reactor-api";
 import { getSchema as getSearchSchema } from "./subgraphs/general-document-indexer/subgraph";
 import { InternalListenerManager } from "./utils/internal-listener-manager";
+import path from "path";
 dotenv.config();
 
 // start document drive server with all available document models
@@ -40,10 +41,22 @@ const main = async () => {
 
     // init router
     await initReactorRouter("/", app, driveServer);
+
+    // add search subgraph @todo: automatically add all subgraphs
     await addSubgraph({
       name: "search/:drive",
       getSchema: (driveServer) => getSearchSchema(driveServer),
     });
+
+    // load switchboard-gui
+    app.use(
+      express.static(
+        path.join(
+          __dirname,
+          "../node_modules/@powerhousedao/switchboard-gui/dist"
+        )
+      )
+    );
 
     // start http server
     httpServer.listen({ port: serverPort }, () => {
