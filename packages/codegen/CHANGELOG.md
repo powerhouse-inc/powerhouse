@@ -1,3 +1,47 @@
+## 0.7.0 (2024-10-16)
+
+### 🚀 Features
+
+- **codegen:** improved package exports ([21059412](https://github.com/powerhouse-inc/powerhouse/commit/21059412))
+
+### 🩹 Fixes
+
+- **codegen:** export create-lib methods ([#403](https://github.com/powerhouse-inc/powerhouse/pull/403))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
+## 0.6.0 (2024-10-14)
+
+### 🚀 Features
+
+- **codegen:** bundle with tsup ([3cccbdf9](https://github.com/powerhouse-inc/powerhouse/commit/3cccbdf9))
+- **document-model-libs:** update codegen dependency ([f5330139](https://github.com/powerhouse-inc/powerhouse/commit/f5330139))
+
+### 🩹 Fixes
+
+- **document-model-libs:** added type annotation for createDocumentStory ([6c5441f3](https://github.com/powerhouse-inc/powerhouse/commit/6c5441f3))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+
+## 0.5.0 (2024-10-14)
+
+### 🚀 Features
+
+- added codegen build step ([66523278](https://github.com/powerhouse-inc/powerhouse/commit/66523278))
+- **scalars:** setup scalars project ([#370](https://github.com/powerhouse-inc/powerhouse/pull/370))
+- **design-system:** create icon components in prepare install of postinstall ([f302d65f](https://github.com/powerhouse-inc/powerhouse/commit/f302d65f))
+- **design-system:** improve bundle size and tree shaking support ([ffb68cfc](https://github.com/powerhouse-inc/powerhouse/commit/ffb68cfc))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 0.4.0 (2024-10-09)
 
 ### 🚀 Features

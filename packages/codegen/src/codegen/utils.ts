@@ -1,5 +1,5 @@
-import { DocumentModelState, utils, z } from "document-model/document-model";
-import fs from "fs";
+import { DocumentModelState, utils } from "document-model/document-model";
+import fs from "node:fs";
 
 export async function loadDocumentModel(
   path: string,
@@ -14,15 +14,13 @@ export async function loadDocumentModel(
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");
       const document = JSON.parse(data) as DocumentModelState;
-      // z.DocumentModelStateSchema().parse(document);
       documentModel = document;
     } else {
       throw new Error("File type not supported. Must be zip or json.");
     }
     return documentModel;
   } catch (error) {
-    // @ts-expect-error
-    throw error.code === "MODULE_NOT_FOUND"
+    throw (error as { code?: string }).code === "MODULE_NOT_FOUND"
       ? new Error(`Document model not found.`)
       : error;
   }

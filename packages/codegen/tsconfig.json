@@ -1,23 +1,28 @@
 {
-    "compilerOptions": {
-        "lib": ["es2017"],
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
-        "strict": true,
-        "rootDir": "./src",
-        "outDir": "./dist",
-        "composite": false,
-        "esModuleInterop": true,
-        "forceConsistentCasingInFileNames": true,
-        "inlineSources": false,
-        "isolatedModules": true,
-        "noUnusedLocals": false,
-        "noUnusedParameters": false,
-        "preserveWatchOutput": true,
-        "skipLibCheck": true,
-        "experimentalDecorators": true,
-        "declaration": true
-    },
-    "include": ["src/**/*.ts", "src/**/.hygen/**/*.ts", "reset.d.ts"],
-    "exclude": ["**/*.esm.t"]
+  "compilerOptions": {
+    "lib": ["es2017"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "outDir": "./dist",
+    "composite": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "isolatedModules": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "declaration": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/.hygen/**/*.ts",
+    "reset.d.ts",
+    "*.config.ts"
+  ],
+  "exclude": ["**/*.esm.t"]
 }

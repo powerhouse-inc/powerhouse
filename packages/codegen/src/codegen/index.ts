@@ -7,7 +7,7 @@ import {
 } from "./hygen";
 import { generateSchemas, generateSchema } from "./graphql";
 import type { PowerhouseConfig } from "../utils";
-import fs from "fs";
+import fs from "node:fs";
 import { join, resolve } from "path";
 import { paramCase, pascalCase } from "change-case";
 import { loadDocumentModel } from "./utils";
@@ -16,9 +16,9 @@ function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
     documentModel.specifications[documentModel.specifications.length - 1];
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!spec) {
-    console.log(`No spec found for ${documentModel.id}`);
-    return;
+    throw new Error(`No spec found for ${documentModel.id}`);
   }
 
   const {

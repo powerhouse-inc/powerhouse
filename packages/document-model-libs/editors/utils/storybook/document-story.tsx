@@ -9,6 +9,7 @@ import {
   Reducer,
   utils,
   Document,
+  PartialState,
 } from "document-model/document";
 import React, { useState } from "react";
 import { useDocumentReducer } from "../reducer";
@@ -38,9 +39,9 @@ export type DocumentStory<S, A extends Action, LocalState> = StoryObj<
 export function createDocumentStory<S, A extends Action, L = unknown>(
   Editor: EditorStoryComponent<S, A, L>,
   reducer: Reducer<S, A, L>,
-  initialState: ExtendedState<Partial<S>>,
+  initialState: ExtendedState<PartialState<S>, PartialState<L>>,
   additionalStoryArgs?: EditorStoryArgs,
-) {
+): { meta: Meta<typeof Editor>; CreateDocumentStory: DocumentStory<S, A, L> } {
   const meta = {
     component: Editor,
     decorators: [
@@ -145,7 +146,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
     },
   } satisfies Meta<typeof Editor>;
 
-  const CreateDocumentStory: DocumentStory<S, A, unknown> = {
+  const CreateDocumentStory: DocumentStory<S, A, L> = {
     name: "New document",
     args: {
       document: utils.createDocument(initialState),

@@ -1,5 +1,5 @@
 import { DocumentModel } from "document-model";
-import fs from "fs";
+import fs from "node:fs";
 import { Logger, runner } from "hygen";
 import path from "path";
 import { loadDocumentModel } from "./utils";
@@ -7,6 +7,7 @@ import { loadDocumentModel } from "./utils";
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, ".hygen", "templates");
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function run(args: string[], { watch = false, format = false } = {}) {
   const result = await runner(args, {
     templates: defaultTemplates,

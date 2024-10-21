@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.4.0",
+  "version": "0.7.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "main": "dist/index.js",
@@ -12,16 +12,23 @@
   "files": [
     "/dist"
   ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./graphql": "./dist/codegen/graphql.js",
+    "./hygen": "./dist/codegen/hygen.js",
+    "./create-lib": "./dist/create-lib/index.js",
+    "./utils": "./dist/utils/index.js"
+  },
   "scripts": {
     "check-types": "tsc --noEmit",
     "postlint": "npm run check-types",
     "lint": "eslint",
     "clean": "rimraf dist/",
     "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
-    "build": "npm run clean && npm run copy-files",
-    "prepublishOnly": "yarn build",
+    "build": "tsup",
+    "prepublishOnly": "npm run build",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
-    "publish:create-lib": "yarn publish --cwd ./src/create-lib/",
+    "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "ts-node src/cli.ts",
     "clean:node_modules": "rimraf node_modules"
   },
@@ -44,7 +51,8 @@
     "graphql": "^16.8.1",
     "husky": "^8.0.3",
     "rimraf": "^5.0.5",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "tsup": "^8.3.0"
   },
   "peerDependencies": {
     "graphql": "^16.8.1"
