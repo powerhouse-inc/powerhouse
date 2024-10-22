@@ -1,6 +1,7 @@
 import type { ExtendedEditor } from 'document-model-libs';
 import { atom, useAtomValue } from 'jotai';
 import { unwrap } from 'jotai/utils';
+import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
 
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 
@@ -44,7 +45,19 @@ export const useUnwrappedEditors = () => {
 
 export const useEditorsAsync = () => editorsPromise;
 
-const getEditor = (documentType: string, editors: ExtendedEditor[]) => {
+const getEditor = (
+    documentType: string,
+    editors: ExtendedEditor[],
+    preferredEditorId?: string,
+) => {
+    const preferredEditor = editors.find(
+        e =>
+            e.config?.id === preferredEditorId &&
+            e.documentTypes.includes(documentType),
+    );
+
+    if (preferredEditor) return preferredEditor;
+
     const editor =
         editors.find(e => e.documentTypes.includes(documentType)) ||
         editors.find(e => e.documentTypes.includes('*'));
@@ -62,8 +75,12 @@ export const useEditor = (documentType: string) => {
 
 export const useGetEditor = () => {
     const editors = useUnwrappedEditors();
+    const [defaultDocumentModelEditor] = useDefaultDocumentModelEditor();
+
     return (documentType: string) =>
-        editors ? getEditor(documentType, editors) : undefined;
+        editors
+            ? getEditor(documentType, editors, defaultDocumentModelEditor.value)
+            : undefined;
 };
 
 export const usePreloadEditor = () => {
