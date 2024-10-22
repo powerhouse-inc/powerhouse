@@ -1,0 +1,37 @@
+name: Check PR ph-cli
+
+on:
+    workflow_dispatch:
+    push:
+        branches: ['main']
+        paths:
+            - 'packages/ph-cli/**'
+    pull_request:
+        branches: ['main']
+        paths:
+            - 'packages/ph-cli/**'
+        types: [opened, synchronize]
+
+env:
+  NX_ISOLATE_PLUGINS: false
+
+jobs:
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        container: node:22
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install PNPM
+              uses: pnpm/action-setup@v3
+              with:
+                  version: latest-8
+                  run_install: false
+
+            - name: Install Dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Lint
+              run: npx nx run @powerhousedao/ph-cli:lint

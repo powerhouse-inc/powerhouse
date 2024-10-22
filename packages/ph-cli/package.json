@@ -1,0 +1,41 @@
+{
+  "name": "@powerhousedao/ph-cli",
+  "version": "0.2.1",
+  "description": "",
+  "license": "AGPL-3.0-only",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "ph": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "ts-node src/cli.ts",
+    "prepublishOnly": "npm run build",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "tsup": "^8.3.0"
+  },
+  "dependencies": {
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/connect": "develop",
+    "colorette": "^2.0.20",
+    "commander": "^12.1.0",
+    "graphql": "^16.8.1"
+  },
+  "resolutions": {
+    "graphql": "^16.8.1"
+  }
+}
