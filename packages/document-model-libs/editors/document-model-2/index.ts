@@ -12,9 +12,9 @@ export const module: ExtendedEditor<
   DocumentModelLocalState
 > = {
   Component: lazyWithPreload(() => import("./editor")),
-  documentTypes: ["powerhouse/document-model-2"],
+  documentTypes: ["powerhouse/document-model"],
   config: {
-    id: "document-model-editor-2",
+    id: "document-model-editor",
     disableExternalControls: false,
   },
 };
