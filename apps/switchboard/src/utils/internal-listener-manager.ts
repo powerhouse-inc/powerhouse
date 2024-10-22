@@ -26,15 +26,7 @@ export class InternalListenerManager {
 
   constructor(driveServer: BaseDocumentDriveServer) {
     this.driveServer = driveServer;
-    driveServer.on("documentModels", (documentModels) => {
-      console.log("documentModels", documentModels);
-    });
-
     driveServer.on("driveAdded", this.#onDriveAdded.bind(this));
-
-    driveServer.on("driveDeleted", (driveId) => {
-      console.log("driveRemoved", driveId);
-    });
   }
 
   async #onDriveAdded(drive: DocumentDriveDocument) {
@@ -45,7 +37,6 @@ export class InternalListenerManager {
           {
             transmit: module.transmit,
             disconnect: async () => {
-              console.log("disconnect", drive.state.global.id);
               return Promise.resolve();
             },
           },
@@ -53,8 +44,6 @@ export class InternalListenerManager {
         )
       )
     );
-
-    console.log("listener added");
   }
 
   async init() {

@@ -102,7 +102,6 @@ export const getSessionByToken = async (
   origin?: string,
   token?: string
 ) => {
-  console.log("token", db);
   if (!token) {
     throw new GraphQLError("Not authenticated", {
       extensions: { code: "NOT_AUTHENTICATED" },

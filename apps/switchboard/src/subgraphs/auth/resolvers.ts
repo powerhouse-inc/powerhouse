@@ -5,7 +5,6 @@ import { DrizzleD1Database } from "drizzle-orm/d1";
 import { GraphQLError } from "graphql";
 import { SiweMessage } from "siwe";
 import { URL } from "url";
-import { Context } from "../../types";
 import { getDb } from "../../db";
 import { generateTokenAndSession } from "./helpers";
 import { challengeTable, sessionTable } from "./schema";
@@ -16,6 +15,7 @@ import {
   verifySignature,
 } from "./utils/session";
 import { getUser, upsertUser } from "./utils/user";
+import { Context } from "../../../types";
 
 const textToHex = (textMessage: string) =>
   `0x${Buffer.from(textMessage, "utf8").toString("hex")}`;
@@ -30,15 +30,12 @@ export const resolvers = {
     },
     sessions: async (_: unknown, __: unknown, ctx: Context) => {
       const session = await authenticate(ctx);
-      console.log("sessions", session);
       const db = await getDb();
       const sessions = await db
         .select()
         .from(sessionTable)
         .where(eq(sessionTable.createdBy, session.createdBy))
         .orderBy(desc(sessionTable.createdAt));
-
-      console.log(sessions);
       return sessions;
     },
   },

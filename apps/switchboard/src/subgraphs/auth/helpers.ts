@@ -29,7 +29,6 @@ const generateToken = (
     return jwt.sign({ sessionId }, JWT_SECRET);
   }
 
-  console.log("expiryDurationSeconds", expiryDurationSeconds);
   const expiresIn = expiryDurationSeconds
     ? ms(expiryDurationSeconds * 1000)
     : (JWT_EXPIRATION_PERIOD ?? 3600);

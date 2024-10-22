@@ -66,7 +66,6 @@ async function handleStrand(strand: InternalTransmitterUpdate) {
         label: (op.input as AddFileInput).name,
         type: (op.input as AddFileInput).documentType,
       });
-      console.log(result);
     } else if (op.type === "COPY_NODE") {
       const [file] = await db
         .select()
@@ -90,7 +89,6 @@ async function handleStrand(strand: InternalTransmitterUpdate) {
         type: file.type,
       });
     } else if (op.type === "UPDATE_NODE") {
-      console.log(op.input);
       // const typedOp = op.input as UpdateNodeInput;
       const fieldsToUpdate: Record<string, any> = {};
       if ("name" in op.input) {

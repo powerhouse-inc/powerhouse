@@ -154,8 +154,8 @@ const useAuth = () => {
         return;
       }
 
-      setAddress(data.system.auth.me.address);
-      setSessions(data.system.auth.sessions);
+      setAddress(data.me.address);
+      setSessions(data.sessions);
     } catch (e) {
       setAddress("");
       setSessions([]);
@@ -227,7 +227,6 @@ const useAuth = () => {
   };
 
   const signIn = async () => {
-    console.log("test");
     const address = await connectWallet();
 
     const { nonce, message } = await createChallenge(address);
