@@ -1,3 +1,10 @@
+# [1.0.0-dev.145](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.144...v1.0.0-dev.145) (2024-10-22)
+
+
+### Features
+
+* update document-model editor ([072aca3](https://github.com/powerhouse-inc/document-model-electron/commit/072aca35f3e7be3312dbe541aa8607e4003eec0a))
+
 # [1.0.0-dev.144](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.143...v1.0.0-dev.144) (2024-10-16)
 
 
