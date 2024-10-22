@@ -18,11 +18,12 @@ import { AuthorSchema } from "../../schemas/document-model";
 import { useDocumentModel } from "../../context/DocumentModelContext";
 import { useFormManager } from "../../context/FormManager";
 import { getDifferences } from "../../lib/diff";
+import { NoWhitespaceSchema } from "../../schemas";
 
 export const CreateMetadataFormSchema = z.object({
   name: z.string(),
   extension: EmptyStringSchema,
-  documentType: z.string().default("powerhouse/document-model"),
+  documentType: NoWhitespaceSchema,
   author: AuthorSchema,
 });
 
@@ -43,7 +44,7 @@ export function ModelMetadataForm() {
     ? getDocumentMetadata(document)
     : {
         name: "",
-        documentType: "powerhouse/document-model",
+        documentType: "",
         extension: "",
         author: {
           name: "",
@@ -62,12 +63,21 @@ export function ModelMetadataForm() {
       ? getDifferences(getDocumentMetadata(document), values)
       : values;
 
-    const { name, extension, author } = diff;
-    const { setModelName, setModelExtension, setAuthorName, setAuthorWebsite } =
-      handlers;
+    const { name, extension, author, documentType } = diff;
+    const {
+      setModelName,
+      setModelId,
+      setModelExtension,
+      setAuthorName,
+      setAuthorWebsite,
+    } = handlers;
 
     if (name) {
       setModelName(name);
+    }
+
+    if (documentType) {
+      setModelId(documentType);
     }
 
     if (extension) {
@@ -117,7 +127,7 @@ export function ModelMetadataForm() {
             <FormItem>
               <FormLabel>Document Type</FormLabel>
               <FormControl>
-                <Input placeholder="MyDocument" {...field} />
+                <Input placeholder="powerhouse/my-document-model" {...field} />
               </FormControl>
               <FormDescription>
                 The type name for your new Document Model.
