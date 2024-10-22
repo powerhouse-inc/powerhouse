@@ -1,3 +1,10 @@
+# [1.0.0-dev.146](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.145...v1.0.0-dev.146) (2024-10-22)
+
+
+### Features
+
+* **connect:** added default document-model editor selector ([66db019](https://github.com/powerhouse-inc/document-model-electron/commit/66db0191bc30a31f39c0c59c4e17b988b28481f1))
+
 # [1.0.0-dev.145](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.144...v1.0.0-dev.145) (2024-10-22)
 
 
