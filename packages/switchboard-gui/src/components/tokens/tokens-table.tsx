@@ -1,4 +1,4 @@
-import useAuth, { Session, authStore } from "@/hooks/useAuth";
+import useAuth, { authStore } from "../../hooks/useAuth";
 
 export const TokensTable = () => {
     const { revokeSession } = useAuth();

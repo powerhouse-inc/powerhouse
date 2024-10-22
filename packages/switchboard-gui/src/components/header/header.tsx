@@ -1,38 +1,37 @@
 "use client";
-import Image from "next/image";
 import SwitchboardLink from "../text/Link";
-import useAuth, { authStore } from "@/hooks/useAuth";
-import { useRouter } from "next/navigation";
+import useAuth, { authStore } from "../../hooks/useAuth";
 import { UserCircleIcon } from "@heroicons/react/24/solid";
-import Link from "next/link";
+import Link from "../text/Link";
 import { useEffect, useState } from "react";
-import logo from "../../../public/assets/logo.svg";
-import github from "../../../public/assets/github.svg";
+import logo from "../../assets/logo.svg";
+import github from "../../assets/github.svg";
+import { route } from 'preact-router';
+
 export default function Header() {
   const address = authStore((state) => state.address);
   const gqlToken = authStore((state) => state.gqlToken);
   const auth = useAuth();
-  const router = useRouter();
 
   const [drives, setDrives] = useState([]);
 
   useEffect(() => {
-    if (!gqlToken) {
-      return;
-    }
     auth.checkAuthValidity();
     auth.getDrives().then((drives) => {
       setDrives(drives);
     });
-  }, [gqlToken]);
+  }, [gqlToken, address]);
 
   const selectGraphQLPlayground = (e: React.ChangeEvent<HTMLSelectElement>) => {
     e.preventDefault();
-    const drive = e.target.value;
+    if (!e.target) {
+      return;
+    }
+    const { value: drive } = e.target as HTMLInputElement;
     if (drive === "system") {
-      router.push(`/graphql`);
+      route(`/graphql`);
     } else if (drive !== "") {
-      router.push(`/graphql/${drive}`);
+      route(`/graphql/${drive}`);
     }
   };
   return (
@@ -41,7 +40,7 @@ export default function Header() {
         <div className="flex items-start">
           <SwitchboardLink href="/">
             <div className="flex flex-row items-center">
-              <Image
+              <img
                 src={logo}
                 alt="Switchboard Logo"
                 className="w-10"
@@ -94,7 +93,7 @@ export default function Header() {
               href="https://github.com/powerhouse-inc/switchboard-boilerplate"
               target="_blank"
             >
-              <Image src={github} alt="GitHub" width="32" height="32" />
+              <img src={github} alt="GitHub" width="32" height="32" />
             </Link>
           </div>
         </div>

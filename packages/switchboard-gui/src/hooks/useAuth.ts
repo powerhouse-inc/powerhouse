@@ -1,23 +1,27 @@
-"use client"
-import { jwtDecode } from 'jwt-decode'
-import useWallet from './useWallet'
-import { create } from 'zustand';
-import { ApolloClient, InMemoryCache, createHttpLink, gql } from '@apollo/client';
-import { useEffect } from 'react';
-import { setContext } from '@apollo/client/link/context';
-import { env } from 'next-runtime-env';
-
+"use client";
+import { jwtDecode } from "jwt-decode";
+import useWallet from "./useWallet";
+import { create } from "zustand";
+import {
+  ApolloClient,
+  InMemoryCache,
+  createHttpLink,
+  gql,
+} from "@apollo/client";
+import { useEffect } from "react";
+import { setContext } from "@apollo/client/link/context";
+// import { env } from '../../env';
 
 export interface Session {
-  id: string
-  createdAt: Date
-  createdBy: string
-  referenceExpiryDate?: Date
-  referenceTokenId?: string
-  isUserCreated?: boolean
-  name?: string
-  revokedAt?: Date
-  allowedOrigins?: string
+  id: string;
+  createdAt: Date;
+  createdBy: string;
+  referenceExpiryDate?: Date;
+  referenceTokenId?: string;
+  isUserCreated?: boolean;
+  name?: string;
+  revokedAt?: Date;
+  allowedOrigins?: string;
 }
 
 interface AuthStore {
@@ -33,47 +37,52 @@ interface AuthStore {
   setSessions: (sessions: Session[]) => void;
 }
 
-export const authStore = create<AuthStore>((set, get) => ({
+export const authStore = create<AuthStore>((set) => ({
   gqlToken: undefined,
   isLoading: true,
   address: "",
   isAuthorized: false,
   sessions: [],
   setGqlToken: (token: string | undefined) => {
-    set(state => ({ ...state, gqlToken: token }))
+    set((state) => ({ ...state, gqlToken: token }));
   },
   setIsLoading: (loading: boolean) => {
-    set(state => ({ ...state, isLoading: loading }))
+    set((state) => ({ ...state, isLoading: loading }));
   },
   setAddress: (address: string) => {
-    set(state => ({ ...state, address }))
+    set((state) => ({ ...state, address }));
   },
   setIsAuthorized: (isAuthorized: boolean) => {
-    set(state => ({ ...state, isAuthorized }))
+    set((state) => ({ ...state, isAuthorized }));
   },
   setSessions: (sessions: Session[]) => {
-    set(state => ({ ...state, sessions }))
+    set((state) => ({ ...state, sessions }));
   },
 }));
 
-
 const useAuth = () => {
-
   const { connectWallet, signMessage } = useWallet();
-  const { gqlToken, setGqlToken, setIsLoading, setAddress, setIsAuthorized, setSessions } = authStore();
+  const {
+    gqlToken,
+    setGqlToken,
+    setIsLoading,
+    setAddress,
+    setIsAuthorized,
+    setSessions,
+  } = authStore();
   useEffect(() => {
-    const localToken = localStorage.getItem('token');
+    const localToken = localStorage.getItem("token");
     if (localToken && !gqlToken) {
       setGqlToken(localToken);
     }
   }, []);
 
-  const NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST = env(
-    "NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST"
-  );
+  // const NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST = env(
+  //   "NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST"
+  // );
 
   const httpLink = createHttpLink({
-    uri: NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST + '/drives',
+    uri: "/system",
   });
 
   const authLink = setContext((_, { headers }) => {
@@ -81,17 +90,26 @@ const useAuth = () => {
       headers: {
         ...headers,
         authorization: gqlToken ? `Bearer ${gqlToken}` : "",
-      }
-    }
+      },
+    };
+  });
+
+  const systemClient = new ApolloClient({
+    link: httpLink,
+    cache: new InMemoryCache(),
+  });
+
+  const authHttpLink = createHttpLink({
+    uri: "/auth",
   });
 
   const client = new ApolloClient({
-    link: authLink.concat(httpLink),
+    link: authLink.concat(authHttpLink),
     cache: new InMemoryCache(),
   });
 
   const getDrives = async () => {
-    const { data, errors } = await client.query({
+    const { data, errors } = await systemClient.query({
       query: gql`
         query {
           drives
@@ -104,32 +122,28 @@ const useAuth = () => {
     }
 
     return data.drives;
-  }
+  };
 
   const checkAuthValidity = async () => {
     try {
       const { data, errors } = await client.query({
         query: gql`
-            query {
-              system {
-                auth {
-                  me {
-                    address
-                  }
-                  sessions {
-                    id
-                    createdAt
-                    createdBy
-                    referenceExpiryDate
-                    referenceTokenId
-                    isUserCreated
-                    name
-                    revokedAt
-                    allowedOrigins
-                  }
-                }
-              }
+          query {
+            me {
+              address
             }
+            sessions {
+              id
+              createdAt
+              createdBy
+              referenceExpiryDate
+              referenceTokenId
+              isUserCreated
+              name
+              revokedAt
+              allowedOrigins
+            }
+          }
         `,
       });
 
@@ -140,8 +154,8 @@ const useAuth = () => {
         return;
       }
 
-      setAddress(data.system.auth.me.address);
-      setSessions(data.system.auth.sessions);
+      setAddress(data.me.address);
+      setSessions(data.sessions);
     } catch (e) {
       setAddress("");
       setSessions([]);
@@ -151,7 +165,9 @@ const useAuth = () => {
   };
 
   const createChallenge = async (address: string) => {
-    const { data, errors } = await client.mutate({ mutation: gql`mutation { createChallenge(address: "${address}") { nonce, message } }` });
+    const { data, errors } = await client.mutate({
+      mutation: gql`mutation { createChallenge(address: "${address}") { nonce, message } }`,
+    });
 
     if (errors) {
       throw new Error(errors[0].message);
@@ -161,7 +177,9 @@ const useAuth = () => {
   };
 
   const solveChallenge = async (nonce: string, signature: string) => {
-    const { data, errors } = await client.mutate({ mutation: gql`mutation { solveChallenge(nonce: "${nonce}", signature: "${signature}") { token } }` });
+    const { data, errors } = await client.mutate({
+      mutation: gql`mutation { solveChallenge(nonce: "${nonce}", signature: "${signature}") { token } }`,
+    });
 
     if (errors) {
       throw new Error(errors[0].message);
@@ -170,8 +188,14 @@ const useAuth = () => {
     return data.solveChallenge.token;
   };
 
-  const createSession = async (name: string, expiryDurationSeconds: number | null, allowedOrigins: string): Promise<string> => {
-    const { data, errors } = await client.mutate({ mutation: gql`mutation { createSession(session: {name: "${name}", expiryDurationSeconds: ${expiryDurationSeconds}, allowedOrigins: "${allowedOrigins}"}) { token } }` });
+  const createSession = async (
+    name: string,
+    expiryDurationSeconds: number | null,
+    allowedOrigins: string
+  ): Promise<string> => {
+    const { data, errors } = await client.mutate({
+      mutation: gql`mutation { createSession(session: {name: "${name}", expiryDurationSeconds: ${expiryDurationSeconds}, allowedOrigins: "${allowedOrigins}"}) { token } }`,
+    });
 
     if (errors) {
       throw new Error(errors[0].message);
@@ -179,17 +203,19 @@ const useAuth = () => {
 
     checkAuthValidity();
     return data.createSession.token as string;
-  }
+  };
 
   const revokeSession = async (sessionId: string) => {
-    const { data, errors } = await client.mutate({ mutation: gql`mutation { revokeSession(sessionId: "${sessionId}") { id } }` });
+    const { data, errors } = await client.mutate({
+      mutation: gql`mutation { revokeSession(sessionId: "${sessionId}") { id } }`,
+    });
 
     if (errors) {
       throw new Error(errors[0].message);
     }
 
     if (gqlToken) {
-      const payload = jwtDecode(gqlToken) as { sessionId?: string } | undefined
+      const payload = jwtDecode(gqlToken) as { sessionId?: string } | undefined;
       if (sessionId === payload?.sessionId) {
         setGqlToken(undefined);
         setAddress("");
@@ -197,38 +223,41 @@ const useAuth = () => {
       }
     }
     checkAuthValidity();
-    return data.value?.revokeSession?.referenceTokenId
-  }
-
-
+    return data.value?.revokeSession?.referenceTokenId;
+  };
 
   const signIn = async () => {
+    const address = await connectWallet();
 
-    const address = await connectWallet()
+    const { nonce, message } = await createChallenge(address);
+    const signature = await signMessage(message);
 
-    const { nonce, message } = await createChallenge(address)
-    const signature = await signMessage(message)
-
-    const token = await solveChallenge(nonce, signature)
-    localStorage.setItem('token', token);
-    setGqlToken(token)
-    setIsAuthorized(true)
-  }
-
+    const token = await solveChallenge(nonce, signature);
+    localStorage.setItem("token", token);
+    setGqlToken(token);
+    setIsAuthorized(true);
+  };
 
   const signOut = async () => {
     if (!gqlToken) {
-      throw new Error('No user token provided')
+      throw new Error("No user token provided");
     }
-    const payload = jwtDecode(gqlToken) as { sessionId?: string } | undefined
+    const payload = jwtDecode(gqlToken) as { sessionId?: string } | undefined;
     if (!payload || !payload.sessionId) {
-      throw new Error('Token has invalid format')
+      throw new Error("Token has invalid format");
     }
-    await revokeSession(payload.sessionId)
-    localStorage.removeItem('token');
-  }
+    await revokeSession(payload.sessionId);
+    localStorage.removeItem("token");
+  };
 
-  return { checkAuthValidity, signIn, signOut, createSession, revokeSession, getDrives }
-}
+  return {
+    checkAuthValidity,
+    signIn,
+    signOut,
+    createSession,
+    revokeSession,
+    getDrives,
+  };
+};
 
-export default useAuth
+export default useAuth;

@@ -1,8 +1,4 @@
-import { useSearchParams } from "next/navigation";
-
-export default function GraphQLIframe({ url }: { url: string }) {
-  const searchParams = useSearchParams();
-  const query = searchParams?.get("query");
+export default function GraphQLIframe({ url, query }: { url: string, query?: string }) {
   return (
     <iframe
       src={`${url}${query ? "?query=" + encodeURIComponent(query) : ""}`}

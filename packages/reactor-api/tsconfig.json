@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "esnext",
+    "types": ["node", "./types.d.ts"],
+    "declaration": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "emitDeclarationOnly": true,
+    "baseUrl": "."
+  },
+  "include": ["src/**/*", "*.config.ts"]
+}
