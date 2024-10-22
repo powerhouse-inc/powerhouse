@@ -1,6 +1,7 @@
 import {
     Button,
     ClearStorageSettingsRow,
+    Combobox,
     SettingsModal as ConnectSettingsModal,
     DependencyVersions,
     DocumentSelectSettingsRow,
@@ -10,6 +11,8 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
+import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
+import { DefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor/atom';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
 import { useLogin } from 'src/hooks/useLogin';
@@ -43,6 +46,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
     const { setConfig } = useFeatureFlag();
     const { showModal } = useModal();
     const [connectConfig] = useConnectConfig();
+    const [documentModelEditor, setDocumentModelEditor] =
+        useDefaultDocumentModelEditor();
     const [selectedDocuments, setSelectedDocuments] = useState(
         mapDocumentModelsToOptions(enabledDocuments),
     );
@@ -138,6 +143,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                     'modals.connectSettings.clearStorage.description',
                 )}
             />
+            <div>
+                <label
+                    htmlFor="default-document-model-editor"
+                    className="text-sm"
+                >
+                    Default Document Model Editor:
+                </label>
+                <Combobox
+                    id="default-document-model-editor"
+                    value={documentModelEditor}
+                    onChange={value =>
+                        setDocumentModelEditor(
+                            value as DefaultDocumentModelEditor,
+                        )
+                    }
+                    options={[
+                        { label: 'V1', value: 'document-model-editor' },
+                        { label: 'V2', value: 'document-model-editor-v2' },
+                    ]}
+                />
+            </div>
             <DependencyVersions packageJson={packageJson} />
         </ConnectSettingsModal>
     );
