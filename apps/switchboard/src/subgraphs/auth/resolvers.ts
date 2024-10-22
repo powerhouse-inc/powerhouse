@@ -1,10 +1,9 @@
 import { randomUUID } from "crypto";
-import { logger } from "document-drive/logger";
-import { and, desc, eq, SQL, sql } from "drizzle-orm";
-import { DrizzleD1Database } from "drizzle-orm/d1";
+import { and, desc, eq } from "drizzle-orm";
 import { GraphQLError } from "graphql";
 import { SiweMessage } from "siwe";
 import { URL } from "url";
+import { Context } from "../../../types";
 import { getDb } from "../../db";
 import { generateTokenAndSession } from "./helpers";
 import { challengeTable, sessionTable } from "./schema";
@@ -15,7 +14,6 @@ import {
   verifySignature,
 } from "./utils/session";
 import { getUser, upsertUser } from "./utils/user";
-import { Context } from "../../../types";
 
 const textToHex = (textMessage: string) =>
   `0x${Buffer.from(textMessage, "utf8").toString("hex")}`;
@@ -48,8 +46,6 @@ export const resolvers = {
       const db = await getDb();
       const { API_ORIGIN } = process.env;
 
-      logger.debug("createChallenge: received", address);
-
       const origin = API_ORIGIN ?? "http://localhost:3000";
       const domain = URL.parse(origin)?.hostname;
 
@@ -67,7 +63,6 @@ export const resolvers = {
         chainId: 1,
       }).prepareMessage();
       const hexMessage = textToHex(message);
-      logger.debug("createChallenge: created message", message, hexMessage);
 
       await db
         .insert(challengeTable)
@@ -91,7 +86,6 @@ export const resolvers = {
           .select()
           .from(challengeTable)
           .where(eq(challengeTable.nonce, nonce));
-        logger.debug("solveChallenge: found challenge", challenge);
 
         // check that challenge with this nonce exists
         if (!challenge) {

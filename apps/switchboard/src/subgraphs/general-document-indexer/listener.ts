@@ -36,7 +36,6 @@ export const options: Omit<Listener, "driveId"> = {
 };
 
 export async function transmit(strands: InternalTransmitterUpdate[]) {
-  // logger.debug(strands);
   for (const strand of strands) {
     handleStrand(strand);
   }

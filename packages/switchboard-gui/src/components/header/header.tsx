@@ -16,14 +16,11 @@ export default function Header() {
   const [drives, setDrives] = useState([]);
 
   useEffect(() => {
-    if (!gqlToken) {
-      return;
-    }
     auth.checkAuthValidity();
     auth.getDrives().then((drives) => {
       setDrives(drives);
     });
-  }, [gqlToken]);
+  }, [gqlToken, address]);
 
   const selectGraphQLPlayground = (e: React.ChangeEvent<HTMLSelectElement>) => {
     e.preventDefault();
