@@ -4,8 +4,8 @@ import useAuth, { authStore } from "../../hooks/useAuth";
 import { UserCircleIcon } from "@heroicons/react/24/solid";
 import Link from "../text/Link";
 import { useEffect, useState } from "react";
-import logo from "../../../public/assets/logo.svg";
-import github from "../../../public/assets/github.svg";
+import logo from "../../assets/logo.svg";
+import github from "../../assets/github.svg";
 import { route } from 'preact-router';
 
 export default function Header() {

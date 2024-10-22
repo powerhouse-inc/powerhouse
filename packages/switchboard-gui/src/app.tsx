@@ -1,5 +1,4 @@
 import { Route, Router } from 'preact-router';
-import './app.css';
 import Home from './app/home';
 import User from './app/user';
 import GraphQL from './app/graphql';
