@@ -48,6 +48,7 @@ export function getMinimalValue(type: GraphQLType, schema: GraphQLSchema) {
   }
 
   if (isEnumType(nullableType)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return nullableType.getValues()[0]?.value || null;
   }
 
@@ -60,6 +61,7 @@ export function getMinimalValue(type: GraphQLType, schema: GraphQLSchema) {
     const fields = nullableType.getFields();
     for (const fieldName in fields) {
       const field = fields[fieldName];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       result[fieldName] = getMinimalValue(field.type, schema);
     }
     return result;
@@ -78,6 +80,7 @@ export function generateMinimalObject(schema: GraphQLSchema, typeName: string) {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return getMinimalValue(type, schema);
 }
 
