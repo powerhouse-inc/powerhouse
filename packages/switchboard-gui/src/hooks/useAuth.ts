@@ -82,7 +82,7 @@ const useAuth = () => {
   // );
 
   const httpLink = createHttpLink({
-    uri: "/drives",
+    uri: "/system",
   });
 
   const authLink = setContext((_, { headers }) => {
@@ -94,13 +94,22 @@ const useAuth = () => {
     };
   });
 
+  const systemClient = new ApolloClient({
+    link: httpLink,
+    cache: new InMemoryCache(),
+  });
+
+  const authHttpLink = createHttpLink({
+    uri: "/auth",
+  });
+
   const client = new ApolloClient({
-    link: authLink.concat(httpLink),
+    link: authLink.concat(authHttpLink),
     cache: new InMemoryCache(),
   });
 
   const getDrives = async () => {
-    const { data, errors } = await client.query({
+    const { data, errors } = await systemClient.query({
       query: gql`
         query {
           drives
@@ -222,6 +231,7 @@ const useAuth = () => {
   };
 
   const signIn = async () => {
+    console.log("test");
     const address = await connectWallet();
 
     const { nonce, message } = await createChallenge(address);

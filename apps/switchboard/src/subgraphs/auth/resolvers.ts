@@ -6,6 +6,7 @@ import { GraphQLError } from "graphql";
 import { SiweMessage } from "siwe";
 import { URL } from "url";
 import { Context } from "../../types";
+import { getDb } from "../../db";
 import { generateTokenAndSession } from "./helpers";
 import { challengeTable, sessionTable } from "./schema";
 import { SessionInput } from "./types";
@@ -25,7 +26,7 @@ export const resolvers = {
       const session = await authenticate(ctx);
       const user = await getUser(
         ctx.db as DrizzleD1Database,
-        session.createdBy,
+        session.createdBy
       );
       return user;
     },
@@ -34,9 +35,9 @@ export const resolvers = {
     createChallenge: async (
       _: unknown,
       { address }: { address: string },
-      ctx: Context,
+      ctx: Context
     ) => {
-      const { db } = ctx;
+      const db = await getDb();
       const { API_ORIGIN } = process.env;
 
       logger.debug("createChallenge: received", address);
@@ -74,9 +75,9 @@ export const resolvers = {
     solveChallenge: async (
       _: unknown,
       { nonce, signature }: { nonce: string; signature: string },
-      ctx: Context,
+      ctx: Context
     ) => {
-      const { db } = ctx;
+      const db = await getDb();
       return db.transaction(async (tx) => {
         const [challenge] = await tx
           .select()
@@ -123,7 +124,7 @@ export const resolvers = {
 
         const tokenAndSession = await createAuthenticationSession(
           db as DrizzleD1Database,
-          user.address,
+          user.address
         );
 
         return tokenAndSession;
@@ -132,31 +133,31 @@ export const resolvers = {
     createSession: async (
       _: unknown,
       { session }: { session: SessionInput },
-      ctx: Context,
+      ctx: Context
     ) => {
-      const { db } = ctx;
+      const db = await getDb();
       const sessionAuth = await authenticate(ctx);
       return generateTokenAndSession(
         db as DrizzleD1Database,
         session,
         sessionAuth.createdBy,
-        sessionAuth.isUserCreated,
+        sessionAuth.isUserCreated
       );
     },
     revokeSession: async (
       _: unknown,
       { sessionId, userId }: { sessionId: string; userId: string },
-      ctx: Context,
+      ctx: Context
     ): Promise<boolean> => {
-      const { db } = ctx;
+      const db = await getDb();
       const [session] = await db
         .select()
         .from(sessionTable)
         .where(
           and(
             eq(sessionTable.id, sessionId),
-            eq(sessionTable.createdBy, userId),
-          ),
+            eq(sessionTable.createdBy, userId)
+          )
         );
 
       if (!session) {
@@ -178,8 +179,8 @@ export const resolvers = {
         .where(
           and(
             eq(sessionTable.id, sessionId),
-            eq(sessionTable.createdBy, userId),
-          ),
+            eq(sessionTable.createdBy, userId)
+          )
         );
 
       return true;

@@ -8,7 +8,7 @@ let db: PgDatabase<any>;
 
 export async function initDb() {
   if (!process.env.DATABASE_URL) {
-    const client = new PGlite();
+    const client = new PGlite("./dev.db");
     db = await drizzlePg(client);
   } else {
     const pool = new Pool({

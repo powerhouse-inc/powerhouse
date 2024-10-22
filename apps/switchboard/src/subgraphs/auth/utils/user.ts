@@ -5,8 +5,8 @@ import { GraphQLError } from "graphql";
 import { usersTable } from "../schema";
 
 export const upsertUser = async (db: DrizzleD1Database, user: User) => {
-  const { AUTH_SIGNUP_ENABLED } = process.env;
-  if (!AUTH_SIGNUP_ENABLED) {
+  const { AUTH_SIGNUP_DISABLED } = process.env;
+  if (AUTH_SIGNUP_DISABLED) {
     throw new GraphQLError("Sign up is disabled");
   }
 

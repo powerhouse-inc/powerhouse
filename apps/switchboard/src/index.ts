@@ -8,6 +8,7 @@ import express from "express";
 import http from "http";
 import { addSubgraph, initReactorRouter } from "reactor-api";
 import { getSchema as getSearchSchema } from "./subgraphs/general-document-indexer/subgraph";
+import { getSchema as getAuthSchema } from "./subgraphs/auth/subgraph";
 import { InternalListenerManager } from "./utils/internal-listener-manager";
 import path from "path";
 dotenv.config();
@@ -46,6 +47,12 @@ const main = async () => {
     await addSubgraph({
       name: "search/:drive",
       getSchema: (driveServer) => getSearchSchema(driveServer),
+    });
+
+    // add auth subgraph
+    await addSubgraph({
+      name: "auth",
+      getSchema: (driveServer) => getAuthSchema(driveServer),
     });
 
     // load switchboard-gui
