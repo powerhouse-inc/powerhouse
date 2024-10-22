@@ -104,7 +104,7 @@ export function validateOriginAgainstAllowed(
 }
 
 export const generateTokenAndSession = async (
-  db: DrizzleD1Database,
+  db: PgDatabase<any, any, any>,
   session: SessionInput,
   userId: string,
   isUserCreated: boolean
@@ -113,7 +113,11 @@ export const generateTokenAndSession = async (
   const generatedToken = generateToken(sessionId, Number(session.expiresAt));
   const referenceExpiryDate = getExpiryDateFromToken(generatedToken);
   const referenceTokenId = formatToken(generatedToken);
-  const allowedOrigins = parseOriginMarkup(session.allowedOrigins.join(","));
+  const allowedOrigins = parseOriginMarkup(
+    Array.isArray(session.allowedOrigins)
+      ? session.allowedOrigins.join(",")
+      : session.allowedOrigins
+  );
   const createdSession = await db
     .insert(sessionTable)
     .values({

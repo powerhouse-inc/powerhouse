@@ -6,7 +6,7 @@ export default function GraphQLDrive({driveId}: {driveId: string}) {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <GraphQLIframe
-        url={`/explorer/${driveId}`}
+        url={`/d/${driveId}`}
       />
     </Suspense>
   );

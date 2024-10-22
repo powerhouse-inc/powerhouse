@@ -22,8 +22,8 @@ type Challenge {
 }
 
 type SessionOutput {
-  session: Session!
-  token: String!
+  id: ID!
+  token: String
 }
 
 type Session {

@@ -15,7 +15,7 @@ import { getDb } from "../../../db";
 import { PgDatabase } from "drizzle-orm/pg-core";
 
 export const createAuthenticationSession = async (
-  db: DrizzleD1Database,
+  db: PgDatabase<any, any, any>,
   userId: string,
   allowedOrigins = ["*"]
 ) => {
@@ -34,7 +34,7 @@ export const createAuthenticationSession = async (
 };
 
 export const createCustomSession = async (
-  db: DrizzleD1Database,
+  db: PgDatabase<any, any, any>,
   userId: string,
   session: {
     expiryDurationSeconds?: number | null;
@@ -46,7 +46,10 @@ export const createCustomSession = async (
   return generateTokenAndSession(db, session, userId, isUserCreated);
 };
 
-export const listSessions = async (db: DrizzleD1Database, userId: string) => {
+export const listSessions = async (
+  db: PgDatabase<any, any, any>,
+  userId: string
+) => {
   return db
     .select()
     .from(sessionTable)

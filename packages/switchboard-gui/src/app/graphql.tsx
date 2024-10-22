@@ -5,7 +5,7 @@ import { Suspense } from "react";
 export default function GraphQL() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <GraphQLIframe url={`/explorer`} />
+      <GraphQLIframe url={`/system`} />
     </Suspense>
   );
 }

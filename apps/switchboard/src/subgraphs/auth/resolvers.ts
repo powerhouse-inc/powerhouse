@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { logger } from "document-drive/logger";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, SQL, sql } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { GraphQLError } from "graphql";
 import { SiweMessage } from "siwe";
@@ -120,7 +120,7 @@ export const resolvers = {
           .where(eq(challengeTable.nonce, nonce));
 
         // create user and session
-        const user = await upsertUser(db as DrizzleD1Database, {
+        const user = await upsertUser(db, {
           address: parsedMessage.address as `0x${string}`,
           networkId: "1",
           chainId: 1,
@@ -131,7 +131,7 @@ export const resolvers = {
         }
 
         const tokenAndSession = await createAuthenticationSession(
-          db as DrizzleD1Database,
+          db,
           user.address
         );
 
@@ -146,7 +146,7 @@ export const resolvers = {
       const db = await getDb();
       const sessionAuth = await authenticate(ctx);
       return generateTokenAndSession(
-        db as DrizzleD1Database,
+        db,
         session,
         sessionAuth.createdBy,
         sessionAuth.isUserCreated
@@ -156,7 +156,8 @@ export const resolvers = {
       _: unknown,
       { sessionId, userId }: { sessionId: string; userId: string },
       ctx: Context
-    ): Promise<boolean> => {
+    ): Promise<{ id: string }> => {
+      const user = await authenticate(ctx);
       const db = await getDb();
       const [session] = await db
         .select()
@@ -164,7 +165,7 @@ export const resolvers = {
         .where(
           and(
             eq(sessionTable.id, sessionId),
-            eq(sessionTable.createdBy, userId)
+            eq(sessionTable.createdBy, user.createdBy)
           )
         );
 
@@ -187,11 +188,11 @@ export const resolvers = {
         .where(
           and(
             eq(sessionTable.id, sessionId),
-            eq(sessionTable.createdBy, userId)
+            eq(sessionTable.createdBy, user.createdBy)
           )
         );
 
-      return true;
+      return { id: session.id };
     },
   },
 };
