@@ -3,7 +3,6 @@ import { DrizzleD1Database } from "drizzle-orm/d1";
 import { GraphQLError } from "graphql";
 import ms from "ms";
 import { SiweMessage } from "siwe";
-import { Context } from "../../../types";
 import { JWT_EXPIRATION_PERIOD } from "../env";
 import {
   generateTokenAndSession,
@@ -13,6 +12,7 @@ import {
 import { sessionTable } from "../schema";
 import { getDb } from "../../../db";
 import { PgDatabase } from "drizzle-orm/pg-core";
+import { Context } from "../../../../types";
 
 export const createAuthenticationSession = async (
   db: PgDatabase<any, any, any>,

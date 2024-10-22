@@ -8,7 +8,7 @@ import z from "zod";
 import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from "./env";
 import { sessionTable } from "./schema";
 import { SessionInput } from "./types";
-
+import { PgDatabase } from "drizzle-orm/pg-core";
 const jwtSchema = z.object({
   sessionId: z.string(),
   exp: z.optional(z.number()),

@@ -14,14 +14,6 @@ import { getDb } from "../../db";
 import { and, eq } from "drizzle-orm";
 import { searchTable } from "./schema";
 
-const logger = {
-  info: (msg: string) => console.log(msg),
-  debug: (msg: string) => console.log(msg),
-  error: (msg: string) => console.log(msg),
-  warn: (msg: string) => console.log(msg),
-  fatal: (msg: string) => console.log(msg),
-};
-
 export const options: Omit<Listener, "driveId"> = {
   listenerId: "general-document-indexer",
   filter: {
@@ -44,10 +36,6 @@ export async function transmit(strands: InternalTransmitterUpdate[]) {
 }
 
 async function handleStrand(strand: InternalTransmitterUpdate) {
-  logger.debug(
-    `Received strand for document ${strand.documentId} with operations: ${strand.operations.map((op) => op.type).join(", ")}`
-  );
-
   const db = await getDb();
   const firstOp = strand.operations[0];
   if (firstOp?.index === 0) {
@@ -58,7 +46,7 @@ async function handleStrand(strand: InternalTransmitterUpdate) {
   strand.operations.map(async (op: OperationUpdate) => {
     // AddFileInput --> insert into db
     if (op.type === "ADD_FILE") {
-      const result = await db.insert(searchTable).values({
+      await db.insert(searchTable).values({
         driveId: strand.driveId,
         documentId: (op.input as AddFileInput).id,
         objectId: (op.input as AddFileInput).id,
@@ -88,12 +76,12 @@ async function handleStrand(strand: InternalTransmitterUpdate) {
         type: file.type,
       });
     } else if (op.type === "UPDATE_NODE") {
-      // const typedOp = op.input as UpdateNodeInput;
       const fieldsToUpdate: Record<string, any> = {};
       if ("name" in op.input) {
         fieldsToUpdate.label = (op.input as UpdateNodeInput).name ?? "unnamed";
       }
-      db.update(searchTable)
+      await db
+        .update(searchTable)
         .set({
           ...fieldsToUpdate,
         })
@@ -103,15 +91,18 @@ async function handleStrand(strand: InternalTransmitterUpdate) {
             eq(searchTable.documentId, (op.input as UpdateNodeInput).id),
             eq(searchTable.objectId, (op.input as UpdateNodeInput).id)
           )
-        );
-    } else if (op.type === "DELETE_NODE") {
-      db.delete(searchTable).where(
-        and(
-          eq(searchTable.driveId, strand.driveId),
-          eq(searchTable.documentId, (op.input as DeleteNodeInput).id),
-          eq(searchTable.objectId, (op.input as DeleteNodeInput).id)
         )
-      );
+        .returning();
+    } else if (op.type === "DELETE_NODE") {
+      await db
+        .delete(searchTable)
+        .where(
+          and(
+            eq(searchTable.driveId, strand.driveId),
+            eq(searchTable.documentId, (op.input as DeleteNodeInput).id),
+            eq(searchTable.objectId, (op.input as DeleteNodeInput).id)
+          )
+        );
     }
   });
 }
