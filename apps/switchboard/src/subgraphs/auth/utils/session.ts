@@ -11,23 +11,25 @@ import {
   verifyToken,
 } from "../helpers";
 import { sessionTable } from "../schema";
+import { getDb } from "../../../db";
+import { PgDatabase } from "drizzle-orm/pg-core";
 
 export const createAuthenticationSession = async (
   db: DrizzleD1Database,
   userId: string,
-  allowedOrigins = ["*"],
+  allowedOrigins = ["*"]
 ) => {
   return generateTokenAndSession(
     db,
     {
       expiresAt: new Date(
-        new Date().getTime() + ms(JWT_EXPIRATION_PERIOD),
+        new Date().getTime() + ms(JWT_EXPIRATION_PERIOD)
       ).toISOString(),
       name: "Sign in/Sign up",
       allowedOrigins,
     },
     userId,
-    true,
+    true
   );
 };
 
@@ -39,7 +41,7 @@ export const createCustomSession = async (
     name: string;
     allowedOrigins: string[];
   },
-  isUserCreated = false,
+  isUserCreated = false
 ) => {
   return generateTokenAndSession(db, session, userId, isUserCreated);
 };
@@ -54,13 +56,13 @@ export const listSessions = async (db: DrizzleD1Database, userId: string) => {
 export const revoke = async (
   db: DrizzleD1Database,
   sessionId: string,
-  userId: string,
+  userId: string
 ) => {
   const [session] = await db
     .select()
     .from(sessionTable)
     .where(
-      and(eq(sessionTable.id, sessionId), eq(sessionTable.createdBy, userId)),
+      and(eq(sessionTable.id, sessionId), eq(sessionTable.createdBy, userId))
     );
 
   if (!session) {
@@ -83,7 +85,7 @@ export const revoke = async (
 
 export const authenticate = async (context: Context) => {
   const authorization = context.headers.authorization;
-  const db = context.db;
+  const db = await getDb();
   if (!authorization) {
     throw new GraphQLError("Not authenticated", {
       extensions: { code: "NOT_AUTHENTICATED" },
@@ -91,19 +93,16 @@ export const authenticate = async (context: Context) => {
   }
   const token = authorization.replace("Bearer ", "");
   const origin = context.headers.origin;
-  const session = await getSessionByToken(
-    db as DrizzleD1Database,
-    origin,
-    token,
-  );
+  const session = await getSessionByToken(db, origin, token);
   return session;
 };
 
 export const getSessionByToken = async (
-  db: DrizzleD1Database,
+  db: PgDatabase<any, any, any>,
   origin?: string,
-  token?: string,
+  token?: string
 ) => {
+  console.log("token", db);
   if (!token) {
     throw new GraphQLError("Not authenticated", {
       extensions: { code: "NOT_AUTHENTICATED" },
@@ -142,7 +141,7 @@ export const getSessionByToken = async (
 
 export const verifySignature = async (
   parsedMessage: SiweMessage,
-  signature: string,
+  signature: string
 ) => {
   try {
     const response = await parsedMessage.verify({

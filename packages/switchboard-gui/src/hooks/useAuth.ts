@@ -129,23 +129,19 @@ const useAuth = () => {
       const { data, errors } = await client.query({
         query: gql`
           query {
-            system {
-              auth {
-                me {
-                  address
-                }
-                sessions {
-                  id
-                  createdAt
-                  createdBy
-                  referenceExpiryDate
-                  referenceTokenId
-                  isUserCreated
-                  name
-                  revokedAt
-                  allowedOrigins
-                }
-              }
+            me {
+              address
+            }
+            sessions {
+              id
+              createdAt
+              createdBy
+              referenceExpiryDate
+              referenceTokenId
+              isUserCreated
+              name
+              revokedAt
+              allowedOrigins
             }
           }
         `,

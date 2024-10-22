@@ -1,5 +1,6 @@
 type Query {
   me: User
+  sessions: [Session!]!
 }
 
 type Mutation {
@@ -32,6 +33,13 @@ type Session {
   expiresAt: DateTime!
   createdAt: DateTime!
   updatedAt: DateTime!
+  referenceTokenId: String!
+  createdBy: String!
+  referenceExpiryDate: DateTime
+  isUserCreated: Boolean!
+  name: String
+  allowedOrigins: String
+  revokedAt: DateTime
 }
 
 input SessionInput {

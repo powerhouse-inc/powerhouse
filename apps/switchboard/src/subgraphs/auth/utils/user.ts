@@ -1,10 +1,10 @@
 import { User } from "document-model/document";
 import { eq } from "drizzle-orm";
-import { DrizzleD1Database } from "drizzle-orm/d1";
+import { PgDatabase } from "drizzle-orm/pg-core";
 import { GraphQLError } from "graphql";
 import { usersTable } from "../schema";
 
-export const upsertUser = async (db: DrizzleD1Database, user: User) => {
+export const upsertUser = async (db: PgDatabase<any, any, any>, user: User) => {
   const { AUTH_SIGNUP_DISABLED } = process.env;
   if (AUTH_SIGNUP_DISABLED) {
     throw new GraphQLError("Sign up is disabled");
@@ -31,7 +31,10 @@ export const upsertUser = async (db: DrizzleD1Database, user: User) => {
   return newUser;
 };
 
-export const getUser = async (db: DrizzleD1Database, address: string) => {
+export const getUser = async (
+  db: PgDatabase<any, any, any>,
+  address: string
+) => {
   const [user] = await db
     .select()
     .from(usersTable)

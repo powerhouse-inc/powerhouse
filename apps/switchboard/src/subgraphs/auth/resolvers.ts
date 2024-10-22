@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { logger } from "document-drive/logger";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { GraphQLError } from "graphql";
 import { SiweMessage } from "siwe";
@@ -24,11 +24,22 @@ export const resolvers = {
   Query: {
     me: async (_: unknown, __: unknown, ctx: Context) => {
       const session = await authenticate(ctx);
-      const user = await getUser(
-        ctx.db as DrizzleD1Database,
-        session.createdBy
-      );
+      const db = await getDb();
+      const user = await getUser(db, session.createdBy);
       return user;
+    },
+    sessions: async (_: unknown, __: unknown, ctx: Context) => {
+      const session = await authenticate(ctx);
+      console.log("sessions", session);
+      const db = await getDb();
+      const sessions = await db
+        .select()
+        .from(sessionTable)
+        .where(eq(sessionTable.createdBy, session.createdBy))
+        .orderBy(desc(sessionTable.createdAt));
+
+      console.log(sessions);
+      return sessions;
     },
   },
   Mutation: {

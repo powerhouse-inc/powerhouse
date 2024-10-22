@@ -36,7 +36,7 @@ export const sessionTable = pgTable(
       createdByIdKey: uniqueIndex("Session_createdBy_id_key").using(
         "btree",
         table.createdBy.asc().nullsLast(),
-        table.id.asc().nullsLast(),
+        table.id.asc().nullsLast()
       ),
       sessionCreatedByFkey: foreignKey({
         columns: [table.createdBy],
@@ -46,7 +46,7 @@ export const sessionTable = pgTable(
         .onUpdate("cascade")
         .onDelete("cascade"),
     };
-  },
+  }
 );
 
 export const challengeTable = pgTable(
@@ -64,10 +64,10 @@ export const challengeTable = pgTable(
     return {
       messageKey: uniqueIndex("Challenge_message_key").using(
         "btree",
-        table.message.asc().nullsLast(),
+        table.message.asc().nullsLast()
       ),
     };
-  },
+  }
 );
 
 export const sessionRelations = relations(sessionTable, ({ one }) => ({
