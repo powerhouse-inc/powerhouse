@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ScalarDemo } from "./ScalarDemo";
 
 const meta: Meta<typeof ScalarDemo> = {
-  title: "COMPLEX COMPONENTS/Components/ScalarDemo",
+  title: "Document Engineering/Complex Components/ScalarDemo",
   component: ScalarDemo,
   argTypes: {
     name: {
