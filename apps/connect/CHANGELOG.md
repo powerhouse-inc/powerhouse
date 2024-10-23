@@ -1,3 +1,10 @@
+# [1.0.0-dev.147](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.146...v1.0.0-dev.147) (2024-10-23)
+
+
+### Features
+
+* **connect:** enabled support for config file ([7e5e316](https://github.com/powerhouse-inc/document-model-electron/commit/7e5e316f96696f20bc96069d28a411283929f702))
+
 # [1.0.0-dev.146](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.145...v1.0.0-dev.146) (2024-10-22)
 
 
