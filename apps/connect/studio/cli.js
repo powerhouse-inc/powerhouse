@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-import { startServer } from './index.js';
+import { program } from './index.js';
 
-startServer().catch(error => {
-    throw error;
-});
+program.parse(process.argv);
