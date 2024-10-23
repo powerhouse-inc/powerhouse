@@ -1,89 +1,102 @@
-import { exec } from 'node:child_process';
+import { Command } from 'commander';
 import fs from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createLogger, createServer, InlineConfig, Plugin } from 'vite';
-import { viteEnvs } from 'vite-envs';
-import { getStudioConfig, viteConnectDevStudioPlugin } from './vite-plugin';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 
-const studioDirname = fileURLToPath(new URL('.', import.meta.url));
-const appPath = join(studioDirname, '..');
-const viteEnvsScript = join(appPath, 'vite-envs.sh');
+import { startServer } from './server';
 
-// silences dynamic import warnings
-const logger = createLogger();
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const loggerWarn = logger.warn;
-/**
- * @param {string} msg
- * @param {import('vite').LogOptions} options
- */
-logger.warn = (msg, options) => {
-    if (msg.includes('The above dynamic import cannot be analyzed by Vite.')) {
-        return;
-    }
-    loggerWarn(msg, options);
+type PowerhouseConfig = {
+    documentModelsDir?: string;
+    editorsDir?: string;
 };
 
-function runShellScriptPlugin(scriptPath: string): Plugin {
-    return {
-        name: 'vite-plugin-run-shell-script',
-        buildStart() {
-            if (fs.existsSync(scriptPath)) {
-                exec(`sh ${scriptPath}`, (error, stdout, stderr) => {
-                    if (error) {
-                        console.error(
-                            `Error executing the script: ${error.message}`,
-                        );
-                        return;
-                    }
-                    if (stderr) {
-                        console.error(stderr);
-                    }
-                });
-            }
-        },
-    };
-}
+const readJsonFile = (filePath: string): PowerhouseConfig | null => {
+    try {
+        const absolutePath = resolve(filePath);
+        const fileContents = fs.readFileSync(absolutePath, 'utf-8');
+        return JSON.parse(fileContents) as PowerhouseConfig;
+    } catch (error) {
+        console.error(`Error reading file: ${filePath}`);
+        return null;
+    }
+};
 
-export async function startServer() {
-    const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
-    const studioConfig = getStudioConfig();
+type ConnectStudioOptions = {
+    port?: string;
+    host?: boolean;
+    configFile?: string;
+    localEditors?: string;
+    localDocuments?: string;
+};
 
-    // needed for viteEnvs
-    if (!fs.existsSync(join(appPath, 'src'))) {
-        fs.mkdirSync(join(appPath, 'src'));
+type ConnectStudioAction = (options: ConnectStudioOptions) => void;
+
+const connectStudioAction: ConnectStudioAction = options => {
+    if (options.port) {
+        process.env.PORT = options.port;
     }
 
-    process.env.PH_CONNECT_STUDIO_MODE = 'true';
+    if (options.host) {
+        process.env.HOST = options.host.toString();
+    }
 
-    const config: InlineConfig = {
-        customLogger: logger,
-        configFile: false,
-        root: appPath,
-        server: {
-            port: PORT,
-            open: true,
-        },
-        plugins: [
-            viteConnectDevStudioPlugin(true),
-            viteEnvs({
-                declarationFile: join(studioDirname, '../.env'),
-                computedEnv: studioConfig,
-            }),
-            runShellScriptPlugin(viteEnvsScript),
-        ],
-        build: {
-            rollupOptions: {
-                input: 'index.html',
-            },
-        },
-    };
+    if (options.configFile) {
+        const config = readJsonFile(options.configFile);
+        if (!config) return;
 
-    const server = await createServer(config);
+        const configFileDir = dirname(options.configFile);
 
-    await server.listen();
+        if (config.documentModelsDir) {
+            process.env.LOCAL_DOCUMENT_MODELS = isAbsolute(
+                config.documentModelsDir,
+            )
+                ? config.documentModelsDir
+                : join(configFileDir, config.documentModelsDir);
+        }
 
-    server.printUrls();
-    server.bindCLIShortcuts({ print: true });
-}
+        if (config.editorsDir) {
+            process.env.LOCAL_DOCUMENT_EDITORS = isAbsolute(config.editorsDir)
+                ? config.editorsDir
+                : join(configFileDir, config.editorsDir);
+        }
+    }
+
+    if (options.localEditors) {
+        process.env.LOCAL_DOCUMENT_EDITORS = options.localEditors;
+    }
+
+    if (options.localDocuments) {
+        process.env.LOCAL_DOCUMENT_MODELS = options.localDocuments;
+    }
+
+    startServer().catch(error => {
+        throw error;
+    });
+};
+
+export const program = new Command();
+
+program
+    .name('Connect Studio')
+    .description('Connect Studio CLI')
+    .option('-p, --port <port>', 'Port to run the server on', '3000')
+    .option('-h, --host', 'Expose the server to the network')
+    .option(
+        '--config-file <configFile>',
+        'Path to the powerhouse.config.js file',
+    )
+    .option(
+        '-le, --local-editors <localEditors>',
+        'Link local document editors path',
+    )
+    .option(
+        '-ld, --local-documents <localDocuments>',
+        'Link local documents path',
+    )
+    .action(connectStudioAction);
+
+program
+    .command('help')
+    .description('Display help information')
+    .action(() => {
+        program.help();
+    });
