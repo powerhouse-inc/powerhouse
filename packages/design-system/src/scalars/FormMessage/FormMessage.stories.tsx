@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { FormMessage } from "./FormMessage";
 
 const meta: Meta<typeof FormMessage> = {
-  title: "SIMPLE COMPONENTS/Components/FormMessage",
+  title: "Document Engineering/Simple Components/FormMessage",
   component: FormMessage,
   argTypes: {
     type: {
