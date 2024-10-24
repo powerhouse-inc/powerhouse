@@ -2,7 +2,7 @@
   "name": "@powerhousedao/general-document-indexer",
   "version": "1.0.0",
   "description": "general document indexer read model",
-  "main": "dist/index.js",
+  "main": "dist/index.mjs",
   "scripts": {
     "build": "tsup",
     "test": "echo \"Error: no test specified\" && exit 1"

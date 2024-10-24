@@ -19,6 +19,7 @@
     "@apollo/subgraph": "^2.9.2",
     "@electric-sql/pglite": "^0.2.12",
     "@libsql/client": "^0.14.0",
+    "@powerhousedao/general-document-indexer": "workspace:^",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "document-model-libs": "workspace:*",
@@ -29,7 +30,7 @@
     "graphql": "^16.9.0",
     "ms": "^2.1.3",
     "pg": "^8.13.0",
-    "reactor-api": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
     "vite-node": "^2.1.2"
   },
   "devDependencies": {

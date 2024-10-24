@@ -1,3 +1,4 @@
+import * as searchListener from "@powerhousedao/general-document-indexer";
 import {
   BaseDocumentDriveServer,
   InternalTransmitter,
@@ -5,13 +6,16 @@ import {
   Listener,
 } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import * as searchListener from "../subgraphs/general-document-indexer/listener";
-import { Document } from "document-model/document";
+import { PgDatabase } from "drizzle-orm/pg-core";
+import { getDb } from "..";
 
 type InternalListenerModule = {
   name: string;
   options: Omit<Listener, "driveId">;
-  transmit: (strands: InternalTransmitterUpdate[]) => Promise<void>;
+  transmit: (
+    strands: InternalTransmitterUpdate[],
+    db: PgDatabase<any>
+  ) => Promise<void>;
 };
 
 export class InternalListenerManager {
@@ -20,7 +24,7 @@ export class InternalListenerManager {
     {
       name: "search",
       options: searchListener.options,
-      transmit: searchListener.transmit,
+      transmit: (strands, db) => searchListener.transmit(strands, db),
     },
   ];
 
@@ -30,12 +34,13 @@ export class InternalListenerManager {
   }
 
   async #onDriveAdded(drive: DocumentDriveDocument) {
+    const db = getDb();
     const listeners = await Promise.all(
       this.modules.map((module) =>
         this.driveServer.addInternalListener(
           drive.state.global.id,
           {
-            transmit: module.transmit,
+            transmit: (strands) => module.transmit(strands, db),
             disconnect: async () => {
               return Promise.resolve();
             },
@@ -48,6 +53,7 @@ export class InternalListenerManager {
 
   async init() {
     const drives = await this.driveServer.getDrives();
+    const db = getDb();
     // eslint-disable-next-line no-restricted-syntax
     for (const { options, transmit } of this.modules) {
       if (!options || !transmit) {
@@ -74,7 +80,7 @@ export class InternalListenerManager {
           if (transmitter instanceof InternalTransmitter) {
             transmitter.setReceiver({
               transmit: async (strands: InternalTransmitterUpdate[]) => {
-                await transmit(strands);
+                await transmit(strands, db);
                 return Promise.resolve();
               },
               disconnect: () => {

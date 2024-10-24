@@ -1,7 +1,3 @@
-# todo: filter documentType by array
-# ["powerhouse/document-model","powerhouse/budget-statement", "powerhouse/*"]
-#
-
 type Query {
   search(title: String!, type: String!): [SearchResult!]!
 }

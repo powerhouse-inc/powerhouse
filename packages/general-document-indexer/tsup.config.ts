@@ -1,22 +1,16 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/**/*.ts"],
-  splitting: false,
+  entry: ["src/index.ts"],
+  splitting: true,
   sourcemap: true,
   clean: true,
-  format: "cjs",
+  format: "esm",
   treeshake: true,
-  bundle: false,
-  platform: "node",
+  noExternal: ["document-drive"],
   target: "node20",
-  legacyOutput: true,
   loader: {
-    ".esm.t": "copy",
+    ".graphql": "file",
   },
-  dts: {
-    entry: {
-      index: "src/index.ts",
-    },
-  },
+  dts: true,
 });

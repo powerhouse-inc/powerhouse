@@ -1,14 +1,19 @@
 import { DocumentDriveServer } from "document-drive";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import { drizzle } from "drizzle-orm/connect";
-import { addSubgraph, startAPI } from "reactor-api";
-import { getSchema as getSearchSchema } from "./subgraphs/general-document-indexer/subgraph";
-import { InternalListenerManager } from "./utils/internal-listener-manager";
 import path from "path";
-import { FilesystemStorage } from "document-drive/storage/filesystem";
+import {
+  addSubgraph,
+  createSchema,
+  startAPI,
+} from "@powerhousedao/reactor-api";
+import { InternalListenerManager } from "./utils/internal-listener-manager";
+import * as searchSubgraph from "@powerhousedao/general-document-indexer";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 dotenv.config();
 
 // start document drive server with all available document models
@@ -58,14 +63,19 @@ const main = async () => {
     // add search subgraph @todo: automatically add all subgraphs
     await addSubgraph({
       name: "search/:drive",
-      getSchema: (driveServer) => getSearchSchema(driveServer),
+      getSchema: (driveServer) =>
+        createSchema(
+          driveServer,
+          searchSubgraph.resolvers as GraphQLResolverMap,
+          searchSubgraph.typeDefs
+        ),
     });
   } catch (e) {
     console.error("App crashed", e);
   }
 };
 
-export async function getDb() {
+export function getDb() {
   return db;
 }
 
