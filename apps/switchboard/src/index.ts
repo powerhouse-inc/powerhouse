@@ -6,11 +6,18 @@ import dotenv from "dotenv";
 import { drizzle } from "drizzle-orm/connect";
 import express from "express";
 import http from "http";
-import { addSubgraph, initReactorRouter } from "reactor-api";
-import { getSchema as getSearchSchema } from "./subgraphs/general-document-indexer/subgraph";
+import {
+  addSubgraph,
+  createSchema,
+  initReactorRouter,
+  registerInternalListener,
+  setAdditionalContextFields,
+} from "@powerhousedao/reactor-api";
+import * as searchListener from "@powerhousedao/general-document-indexer";
 import { getSchema as getAuthSchema } from "./subgraphs/auth/subgraph";
-import { InternalListenerManager } from "./utils/internal-listener-manager";
 import path from "path";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+
 dotenv.config();
 
 // start document drive server with all available document models
@@ -36,17 +43,28 @@ const main = async () => {
     // init drive server
     await driveServer.initialize();
 
-    // init listener manager
-    const listenerManager = new InternalListenerManager(driveServer);
-    await listenerManager.init();
-
     // init router
     await initReactorRouter("/", app, driveServer);
+
+    setAdditionalContextFields({ db });
 
     // add search subgraph @todo: automatically add all subgraphs
     await addSubgraph({
       name: "search/:drive",
-      getSchema: (driveServer) => getSearchSchema(driveServer),
+      getSchema: (driveServer) =>
+        createSchema(
+          driveServer,
+          searchListener.resolvers as GraphQLResolverMap,
+          searchListener.typeDefs
+        ),
+    });
+
+    await registerInternalListener({
+      ...searchListener,
+      name: "general-document-indexer",
+      transmit(strands) {
+        return searchListener.transmit(strands, db);
+      },
     });
 
     // add auth subgraph
