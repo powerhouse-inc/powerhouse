@@ -5,7 +5,6 @@ type Query {
 type SearchResult {
   driveId: String!
   documentId: String!
-  objectId: String!
-  label: String!
+  title: String!
   type: String!
 }

@@ -5,13 +5,12 @@ export const searchTable = pgTable(
   {
     driveId: text("driveId").notNull(),
     documentId: text("documentId").notNull(),
-    objectId: text("objectId").notNull(),
-    label: text("label").notNull(),
+    title: text("title").notNull(),
     type: text("type").notNull(),
   },
   (table) => ({
     pk: primaryKey({
-      columns: [table.driveId, table.documentId, table.objectId],
+      columns: [table.driveId, table.documentId],
     }),
   })
 );
