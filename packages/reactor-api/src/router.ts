@@ -1,17 +1,32 @@
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { BaseDocumentDriveServer } from "document-drive";
-import { IRouter, Router } from "express";
-import { SUBGRAPH_REGISTRY } from "./subgraphs";
-import { Context } from "./types";
 import bodyParser from "body-parser";
 import cors from "cors";
-import express from "express";
+import { BaseDocumentDriveServer } from "document-drive";
+import express, { IRouter, Router } from "express";
+import {
+  InternalListenerManager,
+  InternalListenerModule,
+} from "./internal-listener-manager";
+import { SUBGRAPH_REGISTRY } from "./subgraphs";
+import { Context } from "./types";
 export let reactorRouter: IRouter = Router();
 
 const getLocalSubgraphConfig = (subgraphName: string) =>
   SUBGRAPH_REGISTRY.find((it) => it.name === subgraphName);
+
+let listenerManager: InternalListenerManager | undefined;
+
+export const getListenerManager = async (
+  driveServer: BaseDocumentDriveServer
+) => {
+  if (!listenerManager) {
+    listenerManager = new InternalListenerManager(driveServer);
+    await listenerManager.init();
+  }
+  return listenerManager;
+};
 
 export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
   const newRouter = Router();
@@ -45,12 +60,14 @@ export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
             headers: req.headers,
             driveId: req.params.drive ?? undefined,
             driveServer,
+            ...getAdditionalContextFields(),
           }),
       })
     );
-
     console.log(`Setting up [${subgraphConfig.name}] subgraph at ${path}`);
   }
+
+  listenerManager = await getListenerManager(driveServer);
   reactorRouter = newRouter;
   console.log("All subgraphs started.");
 };
@@ -84,4 +101,22 @@ export const addSubgraph = async (
 ) => {
   SUBGRAPH_REGISTRY.unshift(subgraph);
   await updateRouter(docDriveServer);
+};
+
+export const registerInternalListener = async (
+  module: InternalListenerModule
+) => {
+  if (!listenerManager) {
+    throw new Error("Listener manager not initialized");
+  }
+  await listenerManager.registerInternalListener(module);
+};
+
+let contextFields = {};
+export const getAdditionalContextFields = () => {
+  return contextFields;
+};
+
+export const setAdditionalContextFields = (fields: Record<string, any>) => {
+  contextFields = { ...contextFields, ...fields };
 };

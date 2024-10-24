@@ -1,7 +1,6 @@
 import { BaseDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
-import { initReactorRouter, reactorRouter } from "./router";
-
+import { initReactorRouter } from "./router";
 type Options = {
   express?: Express;
   port?: number;
@@ -16,7 +15,7 @@ export async function startAPI(
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 
-  await initReactorRouter("/graphql", app, reactor);
+  await initReactorRouter("/", app, reactor);
 
   app.listen(port);
 }

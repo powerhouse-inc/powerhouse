@@ -1,11 +1,11 @@
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { BaseDocumentDriveServer } from "document-drive";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "fs";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 import { createSchema } from "src/utils/create-schema";
 import { resolvers } from "./resolvers";
 import schemaPath from "./schema.graphql";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 
 const __dirname =
   import.meta.dirname ?? dirname(fileURLToPath(import.meta.url));
