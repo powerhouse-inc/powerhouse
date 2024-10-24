@@ -11,6 +11,14 @@ const preview: Preview = {
         date: /Date$/,
       },
     },
+    options: {
+      storySort: {
+        order: ['Connect', 'Powerhouse', 'RWA', 'Document Engineering', ['Simple Components', 'Complex Components', 'Layout Components']],
+        method: 'alphabetical',
+        locales: 'en-US',
+        includeNames: true,
+      },
+    },
   },
   decorators: [
     (Story) => (
