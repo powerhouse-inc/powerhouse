@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "pnpm db:generate",
     "start": "vite-node src/index.ts",
-    "build": "tsc",
+    "build": "tsup",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
@@ -49,6 +49,7 @@
     "autoprefixer": "^10.4.20",
     "graphql-codegen-typescript-common": "0.18.2",
     "postcss": "^8.4.47",
+    "tsup": "^8.3.0",
     "typescript": "^5.6.2"
   }
 }
