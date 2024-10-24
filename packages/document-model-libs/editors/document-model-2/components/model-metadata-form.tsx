@@ -1,106 +1,82 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { AuthorSchema } from "../schemas";
+import { getDifferences, getDocumentMetadata } from "../utils";
 import {
   Form,
-  FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
+  FormControl,
+  FormDescription,
   FormMessage,
-} from "../ui/form";
-import { Input } from "../ui/input";
-import { Button } from "@powerhousedao/design-system";
-import { getDocumentMetadata } from "../../lib/document";
-import { EmptyStringSchema } from "../../schemas/util";
-import { AuthorSchema } from "../../schemas/document-model";
-import { useDocumentModel } from "../../context/DocumentModelContext";
-import { useFormManager } from "../../context/FormManager";
-import { getDifferences } from "../../lib/diff";
-import { NoWhitespaceSchema } from "../../schemas";
+} from "./form";
+import { Input } from "./input";
+import { DocumentActionHandlers, DocumentModelDocument } from "../types";
 
-export const CreateMetadataFormSchema = z.object({
-  name: z.string(),
-  extension: EmptyStringSchema,
-  documentType: NoWhitespaceSchema,
+export const MetadataFormSchema = z.object({
+  name: z.string().min(1),
+  extension: z.string().min(1),
+  documentType: z.string().min(1),
+  description: z.string(),
   author: AuthorSchema,
 });
 
-export const EditModelMetadataSchema = CreateMetadataFormSchema.partial();
+type MetadataFormValues = z.infer<typeof MetadataFormSchema>;
 
-export type ModelModelMetadataFormValues = z.infer<
-  typeof CreateMetadataFormSchema | typeof EditModelMetadataSchema
->;
+type Props = {
+  document: DocumentModelDocument;
+  handlers: DocumentActionHandlers;
+};
+export function ModelMetadataForm(props: Props) {
+  const { document, handlers } = props;
+  const defaultValues = getDocumentMetadata(document);
 
-export function ModelMetadataForm() {
-  const { document, handlers, hasSetInitialMetadata } = useDocumentModel();
-  const { closeForm } = useFormManager();
-  const isEdit = !!document && hasSetInitialMetadata;
-  const formSchema = isEdit
-    ? EditModelMetadataSchema
-    : CreateMetadataFormSchema;
-  const defaultValues = isEdit
-    ? getDocumentMetadata(document)
-    : {
-        name: "",
-        documentType: "",
-        extension: "",
-        author: {
-          name: "",
-          website: "",
-        },
-      };
-  const form = useForm<ModelModelMetadataFormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<MetadataFormValues>({
+    resolver: zodResolver(MetadataFormSchema),
     defaultValues,
   });
 
   const { control, reset, handleSubmit } = form;
 
-  function onSubmit(values: ModelModelMetadataFormValues) {
-    const diff = document
-      ? getDifferences(getDocumentMetadata(document), values)
-      : values;
+  function onSubmit(values: MetadataFormValues) {
+    const diff = getDifferences(getDocumentMetadata(document), values);
 
-    const { name, extension, author, documentType } = diff;
-    const {
-      setModelName,
-      setModelId,
-      setModelExtension,
-      setAuthorName,
-      setAuthorWebsite,
-    } = handlers;
+    const { name, documentType, description, extension, author } = diff;
 
     if (name) {
-      setModelName(name);
+      handlers.setModelName(name);
     }
 
     if (documentType) {
-      setModelId(documentType);
+      handlers.setModelId(documentType);
+    }
+
+    if (description) {
+      handlers.setModuleDescription(description);
     }
 
     if (extension) {
-      setModelExtension(extension);
+      handlers.setModelExtension(extension);
     }
 
     if (author?.name) {
-      setAuthorName(author.name);
+      handlers.setAuthorName(author.name);
     }
 
     if (author?.website) {
-      setAuthorWebsite(author.website);
+      handlers.setAuthorWebsite(author.website);
     }
     reset();
-    closeForm();
   }
 
   return (
     <Form {...form}>
-      <h2 className="mb-4 mt-8 text-lg font-semibold">Add a new type</h2>
+      <h2 className="mb-4 mt-8 text-lg font-semibold">New Document Model</h2>
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="mb-12 max-w-screen-sm  space-y-8"
+        className="mb-12 max-w-screen-sm  space-y-4"
       >
         <FormField
           control={control}
@@ -127,7 +103,7 @@ export function ModelMetadataForm() {
             <FormItem>
               <FormLabel>Document Type</FormLabel>
               <FormControl>
-                <Input placeholder="powerhouse/my-document-model" {...field} />
+                <Input placeholder="MyDocument" {...field} />
               </FormControl>
               <FormDescription>
                 The type name for your new Document Model.
@@ -139,6 +115,7 @@ export function ModelMetadataForm() {
         <FormField
           control={control}
           name="extension"
+          rules={{ required: "Model extension is required" }}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Model Extension</FormLabel>
@@ -147,6 +124,22 @@ export function ModelMetadataForm() {
               </FormControl>
               <FormDescription>
                 The file extension for your new Document Model.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Model Description</FormLabel>
+              <FormControl>
+                <Input placeholder="MyModel works like..." {...field} />
+              </FormControl>
+              <FormDescription>
+                The description name for your new Document Model.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -173,7 +166,6 @@ export function ModelMetadataForm() {
             <FormItem>
               <FormLabel>Author Website</FormLabel>
               <FormControl>
-                {/* @ts-expect-error - type error from shadcn */}
                 <Input placeholder="https://my-website.com" {...field} />
               </FormControl>
               <FormDescription>Your website</FormDescription>
@@ -181,21 +173,12 @@ export function ModelMetadataForm() {
             </FormItem>
           )}
         />
-        <div className="flex">
-          <Button
-            onClick={() => {
-              reset();
-              closeForm();
-            }}
-            type="button"
-            className="w-full bg-white text-red-900"
-          >
-            Cancel
-          </Button>
-          <Button type="submit" className="text-primary w-full bg-white">
-            Submit
-          </Button>
-        </div>
+        <button
+          className="w-full rounded-lg border border-gray-500 bg-white px-5 py-1 text-gray-900 mb-4"
+          type="submit"
+        >
+          Submit
+        </button>
       </form>
     </Form>
   );

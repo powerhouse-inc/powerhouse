@@ -8,10 +8,13 @@ import {
   FieldValues,
   FormProvider,
 } from "react-hook-form";
-import { FormFieldContext, FormItemContext } from "../../context/FormContext";
-import { useFormField } from "../../hooks/useFormField";
-import { cn } from "../../lib/utils";
-import { Label } from "./label";
+import {
+  cn,
+  FormFieldContext,
+  FormItemContext,
+  useFormField,
+  Label,
+} from "editors/document-model-2";
 
 const Form = FormProvider;
 
@@ -90,7 +93,7 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn("text-[0.8rem] text-muted-foreground", className)}
+      className={cn("text-[0.8rem] text-gray-600", className)}
       {...props}
     />
   );
@@ -112,7 +115,7 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn("text-[0.8rem] font-medium text-destructive", className)}
+      className={cn("text-[0.8rem] font-medium text-red-800", className)}
       {...props}
     >
       {body}

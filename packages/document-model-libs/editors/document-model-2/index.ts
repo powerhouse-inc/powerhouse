@@ -20,3 +20,11 @@ export const module: ExtendedEditor<
 };
 
 export default module;
+
+export * from "./context";
+export * from "./hooks";
+export * from "./components";
+export * from "./utils";
+export * from "./constants";
+export * from "./types";
+export * from "./schemas";

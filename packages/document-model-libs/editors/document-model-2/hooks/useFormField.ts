@@ -1,6 +1,6 @@
 import React from "react";
 import { useFormContext } from "react-hook-form";
-import { FormFieldContext, FormItemContext } from "../context/FormContext";
+import { FormFieldContext, FormItemContext } from "editors/document-model-2";
 
 export const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext);
