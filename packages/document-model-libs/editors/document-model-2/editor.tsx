@@ -28,7 +28,6 @@ export default function Editor(
   >,
 ) {
   const { document, dispatch } = props;
-  console.log("!!!!!!SANITY!!!!!!", document);
   const modelName = document.name;
   const hasSetModelMetadata = !!modelName;
   const globalStateSchema =
