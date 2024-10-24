@@ -1,0 +1,15 @@
+# todo: filter documentType by array
+# ["powerhouse/document-model","powerhouse/budget-statement", "powerhouse/*"]
+#
+
+type Query {
+  search(title: String!, type: String!): [SearchResult!]!
+}
+
+type SearchResult {
+  driveId: String!
+  documentId: String!
+  objectId: String!
+  label: String!
+  type: String!
+}

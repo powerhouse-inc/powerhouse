@@ -1,0 +1,18 @@
+{
+  "name": "@powerhousedao/general-document-indexer",
+  "version": "1.0.0",
+  "description": "general document indexer read model",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "document-drive": "workspace:*",
+    "document-model-libs": "workspace:*",
+    "document-model": "workspace:*",
+    "drizzle-kit": "^0.25.0",
+    "drizzle-orm": "^0.34.1"
+  }
+}
