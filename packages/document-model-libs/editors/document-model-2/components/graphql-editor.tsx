@@ -1,34 +1,41 @@
 import { EditorState } from "@codemirror/state";
+import { EditorView, ViewUpdate } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { ViewUpdate } from "@codemirror/view";
-import { useStore } from "@tanstack/react-store";
-import { EditorView, basicSetup } from "codemirror";
-import { GraphQLSchema } from "graphql";
-import { useRef, useEffect } from "react";
-import { standardLibraryLinter } from "../lib/linter";
-import { docStore, updateDoc } from "../store/docStore";
 import { graphql, updateSchema } from "cm6-graphql";
+import { useEffect, useRef } from "react";
+import { GraphQLSchema, parse } from "graphql";
+import { basicSetup } from "codemirror";
+import {
+  validateGraphQlDocuments,
+  createDefaultRules,
+  isDocumentString,
+} from "@graphql-tools/utils";
+
+const rules = createDefaultRules().filter(
+  (rule) => rule.name !== "ExecutableDefinitionsRule",
+);
 type Props = {
-  id: string;
   schema: GraphQLSchema;
-  initialDoc?: string;
+  doc?: string;
   readonly?: boolean;
+  updateDoc: (newDoc: string) => void;
 };
 
 export function GraphqlEditor(props: Props) {
-  const { schema, id, initialDoc, readonly } = props;
-  const doc = useStore(docStore, (state) => state.get(id));
+  const { doc, schema, readonly, updateDoc } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const stateRef = useRef<EditorState | null>(null);
+
   useEffect(() => {
     stateRef.current = EditorState.create({
-      doc: initialDoc ?? doc,
+      doc: doc ?? "",
       extensions: [
         basicSetup,
         oneDark,
-        graphql(schema),
-        standardLibraryLinter,
+        graphql(schema, {
+          showErrorOnInvalidSchema: true,
+        }),
         EditorView.lineWrapping,
         EditorView.theme({
           "&": {
@@ -39,8 +46,31 @@ export function GraphqlEditor(props: Props) {
           if (readonly) return;
           if (update.docChanged) {
             const newDoc = update.state.doc.toString();
-            updateDoc(id, newDoc);
+            if (!isDocumentString(newDoc)) return;
+            const errors = validateGraphQlDocuments(
+              schema,
+              [parse(newDoc)],
+              rules,
+            );
+            if (!errors.length) {
+              updateDoc(newDoc);
+            }
           }
+        }),
+        EditorView.focusChangeEffect.of((state, focusing) => {
+          if (readonly || focusing) return null;
+          const newDoc = state.doc.toString();
+          if (!isDocumentString(newDoc)) return null;
+          const errors = validateGraphQlDocuments(
+            schema,
+            [parse(newDoc)],
+            rules,
+          );
+          if (!errors.length) {
+            updateDoc(newDoc);
+          }
+
+          return null;
         }),
         EditorState.readOnly.of(!!readonly),
       ],
