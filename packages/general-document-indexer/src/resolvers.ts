@@ -1,16 +1,16 @@
 import { like, or } from "drizzle-orm";
-import { getDb } from "../../index";
 import { searchTable } from "./schema";
+import { PgDatabase } from "drizzle-orm/pg-core";
 
 // provide separate search fields for query type
 export const resolvers = {
   Query: {
     search: async (
       _: null,
-      { title, type }: { title: string; type: string }
+      { title, type }: { title: string; type: string },
+      db: PgDatabase<any, any, any>
     ) => {
-      const db = await getDb();
-      const results: (typeof searchTable)[] = await db
+      const results = await db
         .select()
         .from(searchTable)
         .where(

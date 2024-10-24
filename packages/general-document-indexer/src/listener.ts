@@ -9,9 +9,8 @@ import {
   DeleteNodeInput,
   UpdateNodeInput,
 } from "document-model-libs/document-drive";
-import { getDb } from "../../index";
-
 import { and, eq } from "drizzle-orm";
+import { PgDatabase } from "drizzle-orm/pg-core";
 import { searchTable } from "./schema";
 
 export const options: Omit<Listener, "driveId"> = {
@@ -27,16 +26,21 @@ export const options: Omit<Listener, "driveId"> = {
   system: true,
 };
 
-export async function transmit(strands: InternalTransmitterUpdate[]) {
+export async function transmit(
+  strands: InternalTransmitterUpdate[],
+  db: PgDatabase<any, any, any>
+) {
   for (const strand of strands) {
-    handleStrand(strand);
+    handleStrand(strand, db);
   }
 
   return Promise.resolve();
 }
 
-async function handleStrand(strand: InternalTransmitterUpdate) {
-  const db = await getDb();
+async function handleStrand(
+  strand: InternalTransmitterUpdate,
+  db: PgDatabase<any, any, any>
+) {
   const firstOp = strand.operations[0];
   if (firstOp?.index === 0) {
     await db.delete(searchTable);
