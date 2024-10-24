@@ -4,6 +4,7 @@ import {
   MoreDetailsCell,
   RWATableCell,
   RWATableRow,
+  SortDirection,
   TableBase,
   TableColumn,
   TableItemType,
@@ -115,7 +116,9 @@ export function Table(props: TableProps) {
         hasSelectedItem={!!selectedTableItem}
         headerRef={headerRef}
         maxHeight={maxHeight}
-        onClickSort={sortHandler}
+        onClickSort={
+          sortHandler as (key: string, direction: SortDirection) => void
+        }
         ref={tableContainerRef}
         renderRow={renderRow}
         specialFirstRow={specialFirstRow}
