@@ -1,3 +1,11 @@
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import {
+  addSubgraph,
+  createSchema,
+  registerInternalListener,
+  setAdditionalContextFields,
+  startAPI,
+} from "@powerhousedao/reactor-api";
 import { DocumentDriveServer } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
@@ -6,23 +14,16 @@ import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import { drizzle } from "drizzle-orm/connect";
 import path from "path";
-import {
-  addSubgraph,
-  createSchema,
-  startAPI,
-} from "@powerhousedao/reactor-api";
-import { InternalListenerManager } from "./utils/internal-listener-manager";
-import * as searchSubgraph from "@powerhousedao/general-document-indexer";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import * as searchListener from "@powerhousedao/general-document-indexer";
 dotenv.config();
 
-// start document drive server with all available document models
+// start document drive server with all available document models & filesystem storage
 const driveServer = new DocumentDriveServer(
   [DocumentModelLib, ...Object.values(DocumentModelsLibs)] as DocumentModel[],
   new FilesystemStorage(path.join(__dirname, "../file-storage"))
 );
 
-// Create a monolith express app for all subgraphs
+// Start GraphQL API
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 let db: any;
 const main = async () => {
@@ -47,12 +48,8 @@ const main = async () => {
       },
     });
   } catch (e) {
-    console.info("Default drive already exists", e);
+    console.info("Default drive already exists. Skipping...");
   }
-
-  // init listener manager
-  const listenerManager = new InternalListenerManager(driveServer);
-  await listenerManager.init();
 
   try {
     // start api
@@ -60,23 +57,28 @@ const main = async () => {
       port: serverPort,
     });
 
-    // add search subgraph @todo: automatically add all subgraphs
+    setAdditionalContextFields({ db });
+
+    // register general document indexer listener
+    await registerInternalListener({
+      name: "search",
+      options: searchListener.options,
+      transmit: (strands) => searchListener.transmit(strands, db),
+    });
+
+    // add general document indexer subgraph
     await addSubgraph({
-      name: "search/:drive",
-      getSchema: (driveServer) =>
+      getSchema: () =>
         createSchema(
           driveServer,
-          searchSubgraph.resolvers as GraphQLResolverMap,
-          searchSubgraph.typeDefs
+          searchListener.resolvers as GraphQLResolverMap,
+          searchListener.typeDefs
         ),
+      name: "search/:drive",
     });
   } catch (e) {
     console.error("App crashed", e);
   }
 };
-
-export function getDb() {
-  return db;
-}
 
 main();
