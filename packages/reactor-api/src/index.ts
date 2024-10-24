@@ -1,3 +1,3 @@
 export * from "./server";
 export * from "./router";
-export * from "./utils/gen-doc-model-type-defs";
+export * from "./utils/create-schema";
