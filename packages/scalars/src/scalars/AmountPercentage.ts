@@ -17,6 +17,8 @@ export const typedef = 'scalar Amount_Percentage';
 
 export const schema = z.number(); // Update this code accordingly
 
+export const stringSchema = 'z.number()'; // Update this code accordingly
+
 const amountPercentageValidation = (value: unknown): number => {
     if (typeof value !== 'number') {
         throw new GraphQLError(`Value is not number: ${JSON.stringify(value)}`);
