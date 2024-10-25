@@ -5,4 +5,4 @@ export * from "./form-message";
 export * from "./scalar-demo";
 export * from "./toggle";
 export * from "./radio-group";
-export * from "./toggle/input-toggle";
+export * from "./toggle/toggle";

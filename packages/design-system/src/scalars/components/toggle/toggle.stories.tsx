@@ -1,54 +1,46 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Toggle } from "./toggle";
+import { ToggleField } from "./toggle-field";
 
-const meta: Meta<typeof Toggle> = {
+const meta: Meta<typeof ToggleField> = {
   title: "Document Engineering/Simple Components/Toggle",
   tags: ["autodocs"],
-  component: Toggle,
+  component: ToggleField,
   argTypes: {
     checked: {
-      control: {
-        type: "boolean",
-      },
+      control: "boolean",
       description: "Indicates if the toggle is checked",
-      defaultValue: false,
+      defaultValue: true,
     },
     disabled: {
-      control: {
-        type: "boolean",
-      },
+      control: "boolean",
       description: "Indicates if the toggle is disabled",
+      defaultValue: false,
     },
     label: {
-      control: {
-        type: "text",
-      },
+      control: "text",
       description: "Label for the toggle",
     },
-    type: {
-      control: {
-        type: "select",
-      },
-      options: ["error", "info", "warning"],
-      description: "Type of message to display (error, info, etc.)",
-    },
     errors: {
-      control: {
-        type: "object",
-      },
+      control: "object",
       description: "Array of error objects to display",
+      defaultValue: [],
     },
     required: {
-      control: {
-        type: "boolean",
-      },
+      control: "boolean",
       description: "Indicates if the toggle is required",
+      defaultValue: false,
     },
     className: {
-      control: {
-        type: "text",
-      },
+      control: "text",
       description: "Additional CSS classes for styling",
+    },
+    onCheckedChange: {
+      action: "checked changed",
+      description: "Callback when the checked state changes",
+    },
+    name: {
+      control: "text",
+      description: "Name attribute for the toggle input",
     },
   },
 };
@@ -61,7 +53,6 @@ export const Default: Story = {
     checked: false,
     disabled: false,
     label: "",
-    type: "info",
     errors: [],
     required: false,
     className: "",

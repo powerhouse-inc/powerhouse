@@ -1,69 +1,52 @@
-import React from "react";
-import { InputToggle } from "./input-toggle";
+import * as React from "react";
+import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { cn } from "@/scalars/lib/utils";
-import { FormLabel } from "../form-label";
-import { FormMessage, FormMessageType } from "../form-message";
-
-export interface Message {
-  code: string;
-  message: string;
-}
 
 interface ToggleProps {
-  label?: string;
   disabled?: boolean;
   checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
-  type?: FormMessageType;
-  message?: string;
-  errors?: Message[];
-  className?: string;
   required?: boolean;
-  name?: string;
+  onChange?: (checked: boolean) => void;
 }
 
-const Toggle: React.FC<ToggleProps> = ({
-  label,
-  disabled,
-  checked,
-  onCheckedChange,
-  type,
-  errors = [],
-  required = false,
-  name,
-  className,
-}) => {
-  return (
-    <div
-      className={cn("flex flex-col gap-1", className)}
-      data-testid="custom-class"
+const Toggle = React.forwardRef<
+  React.ElementRef<typeof SwitchPrimitives.Root>,
+  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & ToggleProps
+>(
+  (
+    {
+      className,
+      disabled = false,
+      checked = false,
+      required = false,
+      onChange,
+      ...props
+    },
+    ref,
+  ) => (
+    <SwitchPrimitives.Root
+      required={required}
+      checked={checked}
+      role="switch"
+      name="switch"
+      disabled={disabled}
+      onCheckedChange={onChange}
+      className={cn(
+        "peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#0084FF] data-[state=unchecked]:bg-[#9EA0A1]",
+        disabled && "cursor-not-allowed data-[state=checked]:bg-[#E5F3FF] data-[state=unchecked]:bg-[#EFEFEF]",
+        className,
+      )}
+      {...props}
+      ref={ref}
     >
-      <div className="flex items-center">
-        {label && (
-          <FormLabel className="mr-2" disabled={disabled} id={name}>
-            {label}
-          </FormLabel>
+      <SwitchPrimitives.Thumb
+        className={cn(
+          "peer pointer-events-none block h-3.5 w-3.5 rounded-full bg-[#FCFCFC] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0",
+          disabled && "disabled:cursor-not-allowed bg-[#FCFCFC]",
         )}
-        <InputToggle
-          aria-labelledby={name}
-          required={required}
-          disabled={disabled}
-          name="switch"
-          id="switch"
-          checked={checked}
-          onCheckedChange={onCheckedChange}
-        />
-      </div>
-      {errors.length !== 0 &&
-        errors.map((error) => (
-          <FormMessage key={error.code} type={type}>
-            {error.message}
-          </FormMessage>
-        ))}
-    </div>
-  );
-};
-
-Toggle.displayName = "Toggle";
+      />
+    </SwitchPrimitives.Root>
+  ),
+);
 
 export { Toggle };
