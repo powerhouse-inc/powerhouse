@@ -1,3 +1,10 @@
+# [1.0.0-dev.150](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.149...v1.0.0-dev.150) (2024-10-25)
+
+
+### Features
+
+* **connect:** fix import zip file ([d0a45ca](https://github.com/powerhouse-inc/document-model-electron/commit/d0a45caa8e624e366289c7eaa79e4ab8281ffc24))
+
 # [1.0.0-dev.149](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.148...v1.0.0-dev.149) (2024-10-25)
 
 
