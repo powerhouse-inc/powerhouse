@@ -172,6 +172,9 @@ importers:
         specifier: ^6.2.11
         version: 6.2.11
     devDependencies:
+      '@powerhousedao/scalars':
+        specifier: workspace:*
+        version: link:../scalars
       copyfiles:
         specifier: ^2.4.1
         version: 2.4.1

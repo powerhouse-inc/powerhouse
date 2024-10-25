@@ -2,6 +2,8 @@ import { type CodegenConfig, generate } from "@graphql-codegen/cli";
 import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
 import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
 import { readdirSync } from "node:fs";
+import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
+
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory())
@@ -14,6 +16,7 @@ export const tsConfig: TypeScriptPluginConfig = {
     DateTime: "string",
     Attachment: "string",
     Address: "`${string}:0x${string}`",
+    ...(generatorTypeDefs as Record<string, string>),
   },
   enumsAsTypes: true,
   allowEnumStringTypes: true,
@@ -37,6 +40,7 @@ export const validationConfig: ValidationSchemaConfigType = {
     Attachment: "z.string()",
     Address:
       "z.custom<`${string}:0x${string}`>((val) => /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string))",
+    ...(validationSchema as Record<string, string>),
   },
   directives: {
     equals: {
