@@ -1,3 +1,15 @@
+## 1.3.0 (2024-10-25)
+
+### 🚀 Features
+
+- **scalars:** added amount percentage scalar ([#433](https://github.com/powerhouse-inc/powerhouse/pull/433))
+- **document-model-libs:** simplify editor ([1725f876](https://github.com/powerhouse-inc/powerhouse/commit/1725f876))
+
+### ❤️  Thank You
+
+- Guillermo Puente Sandoval @gpuente
+- ryanwolhuter @ryanwolhuter
+
 ## 1.2.0 (2024-10-22)
 
 ### 🚀 Features
