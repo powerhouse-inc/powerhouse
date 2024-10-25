@@ -10,6 +10,8 @@ const studioDirname = fileURLToPath(new URL('.', import.meta.url));
 const appPath = join(studioDirname, '..');
 const viteEnvsScript = join(appPath, 'vite-envs.sh');
 
+const projectRoot = process.cwd();
+
 // silences dynamic import warnings
 const logger = createLogger();
 // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -65,6 +67,17 @@ export async function startServer() {
             port: PORT,
             open: true,
             host: Boolean(process.env.HOST),
+        },
+        resolve: {
+            alias: {
+                // Resolve to the node_modules in the project root
+                '@powerhousedao/scalars': join(
+                    projectRoot,
+                    'node_modules',
+                    '@powerhousedao',
+                    'scalars',
+                ),
+            },
         },
         plugins: [
             viteConnectDevStudioPlugin(true),

@@ -173,7 +173,8 @@ export function viteConnectDevStudioPlugin(
         studioConfig[LOCAL_DOCUMENT_EDITORS_IMPORT];
 
     return [
-        enabled && viteIgnoreStaticImport([externalImports]),
+        enabled &&
+            viteIgnoreStaticImport([externalImports, '@powerhousedao/scalars']),
         {
             name: 'vite-plugin-connect-dev-studio',
             enforce: 'pre',
