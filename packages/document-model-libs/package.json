@@ -168,6 +168,7 @@
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
     "@graphql-codegen/core": "^4.0.2",
     "@graphql-codegen/typescript": "^4.0.6",
+    "@graphql-tools/utils": "^10.5.5",
     "@internationalized/date": "^3.5.1",
     "@storybook/test": "^8.0.2",
     "copy-anything": "^3.0.5",

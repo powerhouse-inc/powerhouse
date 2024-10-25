@@ -1,7 +1,34 @@
 import { z } from "zod";
 import validator from "validator";
-import { containsSpaces, replaceSpaces } from "../lib/utils";
-import { GraphQLType, isType } from "graphql";
+import { snakeCase, constantCase } from "change-case";
+import { EmptyStringSchema } from "./utils";
+
+const whitespaceRegex = /\s+/g;
+
+export function containsSpaces(s: string) {
+  return whitespaceRegex.test(s);
+}
+
+export function replaceSpaces(s: string) {
+  return s.replace(whitespaceRegex, "_");
+}
+
+export const NoWhitespaceSchema = z
+  .string()
+  .min(1)
+  .refine((s) => !containsSpaces(s), {
+    message: "Cannot contain spaces",
+  });
+
+export const ConstantCaseSchema = z.string().refine(validator.isUppercase, {
+  message: "Must be uppercase",
+});
+
+export const LowercaseSnakeCaseSchema = z
+  .string()
+  .refine(validator.isLowercase, {
+    message: "Must be lowercase",
+  });
 
 export function UniqueNameSchema(names: string[]) {
   return z
@@ -14,15 +41,6 @@ export function UniqueNameSchema(names: string[]) {
     }, "Name must be unique");
 }
 
-export const OperationTypeSchema = z.union([
-  z.literal("SET"),
-  z.literal("CREATE"),
-  z.literal("UPDATE"),
-  z.literal("DELETE"),
-]);
-
-export const ScopeSchema = z.union([z.literal("global"), z.literal("local")]);
-
 export const ToLowercaseSnakeCaseSchema = z
   .string()
   .toLowerCase()
@@ -33,40 +51,32 @@ export const ToConstantCaseSchema = z
   .toUpperCase()
   .transform(replaceSpaces);
 
-export const NoWhitespaceSchema = z.string().refine((s) => !containsSpaces(s), {
-  message: "Cannot contain spaces",
-});
+export function toLowercaseSnakeCase(value: string) {
+  return ToLowercaseSnakeCaseSchema.parse(
+    snakeCase(value),
+  ) as LowercaseSnakeCase;
+}
 
-export const ConstantCaseSchema = NoWhitespaceSchema.refine(
-  validator.isUppercase,
-  {
-    message: "Must be uppercase",
-  },
-);
+export function toConstantCase(value: string) {
+  return ToConstantCaseSchema.parse(constantCase(value)) as ConstantCase;
+}
 
-export const LowercaseSnakeCaseSchema = NoWhitespaceSchema.refine(
-  validator.isLowercase,
-  {
-    message: "Must be lowercase",
-  },
-);
+export type SnakeCase = `${string}_${string}`;
+export type LowercaseSnakeCase = Lowercase<SnakeCase>;
+export type ConstantCase = Uppercase<SnakeCase>;
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
 
-export const OperationSchema = z.object({
-  id: z.string(),
-  scope: ScopeSchema,
-  name: ConstantCaseSchema,
-});
-
-export const GraphQLTypeSchema = z
-  .any()
-  .refine((val): val is GraphQLType => isType(val), {
-    message: "Invalid GraphQL type",
+export const AuthorSchema = z
+  .object({
+    name: EmptyStringSchema,
+    website: z
+      .union([z.string().url(), z.literal("")])
+      .optional()
+      .default(""),
+  })
+  .default({
+    name: "",
+    website: "",
   });
-
-export const ModuleSchema = z.object({
-  id: z.string(),
-  name: LowercaseSnakeCaseSchema,
-  stateFieldName: z.string(),
-  stateFieldType: GraphQLTypeSchema,
-  operations: z.array(OperationSchema),
-});

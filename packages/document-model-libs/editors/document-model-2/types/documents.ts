@@ -1,4 +1,17 @@
-import { Scope } from "./modules";
+import { Document } from "document-model/document";
+import {
+  DocumentModelState,
+  DocumentModelAction,
+  DocumentModelLocalState,
+} from "document-model/document-model";
+
+export type Scope = "global" | "local";
+
+export type DocumentModelDocument = Document<
+  DocumentModelState,
+  DocumentModelAction,
+  DocumentModelLocalState
+>;
 
 export type DocumentActionHandlers = {
   setModelId: (id: string) => void;
