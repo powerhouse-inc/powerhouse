@@ -339,7 +339,7 @@ importers:
         specifier: ^7.0.3
         version: 7.0.3
       document-model:
-        specifier: 2.3.0
+        specifier: 2.3.1
         version: link:../document-model
       fast-xml-parser:
         specifier: ^4.3.4
@@ -422,7 +422,7 @@ importers:
         specifier: ^9.0.8
         version: 9.0.8
       document-model:
-        specifier: 2.3.0
+        specifier: 2.3.1
         version: link:../document-model
       document-model-libs:
         specifier: 1.94.0
@@ -586,7 +586,7 @@ importers:
         specifier: 0.9.0
         version: link:../codegen
       '@powerhousedao/design-system':
-        specifier: 1.4.0
+        specifier: 1.4.1
         version: link:../design-system
       '@powerhousedao/scalars':
         specifier: 1.4.0
@@ -712,7 +712,7 @@ importers:
         specifier: ^3.12.0
         version: 3.12.0
       document-model:
-        specifier: 2.3.0
+        specifier: 2.3.1
         version: link:../document-model
       document-model-editors:
         specifier: ^1.0.1
