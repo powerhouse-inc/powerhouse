@@ -23,3 +23,15 @@ export const typeDefs = [
     AmountPercentage.typedef,
     EmailAddress.typedef,
 ];
+
+export const generatorTypeDefs = {
+    // export generator typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
+    [EmailAddress.config.name]: EmailAddress.type,
+    [AmountPercentage.config.name]: AmountPercentage.type,
+};
+
+export const validationSchema = {
+    // export validation schema -- DO NOT REMOVE OR EDIT THIS COMMENT
+    [EmailAddress.config.name]: EmailAddress.stringSchema,
+    [AmountPercentage.config.name]: AmountPercentage.stringSchema,
+};
