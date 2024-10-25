@@ -702,7 +702,7 @@ importers:
         specifier: ^11.0.0
         version: 11.0.0
       graphql:
-        specifier: ^16.9.0
+        specifier: ^16.8.1
         version: 16.9.0
       typescript:
         specifier: ^5.3.3
