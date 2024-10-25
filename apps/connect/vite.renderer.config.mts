@@ -11,6 +11,9 @@ import clientConfig from './client.config';
 import pkg from './package.json';
 import { externalIds, viteConnectDevStudioPlugin } from './studio/vite-plugin';
 
+const isBuildStudio = process.env.BUILD_STUDIO === 'true';
+const buildStudioExternals = isBuildStudio ? ['@powerhousedao/studio'] : [];
+
 export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
     const env = loadEnv(mode, process.cwd());
@@ -106,11 +109,7 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: [
-                    'node:crypto',
-                    externalIds,
-                    '@powerhousedao/scalars',
-                ],
+                external: ['node:crypto', externalIds, ...buildStudioExternals],
             },
         },
         resolve: {
