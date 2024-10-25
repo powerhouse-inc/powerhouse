@@ -1,3 +1,14 @@
+## 1.4.0 (2024-10-25)
+
+### 🚀 Features
+
+- **document-model-libs:** added scalars as a peerDep ([#435](https://github.com/powerhouse-inc/powerhouse/pull/435))
+- **scalars:** added exports for codegen ([#434](https://github.com/powerhouse-inc/powerhouse/pull/434))
+
+### ❤️  Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.3.0 (2024-10-25)
 
 ### 🚀 Features

@@ -586,7 +586,7 @@ importers:
         specifier: 1.4.0
         version: link:../design-system
       '@powerhousedao/scalars':
-        specifier: workspace:*
+        specifier: 1.4.0
         version: link:../scalars
       '@prettier/sync':
         specifier: ^0.5.2
