@@ -38,6 +38,7 @@ export default defineConfig(({ mode }) => {
     "react/jsx-runtime",
     "react-dom",
     /^document-model\//,
+    "@powerhousedao/scalars",
   ];
 
   return {
