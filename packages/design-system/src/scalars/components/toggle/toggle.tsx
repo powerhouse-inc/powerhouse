@@ -1,28 +1,69 @@
-"use client";
-
-import * as React from "react";
-import * as SwitchPrimitives from "@radix-ui/react-switch";
+import React from "react";
+import { InputToggle } from "./input-toggle";
 import { cn } from "@/scalars/lib/utils";
+import { FormLabel } from "../form-label";
+import { FormMessage, FormMessageType } from "../form-message";
 
-const Toggle = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
-      className,
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
-      className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0",
-      )}
-    />
-  </SwitchPrimitives.Root>
-));
-Toggle.displayName = SwitchPrimitives.Root.displayName;
+export interface Message {
+  code: string;
+  message: string;
+}
+
+interface ToggleProps {
+  label?: string;
+  disabled?: boolean;
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  type?: FormMessageType;
+  message?: string;
+  errors?: Message[];
+  className?: string;
+  required?: boolean;
+  name?: string;
+}
+
+const Toggle: React.FC<ToggleProps> = ({
+  label,
+  disabled,
+  checked,
+  onCheckedChange,
+  type,
+  errors = [],
+  required = false,
+  name,
+  className,
+}) => {
+  return (
+    <div
+      className={cn("flex flex-col gap-1", className)}
+      data-testid="custom-class"
+    >
+      <div className="flex items-center">
+        {label && (
+          <FormLabel className="mr-2" disabled={disabled} id={name}>
+            {label}
+          </FormLabel>
+        )}
+        <InputToggle
+          aria-labelledby={name}
+          required={required}
+          disabled={disabled}
+          name="switch"
+          id="switch"
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+        />
+      </div>
+      {errors.length !== 0 &&
+        errors.map((error) => (
+          <FormMessage key={error.code} type={type}>
+            {error.message}
+          </FormMessage>
+        ))}
+    </div>
+  );
+};
+
+Toggle.displayName = "Toggle";
 
 export { Toggle };

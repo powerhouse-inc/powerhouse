@@ -1,0 +1,55 @@
+import * as React from "react";
+import * as SwitchPrimitives from "@radix-ui/react-switch";
+import { cn } from "@/scalars/lib/utils";
+
+interface InputToggleProps {
+  disabled?: boolean;
+  checked?: boolean;
+  required?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+}
+
+const InputToggle = React.forwardRef<
+  React.ElementRef<typeof SwitchPrimitives.Root>,
+  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> &
+    InputToggleProps
+>(
+  (
+    {
+      className,
+      disabled = false,
+      checked = false,
+      required = false,
+      onCheckedChange,
+      ...props
+    },
+    ref,
+  ) => (
+    <SwitchPrimitives.Root
+      required={required}
+      checked={checked}
+      role="switch"
+      name="switch"
+      disabled={disabled}
+      onCheckedChange={onCheckedChange}
+      className={cn(
+        "peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#0084FF] data-[state=unchecked]:bg-[#9EA0A1]",
+        disabled &&
+          "cursor-not-allowed data-[state=checked]:bg-[#E5F3FF] data-[state=unchecked]:bg-[#EFEFEF]",
+        className,
+      )}
+      {...props}
+      ref={ref}
+    >
+      <SwitchPrimitives.Thumb
+        className={cn(
+          "peer pointer-events-none block h-3.5 w-3.5 rounded-full bg-[#FCFCFC] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0",
+          disabled && "disabled:cursor-not-allowed bg-[#FCFCFC]",
+        )}
+      />
+    </SwitchPrimitives.Root>
+  ),
+);
+InputToggle.displayName = SwitchPrimitives.Root.displayName;
+
+export { InputToggle };
