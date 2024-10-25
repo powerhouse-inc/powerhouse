@@ -1,4 +1,8 @@
-import { FILE, RevisionHistory } from '@powerhousedao/design-system';
+import {
+    DocumentToolbar,
+    FILE,
+    RevisionHistory,
+} from '@powerhousedao/design-system';
 import {
     Action,
     ActionErrorCallback,
@@ -191,10 +195,23 @@ export function DocumentEditor(props: EditorProps) {
     }
 
     const EditorComponent = editor.Component;
-    const { disableExternalControls } = editor.config || {};
+    const { disableExternalControls, documentToolbarEnabled } =
+        editor.config || {};
 
     return (
         <div className="relative h-full" id="document-editor-context">
+            {documentToolbarEnabled &&
+                disableExternalControls &&
+                !showRevisionHistory && (
+                    <DocumentToolbar
+                        onClose={onClose}
+                        onExport={onExport}
+                        onShowRevisionHistory={() =>
+                            setShowRevisionHistory(true)
+                        }
+                        title={document.name}
+                    />
+                )}
             {!disableExternalControls && (
                 <div className="mb-4 flex justify-end gap-10">
                     <Button onClick={onExport}>Export</Button>
@@ -229,6 +246,10 @@ export function DocumentEditor(props: EditorProps) {
                             dispatch={dispatch}
                             onClose={onClose}
                             onExport={onExport}
+                            canUndo={canUndo}
+                            canRedo={canRedo}
+                            undo={undo}
+                            redo={redo}
                             onSwitchboardLinkClick={onOpenSwitchboardLink}
                             onShowRevisionHistory={() =>
                                 setShowRevisionHistory(true)
