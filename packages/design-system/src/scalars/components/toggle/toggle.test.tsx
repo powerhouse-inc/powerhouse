@@ -40,13 +40,7 @@ describe("Toggle Component", () => {
   });
 
   it("displays an error message when hasMessage is true", () => {
-    render(
-      <ToggleField
-        label="Test Label"
-        errors={["Error message"]}
-        message="Error message"
-      />,
-    );
+    render(<ToggleField label="Test Label" errors={["Error message"]} />);
     expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 

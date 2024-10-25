@@ -9,34 +9,39 @@ const meta: Meta<typeof ToggleField> = {
     checked: {
       control: "boolean",
       description: "Indicates if the toggle is checked",
-      defaultValue: true,
+      table: { defaultValue: { summary: "true" } },
     },
     disabled: {
       control: "boolean",
       description: "Indicates if the toggle is disabled",
-      defaultValue: false,
+      table: { defaultValue: { summary: "false" } },
     },
     label: {
       control: "text",
       description: "Label for the toggle",
+      table: { defaultValue: { summary: "" } },
     },
     errors: {
       control: "object",
       description: "Array of error objects to display",
-      defaultValue: [],
+      table: { defaultValue: { summary: "[]" } },
     },
     required: {
       control: "boolean",
       description: "Indicates if the toggle is required",
-      defaultValue: false,
+      table: { defaultValue: { summary: "false" } },
     },
     className: {
       control: "text",
       description: "Additional CSS classes for styling",
+      table: { defaultValue: { summary: "" } },
     },
     onCheckedChange: {
       action: "checked changed",
       description: "Callback when the checked state changes",
+      table: {
+        type: { summary: "(checked: boolean) => void" },
+      },
     },
     name: {
       control: "text",
@@ -50,32 +55,69 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    checked: false,
+    checked: true,
     disabled: false,
     label: "",
     errors: [],
     required: false,
     className: "",
+    name: "",
   },
 };
 
-export const Checked: Story = {
+export const CheckedWithLabel: Story = {
+  name: "Checked with label",
   args: {
     checked: true,
+    label: "Active",
+  },
+};
+
+export const Unchecked: Story = {
+  name: "Unchecked without label",
+  args: {
+    checked: false,
+  },
+};
+
+export const UncheckedWithLabel: Story = {
+  name: "Unchecked with label",
+  args: {
+    checked: false,
+    label: "Active",
   },
 };
 
 export const DisabledChecked: Story = {
+  name: "Disabled checked without label",
   args: {
     checked: true,
     disabled: true,
   },
 };
 
-export const DisabledUnChecked: Story = {
-  name: "Disabled Unchecked",
+export const DisabledCheckedWithLabel: Story = {
+  name: "Disabled checked with label",
+  args: {
+    disabled: true,
+    checked: true,
+    label: "Active",
+  },
+};
+
+export const DisabledUncheckedWithoutLabel: Story = {
+  name: "Disabled unchecked without label",
+  args: {
+    checked: false,
+    disabled: true,
+  },
+};
+
+export const DisabledUncheckedWithLabel: Story = {
+  name: "Disabled unchecked with label",
   args: {
     disabled: true,
     checked: false,
+    label: "Active",
   },
 };

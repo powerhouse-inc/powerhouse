@@ -9,7 +9,6 @@ interface ToggleFieldProps {
   disabled?: boolean;
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
-  message?: string;
   errors?: string[];
   className?: string;
   required?: boolean;

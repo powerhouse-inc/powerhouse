@@ -17,9 +17,9 @@ const Toggle = React.forwardRef<
     {
       className,
       disabled = false,
-      checked = false,
+      checked = true,
       required = false,
-      onChange,
+      onChange = () => {},
       ...props
     },
     ref,
@@ -33,7 +33,8 @@ const Toggle = React.forwardRef<
       onCheckedChange={onChange}
       className={cn(
         "peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#0084FF] data-[state=unchecked]:bg-[#9EA0A1]",
-        disabled && "cursor-not-allowed data-[state=checked]:bg-[#E5F3FF] data-[state=unchecked]:bg-[#EFEFEF]",
+        disabled &&
+          "cursor-not-allowed data-[state=checked]:bg-[#E5F3FF] data-[state=unchecked]:bg-[#EFEFEF]",
         className,
       )}
       {...props}
