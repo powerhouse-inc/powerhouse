@@ -1,3 +1,10 @@
+# [1.0.0-dev.149](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.148...v1.0.0-dev.149) (2024-10-25)
+
+
+### Features
+
+* **connect:** added scalars as peer dep ([2e6c42c](https://github.com/powerhouse-inc/document-model-electron/commit/2e6c42c8852e3ee51f61e52928d6983f013a322b))
+
 # [1.0.0-dev.148](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.147...v1.0.0-dev.148) (2024-10-25)
 
 
