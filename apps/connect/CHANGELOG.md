@@ -1,3 +1,10 @@
+# [1.0.0-dev.148](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.147...v1.0.0-dev.148) (2024-10-25)
+
+
+### Features
+
+* **connect:** enabled document toolbar ([30efb04](https://github.com/powerhouse-inc/document-model-electron/commit/30efb044552034c588400dcef3835a4a1daed64e))
+
 # [1.0.0-dev.147](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.146...v1.0.0-dev.147) (2024-10-23)
 
 
