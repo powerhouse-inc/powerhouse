@@ -1,3 +1,10 @@
+# [1.0.0-dev.153](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.152...v1.0.0-dev.153) (2024-10-28)
+
+
+### Features
+
+* **connect:** updated document-model-libs dep ([6f11e87](https://github.com/powerhouse-inc/document-model-electron/commit/6f11e87bc9253317d66e16d888c5e378b6cd498a))
+
 # [1.0.0-dev.152](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.151...v1.0.0-dev.152) (2024-10-28)
 
 
