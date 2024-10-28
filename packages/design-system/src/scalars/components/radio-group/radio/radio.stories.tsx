@@ -3,6 +3,13 @@ import { Radio } from "./radio";
 import { RadioGroup } from "../radio-group";
 
 const meta: Meta<typeof Radio> = {
+  argTypes: {
+    checked: { control: "boolean" },
+    description: { control: "text" },
+    disabled: { control: "boolean" },
+    label: { control: "text" },
+    value: { control: "text" },
+  },
   component: Radio,
   decorators: [
     (Story) => (
@@ -23,10 +30,6 @@ export default meta;
 type Story = StoryObj<typeof Radio>;
 
 export const Default: Story = {
-  argTypes: {
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     label: "Default",
     value: "default",
@@ -34,11 +37,6 @@ export const Default: Story = {
 };
 
 export const DefaultChecked: Story = {
-  argTypes: {
-    checked: { control: "boolean" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     checked: true,
     label: "Default Checked",
@@ -47,11 +45,6 @@ export const DefaultChecked: Story = {
 };
 
 export const DefaultWithDescription: Story = {
-  argTypes: {
-    description: { control: "text" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     description: "This is a default radio with description",
     label: "Default with description",
@@ -60,12 +53,6 @@ export const DefaultWithDescription: Story = {
 };
 
 export const DefaultWithDescriptionChecked: Story = {
-  argTypes: {
-    checked: { control: "boolean" },
-    description: { control: "text" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     checked: true,
     description: "This is a default radio with description & checked",
@@ -75,10 +62,6 @@ export const DefaultWithDescriptionChecked: Story = {
 };
 
 export const Focus: Story = {
-  argTypes: {
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     label: "Focus",
     value: "focus",
@@ -89,11 +72,6 @@ export const Focus: Story = {
 };
 
 export const FocusChecked: Story = {
-  argTypes: {
-    checked: { control: "boolean" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     checked: true,
     label: "Focus Checked",
@@ -105,11 +83,6 @@ export const FocusChecked: Story = {
 };
 
 export const FocusWithDescription: Story = {
-  argTypes: {
-    description: { control: "text" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     description: "This is a focused radio with description",
     label: "Focus with description",
@@ -121,12 +94,6 @@ export const FocusWithDescription: Story = {
 };
 
 export const FocusWithDescriptionChecked: Story = {
-  argTypes: {
-    checked: { control: "boolean" },
-    description: { control: "text" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     checked: true,
     description: "This is a focused radio with description & checked",
@@ -139,10 +106,6 @@ export const FocusWithDescriptionChecked: Story = {
 };
 
 export const Hover: Story = {
-  argTypes: {
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     label: "Hover",
     value: "hover",
@@ -153,11 +116,6 @@ export const Hover: Story = {
 };
 
 export const HoverChecked: Story = {
-  argTypes: {
-    checked: { control: "boolean" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     checked: true,
     label: "Hover Checked",
@@ -169,11 +127,6 @@ export const HoverChecked: Story = {
 };
 
 export const HoverWithDescription: Story = {
-  argTypes: {
-    description: { control: "text" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     description: "This is a hovered radio with description",
     label: "Hover with description",
@@ -185,12 +138,6 @@ export const HoverWithDescription: Story = {
 };
 
 export const HoverWithDescriptionChecked: Story = {
-  argTypes: {
-    checked: { control: "boolean" },
-    description: { control: "text" },
-    label: { control: "text" },
-    value: { control: "text" },
-  },
   args: {
     checked: true,
     description: "This is a hovered radio with description & checked",
@@ -202,62 +149,38 @@ export const HoverWithDescriptionChecked: Story = {
   },
 };
 
-export const ReadOnly: Story = {
-  argTypes: {
-    label: { control: "text" },
-    readOnly: { control: "boolean" },
-    value: { control: "text" },
-  },
+export const Disabled: Story = {
   args: {
-    label: "Read only",
-    readOnly: true,
-    value: "readonly",
+    disabled: true,
+    label: "Disabled",
+    value: "disabled",
   },
 };
 
-export const ReadOnlyChecked: Story = {
-  argTypes: {
-    checked: { control: "boolean" },
-    label: { control: "text" },
-    readOnly: { control: "boolean" },
-    value: { control: "text" },
-  },
+export const DisabledChecked: Story = {
   args: {
     checked: true,
-    label: "Read only checked",
-    readOnly: true,
-    value: "readonly-checked",
+    disabled: true,
+    label: "Disabled checked",
+    value: "disabled-checked",
   },
 };
 
-export const ReadOnlyWithDescription: Story = {
-  argTypes: {
-    description: { control: "text" },
-    label: { control: "text" },
-    readOnly: { control: "boolean" },
-    value: { control: "text" },
-  },
+export const DisabledWithDescription: Story = {
   args: {
-    description: "This is a read-only radio with description",
-    label: "Read only with description",
-    readOnly: true,
-    value: "readonly-with-description",
+    description: "This is a disabled radio with description",
+    disabled: true,
+    label: "Disabled with description",
+    value: "disabled-with-description",
   },
 };
 
-export const ReadOnlyWithDescriptionChecked: Story = {
-  argTypes: {
-    checked: { control: "boolean" },
-    description: { control: "text" },
-    label: { control: "text" },
-    readOnly: { control: "boolean" },
-    value: { control: "text" },
-  },
+export const DisabledWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a read-only radio with description & checked",
-    label: "Read only with description & checked",
-    readOnly: true,
-    value: "readonly-with-description-checked",
+    description: "This is a disabled radio with description & checked",
+    disabled: true,
+    label: "Disabled with description & checked",
+    value: "disabled-with-description-checked",
   },
 };

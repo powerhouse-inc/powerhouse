@@ -5,12 +5,11 @@ import { cn } from "@/scalars/lib/utils";
 
 export interface RadioGroupProps
   extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root> {
-  "aria-label"?: string;
-  children: React.ReactElement;
+  children: React.ReactElement | React.ReactElement[];
   className?: string;
   defaultValue?: string;
   description?: string;
-  hasError?: boolean;
+  errors?: string[];
   id?: string;
   label?: string;
   name?: string;
@@ -25,12 +24,11 @@ export const RadioGroup = React.forwardRef<
 >(
   (
     {
-      "aria-label": ariaLabel,
       children,
       className,
       defaultValue,
       description,
-      hasError,
+      errors = [],
       id: propId,
       label,
       name: propName,
@@ -45,6 +43,7 @@ export const RadioGroup = React.forwardRef<
     const id = propId ?? `${prefix}-radio-group`;
     const name = propName ?? `${prefix}-radio-group`;
     const hasLabel = label !== undefined;
+    const hasError = errors.length > 0;
 
     return (
       <>
@@ -61,7 +60,8 @@ export const RadioGroup = React.forwardRef<
         <RadioGroupPrimitive.Root
           {...props}
           aria-invalid={hasError}
-          aria-label={hasLabel ? undefined : ariaLabel}
+          aria-label={hasLabel ? undefined : props["aria-label"]}
+          aria-required={required}
           className={cn("flex flex-col gap-4", className)}
           defaultValue={defaultValue}
           id={id}

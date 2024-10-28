@@ -8,10 +8,10 @@ export interface RadioProps
   extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item> {
   className?: string;
   description?: string;
+  disabled?: boolean;
   hasError?: boolean;
   id?: string;
   label: string;
-  readOnly?: boolean;
   value: string;
 }
 
@@ -23,10 +23,10 @@ export const Radio = React.forwardRef<
     {
       className,
       description,
+      disabled,
       hasError,
       id: propId,
       label,
-      readOnly,
       value,
       ...props
     },
@@ -39,21 +39,20 @@ export const Radio = React.forwardRef<
       <div className="flex items-center space-x-2.5" role="presentation">
         <RadioGroupPrimitive.Item
           {...props}
-          aria-disabled={readOnly}
+          aria-disabled={disabled}
           aria-invalid={hasError}
-          aria-readonly={readOnly}
           className={cn(
             "aspect-square size-4 rounded-full border-2 border-blue-700",
             "focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-0",
             "hover:border-blue-900",
             "focus:hover:ring-blue-200",
-            readOnly &&
+            disabled &&
               "border-gray-600 cursor-not-allowed opacity-50 hover:border-gray-600",
             hasError &&
               "border-red-700 focus:ring-red-100 hover:border-red-900 focus:hover:ring-red-200",
             className,
           )}
-          disabled={readOnly}
+          disabled={disabled}
           id={id}
           ref={ref}
           value={value}
@@ -64,7 +63,7 @@ export const Radio = React.forwardRef<
                 "size-2.5",
                 "fill-blue-700 text-blue-700",
                 "hover:fill-blue-900 hover:text-blue-900",
-                readOnly &&
+                disabled &&
                   "fill-gray-600 text-gray-600 hover:fill-gray-600 hover:text-gray-600",
                 hasError &&
                   "fill-red-700 text-red-700 hover:fill-red-900 hover:text-red-900",
@@ -74,7 +73,7 @@ export const Radio = React.forwardRef<
         </RadioGroupPrimitive.Item>
         <FormLabel
           description={description}
-          disabled={readOnly}
+          disabled={disabled}
           hasError={hasError}
           htmlFor={id}
           required={props.required}

@@ -1,23 +1,23 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Radio } from "../radio";
-import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
+import { RadioGroup } from "../radio-group";
+import { render, screen } from "@testing-library/react";
 
 describe("Radio Component", () => {
   it("should match snapshot", () => {
     const { asFragment } = render(
-      <RadioGroupPrimitive.Root>
-        <Radio label="Test Label" value="test" />,
-      </RadioGroupPrimitive.Root>,
+      <RadioGroup>
+        <Radio label="Test Label" value="test" />
+      </RadioGroup>,
     );
     expect(asFragment()).toMatchSnapshot();
   });
 
-  it("renders with required label and value", () => {
+  it("renders with label and value", () => {
     render(
-      <RadioGroupPrimitive.Root>
-        <Radio label="Test Label" value="test" />,
-      </RadioGroupPrimitive.Root>,
+      <RadioGroup>
+        <Radio label="Test Label" value="test" />
+      </RadioGroup>,
     );
     expect(screen.getByText("Test Label")).toBeInTheDocument();
     expect(screen.getByRole("radio")).toHaveAttribute("value", "test");
@@ -25,9 +25,9 @@ describe("Radio Component", () => {
 
   it("renders with description", () => {
     render(
-      <RadioGroupPrimitive.Root>
+      <RadioGroup>
         <Radio label="Test Label" value="test" description="Test Description" />
-      </RadioGroupPrimitive.Root>,
+      </RadioGroup>,
     );
     // Check that the info icon fallback is rendered
     const iconFallback = screen.getByTestId("icon-fallback");
@@ -37,50 +37,49 @@ describe("Radio Component", () => {
 
   it("applies error styles when hasError is true", () => {
     render(
-      <RadioGroupPrimitive.Root>
-        <Radio label="Test Label" value="test" hasError={true} />,
-      </RadioGroupPrimitive.Root>,
+      <RadioGroup>
+        <Radio label="Test Label" value="test" hasError={true} />
+      </RadioGroup>,
     );
     const radio = screen.getByRole("radio");
     expect(radio).toHaveAttribute("aria-invalid", "true");
     expect(radio).toHaveClass("border-red-700");
   });
 
-  it("applies readonly styles and attributes", () => {
+  it("applies disabled styles and attributes", () => {
     render(
-      <RadioGroupPrimitive.Root>
-        <Radio label="Test Label" value="test" readOnly={true} />,
-      </RadioGroupPrimitive.Root>,
+      <RadioGroup>
+        <Radio label="Test Label" value="test" disabled={true} />
+      </RadioGroup>,
     );
     const radio = screen.getByRole("radio");
-    expect(radio).toHaveAttribute("aria-readonly", "true");
     expect(radio).toHaveAttribute("aria-disabled", "true");
     expect(radio).toHaveClass("cursor-not-allowed");
   });
 
   it("renders with custom className", () => {
     render(
-      <RadioGroupPrimitive.Root>
-        <Radio label="Test Label" value="test" className="custom-class" />,
-      </RadioGroupPrimitive.Root>,
+      <RadioGroup>
+        <Radio label="Test Label" value="test" className="custom-class" />
+      </RadioGroup>,
     );
     expect(screen.getByRole("radio")).toHaveClass("custom-class");
   });
 
   it("uses provided id when specified", () => {
     render(
-      <RadioGroupPrimitive.Root>
-        <Radio label="Test Label" value="test" id="custom-id" />,
-      </RadioGroupPrimitive.Root>,
+      <RadioGroup>
+        <Radio label="Test Label" value="test" id="custom-id" />
+      </RadioGroup>,
     );
     expect(screen.getByRole("radio")).toHaveAttribute("id", "custom-id");
   });
 
   it("generates unique id when not provided", () => {
     render(
-      <RadioGroupPrimitive.Root>
-        <Radio label="Test Label" value="test" />,
-      </RadioGroupPrimitive.Root>,
+      <RadioGroup>
+        <Radio label="Test Label" value="test" />
+      </RadioGroup>,
     );
     const radio = screen.getByRole("radio");
     expect(radio.id).toMatch(/^.*-radio$/); // Check if id ends with -radio
