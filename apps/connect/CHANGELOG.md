@@ -1,3 +1,10 @@
+# [1.0.0-dev.152](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.151...v1.0.0-dev.152) (2024-10-28)
+
+
+### Features
+
+* exclude document-model-libs ([e9e0c84](https://github.com/powerhouse-inc/document-model-electron/commit/e9e0c842a03d8a5c58d4f83ae6eb8e5eab7fc60a))
+
 # [1.0.0-dev.151](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.150...v1.0.0-dev.151) (2024-10-28)
 
 
