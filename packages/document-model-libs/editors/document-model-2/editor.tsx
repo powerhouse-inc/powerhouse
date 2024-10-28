@@ -1,5 +1,10 @@
 import { useMemo, useCallback } from "react";
-import { hiddenQueryTypeDefDoc, makeInitialSchemaDoc, Scope } from ".";
+import {
+  getDocumentMetadata,
+  hiddenQueryTypeDefDoc,
+  makeInitialSchemaDoc,
+  Scope,
+} from ".";
 import {
   DocumentModelState,
   DocumentModelAction,
@@ -29,10 +34,13 @@ export default function Editor(
   >,
 ) {
   const { document, dispatch } = props;
-  const { name: modelName } = useMemo(
-    () => ({ name: document.name }),
-    [document.name],
-  );
+  const {
+    name: modelName,
+    documentType,
+    extension,
+    description,
+    author,
+  } = useMemo(() => getDocumentMetadata(document), [document]);
   const {
     state: {
       global: {
@@ -258,8 +266,10 @@ export default function Editor(
       <ModelMetadataForm
         onSubmit={onSubmit}
         name={modelName}
-        documentType="documentModel"
-        extension=".test.ph"
+        documentType={documentType}
+        extension={extension}
+        description={description}
+        author={author as MetadataFormValues["author"]}
       />
       <DocumentModelEditor
         schema={schema}

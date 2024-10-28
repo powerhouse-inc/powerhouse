@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { pascalCase } from "change-case";
-import { Operation } from "document-model/document-model";
+import { Author, Operation } from "document-model/document-model";
 import {
   extendSchema,
   getNullableType,
@@ -110,15 +110,16 @@ export function makeSchemaStringFromDocs(docs: Record<string, string>) {
 
 export function getDocumentMetadata(document: DocumentModelDocument) {
   const globalState = document.state.global;
+  const author: Author = {
+    name: globalState.author.name,
+    website: globalState.author.website,
+  };
   return {
-    name: document.name ?? "",
-    documentType: document.documentType ?? "",
-    description: globalState.description ?? "",
-    extension: globalState.extension ?? "",
-    author: {
-      name: globalState.author.name ?? "",
-      website: globalState.author.website ?? "",
-    },
+    name: document.name,
+    documentType: document.documentType,
+    description: globalState.description,
+    extension: globalState.extension,
+    author,
   };
 }
 

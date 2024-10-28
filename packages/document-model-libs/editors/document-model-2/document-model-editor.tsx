@@ -6,7 +6,7 @@ import {
   makeInitialSchemaDoc,
   makeOperationInitialDoc,
 } from "./utils";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { DocumentActionHandlers } from "./types";
 import { Module } from "document-model/document-model";
 import { GraphQLSchema } from "graphql";
@@ -33,6 +33,18 @@ export function _DocumentModelEditor(props: Props) {
     handlers,
   } = props;
   const [showStandardLib, setShowStandardLib] = useState(false);
+
+  useEffect(() => {
+    const operations = modules.flatMap((module) => module.operations);
+    for (const operation of operations) {
+      if (!operation.schema) {
+        handlers.updateOperationSchema(
+          operation.id,
+          makeOperationInitialDoc(operation),
+        );
+      }
+    }
+  }, [modules]);
 
   return (
     <div>
@@ -175,7 +187,7 @@ export function _DocumentModelEditor(props: Props) {
                       />
                       <GraphqlEditor
                         schema={schema}
-                        doc={makeOperationInitialDoc(operation)}
+                        doc={operation.schema ?? ""}
                         updateDoc={(newDoc) =>
                           handlers.updateOperationSchema(operation.id, newDoc)
                         }

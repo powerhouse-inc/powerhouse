@@ -23,21 +23,21 @@ export const MetadataFormSchema = z.object({
 
 export type MetadataFormValues = z.infer<typeof MetadataFormSchema>;
 
-type Props = {
-  name: string;
-  documentType: string;
-  extension: string;
+type Props = MetadataFormValues & {
   onSubmit: (values: MetadataFormValues) => void;
 };
 export function ModelMetadataForm(props: Props) {
-  const { name, documentType, extension, onSubmit } = props;
+  const { name, documentType, extension, description, author, onSubmit } =
+    props;
 
   const form = useForm<MetadataFormValues>({
     resolver: zodResolver(MetadataFormSchema),
     defaultValues: {
-      name: name || "",
-      documentType: documentType || "",
-      extension: extension || "",
+      name,
+      documentType,
+      extension,
+      description,
+      author,
     },
   });
 
