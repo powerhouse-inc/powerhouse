@@ -83,6 +83,11 @@ export async function startServer() {
                     '@powerhousedao',
                     'scalars',
                 ),
+                'document-model-libs': join(
+                    projectRoot,
+                    'node_modules',
+                    'document-model-libs',
+                ),
                 react: join(projectRoot, 'node_modules', 'react'),
                 'react-dom': join(projectRoot, 'node_modules', 'react-dom'),
             },
