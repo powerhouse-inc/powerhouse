@@ -174,7 +174,11 @@ export function viteConnectDevStudioPlugin(
 
     return [
         enabled &&
-            viteIgnoreStaticImport([externalImports, '@powerhousedao/scalars']),
+            viteIgnoreStaticImport([
+                'react',
+                'react-dom',
+                '@powerhousedao/scalars',
+            ]),
         {
             name: 'vite-plugin-connect-dev-studio',
             enforce: 'pre',

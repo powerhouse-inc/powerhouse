@@ -12,7 +12,9 @@ import pkg from './package.json';
 import { externalIds, viteConnectDevStudioPlugin } from './studio/vite-plugin';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
-const buildStudioExternals = isBuildStudio ? ['@powerhousedao/studio'] : [];
+const buildStudioExternals = isBuildStudio
+    ? [externalIds, '@powerhousedao/studio']
+    : [];
 
 export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
@@ -109,7 +111,7 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: ['node:crypto', externalIds, ...buildStudioExternals],
+                external: ['node:crypto', ...buildStudioExternals],
             },
         },
         resolve: {
