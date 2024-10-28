@@ -17,6 +17,8 @@ export const typedef = 'scalar <%= name %>';
 
 export const schema = z.string(); // Update this code accordingly
 
+export const schemaString = 'z.string()'; // Update this code accordingly
+
 export const config: GraphQLScalarTypeConfig<any, any> = {
     name: '<%= name %>',
     description: '',

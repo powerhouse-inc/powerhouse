@@ -286,6 +286,9 @@ importers:
       '@storybook/addon-actions':
         specifier: ^8.3.4
         version: 8.3.5(storybook@8.3.5)
+      '@storybook/addon-docs':
+        specifier: 8.3.5
+        version: 8.3.5(storybook@8.3.5)
       '@storybook/addon-essentials':
         specifier: ^8.3.4
         version: 8.3.5(storybook@8.3.5)
@@ -702,7 +705,7 @@ importers:
         specifier: ^11.0.0
         version: 11.0.0
       graphql:
-        specifier: ^16.9.0
+        specifier: ^16.8.1
         version: 16.9.0
       typescript:
         specifier: ^5.3.3

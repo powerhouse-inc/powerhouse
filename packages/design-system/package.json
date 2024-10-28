@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.1.0-canary.8",
+  "version": "1.1.0-canary.10",
   "description": "",
   "files": [
     "/dist"
@@ -55,6 +55,7 @@
   "devDependencies": {
     "@hookform/devtools": "^4.3.1",
     "@storybook/addon-actions": "^8.3.4",
+    "@storybook/addon-docs": "8.3.5",
     "@storybook/addon-essentials": "^8.3.4",
     "@storybook/addon-interactions": "^8.3.4",
     "@storybook/addon-links": "^8.3.4",
