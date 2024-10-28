@@ -2,19 +2,16 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["src/**/*.ts"],
-  splitting: false,
+  splitting: true,
   sourcemap: false,
   clean: true,
-  format: "cjs",
+  format: "esm",
   treeshake: true,
   bundle: true,
   platform: "node",
   target: "node22",
-  legacyOutput: true,
-  external: ["document-drive"],
-  loader: {
-    ".esm.t": "copy",
-  },
+  noExternal: ["document-drive"],
+  shims: true,
   dts: {
     entry: {
       server: "src/server.ts",
