@@ -17,6 +17,8 @@ export const typedef = 'scalar EmailAddress';
 
 export const schema = z.string().email();
 
+export const stringSchema = 'z.string().email()';
+
 const emailValidation = (value: unknown): string => {
     if (typeof value !== 'string') {
         throw new GraphQLError(`Value is not string: ${JSON.stringify(value)}`);

@@ -13,6 +13,12 @@ const exportTypedefs =
 const exportScalarType =
   "// export types -- DO NOT REMOVE OR EDIT THIS COMMENT";
 
+const exportGeneratorTypeDefs =
+  "// export generator typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT";
+
+const exportValidationSchema =
+  "// export validation schema -- DO NOT REMOVE OR EDIT THIS COMMENT";
+
 export async function newScalarGenerator(
   tree: Tree,
   options: NewScalarGeneratorSchema,
@@ -47,6 +53,16 @@ export async function newScalarGenerator(
   newContents = newContents.replace(
     exportScalarType,
     `${exportScalarType}\nexport type { ScalarType as ${options.name}ScalarType } from './${options.name}';`,
+  );
+
+  newContents = newContents.replace(
+    exportGeneratorTypeDefs,
+    `${exportGeneratorTypeDefs}\n    [${options.name}.config.name]: ${options.name}.type,`,
+  );
+
+  newContents = newContents.replace(
+    exportValidationSchema,
+    `${exportValidationSchema}\n    [${options.name}.config.name]: ${options.name}.stringSchema,`,
   );
 
   tree.write(filePath, newContents);
