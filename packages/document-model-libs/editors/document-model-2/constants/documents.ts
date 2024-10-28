@@ -1,4 +1,5 @@
 import { GraphQLObjectType, GraphQLSchema, GraphQLString } from "graphql";
+import { typeDefs } from "@powerhousedao/scalars";
 
 export const initialStateDoc = `type State {
   examples: [String!]!
@@ -10,7 +11,9 @@ export const initialLocalStateDoc = `type LocalState {
 
 export const hiddenQueryTypeDefDoc = `type Query {
   _hidden: String
-}`;
+}
+${typeDefs.join("\n")}
+`;
 
 export const query = new GraphQLObjectType({
   name: "Query",

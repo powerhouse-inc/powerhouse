@@ -19,7 +19,6 @@ import { EditorProps, OperationScope, utils } from "document-model/document";
 import { OperationForm } from "./components/operation-form";
 import { typeDefs } from "@powerhousedao/scalars";
 import { ModelMetadataForm } from "./components/model-metadata-form";
-
 export default function Editor(
   props: EditorProps<
     DocumentModelState,
@@ -50,7 +49,6 @@ export default function Editor(
   );
   const [schema, setSchema] = useState(initialSchema);
   const [showStandardLib, setShowStandardLib] = useState(false);
-
   const setModelId = useCallback((id: string) => {
     dispatch(actions.setModelId({ id }));
   }, []);
