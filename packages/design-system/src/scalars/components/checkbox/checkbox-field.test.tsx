@@ -46,4 +46,23 @@ describe("CheckboxField", () => {
     const checkbox = screen.getByRole("checkbox");
     expect(checkbox).toBeRequired();
   });
+
+  it("should render with errors", () => {
+    render(
+      <CheckboxField label="Test checkbox" errors={["This is an error"]} />,
+    );
+    expect(screen.getByText("This is an error")).toBeInTheDocument();
+  });
+
+  it("should render with warnings and errors", () => {
+    render(
+      <CheckboxField
+        label="Test checkbox"
+        warnings={["This is a warning"]}
+        errors={["This is an error"]}
+      />,
+    );
+    expect(screen.getByText("This is a warning")).toBeInTheDocument();
+    expect(screen.getByText("This is an error")).toBeInTheDocument();
+  });
 });

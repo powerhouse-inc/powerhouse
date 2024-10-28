@@ -4,6 +4,7 @@ import { CheckboxField } from "./checkbox-field";
 const meta: Meta<typeof CheckboxField> = {
   component: CheckboxField,
   title: "Document Engineering/Simple Components/Checkbox",
+  tags: ["autodocs"],
   argTypes: {
     checked: {
       control: "boolean",
@@ -24,6 +25,25 @@ const meta: Meta<typeof CheckboxField> = {
     label: {
       control: "text",
       description: "Label for the checkbox",
+    },
+    required: {
+      control: "boolean",
+      description: "Whether the checkbox is required",
+      table: {
+        defaultValue: { summary: "false" },
+      },
+    },
+    description: {
+      control: "text",
+      description: "Additional description text below the label",
+    },
+    errors: {
+      control: "object",
+      description: "Array of error messages to display",
+    },
+    warnings: {
+      control: "object",
+      description: "Array of warning messages to display",
     },
   },
 };
@@ -105,5 +125,22 @@ export const WithCustomLabel: Story = {
         </a>
       </span>
     ),
+  },
+};
+
+export const WithErrors: Story = {
+  args: {
+    checked: false,
+    label: "Checkbox with Errors",
+    errors: ["This field is required", "Another error"],
+  },
+};
+
+export const WithWarningsAndErrors: Story = {
+  args: {
+    checked: false,
+    label: "Checkbox with Warnings and Errors",
+    warnings: ["This is a warning"],
+    errors: ["This is an error"],
   },
 };

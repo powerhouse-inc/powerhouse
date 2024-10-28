@@ -2,6 +2,7 @@ import { useId } from "react";
 import { FormLabel } from "../form-label";
 import { Checkbox } from "./checkbox";
 import { cn } from "@/scalars/lib/utils";
+import { FormMessageList } from "../form-message";
 
 interface CheckboxFieldProps {
   id?: string;
@@ -11,7 +12,8 @@ interface CheckboxFieldProps {
   disabled?: boolean;
   required?: boolean;
   description?: string;
-  // TODO: add support for errors and warnings
+  errors?: string[];
+  warnings?: string[];
   onChange?: (checked: boolean) => void;
   className?: string;
 }
@@ -24,6 +26,8 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
   disabled,
   required,
   description,
+  errors,
+  warnings,
   onChange,
   className,
 }) => {
@@ -45,7 +49,8 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
           {label}
         </FormLabel>
       </div>
-      {/* TODO: add support for errors and warnings */}
+      {warnings && <FormMessageList type="warning" messages={warnings} />}
+      {errors && <FormMessageList type="error" messages={errors} />}
     </div>
   );
 };
