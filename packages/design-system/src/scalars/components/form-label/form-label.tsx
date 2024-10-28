@@ -1,6 +1,7 @@
 import { Icon } from "@/powerhouse/components/icon";
 import React from "react";
 import { twMerge } from "tailwind-merge";
+import { Tooltip, TooltipProvider } from "../tooltip";
 
 export interface FormLabelProps
   extends React.PropsWithChildren,
@@ -38,12 +39,15 @@ export const FormLabel: React.FC<FormLabelProps> = ({
       {required && <span className="ml-1 text-blue-700 ">*</span>}
 
       {description && (
-        // TODO: add tooltip with the description
-        <Icon
-          name="CircleInfo"
-          size={16}
-          className="ml-1 cursor-pointer text-gray-600"
-        />
+        <TooltipProvider>
+          <Tooltip content={description}>
+            <Icon
+              name="CircleInfo"
+              size={16}
+              className="ml-1 cursor-pointer text-gray-600"
+            />
+          </Tooltip>
+        </TooltipProvider>
       )}
     </label>
   );
