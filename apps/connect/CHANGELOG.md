@@ -1,3 +1,12 @@
+# [1.0.0-dev.151](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.150...v1.0.0-dev.151) (2024-10-28)
+
+
+### Features
+
+* **connect:** added design-system as external dep ([8bfe962](https://github.com/powerhouse-inc/document-model-electron/commit/8bfe962e9e0fff42fde5d2725534d1acc0ef5ef9))
+* **connect:** fix duplicated react instance when using design system in document-model template ([c46a97a](https://github.com/powerhouse-inc/document-model-electron/commit/c46a97a73ba3766bd9042448f897f75ac111677b))
+* use react import map only when build is not for connect studio ([954379f](https://github.com/powerhouse-inc/document-model-electron/commit/954379fe495ae2cf51644269c6d8057afe14a640))
+
 # [1.0.0-dev.150](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.149...v1.0.0-dev.150) (2024-10-25)
 
 
