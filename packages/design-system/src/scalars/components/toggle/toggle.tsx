@@ -28,7 +28,6 @@ const Toggle = React.forwardRef<
       required={required}
       checked={checked}
       role="switch"
-      name="switch"
       disabled={disabled}
       onCheckedChange={onChange}
       className={cn(
