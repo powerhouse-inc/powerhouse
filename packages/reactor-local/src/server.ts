@@ -26,7 +26,7 @@ const driveServer = new DocumentDriveServer(
 // Start GraphQL API
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 let db: any;
-const main = async () => {
+const startServer = async () => {
   db = await drizzle("pglite", "./dev.db");
 
   // init drive server
@@ -81,4 +81,4 @@ const main = async () => {
   }
 };
 
-main();
+export { startServer };
