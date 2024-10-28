@@ -61,7 +61,6 @@ export function OperationForm(props: Props) {
                   {...field}
                   onBlur={handleBlur}
                   onKeyDown={(e) => {
-                    e.preventDefault();
                     if (e.key === "Enter") {
                       form.handleSubmit(onSubmit)();
                     }
