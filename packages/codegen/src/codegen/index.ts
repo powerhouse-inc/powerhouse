@@ -1,5 +1,6 @@
 #! /usr/bin/env node
 import { DocumentModelState } from "document-model/document-model";
+import { typeDefs } from "@powerhousedao/scalars";
 import {
   generateAll,
   generateEditor as _generateEditor,
@@ -83,7 +84,12 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
   );
 
   // bundle graphql schemas together
-  const schemaStr = generateGraphqlSchema(documentModel);
+  const schemaStr = [
+    typeDefs.join("\n"), // inject ph scalars
+    generateGraphqlSchema(documentModel),
+  ].join("\n");
+
+  console.log(schemaStr);
   if (schemaStr) {
     fs.writeFileSync(
       join(config.documentModelsDir, name, `schema.graphql`),
