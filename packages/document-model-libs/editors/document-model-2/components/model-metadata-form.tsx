@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AuthorSchema } from "../schemas";
-import { getDifferences, getDocumentMetadata } from "../utils";
 import {
   Form,
   FormField,
@@ -13,63 +12,36 @@ import {
   FormMessage,
 } from "./form";
 import { Input } from "./input";
-import { DocumentActionHandlers, DocumentModelDocument } from "../types";
 
 export const MetadataFormSchema = z.object({
   name: z.string().min(1),
   extension: z.string().min(1),
   documentType: z.string().min(1),
-  description: z.string(),
-  author: AuthorSchema,
+  description: z.string().optional(),
+  author: AuthorSchema.optional(),
 });
 
-type MetadataFormValues = z.infer<typeof MetadataFormSchema>;
+export type MetadataFormValues = z.infer<typeof MetadataFormSchema>;
 
 type Props = {
-  document: DocumentModelDocument;
-  handlers: DocumentActionHandlers;
+  name: string;
+  documentType: string;
+  extension: string;
+  onSubmit: (values: MetadataFormValues) => void;
 };
 export function ModelMetadataForm(props: Props) {
-  const { document, handlers } = props;
-  const defaultValues = getDocumentMetadata(document);
+  const { name, documentType, extension, onSubmit } = props;
 
   const form = useForm<MetadataFormValues>({
     resolver: zodResolver(MetadataFormSchema),
-    defaultValues,
+    defaultValues: {
+      name: name || "",
+      documentType: documentType || "",
+      extension: extension || "",
+    },
   });
 
-  const { control, reset, handleSubmit } = form;
-
-  function onSubmit(values: MetadataFormValues) {
-    const diff = getDifferences(getDocumentMetadata(document), values);
-
-    const { name, documentType, description, extension, author } = diff;
-
-    if (name) {
-      handlers.setModelName(name);
-    }
-
-    if (documentType) {
-      handlers.setModelId(documentType);
-    }
-
-    if (description) {
-      handlers.setModuleDescription(description);
-    }
-
-    if (extension) {
-      handlers.setModelExtension(extension);
-    }
-
-    if (author?.name) {
-      handlers.setAuthorName(author.name);
-    }
-
-    if (author?.website) {
-      handlers.setAuthorWebsite(author.website);
-    }
-    reset();
-  }
+  const { control, handleSubmit } = form;
 
   return (
     <Form {...form}>
@@ -174,7 +146,7 @@ export function ModelMetadataForm(props: Props) {
           )}
         />
         <button
-          className="w-full rounded-lg border border-gray-500 bg-white px-5 py-1 text-gray-900 mb-4"
+          className="mb-4 w-full rounded-lg border border-gray-500 bg-white px-5 py-1 text-gray-900"
           type="submit"
         >
           Submit

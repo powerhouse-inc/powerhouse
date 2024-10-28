@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "./form";
 import { Input } from "./input";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 
 const OperationFormSchema = z.object({
   name: z.string(),
@@ -26,15 +26,6 @@ export function OperationForm(props: Props) {
       name: operation?.name ?? "",
     },
   });
-
-  // Update the form's default values when the operation prop changes or for the new form with no operation
-  useEffect(() => {
-    if (operation) {
-      form.reset({ name: operation.name ?? "" }); // reset to operation name if editing
-    } else {
-      form.reset({ name: "" }); // reset to empty string for new form
-    }
-  }, [operation, form]);
 
   function onSubmit(values: z.infer<typeof OperationFormSchema>) {
     const name = toConstantCase(values.name);
@@ -57,7 +48,7 @@ export function OperationForm(props: Props) {
 
   return (
     <Form {...form}>
-      <form className="max-w-screen-sm">
+      <form className="w-1/2">
         <FormField
           control={form.control}
           name="name"
@@ -69,6 +60,12 @@ export function OperationForm(props: Props) {
                   placeholder="Add operation"
                   {...field}
                   onBlur={handleBlur}
+                  onKeyDown={(e) => {
+                    e.preventDefault();
+                    if (e.key === "Enter") {
+                      form.handleSubmit(onSubmit)();
+                    }
+                  }}
                 />
               </FormControl>
               <FormMessage />

@@ -1,14 +1,5 @@
-import { buildSchema } from "graphql";
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { initialSchema, hiddenQueryTypeDefDoc } from "./constants";
-import {
-  GraphqlEditor,
-  makeMinimalObjectFromSDL,
-  makeOperationInitialDoc,
-  makeStateInitialDoc,
-  ModuleForm,
-  Scope,
-} from ".";
+import { useMemo, useCallback } from "react";
+import { hiddenQueryTypeDefDoc, makeInitialSchemaDoc, Scope } from ".";
 import {
   DocumentModelState,
   DocumentModelAction,
@@ -16,9 +7,19 @@ import {
   actions,
 } from "document-model/document-model";
 import { EditorProps, OperationScope, utils } from "document-model/document";
-import { OperationForm } from "./components/operation-form";
-import { typeDefs } from "@powerhousedao/scalars";
-import { ModelMetadataForm } from "./components/model-metadata-form";
+import { DocumentModelEditor } from "./document-model-editor";
+import {
+  renameType,
+  mapSchema,
+  MapperKind,
+  astFromObjectType,
+} from "@graphql-tools/utils";
+import { pascalCase } from "change-case";
+import { buildSchema, isObjectType, print } from "graphql";
+import {
+  MetadataFormValues,
+  ModelMetadataForm,
+} from "./components/model-metadata-form";
 
 export default function Editor(
   props: EditorProps<
@@ -28,28 +29,39 @@ export default function Editor(
   >,
 ) {
   const { document, dispatch } = props;
-  const modelName = document.name;
-  const hasSetModelMetadata = !!modelName;
-  const globalStateSchema =
-    document.state.global.specifications[0].state.global.schema;
-  const globalStateInitialValue =
-    document.state.global.specifications[0].state.global.initialValue;
-  const localStateSchema =
-    document.state.global.specifications[0].state.local.schema;
-  const modules = useMemo(
-    () => document.state.global.specifications[0].modules,
-    [document.state.global.specifications],
+  const { name: modelName } = useMemo(
+    () => ({ name: document.name }),
+    [document.name],
   );
-  const operations = useMemo(
-    () => modules.flatMap((module) => module.operations),
-    [modules],
+  const {
+    state: {
+      global: {
+        schema: globalStateSchema,
+        initialValue: globalStateInitialValue,
+      },
+      local: { schema: localStateSchema, initialValue: localStateInitialValue },
+    },
+    modules,
+  } = useMemo(
+    () => document.state.global.specifications[0],
+    [
+      document.state.global.specifications[0].state.global,
+      document.state.global.specifications[0].state.local,
+      document.state.global.specifications[0].modules,
+    ],
   );
-  const operationSchemas = useMemo(
-    () => operations.map((op) => op.schema).filter(Boolean),
-    [operations],
-  );
-  const [schema, setSchema] = useState(initialSchema);
-  const [showStandardLib, setShowStandardLib] = useState(false);
+
+  const schema = buildSchema(`
+    ${hiddenQueryTypeDefDoc}
+    ${globalStateSchema}
+    ${localStateSchema}
+    ${modules
+      .flatMap((module) =>
+        module.operations.map((operation) => operation.schema),
+      )
+      .filter(Boolean)
+      .join("\n")}
+  `);
 
   const setModelId = useCallback((id: string) => {
     dispatch(actions.setModelId({ id }));
@@ -64,8 +76,8 @@ export default function Editor(
   }, []);
 
   const setModelName = useCallback((name: string) => {
-    dispatch(actions.setModelName({ name }));
     dispatch(actions.setName(name));
+    dispatch(actions.setModelName({ name }));
   }, []);
 
   const setAuthorName = useCallback((authorName: string) => {
@@ -146,152 +158,119 @@ export default function Editor(
       updateOperationScope,
       deleteOperation,
     }),
-    [
-      setModelId,
-      setModelExtension,
-      setModelName,
-      setAuthorName,
-      setAuthorWebsite,
-      setStateSchema,
-      setInitialState,
-      addModule,
-      setModuleDescription,
-      updateModuleName,
-      updateModuleDescription,
-      deleteModule,
-      addOperation,
-      updateOperationName,
-      updateOperationSchema,
-      updateOperationScope,
-      deleteOperation,
-    ],
+    [],
   );
+  function onSubmit(values: MetadataFormValues) {
+    const { name, documentType, description, extension, author } = values;
+    if (name) {
+      handlers.setModelName(name);
+      if (!globalStateSchema) {
+        const initialSchemaDoc = makeInitialSchemaDoc(
+          globalStateSchema,
+          name,
+          "global",
+        );
+        handlers.setStateSchema(initialSchemaDoc, "global");
 
-  useEffect(() => {
-    const newSchemaString = `
-      ${hiddenQueryTypeDefDoc}
-      ${globalStateSchema}
-      ${localStateSchema}
-      ${operationSchemas.join("\n")}
-    `;
-    if (!newSchemaString) return;
-    const newSchema = buildSchema(newSchemaString);
-    setSchema(newSchema);
-  }, [globalStateSchema, localStateSchema, modules]);
+        if (!globalStateInitialValue) {
+          const initialStateDoc = "{}";
+          handlers.setInitialState(initialStateDoc, "global");
+        }
+      } else {
+        const oldGlobalStateType = schema.getType(
+          `${pascalCase(modelName)}State`,
+        );
+        if (!oldGlobalStateType) {
+          throw new Error("Expected global state type");
+        }
+        const newGlobalStateType = renameType(
+          oldGlobalStateType,
+          `${pascalCase(name)}State`,
+        );
+        const schemaWithNewType = mapSchema(schema, {
+          [MapperKind.TYPE]: (type) => {
+            if (type.name === oldGlobalStateType.name) {
+              return newGlobalStateType;
+            }
+            return type;
+          },
+        });
+        if (!isObjectType(newGlobalStateType)) {
+          throw new Error("Expected object type");
+        }
+        handlers.setStateSchema(
+          print(astFromObjectType(newGlobalStateType, schemaWithNewType)),
+          "global",
+        );
+        const oldLocalStateType = schema.getType(
+          `${pascalCase(modelName)}LocalState`,
+        );
+        if (!oldLocalStateType) {
+          return;
+        }
+        const newLocalStateType = renameType(
+          oldLocalStateType,
+          `${pascalCase(name)}LocalState`,
+        );
+        const schemaWithNewLocalStateType = mapSchema(schema, {
+          [MapperKind.TYPE]: (type) => {
+            if (type.name === oldLocalStateType.name) {
+              return newLocalStateType;
+            }
+            return type;
+          },
+        });
+        if (!isObjectType(newLocalStateType)) {
+          throw new Error("Expected object type");
+        }
+        handlers.setStateSchema(
+          print(
+            astFromObjectType(newLocalStateType, schemaWithNewLocalStateType),
+          ),
+          "local",
+        );
+      }
+    }
+
+    if (documentType) {
+      handlers.setModelId(documentType);
+    }
+
+    if (description) {
+      handlers.setModuleDescription(description);
+    }
+
+    if (extension) {
+      handlers.setModelExtension(extension);
+    }
+
+    if (author?.name) {
+      handlers.setAuthorName(author.name);
+    }
+
+    if (author?.website) {
+      handlers.setAuthorWebsite(author.website);
+    }
+  }
 
   return (
     <main className="mx-auto min-h-dvh max-w-screen-xl px-4 pt-8">
-      {!hasSetModelMetadata ? (
-        <ModelMetadataForm document={document} handlers={handlers} />
-      ) : (
-        <div>
-          <div className="mt-4 flex gap-2">
-            {showStandardLib ? (
-              <button
-                className="rounded bg-gray-800 px-2 py-1 text-white"
-                onClick={() => setShowStandardLib(false)}
-              >
-                Hide standard library
-              </button>
-            ) : (
-              <button
-                className="rounded bg-gray-800 px-2 py-1 text-white"
-                onClick={() => setShowStandardLib(true)}
-              >
-                Show standard library
-              </button>
-            )}
-          </div>
-          <div>
-            {showStandardLib && (
-              <GraphqlEditor
-                doc={typeDefs.join("\n")}
-                schema={schema}
-                readonly
-                updateDoc={() => {}}
-              />
-            )}
-            <GraphqlEditor
-              doc={makeStateInitialDoc(globalStateSchema, modelName, "global")}
-              schema={schema}
-              updateDoc={(newDoc) => {
-                handlers.setStateSchema(newDoc, "global");
-                handlers.setInitialState(
-                  makeMinimalObjectFromSDL(schema, newDoc),
-                  "global",
-                );
-              }}
-            />
-            {!localStateSchema && (
-              <button
-                className="rounded bg-gray-800 px-2 py-1 text-white"
-                onClick={() => {
-                  const initialDoc = makeStateInitialDoc(
-                    localStateSchema,
-                    modelName,
-                    "local",
-                  );
-                  handlers.setStateSchema(initialDoc, "local");
-                }}
-              >
-                Add local state
-              </button>
-            )}
-            {!!localStateSchema && (
-              <GraphqlEditor
-                doc={localStateSchema}
-                schema={schema}
-                updateDoc={(newDoc) => {
-                  handlers.setStateSchema(newDoc, "local");
-                  handlers.setInitialState(
-                    makeMinimalObjectFromSDL(schema, newDoc),
-                    "local",
-                  );
-                }}
-              />
-            )}
-            {modules.map((module) => (
-              <div className="" key={module.id}>
-                <div className="mt-4">
-                  <ModuleForm
-                    key={module.id}
-                    handlers={handlers}
-                    module={module}
-                  />
-                </div>
-                <div className="mt-4">
-                  {module.operations.map((operation) => (
-                    <div key={operation.id}>
-                      <OperationForm
-                        operation={operation}
-                        handlers={handlers}
-                        module={module}
-                      />
-                      <GraphqlEditor
-                        schema={schema}
-                        doc={makeOperationInitialDoc(operation)}
-                        updateDoc={(newDoc) =>
-                          handlers.updateOperationSchema(operation.id, newDoc)
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <OperationForm
-                    key={Math.random().toString()}
-                    handlers={handlers}
-                    module={module}
-                  />
-                </div>
-              </div>
-            ))}
-            <div className="mt-6">
-              <ModuleForm key={Math.random().toString()} handlers={handlers} />
-            </div>
-          </div>
-        </div>
-      )}
+      <ModelMetadataForm
+        onSubmit={onSubmit}
+        name={modelName}
+        documentType="documentModel"
+        extension=".test.ph"
+      />
+      <DocumentModelEditor
+        schema={schema}
+        modelName={modelName}
+        globalStateSchema={globalStateSchema}
+        globalStateInitialValue={globalStateInitialValue}
+        localStateSchema={localStateSchema}
+        localStateInitialValue={localStateInitialValue}
+        handlers={handlers}
+        modules={modules}
+      />
     </main>
   );
 }
