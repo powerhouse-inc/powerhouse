@@ -20,14 +20,14 @@ dotenv.config();
 // start document drive server with all available document models & filesystem storage
 const driveServer = new DocumentDriveServer(
   [DocumentModelLib, ...Object.values(DocumentModelsLibs)] as DocumentModel[],
-  new FilesystemStorage(path.join(__dirname, "../file-storage"))
+  new FilesystemStorage(path.join(__dirname, "../file-storage")),
 );
 
 // Start GraphQL API
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
-let db: any;
+
 const startServer = async () => {
-  db = await drizzle("pglite", "./dev.db");
+  const db = await drizzle("pglite", "./dev.db");
 
   // init drive server
   await driveServer.initialize();
@@ -48,6 +48,7 @@ const startServer = async () => {
       },
     });
   } catch (e) {
+    // TODO check if error is because drive already exists
     console.info("Default drive already exists. Skipping...");
   }
 
@@ -72,7 +73,7 @@ const startServer = async () => {
         createSchema(
           driveServer,
           searchListener.resolvers as GraphQLResolverMap,
-          searchListener.typeDefs
+          searchListener.typeDefs,
         ),
       name: "search/:drive",
     });

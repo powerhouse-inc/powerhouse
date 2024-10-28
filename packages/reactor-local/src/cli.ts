@@ -1,3 +1,4 @@
+#! /usr/bin/env node
 import { Command } from "commander";
 import { startServer } from "./server";
 
@@ -24,7 +25,7 @@ const reactorLocalAction: ReactorLocalAction = (options) => {
     process.env.LOCAL_DOCUMENT_MODELS = options.localDocuments;
   }
 
-  startServer().catch((error) => {
+  startServer().catch((error: unknown) => {
     throw error;
   });
 };
@@ -37,11 +38,11 @@ program
   .option("-p, --port <port>", "Port to run the server on", "4001")
   .option(
     "-le, --local-editors <localEditors>",
-    "Link local document editors path"
+    "Link local document editors path",
   )
   .option(
     "-ld, --local-documents <localDocuments>",
-    "Link local documents path"
+    "Link local documents path",
   )
   .action(reactorLocalAction);
 
