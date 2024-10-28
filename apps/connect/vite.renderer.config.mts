@@ -13,7 +13,12 @@ import { externalIds, viteConnectDevStudioPlugin } from './studio/vite-plugin';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
 const buildStudioExternals = isBuildStudio
-    ? [externalIds, '@powerhousedao/studio', '@powerhousedao/design-system']
+    ? [
+          externalIds,
+          '@powerhousedao/studio',
+          '@powerhousedao/design-system',
+          'document-model-libs',
+      ]
     : [externalIds];
 
 const reactImportScript = `
