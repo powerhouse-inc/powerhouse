@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "",
   "license": "AGPL-3.0-only",
   "types": "dist/index.d.ts",
@@ -29,7 +29,7 @@
     "tsup": "^8.3.0"
   },
   "dependencies": {
-    "@powerhousedao/codegen": "0.9.0",
+    "@powerhousedao/codegen": "0.10.0",
     "@powerhousedao/connect": "develop",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",

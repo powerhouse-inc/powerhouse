@@ -173,7 +173,7 @@ importers:
         version: 6.2.11
     devDependencies:
       '@powerhousedao/scalars':
-        specifier: workspace:*
+        specifier: 1.5.0
         version: link:../scalars
       copyfiles:
         specifier: ^2.4.1
@@ -586,13 +586,13 @@ importers:
         specifier: ^5.15.5
         version: 5.16.7(@emotion/react@11.13.3)(@emotion/styled@11.13.0)(@types/react@18.3.11)(react-dom@18.3.1)(react@18.3.1)
       '@powerhousedao/codegen':
-        specifier: 0.9.0
+        specifier: 0.10.0
         version: link:../codegen
       '@powerhousedao/design-system':
         specifier: 1.4.1
         version: link:../design-system
       '@powerhousedao/scalars':
-        specifier: workspace:*
+        specifier: 1.5.0
         version: link:../scalars
       '@prettier/sync':
         specifier: ^0.5.2
@@ -802,7 +802,7 @@ importers:
   packages/ph-cli:
     dependencies:
       '@powerhousedao/codegen':
-        specifier: 0.9.0
+        specifier: 0.10.0
         version: link:../codegen
       '@powerhousedao/connect':
         specifier: develop
