@@ -286,6 +286,9 @@ importers:
       '@storybook/addon-actions':
         specifier: ^8.3.4
         version: 8.3.5(storybook@8.3.5)
+      '@storybook/addon-docs':
+        specifier: 8.3.5
+        version: 8.3.5(storybook@8.3.5)
       '@storybook/addon-essentials':
         specifier: ^8.3.4
         version: 8.3.5(storybook@8.3.5)

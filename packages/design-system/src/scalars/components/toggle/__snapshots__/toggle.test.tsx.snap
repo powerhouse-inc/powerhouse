@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Toggle Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="flex flex-col gap-1"
+    data-testid="custom-class"
+  >
+    <div
+      class="flex items-center"
+    >
+      <button
+        aria-checked="true"
+        aria-labelledby=":r0:-label"
+        aria-required="false"
+        class="peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#0084FF] data-[state=unchecked]:bg-[#9EA0A1]"
+        data-state="checked"
+        id=":r0:"
+        role="switch"
+        type="button"
+        value="on"
+      >
+        <span
+          class="peer pointer-events-none block h-3.5 w-3.5 rounded-full bg-[#FCFCFC] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0"
+          data-state="checked"
+        />
+      </button>
+    </div>
+  </div>
+</DocumentFragment>
+`;
