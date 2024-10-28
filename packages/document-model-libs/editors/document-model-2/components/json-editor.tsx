@@ -1,19 +1,13 @@
 import { Annotation, EditorState } from "@codemirror/state";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { graphql, updateSchema } from "cm6-graphql";
 import { useEffect, useRef } from "react";
-import { GraphQLSchema, parse } from "graphql";
 import { basicSetup } from "codemirror";
-import {
-  validateGraphQlDocuments,
-  createDefaultRules,
-  isDocumentString,
-} from "@graphql-tools/utils";
+import { json, jsonParseLinter } from "@codemirror/lang-json";
+import { linter } from "@codemirror/lint";
+import { GraphQLSchema } from "graphql";
 
-const rules = createDefaultRules().filter(
-  (rule) => rule.name !== "ExecutableDefinitionsRule",
-);
+const jsonLinter = jsonParseLinter();
 const skipUpdateAnnotation = Annotation.define<boolean>();
 type Props = {
   schema: GraphQLSchema;
@@ -22,21 +16,20 @@ type Props = {
   updateDoc: (newDoc: string) => void;
 };
 
-export function GraphqlEditor(props: Props) {
-  const { doc, schema, readonly, updateDoc } = props;
+export function JSONEditor(props: Props) {
+  const { doc, readonly, updateDoc } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const stateRef = useRef<EditorState | null>(null);
 
   useEffect(() => {
     stateRef.current = EditorState.create({
-      doc: doc || "",
+      doc: doc || "{}",
       extensions: [
         basicSetup,
         oneDark,
-        graphql(schema, {
-          showErrorOnInvalidSchema: true,
-        }),
+        json(),
+        linter(jsonLinter),
         EditorView.lineWrapping,
         EditorView.theme({
           "&": {
@@ -45,7 +38,6 @@ export function GraphqlEditor(props: Props) {
         }),
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (readonly) return;
-          // Check if the transaction has the skipUpdateAnnotation
           if (
             update.transactions.some((tr) =>
               tr.annotation(skipUpdateAnnotation),
@@ -55,13 +47,8 @@ export function GraphqlEditor(props: Props) {
           }
           if (update.docChanged) {
             const newDoc = update.state.doc.toString();
-            if (!newDoc || newDoc === doc || !isDocumentString(newDoc)) return;
-            const errors = validateGraphQlDocuments(
-              schema,
-              [parse(newDoc)],
-              rules,
-            );
-            if (!errors.length) {
+            const isValid = jsonLinter(update.view).length === 0;
+            if (!!newDoc && isValid && newDoc !== doc) {
               updateDoc(newDoc);
             }
           }
@@ -69,17 +56,10 @@ export function GraphqlEditor(props: Props) {
         EditorView.focusChangeEffect.of((state, focusing) => {
           if (readonly || focusing) return null;
           const newDoc = state.doc.toString();
-          if (!newDoc || newDoc === doc || !isDocumentString(newDoc))
-            return null;
-          const errors = validateGraphQlDocuments(
-            schema,
-            [parse(newDoc)],
-            rules,
-          );
-          if (!errors.length) {
+          const isValid = jsonLinter(viewRef.current!).length === 0;
+          if (!!newDoc && isValid && newDoc !== doc) {
             updateDoc(newDoc);
           }
-
           return null;
         }),
         EditorState.readOnly.of(!!readonly),
@@ -99,10 +79,6 @@ export function GraphqlEditor(props: Props) {
   }, []);
 
   useEffect(() => {
-    updateSchema(viewRef.current!, schema);
-  }, [schema]);
-
-  useEffect(() => {
     if (!doc) return;
 
     const view = viewRef.current!;
@@ -115,7 +91,7 @@ export function GraphqlEditor(props: Props) {
           to: currentDoc.length,
           insert: doc,
         },
-        annotations: skipUpdateAnnotation.of(true),
+        annotations: skipUpdateAnnotation.of(true), // Add this line
       });
     }
   }, [doc]);

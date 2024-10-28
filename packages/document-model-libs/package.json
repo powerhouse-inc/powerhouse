@@ -140,6 +140,7 @@
     "dspot-powerhouse-components": "^1.1.0",
     "graphql": "^16.9.0",
     "graphql-codegen-typescript-validation-schema": "^0.16.0",
+    "jsonc-parser": "^3.3.1",
     "lucide-react": "^0.451.0",
     "lz-string": "^1.5.0",
     "microdiff": "^1.3.2",
@@ -170,6 +171,7 @@
   },
   "dependencies": {
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
+    "@codemirror/lang-json": "^6.0.1",
     "@graphql-codegen/core": "^4.0.2",
     "@graphql-codegen/typescript": "^4.0.6",
     "@graphql-tools/schema": "^10.0.7",
@@ -179,7 +181,6 @@
     "copy-anything": "^3.0.5",
     "date-fns": "^3.3.1",
     "deep-object-diff": "^1.1.9",
-    "jsonc-parser": "^3.2.1",
     "jszip": "^3.10.1",
     "mathjs": "^13.0.0"
   }

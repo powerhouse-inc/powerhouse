@@ -4,16 +4,9 @@ import { toLowercaseSnakeCase } from "../schemas";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "./form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "./form";
 import { Input } from "./input";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 
 const ModuleFormSchema = z.object({
   name: z.string(),
@@ -29,18 +22,9 @@ export function ModuleForm(props: Props) {
   const form = useForm<z.infer<typeof ModuleFormSchema>>({
     resolver: zodResolver(ModuleFormSchema),
     defaultValues: {
-      name: module?.name ? module.name : "",
+      name: module?.name ?? "",
     },
   });
-
-  // Update the form's default values when the module prop changes or for the new form with no module
-  useEffect(() => {
-    if (module) {
-      form.reset({ name: module.name }); // reset to module name if editing
-    } else {
-      form.reset({ name: "" }); // reset to empty string for new form
-    }
-  }, [module, form]);
 
   function onSubmit(values: z.infer<typeof ModuleFormSchema>) {
     const name = toLowercaseSnakeCase(values.name);
@@ -63,7 +47,7 @@ export function ModuleForm(props: Props) {
 
   return (
     <Form {...form}>
-      <form className="max-w-screen-sm">
+      <form className="w-1/2">
         <FormField
           control={form.control}
           name="name"
@@ -75,6 +59,12 @@ export function ModuleForm(props: Props) {
                   placeholder="Add module"
                   {...field}
                   onBlur={handleBlur}
+                  onKeyDown={(e) => {
+                    e.preventDefault();
+                    if (e.key === "Enter") {
+                      form.handleSubmit(onSubmit)();
+                    }
+                  }}
                 />
               </FormControl>
               <FormMessage />

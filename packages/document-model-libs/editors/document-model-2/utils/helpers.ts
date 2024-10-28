@@ -5,6 +5,7 @@ import { Operation } from "document-model/document-model";
 import {
   extendSchema,
   getNullableType,
+  GraphQLScalarType,
   GraphQLSchema,
   GraphQLType,
   InputObjectTypeDefinitionNode,
@@ -18,6 +19,7 @@ import {
   print,
 } from "graphql";
 import { DocumentModelDocument, Scope } from "../types";
+import * as customScalars from "@powerhousedao/scalars";
 
 export function makeStateObject(modelName: string, scope: Scope) {
   const name = makeStateObjectName(modelName, scope);
@@ -92,7 +94,7 @@ export function makeOperationInitialDoc(operation: Operation) {
   return inputObject;
 }
 
-export function makeStateInitialDoc(
+export function makeInitialSchemaDoc(
   stateSchema: string,
   modelName: string,
   scope: Scope,
@@ -175,12 +177,44 @@ export function getDifferences<T extends object>(
     return acc;
   }, {});
 }
+function isValidScalarValue(typeName: string, value: any): boolean {
+  if (typeName in customScalars) {
+    const scalar = customScalars[typeName as keyof typeof customScalars];
+    if (scalar instanceof GraphQLScalarType) {
+      return scalar.parseValue(value) !== undefined;
+    }
+  }
+  switch (typeName) {
+    case "Int":
+      return Number.isInteger(value);
+    case "Float":
+      return typeof value === "number";
+    case "Boolean":
+      return typeof value === "boolean";
+    case "DateTime":
+      return typeof value === "string" && !isNaN(Date.parse(value));
+    case "ID":
+    case "String":
+    default:
+      return typeof value === "string";
+  }
+}
 
-function getMinimalValue(type: GraphQLType, schema: GraphQLSchema) {
+function getMinimalValue(
+  type: GraphQLType,
+  schema: GraphQLSchema,
+  existingValue?: any,
+) {
   const nullableType = getNullableType(type);
 
   if (isScalarType(nullableType)) {
     const typeName = nullableType.name;
+    if (
+      existingValue !== undefined &&
+      isValidScalarValue(typeName, existingValue)
+    ) {
+      return existingValue;
+    }
     switch (typeName) {
       case "Int":
       case "Float":
@@ -197,19 +231,35 @@ function getMinimalValue(type: GraphQLType, schema: GraphQLSchema) {
   }
 
   if (isEnumType(nullableType)) {
-    return nullableType.getValues()[0]?.value || null;
+    const enumValues = nullableType.getValues().map((v) => v.value);
+    if (existingValue !== undefined && enumValues.includes(existingValue)) {
+      return existingValue;
+    }
+    return enumValues[0] || null;
   }
 
   if (isListType(nullableType)) {
+    if (existingValue !== undefined && Array.isArray(existingValue)) {
+      // Optionally, validate each element in the array
+      return existingValue;
+    }
     return [];
   }
 
   if (isObjectType(nullableType)) {
     const result: Record<string, any> = {};
     const fields = nullableType.getFields();
+    const _existingValue = existingValue as Record<string, any> | undefined;
     for (const fieldName in fields) {
       const field = fields[fieldName];
-      result[fieldName] = getMinimalValue(field.type, schema);
+      const existingFieldValue = _existingValue
+        ? _existingValue[fieldName]
+        : undefined;
+      result[fieldName] = getMinimalValue(
+        field.type,
+        schema,
+        existingFieldValue,
+      );
     }
     return result;
   }
@@ -218,9 +268,12 @@ function getMinimalValue(type: GraphQLType, schema: GraphQLSchema) {
   return null;
 }
 
-export function makeMinimalObjectFromSDL(schema: GraphQLSchema, sdl: string) {
+export function makeMinimalObjectFromSDL(
+  schema: GraphQLSchema,
+  sdl: string,
+  existingValue?: any,
+) {
   const typeAST = parse(sdl);
-  const extendedSchema = extendSchema(schema, typeAST);
 
   // Extract the type names from the SDL
   const typeNames: string[] = [];
@@ -239,11 +292,20 @@ export function makeMinimalObjectFromSDL(schema: GraphQLSchema, sdl: string) {
 
   // Assuming there's only one type definition in the SDL
   const typeName = typeNames[0];
-  const type = extendedSchema.getType(typeName);
+  let type = schema.getType(typeName);
+
+  let effectiveSchema = schema;
+
+  if (!type || !isObjectType(type)) {
+    // Type doesn't exist in the schema, extend the schema
+    effectiveSchema = extendSchema(schema, typeAST);
+    type = effectiveSchema.getType(typeName);
+  }
 
   if (!type || !isObjectType(type)) {
     throw new Error(`Type "${typeName}" is not a valid ObjectType.`);
   }
 
-  return JSON.stringify(getMinimalValue(type, extendedSchema));
+  const minimalObject = getMinimalValue(type, effectiveSchema, existingValue);
+  return JSON.stringify(minimalObject, null, 2);
 }
