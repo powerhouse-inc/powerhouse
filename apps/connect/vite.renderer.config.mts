@@ -12,7 +12,25 @@ import pkg from './package.json';
 import { externalIds, viteConnectDevStudioPlugin } from './studio/vite-plugin';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
-const buildStudioExternals = isBuildStudio ? ['@powerhousedao/studio'] : [];
+const buildStudioExternals = isBuildStudio
+    ? [externalIds, '@powerhousedao/studio', '@powerhousedao/design-system']
+    : [externalIds];
+
+const reactImportScript = `
+    <script type="importmap">
+        {
+            "imports": 
+            {
+                "react": "https://esm.sh/react",
+                "react/": "https://esm.sh/react/",
+                "react-dom": "https://esm.sh/react-dom",
+                "react-dom/": "https://esm.sh/react-dom/"
+            }
+        }
+    </script>
+`;
+
+process.env.VITE_IMPORT_REACT_SCRIPT = isBuildStudio ? '' : reactImportScript;
 
 export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
@@ -109,7 +127,7 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: ['node:crypto', externalIds, ...buildStudioExternals],
+                external: ['node:crypto', ...buildStudioExternals],
             },
         },
         resolve: {

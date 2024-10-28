@@ -49,7 +49,8 @@
         "vite-envs": "^4.4.5"
     },
     "peerDependencies": {
-        "@powerhousedao/scalars": "latest"
+        "@powerhousedao/scalars": "latest",
+        "@powerhousedao/design-system": "latest"
     },
     "devDependencies": {
         "@commitlint/cli": "^18.4.3",
@@ -63,7 +64,7 @@
         "@electron-forge/publisher-electron-release-server": "^6.2.1",
         "@electron-forge/publisher-github": "^7.2.0",
         "@playwright/test": "^1.41.2",
-        "@powerhousedao/design-system": "^1.4.0",
+        "@powerhousedao/design-system": "latest",
         "@powerhousedao/scalars": "latest",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
