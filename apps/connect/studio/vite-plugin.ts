@@ -178,6 +178,7 @@ export function viteConnectDevStudioPlugin(
                 'react',
                 'react-dom',
                 '@powerhousedao/scalars',
+                '@powerhousedao/design-system',
             ]),
         {
             name: 'vite-plugin-connect-dev-studio',

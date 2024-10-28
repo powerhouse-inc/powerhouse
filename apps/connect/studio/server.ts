@@ -71,6 +71,12 @@ export async function startServer() {
         resolve: {
             alias: {
                 // Resolve to the node_modules in the project root
+                '@powerhousedao/design-system': join(
+                    projectRoot,
+                    'node_modules',
+                    '@powerhousedao',
+                    'design-system',
+                ),
                 '@powerhousedao/scalars': join(
                     projectRoot,
                     'node_modules',

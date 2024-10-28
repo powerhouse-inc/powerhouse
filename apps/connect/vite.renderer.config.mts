@@ -13,7 +13,7 @@ import { externalIds, viteConnectDevStudioPlugin } from './studio/vite-plugin';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
 const buildStudioExternals = isBuildStudio
-    ? [externalIds, '@powerhousedao/studio']
+    ? [externalIds, '@powerhousedao/studio', '@powerhousedao/design-system']
     : [];
 
 export default defineConfig(({ mode }) => {
