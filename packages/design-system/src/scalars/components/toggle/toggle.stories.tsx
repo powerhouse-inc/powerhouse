@@ -70,6 +70,7 @@ export const CheckedWithLabel: Story = {
   args: {
     checked: true,
     label: "Active",
+    errors: [],
   },
 };
 
@@ -77,6 +78,7 @@ export const Unchecked: Story = {
   name: "Unchecked without label",
   args: {
     checked: false,
+    errors: [],
   },
 };
 
@@ -85,6 +87,7 @@ export const UncheckedWithLabel: Story = {
   args: {
     checked: false,
     label: "Active",
+    errors: [],
   },
 };
 
@@ -93,6 +96,7 @@ export const DisabledChecked: Story = {
   args: {
     checked: true,
     disabled: true,
+    errors: [],
   },
 };
 
@@ -102,6 +106,7 @@ export const DisabledCheckedWithLabel: Story = {
     disabled: true,
     checked: true,
     label: "Active",
+    errors: [],
   },
 };
 
@@ -110,6 +115,7 @@ export const DisabledUncheckedWithoutLabel: Story = {
   args: {
     checked: false,
     disabled: true,
+    errors: [],
   },
 };
 
@@ -119,5 +125,6 @@ export const DisabledUncheckedWithLabel: Story = {
     disabled: true,
     checked: false,
     label: "Active",
+    errors: [],
   },
 };

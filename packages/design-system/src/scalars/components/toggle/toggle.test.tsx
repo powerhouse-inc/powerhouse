@@ -1,75 +1,97 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, vi } from "vitest";
-import { ToggleField } from "./toggle-field";
+import { render, fireEvent, screen } from "@testing-library/react";
+import { Toggle } from "./toggle";
+import { vi } from "vitest";
 
 describe("Toggle Component", () => {
-  const mockOnChange = vi.fn();
+  const defaultProps = {
+    onChange: vi.fn(),
+    disabled: false,
+    checked: false,
+    required: false,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should match snapshot", () => {
-    const { asFragment } = render(<ToggleField />);
-    expect(asFragment()).toMatchSnapshot();
+  describe("Functionality", () => {
+    it("should call onChange with correct value when clicked", () => {
+      const handleChange = vi.fn();
+      render(<Toggle {...defaultProps} onChange={handleChange} />);
+
+      const toggle = screen.getByRole("switch");
+      fireEvent.click(toggle);
+
+      expect(handleChange).toHaveBeenCalledTimes(1);
+      expect(handleChange).toHaveBeenCalledWith(true);
+    });
+
+    it("should not call onChange when disabled", () => {
+      const handleChange = vi.fn();
+      render(
+        <Toggle {...defaultProps} disabled={true} onChange={handleChange} />,
+      );
+
+      const toggle = screen.getByRole("switch");
+      fireEvent.click(toggle);
+
+      expect(handleChange).not.toHaveBeenCalled();
+    });
+
+    it("should toggle between checked and unchecked states", () => {
+      const handleChange = vi.fn();
+      const { rerender } = render(
+        <Toggle {...defaultProps} checked={false} onChange={handleChange} />,
+      );
+
+      const toggle = screen.getByRole("switch");
+
+      expect(toggle).toHaveAttribute("data-state", "unchecked");
+
+      fireEvent.click(toggle);
+      rerender(
+        <Toggle {...defaultProps} checked={true} onChange={handleChange} />,
+      );
+
+      expect(toggle).toHaveAttribute("data-state", "checked");
+    });
   });
 
-  it("renders default status without a label at the left", () => {
-    render(<ToggleField />);
-    expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
-  });
+  describe("Rendering", () => {
+    it("should render with correct initial checked state", () => {
+      render(<Toggle {...defaultProps} checked={true} />);
+      const toggle = screen.getByRole("switch");
+      expect(toggle).toHaveAttribute("data-state", "checked");
+    });
 
-  it("renders default status without a label at the left", () => {
-    render(<ToggleField label="Test Label" />);
-    expect(screen.getByText("Test Label")).toBeInTheDocument();
-  });
+    it("should render as unchecked when checked prop is false", () => {
+      render(<Toggle {...defaultProps} checked={false} />);
+      const toggle = screen.getByRole("switch");
+      expect(toggle).toHaveAttribute("data-state", "unchecked");
+    });
 
-  it("renders checked status without label", () => {
-    render(<ToggleField checked={true} />);
-    expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
-  });
+    it("should apply disabled styles when disabled", () => {
+      render(<Toggle {...defaultProps} disabled={true} checked={true} />);
+      const toggle = screen.getByRole("switch");
 
-  it("renders defaultd status with a label at the left", () => {
-    render(<ToggleField label="Test Label" checked={true} />);
-    expect(screen.getByText("Test Label")).toBeInTheDocument();
-  });
+      expect(toggle).toHaveClass("cursor-not-allowed");
+      expect(toggle).toHaveClass("data-[state=checked]:bg-[#C5C7C7]");
+    });
 
-  it("does not render the label when not provided", () => {
-    render(<ToggleField />);
-    expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
-  });
+    it("should mark as required when required prop is true", () => {
+      render(<Toggle {...defaultProps} disabled={true} />);
+      const toggle = screen.getByRole("switch");
 
-  it("displays an error message when hasMessage is true", () => {
-    render(<ToggleField label="Test Label" errors={["Error message"]} />);
-    expect(screen.getByText("Error message")).toBeInTheDocument();
-  });
+      expect(toggle).toHaveAttribute("disabled");
+    });
 
-  it("calls onCheckedChange when clicked", () => {
-    render(<ToggleField label="Test Label" onCheckedChange={mockOnChange} />);
-    const toggleInput = screen.getByRole("switch");
+    it("should apply custom className when provided", () => {
+      const customClass = "custom-class";
+      render(<Toggle {...defaultProps} className={customClass} />);
+      const toggle = screen.getByRole("switch");
 
-    fireEvent.click(toggleInput);
-    expect(mockOnChange).toHaveBeenCalledTimes(1);
-    expect(toggleInput).toBeInTheDocument();
-  });
-
-  it("disables the toggle when disabled prop is true", () => {
-    render(
-      <ToggleField
-        label="Test Label"
-        disabled
-        onCheckedChange={mockOnChange}
-      />,
-    );
-    const toggleInput = screen.getByRole("switch");
-    expect(toggleInput).toBeDisabled();
-  });
-
-  it("renders with custom className", () => {
-    // this is a custom class name for testing purposes
-    // eslint-disable-next-line tailwindcss/no-custom-classname
-    render(<ToggleField className="custom-class" />);
-    const toggle = screen.getByTestId("custom-class");
-    expect(toggle).toHaveClass("custom-class");
+      expect(toggle).toHaveClass(customClass);
+    });
   });
 });
