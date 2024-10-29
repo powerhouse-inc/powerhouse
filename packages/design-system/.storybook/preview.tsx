@@ -28,11 +28,11 @@ const preview: Preview = {
     ),
     withThemeByDataAttribute<ReactRenderer>({
       themes: {
-        light: "ph-light",
-        dark: "ph-dark",
+        light: "light",
+        dark: "dark",
       },
       defaultTheme: "light",
-      attributeName: "data-theme",
+      attributeName: 'data-mode',
     }),
   ],
 };
