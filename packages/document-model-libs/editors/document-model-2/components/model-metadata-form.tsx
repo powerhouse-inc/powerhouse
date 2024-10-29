@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { AuthorSchema } from "../schemas";
 import {
   Form,
   FormField,
@@ -15,10 +14,15 @@ import { Input } from "./input";
 
 export const MetadataFormSchema = z.object({
   name: z.string().min(1),
-  extension: z.string().min(1),
+  extension: z.string().optional(),
   documentType: z.string().min(1),
   description: z.string().optional(),
-  author: AuthorSchema.optional(),
+  author: z
+    .object({
+      name: z.string().optional(),
+      website: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type MetadataFormValues = z.infer<typeof MetadataFormSchema>;
@@ -35,9 +39,12 @@ export function ModelMetadataForm(props: Props) {
     defaultValues: {
       name,
       documentType,
-      extension,
       description,
-      author,
+      extension: extension || ".phdm",
+      author: {
+        name: author?.name ?? "",
+        website: author?.website ?? "",
+      },
     },
   });
 

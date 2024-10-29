@@ -1,12 +1,8 @@
 import { typeDefs } from "@powerhousedao/scalars";
 import { GraphqlEditor, JSONEditor, ModuleForm } from "./components";
 import { OperationForm } from "./components/operation-form";
-import {
-  makeMinimalObjectFromSDL,
-  makeInitialSchemaDoc,
-  makeOperationInitialDoc,
-} from "./utils";
-import { memo, useEffect, useState } from "react";
+import { makeMinimalObjectFromSDL, makeInitialSchemaDoc } from "./utils";
+import { memo, useState } from "react";
 import { DocumentActionHandlers } from "./types";
 import { Module } from "document-model/document-model";
 import { GraphQLSchema } from "graphql";
@@ -33,18 +29,6 @@ export function _DocumentModelEditor(props: Props) {
     handlers,
   } = props;
   const [showStandardLib, setShowStandardLib] = useState(false);
-
-  useEffect(() => {
-    const operations = modules.flatMap((module) => module.operations);
-    for (const operation of operations) {
-      if (!operation.schema) {
-        handlers.updateOperationSchema(
-          operation.id,
-          makeOperationInitialDoc(operation),
-        );
-      }
-    }
-  }, [modules]);
 
   return (
     <div>

@@ -3,6 +3,7 @@ import {
   getDocumentMetadata,
   hiddenQueryTypeDefDoc,
   makeInitialSchemaDoc,
+  makeOperationInitialDoc,
   Scope,
 } from ".";
 import {
@@ -123,9 +124,16 @@ export default function Editor(
     dispatch(actions.deleteModule({ id }));
   }, []);
 
-  const addOperation = useCallback((moduleId: string, name: string) => {
-    dispatch(actions.addOperation({ id: utils.hashKey(), moduleId, name }));
-  }, []);
+  const addOperation = useCallback(
+    (moduleId: string, name: string): Promise<string> => {
+      return new Promise((resolve) => {
+        const id = utils.hashKey();
+        dispatch(actions.addOperation({ id, moduleId, name }));
+        resolve(id);
+      });
+    },
+    [],
+  );
 
   const updateOperationName = useCallback((id: string, name: string) => {
     dispatch(actions.setOperationName({ id, name }));
@@ -134,6 +142,14 @@ export default function Editor(
   const updateOperationSchema = useCallback((id: string, schema: string) => {
     dispatch(actions.setOperationSchema({ id, schema }));
   }, []);
+
+  const addOperationAndInitialSchema = useCallback(
+    async (moduleId: string, name: string) => {
+      const id = await addOperation(moduleId, name);
+      updateOperationSchema(id, makeOperationInitialDoc(name));
+    },
+    [],
+  );
 
   const updateOperationScope = useCallback(
     (id: string, scope: OperationScope) => {
@@ -161,6 +177,7 @@ export default function Editor(
       updateModuleDescription,
       deleteModule,
       addOperation,
+      addOperationAndInitialSchema,
       updateOperationName,
       updateOperationSchema,
       updateOperationScope,

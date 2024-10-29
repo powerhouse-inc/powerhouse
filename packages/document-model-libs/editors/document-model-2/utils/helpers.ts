@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { pascalCase } from "change-case";
-import { Author, Operation } from "document-model/document-model";
+import { Author } from "document-model/document-model";
 import {
   extendSchema,
   getNullableType,
@@ -84,13 +84,9 @@ export function makeStateObjectName(modelName: string, scope: string) {
   return `${pascalCase(modelName)}${scope === "local" ? "Local" : ""}State`;
 }
 
-export function makeOperationInitialDoc(operation: Operation) {
-  if (operation.schema) return operation.schema;
-  if (!operation.name) {
-    throw new Error("Operation name is required");
-  }
-  const name = makeOperationInputName(operation.name);
-  const inputObject = makeEmptyInputObject(name);
+export function makeOperationInitialDoc(name: string) {
+  const inputName = makeOperationInputName(name);
+  const inputObject = makeEmptyInputObject(inputName);
   return inputObject;
 }
 
