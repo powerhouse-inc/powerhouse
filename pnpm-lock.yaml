@@ -155,10 +155,10 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
-        specifier: 1.1.1
+        specifier: 1.2.0
         version: link:../../packages/general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: 1.1.1
+        specifier: 1.2.0
         version: link:../../packages/reactor-api
       '@powerhousedao/switchboard-gui':
         specifier: 0.3.0
@@ -1074,10 +1074,10 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
-        specifier: 1.1.1
+        specifier: 1.2.0
         version: link:../general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: 1.1.1
+        specifier: 1.2.0
         version: link:../reactor-api
       commander:
         specifier: ^12.1.0
