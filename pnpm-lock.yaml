@@ -155,10 +155,10 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../packages/general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../packages/reactor-api
       '@powerhousedao/switchboard-gui':
         specifier: 0.3.0
@@ -170,7 +170,7 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-drive:
-        specifier: workspace:*
+        specifier: 1.2.0
         version: link:../../packages/document-drive
       document-model:
         specifier: workspace:*
@@ -535,8 +535,6 @@ importers:
       tsx:
         specifier: ^4.19.1
         version: 4.19.1
-
-  packages/docker-environment: {}
 
   packages/document-drive:
     dependencies:
@@ -968,7 +966,7 @@ importers:
   packages/general-document-indexer:
     dependencies:
       document-drive:
-        specifier: workspace:*
+        specifier: 1.2.0
         version: link:../document-drive
       document-model:
         specifier: workspace:*
@@ -1046,7 +1044,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       document-drive:
-        specifier: workspace:*
+        specifier: 1.2.0
         version: link:../document-drive
       document-model:
         specifier: workspace:*
@@ -1076,16 +1074,16 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../reactor-api
       commander:
         specifier: ^12.1.0
         version: 12.1.0
       document-drive:
-        specifier: workspace:*
+        specifier: 1.2.0
         version: link:../document-drive
       document-model:
         specifier: workspace:*
@@ -16526,7 +16524,7 @@ packages:
     resolution: {integrity: sha512-an2S5quJMiy5bnZKEf6AkfH/7r8CzHvhchU40gxN+OM6HPhe7Z9T1FUychcf2M9PpPOO0Hf7BAEfJkw2TDIBDw==}
     engines: {node: '>=12.0.0'}
     dependencies:
-      readable-stream: 3.6.2
+      readable-stream: 4.5.2
       webextension-polyfill: 0.10.0
     dev: false
 
@@ -23458,7 +23456,6 @@ packages:
       events: 3.3.0
       process: 0.11.10
       string_decoder: 1.3.0
-    dev: true
 
   /readable-web-to-node-stream@3.0.2:
     resolution: {integrity: sha512-ePeK6cc1EcKLEhJFt/AebMCLL+GgSKhuygrZ/GLaKZYEecIgIECf4UaUuaByiGtzckwR4ain9VzUh95T1exYGw==}
