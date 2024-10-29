@@ -6,6 +6,9 @@
   "bin": {
     "reactor-local": "dist/cli.js"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "vite-node src/index.ts",
     "build": "tsup",
