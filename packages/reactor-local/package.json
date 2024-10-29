@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/server.js",
   "bin": {
     "reactor-local": "dist/cli.js"
@@ -21,7 +21,7 @@
     "@apollo/subgraph": "^2.9.2",
     "@electric-sql/pglite": "^0.2.12",
     "@libsql/client": "^0.14.0",
-    "@powerhousedao/general-document-indexer": "workspace:^",
+    "@powerhousedao/general-document-indexer": "1.1.0",
     "@powerhousedao/reactor-api": "workspace:*",
     "commander": "^12.1.0",
     "document-drive": "workspace:*",
