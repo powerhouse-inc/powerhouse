@@ -161,7 +161,7 @@ importers:
         specifier: 1.1.0
         version: link:../../packages/reactor-api
       '@powerhousedao/switchboard-gui':
-        specifier: workspace:*
+        specifier: 0.3.0
         version: link:../../packages/switchboard-gui
       body-parser:
         specifier: ^1.20.3
