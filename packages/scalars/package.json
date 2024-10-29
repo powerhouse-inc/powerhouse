@@ -44,17 +44,17 @@
       "import": "./dist/es/src/index.js",
       "types": "./dist/types/src/index.d.ts"
     },
-    "./src\\scalars\\index": {
+    "./src/scalars/index": {
       "require": "./dist/cjs/src/scalars/src/scalars/index.js",
       "import": "./dist/es/src/scalars/src/scalars/index.js",
       "types": "./dist/types/src/scalars/src/scalars/index.d.ts"
     },
-    "./src\\scalars\\EmailAddress": {
+    "./src/scalars/EmailAddress": {
       "require": "./dist/cjs/src/scalars/src/scalars/EmailAddress.js",
       "import": "./dist/es/src/scalars/src/scalars/EmailAddress.js",
       "types": "./dist/types/src/scalars/src/scalars/EmailAddress.d.ts"
     },
-    "./src\\scalars\\AmountPercentage": {
+    "./src/scalars/AmountPercentage": {
       "require": "./dist/cjs/src/scalars/src/scalars/AmountPercentage.js",
       "import": "./dist/es/src/scalars/src/scalars/AmountPercentage.js",
       "types": "./dist/types/src/scalars/src/scalars/AmountPercentage.d.ts"
