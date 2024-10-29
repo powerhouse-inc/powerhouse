@@ -4,6 +4,7 @@ exports[`FormMessage > should match snapshot 1`] = `
 <DocumentFragment>
   <p
     class="mb-0 inline-flex items-center text-xs font-medium text-blue-900 dark:text-blue-900"
+    data-type="info"
   >
     message
   </p>
