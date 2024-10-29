@@ -6,7 +6,7 @@ import { cn } from "@/scalars/lib";
 
 export interface FormLabelProps
   extends React.PropsWithChildren,
-  React.LabelHTMLAttributes<HTMLLabelElement> {
+    React.LabelHTMLAttributes<HTMLLabelElement> {
   required?: boolean;
   disabled?: boolean;
   description?: string;

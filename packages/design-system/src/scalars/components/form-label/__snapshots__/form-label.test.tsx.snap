@@ -3,7 +3,7 @@
 exports[`FormLabel Component > should match snapshot 1`] = `
 <DocumentFragment>
   <label
-    class="inline-flex items-center text-sm font-semibold text-gray-700 dark:text-gray-400"
+    class="inline-flex items-center text-sm font-medium text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
     data-testid="form-label"
     role="label"
   >
