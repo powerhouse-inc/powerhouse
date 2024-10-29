@@ -1,3 +1,19 @@
+## 0.8.0 (2024-10-25)
+
+### 🚀 Features
+
+- implement a standard document model toolbar with out of the box functionalities in the document model editor ([#430](https://github.com/powerhouse-inc/powerhouse/pull/430))
+- **document-model-libs:** port code from private repo ([11ef336a](https://github.com/powerhouse-inc/powerhouse/commit/11ef336a))
+- **ph-cli:** Support for dev and generate command ([#406](https://github.com/powerhouse-inc/powerhouse/pull/406))
+- **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
+- **switchboard-gui:** init ([#405](https://github.com/powerhouse-inc/powerhouse/pull/405))
+
+### ❤️  Thank You
+
+- frankp.eth @froid1911
+- Guillermo Puente Sandoval @gpuente
+- ryanwolhuter @ryanwolhuter
+
 ## 0.7.0 (2024-10-16)
 
 ### 🚀 Features

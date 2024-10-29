@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.7.0",
+  "version": "0.10.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "main": "dist/index.js",
@@ -52,9 +52,11 @@
     "husky": "^8.0.3",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
-    "tsup": "^8.3.0"
+    "tsup": "^8.3.0",
+    "@powerhousedao/scalars": "1.5.0"
   },
   "peerDependencies": {
-    "graphql": "^16.8.1"
+    "graphql": "^16.8.1",
+    "@powerhousedao/scalars": "latest"
   }
 }
