@@ -2,9 +2,9 @@
   "name": "@powerhousedao/reactor-local",
   "type": "module",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/server.js",
   "bin": {
-    "reactor-local": "dist/esm/cli.js"
+    "reactor-local": "dist/cli.js"
   },
   "scripts": {
     "start": "vite-node src/index.ts",
