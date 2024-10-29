@@ -158,7 +158,7 @@ importers:
         specifier: 1.1.0
         version: link:../../packages/general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: workspace:*
+        specifier: 1.1.0
         version: link:../../packages/reactor-api
       '@powerhousedao/switchboard-gui':
         specifier: workspace:*
@@ -1079,7 +1079,7 @@ importers:
         specifier: 1.1.0
         version: link:../general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: workspace:*
+        specifier: 1.1.0
         version: link:../reactor-api
       commander:
         specifier: ^12.1.0
