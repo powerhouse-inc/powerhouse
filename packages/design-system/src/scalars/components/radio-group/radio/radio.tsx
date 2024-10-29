@@ -1,6 +1,5 @@
 import React, { useId } from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
-import { Circle } from "lucide-react";
 import { FormLabel } from "@/scalars/components/form-label";
 import { cn } from "@/scalars/lib/utils";
 
@@ -23,11 +22,11 @@ export const Radio = React.forwardRef<
     {
       className,
       description,
-      disabled,
-      hasError,
+      disabled = false,
+      hasError = false,
       id: propId,
-      label,
-      value,
+      label = "",
+      value = "",
       ...props
     },
     ref,
@@ -42,7 +41,7 @@ export const Radio = React.forwardRef<
           aria-disabled={disabled}
           aria-invalid={hasError}
           className={cn(
-            "aspect-square size-4 rounded-full border-2 border-blue-700",
+            "aspect-square size-4 rounded-full bg-white border-2 border-blue-700",
             "focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-0",
             "hover:border-blue-900",
             "focus:hover:ring-blue-200",
@@ -57,19 +56,15 @@ export const Radio = React.forwardRef<
           ref={ref}
           value={value}
         >
-          <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-            <Circle
-              className={cn(
-                "size-2.5",
-                "fill-blue-700 text-blue-700",
-                "hover:fill-blue-900 hover:text-blue-900",
-                disabled &&
-                  "fill-gray-600 text-gray-600 hover:fill-gray-600 hover:text-gray-600",
-                hasError &&
-                  "fill-red-700 text-red-700 hover:fill-red-900 hover:text-red-900",
-              )}
-            />
-          </RadioGroupPrimitive.Indicator>
+          <RadioGroupPrimitive.Indicator
+            className={cn(
+              "relative flex size-full items-center justify-center",
+              "after:block after:size-2 after:rounded-full after:bg-blue-700",
+              "after:hover:bg-blue-900",
+              disabled && "after:bg-gray-600 after:hover:bg-gray-600",
+              hasError && "after:bg-red-700 after:hover:bg-red-900",
+            )}
+          />
         </RadioGroupPrimitive.Item>
         <FormLabel
           description={description}

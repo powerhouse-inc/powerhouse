@@ -55,8 +55,8 @@ export const DefaultWithDescription: Story = {
 export const DefaultWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a default radio with description & checked",
-    label: "Default with description & checked",
+    description: "This is a default radio with description and checked",
+    label: "Default with description and checked",
     value: "default-with-description-checked",
   },
 };
@@ -96,8 +96,8 @@ export const FocusWithDescription: Story = {
 export const FocusWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a focused radio with description & checked",
-    label: "Focus with description & checked",
+    description: "This is a focused radio with description and checked",
+    label: "Focus with description and checked",
     value: "focus-with-description-checked",
   },
   parameters: {
@@ -140,8 +140,8 @@ export const HoverWithDescription: Story = {
 export const HoverWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a hovered radio with description & checked",
-    label: "Hover with description & checked",
+    description: "This is a hovered radio with description and checked",
+    label: "Hover with description and checked",
     value: "hover-with-description-checked",
   },
   parameters: {
@@ -178,9 +178,9 @@ export const DisabledWithDescription: Story = {
 export const DisabledWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a disabled radio with description & checked",
+    description: "This is a disabled radio with description and checked",
     disabled: true,
-    label: "Disabled with description & checked",
+    label: "Disabled with description and checked",
     value: "disabled-with-description-checked",
   },
 };

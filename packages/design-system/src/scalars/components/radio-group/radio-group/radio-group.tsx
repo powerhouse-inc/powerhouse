@@ -1,6 +1,7 @@
 import React, { useId } from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import { FormLabel } from "@/scalars/components/form-label";
+import { FormMessageList } from "@/scalars/components/form-message";
 import { cn } from "@/scalars/lib/utils";
 
 export interface RadioGroupProps
@@ -33,7 +34,7 @@ export const RadioGroup = React.forwardRef<
       label,
       name: propName,
       onValueChange,
-      required,
+      required = false,
       value,
       ...props
     },
@@ -46,7 +47,20 @@ export const RadioGroup = React.forwardRef<
     const hasError = errors.length > 0;
 
     return (
-      <>
+      <RadioGroupPrimitive.Root
+        {...props}
+        aria-invalid={hasError}
+        aria-label={hasLabel ? undefined : props["aria-label"]}
+        aria-required={required}
+        className={cn("flex flex-col gap-2.5", className)}
+        defaultValue={defaultValue}
+        id={id}
+        name={name}
+        onValueChange={onValueChange}
+        ref={ref}
+        required={required}
+        value={value}
+      >
         {hasLabel && (
           <FormLabel
             description={description}
@@ -57,23 +71,11 @@ export const RadioGroup = React.forwardRef<
             {label}
           </FormLabel>
         )}
-        <RadioGroupPrimitive.Root
-          {...props}
-          aria-invalid={hasError}
-          aria-label={hasLabel ? undefined : props["aria-label"]}
-          aria-required={required}
-          className={cn("flex flex-col gap-4", className)}
-          defaultValue={defaultValue}
-          id={id}
-          name={name}
-          onValueChange={onValueChange}
-          ref={ref}
-          required={required}
-          value={value}
-        >
-          {children}
-        </RadioGroupPrimitive.Root>
-      </>
+        {children}
+        {errors.length > 0 && (
+          <FormMessageList messages={errors} type="error" />
+        )}
+      </RadioGroupPrimitive.Root>
     );
   },
 );

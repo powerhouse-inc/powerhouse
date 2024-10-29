@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Radio } from "../radio";
 import { RadioGroup } from "../radio-group";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 describe("Radio Component", () => {
   it("should match snapshot", () => {
@@ -13,7 +14,7 @@ describe("Radio Component", () => {
     expect(asFragment()).toMatchSnapshot();
   });
 
-  it("renders with label and value", () => {
+  it("should render with label and value", () => {
     render(
       <RadioGroup>
         <Radio label="Test Label" value="test" />
@@ -23,7 +24,7 @@ describe("Radio Component", () => {
     expect(screen.getByRole("radio")).toHaveAttribute("value", "test");
   });
 
-  it("renders with description", () => {
+  it("should render with description", () => {
     render(
       <RadioGroup>
         <Radio label="Test Label" value="test" description="Test Description" />
@@ -35,10 +36,10 @@ describe("Radio Component", () => {
     expect(iconFallback).toHaveStyle({ width: "16px", height: "16px" });
   });
 
-  it("applies error styles when hasError is true", () => {
+  it("should apply error styles when hasError is true", () => {
     render(
       <RadioGroup>
-        <Radio label="Test Label" value="test" hasError={true} />
+        <Radio label="Test Label" value="test" hasError />
       </RadioGroup>,
     );
     const radio = screen.getByRole("radio");
@@ -46,10 +47,10 @@ describe("Radio Component", () => {
     expect(radio).toHaveClass("border-red-700");
   });
 
-  it("applies disabled styles and attributes", () => {
+  it("should apply disabled styles and attributes", () => {
     render(
       <RadioGroup>
-        <Radio label="Test Label" value="test" disabled={true} />
+        <Radio label="Test Label" value="test" disabled />
       </RadioGroup>,
     );
     const radio = screen.getByRole("radio");
@@ -57,16 +58,18 @@ describe("Radio Component", () => {
     expect(radio).toHaveClass("cursor-not-allowed");
   });
 
-  it("renders with custom className", () => {
+  it("should render with custom className", () => {
     render(
       <RadioGroup>
+        {/* Custom className for testing purposes */}
+        {/* eslint-disable-next-line tailwindcss/no-custom-classname */}
         <Radio label="Test Label" value="test" className="custom-class" />
       </RadioGroup>,
     );
     expect(screen.getByRole("radio")).toHaveClass("custom-class");
   });
 
-  it("uses provided id when specified", () => {
+  it("should use provided id when specified", () => {
     render(
       <RadioGroup>
         <Radio label="Test Label" value="test" id="custom-id" />
@@ -75,13 +78,27 @@ describe("Radio Component", () => {
     expect(screen.getByRole("radio")).toHaveAttribute("id", "custom-id");
   });
 
-  it("generates unique id when not provided", () => {
+  it("should generate unique id when not provided", () => {
     render(
       <RadioGroup>
         <Radio label="Test Label" value="test" />
       </RadioGroup>,
     );
     const radio = screen.getByRole("radio");
-    expect(radio.id).toMatch(/^.*-radio$/); // Check if id ends with -radio
+    // Check that the id ends with -radio
+    expect(radio.id).toMatch(/^.*-radio$/);
+  });
+
+  it("should select the radio when the label is clicked", async () => {
+    const user = userEvent.setup();
+    render(
+      <RadioGroup>
+        <Radio label="Test Label" value="test" />
+      </RadioGroup>,
+    );
+    const label = screen.getByText("Test Label");
+    const radio = screen.getByRole("radio");
+    await user.click(label);
+    expect(radio).toBeChecked();
   });
 });
