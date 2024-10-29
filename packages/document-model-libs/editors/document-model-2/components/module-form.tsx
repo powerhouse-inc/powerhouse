@@ -61,6 +61,7 @@ export function ModuleForm(props: Props) {
                   onBlur={handleBlur}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
+                      e.preventDefault();
                       form.handleSubmit(onSubmit)();
                     }
                   }}

@@ -27,6 +27,7 @@ export type DocumentActionHandlers = {
   updateModuleDescription: (id: string, description: string) => void;
   deleteModule: (id: string) => void;
   addOperation: (moduleId: string, name: string) => void;
+  addOperationAndInitialSchema: (moduleId: string, name: string) => void;
   updateOperationName: (id: string, name: string) => void;
   updateOperationSchema: (id: string, schema: string) => void;
   updateOperationScope: (id: string, scope: Scope) => void;

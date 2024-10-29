@@ -17,10 +17,10 @@ const mockDocument = {
       id: "",
       name: "test",
       extension: ".test.ph",
-      description: "",
+      description: "my description",
       author: {
-        name: "",
-        website: "",
+        name: "my name",
+        website: "https://www.example.com",
       },
       specifications: [
         {

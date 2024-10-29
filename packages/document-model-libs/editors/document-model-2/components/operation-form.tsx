@@ -36,7 +36,7 @@ export function OperationForm(props: Props) {
         handlers.updateOperationName(operation.id, name);
       }
     } else {
-      handlers.addOperation(module.id, name);
+      handlers.addOperationAndInitialSchema(module.id, name);
     }
     form.reset({ name });
   }
@@ -62,6 +62,7 @@ export function OperationForm(props: Props) {
                   onBlur={handleBlur}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
+                      e.preventDefault();
                       form.handleSubmit(onSubmit)();
                     }
                   }}

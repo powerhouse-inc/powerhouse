@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { pascalCase } from "change-case";
-import { Operation } from "document-model/document-model";
+import { Author } from "document-model/document-model";
 import {
   extendSchema,
   getNullableType,
@@ -84,13 +84,9 @@ export function makeStateObjectName(modelName: string, scope: string) {
   return `${pascalCase(modelName)}${scope === "local" ? "Local" : ""}State`;
 }
 
-export function makeOperationInitialDoc(operation: Operation) {
-  if (operation.schema) return operation.schema;
-  if (!operation.name) {
-    throw new Error("Operation name is required");
-  }
-  const name = makeOperationInputName(operation.name);
-  const inputObject = makeEmptyInputObject(name);
+export function makeOperationInitialDoc(name: string) {
+  const inputName = makeOperationInputName(name);
+  const inputObject = makeEmptyInputObject(inputName);
   return inputObject;
 }
 
@@ -110,15 +106,16 @@ export function makeSchemaStringFromDocs(docs: Record<string, string>) {
 
 export function getDocumentMetadata(document: DocumentModelDocument) {
   const globalState = document.state.global;
+  const author: Author = {
+    name: globalState.author.name,
+    website: globalState.author.website,
+  };
   return {
-    name: document.name ?? "",
-    documentType: document.documentType ?? "",
-    description: globalState.description ?? "",
-    extension: globalState.extension ?? "",
-    author: {
-      name: globalState.author.name ?? "",
-      website: globalState.author.website ?? "",
-    },
+    name: document.name,
+    documentType: document.documentType,
+    description: globalState.description,
+    extension: globalState.extension,
+    author,
   };
 }
 
