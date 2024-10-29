@@ -52,10 +52,10 @@ describe("FormLabel Component", () => {
     expect(label).toHaveAttribute("role", "label");
   });
 
-  it("should include asterisk in the after element when required", () => {
+  it("should display an asterisk when required", () => {
     render(<FormLabel required>Required Label</FormLabel>);
-    const label = screen.getByText("Required Label");
-    expect(label).toHaveClass("after:content-['*']");
+    const asterisk = screen.getByText("*");
+    expect(asterisk).toBeInTheDocument();
   });
 
   it("should have different style and not-allowed cursor when disabled", () => {

@@ -40,7 +40,7 @@ export const FormMessage: <E extends React.ElementType = typeof defaultElement>(
 
   // TODO: add icon
   return (
-    <Component className={classes} {...props}>
+    <Component data-type={type} className={classes} {...props}>
       {children}
     </Component>
   );
