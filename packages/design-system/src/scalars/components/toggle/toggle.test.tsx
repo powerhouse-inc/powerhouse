@@ -79,7 +79,7 @@ describe("Toggle Component", () => {
       expect(toggle).toHaveClass("data-[state=checked]:bg-[#C5C7C7]");
     });
 
-    it("should mark as required when required prop is true", () => {
+    it("should mark as required when disabled prop is true", () => {
       render(<Toggle {...defaultProps} disabled={true} />);
       const toggle = screen.getByRole("switch");
 

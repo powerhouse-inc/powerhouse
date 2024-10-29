@@ -33,16 +33,6 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
       data-testid="custom-class"
     >
       <div className="flex items-center">
-        {label && (
-          <FormLabel
-            htmlFor={id}
-            className="mr-2"
-            disabled={disabled}
-            id={`${id}-label`}
-          >
-            {label}
-          </FormLabel>
-        )}
         <Toggle
           aria-labelledby={`${id}-label`}
           required={required}
@@ -52,6 +42,16 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
           checked={checked}
           onCheckedChange={onCheckedChange}
         />
+        {label && (
+          <FormLabel
+            htmlFor={id}
+            className="ml-2"
+            disabled={disabled}
+            id={`${id}-label`}
+          >
+            {label}
+          </FormLabel>
+        )}
       </div>
       {errors.length !== 0 && (
         <FormMessageList messages={errors} type="error" />

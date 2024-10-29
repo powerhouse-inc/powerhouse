@@ -1,4 +1,3 @@
-import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
 import { ToggleField } from "./toggle-field";
@@ -14,37 +13,37 @@ describe("Toggle Component", () => {
     expect(asFragment()).toMatchSnapshot();
   });
 
-  it("renders default status without a label at the left", () => {
+  it("should render default status without a label on the left", () => {
     render(<ToggleField />);
     expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
   });
 
-  it("renders default status without a label at the left", () => {
+  it("should render with a label when label prop is provided", () => {
     render(<ToggleField label="Test Label" />);
     expect(screen.getByText("Test Label")).toBeInTheDocument();
   });
 
-  it("renders checked status without label", () => {
+  it("should render checked status without label", () => {
     render(<ToggleField checked={true} />);
     expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
   });
 
-  it("renders defaultd status with a label at the left", () => {
+  it("should render checked status with a label on the left", () => {
     render(<ToggleField label="Test Label" checked={true} />);
     expect(screen.getByText("Test Label")).toBeInTheDocument();
   });
 
-  it("does not render the label when not provided", () => {
+  it("should not render the label when not provided", () => {
     render(<ToggleField />);
     expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
   });
 
-  it("displays an error message when hasMessage is true", () => {
+  it("should display an error message when hasMessage is true", () => {
     render(<ToggleField label="Test Label" errors={["Error message"]} />);
     expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 
-  it("calls onCheckedChange when clicked", () => {
+  it("should call onCheckedChange when clicked", () => {
     render(<ToggleField label="Test Label" onCheckedChange={mockOnChange} />);
     const toggleInput = screen.getByRole("switch");
 
@@ -53,7 +52,7 @@ describe("Toggle Component", () => {
     expect(toggleInput).toBeInTheDocument();
   });
 
-  it("disables the toggle when disabled prop is true", () => {
+  it("should disable the toggle when disabled prop is true", () => {
     render(
       <ToggleField
         label="Test Label"
@@ -65,7 +64,7 @@ describe("Toggle Component", () => {
     expect(toggleInput).toBeDisabled();
   });
 
-  it("renders with custom className", () => {
+  it("should render with custom className", () => {
     // this is a custom class name for testing purposes
     // eslint-disable-next-line tailwindcss/no-custom-classname
     render(<ToggleField className="custom-class" />);
