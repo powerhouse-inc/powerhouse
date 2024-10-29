@@ -1,3 +1,13 @@
+## 0.4.0 (2024-10-29)
+
+### 🚀 Features
+
+- **switchboard-gui:** updated gitignore ([1fd60a3b](https://github.com/powerhouse-inc/powerhouse/commit/1fd60a3b))
+
+### ❤️  Thank You
+
+- Guillermo Puente @gpuente
+
 ## 0.3.0 (2024-10-29)
 
 ### 🚀 Features

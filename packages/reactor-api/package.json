@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,8 +20,8 @@
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "document-drive": "1.2.0",
-    "document-model": "workspace:*",
+    "document-drive": "1.2.1",
+    "document-model": "2.4.0",
     "esbuild": "^0.24.0",
     "graphql": "^16.9.0",
     "graphql-tag": "^2.12.6",

@@ -1,3 +1,23 @@
+## 2.4.0 (2024-10-29)
+
+### 🚀 Features
+
+- **switchboard-gui:** updated gitignore ([1fd60a3b](https://github.com/powerhouse-inc/powerhouse/commit/1fd60a3b))
+- **document-model:** fixed cjs exports ([5afce14c](https://github.com/powerhouse-inc/powerhouse/commit/5afce14c))
+- **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
+- **document-model-libs:** bump deps ([68a98ee6](https://github.com/powerhouse-inc/powerhouse/commit/68a98ee6))
+- **document-model-libs:** re-add prevent default and handle operation initial schema ([ae010779](https://github.com/powerhouse-inc/powerhouse/commit/ae010779))
+- **document-model-libs:** add initial state editor ([#443](https://github.com/powerhouse-inc/powerhouse/pull/443))
+- **document-model-libs:** add json editors with sync ([76acd807](https://github.com/powerhouse-inc/powerhouse/commit/76acd807))
+- **document-model-libs:** include typedefs in initial hidden schema state ([88e184fd](https://github.com/powerhouse-inc/powerhouse/commit/88e184fd))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 2.3.1 (2024-10-25)
 
 ### 🚀 Features

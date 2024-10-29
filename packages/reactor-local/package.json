@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "dist/server.js",
   "bin": {
     "reactor-local": "dist/cli.js"
@@ -25,11 +25,11 @@
     "@electric-sql/pglite": "^0.2.12",
     "@libsql/client": "^0.14.0",
     "@powerhousedao/general-document-indexer": "1.2.0",
-    "@powerhousedao/reactor-api": "1.2.0",
+    "@powerhousedao/reactor-api": "1.2.1",
     "commander": "^12.1.0",
-    "document-drive": "1.2.0",
-    "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
+    "document-drive": "1.2.1",
+    "document-model": "2.4.0",
+    "document-model-libs": "1.104.0",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1",

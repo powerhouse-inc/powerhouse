@@ -156,12 +156,12 @@ importers:
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
         specifier: 1.2.0
-        version: link:../../packages/general-document-indexer
+        version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@types/pg@8.11.10)(@types/react@18.3.11)(graphql@16.9.0)(pg@8.13.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
       '@powerhousedao/reactor-api':
-        specifier: 1.2.0
+        specifier: 1.2.1
         version: link:../../packages/reactor-api
       '@powerhousedao/switchboard-gui':
-        specifier: 0.3.0
+        specifier: 0.4.0
         version: link:../../packages/switchboard-gui
       body-parser:
         specifier: ^1.20.3
@@ -170,14 +170,14 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-drive:
-        specifier: 1.2.0
+        specifier: 1.2.1
         version: link:../../packages/document-drive
       document-model:
-        specifier: workspace:*
+        specifier: 2.4.0
         version: link:../../packages/document-model
       document-model-libs:
-        specifier: workspace:*
-        version: link:../../packages/document-model-libs
+        specifier: 1.104.0
+        version: 1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -503,7 +503,7 @@ importers:
         specifier: ^7.0.3
         version: 7.0.3
       document-model:
-        specifier: 2.3.1
+        specifier: 2.4.0
         version: link:../document-model
       fast-xml-parser:
         specifier: ^4.3.4
@@ -574,7 +574,7 @@ importers:
         version: 4.7.0
       sequelize:
         specifier: ^6.37.3
-        version: 6.37.4(sqlite3@5.1.7)
+        version: 6.37.4(pg@8.13.0)(sqlite3@5.1.7)
       sqlite3:
         specifier: ^5.1.7
         version: 5.1.7
@@ -586,7 +586,7 @@ importers:
         specifier: ^9.0.8
         version: 9.0.8
       document-model:
-        specifier: 2.3.1
+        specifier: 2.4.0
         version: link:../document-model
       document-model-libs:
         specifier: 1.94.0
@@ -753,7 +753,7 @@ importers:
         specifier: 0.10.0
         version: link:../codegen
       '@powerhousedao/design-system':
-        specifier: 1.4.1
+        specifier: 1.4.2
         version: link:../design-system
       '@powerhousedao/scalars':
         specifier: 1.5.0
@@ -879,7 +879,7 @@ importers:
         specifier: ^3.12.0
         version: 3.12.0
       document-model:
-        specifier: 2.3.1
+        specifier: 2.4.0
         version: link:../document-model
       document-model-editors:
         specifier: ^1.0.1
@@ -966,14 +966,14 @@ importers:
   packages/general-document-indexer:
     dependencies:
       document-drive:
-        specifier: 1.2.0
+        specifier: 1.2.1
         version: link:../document-drive
       document-model:
-        specifier: workspace:*
+        specifier: 2.4.0
         version: link:../document-model
       document-model-libs:
-        specifier: workspace:*
-        version: link:../document-model-libs
+        specifier: 1.104.0
+        version: 1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
       drizzle-kit:
         specifier: ^0.25.0
         version: 0.25.0
@@ -1044,10 +1044,10 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       document-drive:
-        specifier: 1.2.0
+        specifier: 1.2.1
         version: link:../document-drive
       document-model:
-        specifier: workspace:*
+        specifier: 2.4.0
         version: link:../document-model
       esbuild:
         specifier: ^0.24.0
@@ -1075,22 +1075,22 @@ importers:
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
         specifier: 1.2.0
-        version: link:../general-document-indexer
+        version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@types/pg@8.11.10)(@types/react@18.3.11)(graphql@16.9.0)(pg@8.13.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
       '@powerhousedao/reactor-api':
-        specifier: 1.2.0
+        specifier: 1.2.1
         version: link:../reactor-api
       commander:
         specifier: ^12.1.0
         version: 12.1.0
       document-drive:
-        specifier: 1.2.0
+        specifier: 1.2.1
         version: link:../document-drive
       document-model:
-        specifier: workspace:*
+        specifier: 2.4.0
         version: link:../document-model
       document-model-libs:
-        specifier: workspace:*
-        version: link:../document-model-libs
+        specifier: 1.104.0
+        version: 1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -7937,6 +7937,58 @@ packages:
       - stylus
       - sugarss
       - terser
+    dev: false
+
+  /@powerhousedao/general-document-indexer@1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@types/pg@8.11.10)(@types/react@18.3.11)(graphql@16.9.0)(pg@8.13.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6):
+    resolution: {integrity: sha512-S7ZOyK8A0jMkJFoTIeCQ6JL2TnhS3DVXZcF2mWKLfLVx3WCus9I/44kmzoS5NgPkozsR1zomyk8NT+UkcuWS/Q==}
+    dependencies:
+      document-drive: 1.2.0(document-model-libs@1.104.0)(document-model@2.3.1)(pg@8.13.0)
+      document-model: 2.3.1
+      document-model-libs: 1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
+      drizzle-kit: 0.25.0
+      drizzle-orm: 0.34.1(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@types/pg@8.11.10)(@types/react@18.3.11)(pg@8.13.0)(react@18.3.1)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@powerhousedao/scalars'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/react'
+      - '@types/sql.js'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bluebird
+      - bun-types
+      - encoding
+      - expo-sqlite
+      - graphql
+      - ibm_db
+      - knex
+      - kysely
+      - mariadb
+      - mysql2
+      - oracledb
+      - pg
+      - pg-hstore
+      - postgres
+      - prisma
+      - react
+      - react-dom
+      - snowflake-sdk
+      - sql.js
+      - sqlite3
+      - storybook
+      - supports-color
+      - tedious
     dev: false
 
   /@preact/preset-vite@2.9.1(@babel/core@7.25.8)(preact@10.24.3)(vite@5.4.9):
@@ -15151,6 +15203,43 @@ packages:
       esutils: 2.0.3
     dev: true
 
+  /document-drive@1.2.0(document-model-libs@1.104.0)(document-model@2.3.1)(pg@8.13.0):
+    resolution: {integrity: sha512-9cG8tBynh8YSSrZctnvC7SIjDAQ1TtYr+4LrMzscDy7cYCGEeOzEAl8AnYC47/LdRednPZUMAnEqGbJM7z+2rQ==}
+    peerDependencies:
+      document-model: ^2.1.0
+      document-model-libs: ^1.92.0
+    dependencies:
+      change-case: 5.4.4
+      document-model: 2.3.1
+      document-model-libs: 1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
+      exponential-backoff: 3.1.1
+      graphql: 16.9.0
+      graphql-request: 6.1.0(graphql@16.9.0)
+      json-stringify-deterministic: 1.0.12
+      nanoevents: 9.1.0
+      sanitize-filename: 1.6.3
+      uuid: 9.0.1
+    optionalDependencies:
+      '@prisma/client': 5.21.1(prisma@5.21.1)
+      localforage: 1.10.0
+      redis: 4.7.0
+      sequelize: 6.37.4(pg@8.13.0)(sqlite3@5.1.7)
+      sqlite3: 5.1.7
+    transitivePeerDependencies:
+      - bluebird
+      - encoding
+      - ibm_db
+      - mariadb
+      - mysql2
+      - oracledb
+      - pg
+      - pg-hstore
+      - prisma
+      - snowflake-sdk
+      - supports-color
+      - tedious
+    dev: false
+
   /document-model-editors@1.0.1(document-model@packages+document-model)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6):
     resolution: {integrity: sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==}
     peerDependencies:
@@ -15164,6 +15253,35 @@ packages:
       react-dom: 18.3.1(react@18.3.1)
       storybook: 8.3.6
     dev: true
+
+  /document-model-libs@1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6):
+    resolution: {integrity: sha512-8BOse6mVZR+3T6iopH6D9Inpc43+iA20Rj1Ma+nWEcCLs6cWgYbm1XF4OT2/52Se+YgAK4mLEdhjcMvulnEC+Q==}
+    peerDependencies:
+      '@powerhousedao/scalars': latest
+      react: ^18.2.0
+      react-dom: ^18.2.0
+    dependencies:
+      '@acaldas/graphql-codegen-typescript-validation-schema': 0.12.3(graphql@16.9.0)
+      '@codemirror/lang-json': 6.0.1
+      '@graphql-codegen/core': 4.0.2(graphql@16.9.0)
+      '@graphql-codegen/typescript': 4.1.0(graphql@16.9.0)
+      '@graphql-tools/schema': 10.0.7(graphql@16.9.0)
+      '@graphql-tools/utils': 10.5.5(graphql@16.9.0)
+      '@internationalized/date': 3.5.6
+      '@storybook/test': 8.3.6(storybook@8.3.6)
+      copy-anything: 3.0.5
+      date-fns: 3.6.0
+      deep-object-diff: 1.1.9
+      jszip: 3.10.1
+      mathjs: 13.2.0
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+    transitivePeerDependencies:
+      - encoding
+      - graphql
+      - storybook
+      - supports-color
+    dev: false
 
   /document-model-libs@1.93.2(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6):
     resolution: {integrity: sha512-wbGcEc6XtVNkcVoQc6cI8y0E7FKR6kZr0LBvHUUQuqqeBlJEADiU2ru4k4Z17X5yDK7mEPKWN136HhEfJ9igZA==}
@@ -15224,6 +15342,19 @@ packages:
       json-stringify-deterministic: 1.0.10
       jszip: 3.10.1
       mime: 4.0.4
+      zod: 3.23.8
+    dev: false
+
+  /document-model@2.3.1:
+    resolution: {integrity: sha512-p1Lwdoorve1g1RFkv2oB3S9rd0ncJ+uYOt5f2fxFH4rIKw2ArQg7LLpyA7Wr8ehgrraGIObxTyfU/+UzKDtrOA==}
+    dependencies:
+      change-case: 5.4.4
+      jszip: 3.10.1
+      mime: 4.0.4
+      mutative: 1.0.11
+      safe-stable-stringify: 2.5.0
+      sha1-uint8array: 0.10.7
+      uuid: 9.0.1
       zod: 3.23.8
     dev: false
 
@@ -24124,7 +24255,7 @@ packages:
     dev: false
     optional: true
 
-  /sequelize@6.37.4(sqlite3@5.1.7):
+  /sequelize@6.37.4(pg@8.13.0)(sqlite3@5.1.7):
     resolution: {integrity: sha512-+8B0p00EKmxJpwwruDI0drxh4wNSC0YB9pVhOajRzfMI+uIDi5V7rJPC8RTTkLmKUoAIatJZn6lW9gj6bmmYKQ==}
     engines: {node: '>=10.0.0'}
     requiresBuild: true
@@ -24166,6 +24297,7 @@ packages:
       lodash: 4.17.21
       moment: 2.30.1
       moment-timezone: 0.5.46
+      pg: 8.13.0
       pg-connection-string: 2.7.0
       retry-as-promised: 7.0.4
       semver: 7.6.3
