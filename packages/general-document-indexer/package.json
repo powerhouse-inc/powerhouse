@@ -1,0 +1,23 @@
+{
+  "name": "@powerhousedao/general-document-indexer",
+  "version": "1.0.0",
+  "description": "general document indexer read model",
+  "main": "dist/index.mjs",
+  "scripts": {
+    "build": "tsup",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
+    "drizzle-kit": "^0.25.0",
+    "drizzle-orm": "^0.34.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.3"
+  }
+}

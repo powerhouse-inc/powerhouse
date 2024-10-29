@@ -1,6 +1,6 @@
 "use client";
-import useAuth from "@/hooks/useAuth";
 import { FormEvent, useState } from "react";
+import useAuth from "../../hooks/useAuth";
 
 const TokenForm = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +17,10 @@ const TokenForm = () => {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
+    if (!e.target) {
+      return;
+    }
+    const { name, value } = e.target as HTMLInputElement;
     setFormData({
       ...formData,
       [name]: value,

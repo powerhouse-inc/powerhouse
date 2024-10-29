@@ -1,0 +1,39 @@
+{
+  "name": "@powerhousedao/reactor-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "@types/body-parser": "^1.19.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "esbuild": "^0.24.0",
+    "graphql": "^16.9.0",
+    "graphql-tag": "^2.12.6",
+    "tsup": "^8.3.0"
+  },
+  "peerDependencies": {
+    "document-drive": "^1.0.1",
+    "document-model": "^2.2.0"
+  },
+  "dependencies": {
+    "@apollo/server": "^4.11.0",
+    "@apollo/subgraph": "^2.9.2",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "document-model-libs": "1.93.2",
+    "express": "^4.21.1"
+  }
+}

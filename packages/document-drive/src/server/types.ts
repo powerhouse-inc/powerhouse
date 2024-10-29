@@ -202,6 +202,8 @@ export interface DriveEvents {
     errorMessage: string,
   ) => void;
   documentModels: (documentModels: DocumentModel[]) => void;
+  driveAdded: (drive: DocumentDriveDocument) => void;
+  driveDeleted: (driveId: string) => void;
 }
 
 export type PartialRecord<K extends keyof any, T> = {
@@ -480,6 +482,7 @@ export abstract class AbstractDocumentDriveServer {
   protected abstract deleteDocument(drive: string, id: string): Promise<void>;
 
   protected abstract getDocumentModel(documentType: string): DocumentModel;
+  abstract getDocumentModels(): DocumentModel[];
 
   /** Event methods **/
   protected abstract emit<K extends keyof DriveEvents>(
