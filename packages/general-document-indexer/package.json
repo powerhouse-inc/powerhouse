@@ -3,6 +3,9 @@
   "version": "1.1.1",
   "description": "general document indexer read model",
   "main": "dist/index.mjs",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "test": "echo \"Error: no test specified\" && exit 1"
