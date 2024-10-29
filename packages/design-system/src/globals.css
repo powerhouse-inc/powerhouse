@@ -16,9 +16,6 @@
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
-  body {
-		@apply dark:bg-black  min-h-screen relative;
-	}
   /* Modal */
   .modal-shadow {
     box-shadow:

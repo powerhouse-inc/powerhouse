@@ -11,11 +11,7 @@ describe("Toggle Component", () => {
     required: false,
   };
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe("Functionality", () => {
+  describe("Testing the interactive behavior of the Toggle component", () => {
     it("should call onChange with correct value when clicked", () => {
       const handleChange = vi.fn();
       render(<Toggle {...defaultProps} onChange={handleChange} />);
@@ -58,7 +54,7 @@ describe("Toggle Component", () => {
     });
   });
 
-  describe("Rendering", () => {
+  describe("Testing rendering characteristics of the Toggle component", () => {
     it("should render with correct initial checked state", () => {
       render(<Toggle {...defaultProps} checked={true} />);
       const toggle = screen.getByRole("switch");

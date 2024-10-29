@@ -2,11 +2,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
 import { ToggleField } from "./toggle-field";
 
-describe("Toggle Component", () => {
+describe("ToggleField Component", () => {
   const mockOnChange = vi.fn();
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
   it("should match snapshot", () => {
     const { asFragment } = render(<ToggleField />);
