@@ -1,3 +1,16 @@
+## 1.5.0 (2024-10-28)
+
+### 🚀 Features
+
+- **scalars:** added default scalars ([#444](https://github.com/powerhouse-inc/powerhouse/pull/444))
+- **document-model-libs:** add initial state editor ([#443](https://github.com/powerhouse-inc/powerhouse/pull/443))
+- **codegen:** integrate scalars into code generation ([#436](https://github.com/powerhouse-inc/powerhouse/pull/436))
+
+### ❤️  Thank You
+
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 1.4.0 (2024-10-25)
 
 ### 🚀 Features

@@ -31,7 +31,7 @@ const amountPercentageValidation = (value: unknown): number => {
 };
 
 export const config: GraphQLScalarTypeConfig<number, number> = {
-    name: 'AmountPercentage',
+    name: 'Amount_Percentage',
     description: '',
     serialize: amountPercentageValidation,
     parseValue: amountPercentageValidation,
