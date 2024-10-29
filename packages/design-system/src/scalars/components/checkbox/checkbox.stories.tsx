@@ -63,8 +63,14 @@ export const Default: Story = {
 export const Checked: Story = {
   args: {
     checked: true,
-    disabled: false,
     label: "Checked Checkbox",
+  },
+};
+
+export const Indeterminate: Story = {
+  args: {
+    checked: undefined,
+    label: "Indeterminate Checkbox",
   },
 };
 
@@ -140,7 +146,7 @@ export const WithWarningsAndErrors: Story = {
   args: {
     checked: false,
     label: "Checkbox with Warnings and Errors",
-    warnings: ["This is a warning"],
-    errors: ["This is an error"],
+    warnings: ["This is a warning", "Another warning"],
+    errors: ["This is an error", "Another error"],
   },
 };
