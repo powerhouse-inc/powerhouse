@@ -48,18 +48,23 @@
     "sqlite3": "^5.1.7"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.2.11",
     "change-case": "^5.4.4",
+    "drizzle-kit": "^0.25.0",
+    "drizzle-orm": "^0.34.1",
     "exponential-backoff": "^3.1.1",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
     "nanoevents": "^9.0.0",
+    "pg": "^8.13.0",
     "sanitize-filename": "^1.6.3",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
+    "@types/pg": "^8.11.10",
     "@types/uuid": "^9.0.8",
     "document-model": "2.3.1",
     "document-model-libs": "1.94.0",
@@ -69,7 +74,7 @@
     "prisma": "^5.18.0",
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
-    "webdriverio": "^9.0.9",
-    "vitest-fetch-mock": "^0.3.0"
+    "vitest-fetch-mock": "^0.3.0",
+    "webdriverio": "^9.0.9"
   }
 }

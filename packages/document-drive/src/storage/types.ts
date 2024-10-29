@@ -9,6 +9,7 @@ import type {
   DocumentHeader,
   DocumentOperations,
   Operation,
+  SynchronizationUnit,
 } from "document-model/document";
 import type { SynchronizationUnitQuery } from "../server/types";
 
@@ -22,7 +23,7 @@ export type DocumentDriveStorage = DocumentStorage<DocumentDriveDocument>;
 export interface IStorageDelegate {
   getCachedOperations(
     drive: string,
-    id: string,
+    id: string
   ): Promise<DocumentOperations<Action> | undefined>;
 }
 
@@ -34,12 +35,13 @@ export interface IStorage {
     drive: string,
     id: string,
     document: DocumentStorage,
+    synchronizationUnits: SynchronizationUnit[]
   ): Promise<void>;
   addDocumentOperations(
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    header: DocumentHeader
   ): Promise<void>;
   addDocumentOperationsWithTransaction?(
     drive: string,
@@ -47,7 +49,7 @@ export interface IStorage {
     callback: (document: DocumentStorage) => Promise<{
       operations: Operation[];
       header: DocumentHeader;
-    }>,
+    }>
   ): Promise<void>;
   deleteDocument(drive: string, id: string): Promise<void>;
   getOperationResultingState?(
@@ -55,7 +57,7 @@ export interface IStorage {
     id: string,
     index: number,
     scope: string,
-    branch: string,
+    branch: string
   ): Promise<unknown>;
   setStorageDelegate?(delegate: IStorageDelegate): void;
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
@@ -79,19 +81,19 @@ export interface IDriveStorage extends IStorage {
   addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction | BaseAction>[],
-    header: DocumentHeader,
+    header: DocumentHeader
   ): Promise<void>;
   addDriveOperationsWithTransaction?(
     drive: string,
     callback: (document: DocumentDriveStorage) => Promise<{
       operations: Operation[];
       header: DocumentHeader;
-    }>,
+    }>
   ): Promise<void>;
   getDriveOperationResultingState?(
     drive: string,
     index: number,
     scope: string,
-    branch: string,
+    branch: string
   ): Promise<unknown>;
 }

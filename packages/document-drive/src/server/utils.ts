@@ -1,10 +1,14 @@
-import type { Document, OperationScope } from "document-model/document";
+import type {
+  Document,
+  Operation,
+  OperationScope,
+} from "document-model/document";
 import { RevisionsFilter, StrandUpdate } from "./types";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],
   driveId: string,
-  documentId: string,
+  documentId: string
 ): RevisionsFilter {
   return strands.reduce<RevisionsFilter>((acc, s) => {
     if (!(s.driveId === driveId && s.documentId === documentId)) {
@@ -17,7 +21,7 @@ export function buildRevisionsFilter(
 
 export function filterOperationsByRevision(
   operations: Document["operations"],
-  revisions?: RevisionsFilter,
+  revisions?: RevisionsFilter
 ): Document["operations"] {
   if (!revisions) {
     return operations;
@@ -31,4 +35,38 @@ export function filterOperationsByRevision(
     }
     return acc;
   }, operations);
+}
+
+export function groupOperationsBySyncUnit(operations: Operation[]): {
+  scope: OperationScope;
+  branch: string;
+  operations: Operation[];
+}[] {
+  const groupedOperations: Record<
+    string,
+    {
+      scope: OperationScope;
+      branch: string;
+      operations: Operation[];
+    }
+  > = {};
+
+  operations.forEach((operation) => {
+    // Find the corresponding sync unit for the action
+    const branch =
+      "branch" in operation ? (operation.branch as string) : "main";
+    const key = `${operation.scope}-${branch}`;
+
+    if (!groupedOperations[key]) {
+      groupedOperations[key] = {
+        scope: operation.scope,
+        branch,
+        operations: [],
+      };
+    }
+
+    groupedOperations[key].operations.push(operation);
+  });
+
+  return Object.values(groupedOperations);
 }
