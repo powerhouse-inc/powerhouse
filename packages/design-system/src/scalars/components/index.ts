@@ -6,3 +6,5 @@ export * from "./scalar-demo";
 export * from "./toggle";
 export * from "./radio-group";
 export * from "./toggle/toggle";
+export * from "./input";
+export * from "./string";
