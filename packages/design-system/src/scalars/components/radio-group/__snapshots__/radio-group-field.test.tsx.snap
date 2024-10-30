@@ -13,26 +13,31 @@ exports[`RadioGroupField Component > should match snapshot 1`] = `
     style="outline: none;"
     tabindex="0"
   >
-    <button
-      aria-checked="false"
-      aria-disabled="false"
-      aria-invalid="false"
-      class="aspect-square size-4 rounded-full border-2 border-blue-700 dark:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-0 dark:focus:ring-blue-900/30 hover:border-blue-900 dark:hover:border-blue-300 focus:hover:ring-blue-200 dark:focus:hover:ring-blue-900/40"
-      data-radix-collection-item=""
-      data-state="unchecked"
-      id=":r0:-radio-0-1"
-      role="radio"
-      tabindex="-1"
-      type="button"
-      value="1"
-    />
-    <label
-      class="inline-flex items-center text-sm font-semibold text-gray-700 dark:text-gray-400"
-      for=":r0:-radio-0-1"
-      role="label"
+    <div
+      class="flex items-center gap-2.5"
+      role="presentation"
     >
-      Option 1
-    </label>
+      <button
+        aria-checked="false"
+        aria-disabled="false"
+        aria-invalid="false"
+        class="aspect-square size-4 rounded-full border-2 border-blue-700 dark:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-0 dark:focus:ring-blue-900/30 hover:border-blue-900 dark:hover:border-blue-300 focus:hover:ring-blue-200 dark:focus:hover:ring-blue-900/40"
+        data-radix-collection-item=""
+        data-state="unchecked"
+        id=":r0:-radio-0-1"
+        role="radio"
+        tabindex="-1"
+        type="button"
+        value="1"
+      />
+      <label
+        class="inline-flex items-center text-sm font-medium text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+        for=":r0:-radio-0-1"
+        role="label"
+      >
+        Option 1
+      </label>
+    </div>
   </div>
 </DocumentFragment>
 `;
