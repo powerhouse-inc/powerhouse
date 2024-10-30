@@ -13,9 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "document-drive": "1.2.1",
-    "document-model": "2.4.0",
-    "document-model-libs": "1.104.0",
+    "document-drive": "^1.2.1",
+    "document-model": "^2.4.0",
+    "document-model-libs": "^1.104.0",
+    "@powerhousedao/scalars": "^1.0.5",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1"
   },

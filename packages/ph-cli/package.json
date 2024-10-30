@@ -34,8 +34,5 @@
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "graphql": "^16.8.1"
-  },
-  "resolutions": {
-    "graphql": "^16.8.1"
   }
 }

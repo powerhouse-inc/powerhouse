@@ -37,8 +37,9 @@
     "build": "prisma generate"
   },
   "peerDependencies": {
-    "document-model": "^2.1.0",
-    "document-model-libs": "^1.92.0"
+    "document-model": "^2.3.1",
+    "document-model-libs": "^1.104.0",
+    "@powerhousedao/scalars": "latest"
   },
   "optionalDependencies": {
     "@prisma/client": "^5.18.0",
@@ -58,11 +59,12 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@powerhousedao/scalars": "latest",
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",
-    "document-model": "2.4.0",
-    "document-model-libs": "1.94.0",
+    "document-model": "^2.4.0",
+    "document-model-libs": "^1.104.0",
     "fake-indexeddb": "^5.0.2",
     "localforage": "^1.10.0",
     "msw": "^2.3.1",
