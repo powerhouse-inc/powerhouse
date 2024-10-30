@@ -17,9 +17,12 @@ export async function loadDocumentModel(
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");
-      const document = (JSON.parse(data) as DocumentModel).state
-        .global as DocumentModelState;
-      documentModel = document;
+      const parsedData = JSON.parse(data) as DocumentModel | DocumentModelState;
+      if ("state" in parsedData) {
+        documentModel = parsedData.state.global as DocumentModelState;
+      } else {
+        documentModel = parsedData;
+      }
     } else {
       throw new Error("File type not supported. Must be zip or json.");
     }
