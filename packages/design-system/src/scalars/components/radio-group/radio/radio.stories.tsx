@@ -4,24 +4,44 @@ import { RadioGroup } from "../radio-group";
 
 const meta: Meta<typeof Radio> = {
   argTypes: {
-    checked: { control: "boolean" },
-    description: { control: "text" },
-    disabled: { control: "boolean" },
-    label: { control: "text" },
-    value: { control: "text" },
+    checked: {
+      control: "boolean",
+      description: "Indicates if the Radio is checked",
+    },
+    className: {
+      control: "text",
+      description: "Additional CSS classes to apply to the Radio",
+    },
+    description: {
+      control: "text",
+      description: "Description for the Radio",
+    },
+    disabled: {
+      control: "boolean",
+      description: "Indicates if the Radio is disabled",
+      table: { defaultValue: { summary: "false" } },
+    },
+    label: {
+      control: "text",
+      description: "Label for the Radio",
+      table: { defaultValue: { summary: "" } },
+    },
+    value: {
+      control: "text",
+      description: "Value of the Radio input",
+      table: { defaultValue: { summary: "" } },
+    },
   },
   component: Radio,
   decorators: [
     (Story) => (
       <RadioGroup name="radio-group">
-        <Story />
+        <div className="flex items-center space-x-2.5" role="presentation">
+          <Story />
+        </div>
       </RadioGroup>
     ),
   ],
-  parameters: {
-    controls: { sort: "requiredFirst" },
-  },
-  tags: ["autodocs"],
   title: "Document Engineering/Simple Components/Radio Group/Radio",
 };
 
@@ -46,7 +66,7 @@ export const DefaultChecked: Story = {
 
 export const DefaultWithDescription: Story = {
   args: {
-    description: "This is a default radio with description",
+    description: "This is a default Radio with description",
     label: "Default with description",
     value: "default-with-description",
   },
@@ -55,7 +75,7 @@ export const DefaultWithDescription: Story = {
 export const DefaultWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a default radio with description and checked",
+    description: "This is a default Radio with description and checked",
     label: "Default with description and checked",
     value: "default-with-description-checked",
   },
@@ -84,7 +104,7 @@ export const FocusChecked: Story = {
 
 export const FocusWithDescription: Story = {
   args: {
-    description: "This is a focused radio with description",
+    description: "This is a focused Radio with description",
     label: "Focus with description",
     value: "focus-with-description",
   },
@@ -96,7 +116,7 @@ export const FocusWithDescription: Story = {
 export const FocusWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a focused radio with description and checked",
+    description: "This is a focused Radio with description and checked",
     label: "Focus with description and checked",
     value: "focus-with-description-checked",
   },
@@ -128,7 +148,7 @@ export const HoverChecked: Story = {
 
 export const HoverWithDescription: Story = {
   args: {
-    description: "This is a hovered radio with description",
+    description: "This is a hovered Radio with description",
     label: "Hover with description",
     value: "hover-with-description",
   },
@@ -140,7 +160,7 @@ export const HoverWithDescription: Story = {
 export const HoverWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a hovered radio with description and checked",
+    description: "This is a hovered Radio with description and checked",
     label: "Hover with description and checked",
     value: "hover-with-description-checked",
   },
@@ -168,7 +188,7 @@ export const DisabledChecked: Story = {
 
 export const DisabledWithDescription: Story = {
   args: {
-    description: "This is a disabled radio with description",
+    description: "This is a disabled Radio with description",
     disabled: true,
     label: "Disabled with description",
     value: "disabled-with-description",
@@ -178,7 +198,7 @@ export const DisabledWithDescription: Story = {
 export const DisabledWithDescriptionChecked: Story = {
   args: {
     checked: true,
-    description: "This is a disabled radio with description and checked",
+    description: "This is a disabled Radio with description and checked",
     disabled: true,
     label: "Disabled with description and checked",
     value: "disabled-with-description-checked",

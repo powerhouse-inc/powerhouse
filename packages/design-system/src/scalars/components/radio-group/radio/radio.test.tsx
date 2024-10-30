@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Radio } from "../radio";
+import { Radio } from "./radio";
 import { RadioGroup } from "../radio-group";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 describe("Radio Component", () => {
   it("should match snapshot", () => {
     const { asFragment } = render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Test Label" value="test" />
       </RadioGroup>,
     );
@@ -16,7 +16,7 @@ describe("Radio Component", () => {
 
   it("should render with label and value", () => {
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Test Label" value="test" />
       </RadioGroup>,
     );
@@ -26,7 +26,7 @@ describe("Radio Component", () => {
 
   it("should render with description", () => {
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Test Label" value="test" description="Test Description" />
       </RadioGroup>,
     );
@@ -38,7 +38,7 @@ describe("Radio Component", () => {
 
   it("should apply error styles when hasError is true", () => {
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Test Label" value="test" hasError />
       </RadioGroup>,
     );
@@ -49,7 +49,7 @@ describe("Radio Component", () => {
 
   it("should apply disabled styles and attributes", () => {
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Test Label" value="test" disabled />
       </RadioGroup>,
     );
@@ -60,7 +60,7 @@ describe("Radio Component", () => {
 
   it("should render with custom className", () => {
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         {/* Custom className for testing purposes */}
         {/* eslint-disable-next-line tailwindcss/no-custom-classname */}
         <Radio label="Test Label" value="test" className="custom-class" />
@@ -71,7 +71,7 @@ describe("Radio Component", () => {
 
   it("should use provided id when specified", () => {
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Test Label" value="test" id="custom-id" />
       </RadioGroup>,
     );
@@ -80,7 +80,7 @@ describe("Radio Component", () => {
 
   it("should generate unique id when not provided", () => {
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Test Label" value="test" />
       </RadioGroup>,
     );
@@ -92,7 +92,7 @@ describe("Radio Component", () => {
   it("should select the radio when the label is clicked", async () => {
     const user = userEvent.setup();
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Test Label" value="test" />
       </RadioGroup>,
     );
