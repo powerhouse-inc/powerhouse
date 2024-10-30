@@ -1,12 +1,12 @@
 import {
-  DocumentModel,
+  DocumentModelDocument,
   DocumentModelState,
   utils,
 } from "document-model/document-model";
 import fs from "node:fs";
 
 export async function loadDocumentModel(
-  path: string,
+  path: string
 ): Promise<DocumentModelState> {
   let documentModel: DocumentModelState;
   try {
@@ -17,9 +17,11 @@ export async function loadDocumentModel(
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");
-      const parsedData = JSON.parse(data) as DocumentModel | DocumentModelState;
+      const parsedData = JSON.parse(data) as
+        | DocumentModelDocument
+        | DocumentModelState;
       if ("state" in parsedData) {
-        documentModel = parsedData.state.global as DocumentModelState;
+        documentModel = parsedData.state.global;
       } else {
         documentModel = parsedData;
       }
