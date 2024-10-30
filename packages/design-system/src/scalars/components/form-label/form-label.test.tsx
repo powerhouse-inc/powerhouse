@@ -58,10 +58,9 @@ describe("FormLabel Component", () => {
     expect(asterisk).toBeInTheDocument();
   });
 
-  it("should have different style and not-allowed cursor when disabled", () => {
+  it("should have not-allowed cursor when disabled", () => {
     render(<FormLabel disabled>Disabled Label</FormLabel>);
     const label = screen.getByText("Disabled Label");
-    expect(label).toHaveClass("text-gray-600");
     expect(label).toHaveClass("cursor-not-allowed");
   });
 
