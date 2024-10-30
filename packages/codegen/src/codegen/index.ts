@@ -80,7 +80,7 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
   fs.mkdirSync(join(config.documentModelsDir, name), { recursive: true });
   fs.writeFileSync(
     join(config.documentModelsDir, name, `${name}.json`),
-    JSON.stringify(documentModel, null, 4)
+    JSON.stringify(documentModel, null, 4),
   );
 
   // bundle graphql schemas together
@@ -93,7 +93,7 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
   if (schemaStr) {
     fs.writeFileSync(
       join(config.documentModelsDir, name, `schema.graphql`),
-      schemaStr
+      schemaStr,
     );
   }
 
@@ -104,13 +104,13 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
 export async function generateEditor(
   name: string,
   documentTypes: string[],
-  config: PowerhouseConfig
+  config: PowerhouseConfig,
 ) {
   const { documentModelsDir, format } = config;
   const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
 
   const invalidType = documentTypes.find(
-    (type) => !Object.keys(docummentTypesMap).includes(type)
+    (type) => !Object.keys(docummentTypesMap).includes(type),
   );
   if (invalidType) {
     throw new Error(`Document model for ${invalidType} not found`);
@@ -121,6 +121,6 @@ export async function generateEditor(
     docummentTypesMap,
     config.editorsDir,
     config.documentModelsDir,
-    { format }
+    { format },
   );
 }

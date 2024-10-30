@@ -1,8 +1,12 @@
-import { DocumentModelState, utils } from "document-model/document-model";
+import {
+  DocumentModel,
+  DocumentModelState,
+  utils,
+} from "document-model/document-model";
 import fs from "node:fs";
 
 export async function loadDocumentModel(
-  path: string
+  path: string,
 ): Promise<DocumentModelState> {
   let documentModel: DocumentModelState;
   try {
@@ -13,7 +17,8 @@ export async function loadDocumentModel(
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");
-      const document = JSON.parse(data).state.global as DocumentModelState;
+      const document = (JSON.parse(data) as DocumentModel).state
+        .global as DocumentModelState;
       documentModel = document;
     } else {
       throw new Error("File type not supported. Must be zip or json.");
