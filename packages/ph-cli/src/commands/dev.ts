@@ -7,32 +7,60 @@ import fs from "fs";
 import { CommandActionType } from "../types";
 
 const CONNECT_BIN_PATH = "node_modules/.bin/connect";
+const REACTOR_LOCAL_BIN_PATH = "node_modules/.bin/reactor-local";
 
 export const dev: CommandActionType<[{ projectPath?: string }]> = ({
   projectPath,
 }) => {
-  let binPath = path.join(projectPath || ".", "node_modules/.bin/connect");
+  let connectBinPath = path.join(projectPath || ".", CONNECT_BIN_PATH);
+  let reactorLocalBinPath = path.join(
+    projectPath || ".",
+    REACTOR_LOCAL_BIN_PATH
+  );
 
-  if (!fs.existsSync(binPath)) {
+  if (!fs.existsSync(connectBinPath)) {
     const packagePath = require.resolve("@powerhousedao/connect/package.json");
     const packageDir = path.dirname(packagePath);
 
-    binPath = path.join(packageDir, CONNECT_BIN_PATH);
+    connectBinPath = path.join(packageDir, CONNECT_BIN_PATH);
   }
 
-  const child = spawn(binPath);
+  if (!fs.existsSync(reactorLocalBinPath)) {
+    const packagePath = require.resolve(
+      "@powerhousedao/reactor-local/package.json"
+    );
+    const packageDir = path.dirname(packagePath);
 
-  child.stdout.on("data", (data: Buffer) => {
+    reactorLocalBinPath = path.join(packageDir, REACTOR_LOCAL_BIN_PATH);
+  }
+
+  const connectChild = spawn(connectBinPath);
+  const reactorLocalChild = spawn(reactorLocalBinPath);
+
+  connectChild.stdout.on("data", (data: Buffer) => {
     green(data.toString());
     process.stdout.write(green(`[Connect]: ${data.toString()}`));
   });
 
-  child.stderr.on("data", (data: Buffer) => {
+  connectChild.stderr.on("data", (data: Buffer) => {
     process.stderr.write(red(`[Connect]: ${data.toString()}`));
   });
 
-  child.on("close", (code) => {
+  connectChild.on("close", (code) => {
     console.log(`Connect process exited with code ${code}`);
+  });
+
+  reactorLocalChild.stdout.on("data", (data: Buffer) => {
+    green(data.toString());
+    process.stdout.write(green(`[Reactor Local]: ${data.toString()}`));
+  });
+
+  reactorLocalChild.stderr.on("data", (data: Buffer) => {
+    process.stderr.write(red(`[Reactor Local]: ${data.toString()}`));
+  });
+
+  reactorLocalChild.on("close", (code) => {
+    console.log(`Reactor Local process exited with code ${code}`);
   });
 };
 
