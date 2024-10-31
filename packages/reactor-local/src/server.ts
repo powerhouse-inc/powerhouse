@@ -6,7 +6,7 @@ import {
   setAdditionalContextFields,
   startAPI,
 } from "@powerhousedao/reactor-api";
-import { DocumentDriveServer } from "document-drive";
+import { DocumentDriveServer, DriveAlreadyExistsError } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
@@ -48,8 +48,11 @@ const startServer = async () => {
       },
     });
   } catch (e) {
-    // TODO check if error is because drive already exists
-    console.info("Default drive already exists. Skipping...");
+    if (e instanceof DriveAlreadyExistsError) {
+      console.info("Default drive already exists. Skipping...");
+    } else {
+      throw e;
+    }
   }
 
   try {

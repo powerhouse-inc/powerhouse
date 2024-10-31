@@ -1,6 +1,6 @@
 import arg from "arg";
 import { execSync } from "child_process";
-import { prompt } from "enquirer";
+import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
 import {
@@ -16,6 +16,8 @@ const BOILERPLATE_REPO =
 
 const packageManager = getPackageManager(process.env.npm_config_user_agent);
 const isNpm = packageManager === "npm";
+
+const { prompt } = enquirer;
 
 function buildPackageJson(appPath: string, projectName: string) {
   const packageJson = JSON.parse(

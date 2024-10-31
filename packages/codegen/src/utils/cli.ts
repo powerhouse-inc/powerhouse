@@ -1,6 +1,8 @@
 import arg from "arg";
-import { prompt } from "enquirer";
+import enquirer from "enquirer";
 import { readFileSync, writeFileSync } from "node:fs";
+
+const { prompt } = enquirer;
 
 export type PowerhouseConfig = {
   documentModelsDir: string;
