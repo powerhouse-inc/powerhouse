@@ -12,6 +12,8 @@ export type CreateDocumentModalProps = ComponentPropsWithoutRef<
   readonly onContinue: (nodeName: string) => void;
 };
 
+const CLOSE_ANIMATION_DURATION = 300;
+
 export function CreateDocumentModal(props: CreateDocumentModalProps) {
   const { onOpenChange, onContinue, overlayProps, contentProps, ...restProps } =
     props;
@@ -20,12 +22,12 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
 
   const handleCancel = () => {
     onOpenChange?.(false);
-    setNodeName("");
+    setTimeout(() => setNodeName(""), CLOSE_ANIMATION_DURATION);
   };
 
   const handleCreate = () => {
     onContinue(nodeName);
-    setNodeName("");
+    setTimeout(() => setNodeName(""), CLOSE_ANIMATION_DURATION);
   };
 
   return (

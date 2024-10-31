@@ -6,7 +6,7 @@ import {
 import fs from "node:fs";
 
 export async function loadDocumentModel(
-  path: string
+  path: string,
 ): Promise<DocumentModelState> {
   let documentModel: DocumentModelState;
   try {
