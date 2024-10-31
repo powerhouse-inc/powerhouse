@@ -1,8 +1,8 @@
 import React, { useId } from "react";
 import { Toggle } from "./toggle";
 import { cn } from "@/scalars/lib/utils";
-import { FormLabel } from "../form-label";
-import { FormMessageList } from "../form-message";
+import { FormLabel } from "../fragments/form-label";
+import { FormMessageList } from "../fragments/form-message";
 
 interface ToggleFieldProps {
   label?: string;

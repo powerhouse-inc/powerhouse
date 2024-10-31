@@ -1,6 +1,6 @@
 import React, { useId } from "react";
-import { FormLabel } from "@/scalars/components/form-label";
-import { FormMessageList } from "@/scalars/components/form-message";
+import { FormLabel } from "@/scalars/components/fragments/form-label";
+import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { Radio } from "./radio";
 import { RadioGroup } from "./radio-group";
 
