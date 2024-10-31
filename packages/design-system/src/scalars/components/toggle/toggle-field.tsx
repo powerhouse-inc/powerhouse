@@ -1,8 +1,9 @@
-import React, { useId } from "react";
+import React, { useId, useState } from "react";
 import { Toggle } from "./toggle";
 import { cn } from "@/scalars/lib/utils";
 import { FormLabel } from "../form-label";
 import { FormMessageList } from "../form-message";
+import { validateRequiredField } from "./toggles-schema";
 
 interface ToggleFieldProps {
   label?: string;
@@ -13,6 +14,8 @@ interface ToggleFieldProps {
   className?: string;
   required?: boolean;
   name?: string;
+  validateOnBlur?: boolean;
+  validateOnChange?: boolean;
 }
 
 const ToggleField: React.FC<ToggleFieldProps> = ({
@@ -24,8 +27,18 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
   required = false,
   name,
   className,
+  validateOnBlur = true,
+  validateOnChange = false,
 }) => {
   const id = useId();
+  const [touched, setTouched] = useState(false);
+
+  const validateField = () => {
+    return [...errors, ...validateRequiredField(checked, required)];
+  };
+
+  const errorMerge = validateField();
+  const showError = touched && !!errorMerge.length;
 
   return (
     <div
@@ -38,9 +51,19 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
           required={required}
           disabled={disabled}
           name={name}
+          onBlur={() => {
+            if (validateOnBlur) {
+              setTouched(true);
+            }
+          }}
+          onCheckedChange={(checked) => {
+            if (validateOnChange) {
+              setTouched(true);
+            }
+            onCheckedChange?.(checked);
+          }}
           id={id}
           checked={checked}
-          onCheckedChange={onCheckedChange}
         />
         {label && (
           <FormLabel
@@ -53,9 +76,7 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
           </FormLabel>
         )}
       </div>
-      {errors.length !== 0 && (
-        <FormMessageList messages={errors} type="error" />
-      )}
+      {showError && <FormMessageList messages={errorMerge} type="error" />}
     </div>
   );
 };
