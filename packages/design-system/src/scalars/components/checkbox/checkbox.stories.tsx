@@ -46,6 +46,10 @@ const meta: Meta<typeof CheckboxField> = {
       description: "Array of warning messages to display",
     },
   },
+  args: {
+    errors: [],
+    warnings: [],
+  },
 };
 
 export default meta;
@@ -57,7 +61,6 @@ export const Default: Story = {
     checked: false,
     disabled: false,
     label: "Default Checkbox",
-    errors: [],
   },
 };
 
@@ -65,7 +68,6 @@ export const Checked: Story = {
   args: {
     checked: true,
     label: "Checked Checkbox",
-    errors: [],
   },
 };
 
@@ -73,7 +75,6 @@ export const Indeterminate: Story = {
   args: {
     checked: undefined,
     label: "Indeterminate Checkbox",
-    errors: [],
   },
 };
 
@@ -82,7 +83,6 @@ export const Disabled: Story = {
     checked: false,
     disabled: true,
     label: "Disabled Checkbox",
-    errors: [],
   },
 };
 
@@ -91,7 +91,6 @@ export const CheckedAndDisabled: Story = {
     checked: true,
     disabled: true,
     label: "Checked and Disabled Checkbox",
-    errors: [],
   },
 };
 
@@ -100,7 +99,6 @@ export const Required: Story = {
     checked: false,
     required: true,
     label: "Required Checkbox",
-    errors: [],
   },
 };
 
@@ -109,7 +107,6 @@ export const WithDescription: Story = {
     checked: false,
     description: "This is a description",
     label: "Checkbox with description",
-    errors: [],
   },
 };
 
@@ -119,7 +116,6 @@ export const RequiredWithDescription: Story = {
     description: "This is a description",
     label: "Required Checkbox with description",
     required: true,
-    errors: [],
   },
 };
 
@@ -139,7 +135,6 @@ export const WithCustomLabel: Story = {
         </a>
       </span>
     ),
-    errors: [],
   },
 };
 
