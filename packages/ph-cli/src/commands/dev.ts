@@ -38,10 +38,10 @@ const spawnChild = (binPath: string) => {
 export const dev: CommandActionType<[{ projectPath?: string }]> = ({
   projectPath,
 }) => {
-  let connectBinPath = path.join(projectPath || ".", CONNECT_BIN_PATH);
-  let reactorLocalBinPath = path.join(
+  const connectBinPath = path.join(projectPath || ".", CONNECT_BIN_PATH);
+  const reactorLocalBinPath = path.join(
     projectPath || ".",
-    REACTOR_LOCAL_BIN_PATH
+    REACTOR_LOCAL_BIN_PATH,
   );
   process.env.PH_CONNECT_DEFAULT_DRIVES_URL =
     "http://localhost:3000/d/powerhouse";
