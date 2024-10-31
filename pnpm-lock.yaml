@@ -156,10 +156,13 @@ importers:
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
         specifier: 1.2.0
-        version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@types/pg@8.11.10)(@types/react@18.3.12)(graphql@16.9.0)(pg@8.13.1)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
+        version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@powerhousedao/scalars@packages+scalars)(@types/pg@8.11.10)(@types/react@18.3.12)(graphql@16.9.0)(pg@8.13.1)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
       '@powerhousedao/reactor-api':
         specifier: 1.2.1
         version: link:../../packages/reactor-api
+      '@powerhousedao/scalars':
+        specifier: ^1.0.5
+        version: link:../../packages/scalars
       '@powerhousedao/switchboard-gui':
         specifier: 0.4.0
         version: link:../../packages/switchboard-gui
@@ -170,14 +173,14 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-drive:
-        specifier: 1.2.1
+        specifier: ^1.2.1
         version: link:../../packages/document-drive
       document-model:
-        specifier: 2.4.0
+        specifier: ^2.4.0
         version: link:../../packages/document-model
       document-model-libs:
-        specifier: 1.104.0
-        version: 1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
+        specifier: ^1.104.0
+        version: link:../../packages/document-model-libs
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -535,6 +538,8 @@ importers:
       tsx:
         specifier: ^4.19.1
         version: 4.19.2
+
+  packages/docker-environment: {}
 
   packages/document-drive:
     dependencies:
@@ -7990,12 +7995,12 @@ packages:
       - terser
     dev: false
 
-  /@powerhousedao/general-document-indexer@1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@types/pg@8.11.10)(@types/react@18.3.12)(graphql@16.9.0)(pg@8.13.1)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6):
+  /@powerhousedao/general-document-indexer@1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@powerhousedao/scalars@packages+scalars)(@types/pg@8.11.10)(@types/react@18.3.12)(graphql@16.9.0)(pg@8.13.1)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6):
     resolution: {integrity: sha512-S7ZOyK8A0jMkJFoTIeCQ6JL2TnhS3DVXZcF2mWKLfLVx3WCus9I/44kmzoS5NgPkozsR1zomyk8NT+UkcuWS/Q==}
     dependencies:
       document-drive: 1.2.0(document-model-libs@1.104.0)(document-model@2.3.1)(pg@8.13.1)
       document-model: 2.3.1
-      document-model-libs: 1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
+      document-model-libs: 1.104.0(@powerhousedao/scalars@packages+scalars)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
       drizzle-kit: 0.25.0
       drizzle-orm: 0.34.1(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@types/pg@8.11.10)(@types/react@18.3.12)(pg@8.13.1)(react@18.3.1)
     transitivePeerDependencies:
@@ -15056,7 +15061,7 @@ packages:
     dependencies:
       change-case: 5.4.4
       document-model: 2.3.1
-      document-model-libs: 1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
+      document-model-libs: 1.104.0(@powerhousedao/scalars@packages+scalars)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6)
       exponential-backoff: 3.1.1
       graphql: 16.9.0
       graphql-request: 6.1.0(graphql@16.9.0)
@@ -15099,7 +15104,7 @@ packages:
       storybook: 8.3.6
     dev: true
 
-  /document-model-libs@1.104.0(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6):
+  /document-model-libs@1.104.0(@powerhousedao/scalars@packages+scalars)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.6):
     resolution: {integrity: sha512-8BOse6mVZR+3T6iopH6D9Inpc43+iA20Rj1Ma+nWEcCLs6cWgYbm1XF4OT2/52Se+YgAK4mLEdhjcMvulnEC+Q==}
     peerDependencies:
       '@powerhousedao/scalars': latest
@@ -15113,6 +15118,7 @@ packages:
       '@graphql-tools/schema': 10.0.7(graphql@16.9.0)
       '@graphql-tools/utils': 10.5.5(graphql@16.9.0)
       '@internationalized/date': 3.5.6
+      '@powerhousedao/scalars': link:packages/scalars
       '@storybook/test': 8.3.6(storybook@8.3.6)
       copy-anything: 3.0.5
       date-fns: 3.6.0
@@ -18301,6 +18307,7 @@ packages:
   /ip-address@9.0.5:
     resolution: {integrity: sha512-zHtQzGojZXTwZTHQqra+ETKd4Sn3vgi7uBmlPoXVWZqYvuKmtI0l/VZTjqGmJY9x88GGOaZ9+G9ES8hC4T4X8g==}
     engines: {node: '>= 12'}
+    requiresBuild: true
     dependencies:
       jsbn: 1.1.0
       sprintf-js: 1.1.3
@@ -24260,6 +24267,7 @@ packages:
   /smart-buffer@4.2.0:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
+    requiresBuild: true
 
   /snake-case@2.1.0:
     resolution: {integrity: sha512-FMR5YoPFwOLuh4rRz92dywJjyKYZNLpMn1R5ujVpIYkbA9p01fq8RMg0FkO4M+Yobt4MjHeLTJVm5xFFBHSV2Q==}
