@@ -1,9 +1,15 @@
-import { DocumentModel } from "document-model";
 import fs from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Logger, runner } from "hygen";
-import path from "path";
+import { DocumentModel } from "document-model";
 import { loadDocumentModel } from "./utils";
 
+const require = createRequire(import.meta.url);
+
+const __dirname =
+  import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, ".hygen", "templates");
 
@@ -14,12 +20,12 @@ async function run(args: string[], { watch = false, format = false } = {}) {
     cwd: process.cwd(),
     logger,
     createPrompter: () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-require-imports
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return require("enquirer");
     },
     exec: (action, body) => {
       const opts = body && body.length > 0 ? { input: body } : {};
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-require-imports
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       return require("execa").shell(action, opts);
     },
     debug: !!process.env.DEBUG,

@@ -1,6 +1,11 @@
 #! /usr/bin/env node
 import { generate, generateEditor, generateFromFile } from "./codegen/index";
-import { parseArgs, getConfig, promptDirectories, parseConfig } from "./utils";
+import {
+  parseArgs,
+  getConfig,
+  promptDirectories,
+  parseConfig,
+} from "./utils/index";
 
 function parseCommand(argv: string[]) {
   const args = parseArgs(argv, {

@@ -89,7 +89,6 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
     generateGraphqlSchema(documentModel),
   ].join("\n");
 
-  console.log(schemaStr);
   if (schemaStr) {
     fs.writeFileSync(
       join(config.documentModelsDir, name, `schema.graphql`),
