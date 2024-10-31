@@ -536,6 +536,8 @@ importers:
         specifier: ^4.19.1
         version: 4.19.2
 
+  packages/docker-environment: {}
+
   packages/document-drive:
     dependencies:
       change-case:
@@ -1000,24 +1002,36 @@ importers:
         specifier: 0.10.0
         version: link:../codegen
       '@powerhousedao/connect':
-        specifier: develop
-        version: 1.0.0-dev.155(@types/node@20.17.3)
+        specifier: 1.0.0-dev.150
+        version: 1.0.0-dev.150(@powerhousedao/scalars@packages+scalars)(@types/node@22.8.4)
+      '@powerhousedao/design-system':
+        specifier: ^1.2.0
+        version: link:../design-system
+      '@powerhousedao/reactor-local':
+        specifier: ^1.2.1
+        version: link:../reactor-local
+      '@powerhousedao/scalars':
+        specifier: ^1.0.5
+        version: link:../scalars
       colorette:
         specifier: ^2.0.20
         version: 2.0.20
       commander:
         specifier: ^12.1.0
         version: 12.1.0
+      document-model-libs:
+        specifier: ^1.104.0
+        version: link:../document-model-libs
       graphql:
         specifier: ^16.8.1
         version: 16.9.0
     devDependencies:
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@swc/core@1.5.29)(@types/node@20.17.3)(typescript@5.6.3)
       tsup:
         specifier: ^8.3.0
         version: 8.3.5(@swc/core@1.5.29)(postcss@8.4.47)(typescript@5.6.3)
+      vite-node:
+        specifier: ^2.1.2
+        version: 2.1.4(@types/node@22.8.4)
 
   packages/reactor-api:
     dependencies:
@@ -7965,16 +7979,15 @@ packages:
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
     dev: true
 
-  /@powerhousedao/connect@1.0.0-dev.155(@types/node@20.17.3):
-    resolution: {integrity: sha512-urPss9KhtVw0kIdVyGdvVf+4fRM1QbqGhGjd1nLG1b2PeD3iaxfVnMvwX39Nex0lGoD9uxJQEa4Tc9d+svW5YA==}
+  /@powerhousedao/connect@1.0.0-dev.150(@powerhousedao/scalars@packages+scalars)(@types/node@22.8.4):
+    resolution: {integrity: sha512-d8yk7X9eDAK/icD8mu2EuYXVh51Ex+FCTJbfjYxt+IU686OYxF7VasiCtlojwePYsEJmKrs3366Rl9rr0wyjUg==}
     hasBin: true
     peerDependencies:
-      '@powerhousedao/design-system': latest
       '@powerhousedao/scalars': latest
-      document-model-libs: latest
     dependencies:
+      '@powerhousedao/scalars': link:packages/scalars
       commander: 12.1.0
-      vite: 5.4.10(@types/node@20.17.3)
+      vite: 5.4.10(@types/node@22.8.4)(lightningcss@1.27.0)
       vite-envs: 4.4.5
     optionalDependencies:
       '@esbuild/linux-x64': 0.21.5
@@ -18301,6 +18314,7 @@ packages:
   /ip-address@9.0.5:
     resolution: {integrity: sha512-zHtQzGojZXTwZTHQqra+ETKd4Sn3vgi7uBmlPoXVWZqYvuKmtI0l/VZTjqGmJY9x88GGOaZ9+G9ES8hC4T4X8g==}
     engines: {node: '>= 12'}
+    requiresBuild: true
     dependencies:
       jsbn: 1.1.0
       sprintf-js: 1.1.3
@@ -24260,6 +24274,7 @@ packages:
   /smart-buffer@4.2.0:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
+    requiresBuild: true
 
   /snake-case@2.1.0:
     resolution: {integrity: sha512-FMR5YoPFwOLuh4rRz92dywJjyKYZNLpMn1R5ujVpIYkbA9p01fq8RMg0FkO4M+Yobt4MjHeLTJVm5xFFBHSV2Q==}
@@ -26374,6 +26389,7 @@ packages:
       rollup: 4.24.3
     optionalDependencies:
       fsevents: 2.3.3
+    dev: true
 
   /vite@5.4.10(@types/node@22.8.4)(lightningcss@1.27.0):
     resolution: {integrity: sha512-1hvaPshuPUtxeQ0hsVH3Mud0ZanOLwVTneA1EgbAM5LhaZEqyPWGRQ7BtaMvUrTDeEaC8pxtj6a6jku3x4z6SQ==}
