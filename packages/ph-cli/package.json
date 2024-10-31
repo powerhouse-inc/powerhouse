@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@powerhousedao/codegen": "0.10.0",
-    "@powerhousedao/connect": "develop",
+    "@powerhousedao/connect": "1.0.0-dev.150",
     "@powerhousedao/design-system": "^1.2.0",
     "@powerhousedao/reactor-local": "^1.2.1",
     "@powerhousedao/scalars": "^1.0.5",

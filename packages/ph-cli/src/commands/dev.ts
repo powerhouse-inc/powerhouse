@@ -43,9 +43,10 @@ export const dev: CommandActionType<[{ projectPath?: string }]> = ({
     projectPath || ".",
     REACTOR_LOCAL_BIN_PATH
   );
-
-  spawnChild(connectBinPath);
+  process.env.PH_CONNECT_DEFAULT_DRIVES_URL =
+    "http://localhost:3000/d/powerhouse";
   spawnChild(reactorLocalBinPath);
+  spawnChild(connectBinPath);
 };
 
 export function devCommand(program: Command) {
