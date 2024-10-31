@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "ts-node src/cli.ts",
+    "dev": "vite-node src/cli.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
@@ -25,15 +25,18 @@
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "ts-node": "^10.9.2",
-    "tsup": "^8.3.0"
+    "tsup": "^8.3.0",
+    "vite-node": "^2.1.2"
   },
   "dependencies": {
     "@powerhousedao/codegen": "0.10.0",
     "@powerhousedao/connect": "develop",
-    "@powerhousedao/reactor-local": "workspace:^",
+    "@powerhousedao/design-system": "^1.2.0",
+    "@powerhousedao/reactor-local": "^1.2.1",
+    "@powerhousedao/scalars": "^1.0.5",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
+    "document-model-libs": "^1.104.0",
     "graphql": "^16.8.1"
   }
 }
