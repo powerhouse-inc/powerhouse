@@ -18,6 +18,16 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
 
   const [nodeName, setNodeName] = useState("");
 
+  const handleCancel = () => {
+    onOpenChange?.(false);
+    setNodeName("");
+  };
+
+  const handleCreate = () => {
+    onContinue(nodeName);
+    setNodeName("");
+  };
+
   return (
     <Modal
       contentProps={{
@@ -50,13 +60,13 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
               buttonStyles,
               "flex-1 bg-slate-50 text-slate-800",
             )}
-            onClick={() => onOpenChange?.(false)}
+            onClick={handleCancel}
           >
             Cancel
           </button>
           <Button
             className={twMerge(buttonStyles, "flex-1 bg-gray-800 text-gray-50")}
-            onClick={() => onContinue(nodeName)}
+            onClick={handleCreate}
           >
             Create
           </Button>
