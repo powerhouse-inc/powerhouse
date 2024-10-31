@@ -35,8 +35,18 @@ describe("ToggleField Component", () => {
     expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
   });
 
-  it("should display an error message when hasMessage is true", () => {
-    render(<ToggleField label="Test Label" errors={["Error message"]} />);
+  it("should display an error message when errors prop is provided", () => {
+    render(
+      <ToggleField
+        label="Test Label"
+        errors={["Error message"]}
+        validateOnBlur
+      />,
+    );
+
+    const toggleElement = screen.getByLabelText("Test Label");
+    fireEvent.blur(toggleElement);
+
     expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 

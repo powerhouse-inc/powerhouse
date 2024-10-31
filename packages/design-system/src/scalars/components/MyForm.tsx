@@ -1,16 +1,12 @@
 import React, { useState } from "react";
 import { ToggleField } from "@/scalars/components/toggle/toggle-field";
 import { CheckboxField } from "./checkbox";
-import { FormLabel } from "./form-label";
-import { Radio, RadioGroup } from "./radio-group";
 
 const MyForm: React.FC = () => {
   const [toggleChecked, setToggleChecked] = useState(true);
   const [toggleErrors, setToggleErrors] = useState<string[]>([]);
   const [checkboxChecked, setCheckboxChecked] = useState(false);
   const [checkboxErrors, setCheckboxErrors] = useState<string[]>([]);
-  const [radioValue, setRadioValue] = useState<string>("");
-  const [radioErrors, setRadioErrors] = useState<string[]>([]);
 
   const handleToggleChange = (checked: boolean) => {
     setToggleChecked(checked);
@@ -24,11 +20,6 @@ const MyForm: React.FC = () => {
     if (checked) {
       setCheckboxErrors([]);
     }
-  };
-
-  const handleRadioChange = (value: string) => {
-    setRadioValue(value);
-    setRadioErrors([]);
   };
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -50,13 +41,8 @@ const MyForm: React.FC = () => {
       );
     }
 
-    if (!radioValue) {
-      newRadioErrors.push("Please select one of the three options to continue");
-    }
-
     setToggleErrors(newToggleErrors);
     setCheckboxErrors(newCheckboxErrors);
-    setRadioErrors(newRadioErrors);
 
     if (
       newToggleErrors.length === 0 &&
@@ -103,22 +89,6 @@ const MyForm: React.FC = () => {
         </div>
         <p className="mb-2 text-center text-sm text-gray-600">
           Make sure to check this box to confirm.
-        </p>
-
-        <div className="flex flex-col gap-1">
-          <FormLabel>Select one option:</FormLabel>
-          <RadioGroup
-            value={radioValue}
-            onValueChange={handleRadioChange}
-            errors={radioErrors}
-          >
-            <Radio key="1" label="Option 1" value="1" />
-            <Radio key="2" label="Option 2" value="2" />
-            <Radio key="3" label="Option 3" value="3" />
-          </RadioGroup>
-        </div>
-        <p className="mb-2 text-center text-sm text-gray-600">
-          Choose the option that best fits your choice.
         </p>
 
         <div className="mt-4 w-full">
