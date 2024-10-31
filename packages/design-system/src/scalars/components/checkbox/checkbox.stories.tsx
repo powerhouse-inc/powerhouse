@@ -46,6 +46,10 @@ const meta: Meta<typeof CheckboxField> = {
       description: "Array of warning messages to display",
     },
   },
+  args: {
+    errors: [],
+    warnings: [],
+  },
 };
 
 export default meta;
@@ -123,7 +127,7 @@ export const WithCustomLabel: Story = {
         I agree to the{" "}
         <a
           className="underline"
-          href="https://originui.com"
+          href="https://google.com"
           target="_blank"
           rel="noopener noreferrer"
         >

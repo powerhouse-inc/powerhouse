@@ -1,8 +1,8 @@
 import { useId } from "react";
-import { FormLabel } from "../form-label";
+import { FormLabel } from "../fragments/form-label";
 import { Checkbox } from "./checkbox";
 import { cn } from "@/scalars/lib/utils";
-import { FormMessageList } from "../form-message";
+import { FormMessageList } from "../fragments/form-message";
 
 interface CheckboxFieldProps {
   id?: string;
@@ -33,10 +33,11 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
 }) => {
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  const hasError = !!errors?.length;
 
   return (
     <div className={cn("flex flex-col gap-2")}>
-      <div className={cn("flex items-center space-x-2", className)}>
+      <div className={cn("flex items-center space-x-2 group", className)}>
         <Checkbox
           id={id}
           name={name}
@@ -44,8 +45,17 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
           disabled={disabled}
           onCheckedChange={onChange}
           required={required}
+          invalid={hasError}
+          aria-invalid={hasError}
         />
-        <FormLabel htmlFor={id} required={required} description={description}>
+        <FormLabel
+          htmlFor={id}
+          required={required}
+          disabled={disabled}
+          hasError={hasError}
+          description={description}
+          className={cn(!disabled && "group-hover:cursor-pointer")}
+        >
           {label}
         </FormLabel>
       </div>

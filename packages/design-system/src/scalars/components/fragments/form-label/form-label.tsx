@@ -2,6 +2,7 @@ import { Icon } from "@/powerhouse/components/icon";
 import React from "react";
 import { twMerge } from "tailwind-merge";
 import { Tooltip, TooltipProvider } from "../tooltip";
+import { cn } from "@/scalars/lib";
 
 export interface FormLabelProps
   extends React.PropsWithChildren,
@@ -23,9 +24,10 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   ...htmlLabelProps
 }) => {
   const classes = twMerge(
-    "inline-flex items-center text-sm font-semibold text-gray-700  dark:text-gray-400 ",
-    hasError && "text-red-700 after:text-red-700 dark:text-red-700 ",
-    disabled && "cursor-not-allowed text-gray-600",
+    "inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50",
+    hasError && "text-red-700 group-hover:text-red-900",
+    disabled &&
+      `cursor-not-allowed ${!hasError ? "text-gray-700 dark:text-gray-500" : ""}`,
     className,
   );
 
@@ -36,7 +38,11 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   return (
     <label role="label" className={classes} {...extraProps}>
       {children}
-      {required && <span className="ml-1 text-blue-700 ">*</span>}
+      {required && (
+        <span className="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50">
+          *
+        </span>
+      )}
 
       {description && (
         <TooltipProvider>
@@ -44,7 +50,10 @@ export const FormLabel: React.FC<FormLabelProps> = ({
             <Icon
               name="CircleInfo"
               size={16}
-              className="ml-1 cursor-pointer text-gray-600"
+              className={cn(
+                "ml-1 cursor-pointer text-gray-600 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-500",
+                disabled && "text-gray-500",
+              )}
             />
           </Tooltip>
         </TooltipProvider>

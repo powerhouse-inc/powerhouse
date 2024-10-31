@@ -4,20 +4,42 @@ import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
 import { cn } from "@/scalars/lib/utils";
 
+export type CheckboxProps = React.ComponentPropsWithoutRef<
+  typeof CheckboxPrimitive.Root
+> & {
+  invalid?: boolean;
+};
+
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
->(({ className, checked, ...props }, ref) => (
+  CheckboxProps
+>(({ className, checked, invalid, ...props }, ref) => (
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      "peer size-4 shrink-0 rounded border border-input shadow-sm shadow-black/[.04] ring-offset-background transition-shadow focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=indeterminate]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:bg-primary data-[state=checked]:text-primary-foreground data-[state=indeterminate]:text-primary-foreground",
+      // Base styles
+      "peer size-4 shrink-0 rounded",
+      // Border & Shadow
+      "border border-input shadow-sm shadow-black/[.04]",
+      // Background & Ring
+      "ring-offset-background transition-shadow",
+      // Focus styles
+      "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      // Disabled state
+      "disabled:cursor-not-allowed disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-gray-500",
+      // Checked & Indeterminate states
+      "data-[state]:border-gray-700 dark:data-[state]:border-gray-400",
+      "data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-gray-400 dark:data-[state=indeterminate]:bg-gray-400",
+      "data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-gray-900 dark:data-[state=indeterminate]:text-gray-900",
+      // Error state
+      "data-[invalid=true]:data-[state]:border-red-800 data-[invalid=true]:data-[state=checked]:bg-red-800 data-[invalid=true]:data-[state=indeterminate]:bg-red-800",
       className,
     )}
     checked={checked === undefined ? "indeterminate" : checked}
+    data-invalid={invalid}
     {...props}
   >
-    <CheckboxPrimitive.Indicator className="flex items-center justify-center text-current">
+    <CheckboxPrimitive.Indicator className="text-current flex items-center justify-center">
       {checked === undefined ? (
         <svg
           width="9"
@@ -50,6 +72,5 @@ const Checkbox = React.forwardRef<
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ));
-Checkbox.displayName = CheckboxPrimitive.Root.displayName;
 
 export { Checkbox };
