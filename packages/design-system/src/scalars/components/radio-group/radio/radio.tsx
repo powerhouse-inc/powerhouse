@@ -1,6 +1,6 @@
 import React, { useId } from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
-import { FormLabel } from "@/scalars/components/form-label";
+import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { cn } from "@/scalars/lib/utils";
 
 export interface RadioProps

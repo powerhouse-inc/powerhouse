@@ -1,8 +1,8 @@
 import { useId } from "react";
-import { FormLabel } from "../form-label";
+import { FormLabel } from "../fragments/form-label";
 import { Checkbox } from "./checkbox";
 import { cn } from "@/scalars/lib/utils";
-import { FormMessageList } from "../form-message";
+import { FormMessageList } from "../fragments/form-message";
 
 interface CheckboxFieldProps {
   id?: string;
