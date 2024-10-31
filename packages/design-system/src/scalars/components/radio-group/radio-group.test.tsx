@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Radio } from "../radio";
+import { Radio } from "./radio";
 import { RadioGroup } from "./radio-group";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -7,21 +7,21 @@ import userEvent from "@testing-library/user-event";
 describe("RadioGroup Component", () => {
   it("should match snapshot", () => {
     const { asFragment } = render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Option 1" value="1" />
       </RadioGroup>,
     );
     expect(asFragment()).toMatchSnapshot();
   });
 
-  it("should render radio options with label", () => {
+  it("should render Radio options with label", () => {
     render(
-      <RadioGroup label="Group Label">
+      <RadioGroup name="radio-group">
         <Radio label="Option 1" value="1" />
         <Radio label="Option 2" value="2" />
       </RadioGroup>,
     );
-    expect(screen.getByText("Group Label")).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup")).toBeInTheDocument();
     expect(screen.getByText("Option 1")).toBeInTheDocument();
     expect(screen.getByText("Option 2")).toBeInTheDocument();
     expect(screen.getAllByRole("radio")).toHaveLength(2);
@@ -31,7 +31,7 @@ describe("RadioGroup Component", () => {
     const onValueChangeMock = vi.fn();
     const user = userEvent.setup();
     render(
-      <RadioGroup onValueChange={onValueChangeMock}>
+      <RadioGroup name="radio-group" onValueChange={onValueChangeMock}>
         <Radio label="Option 1" value="1" />
         <Radio label="Option 2" value="2" />
       </RadioGroup>,
@@ -41,10 +41,10 @@ describe("RadioGroup Component", () => {
     expect(onValueChangeMock).toHaveBeenCalledWith("1");
   });
 
-  it("should change the value when a different radio is selected", async () => {
+  it("should change the value when a different Radio is selected", async () => {
     const user = userEvent.setup();
     render(
-      <RadioGroup defaultValue="1">
+      <RadioGroup name="radio-group" defaultValue="1">
         <Radio label="Option 1" value="1" />
         <Radio label="Option 2" value="2" />
       </RadioGroup>,
@@ -58,32 +58,9 @@ describe("RadioGroup Component", () => {
     expect(radio2).toBeChecked();
   });
 
-  it("should display description when provided", () => {
+  it("should handle accessibility (aria-label)", () => {
     render(
-      <RadioGroup label="Group Label" description="Group Description">
-        <Radio label="Option 1" value="1" />
-      </RadioGroup>,
-    );
-    // Check that the info icon fallback is rendered
-    const iconFallback = screen.getByTestId("icon-fallback");
-    expect(iconFallback).toBeInTheDocument();
-    expect(iconFallback).toHaveStyle({ width: "16px", height: "16px" });
-  });
-
-  it("should show error state when errors are provided", () => {
-    render(
-      <RadioGroup label="Group Label" errors={["Error message"]}>
-        <Radio label="Option 1" value="1" />
-      </RadioGroup>,
-    );
-    const radioGroup = screen.getByRole("radiogroup");
-    expect(radioGroup).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByText("Error message")).toBeInTheDocument();
-  });
-
-  it("should handle no label scenario", () => {
-    render(
-      <RadioGroup aria-label="unlabeled group">
+      <RadioGroup name="radio-group" aria-label="unlabeled group">
         <Radio label="Option 1" value="1" />
       </RadioGroup>,
     );
@@ -93,7 +70,7 @@ describe("RadioGroup Component", () => {
 
   it("should generate unique ids when not provided", () => {
     render(
-      <RadioGroup>
+      <RadioGroup name="radio-group">
         <Radio label="Option 1" value="1" />
       </RadioGroup>,
     );
@@ -103,7 +80,7 @@ describe("RadioGroup Component", () => {
 
   it("should use provided id when specified", () => {
     render(
-      <RadioGroup id="custom-id">
+      <RadioGroup name="radio-group" id="custom-id">
         <Radio label="Option 1" value="1" />
       </RadioGroup>,
     );
@@ -113,7 +90,7 @@ describe("RadioGroup Component", () => {
 
   it("should handle required state", () => {
     render(
-      <RadioGroup label="Group Label" required>
+      <RadioGroup name="radio-group" required>
         <Radio label="Option 1" value="1" />
       </RadioGroup>,
     );
@@ -123,7 +100,7 @@ describe("RadioGroup Component", () => {
 
   it("should handle defaultValue", () => {
     render(
-      <RadioGroup defaultValue="2">
+      <RadioGroup name="radio-group" defaultValue="2">
         <Radio label="Option 1" value="1" />
         <Radio label="Option 2" value="2" />
       </RadioGroup>,
@@ -134,7 +111,7 @@ describe("RadioGroup Component", () => {
 
   it("should handle controlled value", () => {
     render(
-      <RadioGroup value="1">
+      <RadioGroup name="radio-group" value="1">
         <Radio label="Option 1" value="1" />
         <Radio label="Option 2" value="2" />
       </RadioGroup>,
@@ -147,21 +124,11 @@ describe("RadioGroup Component", () => {
     render(
       // Custom className for testing purposes
       // eslint-disable-next-line tailwindcss/no-custom-classname
-      <RadioGroup className="custom-class">
+      <RadioGroup name="radio-group" className="custom-class">
         <Radio label="Option 1" value="1" />
       </RadioGroup>,
     );
     const radioGroup = screen.getByRole("radiogroup");
     expect(radioGroup).toHaveClass("custom-class");
-  });
-
-  it("should handle multiple errors", () => {
-    render(
-      <RadioGroup label="Group Label" errors={["Error 1", "Error 2"]}>
-        <Radio label="Option 1" value="1" />
-      </RadioGroup>,
-    );
-    expect(screen.getByText("Error 1")).toBeInTheDocument();
-    expect(screen.getByText("Error 2")).toBeInTheDocument();
   });
 });

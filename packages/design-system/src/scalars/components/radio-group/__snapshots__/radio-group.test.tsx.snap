@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Radio Component > should match snapshot 1`] = `
+exports[`RadioGroup Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
     aria-required="false"
@@ -22,14 +22,14 @@ exports[`Radio Component > should match snapshot 1`] = `
       role="radio"
       tabindex="-1"
       type="button"
-      value="test"
+      value="1"
     />
     <label
       class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
       for=":r1:-radio"
       role="label"
     >
-      Test Label
+      Option 1
     </label>
   </div>
 </DocumentFragment>
