@@ -1,8 +1,8 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import {
   getDocumentMetadata,
   hiddenQueryTypeDefDoc,
-  makeInitialSchemaDoc,
+  initialSchema,
   makeOperationInitialDoc,
   Scope,
 } from ".";
@@ -14,17 +14,10 @@ import {
 } from "document-model/document-model";
 import { EditorProps, OperationScope, utils } from "document-model/document";
 import { DocumentModelEditor } from "./document-model-editor";
-import {
-  renameType,
-  mapSchema,
-  MapperKind,
-  astFromObjectType,
-} from "@graphql-tools/utils";
-import { pascalCase } from "change-case";
-import { buildSchema, isObjectType, print } from "graphql";
+import { buildSchema } from "graphql";
 import {
   MetadataFormValues,
-  ModelMetadataForm,
+  ModelMetadata,
 } from "./components/model-metadata-form";
 
 export default function Editor(
@@ -59,18 +52,30 @@ export default function Editor(
       document.state.global.specifications[0].modules,
     ],
   );
+  const [schema, setSchema] = useState(initialSchema);
+  const [errors, setErrors] = useState("");
 
-  const schema = buildSchema(`
-    ${hiddenQueryTypeDefDoc}
-    ${globalStateSchema}
-    ${localStateSchema}
-    ${modules
-      .flatMap((module) =>
-        module.operations.map((operation) => operation.schema),
-      )
-      .filter(Boolean)
-      .join("\n")}
-  `);
+  useEffect(() => {
+    try {
+      const newSchema = buildSchema(`
+        ${hiddenQueryTypeDefDoc}
+        ${globalStateSchema}
+        ${localStateSchema}
+        ${modules
+          .flatMap((module) =>
+            module.operations.map((operation) => operation.schema),
+          )
+          .filter(Boolean)
+          .join("\n")}
+      `);
+      setSchema(newSchema);
+      setErrors("");
+    } catch (e) {
+      if (e instanceof Error) {
+        setErrors(e.message);
+      }
+    }
+  }, [hiddenQueryTypeDefDoc, globalStateSchema, localStateSchema, modules]);
 
   const setModelId = useCallback((id: string) => {
     dispatch(actions.setModelId({ id }));
@@ -85,7 +90,6 @@ export default function Editor(
   }, []);
 
   const setModelName = useCallback((name: string) => {
-    dispatch(actions.setName(name));
     dispatch(actions.setModelName({ name }));
   }, []);
 
@@ -185,110 +189,21 @@ export default function Editor(
     }),
     [],
   );
-  function onSubmit(values: MetadataFormValues) {
-    const { name, documentType, description, extension, author } = values;
-    if (name) {
-      handlers.setModelName(name);
-      if (!globalStateSchema) {
-        const initialSchemaDoc = makeInitialSchemaDoc(
-          globalStateSchema,
-          name,
-          "global",
-        );
-        handlers.setStateSchema(initialSchemaDoc, "global");
-
-        if (!globalStateInitialValue) {
-          const initialStateDoc = "{}";
-          handlers.setInitialState(initialStateDoc, "global");
-        }
-      } else {
-        const oldGlobalStateType = schema.getType(
-          `${pascalCase(modelName)}State`,
-        );
-        if (!oldGlobalStateType) {
-          throw new Error("Expected global state type");
-        }
-        const newGlobalStateType = renameType(
-          oldGlobalStateType,
-          `${pascalCase(name)}State`,
-        );
-        const schemaWithNewType = mapSchema(schema, {
-          [MapperKind.TYPE]: (type) => {
-            if (type.name === oldGlobalStateType.name) {
-              return newGlobalStateType;
-            }
-            return type;
-          },
-        });
-        if (!isObjectType(newGlobalStateType)) {
-          throw new Error("Expected object type");
-        }
-        handlers.setStateSchema(
-          print(astFromObjectType(newGlobalStateType, schemaWithNewType)),
-          "global",
-        );
-        const oldLocalStateType = schema.getType(
-          `${pascalCase(modelName)}LocalState`,
-        );
-        if (!oldLocalStateType) {
-          return;
-        }
-        const newLocalStateType = renameType(
-          oldLocalStateType,
-          `${pascalCase(name)}LocalState`,
-        );
-        const schemaWithNewLocalStateType = mapSchema(schema, {
-          [MapperKind.TYPE]: (type) => {
-            if (type.name === oldLocalStateType.name) {
-              return newLocalStateType;
-            }
-            return type;
-          },
-        });
-        if (!isObjectType(newLocalStateType)) {
-          throw new Error("Expected object type");
-        }
-        handlers.setStateSchema(
-          print(
-            astFromObjectType(newLocalStateType, schemaWithNewLocalStateType),
-          ),
-          "local",
-        );
-      }
-    }
-
-    if (documentType) {
-      handlers.setModelId(documentType);
-    }
-
-    if (description) {
-      handlers.setModuleDescription(description);
-    }
-
-    if (extension) {
-      handlers.setModelExtension(extension);
-    }
-
-    if (author?.name) {
-      handlers.setAuthorName(author.name);
-    }
-
-    if (author?.website) {
-      handlers.setAuthorWebsite(author.website);
-    }
-  }
-
   return (
-    <main className="mx-auto min-h-dvh max-w-screen-xl px-4 pt-8">
-      <ModelMetadataForm
-        onSubmit={onSubmit}
+    <main className="mx-auto min-h-dvh max-w-screen-lg px-4 pt-8">
+      <ModelMetadata
         name={modelName}
         documentType={documentType}
         extension={extension}
         description={description}
         author={author as MetadataFormValues["author"]}
+        handlers={handlers}
+        globalStateSchema={globalStateSchema}
+        globalStateInitialValue={globalStateInitialValue}
+        schema={schema}
       />
       <DocumentModelEditor
+        errors={errors}
         schema={schema}
         modelName={modelName}
         globalStateSchema={globalStateSchema}

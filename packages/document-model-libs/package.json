@@ -75,8 +75,7 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "dev:watch": "vite build --watch",
-    "yalc-push": "vite build && yalc push",
-    "dev": "npm-run-all --parallel dev:watch yalc-push"
+    "yalc-push": "vite build && yalc push"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.18.1",
@@ -182,6 +181,7 @@
     "date-fns": "^3.3.1",
     "deep-object-diff": "^1.1.9",
     "jszip": "^3.10.1",
-    "mathjs": "^13.0.0"
+    "mathjs": "^13.0.0",
+    "thememirror": "^2.0.1"
   }
 }
