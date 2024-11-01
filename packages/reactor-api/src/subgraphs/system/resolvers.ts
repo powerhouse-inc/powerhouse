@@ -1,5 +1,5 @@
 import { DriveInput } from "document-drive";
-import { Context } from "../../../../../../apps/switchboard/types";
+import { Context } from "../types";
 
 export const resolvers = {
   Query: {
