@@ -1,6 +1,17 @@
 import React, { useState } from "react";
 import { ToggleField } from "@/scalars/components/toggle/toggle-field";
 import { CheckboxField } from "./checkbox";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useController, useForm } from "react-hook-form";
+import {
+  FormField,
+  Form,
+  FormControl,
+  FormDescription,
+  FormItem,
+  FormMessage,
+} from "./form";
+import { validateRequiredField } from "./toggle/toggles-schema";
 
 const MyForm: React.FC = () => {
   const [toggleChecked, setToggleChecked] = useState(true);
@@ -10,9 +21,10 @@ const MyForm: React.FC = () => {
 
   const handleToggleChange = (checked: boolean) => {
     setToggleChecked(checked);
-    if (checked) {
-      setToggleErrors([]);
-    }
+
+    // Run validation whenever the toggle changes
+    const errors = validateRequiredField(true, checked);
+    setToggleErrors(errors);
   };
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -24,10 +36,11 @@ const MyForm: React.FC = () => {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    const newToggleErrors: string[] = [];
+    const newToggleErrors: string[] = validateRequiredField(
+      true,
+      toggleChecked,
+    );
     const newCheckboxErrors: string[] = [];
-    const newRadioErrors: string[] = [];
-
     if (!toggleChecked) {
       newToggleErrors.push(
         "Please enable the toggle to proceed",
@@ -44,11 +57,7 @@ const MyForm: React.FC = () => {
     setToggleErrors(newToggleErrors);
     setCheckboxErrors(newCheckboxErrors);
 
-    if (
-      newToggleErrors.length === 0 &&
-      newCheckboxErrors.length === 0 &&
-      newRadioErrors.length === 0
-    ) {
+    if (newToggleErrors.length === 0 && newCheckboxErrors.length === 0) {
       alert("All the data send to server");
     }
   };
@@ -63,6 +72,7 @@ const MyForm: React.FC = () => {
         <h2 className="mb-4 text-center text-xl font-semibold">
           Scalars Test Form
         </h2>
+
         <ToggleField
           name="toggle"
           label="Active"
