@@ -1,0 +1,141 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BooleanField > should render checkbox field when isToggle is false 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-2"
+  >
+    <div
+      class="flex items-center space-x-2 group test-class"
+    >
+      <button
+        aria-checked="true"
+        aria-invalid="true"
+        aria-required="true"
+        class="peer size-4 shrink-0 rounded border border-input shadow-sm shadow-black/[.04] ring-offset-background transition-shadow focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-gray-500 data-[state]:border-gray-700 dark:data-[state]:border-gray-400 data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-gray-400 dark:data-[state=indeterminate]:bg-gray-400 data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-gray-900 dark:data-[state=indeterminate]:text-gray-900 data-[invalid=true]:data-[state]:border-red-800 data-[invalid=true]:data-[state=checked]:bg-red-800 data-[invalid=true]:data-[state=indeterminate]:bg-red-800"
+        data-invalid="true"
+        data-state="checked"
+        id=":r2:"
+        role="checkbox"
+        type="button"
+        value="on"
+      >
+        <span
+          class="text-current flex items-center justify-center"
+          data-state="checked"
+          style="pointer-events: none;"
+        >
+          <svg
+            fill="currentcolor"
+            height="9"
+            viewBox="0 0 9 9"
+            width="9"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              clip-rule="evenodd"
+              d="M8.53547 0.62293C8.88226 0.849446 8.97976 1.3142 8.75325 1.66099L4.5083 8.1599C4.38833 8.34356 4.19397 8.4655 3.9764 8.49358C3.75883 8.52167 3.53987 8.45309 3.3772 8.30591L0.616113 5.80777C0.308959 5.52987 0.285246 5.05559 0.563148 4.74844C0.84105 4.44128 1.31533 4.41757 1.62249 4.69547L3.73256 6.60459L7.49741 0.840706C7.72393 0.493916 8.18868 0.396414 8.53547 0.62293Z"
+              fill-rule="evenodd"
+            />
+          </svg>
+        </span>
+      </button>
+      <label
+        class="inline-flex items-center text-sm font-medium leading-[22px] dark:text-gray-400 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900 group-hover:cursor-pointer"
+        for=":r2:"
+        role="label"
+      >
+        Test Field
+        <span
+          class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+        >
+          *
+        </span>
+        <button
+          data-state="closed"
+        >
+          <div
+            data-testid="icon-fallback"
+            style="width: 16px; height: 16px;"
+          />
+        </button>
+      </label>
+    </div>
+    <p
+      class="mb-0 inline-flex items-center text-xs font-medium text-orange-900 dark:text-orange-900"
+      data-type="warning"
+    >
+      Test warning
+    </p>
+    <p
+      class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-700"
+      data-type="error"
+    >
+      Test error
+    </p>
+  </div>
+</div>
+`;
+
+exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-1 test-class"
+    data-testid="custom-class"
+  >
+    <div
+      class="flex items-center"
+    >
+      <button
+        aria-checked="true"
+        aria-labelledby=":r0:-label"
+        aria-required="true"
+        class="peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]"
+        data-state="checked"
+        id=":r0:"
+        role="switch"
+        type="button"
+        value="on"
+      >
+        <span
+          class="peer pointer-events-none block h-3.5 w-3.5 rounded-full bg-[#FCFCFC] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0"
+          data-state="checked"
+        />
+      </button>
+      <label
+        class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 ml-2"
+        for=":r0:"
+        id=":r0:-label"
+        role="label"
+      >
+        Test Field
+        <span
+          class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+        >
+          *
+        </span>
+        <button
+          data-state="closed"
+        >
+          <div
+            data-testid="icon-fallback"
+            style="width: 16px; height: 16px;"
+          />
+        </button>
+      </label>
+    </div>
+    <p
+      class="mb-0 inline-flex items-center text-xs font-medium text-orange-900 dark:text-orange-900"
+      data-type="warning"
+    >
+      Test warning
+    </p>
+    <p
+      class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-700"
+      data-type="error"
+    >
+      Test error
+    </p>
+  </div>
+</div>
+`;

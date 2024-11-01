@@ -2,14 +2,17 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ToggleField } from "./toggle-field";
 
 const meta: Meta<typeof ToggleField> = {
-  title: "Document Engineering/Simple Components/Toggle",
+  title: "Document Engineering/Fragments/Toggle Field",
   tags: ["autodocs"],
   component: ToggleField,
   argTypes: {
-    checked: {
+    value: {
       control: "boolean",
       description: "Indicates if the toggle is checked",
-      table: { defaultValue: { summary: "true" } },
+    },
+    defaultValue: {
+      control: "boolean",
+      description: "Default value for the toggle",
     },
     disabled: {
       control: "boolean",
@@ -19,11 +22,19 @@ const meta: Meta<typeof ToggleField> = {
     label: {
       control: "text",
       description: "Label for the toggle",
-      table: { defaultValue: { summary: "" } },
+    },
+    description: {
+      control: "text",
+      description: "Description for the toggle",
     },
     errors: {
       control: "object",
       description: "Array of error objects to display",
+      table: { defaultValue: { summary: "[]" } },
+    },
+    warnings: {
+      control: "object",
+      description: "Array of warning objects to display",
       table: { defaultValue: { summary: "[]" } },
     },
     required: {
@@ -34,9 +45,8 @@ const meta: Meta<typeof ToggleField> = {
     className: {
       control: "text",
       description: "Additional CSS classes for styling",
-      table: { defaultValue: { summary: "" } },
     },
-    onCheckedChange: {
+    onChange: {
       action: "checked changed",
       description: "Callback when the checked state changes",
       table: {
@@ -48,6 +58,10 @@ const meta: Meta<typeof ToggleField> = {
       description: "Name attribute for the toggle input",
     },
   },
+  args: {
+    errors: [],
+    warnings: [],
+  },
 };
 
 export default meta;
@@ -55,48 +69,38 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    checked: true,
-    disabled: false,
-    label: "",
-    errors: [],
-    required: false,
-    className: "",
-    name: "",
+    value: true,
   },
 };
 
 export const CheckedWithLabel: Story = {
   name: "Checked with label",
   args: {
-    checked: true,
+    value: true,
     label: "Active",
-    errors: [],
   },
 };
 
 export const Unchecked: Story = {
   name: "Unchecked without label",
   args: {
-    checked: false,
-    errors: [],
+    value: false,
   },
 };
 
 export const UncheckedWithLabel: Story = {
   name: "Unchecked with label",
   args: {
-    checked: false,
+    value: false,
     label: "Active",
-    errors: [],
   },
 };
 
 export const DisabledChecked: Story = {
   name: "Disabled checked without label",
   args: {
-    checked: true,
+    value: true,
     disabled: true,
-    errors: [],
   },
 };
 
@@ -104,18 +108,16 @@ export const DisabledCheckedWithLabel: Story = {
   name: "Disabled checked with label",
   args: {
     disabled: true,
-    checked: true,
+    value: true,
     label: "Active",
-    errors: [],
   },
 };
 
 export const DisabledUncheckedWithoutLabel: Story = {
   name: "Disabled unchecked without label",
   args: {
-    checked: false,
+    value: false,
     disabled: true,
-    errors: [],
   },
 };
 
@@ -123,8 +125,7 @@ export const DisabledUncheckedWithLabel: Story = {
   name: "Disabled unchecked with label",
   args: {
     disabled: true,
-    checked: false,
+    value: false,
     label: "Active",
-    errors: [],
   },
 };

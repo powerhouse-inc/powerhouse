@@ -24,7 +24,7 @@ describe("TextField", () => {
   });
 
   it("should render with default value", () => {
-    render(<TextField label="Name" default="John Doe" />);
+    render(<TextField label="Name" defaultValue="John Doe" />);
     expect(screen.getByDisplayValue("John Doe")).toBeInTheDocument();
   });
 

@@ -1,31 +1,30 @@
 import React, { useId } from "react";
 import { Toggle } from "./toggle";
 import { cn } from "@/scalars/lib/utils";
-import { FormLabel } from "../fragments/form-label";
-import { FormMessageList } from "../fragments/form-message";
+import { FormLabel } from "../form-label";
+import { FormMessageList } from "../form-message";
+import type { FieldCommonProps } from "../../types";
 
-interface ToggleFieldProps {
-  label?: string;
-  disabled?: boolean;
-  checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
-  errors?: string[];
-  className?: string;
-  required?: boolean;
-  name?: string;
+export interface ToggleFieldProps extends FieldCommonProps<boolean> {
+  onChange?: (checked: boolean) => void;
 }
 
 const ToggleField: React.FC<ToggleFieldProps> = ({
+  id: idProp,
+  name,
   label,
   disabled = false,
-  checked = true,
-  onCheckedChange,
+  value,
+  onChange,
   errors = [],
+  warnings = [],
   required = false,
-  name,
   className,
+  defaultValue,
+  description,
 }) => {
-  const id = useId();
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
 
   return (
     <div
@@ -39,20 +38,25 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
           disabled={disabled}
           name={name}
           id={id}
-          checked={checked}
-          onCheckedChange={onCheckedChange}
+          checked={value ?? defaultValue}
+          onCheckedChange={onChange}
         />
         {label && (
           <FormLabel
             htmlFor={id}
             className="ml-2"
             disabled={disabled}
+            required={required}
+            description={description}
             id={`${id}-label`}
           >
             {label}
           </FormLabel>
         )}
       </div>
+      {warnings.length !== 0 && (
+        <FormMessageList messages={warnings} type="warning" />
+      )}
       {errors.length !== 0 && (
         <FormMessageList messages={errors} type="error" />
       )}
