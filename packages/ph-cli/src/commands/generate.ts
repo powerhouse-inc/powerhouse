@@ -6,8 +6,7 @@ import {
   generateFromFile,
   promptDirectories,
 } from "@powerhousedao/codegen";
-
-import { CommandActionType } from "../types";
+import { CommandActionType } from "../types.js";
 
 export const generate: CommandActionType<
   [

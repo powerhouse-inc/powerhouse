@@ -3,6 +3,7 @@
   "version": "0.2.4",
   "description": "",
   "license": "AGPL-3.0-only",
+  "type": "module",
   "types": "dist/index.d.ts",
   "main": "dist/index.js",
   "publishConfig": {
@@ -31,8 +32,13 @@
   "dependencies": {
     "@powerhousedao/codegen": "0.10.0",
     "@powerhousedao/connect": "develop",
+    "@powerhousedao/design-system": "^1.4.2",
+    "@powerhousedao/scalars": "^1.5.0",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
-    "graphql": "^16.8.1"
+    "document-model-libs": "^1.104.0",
+    "graphql": "^16.8.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

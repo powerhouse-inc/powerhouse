@@ -1,7 +1,6 @@
 import { Command } from "commander";
 import { createProject } from "@powerhousedao/codegen";
-
-import { CommandActionType } from "../types";
+import { CommandActionType } from "../types.js";
 
 export const init: CommandActionType<
   [string | undefined, { interactive?: boolean }]

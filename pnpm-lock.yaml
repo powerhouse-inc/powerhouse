@@ -11,6 +11,8 @@ overrides:
   graphql: ^16.8.1
   whatwg-url: ^14.0.0
 
+pnpmfileChecksum: xp5d3eajj6bouju5xzzfm26bcq
+
 importers:
 
   .:
@@ -156,13 +158,13 @@ importers:
         version: 0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       '@powerhousedao/general-document-indexer':
         specifier: 1.2.0
-        version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(@prisma/client@5.21.1(prisma@5.21.1))(@types/pg@8.11.10)(@types/react@18.3.12)(encoding@0.1.13)(graphql@16.9.0)(pg@8.13.1)(prisma@5.21.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sqlite3@5.1.7)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@powerhousedao/scalars@packages+scalars)(@prisma/client@5.21.1(prisma@5.21.1))(@types/pg@8.11.10)(@types/react@18.3.12)(encoding@0.1.13)(graphql@16.9.0)(pg@8.13.1)(prisma@5.21.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sqlite3@5.1.7)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       '@powerhousedao/reactor-api':
         specifier: 1.2.1
         version: link:../../packages/reactor-api
       '@powerhousedao/scalars':
         specifier: ^1.0.5
-        version: 1.5.0(graphql@16.9.0)(zod@3.23.8)
+        version: link:../../packages/scalars
       '@powerhousedao/switchboard-gui':
         specifier: 0.2.0
         version: 0.2.0(@babel/core@7.26.0)(@types/react@18.3.12)(babel-plugin-macros@3.1.0)(bufferutil@4.0.8)(graphql-ws@5.16.0(graphql@16.9.0))(immer@10.1.1)(utf-8-validate@5.0.10)
@@ -174,13 +176,13 @@ importers:
         version: 2.8.5
       document-drive:
         specifier: ^1.2.1
-        version: 1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(encoding@0.1.13)(pg@8.13.1)(prisma@5.21.1)
+        version: link:../../packages/document-drive
       document-model:
         specifier: ^2.4.0
-        version: 2.4.0
+        version: link:../../packages/document-model
       document-model-libs:
         specifier: ^1.104.0
-        version: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: 1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -328,7 +330,7 @@ importers:
         version: 4.1.2
       document-model:
         specifier: ^2.4.0
-        version: 2.4.0
+        version: link:../document-model
       enquirer:
         specifier: ^2.4.1
         version: 2.4.1
@@ -587,7 +589,7 @@ importers:
     devDependencies:
       '@powerhousedao/scalars':
         specifier: latest
-        version: 1.5.0(graphql@16.9.0)(zod@3.23.8)
+        version: link:../scalars
       '@types/node':
         specifier: ^20.14.11
         version: 20.17.3
@@ -596,10 +598,10 @@ importers:
         version: 9.0.8
       document-model:
         specifier: ^2.4.0
-        version: 2.4.0
+        version: link:../document-model
       document-model-libs:
         specifier: ^1.104.0
-        version: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: 1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       fake-indexeddb:
         specifier: ^5.0.2
         version: 5.0.2
@@ -763,10 +765,10 @@ importers:
         version: link:../codegen
       '@powerhousedao/design-system':
         specifier: ^1.4.2
-        version: 1.4.2(@types/react-dom@18.3.1)(@types/react@18.3.12)(bufferutil@4.0.8)(document-model@2.4.0)(encoding@0.1.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.2(@swc/core@1.5.29(@swc/helpers@0.5.13))(@types/node@22.8.4)(typescript@5.6.3))(typescript@5.6.3)(utf-8-validate@5.0.10)(zod@3.23.8)
+        version: link:../design-system
       '@powerhousedao/scalars':
         specifier: ^1.5.0
-        version: 1.5.0(graphql@16.9.0)(zod@3.23.8)
+        version: link:../scalars
       '@prettier/sync':
         specifier: ^0.5.2
         version: 0.5.2(prettier@3.3.3)
@@ -889,13 +891,13 @@ importers:
         version: 3.12.1
       document-model:
         specifier: ^2.4.0
-        version: 2.4.0
+        version: link:../document-model
       document-model-editors:
         specifier: ^1.0.1
-        version: 1.0.1(document-model@2.4.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: 1.0.1(document-model@packages+document-model)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       dspot-powerhouse-components:
         specifier: ^1.1.0
-        version: 1.1.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@mui/material@5.16.7(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 1.1.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@mui/material@5.16.7(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@packages+document-model-libs)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       graphql:
         specifier: ^16.8.1
         version: 16.9.0
@@ -976,16 +978,16 @@ importers:
     dependencies:
       '@powerhousedao/scalars':
         specifier: ^1.0.5
-        version: 1.5.0(graphql@16.9.0)(zod@3.23.8)
+        version: link:../scalars
       document-drive:
         specifier: ^1.2.1
-        version: 1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(pg@8.13.1)(prisma@5.21.1)
+        version: link:../document-drive
       document-model:
         specifier: ^2.4.0
-        version: 2.4.0
+        version: link:../document-model
       document-model-libs:
         specifier: ^1.104.0
-        version: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: 1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       drizzle-kit:
         specifier: ^0.25.0
         version: 0.25.0
@@ -1007,16 +1009,31 @@ importers:
         version: link:../codegen
       '@powerhousedao/connect':
         specifier: develop
-        version: 1.0.0-dev.155(@types/node@22.8.4)(lightningcss@1.27.0)(terser@5.36.0)
+        version: 1.0.0-dev.155(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.8.4)(document-model-libs@packages+document-model-libs)(lightningcss@1.27.0)(terser@5.36.0)
+      '@powerhousedao/design-system':
+        specifier: ^1.4.2
+        version: link:../design-system
+      '@powerhousedao/scalars':
+        specifier: ^1.5.0
+        version: link:../scalars
       colorette:
         specifier: ^2.0.20
         version: 2.0.20
       commander:
         specifier: ^12.1.0
         version: 12.1.0
+      document-model-libs:
+        specifier: ^1.104.0
+        version: link:../document-model-libs
       graphql:
         specifier: ^16.8.1
         version: 16.9.0
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
     devDependencies:
       ts-node:
         specifier: ^10.9.2
@@ -1035,7 +1052,7 @@ importers:
         version: 2.9.3(graphql@16.9.0)
       '@powerhousedao/scalars':
         specifier: latest
-        version: 1.5.0(graphql@16.9.0)(zod@3.23.8)
+        version: link:../scalars
       body-parser:
         specifier: ^1.20.3
         version: 1.20.3
@@ -1044,7 +1061,7 @@ importers:
         version: 2.8.5
       document-model-libs:
         specifier: ^1.104.0
-        version: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: 1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       express:
         specifier: ^4.21.1
         version: 4.21.1
@@ -1060,10 +1077,10 @@ importers:
         version: 5.0.0
       document-drive:
         specifier: ^1.2.1
-        version: 1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(encoding@0.1.13)(pg@8.13.1)(prisma@5.21.1)
+        version: link:../document-drive
       document-model:
         specifier: ^2.4.0
-        version: 2.4.0
+        version: link:../document-model
       esbuild:
         specifier: ^0.24.0
         version: 0.24.0
@@ -1090,25 +1107,25 @@ importers:
         version: 0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       '@powerhousedao/general-document-indexer':
         specifier: ^1.2.0
-        version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(@prisma/client@5.21.1(prisma@5.21.1))(@types/pg@8.11.10)(@types/react@18.3.12)(encoding@0.1.13)(graphql@16.9.0)(pg@8.13.1)(prisma@5.21.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sqlite3@5.1.7)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@powerhousedao/scalars@packages+scalars)(@prisma/client@5.21.1(prisma@5.21.1))(@types/pg@8.11.10)(@types/react@18.3.12)(encoding@0.1.13)(graphql@16.9.0)(pg@8.13.1)(prisma@5.21.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sqlite3@5.1.7)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       '@powerhousedao/reactor-api':
         specifier: ^1.2.1
-        version: 1.2.1(document-drive@1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(pg@8.13.1)(prisma@5.21.1))(document-model@2.4.0)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: link:../reactor-api
       '@powerhousedao/scalars':
         specifier: ^1.0.5
-        version: 1.5.0(graphql@16.9.0)(zod@3.23.8)
+        version: link:../scalars
       commander:
         specifier: ^12.1.0
         version: 12.1.0
       document-drive:
         specifier: ^1.2.1
-        version: 1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(pg@8.13.1)(prisma@5.21.1)
+        version: link:../document-drive
       document-model:
         specifier: ^2.4.0
-        version: 2.4.0
+        version: link:../document-model
       document-model-libs:
         specifier: ^1.104.0
-        version: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+        version: 1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -4525,27 +4542,8 @@ packages:
       '@powerhousedao/scalars': latest
       document-model-libs: latest
 
-  '@powerhousedao/design-system@1.4.2':
-    resolution: {integrity: sha512-xGmaa49sB80GutWP3tUzqDPigP4c6ZzYdMNKzyB269+2ngMBxqvBW23lRZQKVqbKx3OdsMBSjd2v+CxP8AnN6A==}
-    peerDependencies:
-      document-model: ^2.1.0
-      react: ^18.3.1
-      react-dom: ^18.3.1
-
   '@powerhousedao/general-document-indexer@1.2.0':
     resolution: {integrity: sha512-S7ZOyK8A0jMkJFoTIeCQ6JL2TnhS3DVXZcF2mWKLfLVx3WCus9I/44kmzoS5NgPkozsR1zomyk8NT+UkcuWS/Q==}
-
-  '@powerhousedao/reactor-api@1.2.1':
-    resolution: {integrity: sha512-7H2pI1dEcISHlGFe87r3ylwdvmAlQzpRsxAd81jjGSEM6Lw/Qmh47ay1Sr7RLCT5p3o/Eo58njQ+hhk23o352w==}
-    peerDependencies:
-      document-drive: ^1.0.1
-      document-model: ^2.2.0
-
-  '@powerhousedao/scalars@1.5.0':
-    resolution: {integrity: sha512-+6kbTUES+5qgHCvoYjmjmMLB4545p+J9VxGeHD95P1AlufbR6L7M9WZOp2Vu026VKqrqhl/0aMHV+G/YuVC6fw==}
-    peerDependencies:
-      graphql: ^16.8.1
-      zod: ^3.23.8
 
   '@powerhousedao/switchboard-gui@0.2.0':
     resolution: {integrity: sha512-qfv93w5kxNagYF1eEAzUrp0y2pmq2FFk9tSIs54HucPNhHceUxCjA8K4icK4o3I18/YjuGC4zmLhHw+JfAsx6Q==}
@@ -8095,12 +8093,6 @@ packages:
       document-model: ^2.1.0
       document-model-libs: ^1.92.0
 
-  document-drive@1.2.1:
-    resolution: {integrity: sha512-nRkrpWLuUCaij3Ig5ATJiZdamklNrKCVeshv5DPodHd+TLsoNzDifh9dtsz7iA0vcfTCiflaKTDX0j36xgag9Q==}
-    peerDependencies:
-      document-model: ^2.1.0
-      document-model-libs: ^1.92.0
-
   document-model-editors@1.0.1:
     resolution: {integrity: sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==}
     peerDependencies:
@@ -8116,17 +8108,8 @@ packages:
       react: ^18.2.0
       react-dom: ^18.2.0
 
-  document-model-libs@1.93.2:
-    resolution: {integrity: sha512-wbGcEc6XtVNkcVoQc6cI8y0E7FKR6kZr0LBvHUUQuqqeBlJEADiU2ru4k4Z17X5yDK7mEPKWN136HhEfJ9igZA==}
-    peerDependencies:
-      react: ^18.2.0
-      react-dom: ^18.2.0
-
   document-model@2.3.1:
     resolution: {integrity: sha512-p1Lwdoorve1g1RFkv2oB3S9rd0ncJ+uYOt5f2fxFH4rIKw2ArQg7LLpyA7Wr8ehgrraGIObxTyfU/+UzKDtrOA==}
-
-  document-model@2.4.0:
-    resolution: {integrity: sha512-ItZ/hJhR4+M3H1eYMjgStklI7pYOH4ap+ZA7PW3NWOctvBqRirRJttzPpcO2LQwMdFaLHXmv70ZjSpVqChj2mw==}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -10383,6 +10366,7 @@ packages:
 
   libsql@0.4.6:
     resolution: {integrity: sha512-F5M+ltteK6dCcpjMahrkgT96uFJvVI8aQ4r9f2AzHQjC7BkAYtvfMSTWGvRBezRgMUIU2h1Sy0pF9nOGOD5iyA==}
+    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -18761,9 +18745,12 @@ snapshots:
 
   '@popperjs/core@2.11.8': {}
 
-  '@powerhousedao/connect@1.0.0-dev.155(@types/node@22.8.4)(lightningcss@1.27.0)(terser@5.36.0)':
+  '@powerhousedao/connect@1.0.0-dev.155(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.8.4)(document-model-libs@packages+document-model-libs)(lightningcss@1.27.0)(terser@5.36.0)':
     dependencies:
+      '@powerhousedao/design-system': link:packages/design-system
+      '@powerhousedao/scalars': link:packages/scalars
       commander: 12.1.0
+      document-model-libs: link:packages/document-model-libs
       vite: 5.4.10(@types/node@22.8.4)(lightningcss@1.27.0)(terser@5.36.0)
       vite-envs: 4.4.5
     optionalDependencies:
@@ -18779,67 +18766,11 @@ snapshots:
       - sugarss
       - terser
 
-  '@powerhousedao/design-system@1.4.2(@types/react-dom@18.3.1)(@types/react@18.3.12)(bufferutil@4.0.8)(document-model@2.4.0)(encoding@0.1.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.2(@swc/core@1.5.29(@swc/helpers@0.5.13))(@types/node@22.8.4)(typescript@5.6.3))(typescript@5.6.3)(utf-8-validate@5.0.10)(zod@3.23.8)':
+  '@powerhousedao/general-document-indexer@1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@powerhousedao/scalars@packages+scalars)(@prisma/client@5.21.1(prisma@5.21.1))(@types/pg@8.11.10)(@types/react@18.3.12)(encoding@0.1.13)(graphql@16.9.0)(pg@8.13.1)(prisma@5.21.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sqlite3@5.1.7)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))':
     dependencies:
-      '@internationalized/date': 3.5.6
-      '@radix-ui/react-dialog': 1.1.2(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-dropdown-menu': 2.1.2(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-tabs': 1.1.1(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-tooltip': 1.1.3(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@radix-ui/react-visually-hidden': 1.1.0(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@tanstack/react-query': 5.59.16(react@18.3.1)
-      '@tanstack/react-virtual': 3.10.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      change-case: 5.4.4
-      date-fns: 4.1.0
-      date-fns-tz: 3.2.0(date-fns@4.1.0)
-      document-model: 2.4.0
-      mathjs: 13.2.0
-      natural-orderby: 4.0.0
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      react-hook-form: 7.53.1(react@18.3.1)
-      react-multi-select-component: 4.3.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react-number-format: 5.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react-select: 5.8.2(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react-toastify: 10.0.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      tailwind-merge: 2.5.4
-      tailwindcss: 3.4.14(ts-node@10.9.2(@swc/core@1.5.29(@swc/helpers@0.5.13))(@types/node@22.8.4)(typescript@5.6.3))
-      tailwindcss-animate: 1.0.7(tailwindcss@3.4.14(ts-node@10.9.2(@swc/core@1.5.29(@swc/helpers@0.5.13))(@types/node@22.8.4)(typescript@5.6.3)))
-      usehooks-ts: 3.1.0(react@18.3.1)
-      viem: 2.21.37(bufferutil@4.0.8)(typescript@5.6.3)(utf-8-validate@5.0.10)(zod@3.23.8)
-      wagmi: 2.12.25(@tanstack/query-core@5.59.16)(@tanstack/react-query@5.59.16(react@18.3.1))(@types/react@18.3.12)(bufferutil@4.0.8)(encoding@0.1.13)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react-native@0.76.1(@babel/core@7.26.0)(@babel/preset-env@7.26.0(@babel/core@7.26.0))(@types/react@18.3.12)(bufferutil@4.0.8)(encoding@0.1.13)(react@18.3.1)(utf-8-validate@5.0.10))(react@18.3.1)(typescript@5.6.3)(utf-8-validate@5.0.10)(viem@2.21.37(bufferutil@4.0.8)(typescript@5.6.3)(utf-8-validate@5.0.10)(zod@3.23.8))(zod@3.23.8)
-    transitivePeerDependencies:
-      - '@azure/app-configuration'
-      - '@azure/cosmos'
-      - '@azure/data-tables'
-      - '@azure/identity'
-      - '@azure/keyvault-secrets'
-      - '@azure/storage-blob'
-      - '@capacitor/preferences'
-      - '@netlify/blobs'
-      - '@planetscale/database'
-      - '@react-native-async-storage/async-storage'
-      - '@tanstack/query-core'
-      - '@types/react'
-      - '@types/react-dom'
-      - '@upstash/redis'
-      - '@vercel/kv'
-      - bufferutil
-      - encoding
-      - immer
-      - ioredis
-      - react-native
-      - supports-color
-      - ts-node
-      - typescript
-      - utf-8-validate
-      - zod
-
-  '@powerhousedao/general-document-indexer@1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(@prisma/client@5.21.1(prisma@5.21.1))(@types/pg@8.11.10)(@types/react@18.3.12)(encoding@0.1.13)(graphql@16.9.0)(pg@8.13.1)(prisma@5.21.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sqlite3@5.1.7)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))':
-    dependencies:
-      document-drive: 1.2.0(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.3.1)(encoding@0.1.13)(pg@8.13.1)(prisma@5.21.1)
+      document-drive: 1.2.0(document-model-libs@1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.3.1)(encoding@0.1.13)(pg@8.13.1)(prisma@5.21.1)
       document-model: 2.3.1
-      document-model-libs: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+      document-model-libs: 1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       drizzle-kit: 0.25.0
       drizzle-orm: 0.34.1(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@prisma/client@5.21.1(prisma@5.21.1))(@types/pg@8.11.10)(@types/react@18.3.12)(pg@8.13.1)(prisma@5.21.1)(react@18.3.1)(sqlite3@5.1.7)
     transitivePeerDependencies:
@@ -18884,29 +18815,6 @@ snapshots:
       - storybook
       - supports-color
       - tedious
-
-  '@powerhousedao/reactor-api@1.2.1(document-drive@1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(pg@8.13.1)(prisma@5.21.1))(document-model@2.4.0)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))':
-    dependencies:
-      '@apollo/server': 4.11.2(encoding@0.1.13)(graphql@16.9.0)
-      '@apollo/subgraph': 2.9.3(graphql@16.9.0)
-      body-parser: 1.20.3
-      cors: 2.8.5
-      document-drive: 1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(pg@8.13.1)(prisma@5.21.1)
-      document-model: 2.4.0
-      document-model-libs: 1.93.2(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
-      express: 4.21.1
-    transitivePeerDependencies:
-      - encoding
-      - graphql
-      - react
-      - react-dom
-      - storybook
-      - supports-color
-
-  '@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8)':
-    dependencies:
-      graphql: 16.9.0
-      zod: 3.23.8
 
   '@powerhousedao/switchboard-gui@0.2.0(@babel/core@7.26.0)(@types/react@18.3.12)(babel-plugin-macros@3.1.0)(bufferutil@4.0.8)(graphql-ws@5.16.0(graphql@16.9.0))(immer@10.1.1)(utf-8-validate@5.0.10)':
     dependencies:
@@ -23591,11 +23499,11 @@ snapshots:
     dependencies:
       esutils: 2.0.3
 
-  document-drive@1.2.0(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.3.1)(encoding@0.1.13)(pg@8.13.1)(prisma@5.21.1):
+  document-drive@1.2.0(document-model-libs@1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.3.1)(encoding@0.1.13)(pg@8.13.1)(prisma@5.21.1):
     dependencies:
       change-case: 5.4.4
       document-model: 2.3.1
-      document-model-libs: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+      document-model-libs: 1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       exponential-backoff: 3.1.1
       graphql: 16.9.0
       graphql-request: 6.1.0(encoding@0.1.13)(graphql@16.9.0)
@@ -23623,78 +23531,14 @@ snapshots:
       - supports-color
       - tedious
 
-  document-drive@1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(encoding@0.1.13)(pg@8.13.1)(prisma@5.21.1):
+  document-model-editors@1.0.1(document-model@packages+document-model)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)):
     dependencies:
-      change-case: 5.4.4
-      document-model: 2.4.0
-      document-model-libs: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
-      exponential-backoff: 3.1.1
-      graphql: 16.9.0
-      graphql-request: 6.1.0(encoding@0.1.13)(graphql@16.9.0)
-      json-stringify-deterministic: 1.0.12
-      nanoevents: 9.1.0
-      sanitize-filename: 1.6.3
-      uuid: 9.0.1
-    optionalDependencies:
-      '@prisma/client': 5.21.1(prisma@5.21.1)
-      localforage: 1.10.0
-      redis: 4.7.0
-      sequelize: 6.37.5(pg@8.13.1)(sqlite3@5.1.7)
-      sqlite3: 5.1.7
-    transitivePeerDependencies:
-      - bluebird
-      - encoding
-      - ibm_db
-      - mariadb
-      - mysql2
-      - oracledb
-      - pg
-      - pg-hstore
-      - prisma
-      - snowflake-sdk
-      - supports-color
-      - tedious
-
-  document-drive@1.2.1(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(document-model@2.4.0)(pg@8.13.1)(prisma@5.21.1):
-    dependencies:
-      change-case: 5.4.4
-      document-model: 2.4.0
-      document-model-libs: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
-      exponential-backoff: 3.1.1
-      graphql: 16.9.0
-      graphql-request: 6.1.0(encoding@0.1.13)(graphql@16.9.0)
-      json-stringify-deterministic: 1.0.12
-      nanoevents: 9.1.0
-      sanitize-filename: 1.6.3
-      uuid: 9.0.1
-    optionalDependencies:
-      '@prisma/client': 5.21.1(prisma@5.21.1)
-      localforage: 1.10.0
-      redis: 4.7.0
-      sequelize: 6.37.5(pg@8.13.1)(sqlite3@5.1.7)
-      sqlite3: 5.1.7
-    transitivePeerDependencies:
-      - bluebird
-      - encoding
-      - ibm_db
-      - mariadb
-      - mysql2
-      - oracledb
-      - pg
-      - pg-hstore
-      - prisma
-      - snowflake-sdk
-      - supports-color
-      - tedious
-
-  document-model-editors@1.0.1(document-model@2.4.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)):
-    dependencies:
-      document-model: 2.4.0
+      document-model: link:packages/document-model
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       storybook: 8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)
 
-  document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)):
+  document-model-libs@1.104.0(@powerhousedao/scalars@packages+scalars)(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)):
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema': 0.12.3(encoding@0.1.13)(graphql@16.9.0)
       '@codemirror/lang-json': 6.0.1
@@ -23703,32 +23547,11 @@ snapshots:
       '@graphql-tools/schema': 10.0.7(graphql@16.9.0)
       '@graphql-tools/utils': 10.5.5(graphql@16.9.0)
       '@internationalized/date': 3.5.6
-      '@powerhousedao/scalars': 1.5.0(graphql@16.9.0)(zod@3.23.8)
+      '@powerhousedao/scalars': link:packages/scalars
       '@storybook/test': 8.3.6(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
       copy-anything: 3.0.5
       date-fns: 3.6.0
       deep-object-diff: 1.1.9
-      jszip: 3.10.1
-      mathjs: 13.2.0
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-    transitivePeerDependencies:
-      - encoding
-      - graphql
-      - storybook
-      - supports-color
-
-  document-model-libs@1.93.2(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)):
-    dependencies:
-      '@acaldas/graphql-codegen-typescript-validation-schema': 0.12.3(encoding@0.1.13)(graphql@16.9.0)
-      '@graphql-codegen/core': 4.0.2(graphql@16.9.0)
-      '@graphql-codegen/typescript': 4.1.1(encoding@0.1.13)(graphql@16.9.0)
-      '@internationalized/date': 3.5.6
-      '@storybook/test': 8.3.6(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
-      copy-anything: 3.0.5
-      date-fns: 3.6.0
-      deep-object-diff: 1.1.9
-      jsonc-parser: 3.3.1
       jszip: 3.10.1
       mathjs: 13.2.0
       react: 18.3.1
@@ -23740,17 +23563,6 @@ snapshots:
       - supports-color
 
   document-model@2.3.1:
-    dependencies:
-      change-case: 5.4.4
-      jszip: 3.10.1
-      mime: 4.0.4
-      mutative: 1.0.11
-      safe-stable-stringify: 2.5.0
-      sha1-uint8array: 0.10.7
-      uuid: 9.0.1
-      zod: 3.23.8
-
-  document-model@2.4.0:
     dependencies:
       change-case: 5.4.4
       jszip: 3.10.1
@@ -23837,12 +23649,12 @@ snapshots:
 
   dset@3.1.4: {}
 
-  dspot-powerhouse-components@1.1.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@mui/material@5.16.7(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  dspot-powerhouse-components@1.1.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@mui/material@5.16.7(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@packages+document-model-libs)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@emotion/react': 11.13.3(@types/react@18.3.12)(react@18.3.1)
       '@emotion/styled': 11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1)
       '@mui/material': 5.16.7(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@emotion/styled@11.13.0(@emotion/react@11.13.3(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react@18.3.1))(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      document-model-libs: 1.104.0(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(encoding@0.1.13)(graphql@16.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+      document-model-libs: link:packages/document-model-libs
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
