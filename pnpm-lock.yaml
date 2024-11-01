@@ -11,8 +11,6 @@ overrides:
   graphql: ^16.8.1
   whatwg-url: ^14.0.0
 
-pnpmfileChecksum: ylzvq7npjrqsplulljewhxrsua
-
 importers:
 
   .:
