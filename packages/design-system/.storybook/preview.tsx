@@ -13,9 +13,14 @@ const preview: Preview = {
     },
     options: {
       storySort: {
-        order: ['Connect', 'Powerhouse', 'RWA', 'Document Engineering', ['Simple Components', 'Complex Components', 'Layout Components']],
-        method: 'alphabetical',
-        locales: 'en-US',
+        order: [
+          "Connect",
+          "Powerhouse",
+          "RWA",
+          "Document Engineering", 
+          ["Simple Components", "Complex Components", "Layout Components", "Fragments"],
+        ],
+        method: "alphabetical",
         includeNames: true,
       },
     },

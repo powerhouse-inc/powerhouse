@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Tooltip, TooltipProvider } from "./tooltip";
 
 const meta: Meta<typeof Tooltip> = {
-  title: "Document Engineering/Simple Components/Tooltip",
+  title: "Document Engineering/Fragments/Tooltip",
   component: Tooltip,
   parameters: {
     layout: "centered",
