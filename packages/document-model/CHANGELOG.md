@@ -1,3 +1,22 @@
+## 2.4.1 (2024-11-01)
+
+### 🚀 Features
+
+- **codegen:** changed bundle to esm ([24b33b50](https://github.com/powerhouse-inc/powerhouse/commit/24b33b50))
+
+### 🩹 Fixes
+
+- **ph-cli:** bundle cli as esm package and added missing dependencies ([a5a665ef](https://github.com/powerhouse-inc/powerhouse/commit/a5a665ef))
+- **codegen:** fixed bad import ([eefb7b2f](https://github.com/powerhouse-inc/powerhouse/commit/eefb7b2f))
+- bad package reference was breaking build -- also a readme update ([4121e51b](https://github.com/powerhouse-inc/powerhouse/commit/4121e51b))
+- **switchboard:** startup ([#469](https://github.com/powerhouse-inc/powerhouse/pull/469))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- frankp.eth @froid1911
+
 ## 2.4.0 (2024-10-29)
 
 ### 🚀 Features

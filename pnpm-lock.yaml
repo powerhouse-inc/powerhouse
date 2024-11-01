@@ -158,10 +158,10 @@ importers:
         specifier: 1.2.0
         version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0)(@powerhousedao/scalars@packages+scalars)(@types/pg@8.11.10)(@types/react@18.3.12)(graphql@16.9.0)(pg@8.13.1)(react-dom@18.3.1)(react@18.3.1)(storybook@8.4.1)
       '@powerhousedao/reactor-api':
-        specifier: 1.2.1
-        version: link:../../packages/reactor-api
+        specifier: 1.2.0
+        version: 1.2.0(document-drive@packages+document-drive)(document-model@packages+document-model)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.4.1)
       '@powerhousedao/scalars':
-        specifier: ^1.0.5
+        specifier: ^1.5.1
         version: link:../../packages/scalars
       '@powerhousedao/switchboard-gui':
         specifier: 0.2.0
@@ -173,13 +173,13 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-drive:
-        specifier: ^1.2.1
+        specifier: ^1.2.2
         version: link:../../packages/document-drive
       document-model:
-        specifier: ^2.4.0
+        specifier: ^2.4.1
         version: link:../../packages/document-model
       document-model-libs:
-        specifier: ^1.104.0
+        specifier: ^1.104.2
         version: link:../../packages/document-model-libs
       dotenv:
         specifier: ^16.4.5
@@ -327,7 +327,7 @@ importers:
         specifier: ^4.1.2
         version: 4.1.2
       document-model:
-        specifier: ^2.4.0
+        specifier: ^2.4.1
         version: link:../document-model
       enquirer:
         specifier: ^2.4.1
@@ -340,7 +340,7 @@ importers:
         version: 6.2.11
     devDependencies:
       '@powerhousedao/scalars':
-        specifier: 1.5.0
+        specifier: 1.5.1
         version: link:../scalars
       copyfiles:
         specifier: ^2.4.1
@@ -509,7 +509,7 @@ importers:
         specifier: ^7.0.3
         version: 7.0.3
       document-model:
-        specifier: 2.4.0
+        specifier: 2.4.1
         version: link:../document-model
       fast-xml-parser:
         specifier: ^4.3.4
@@ -595,10 +595,10 @@ importers:
         specifier: ^9.0.8
         version: 9.0.8
       document-model:
-        specifier: ^2.4.0
+        specifier: ^2.4.1
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.104.0
+        specifier: ^1.104.2
         version: link:../document-model-libs
       fake-indexeddb:
         specifier: ^5.0.2
@@ -759,13 +759,13 @@ importers:
         specifier: ^5.15.5
         version: 5.16.7(@emotion/react@11.13.3)(@emotion/styled@11.13.0)(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
       '@powerhousedao/codegen':
-        specifier: 0.10.0
+        specifier: 0.11.0
         version: link:../codegen
       '@powerhousedao/design-system':
-        specifier: ^1.4.2
+        specifier: ^1.5.0
         version: link:../design-system
       '@powerhousedao/scalars':
-        specifier: ^1.5.0
+        specifier: ^1.5.1
         version: link:../scalars
       '@prettier/sync':
         specifier: ^0.5.2
@@ -888,7 +888,7 @@ importers:
         specifier: ^3.12.0
         version: 3.12.1
       document-model:
-        specifier: ^2.4.0
+        specifier: ^2.4.1
         version: link:../document-model
       document-model-editors:
         specifier: ^1.0.1
@@ -975,16 +975,16 @@ importers:
   packages/general-document-indexer:
     dependencies:
       '@powerhousedao/scalars':
-        specifier: ^1.0.5
+        specifier: ^1.5.1
         version: link:../scalars
       document-drive:
-        specifier: ^1.2.1
+        specifier: ^1.2.2
         version: link:../document-drive
       document-model:
-        specifier: ^2.4.0
+        specifier: ^2.4.1
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.104.0
+        specifier: ^1.104.2
         version: link:../document-model-libs
       drizzle-kit:
         specifier: ^0.25.0
@@ -1003,16 +1003,16 @@ importers:
   packages/ph-cli:
     dependencies:
       '@powerhousedao/codegen':
-        specifier: 0.10.0
+        specifier: 0.11.0
         version: link:../codegen
       '@powerhousedao/connect':
         specifier: develop
         version: 1.0.0-dev.155(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@20.17.5)(document-model-libs@packages+document-model-libs)
       '@powerhousedao/design-system':
-        specifier: ^1.4.2
+        specifier: ^1.5.0
         version: link:../design-system
       '@powerhousedao/scalars':
-        specifier: ^1.5.0
+        specifier: ^1.5.1
         version: link:../scalars
       colorette:
         specifier: ^2.0.20
@@ -1021,7 +1021,7 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0
       document-model-libs:
-        specifier: ^1.104.0
+        specifier: ^1.104.2
         version: link:../document-model-libs
       graphql:
         specifier: ^16.8.1
@@ -1058,7 +1058,7 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-model-libs:
-        specifier: ^1.104.0
+        specifier: ^1.104.2
         version: link:../document-model-libs
       express:
         specifier: ^4.21.1
@@ -1074,10 +1074,10 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       document-drive:
-        specifier: ^1.2.1
+        specifier: ^1.2.2
         version: link:../document-drive
       document-model:
-        specifier: ^2.4.0
+        specifier: ^2.4.1
         version: link:../document-model
       esbuild:
         specifier: ^0.24.0
@@ -1104,25 +1104,25 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
-        specifier: ^1.2.0
+        specifier: ^1.2.2
         version: link:../general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: ^1.2.1
+        specifier: ^1.2.2
         version: link:../reactor-api
       '@powerhousedao/scalars':
-        specifier: ^1.0.5
+        specifier: ^1.5.1
         version: link:../scalars
       commander:
         specifier: ^12.1.0
         version: 12.1.0
       document-drive:
-        specifier: ^1.2.1
+        specifier: ^1.2.2
         version: link:../document-drive
       document-model:
-        specifier: ^2.4.0
+        specifier: ^2.4.1
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.104.0
+        specifier: ^1.104.2
         version: link:../document-model-libs
       dotenv:
         specifier: ^16.4.5
@@ -8147,6 +8147,29 @@ packages:
       - tedious
     dev: false
 
+  /@powerhousedao/reactor-api@1.2.0(document-drive@packages+document-drive)(document-model@packages+document-model)(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.4.1):
+    resolution: {integrity: sha512-EeAmLMp0cA8LzfvSHgiV5pOKEy/bdFJcjFASqT2aXlGIcIb6Q/wedRV1NlpDGH9EILVqtmdDPtcW9z6RjS0r+Q==}
+    peerDependencies:
+      document-drive: ^1.0.1
+      document-model: ^2.2.0
+    dependencies:
+      '@apollo/server': 4.11.2(graphql@16.9.0)
+      '@apollo/subgraph': 2.9.3(graphql@16.9.0)
+      body-parser: 1.20.3
+      cors: 2.8.5
+      document-drive: link:packages/document-drive
+      document-model: link:packages/document-model
+      document-model-libs: 1.93.2(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.4.1)
+      express: 4.21.1
+    transitivePeerDependencies:
+      - encoding
+      - graphql
+      - react
+      - react-dom
+      - storybook
+      - supports-color
+    dev: false
+
   /@powerhousedao/switchboard-gui@0.2.0(@babel/core@7.26.0)(@types/react@18.3.12):
     resolution: {integrity: sha512-qfv93w5kxNagYF1eEAzUrp0y2pmq2FFk9tSIs54HucPNhHceUxCjA8K4icK4o3I18/YjuGC4zmLhHw+JfAsx6Q==}
     dependencies:
@@ -11583,24 +11606,7 @@ packages:
       '@vitest/spy': 2.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.12
-      msw: 2.6.0(@types/node@20.17.5)(typescript@5.6.3)
-      vite: 5.4.10(@types/node@20.17.5)
-    dev: true
-
-  /@vitest/mocker@2.1.4(vite@5.4.10):
-    resolution: {integrity: sha512-Ky/O1Lc0QBbutJdW0rqLeFNbuLEyS+mIPiNdlVlp2/yhJ0SbyYqObS5IHdhferJud8MbbwMnexg4jordE5cCoQ==}
-    peerDependencies:
-      msw: ^2.4.9
-      vite: ^5.0.0
-    peerDependenciesMeta:
-      msw:
-        optional: true
-      vite:
-        optional: true
-    dependencies:
-      '@vitest/spy': 2.1.4
-      estree-walker: 3.0.3
-      magic-string: 0.30.12
+      msw: 2.6.0(@types/node@22.8.6)(typescript@5.6.3)
       vite: 5.4.10(@types/node@22.8.6)(lightningcss@1.27.0)
     dev: true
 
@@ -15211,6 +15217,32 @@ packages:
       - supports-color
     dev: false
 
+  /document-model-libs@1.93.2(graphql@16.9.0)(react-dom@18.3.1)(react@18.3.1)(storybook@8.4.1):
+    resolution: {integrity: sha512-wbGcEc6XtVNkcVoQc6cI8y0E7FKR6kZr0LBvHUUQuqqeBlJEADiU2ru4k4Z17X5yDK7mEPKWN136HhEfJ9igZA==}
+    peerDependencies:
+      react: ^18.2.0
+      react-dom: ^18.2.0
+    dependencies:
+      '@acaldas/graphql-codegen-typescript-validation-schema': 0.12.3(graphql@16.9.0)
+      '@graphql-codegen/core': 4.0.2(graphql@16.9.0)
+      '@graphql-codegen/typescript': 4.1.1(graphql@16.9.0)
+      '@internationalized/date': 3.5.6
+      '@storybook/test': 8.4.1(storybook@8.4.1)
+      copy-anything: 3.0.5
+      date-fns: 3.6.0
+      deep-object-diff: 1.1.9
+      jsonc-parser: 3.3.1
+      jszip: 3.10.1
+      mathjs: 13.2.0
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+    transitivePeerDependencies:
+      - encoding
+      - graphql
+      - storybook
+      - supports-color
+    dev: false
+
   /document-model@2.3.1:
     resolution: {integrity: sha512-p1Lwdoorve1g1RFkv2oB3S9rd0ncJ+uYOt5f2fxFH4rIKw2ArQg7LLpyA7Wr8ehgrraGIObxTyfU/+UzKDtrOA==}
     dependencies:
@@ -16520,7 +16552,7 @@ packages:
     resolution: {integrity: sha512-an2S5quJMiy5bnZKEf6AkfH/7r8CzHvhchU40gxN+OM6HPhe7Z9T1FUychcf2M9PpPOO0Hf7BAEfJkw2TDIBDw==}
     engines: {node: '>=12.0.0'}
     dependencies:
-      readable-stream: 3.6.2
+      readable-stream: 4.5.2
       webextension-polyfill: 0.10.0
     dev: false
 
@@ -18344,6 +18376,7 @@ packages:
   /ip-address@9.0.5:
     resolution: {integrity: sha512-zHtQzGojZXTwZTHQqra+ETKd4Sn3vgi7uBmlPoXVWZqYvuKmtI0l/VZTjqGmJY9x88GGOaZ9+G9ES8hC4T4X8g==}
     engines: {node: '>= 12'}
+    requiresBuild: true
     dependencies:
       jsbn: 1.1.0
       sprintf-js: 1.1.3
@@ -19569,7 +19602,6 @@ packages:
 
   /jsonc-parser@3.3.1:
     resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
-    dev: true
 
   /jsonfile@4.0.0:
     resolution: {integrity: sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg==}
@@ -22944,6 +22976,7 @@ packages:
 
   /queue-tick@1.0.1:
     resolution: {integrity: sha512-kJt5qhMxoszgU/62PLP1CJytzd2NKetjSRnyuj31fDd3Rlcz3fzlFdFLD1SItunPwyqEOkca6GbV612BWfaBag==}
+    requiresBuild: true
     dev: true
 
   /queue@6.0.2:
@@ -23367,7 +23400,6 @@ packages:
       events: 3.3.0
       process: 0.11.10
       string_decoder: 1.3.0
-    dev: true
 
   /readable-web-to-node-stream@3.0.2:
     resolution: {integrity: sha512-ePeK6cc1EcKLEhJFt/AebMCLL+GgSKhuygrZ/GLaKZYEecIgIECf4UaUuaByiGtzckwR4ain9VzUh95T1exYGw==}
@@ -24284,6 +24316,7 @@ packages:
   /smart-buffer@4.2.0:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
+    requiresBuild: true
 
   /snake-case@2.1.0:
     resolution: {integrity: sha512-FMR5YoPFwOLuh4rRz92dywJjyKYZNLpMn1R5ujVpIYkbA9p01fq8RMg0FkO4M+Yobt4MjHeLTJVm5xFFBHSV2Q==}
@@ -25084,6 +25117,7 @@ packages:
 
   /text-decoder@1.2.1:
     resolution: {integrity: sha512-x9v3H/lTKIJKQQe7RPQkLfKAnc9lUTkWDypIQgTzPJAq+5/GCDHonmshfvlsNSj58yyshbIJJDLmU15qNERrXQ==}
+    requiresBuild: true
     dev: true
 
   /text-extensions@2.4.0:
@@ -26522,7 +26556,7 @@ packages:
       '@types/node': 22.8.6
       '@vitest/browser': 2.1.4(@types/node@22.8.6)(typescript@5.6.3)(vite@5.4.10)(vitest@2.1.4)
       '@vitest/expect': 2.1.4
-      '@vitest/mocker': 2.1.4(vite@5.4.10)
+      '@vitest/mocker': 2.1.4(msw@2.6.0)(vite@5.4.10)
       '@vitest/pretty-format': 2.1.4
       '@vitest/runner': 2.1.4
       '@vitest/snapshot': 2.1.4
