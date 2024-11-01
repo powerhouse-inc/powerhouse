@@ -65,7 +65,7 @@
         "@electron-forge/publisher-electron-release-server": "^6.2.1",
         "@electron-forge/publisher-github": "^7.2.0",
         "@playwright/test": "^1.41.2",
-        "@powerhousedao/design-system": "^1.4.2",
+        "@powerhousedao/design-system": "^1.5.0",
         "@powerhousedao/scalars": "^1.5.0",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
