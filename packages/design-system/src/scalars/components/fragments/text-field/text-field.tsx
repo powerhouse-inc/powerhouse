@@ -24,7 +24,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
       label,
       description,
       value,
-      default: defaultValue,
+      defaultValue,
       errors,
       warnings,
       // TextProps

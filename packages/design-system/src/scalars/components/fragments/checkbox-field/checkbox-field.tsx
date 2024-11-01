@@ -1,28 +1,20 @@
 import { useId } from "react";
-import { FormLabel } from "../fragments/form-label";
+import { FormLabel } from "../form-label";
 import { Checkbox } from "./checkbox";
 import { cn } from "@/scalars/lib/utils";
-import { FormMessageList } from "../fragments/form-message";
+import { FormMessageList } from "../form-message";
+import { FieldCommonProps } from "../../types";
 
-interface CheckboxFieldProps {
-  id?: string;
-  name?: string;
-  label?: React.ReactNode;
-  checked?: boolean;
-  disabled?: boolean;
-  required?: boolean;
-  description?: string;
-  errors?: string[];
-  warnings?: string[];
+export interface CheckboxFieldProps extends FieldCommonProps<boolean> {
   onChange?: (checked: boolean) => void;
-  className?: string;
 }
 
 const CheckboxField: React.FC<CheckboxFieldProps> = ({
   id: idProp,
   name,
   label,
-  checked,
+  value,
+  defaultValue,
   disabled,
   required,
   description,
@@ -41,7 +33,7 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
         <Checkbox
           id={id}
           name={name}
-          checked={checked}
+          checked={value ?? defaultValue}
           disabled={disabled}
           onCheckedChange={onChange}
           required={required}

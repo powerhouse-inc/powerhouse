@@ -3,10 +3,10 @@ import { CheckboxField } from "./checkbox-field";
 
 const meta: Meta<typeof CheckboxField> = {
   component: CheckboxField,
-  title: "Document Engineering/Simple Components/Checkbox",
+  title: "Document Engineering/Fragments/Checkbox Field",
   tags: ["autodocs"],
   argTypes: {
-    checked: {
+    value: {
       control: "boolean",
       description: "Whether the checkbox is checked",
     },
@@ -58,7 +58,7 @@ type Story = StoryObj<typeof CheckboxField>;
 
 export const Default: Story = {
   args: {
-    checked: false,
+    value: false,
     disabled: false,
     label: "Default Checkbox",
   },
@@ -66,21 +66,21 @@ export const Default: Story = {
 
 export const Checked: Story = {
   args: {
-    checked: true,
+    value: true,
     label: "Checked Checkbox",
   },
 };
 
 export const Indeterminate: Story = {
   args: {
-    checked: undefined,
+    value: undefined,
     label: "Indeterminate Checkbox",
   },
 };
 
 export const Disabled: Story = {
   args: {
-    checked: false,
+    value: false,
     disabled: true,
     label: "Disabled Checkbox",
   },
@@ -88,7 +88,7 @@ export const Disabled: Story = {
 
 export const CheckedAndDisabled: Story = {
   args: {
-    checked: true,
+    value: true,
     disabled: true,
     label: "Checked and Disabled Checkbox",
   },
@@ -96,7 +96,7 @@ export const CheckedAndDisabled: Story = {
 
 export const Required: Story = {
   args: {
-    checked: false,
+    value: false,
     required: true,
     label: "Required Checkbox",
   },
@@ -104,7 +104,7 @@ export const Required: Story = {
 
 export const WithDescription: Story = {
   args: {
-    checked: false,
+    value: false,
     description: "This is a description",
     label: "Checkbox with description",
   },
@@ -112,7 +112,7 @@ export const WithDescription: Story = {
 
 export const RequiredWithDescription: Story = {
   args: {
-    checked: false,
+    value: false,
     description: "This is a description",
     label: "Required Checkbox with description",
     required: true,
@@ -121,7 +121,7 @@ export const RequiredWithDescription: Story = {
 
 export const WithCustomLabel: Story = {
   args: {
-    checked: false,
+    value: false,
     label: (
       <span>
         I agree to the{" "}
@@ -140,7 +140,7 @@ export const WithCustomLabel: Story = {
 
 export const WithErrors: Story = {
   args: {
-    checked: false,
+    value: false,
     label: "Checkbox with Errors",
     errors: ["This field is required", "Another error"],
   },
@@ -148,7 +148,7 @@ export const WithErrors: Story = {
 
 export const WithWarningsAndErrors: Story = {
   args: {
-    checked: false,
+    value: false,
     label: "Checkbox with Warnings and Errors",
     warnings: ["This is a warning", "Another warning"],
     errors: ["This is an error", "Another error"],

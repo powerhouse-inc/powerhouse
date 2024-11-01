@@ -1,14 +1,17 @@
 export type Maybe<T> = T | null | undefined;
 
 export interface FieldCommonProps<T> {
-  label?: string;
+  id?: string;
+  name?: string;
+  label?: React.ReactNode;
   description?: string;
-  value?: Maybe<T>;
-  default?: Maybe<T>;
+  value?: T;
+  defaultValue?: T;
   required?: boolean;
   disabled?: boolean;
   errors?: string[];
   warnings?: string[];
+  className?: string;
 }
 
 export interface ErrorHandling {

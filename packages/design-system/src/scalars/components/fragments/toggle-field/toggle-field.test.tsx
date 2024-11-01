@@ -21,12 +21,12 @@ describe("ToggleField Component", () => {
   });
 
   it("should render checked status without label", () => {
-    render(<ToggleField checked={true} />);
+    render(<ToggleField value={true} />);
     expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
   });
 
   it("should render checked status with a label on the left", () => {
-    render(<ToggleField label="Test Label" checked={true} />);
+    render(<ToggleField label="Test Label" value={true} />);
     expect(screen.getByText("Test Label")).toBeInTheDocument();
   });
 
@@ -40,8 +40,8 @@ describe("ToggleField Component", () => {
     expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 
-  it("should call onCheckedChange when clicked", () => {
-    render(<ToggleField label="Test Label" onCheckedChange={mockOnChange} />);
+  it("should call onChange when clicked", () => {
+    render(<ToggleField label="Test Label" onChange={mockOnChange} />);
     const toggleInput = screen.getByRole("switch");
 
     fireEvent.click(toggleInput);
@@ -50,15 +50,9 @@ describe("ToggleField Component", () => {
   });
 
   it("should disable the toggle when disabled prop is true", () => {
-    render(
-      <ToggleField
-        label="Test Label"
-        disabled
-        onCheckedChange={mockOnChange}
-      />,
-    );
-    const toggleInput = screen.getByRole("switch");
-    expect(toggleInput).toBeDisabled();
+    render(<ToggleField disabled />);
+    const toggle = screen.getByRole("switch");
+    expect(toggle).toBeDisabled();
   });
 
   it("should render with custom className", () => {
