@@ -27,7 +27,7 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: latest-9
           run_install: false
 
       - name: Install Dependencies
@@ -47,7 +47,7 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: latest-9
           run_install: false
 
       - name: Install Dependencies
@@ -67,7 +67,7 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: latest-9
           run_install: false
 
       - name: Install Dependencies
@@ -87,7 +87,7 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: latest-9
           run_install: false
 
       - name: Install Dependencies
