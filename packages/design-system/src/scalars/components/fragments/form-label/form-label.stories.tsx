@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { FormLabel } from "./form-label";
 
 const meta: Meta<typeof FormLabel> = {
-  title: "Document Engineering/Simple Components/FormLabel",
+  title: "Document Engineering/Fragments/FormLabel",
   component: FormLabel,
   tags: ["autodocs"],
   argTypes: {

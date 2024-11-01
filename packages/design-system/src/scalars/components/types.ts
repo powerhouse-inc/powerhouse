@@ -10,3 +10,21 @@ export interface FieldCommonProps<T> {
   errors?: string[];
   warnings?: string[];
 }
+
+export interface ErrorHandling {
+  showErrorOnBlur?: boolean;
+  showErrorOnChange?: boolean;
+  customValidator?: (value: unknown) => string | undefined;
+}
+
+export interface TextProps {
+  minLength?: number;
+  maxLength?: number;
+  pattern?: RegExp;
+  placeholder?: string;
+  trim?: boolean;
+  uppercase?: boolean;
+  lowercase?: boolean;
+  autoComplete?: string;
+  spellCheck?: boolean;
+}

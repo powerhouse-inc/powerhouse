@@ -3,6 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { Input } from "./input";
 
 describe("Input", () => {
+  it("should match snapshot", () => {
+    const { container } = render(<Input placeholder="Test placeholder" />);
+    expect(container).toMatchSnapshot();
+  });
+
   it("should render an input element", () => {
     render(<Input />);
     expect(screen.getByRole("textbox")).toBeInTheDocument();

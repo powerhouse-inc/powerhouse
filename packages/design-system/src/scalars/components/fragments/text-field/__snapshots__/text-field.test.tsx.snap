@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TextField > should match snapshot 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-2"
+  >
+    <label
+      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+      role="label"
+    >
+      Test Label
+    </label>
+    <input
+      class="flex h-10 w-full rounded-md text-sm text-gray-900 border border-gray-300 bg-background px-3 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500"
+      value=""
+    />
+  </div>
+</div>
+`;

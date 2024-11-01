@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FormDescription > should render correctly 1`] = `
+<div>
+  <p
+    class="text-gray-600 font-inter text-sm font-normal leading-5"
+  >
+    Test description
+  </p>
+</div>
+`;
