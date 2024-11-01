@@ -58,10 +58,7 @@
     "projectsRelationship": "independent",
     "version": {
       "skipLockFileUpdate": true,
-      "conventionalCommits": true,
-      "generatorOptions": {
-        "installIgnoreScripts": true
-      }
+      "conventionalCommits": true
     },
     "changelog": {
       "projectChangelogs": {
