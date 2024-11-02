@@ -1,9 +1,12 @@
 import React from "react";
-import { ToggleField } from "@/scalars/components/toggle/toggle-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
-import { formSchema, validateRequiredField } from "./toggle/toggles-schema";
 import { FormControl } from "./form";
+import {
+  formSchema,
+  validateRequiredField,
+} from "./fragments/toggle-field/toggles-schema";
+import { ToggleField } from "./fragments";
 
 interface IFormInputs {
   checked: boolean;
@@ -25,7 +28,7 @@ const MyForm: React.FC = () => {
   });
   const onSubmit = (values: IFormInputs) => {
     //Function to validate the schame appart of zod validation
-    //FOr this case validate the same zod validation, but can validate what you want where
+    //For this case validate the same zod validation, but can validate what you want where
     const validations = validateRequiredField(true, values.checked);
     if (validations.length > 0) {
       console.log(validations);
@@ -53,12 +56,10 @@ const MyForm: React.FC = () => {
                 <ToggleField
                   label="Active"
                   required
-                  checked={value}
+                  value={value}
                   validateOnBlur
                   validateOnChange
-                  onCheckedChange={(checked: boolean) => {
-                    onChange(checked);
-                  }}
+                  onChange={onChange}
                   onBlur={onBlur}
                   errors={
                     errors.checked ? [errors.checked.message ?? ""] : [""]
