@@ -1,4 +1,4 @@
-export type Maybe<T> = T | null | undefined;
+export type Maybe<T> = T | undefined;
 
 export interface FieldCommonProps<T> {
   id?: string;
@@ -28,6 +28,6 @@ export interface TextProps {
   trim?: boolean;
   uppercase?: boolean;
   lowercase?: boolean;
-  autoComplete?: string;
+  autoComplete?: boolean;
   spellCheck?: boolean;
 }
