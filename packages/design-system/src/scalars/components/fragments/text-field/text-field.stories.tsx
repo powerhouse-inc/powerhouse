@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { StringField } from "./string-field";
+import { TextField } from "./text-field";
 
 const meta = {
-  title: "Document Engineering/Simple Components/StringField",
-  component: StringField,
+  title: "Document Engineering/Fragments/TextField",
+  component: TextField,
   parameters: {
     layout: "centered",
   },
@@ -34,7 +34,7 @@ const meta = {
       control: "object",
     },
   },
-} satisfies Meta<typeof StringField>;
+} satisfies Meta<typeof TextField>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -49,7 +49,7 @@ export const Default: Story = {
 export const WithDescription: Story = {
   args: {
     label: "Username",
-    description: "Enter your preferred username",
+    description: "You will need this to log in to your account.",
     placeholder: "johndoe",
   },
 };

@@ -20,6 +20,7 @@ const config: StorybookConfig = {
   },
   docs: {
     autodocs: 'tag',
+    defaultName: '_Readme'
   },
   viteFinal(config) {
     return {

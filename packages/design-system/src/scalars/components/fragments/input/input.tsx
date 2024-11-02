@@ -10,21 +10,19 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           // Base styles
-          "flex h-10 w-full rounded-md text-sm",
+          "flex h-10 w-full rounded-md text-sm text-gray-900",
           // Border & Background
-          "border border-input bg-background",
+          "border border-input border-gray-300 bg-background",
           // Padding
           "px-3 py-2",
-          // File input styles
-          "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
           // Placeholder
-          "placeholder:text-muted-foreground",
+          "placeholder:text-gray-600",
           // Background & Ring
           "ring-offset-background",
           // Focus styles
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1",
           // Disabled state
-          "disabled:cursor-not-allowed disabled:opacity-50",
+          "disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500",
           className,
         )}
         ref={ref}

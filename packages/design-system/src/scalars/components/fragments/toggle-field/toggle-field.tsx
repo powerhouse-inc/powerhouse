@@ -1,46 +1,46 @@
 import React, { useId, useState } from "react";
 import { Toggle } from "./toggle";
 import { cn } from "@/scalars/lib/utils";
-import { FormLabel } from "../fragments/form-label";
-import { FormMessageList } from "../fragments/form-message";
+import { FormLabel } from "../form-label";
+import { FormMessageList } from "../form-message";
+import type { FieldCommonProps } from "../../types";
 import { validateRequiredField } from "./toggles-schema";
 
-interface ToggleFieldProps {
-  label?: string;
-  disabled?: boolean;
-  checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
+export interface ToggleFieldProps extends FieldCommonProps<boolean> {
+  onChange?: (checked: boolean) => void;
+  validateOnBlur: boolean;
+  validateOnChange: boolean;
   onBlur?: () => void;
-  errors?: string[];
-  className?: string;
-  required?: boolean;
-  name?: string;
-  validateOnBlur?: boolean;
-  validateOnChange?: boolean;
 }
 
 const ToggleField: React.FC<ToggleFieldProps> = ({
+  id: idProp,
+  name,
   label,
   disabled = false,
-  checked = true,
-  onCheckedChange,
+  value,
+  onChange,
   errors = [],
+  warnings = [],
   required = false,
-  name,
   className,
-  validateOnBlur = true,
-  validateOnChange = false,
+  defaultValue,
+  description,
+  validateOnBlur,
+  validateOnChange,
   onBlur,
 }) => {
-  const id = useId();
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
   const [touched, setTouched] = useState(false);
 
   const validateField = () => {
-    return [...errors, ...validateRequiredField(checked, required)];
+    return [...errors, ...validateRequiredField((value = true), required)];
   };
 
   const errorMerge = validateField();
   const showError = touched && !!errorMerge.length;
+  const showWarning = touched && !!warnings.length;
 
   return (
     <div
@@ -63,23 +63,26 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
             if (validateOnChange) {
               setTouched(true);
             }
-            onCheckedChange?.(checked);
+            onChange?.(checked);
           }}
           id={id}
-          checked={checked}
+          checked={value ?? defaultValue}
         />
         {label && (
           <FormLabel
             htmlFor={id}
             className="ml-2"
             disabled={disabled}
+            required={required}
+            description={description}
             id={`${id}-label`}
           >
             {label}
           </FormLabel>
         )}
       </div>
-      {showError && <FormMessageList messages={errorMerge} type="error" />}
+      {showWarning && <FormMessageList messages={warnings} type="warning" />}
+      {showError && <FormMessageList messages={errors} type="error" />}
     </div>
   );
 };
