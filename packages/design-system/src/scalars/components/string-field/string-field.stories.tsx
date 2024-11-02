@@ -155,7 +155,7 @@ export const Multiline: Story = {
 export const WithDefaultValue: Story = {
   args: {
     label: "Favorite Color",
-    default: "Blue",
+    defaultValue: "Blue",
     placeholder: "Enter your favorite color",
   },
 };
