@@ -1,12 +1,15 @@
-import React, { useId } from "react";
+import React, { useId, useState } from "react";
 import { Toggle } from "./toggle";
 import { cn } from "@/scalars/lib/utils";
 import { FormLabel } from "../form-label";
 import { FormMessageList } from "../form-message";
 import type { FieldCommonProps } from "../../types";
+import { validateRequiredField } from "./schema";
 
 export interface ToggleFieldProps extends FieldCommonProps<boolean> {
   onChange?: (checked: boolean) => void;
+  validateOnBlur?: boolean;
+  validateOnChange?: boolean;
 }
 
 const ToggleField: React.FC<ToggleFieldProps> = ({
@@ -20,11 +23,25 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
   warnings = [],
   required = false,
   className,
-  defaultValue,
+  defaultValue = true,
   description,
+  validateOnBlur,
+  validateOnChange,
 }) => {
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  const [touched, setTouched] = useState(false);
+
+  const validateField = () => {
+    return [
+      ...errors,
+      ...validateRequiredField(value ?? defaultValue, required),
+    ];
+  };
+
+  const errorMerge = validateField();
+  const showError = touched && !!errorMerge.length;
+  const showWarning = touched && !!warnings.length;
 
   return (
     <div
@@ -39,7 +56,17 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
           name={name}
           id={id}
           checked={value ?? defaultValue}
-          onCheckedChange={onChange}
+          onBlur={() => {
+            if (validateOnBlur) {
+              setTouched(true);
+            }
+          }}
+          onCheckedChange={(checked) => {
+            if (validateOnChange) {
+              setTouched(true);
+            }
+            onChange?.(checked);
+          }}
         />
         {label && (
           <FormLabel
@@ -54,12 +81,8 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
           </FormLabel>
         )}
       </div>
-      {warnings.length !== 0 && (
-        <FormMessageList messages={warnings} type="warning" />
-      )}
-      {errors.length !== 0 && (
-        <FormMessageList messages={errors} type="error" />
-      )}
+      {showWarning && <FormMessageList messages={warnings} type="warning" />}
+      {showError && <FormMessageList messages={errors} type="error" />}
     </div>
   );
 };
