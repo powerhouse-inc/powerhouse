@@ -36,7 +36,16 @@ describe("ToggleField Component", () => {
   });
 
   it("should display an error message when hasMessage is true", () => {
-    render(<ToggleField label="Test Label" errors={["Error message"]} />);
+    render(
+      <ToggleField
+        label="Test Label"
+        errors={["Error message"]}
+        validateOnBlur={true}
+      />,
+    );
+
+    const toggleInput = screen.getByRole("switch");
+    fireEvent.blur(toggleInput);
     expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 
