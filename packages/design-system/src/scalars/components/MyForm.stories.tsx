@@ -1,5 +1,6 @@
 import { Meta, StoryObj } from "@storybook/react";
 import MyForm from "./MyForm";
+import { FormProvider, useForm } from "react-hook-form";
 
 const meta: Meta<typeof MyForm> = {
   component: MyForm,
@@ -26,6 +27,21 @@ const meta: Meta<typeof MyForm> = {
       table: { defaultValue: { summary: "[]" } },
     },
   },
+  decorators: [
+    (Story) => {
+      const methods = useForm({
+        defaultValues: {
+          required: true,
+          checked: true,
+        },
+      });
+      return (
+        <FormProvider {...methods}>
+          <Story />
+        </FormProvider>
+      );
+    },
+  ],
 };
 
 export default meta;

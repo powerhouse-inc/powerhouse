@@ -10,6 +10,7 @@ interface ToggleFieldProps {
   disabled?: boolean;
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
+  onBlur?: () => void;
   errors?: string[];
   className?: string;
   required?: boolean;
@@ -29,6 +30,7 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
   className,
   validateOnBlur = true,
   validateOnChange = false,
+  onBlur,
 }) => {
   const id = useId();
   const [touched, setTouched] = useState(false);
@@ -54,6 +56,7 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
           onBlur={() => {
             if (validateOnBlur) {
               setTouched(true);
+              onBlur?.();
             }
           }}
           onCheckedChange={(checked) => {
