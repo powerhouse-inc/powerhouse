@@ -2,7 +2,7 @@ export type Maybe<T> = T | undefined;
 
 export interface FieldCommonProps<T> {
   id?: string;
-  name?: string;
+  name: string;
   label?: React.ReactNode;
   description?: string;
   value?: T;
@@ -17,7 +17,10 @@ export interface FieldCommonProps<T> {
 export interface ErrorHandling {
   showErrorOnBlur?: boolean;
   showErrorOnChange?: boolean;
-  customValidator?: (value: unknown) => string | undefined;
+  customValidator?: (
+    value: any,
+    formState: Record<string, any>,
+  ) => string | boolean;
 }
 
 export interface TextProps {
