@@ -78,7 +78,18 @@ describe("RadioGroupField Component", () => {
     expect(iconFallback).toHaveStyle({ width: "16px", height: "16px" });
   });
 
-  it("should show error state when errors are provided", () => {
+  it("should show a warning when provided", () => {
+    render(
+      <RadioGroupField
+        label="Group Label"
+        warnings={["Warning message"]}
+        radioOptions={[{ label: "Option 1", value: "1" }]}
+      />,
+    );
+    expect(screen.getByText("Warning message")).toBeInTheDocument();
+  });
+
+  it("should show an error when provided", () => {
     render(
       <RadioGroupField
         label="Group Label"
@@ -171,6 +182,18 @@ describe("RadioGroupField Component", () => {
     expect(radioGroup).toHaveClass("custom-class");
   });
 
+  it("should handle multiple warnings", () => {
+    render(
+      <RadioGroupField
+        label="Group Label"
+        warnings={["Warning 1", "Warning 2"]}
+        radioOptions={[{ label: "Option 1", value: "1" }]}
+      />,
+    );
+    expect(screen.getByText("Warning 1")).toBeInTheDocument();
+    expect(screen.getByText("Warning 2")).toBeInTheDocument();
+  });
+
   it("should handle multiple errors", () => {
     render(
       <RadioGroupField
@@ -181,5 +204,18 @@ describe("RadioGroupField Component", () => {
     );
     expect(screen.getByText("Error 1")).toBeInTheDocument();
     expect(screen.getByText("Error 2")).toBeInTheDocument();
+  });
+
+  it("should show both warnings and errors when provided", () => {
+    render(
+      <RadioGroupField
+        label="Group Label"
+        warnings={["Warning message"]}
+        errors={["Error message"]}
+        radioOptions={[{ label: "Option 1", value: "1" }]}
+      />,
+    );
+    expect(screen.getByText("Warning message")).toBeInTheDocument();
+    expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 });
