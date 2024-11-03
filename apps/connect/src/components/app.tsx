@@ -26,7 +26,7 @@ const Preloader = () => {
     return null;
 };
 
-export default (
+const App = () => (
     <React.StrictMode>
         <Suspense fallback={<>{/* TODO loading */}</>}>
             <Provider store={atomStore}>
@@ -49,3 +49,5 @@ export default (
         </Suspense>
     </React.StrictMode>
 );
+
+export default App;
