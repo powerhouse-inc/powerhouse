@@ -9,6 +9,6 @@ export const ScalarDemo: React.FC<ScalarDemoProps> = ({ name }) => {
   console.log(result);
 
   return (
-    <div className="bg-yellow-200 rounded-md p-3">Scalar Demo: {name}</div>
+    <div className="rounded-md bg-yellow-200 p-3">Scalar Demo: {name}</div>
   );
 };

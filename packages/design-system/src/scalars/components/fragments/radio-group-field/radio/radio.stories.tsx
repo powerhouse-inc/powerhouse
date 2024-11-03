@@ -42,7 +42,7 @@ const meta: Meta<typeof Radio> = {
       </RadioGroup>
     ),
   ],
-  title: "Document Engineering/Simple Components/Radio Group/Radio",
+  title: "Document Engineering/Fragments/Radio",
 };
 
 export default meta;

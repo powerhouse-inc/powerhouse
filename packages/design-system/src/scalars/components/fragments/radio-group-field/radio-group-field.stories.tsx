@@ -17,6 +17,11 @@ const meta: Meta<typeof RadioGroupField> = {
       control: "text",
       description: "Description for the Radio Group",
     },
+    warnings: {
+      control: "object",
+      description: "Array of warning messages to display",
+      table: { defaultValue: { summary: "[]" } },
+    },
     errors: {
       control: "object",
       description: "Array of error messages to display",
@@ -52,31 +57,29 @@ const meta: Meta<typeof RadioGroupField> = {
     controls: { sort: "requiredFirst" },
   },
   tags: ["autodocs"],
-  title: "Document Engineering/Simple Components/Radio Group/Radio Group",
+  title: "Document Engineering/Fragments/Radio Group Field",
 };
 
 export default meta;
 
 type Story = StoryObj<typeof RadioGroupField>;
 
+const defaultRadioOptions = [
+  { label: "Option 1", value: "1" },
+  { label: "Option 2", value: "2" },
+  { label: "Option 3", value: "3" },
+];
+
 export const WithoutLabel: Story = {
   args: {
-    radioOptions: [
-      { label: "Option 1", value: "1" },
-      { label: "Option 2", value: "2" },
-      { label: "Option 3", value: "3" },
-    ],
+    radioOptions: defaultRadioOptions,
   },
 };
 
 export const WithLabel: Story = {
   args: {
     label: "Radio Group with label",
-    radioOptions: [
-      { label: "Option 1", value: "1" },
-      { label: "Option 2", value: "2" },
-      { label: "Option 3", value: "3" },
-    ],
+    radioOptions: defaultRadioOptions,
   },
 };
 
@@ -84,11 +87,15 @@ export const WithLabelAndDescription: Story = {
   args: {
     description: "This is a helpful description for the Radio Group",
     label: "Radio Group with label and description",
-    radioOptions: [
-      { label: "Option 1", value: "1" },
-      { label: "Option 2", value: "2" },
-      { label: "Option 3", value: "3" },
-    ],
+    radioOptions: defaultRadioOptions,
+  },
+};
+
+export const WithWarnings: Story = {
+  args: {
+    warnings: ["Warning 1", "Warning 2"],
+    label: "Radio Group with warnings",
+    radioOptions: defaultRadioOptions,
   },
 };
 
@@ -96,22 +103,23 @@ export const WithErrors: Story = {
   args: {
     errors: ["Error 1", "Error 2"],
     label: "Radio Group with errors",
-    radioOptions: [
-      { label: "Option 1", value: "1" },
-      { label: "Option 2", value: "2" },
-      { label: "Option 3", value: "3" },
-    ],
+    radioOptions: defaultRadioOptions,
+  },
+};
+
+export const WithWarningsAndErrors: Story = {
+  args: {
+    warnings: ["Warning 1", "Warning 2"],
+    errors: ["Error 1", "Error 2"],
+    label: "Radio Group with warnings and errors",
+    radioOptions: defaultRadioOptions,
   },
 };
 
 export const Required: Story = {
   args: {
     label: "Required Radio Group",
-    radioOptions: [
-      { label: "Option 1", value: "1" },
-      { label: "Option 2", value: "2" },
-      { label: "Option 3", value: "3" },
-    ],
+    radioOptions: defaultRadioOptions,
     required: true,
   },
 };
@@ -120,11 +128,7 @@ export const WithOptionSelectedByDefault: Story = {
   args: {
     defaultValue: "2",
     label: "Radio Group with option selected by default",
-    radioOptions: [
-      { label: "Option 1", value: "1" },
-      { label: "Option 2", value: "2" },
-      { label: "Option 3", value: "3" },
-    ],
+    radioOptions: defaultRadioOptions,
   },
 };
 
@@ -139,11 +143,7 @@ const ControlledRadioGroup = () => {
     <RadioGroupField
       label="Controlled Radio Group"
       onChange={handleChange}
-      radioOptions={[
-        { label: "Option 1", value: "1" },
-        { label: "Option 2", value: "2" },
-        { label: "Option 3", value: "3" },
-      ]}
+      radioOptions={defaultRadioOptions}
       value={value}
     />
   );

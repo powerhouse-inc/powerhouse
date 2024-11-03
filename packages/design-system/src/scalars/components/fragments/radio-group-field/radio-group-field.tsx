@@ -15,6 +15,7 @@ export interface RadioGroupFieldProps {
   className?: string;
   defaultValue?: string;
   description?: string;
+  warnings?: string[];
   errors?: string[];
   id?: string;
   label?: string;
@@ -25,33 +26,38 @@ export interface RadioGroupFieldProps {
   value?: string;
 }
 
-export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
-  className,
-  defaultValue,
-  description,
-  errors = [],
-  id,
-  label,
-  name,
-  onChange,
-  radioOptions = [],
-  required = false,
-  value,
-}) => {
-  const prefix = useId();
+export const RadioGroupField: React.FC<RadioGroupFieldProps> = (props) => {
+  const {
+    className,
+    defaultValue,
+    description,
+    warnings = [],
+    errors = [],
+    id,
+    label,
+    name,
+    onChange,
+    radioOptions = [],
+    required = false,
+    value,
+  } = props;
+
   const hasLabel = label !== undefined;
   const hasError = errors.length > 0;
+  const prefix = useId();
 
   return (
     <RadioGroup
       aria-invalid={hasError}
-      aria-required={required}
       aria-label={!hasLabel ? "Radio group" : undefined}
+      aria-required={required}
       className={className}
       defaultValue={defaultValue}
       id={id}
       name={name}
-      onValueChange={onChange}
+      onValueChange={(newValue) => {
+        onChange?.(newValue);
+      }}
       value={value}
     >
       {hasLabel && (
@@ -80,6 +86,9 @@ export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
           />
         </div>
       ))}
+      {warnings.length > 0 && (
+        <FormMessageList messages={warnings} type="warning" />
+      )}
       {hasError && <FormMessageList messages={errors} type="error" />}
     </RadioGroup>
   );
