@@ -1,17 +1,39 @@
-import { Meta, Source } from '@storybook/blocks';
+import { Meta, Source, Canvas, Controls } from '@storybook/blocks';
 
-<Meta title="Document Engineering/Forms" />
+<Meta title="Document Engineering/Docs/Forms" />
 
 # Introduction
 
-This is an example
+Forms are essential components in modern web applications, serving as the primary interface for data collection and user interaction. Our form implementation provides a streamlined approach to handling user input, with built-in validation that operates seamlessly under the hood, requiring minimal configuration from developers.
 
-# How to create a form?
+The form components in this design system are crafted with a focus on consistency, accessibility, and developer experience. Each component is designed to work harmoniously within the system, providing a cohesive user experience while maintaining robust functionality.
+
+This documentation will guide you through the implementation and usage of forms, demonstrating how to leverage our pre-built components to create efficient and reliable data collection interfaces.
+
+## Form
+
+All `Field` components must be encapsulated within a `Form` component. The `Form` component provides a FormProvider wrapper that enables automatic validation while maintaining flexibility for custom validation requirements and specific use cases.
 
 <Source language="tsx" code={`
 import { Form } from "@powerhousedao/design-system"
 
 <Form onSubmit={/* your submit function */}>
  {/* your tsx code/fields goes here */}
+</Form>
+`}/>
+
+You can access to the [React Hook Form data](https://react-hook-form.com/docs/useform) inside the form or even use the hooks that React Hook Form exposes
+
+<Source language="tsx" code={`
+import { Form } from "@powerhousedao/design-system"
+
+<Form onSubmit={/* your submit function */}>
+ {({ formState: { isSubmitting } }) => (
+    {/* your fields */}
+
+    <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Submitting" : "Submit"}
+    </button>
+ )}
 </Form>
 `}/>

@@ -1,0 +1,42 @@
+import { Meta, Source, Canvas } from '@storybook/blocks';
+
+import * as BooleanStories from '../components/boolean-field/boolean-field.stories';
+import * as StringStories from '../components/string-field/string-field.stories';
+
+<Meta title="Document Engineering/Docs/Getting started" />
+
+# Installation
+
+<Source language="bash" code={`
+pnpm add @powerhousedao/design-system react-hook-form
+`}/>
+
+> Note: [React Hook Form](https://www.react-hook-form.com/) is a peer dependency to use built-in scalars validation.
+
+# Built-in scalars
+
+All the supported built-in scalars are listed below:
+
+## BooleanField
+
+The BooleanField component provides two distinct user interface elements for handling boolean data: Checkboxes and Toggle switches. These components allow users to make binary choices through familiar and intuitive interaction patterns.
+
+As a [checkbox](?path=/story/document-engineering-simple-components-boolean-field--checkbox):
+
+<Canvas of={BooleanStories.Checkbox} />
+
+As a [Toggle/Switch](?path=/story/document-engineering-simple-components-boolean-field--toggle)
+
+<Canvas of={BooleanStories.Toggle} />
+
+## StringField
+
+StringField components provide text input functionality with built-in validation capabilities. They enable users to input text data while ensuring the input meets specified validation criteria and requirements.
+
+Single line string inputs:
+
+<Canvas of={StringStories.Default} />
+
+Multiline string inputs:
+
+<Canvas of={StringStories.Multiline} />
