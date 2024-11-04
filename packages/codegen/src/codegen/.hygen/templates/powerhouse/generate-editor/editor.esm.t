@@ -8,7 +8,6 @@ import { <%= documentTypesMap[type] %>State, <%= documentTypesMap[type] %>Action
 %><% }); _%>
 import { utils as documentModelUtils } from 'document-model/document';
 import { Button } from '@powerhousedao/design-system';
-import { utils as documentModelUtils } from 'document-model/document';
 
 export type IProps = <% if(!documentTypes.length){ %>EditorProps<unknown, Action><% } else { %><% documentTypes.forEach((type, index) => { _%>EditorProps<<%= documentTypesMap[type] %>State, <%= documentTypesMap[type] %>Action, <%= documentTypesMap[type] %>LocalState%>%>><% if(index < documentTypes.length - 1){ %> | <% }%><% }); _%> <% } %>;
 
