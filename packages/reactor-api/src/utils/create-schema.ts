@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { parse } from "graphql";
-
+import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 export const createSchema = (
   documentDriveServer: BaseDocumentDriveServer,
   resolvers: GraphQLResolverMap,
@@ -22,7 +22,7 @@ export const getDocumentModelTypeDefs = (
   typeDefs: string
 ) => {
   const documentModels = documentDriveServer.getDocumentModels();
-  let dmSchema = "";
+  let dmSchema = `${scalarsTypeDefs.join("\n")}`;
   documentModels.forEach(({ documentModel }) => {
     dmSchema += `
           ${documentModel.specifications
@@ -63,7 +63,6 @@ export const getDocumentModelTypeDefs = (
 
   // add the mutation and query types
   const schema = `
-      scalar DateTime
       interface IDocument {
           name: String!
           documentType: String!
