@@ -1,16 +1,25 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { CheckboxField } from "./checkbox-field";
+import { renderWithForm } from "@/scalars/lib/testing";
 
 describe("CheckboxField", () => {
+  it("should match snapshot", () => {
+    const { container } = renderWithForm(
+      <CheckboxField name="test" label="Test Label" />,
+    );
+    expect(container).toMatchSnapshot();
+  });
+
   it("should render with label", () => {
-    render(<CheckboxField label="Test checkbox" />);
+    renderWithForm(<CheckboxField name="test" label="Test checkbox" />);
     expect(screen.getByText("Test checkbox")).toBeInTheDocument();
   });
 
   it("should render with description icon", () => {
-    render(
+    renderWithForm(
       <CheckboxField
+        name="test"
         label="Test checkbox"
         description="This is a description"
       />,
@@ -20,10 +29,11 @@ describe("CheckboxField", () => {
 
   it("should handle checked state", () => {
     const handleChange = vi.fn();
-    render(
+    renderWithForm(
       <CheckboxField
+        name="test"
         label="Test checkbox"
-        checked={false}
+        value={false}
         onChange={handleChange}
       />,
     );
@@ -34,29 +44,38 @@ describe("CheckboxField", () => {
   });
 
   it("should be disabled when disabled prop is true", () => {
-    render(<CheckboxField label="Test checkbox" disabled={true} />);
+    renderWithForm(
+      <CheckboxField name="test" label="Test checkbox" disabled />,
+    );
 
     const checkbox = screen.getByRole("checkbox");
     expect(checkbox).toBeDisabled();
   });
 
   it("should show required indicator when required", () => {
-    render(<CheckboxField label="Test checkbox" required={true} />);
+    renderWithForm(
+      <CheckboxField name="test" label="Test checkbox" required />,
+    );
 
     const checkbox = screen.getByRole("checkbox");
     expect(checkbox).toBeRequired();
   });
 
   it("should render with errors", () => {
-    render(
-      <CheckboxField label="Test checkbox" errors={["This is an error"]} />,
+    renderWithForm(
+      <CheckboxField
+        name="test"
+        label="Test checkbox"
+        errors={["This is an error"]}
+      />,
     );
     expect(screen.getByText("This is an error")).toBeInTheDocument();
   });
 
   it("should render with warnings and errors", () => {
-    render(
+    renderWithForm(
       <CheckboxField
+        name="test"
         label="Test checkbox"
         warnings={["This is a warning"]}
         errors={["This is an error"]}

@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ToggleField } from "./toggle-field";
+import { withForm } from "@/scalars/lib/decorators";
 
 const meta: Meta<typeof ToggleField> = {
   title: "Document Engineering/Fragments/Toggle Field",
   tags: ["autodocs"],
   component: ToggleField,
+  decorators: [withForm],
   argTypes: {
     value: {
       control: "boolean",
@@ -59,6 +61,7 @@ const meta: Meta<typeof ToggleField> = {
     },
   },
   args: {
+    name: "toggle",
     errors: [],
     warnings: [],
   },

@@ -1,6 +1,4 @@
-import { Maybe } from "../components/types";
-
-export type Transformer<T> = (value: Maybe<T>) => Maybe<T>;
+export type Transformer<T> = (value: T) => T;
 
 const transformersFns: Record<string, Transformer<any>> = {
   lowercase: (value: unknown) => {
@@ -18,13 +16,13 @@ const transformersFns: Record<string, Transformer<any>> = {
 };
 
 export function applyTransformers<T>(
-  value: Maybe<T>,
+  value: T,
   transformers: Record<keyof typeof transformersFns, boolean>,
-): Maybe<T> {
+): T {
   return Object.entries(transformers)
     .filter(([, enabled]) => enabled)
     .reduce((currentValue, [transformerName]) => {
       const transformer = transformersFns[transformerName];
-      return transformer(currentValue) as Maybe<T>;
+      return transformer(currentValue) as T;
     }, value);
 }
