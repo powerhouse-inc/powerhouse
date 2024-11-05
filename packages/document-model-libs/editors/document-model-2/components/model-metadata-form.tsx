@@ -20,10 +20,8 @@ export const MetadataFormSchema = z.object({
   documentType: z.string(),
   extension: z.string(),
   description: z.string(),
-  author: z.object({
-    name: z.string(),
-    website: z.string(),
-  }),
+  authorName: z.string(),
+  authorWebsite: z.string(),
 });
 
 export type MetadataFormValues = z.infer<typeof MetadataFormSchema>;
@@ -44,7 +42,8 @@ export function ModelMetadata(props: Props) {
         <DescriptionForm {...props} />
       </div>
       <div>
-        <AuthorForm {...props} />
+        <AuthorNameForm {...props} />
+        <AuthorWebsiteForm {...props} />
         <ModelExtensionForm {...props} />
       </div>
     </div>
@@ -67,7 +66,6 @@ export function ModelNameForm(props: Props) {
   const { control, handleSubmit } = form;
 
   function onSubmit({ name: newName }: NameFormSchema) {
-    if (newName === name) return;
     handlers.setModelName(newName);
     if (newName) {
       if (!globalStateSchema) {
@@ -168,6 +166,7 @@ export function ModelNameForm(props: Props) {
                   onKeyDown={onEnterKeyDown}
                   rows={1}
                   className="mb-2 text-lg"
+                  autoFocus
                 />
               </FormControl>
               <FormMessage />
@@ -197,9 +196,7 @@ export function DocumentTypeForm(props: Props) {
   const { control, handleSubmit } = form;
 
   function onSubmit({ documentType: newDocumentType }: DocumentTypeFormSchema) {
-    if (newDocumentType !== documentType) {
-      handlers.setModelId(newDocumentType);
-    }
+    handlers.setModelId(newDocumentType);
   }
 
   const handleBlur = useCallback(() => {
@@ -262,11 +259,7 @@ export function ModelExtensionForm(props: Props) {
   const { control, handleSubmit } = form;
 
   function onSubmit({ extension: newExtension }: ExtensionFormSchema) {
-    if (newExtension === undefined) return;
-
-    if (newExtension !== extension) {
-      handlers.setModelExtension(newExtension);
-    }
+    handlers.setModelExtension(newExtension);
   }
 
   const handleBlur = useCallback(() => {
@@ -329,11 +322,7 @@ export function DescriptionForm(props: Props) {
   const { control, handleSubmit } = form;
 
   function onSubmit({ description: newDescription }: DescriptionFormSchema) {
-    if (newDescription === undefined) return;
-
-    if (newDescription !== description) {
-      handlers.setModuleDescription(newDescription);
-    }
+    handlers.setModelDescription(newDescription);
   }
 
   const handleBlur = useCallback(() => {
@@ -376,11 +365,11 @@ export function DescriptionForm(props: Props) {
   );
 }
 
-export function AuthorForm(props: Props) {
-  const { author, handlers } = props;
+export function AuthorNameForm(props: Props) {
+  const { authorName, handlers } = props;
 
   const authorFormSchema = MetadataFormSchema.pick({
-    author: true,
+    authorName: true,
   });
 
   type AuthorFormSchema = z.infer<typeof authorFormSchema>;
@@ -388,22 +377,14 @@ export function AuthorForm(props: Props) {
   const form = useForm<AuthorFormSchema>({
     resolver: zodResolver(authorFormSchema),
     defaultValues: {
-      author: {
-        name: author.name ?? "",
-        website: author.website ?? "",
-      },
+      authorName,
     },
   });
 
   const { control, handleSubmit } = form;
 
-  function onSubmit({ author: newAuthor }: AuthorFormSchema) {
-    if (newAuthor.name !== author.name) {
-      handlers.setAuthorName(newAuthor.name ?? "");
-    }
-    if (newAuthor.website !== author.website) {
-      handlers.setAuthorWebsite(newAuthor.website ?? "");
-    }
+  function onSubmit({ authorName: newAuthorName }: AuthorFormSchema) {
+    handlers.setAuthorName(newAuthorName);
   }
 
   const handleBlur = useCallback(() => {
@@ -425,7 +406,7 @@ export function AuthorForm(props: Props) {
       <form onSubmit={handleSubmit(onSubmit)}>
         <FormField
           control={control}
-          name="author.name"
+          name="authorName"
           render={({ field }) => (
             <FormItem>
               <FormControl>
@@ -442,9 +423,54 @@ export function AuthorForm(props: Props) {
             </FormItem>
           )}
         />
+      </form>
+    </Form>
+  );
+}
+
+export function AuthorWebsiteForm(props: Props) {
+  const { authorWebsite, handlers } = props;
+
+  const authorFormSchema = MetadataFormSchema.pick({
+    authorWebsite: true,
+  });
+
+  type AuthorFormSchema = z.infer<typeof authorFormSchema>;
+
+  const form = useForm<AuthorFormSchema>({
+    resolver: zodResolver(authorFormSchema),
+    defaultValues: {
+      authorWebsite: authorWebsite ?? "",
+    },
+  });
+
+  const { control, handleSubmit } = form;
+
+  function onSubmit({ authorWebsite: newAuthorWebsite }: AuthorFormSchema) {
+    if (!!authorWebsite && !newAuthorWebsite) return;
+    handlers.setAuthorWebsite(newAuthorWebsite);
+  }
+
+  const handleBlur = useCallback(() => {
+    form.handleSubmit(onSubmit)();
+  }, [form]);
+
+  const onEnterKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        form.handleSubmit(onSubmit)();
+      }
+    },
+    [form],
+  );
+
+  return (
+    <Form {...form}>
+      <form onSubmit={handleSubmit(onSubmit)}>
         <FormField
           control={control}
-          name="author.website"
+          name="authorWebsite"
           render={({ field }) => (
             <FormItem>
               <FormControl>

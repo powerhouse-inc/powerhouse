@@ -22,7 +22,7 @@ export type DocumentActionHandlers = {
   setStateSchema: (schema: string, scope: Scope) => void;
   setInitialState: (initialValue: string, scope: Scope) => void;
   addModule: (name: string) => void;
-  setModuleDescription: (description: string) => void;
+  setModelDescription: (description: string) => void;
   updateModuleName: (id: string, name: string) => void;
   updateModuleDescription: (id: string, description: string) => void;
   deleteModule: (id: string) => void;
@@ -31,5 +31,13 @@ export type DocumentActionHandlers = {
   updateOperationName: (id: string, name: string) => void;
   updateOperationSchema: (id: string, schema: string) => void;
   updateOperationScope: (id: string, scope: Scope) => void;
+  setOperationDescription: (id: string, description: string) => void;
   deleteOperation: (id: string) => void;
+  addOperationError: (operationId: string, errorName: string) => void;
+  deleteOperationError: (id: string) => void;
+  setOperationErrorName: (
+    operationId: string,
+    errorId: string,
+    errorName: string,
+  ) => void;
 };

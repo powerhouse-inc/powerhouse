@@ -1,10 +1,8 @@
-import { getConfig } from "@powerhousedao/codegen";
 import type { StorybookConfig } from "@storybook/react-vite";
 
-const { editorsDir } = getConfig();
 
 const config: StorybookConfig = {
-  stories: [`../${editorsDir}/**/*.stories.tsx`],
+  stories: [`../editors/**/*.stories.tsx`],
   addons: [
     "@storybook/addon-links",
     "@storybook/addon-essentials",

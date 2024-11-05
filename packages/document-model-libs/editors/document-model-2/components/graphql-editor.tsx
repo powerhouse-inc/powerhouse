@@ -10,7 +10,6 @@ import {
   createDefaultRules,
   isDocumentString,
 } from "@graphql-tools/utils";
-
 const rules = createDefaultRules().filter(
   (rule) => rule.name !== "ExecutableDefinitionsRule",
 );

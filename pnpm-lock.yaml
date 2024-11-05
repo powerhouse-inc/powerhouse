@@ -700,6 +700,9 @@ importers:
       '@internationalized/date':
         specifier: ^3.5.1
         version: 3.5.6
+      '@radix-ui/react-tabs':
+        specifier: ^1.1.1
+        version: 1.1.1(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
       '@storybook/test':
         specifier: ^8.0.2
         version: 8.4.1(storybook@8.4.1)
@@ -715,12 +718,18 @@ importers:
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
+      lodash.debounce:
+        specifier: ^4.0.8
+        version: 4.0.8
       mathjs:
         specifier: ^13.0.0
         version: 13.2.0
       thememirror:
         specifier: ^2.0.1
         version: 2.0.1(@codemirror/language@6.10.3)(@codemirror/state@6.4.1)(@codemirror/view@6.34.1)
+      usehooks-ts:
+        specifier: ^3.1.0
+        version: 3.1.0(react@18.3.1)
     devDependencies:
       '@codemirror/autocomplete':
         specifier: ^6.18.1
@@ -842,6 +851,9 @@ importers:
       '@trpc/server':
         specifier: 11.0.0-rc.566
         version: 11.0.0-rc.566
+      '@types/lodash.debounce':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/node':
         specifier: ^22.5.5
         version: 22.8.6
@@ -11030,6 +11042,12 @@ packages:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
     dependencies:
       '@types/node': 22.8.6
+    dev: true
+
+  /@types/lodash.debounce@4.0.9:
+    resolution: {integrity: sha512-Ma5JcgTREwpLRwMM+XwBR7DaWe96nC38uCBDFKZWbNKD+osjVzdpnUSwBcqCptrp16sSOLBAUb50Car5I0TCsQ==}
+    dependencies:
+      '@types/lodash': 4.17.13
     dev: true
 
   /@types/lodash@4.17.13:
