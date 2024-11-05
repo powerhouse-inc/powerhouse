@@ -48,7 +48,7 @@ export function OperationForm(props: Props) {
 
   return (
     <Form {...form}>
-      <form className="w-1/2">
+      <form>
         <FormField
           control={form.control}
           name="name"

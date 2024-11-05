@@ -1,6 +1,6 @@
 import { Annotation, EditorState } from "@codemirror/state";
 import { EditorView, ViewUpdate } from "@codemirror/view";
-import { oneDark } from "@codemirror/theme-one-dark";
+import { ayuLight } from "thememirror";
 import { graphql, updateSchema } from "cm6-graphql";
 import { useEffect, useRef } from "react";
 import { GraphQLSchema, parse } from "graphql";
@@ -33,7 +33,7 @@ export function GraphqlEditor(props: Props) {
       doc: doc || "",
       extensions: [
         basicSetup,
-        oneDark,
+        ayuLight,
         graphql(schema, {
           showErrorOnInvalidSchema: true,
         }),
@@ -69,17 +69,8 @@ export function GraphqlEditor(props: Props) {
         EditorView.focusChangeEffect.of((state, focusing) => {
           if (readonly || focusing) return null;
           const newDoc = state.doc.toString();
-          if (!newDoc || newDoc === doc || !isDocumentString(newDoc))
-            return null;
-          const errors = validateGraphQlDocuments(
-            schema,
-            [parse(newDoc)],
-            rules,
-          );
-          if (!errors.length) {
-            updateDoc(newDoc);
-          }
-
+          if (!newDoc || newDoc === doc) return null;
+          updateDoc(newDoc);
           return null;
         }),
         EditorState.readOnly.of(!!readonly),
@@ -120,5 +111,5 @@ export function GraphqlEditor(props: Props) {
     }
   }, [doc]);
 
-  return <div ref={editorRef} className="my-2" />;
+  return <div ref={editorRef} />;
 }

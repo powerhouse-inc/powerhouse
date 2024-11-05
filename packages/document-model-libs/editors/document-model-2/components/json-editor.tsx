@@ -6,6 +6,7 @@ import { basicSetup } from "codemirror";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { linter } from "@codemirror/lint";
 import { GraphQLSchema } from "graphql";
+import { ayuLight } from "thememirror";
 
 const jsonLinter = jsonParseLinter();
 const skipUpdateAnnotation = Annotation.define<boolean>();
@@ -27,7 +28,7 @@ export function JSONEditor(props: Props) {
       doc: doc || "{}",
       extensions: [
         basicSetup,
-        oneDark,
+        ayuLight,
         json(),
         linter(jsonLinter),
         EditorView.lineWrapping,
@@ -56,8 +57,7 @@ export function JSONEditor(props: Props) {
         EditorView.focusChangeEffect.of((state, focusing) => {
           if (readonly || focusing) return null;
           const newDoc = state.doc.toString();
-          const isValid = jsonLinter(viewRef.current!).length === 0;
-          if (!!newDoc && isValid && newDoc !== doc) {
+          if (!!newDoc && newDoc !== doc) {
             updateDoc(newDoc);
           }
           return null;
@@ -96,5 +96,5 @@ export function JSONEditor(props: Props) {
     }
   }, [doc]);
 
-  return <div ref={editorRef} className="my-2" />;
+  return <div ref={editorRef} />;
 }
