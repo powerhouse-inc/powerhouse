@@ -313,7 +313,7 @@ export function makeMinimalObjectFromSDL(
 }
 
 function removeWhitespace(str: string) {
-  return str.replace(/\s/g, "");
+  return str.replace(/\s+|\\n|\\t/g, "").toLowerCase();
 }
 
 export function compareStringsWithoutWhitespace(str1: string, str2: string) {
