@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "license": "AGPL-3.0-only",
   "private": false,
   "main": "dist/index.js",
@@ -48,7 +48,7 @@
     "hygen": "^6.2.11"
   },
   "devDependencies": {
-    "@powerhousedao/scalars": "1.5.1",
+    "@powerhousedao/scalars": "1.6.0",
     "copyfiles": "^2.4.1",
     "esbuild-fix-imports-plugin": "^1.0.6",
     "graphql": "^16.8.1",

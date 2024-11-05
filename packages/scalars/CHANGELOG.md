@@ -1,3 +1,14 @@
+## 1.6.0 (2024-11-05)
+
+### 🚀 Features
+
+- **document-model-libs:** regenerate lockfile ([cf76e91d](https://github.com/powerhouse-inc/powerhouse/commit/cf76e91d))
+- **document-model-libs:** address initial QA feedback ([7513155e](https://github.com/powerhouse-inc/powerhouse/commit/7513155e))
+
+### ❤️  Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 1.5.1 (2024-11-01)
 
 ### 🚀 Features
