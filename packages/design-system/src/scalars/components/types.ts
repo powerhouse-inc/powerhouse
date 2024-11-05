@@ -1,23 +1,33 @@
-export type Maybe<T> = T | undefined;
+export type ErrorMessage = string;
 
-export interface FieldCommonProps<T> {
+export type ValidatorResult = ErrorMessage | boolean;
+
+export type ValidatorHandler = (
+  value: any,
+  formState: Record<string, any>,
+) => ValidatorResult | Promise<ValidatorResult>;
+
+export interface FormFieldProps {
   id?: string;
-  name?: string;
+  name: string;
   label?: React.ReactNode;
+}
+
+export interface FieldCommonProps<T> extends FormFieldProps {
   description?: string;
   value?: T;
   defaultValue?: T;
   required?: boolean;
   disabled?: boolean;
-  errors?: string[];
-  warnings?: string[];
+  errors?: ErrorMessage[];
+  warnings?: ErrorMessage[];
   className?: string;
 }
 
 export interface ErrorHandling {
   showErrorOnBlur?: boolean;
   showErrorOnChange?: boolean;
-  customValidator?: (value: unknown) => string | undefined;
+  customValidator?: ValidatorHandler;
 }
 
 export interface TextProps {
@@ -30,4 +40,21 @@ export interface TextProps {
   lowercase?: boolean;
   autoComplete?: boolean;
   spellCheck?: boolean;
+}
+
+export interface NumberProps {
+  minValue?: number;
+  maxValue?: number;
+  step?: number;
+  allowNegative?: boolean;
+}
+
+export interface IntNumberProps extends NumberProps {
+  isBigInt?: boolean;
+}
+
+export interface FloatNumberProps extends NumberProps {
+  precision?: number;
+  trailingZeros?: boolean;
+  decimalRequired?: boolean;
 }

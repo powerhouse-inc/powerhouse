@@ -7,6 +7,7 @@ import { ErrorHandling, FieldCommonProps, TextProps } from "../../types";
 import { FormDescription } from "../form-description";
 import { applyTransformers } from "@/scalars/lib/transformers";
 import { CharacterCounter } from "../character-counter";
+import { withFieldValidation } from "../with-field-validation";
 
 export interface TextFieldProps
   extends Omit<
@@ -20,7 +21,7 @@ export interface TextFieldProps
   autoComplete?: boolean;
 }
 
-export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
+const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
   (
     {
       label,
@@ -32,7 +33,6 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
       warnings,
       // TextProps
       pattern,
-      // TODO: Implement the following props
       trim,
       uppercase,
       lowercase,
@@ -82,3 +82,5 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     );
   },
 );
+
+export const TextField = withFieldValidation<TextFieldProps>(TextFieldRaw);

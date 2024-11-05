@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { TextField } from "./text-field";
 import { useState } from "react";
+import { withForm } from "@/scalars/lib/decorators";
 
 const meta = {
   title: "Document Engineering/Fragments/TextField",
   component: TextField,
+  decorators: [withForm],
   parameters: {
     layout: "centered",
   },
@@ -66,6 +68,7 @@ const meta = {
   args: {
     errors: [],
     warnings: [],
+    name: "text-field",
   },
 } satisfies Meta<typeof TextField>;
 

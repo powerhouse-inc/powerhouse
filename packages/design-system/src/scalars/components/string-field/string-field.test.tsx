@@ -1,63 +1,66 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StringField } from "./string-field";
+import { renderWithForm } from "@/scalars/lib/testing";
 
 describe("StringField", () => {
   it("should match snapshot with minimal props", () => {
-    const { container } = render(<StringField />);
+    const { container } = renderWithForm(<StringField name="test" />);
     expect(container).toMatchSnapshot();
   });
 
   it("should match snapshot when multiline is true (textarea)", () => {
-    const { container } = render(<StringField multiline />);
+    const { container } = renderWithForm(<StringField name="test" multiline />);
     expect(container).toMatchSnapshot();
   });
 
   it("should render label when provided", () => {
-    render(<StringField label="Test Label" />);
+    renderWithForm(<StringField name="test" label="Test Label" />);
     expect(screen.getByText("Test Label")).toBeInTheDocument();
   });
 
   it("should render description when provided", () => {
-    render(<StringField description="Test description" />);
+    renderWithForm(<StringField name="test" description="Test description" />);
     expect(screen.getByText("Test description")).toBeInTheDocument();
   });
 
   it("should render error messages when provided", () => {
-    render(<StringField errors={["Error message"]} />);
+    renderWithForm(<StringField name="test" errors={["Error message"]} />);
     expect(screen.getByText("Error message")).toBeInTheDocument();
   });
 
   it("should render warning messages when provided", () => {
-    render(<StringField warnings={["Warning message"]} />);
+    renderWithForm(<StringField name="test" warnings={["Warning message"]} />);
     expect(screen.getByText("Warning message")).toBeInTheDocument();
   });
 
   it("should render as textarea when multiline is true", () => {
-    render(<StringField multiline />);
+    renderWithForm(<StringField name="test" multiline />);
     expect(screen.getByRole("textbox")).toHaveProperty("tagName", "TEXTAREA");
   });
 
   it("should render as input when multiline is false", () => {
-    render(<StringField />);
+    renderWithForm(<StringField name="test" />);
     expect(screen.getByRole("textbox")).toHaveProperty("tagName", "INPUT");
   });
 
   it("should disable input when disabled prop is true", () => {
-    render(<StringField disabled />);
+    renderWithForm(<StringField name="test" disabled />);
     expect(screen.getByRole("textbox")).toBeDisabled();
   });
 
   it("should show required indicator when required prop is true", () => {
-    render(<StringField label="Test Label" required />);
+    renderWithForm(<StringField name="test" label="Test Label" required />);
     expect(screen.getByText("*")).toBeInTheDocument();
   });
 
   it("should handle value changes", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<StringField value="initial" onChange={onChange} />);
+    renderWithForm(
+      <StringField name="test" value="initial" onChange={onChange} />,
+    );
     const input = screen.getByRole("textbox");
 
     expect(input).toHaveValue("initial");

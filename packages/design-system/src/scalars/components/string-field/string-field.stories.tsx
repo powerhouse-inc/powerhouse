@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { StringField } from "./string-field";
+import { withForm } from "@/scalars/lib/decorators";
 
 const meta = {
   title: "Document Engineering/Simple Components/String Field",
   component: StringField,
+  decorators: [withForm],
   parameters: {
     layout: "centered",
   },
@@ -82,6 +84,9 @@ const meta = {
       control: "object",
       description: "Array of warning messages to display",
     },
+  },
+  args: {
+    name: "string-field",
   },
 } satisfies Meta<typeof StringField>;
 

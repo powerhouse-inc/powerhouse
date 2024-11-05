@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { BooleanField } from "./boolean-field";
+import { withForm } from "@/scalars/lib/decorators";
 
 const meta = {
   title: "Document Engineering/Simple Components/Boolean Field",
   component: BooleanField,
+  decorators: [withForm],
   argTypes: {
     isToggle: {
       control: "boolean",
@@ -58,6 +60,9 @@ const meta = {
       control: "text",
       description: "Additional CSS class names",
     },
+  },
+  args: {
+    name: "boolean-field",
   },
   tags: ["autodocs"],
   parameters: {

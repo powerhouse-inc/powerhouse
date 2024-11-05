@@ -4,12 +4,13 @@ import { Checkbox } from "./checkbox";
 import { cn } from "@/scalars/lib/utils";
 import { FormMessageList } from "../form-message";
 import { FieldCommonProps } from "../../types";
+import { withFieldValidation } from "../with-field-validation";
 
 export interface CheckboxFieldProps extends FieldCommonProps<boolean> {
   onChange?: (checked: boolean) => void;
 }
 
-const CheckboxField: React.FC<CheckboxFieldProps> = ({
+const CheckboxRaw: React.FC<CheckboxFieldProps> = ({
   id: idProp,
   name,
   label,
@@ -56,5 +57,7 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
     </div>
   );
 };
+
+const CheckboxField = withFieldValidation<CheckboxFieldProps>(CheckboxRaw);
 
 export { CheckboxField };
