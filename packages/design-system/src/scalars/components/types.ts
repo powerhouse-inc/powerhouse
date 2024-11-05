@@ -31,3 +31,20 @@ export interface TextProps {
   autoComplete?: boolean;
   spellCheck?: boolean;
 }
+
+export interface NumberProps {
+  minValue?: number;
+  maxValue?: number;
+  step?: number;
+  allowNegative?: boolean;
+}
+
+export interface IntNumberProps extends NumberProps {
+  isBigInt?: boolean;
+}
+
+export interface FloatNumberProps extends NumberProps {
+  precision?: number;
+  trailingZeros?: boolean;
+  decimalRequired?: boolean;
+}
