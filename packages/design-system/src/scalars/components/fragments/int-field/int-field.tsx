@@ -68,23 +68,31 @@ export const IntField = forwardRef<HTMLInputElement, NumberFieldProps>(
         <Input
           id={id}
           className={cn(
-            "px-4 text-end text-gray-900 focus:text-gray-300 placeholder:focus:ml-0.5 placeholder:focus:text-gray-300",
+            // text and background style
+            "text-end text-gray-900 dark:text-gray-50 dark:bg-[#252A34]  dark:border-[#485265]",
+            //Focus state text and placeholder
+            "focus:text-gray-300 dark:focus:text-gray-700 placeholder:focus:text-gray-300 dark:placeholder:focus:text-gray-700",
+            //Focus state ring style
+            "focus-visible:ring-[#9DA6B9] focus-visible:ring-offset-1 dark:ring-offset-[#252A34]",
+            //Placeholder
+            "placeholder:focus:ml-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700",
             // Disabled state
-            "disabled:border-gray-300 bg-[#FFFFFF]",
+            "disabled:border-gray-300 dark:disabled:border-[#373E4D] disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:text-gray-500 dark:disabled:text-gray-700",
             className,
           )}
-          type="text"
+          type="number"
           inputMode="numeric"
           pattern="[0-9]*"
           min={minValue}
           aria-invalid={!!errors?.length}
           max={maxValue}
           autoComplete={autoCompleteValue}
+          aria-valuemin={minValue}
+          aria-valuemax={maxValue}
           value={value}
           step={step}
           defaultValue={defaultValue ?? undefined}
           onChange={onChange}
-          role="spinbutton"
           {...props}
           ref={ref}
         />
