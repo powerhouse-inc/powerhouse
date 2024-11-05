@@ -1,7 +1,7 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-console.log('Running pnpmfile.cjs script');
+console.log("Running pnpmfile.cjs script");
 
 function createFile(filePath, content) {
   if (!fs.existsSync(filePath)) {
@@ -19,16 +19,19 @@ function createDirectory(dirPath) {
 
 function readPackage(pkg) {
   try {
-    const createLibDir = path.join(__dirname, 'packages/codegen/dist/create-lib');
+    const createLibDir = path.join(
+      __dirname,
+      "packages/codegen/dist/create-lib",
+    );
     createDirectory(createLibDir);
 
-    const cliFilePath = path.join(__dirname, 'packages/codegen/dist/cli.js');
-    createFile(cliFilePath, '#! /usr/bin/env node\n');
+    const cliFilePath = path.join(__dirname, "packages/codegen/dist/cli.js");
+    createFile(cliFilePath, "#! /usr/bin/env node\n");
 
-    const indexFilePath = path.join(createLibDir, 'index.js');
-    createFile(indexFilePath, '#! /usr/bin/env node\n');
+    const indexFilePath = path.join(createLibDir, "index.js");
+    createFile(indexFilePath, "#! /usr/bin/env node\n");
   } catch (err) {
-    console.error('Error creating files:', err);
+    console.error("Error creating files:", err);
   }
 
   return pkg;
@@ -36,6 +39,6 @@ function readPackage(pkg) {
 
 module.exports = {
   hooks: {
-    readPackage
-  }
+    readPackage,
+  },
 };

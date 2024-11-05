@@ -1,77 +1,74 @@
 name: Check PR scalars
 
 on:
-    workflow_dispatch:
-    push:
-        branches: ['main']
-        paths:
-            - 'packages/scalars/**'
-    pull_request:
-        branches: ['main']
-        paths:
-            - 'packages/scalars/**'
-        types: [opened, synchronize]
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "packages/scalars/**"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "packages/scalars/**"
+    types: [opened, synchronize]
 
 env:
   NX_ISOLATE_PLUGINS: false
 
 jobs:
-    lint:
-        name: Lint
-        runs-on: ubuntu-latest
-        container: node:22
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    container: node:22
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install PNPM
-              uses: pnpm/action-setup@v3
-              with:
-                  version: latest-8
-                  run_install: false
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
-            - name: Install Dependencies
-              run: pnpm install --frozen-lockfile
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
 
-            - name: Lint
-              run: npx nx run @powerhousedao/scalars:lint
+      - name: Lint
+        run: npx nx run @powerhousedao/scalars:lint
 
-    test:
-        name: Test
-        runs-on: ubuntu-latest
-        container: node:22
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    container: node:22
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install PNPM
-              uses: pnpm/action-setup@v3
-              with:
-                  version: latest-8
-                  run_install: false
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
-            - name: Install Dependencies
-              run: pnpm install --frozen-lockfile
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
 
-            - name: Lint
-              run: npx nx run @powerhousedao/scalars:test
+      - name: Lint
+        run: npx nx run @powerhousedao/scalars:test
 
-    build:
-        name: Build
-        timeout-minutes: 15
-        runs-on: ubuntu-latest
-        container: node:22
-        steps:
-            - uses: actions/checkout@v4
+  build:
+    name: Build
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    container: node:22
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install PNPM
-              uses: pnpm/action-setup@v3
-              with:
-                  version: latest-8
-                  run_install: false
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
-            - name: Install Dependencies
-              run: pnpm install --frozen-lockfile
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
 
-            - name: Build
-              run: npx nx run @powerhousedao/scalars:build
+      - name: Build
+        run: npx nx run @powerhousedao/scalars:build

@@ -3,8 +3,7 @@ import path from "path";
 import { spawn } from "child_process";
 import { green, red } from "colorette";
 import fs from "fs";
-
-import { CommandActionType } from "../types";
+import { CommandActionType } from "../types.js";
 
 const CONNECT_BIN_PATH = "node_modules/.bin/connect";
 
