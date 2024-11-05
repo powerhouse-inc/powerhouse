@@ -1,5 +1,5 @@
-import { render } from "@testing-library/react";
 import { BooleanField } from "./boolean-field";
+import { renderWithForm } from "@/scalars/lib/testing";
 
 describe("BooleanField", () => {
   const commonProps = {
@@ -15,22 +15,22 @@ describe("BooleanField", () => {
   };
 
   it("should render toggle field when isToggle is true", () => {
-    const { container } = render(
-      <BooleanField {...commonProps} isToggle={true} />,
+    const { container } = renderWithForm(
+      <BooleanField name="test" {...commonProps} isToggle={true} />,
     );
     expect(container).toMatchSnapshot();
   });
 
   it("should render checkbox field when isToggle is false", () => {
-    const { container } = render(
-      <BooleanField {...commonProps} isToggle={false} />,
+    const { container } = renderWithForm(
+      <BooleanField name="test" {...commonProps} isToggle={false} />,
     );
     expect(container).toMatchSnapshot();
   });
 
   it("should pass all props to ToggleField when isToggle is true", () => {
-    const { getByRole } = render(
-      <BooleanField {...commonProps} isToggle={true} />,
+    const { getByRole } = renderWithForm(
+      <BooleanField name="test" {...commonProps} isToggle={true} />,
     );
     const toggle = getByRole("switch");
     expect(toggle).toBeChecked();
@@ -40,8 +40,8 @@ describe("BooleanField", () => {
   });
 
   it("should pass all props to CheckboxField when isToggle is false", () => {
-    const { getByRole } = render(
-      <BooleanField {...commonProps} isToggle={false} />,
+    const { getByRole } = renderWithForm(
+      <BooleanField name="test" {...commonProps} isToggle={false} />,
     );
     const checkbox = getByRole("checkbox");
     expect(checkbox).toBeChecked();

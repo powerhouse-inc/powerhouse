@@ -15,7 +15,6 @@ const StringField: React.FC<StringFieldProps> = ({
 }) => {
   if (multiline || autoExpand) {
     // only textarea supports multiline and autoExpand
-    // TODO: replace with the TextAreaField component
     return <TextareaField {...props} />;
   }
 

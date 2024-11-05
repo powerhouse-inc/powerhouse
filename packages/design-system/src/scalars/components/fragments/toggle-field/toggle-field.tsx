@@ -4,12 +4,13 @@ import { cn } from "@/scalars/lib/utils";
 import { FormLabel } from "../form-label";
 import { FormMessageList } from "../form-message";
 import type { FieldCommonProps } from "../../types";
+import { withFieldValidation } from "../with-field-validation";
 
 export interface ToggleFieldProps extends FieldCommonProps<boolean> {
   onChange?: (checked: boolean) => void;
 }
 
-const ToggleField: React.FC<ToggleFieldProps> = ({
+const ToggleRaw: React.FC<ToggleFieldProps> = ({
   id: idProp,
   name,
   label,
@@ -63,5 +64,7 @@ const ToggleField: React.FC<ToggleFieldProps> = ({
     </div>
   );
 };
+
+const ToggleField = withFieldValidation<ToggleFieldProps>(ToggleRaw);
 
 export { ToggleField };

@@ -1,10 +1,12 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { CheckboxField } from "./checkbox-field";
+import { withForm } from "@/scalars/lib/decorators";
 
 const meta: Meta<typeof CheckboxField> = {
   component: CheckboxField,
   title: "Document Engineering/Fragments/Checkbox Field",
   tags: ["autodocs"],
+  decorators: [withForm],
   argTypes: {
     value: {
       control: "boolean",
@@ -49,6 +51,7 @@ const meta: Meta<typeof CheckboxField> = {
   args: {
     errors: [],
     warnings: [],
+    name: "checkbox",
   },
 };
 
