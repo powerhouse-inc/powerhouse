@@ -1,3 +1,10 @@
+# [1.0.0-dev.157](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.156...v1.0.0-dev.157) (2024-11-06)
+
+
+### Bug Fixes
+
+* double render in studio mode ([f2f78e4](https://github.com/powerhouse-inc/document-model-electron/commit/f2f78e4fcd6c4e8eef342a385341b89f5b78d378))
+
 # [1.0.0-dev.156](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.155...v1.0.0-dev.156) (2024-11-01)
 
 
