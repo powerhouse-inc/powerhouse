@@ -67,71 +67,63 @@ export function ModelNameForm(props: Props) {
 
   function onSubmit({ name: newName }: NameFormSchema) {
     handlers.setModelName(newName);
-    if (newName) {
-      if (!globalStateSchema) {
-        const initialSchemaDoc = makeInitialSchemaDoc(
-          globalStateSchema,
-          newName,
-          "global",
-        );
-        handlers.setStateSchema(initialSchemaDoc, "global");
-
-        if (!globalStateInitialValue) {
-          const initialStateDoc = "{}";
-          handlers.setInitialState(initialStateDoc, "global");
-        }
-      } else {
-        const oldGlobalStateType = schema.getType(`${pascalCase(name)}State`);
-        if (!oldGlobalStateType) {
-          throw new Error("Expected global state type");
-        }
-        const newGlobalStateType = renameType(
-          oldGlobalStateType,
-          `${pascalCase(newName)}State`,
-        );
-        const schemaWithNewType = mapSchema(schema, {
-          [MapperKind.TYPE]: (type) => {
-            if (type.name === oldGlobalStateType.name) {
-              return newGlobalStateType;
-            }
-            return type;
-          },
-        });
-        if (!isObjectType(newGlobalStateType)) {
-          throw new Error("Expected object type");
-        }
-        handlers.setStateSchema(
-          print(astFromObjectType(newGlobalStateType, schemaWithNewType)),
-          "global",
-        );
-        const oldLocalStateType = schema.getType(
-          `${pascalCase(name)}LocalState`,
-        );
-        if (!oldLocalStateType) {
-          return;
-        }
-        const newLocalStateType = renameType(
-          oldLocalStateType,
-          `${pascalCase(newName)}LocalState`,
-        );
-        const schemaWithNewLocalStateType = mapSchema(schema, {
-          [MapperKind.TYPE]: (type) => {
-            if (type.name === oldLocalStateType.name) {
-              return newLocalStateType;
-            }
-            return type;
-          },
-        });
-        if (!isObjectType(newLocalStateType)) {
-          throw new Error("Expected object type");
-        }
-        handlers.setStateSchema(
-          print(
-            astFromObjectType(newLocalStateType, schemaWithNewLocalStateType),
-          ),
-          "local",
-        );
+    if (newName && !globalStateSchema) {
+      const initialSchemaDoc = makeInitialSchemaDoc(
+        globalStateSchema,
+        newName,
+        "global",
+      );
+      handlers.setStateSchema(initialSchemaDoc, "global");
+    } else if (newName && globalStateSchema) {
+      const oldGlobalStateType = schema.getType(`${pascalCase(name)}State`);
+      if (!oldGlobalStateType) {
+        throw new Error("Expected global state type");
       }
+      const newGlobalStateType = renameType(
+        oldGlobalStateType,
+        `${pascalCase(newName)}State`,
+      );
+      const schemaWithNewType = mapSchema(schema, {
+        [MapperKind.TYPE]: (type) => {
+          if (type.name === oldGlobalStateType.name) {
+            return newGlobalStateType;
+          }
+          return type;
+        },
+      });
+      if (!isObjectType(newGlobalStateType)) {
+        throw new Error("Expected object type");
+      }
+      handlers.setStateSchema(
+        print(astFromObjectType(newGlobalStateType, schemaWithNewType)),
+        "global",
+      );
+
+      const oldLocalStateType = schema.getType(`${pascalCase(name)}LocalState`);
+      if (!oldLocalStateType) {
+        return;
+      }
+      const newLocalStateType = renameType(
+        oldLocalStateType,
+        `${pascalCase(newName)}LocalState`,
+      );
+      const schemaWithNewLocalStateType = mapSchema(schema, {
+        [MapperKind.TYPE]: (type) => {
+          if (type.name === oldLocalStateType.name) {
+            return newLocalStateType;
+          }
+          return type;
+        },
+      });
+      if (!isObjectType(newLocalStateType)) {
+        throw new Error("Expected object type");
+      }
+      handlers.setStateSchema(
+        print(
+          astFromObjectType(newLocalStateType, schemaWithNewLocalStateType),
+        ),
+        "local",
+      );
     }
   }
 
@@ -143,10 +135,10 @@ export function ModelNameForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -207,10 +199,10 @@ export function DocumentTypeForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -270,10 +262,10 @@ export function ModelExtensionForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -333,10 +325,10 @@ export function DescriptionForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -395,10 +387,10 @@ export function AuthorNameForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -459,10 +451,10 @@ export function AuthorWebsiteForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (

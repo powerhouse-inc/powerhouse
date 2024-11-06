@@ -37,8 +37,8 @@ export function ModuleForm(props: Props) {
       }
     } else {
       handlers.addModule(name);
+      form.reset({ name: "" });
     }
-    form.reset({ name });
   }
 
   // Handle form submission on blur
@@ -63,7 +63,7 @@ export function ModuleForm(props: Props) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      form.handleSubmit(onSubmit)();
+                      (e.target as HTMLInputElement).blur();
                     }
                   }}
                 />
@@ -74,6 +74,7 @@ export function ModuleForm(props: Props) {
         />
         {!!module && (
           <button
+            tabIndex={-1}
             type="button"
             onClick={() => handlers.deleteModule(module.id)}
           >

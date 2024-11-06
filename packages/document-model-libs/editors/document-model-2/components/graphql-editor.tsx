@@ -1,7 +1,7 @@
-import { Annotation, EditorState } from "@codemirror/state";
+import { EditorState, Transaction, Compartment } from "@codemirror/state";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { ayuLight } from "thememirror";
-import { graphql, updateSchema } from "cm6-graphql";
+import { graphql } from "cm6-graphql";
 import { useEffect, useRef } from "react";
 import { GraphQLSchema, parse } from "graphql";
 import { basicSetup } from "codemirror";
@@ -10,10 +10,11 @@ import {
   createDefaultRules,
   isDocumentString,
 } from "@graphql-tools/utils";
+
 const rules = createDefaultRules().filter(
   (rule) => rule.name !== "ExecutableDefinitionsRule",
 );
-const skipUpdateAnnotation = Annotation.define<boolean>();
+
 type Props = {
   schema: GraphQLSchema;
   doc: string;
@@ -25,36 +26,39 @@ export function GraphqlEditor(props: Props) {
   const { doc, schema, readonly, updateDoc } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const stateRef = useRef<EditorState | null>(null);
+  const graphqlCompartment = useRef(new Compartment());
 
   useEffect(() => {
-    stateRef.current = EditorState.create({
-      doc: doc || "",
+    if (!editorRef.current) return;
+
+    const state = EditorState.create({
+      doc,
       extensions: [
         basicSetup,
         ayuLight,
-        graphql(schema, {
-          showErrorOnInvalidSchema: true,
-        }),
+        graphqlCompartment.current.of(
+          graphql(schema, {
+            showErrorOnInvalidSchema: true,
+          }),
+        ),
         EditorView.lineWrapping,
         EditorView.theme({
-          "&": {
-            fontSize: "18px",
-          },
+          "&": { fontSize: "18px" },
         }),
         EditorView.updateListener.of((update: ViewUpdate) => {
-          if (readonly) return;
-          // Check if the transaction has the skipUpdateAnnotation
+          if (readonly || !update.docChanged) return;
+
           if (
-            update.transactions.some((tr) =>
-              tr.annotation(skipUpdateAnnotation),
+            update.transactions.some(
+              (tr) => tr.annotation(Transaction.userEvent) === "external",
             )
-          ) {
+          )
             return;
-          }
-          if (update.docChanged) {
-            const newDoc = update.state.doc.toString();
-            if (!newDoc || newDoc === doc || !isDocumentString(newDoc)) return;
+
+          const newDoc = update.state.doc.toString();
+          if (!isDocumentString(newDoc)) return;
+
+          try {
             const errors = validateGraphQlDocuments(
               schema,
               [parse(newDoc)],
@@ -63,49 +67,55 @@ export function GraphqlEditor(props: Props) {
             if (!errors.length) {
               updateDoc(newDoc);
             }
+          } catch (e) {
+            /* do nothing */
           }
-        }),
-        EditorView.focusChangeEffect.of((state, focusing) => {
-          if (readonly || focusing) return null;
-          const newDoc = state.doc.toString();
-          if (!newDoc || newDoc === doc) return null;
-          updateDoc(newDoc);
-          return null;
         }),
         EditorState.readOnly.of(!!readonly),
       ],
     });
 
-    const view = new EditorView({
-      state: stateRef.current,
-      parent: editorRef.current!,
-    });
-
-    viewRef.current = view;
+    let view = viewRef.current;
+    if (!view) {
+      view = new EditorView({
+        state,
+        parent: editorRef.current,
+      });
+      viewRef.current = view;
+    } else {
+      view.setState(state);
+    }
 
     return () => {
-      view.destroy();
+      if (viewRef.current) {
+        viewRef.current.destroy();
+        viewRef.current = null;
+      }
     };
-  }, []);
+  }, [readonly]);
 
   useEffect(() => {
-    updateSchema(viewRef.current!, schema);
+    const view = viewRef.current;
+    if (!view) return;
+
+    view.dispatch({
+      effects: graphqlCompartment.current.reconfigure(
+        graphql(schema, {
+          showErrorOnInvalidSchema: true,
+        }),
+      ),
+    });
   }, [schema]);
 
   useEffect(() => {
-    if (!doc) return;
+    const view = viewRef.current;
+    if (!view) return;
 
-    const view = viewRef.current!;
-    const currentDoc = view.state.doc;
-    const currentDocString = currentDoc.toString();
-    if (currentDocString !== doc) {
+    const currentDoc = view.state.doc.toString();
+    if (currentDoc !== doc) {
       view.dispatch({
-        changes: {
-          from: 0,
-          to: currentDoc.length,
-          insert: doc,
-        },
-        annotations: skipUpdateAnnotation.of(true),
+        changes: { from: 0, to: currentDoc.length, insert: doc },
+        annotations: [Transaction.userEvent.of("external")],
       });
     }
   }, [doc]);

@@ -179,11 +179,12 @@
     "@internationalized/date": "^3.5.1",
     "@radix-ui/react-tabs": "^1.1.1",
     "@storybook/test": "^8.0.2",
+    "@types/lodash": "^4.17.13",
     "copy-anything": "^3.0.5",
     "date-fns": "^3.3.1",
     "deep-object-diff": "^1.1.9",
     "jszip": "^3.10.1",
-    "lodash.debounce": "^4.0.8",
+    "lodash": "^4.17.21",
     "mathjs": "^13.0.0",
     "thememirror": "^2.0.1",
     "usehooks-ts": "^3.1.0"
