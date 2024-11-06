@@ -1,3 +1,10 @@
+# [1.0.0-dev.159](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.158...v1.0.0-dev.159) (2024-11-06)
+
+
+### Bug Fixes
+
+* **connect:** add check for * doc type ([d5485c3](https://github.com/powerhouse-inc/document-model-electron/commit/d5485c3cd0ea92705736902f1f5845393d3fec55))
+
 # [1.0.0-dev.158](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.157...v1.0.0-dev.158) (2024-11-06)
 
 
