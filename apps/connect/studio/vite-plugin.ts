@@ -54,6 +54,33 @@ export function watchLocalFiles(
     documentModelsPath?: string,
     editorsPath?: string,
 ) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const debounce = (callback: () => unknown, delay = 100) => {
+        let timeout: NodeJS.Timeout | undefined;
+        return function () {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                callback();
+            }, delay);
+        };
+    };
+
+    const refreshModelsWithDebounce = debounce(() => {
+        console.log(`Local document models changed, reloading Connect...`);
+        server.ws.send({
+            type: 'full-reload',
+            path: '*',
+        });
+    });
+
+    const refreshEditorsWithDebounce = debounce(() => {
+        console.log(`Local document editors changed, reloading Connect...`);
+        server.ws.send({
+            type: 'full-reload',
+            path: '*',
+        });
+    });
+
     if (documentModelsPath) {
         // Use fs to watch the file and trigger a server reload when it changes
         console.log(
@@ -66,13 +93,7 @@ export function watchLocalFiles(
                     recursive: true,
                 },
                 (event, filename) => {
-                    console.log(
-                        `Local document models changed, reloading server...`,
-                    );
-                    server.ws.send({
-                        type: 'full-reload',
-                        path: '*',
-                    });
+                    refreshModelsWithDebounce();
                 },
             );
         } catch (e) {
@@ -89,13 +110,7 @@ export function watchLocalFiles(
                     recursive: true,
                 },
                 (event, filename) => {
-                    console.log(
-                        `Local document models changed, reloading server...`,
-                    );
-                    server.ws.send({
-                        type: 'full-reload',
-                        path: '*',
-                    });
+                    refreshEditorsWithDebounce();
                 },
             );
         } catch (e) {
