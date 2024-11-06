@@ -37,7 +37,6 @@ export const Radio = React.forwardRef<
     return (
       <>
         <RadioGroupPrimitive.Item
-          {...props}
           aria-disabled={disabled}
           aria-invalid={hasError}
           className={cn(
@@ -63,6 +62,7 @@ export const Radio = React.forwardRef<
           id={id}
           ref={ref}
           value={value}
+          {...props}
         >
           <RadioGroupPrimitive.Indicator
             className={cn(

@@ -26,22 +26,20 @@ export interface RadioGroupFieldProps {
   value?: string;
 }
 
-export const RadioGroupField: React.FC<RadioGroupFieldProps> = (props) => {
-  const {
-    className,
-    defaultValue,
-    description,
-    warnings = [],
-    errors = [],
-    id,
-    label,
-    name,
-    onChange,
-    radioOptions = [],
-    required = false,
-    value,
-  } = props;
-
+export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
+  className,
+  defaultValue,
+  description,
+  warnings = [],
+  errors = [],
+  id,
+  label,
+  name,
+  onChange,
+  radioOptions = [],
+  required = false,
+  value,
+}) => {
   const hasLabel = label !== undefined;
   const hasError = errors.length > 0;
   const prefix = useId();

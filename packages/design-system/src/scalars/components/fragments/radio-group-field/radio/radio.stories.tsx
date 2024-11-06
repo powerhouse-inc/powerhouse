@@ -81,6 +81,42 @@ export const DefaultWithDescriptionChecked: Story = {
   },
 };
 
+export const Disabled: Story = {
+  args: {
+    disabled: true,
+    label: "Disabled",
+    value: "disabled",
+  },
+};
+
+export const DisabledChecked: Story = {
+  args: {
+    checked: true,
+    disabled: true,
+    label: "Disabled checked",
+    value: "disabled-checked",
+  },
+};
+
+export const DisabledWithDescription: Story = {
+  args: {
+    description: "This is a disabled Radio with description",
+    disabled: true,
+    label: "Disabled with description",
+    value: "disabled-with-description",
+  },
+};
+
+export const DisabledWithDescriptionChecked: Story = {
+  args: {
+    checked: true,
+    description: "This is a disabled Radio with description and checked",
+    disabled: true,
+    label: "Disabled with description and checked",
+    value: "disabled-with-description-checked",
+  },
+};
+
 export const Focus: Story = {
   args: {
     label: "Focus",
@@ -166,41 +202,5 @@ export const HoverWithDescriptionChecked: Story = {
   },
   parameters: {
     pseudo: { hover: true },
-  },
-};
-
-export const Disabled: Story = {
-  args: {
-    disabled: true,
-    label: "Disabled",
-    value: "disabled",
-  },
-};
-
-export const DisabledChecked: Story = {
-  args: {
-    checked: true,
-    disabled: true,
-    label: "Disabled checked",
-    value: "disabled-checked",
-  },
-};
-
-export const DisabledWithDescription: Story = {
-  args: {
-    description: "This is a disabled Radio with description",
-    disabled: true,
-    label: "Disabled with description",
-    value: "disabled-with-description",
-  },
-};
-
-export const DisabledWithDescriptionChecked: Story = {
-  args: {
-    checked: true,
-    description: "This is a disabled Radio with description and checked",
-    disabled: true,
-    label: "Disabled with description and checked",
-    value: "disabled-with-description-checked",
   },
 };

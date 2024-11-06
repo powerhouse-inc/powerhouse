@@ -13,18 +13,17 @@ export interface RadioGroupProps
 export const RadioGroup = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Root>,
   RadioGroupProps
->(({ children, className, id: propId, name: propName, ...props }, ref) => {
+>(({ children, className, id: propId, name, ...props }, ref) => {
   const prefix = useId();
   const id = propId ?? `${prefix}-radio-group`;
-  const name = propName ?? `${prefix}-radio-group`;
 
   return (
     <RadioGroupPrimitive.Root
-      {...props}
       className={cn("flex flex-col gap-2.5", className)}
       id={id}
       name={name}
       ref={ref}
+      {...props}
     >
       {children}
     </RadioGroupPrimitive.Root>
