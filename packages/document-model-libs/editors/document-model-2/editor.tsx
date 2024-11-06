@@ -55,16 +55,14 @@ export default function Editor(
   useEffect(() => {
     try {
       const newSchema = buildSchema(`
-              ${hiddenQueryTypeDefDoc}
-              ${globalStateSchema}
-              ${localStateSchema}
-              ${modules
-                .flatMap((module) =>
-                  module.operations.map((operation) => operation.schema),
-                )
-                .filter(Boolean)
-                .join("\n")}
-            `);
+${hiddenQueryTypeDefDoc}
+${globalStateSchema}
+${localStateSchema}
+${modules
+  .flatMap((module) => module.operations.map((operation) => operation.schema))
+  .filter(Boolean)
+  .join("\n")}
+`);
       setSchema(newSchema);
       setErrors("");
     } catch (e) {
@@ -113,11 +111,8 @@ export default function Editor(
       setStateSchema: (newSchema: string, scope: Scope) => {
         const oldSchema =
           scope === "global" ? globalStateSchema : localStateSchema;
-        console.log("dispatching set state schema", {
-          newSchema,
-          oldSchema,
-        });
         if (compareStringsWithoutWhitespace(newSchema, oldSchema)) return;
+
         dispatch(actions.setStateSchema({ schema: newSchema, scope }));
       },
 

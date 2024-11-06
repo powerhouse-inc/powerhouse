@@ -1,6 +1,5 @@
-import { memo, useRef, useEffect } from "react";
+import { memo } from "react";
 import { GraphQLSchema } from "graphql";
-import { updateStateTypeNames } from "./utils/schema-updates";
 import { Modules } from "./components/modules";
 import { Divider } from "./components/divider";
 import { Errors } from "./components/errors";
@@ -31,39 +30,6 @@ export function _DocumentModelEditor(props: Props) {
     handlers,
     errors,
   } = props;
-
-  const previousModelNameRef = useRef(modelName);
-
-  useEffect(() => {
-    if (previousModelNameRef.current === modelName) return;
-
-    const oldName = previousModelNameRef.current;
-    previousModelNameRef.current = modelName;
-
-    if (globalStateSchema) {
-      const updatedGlobalSchema = updateStateTypeNames(
-        globalStateSchema,
-        oldName,
-        modelName,
-      );
-
-      if (updatedGlobalSchema !== globalStateSchema) {
-        handlers.setStateSchema(updatedGlobalSchema, "global");
-      }
-    }
-
-    if (localStateSchema) {
-      const updatedLocalSchema = updateStateTypeNames(
-        localStateSchema,
-        oldName,
-        modelName,
-      );
-
-      if (updatedLocalSchema !== localStateSchema) {
-        handlers.setStateSchema(updatedLocalSchema, "local");
-      }
-    }
-  }, [modelName, globalStateSchema, localStateSchema, handlers]);
 
   if (!globalStateSchema) return null;
 
