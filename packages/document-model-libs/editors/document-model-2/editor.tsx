@@ -314,7 +314,7 @@ export default function Editor(
         authorWebsite={authorWebsite ?? ""}
         handlers={handlers}
         globalStateSchema={globalStateSchema}
-        globalStateInitialValue={globalStateInitialValue}
+        localStateSchema={localStateSchema}
         schema={schema}
       />
       <DocumentModelEditor

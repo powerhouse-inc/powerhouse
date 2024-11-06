@@ -18,6 +18,7 @@ import {
 } from "graphql";
 import { DocumentModelDocument, Scope } from "../types";
 import * as customScalars from "@powerhousedao/scalars";
+import { renameType } from "@graphql-tools/utils";
 
 export function makeStateObject(modelName: string, scope: Scope) {
   const name = makeStateObjectName(modelName, scope);
@@ -88,12 +89,7 @@ export function makeOperationInitialDoc(name: string) {
   return inputObject;
 }
 
-export function makeInitialSchemaDoc(
-  stateSchema: string,
-  modelName: string,
-  scope: Scope,
-) {
-  if (stateSchema) return stateSchema;
+export function makeInitialSchemaDoc(modelName: string, scope: Scope) {
   const stateObject = makeStateObject(modelName, scope);
   return stateObject;
 }
@@ -318,4 +314,31 @@ function removeWhitespace(str: string) {
 
 export function compareStringsWithoutWhitespace(str1: string, str2: string) {
   return removeWhitespace(str1) === removeWhitespace(str2);
+}
+
+export function renameSchemaType(
+  schema: GraphQLSchema,
+  oldName: string,
+  newName: string,
+  scope: Scope,
+): string {
+  const typeSuffix = scope === "global" ? "State" : "LocalState";
+  const currentStateType = schema.getType(
+    `${pascalCase(oldName)}${typeSuffix}`,
+  );
+
+  if (!currentStateType || !isObjectType(currentStateType)) {
+    throw new Error(`Could not find ${scope} state type in schema`);
+  }
+
+  const newStateType = renameType(
+    currentStateType,
+    `${pascalCase(newName)}${typeSuffix}`,
+  );
+
+  if (!isObjectType(newStateType)) {
+    throw new Error(`Expected new ${scope} state type to be an object type`);
+  }
+
+  return print(newStateType.astNode!);
 }

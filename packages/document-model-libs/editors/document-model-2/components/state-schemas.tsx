@@ -92,7 +92,17 @@ function StateEditor({
   );
 }
 
-export function StateSchemas({ schema, modelName, ...props }: Props) {
+export function StateSchemas(props: Props) {
+  const {
+    schema,
+    modelName,
+    globalStateSchema,
+    localStateSchema,
+    handlers,
+    globalStateInitialValue,
+    localStateInitialValue,
+  } = props;
+
   return (
     <Tabs defaultValue="global" className="pb-8">
       <div className="mb-10 mt-8 grid grid-cols-3 items-center">
@@ -107,26 +117,22 @@ export function StateSchemas({ schema, modelName, ...props }: Props) {
       <TabsContent value="global" tabIndex={-1}>
         <StateEditor
           schema={schema}
-          stateSchema={props.globalStateSchema}
-          initialValue={props.globalStateInitialValue}
-          handlers={props.handlers}
+          stateSchema={globalStateSchema}
+          initialValue={globalStateInitialValue}
+          handlers={handlers}
           scope="global"
         />
       </TabsContent>
 
       <TabsContent value="local">
-        {!props.localStateSchema ? (
+        {!localStateSchema ? (
           <div className="grid w-full place-items-center pb-8">
             <button
               className="mt-2 rounded border border-slate-800 bg-white px-2 py-1 text-slate-800"
               onClick={() => {
-                const initialDoc = makeInitialSchemaDoc(
-                  props.localStateSchema,
-                  modelName,
-                  "local",
-                );
-                props.handlers.setStateSchema(initialDoc, "local");
-                props.handlers.setInitialState("", "local");
+                const initialDoc = makeInitialSchemaDoc(modelName, "local");
+                handlers.setStateSchema(initialDoc, "local");
+                handlers.setInitialState("", "local");
               }}
             >
               Add local state
@@ -136,9 +142,9 @@ export function StateSchemas({ schema, modelName, ...props }: Props) {
           <div>
             <StateEditor
               schema={schema}
-              stateSchema={props.localStateSchema}
-              initialValue={props.localStateInitialValue}
-              handlers={props.handlers}
+              stateSchema={localStateSchema}
+              initialValue={localStateInitialValue}
+              handlers={handlers}
               scope="local"
             />
           </div>
