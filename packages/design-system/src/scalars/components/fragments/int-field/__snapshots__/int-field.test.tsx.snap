@@ -14,12 +14,12 @@ exports[`IntField Component > should match snapshot 1`] = `
     </label>
     <input
       aria-invalid="false"
-      class="flex h-10 w-full rounded-md text-sm border border-gray-300 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:text-gray-500 px-4 text-end text-gray-900 focus:text-gray-300 placeholder:focus:ml-0.5 placeholder:focus:text-gray-300 disabled:border-gray-300 bg-[#FFFFFF]"
+      class="flex h-10 w-full rounded-md text-sm border border-gray-300 bg-background px-3 py-2 ring-offset-background focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed text-end text-gray-900 dark:text-gray-50 dark:bg-[#252A34] dark:border-[#485265] focus:text-gray-300 dark:focus:text-gray-700 placeholder:focus:text-gray-300 dark:placeholder:focus:text-gray-700 focus-visible:ring-[#9DA6B9] focus-visible:ring-offset-1 dark:ring-offset-[#252A34] placeholder:focus:ml-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 disabled:border-gray-300 dark:disabled:border-[#373E4D] disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:text-gray-500 dark:disabled:text-gray-700"
       id=":r0:"
       inputmode="numeric"
+      name="Label"
       pattern="[0-9]*"
-      role="spinbutton"
-      type="text"
+      type="number"
       value=""
     />
   </div>

@@ -73,15 +73,14 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
+    name: "Label",
     label: "Label",
-    value: -5,
-    minValue: 4,
-    maxValue: 10,
+    value: 5,
   },
 };
-//Complete this
 export const DefaultActive: Story = {
   args: {
+    name: "Label",
     label: "Label",
     placeholder: "23",
   },
@@ -89,12 +88,14 @@ export const DefaultActive: Story = {
 
 export const Filled: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 23,
   },
 };
 export const Disable: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 1234,
     disabled: true,
@@ -103,13 +104,15 @@ export const Disable: Story = {
 
 export const Warning: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 23,
     warnings: ["Warning message"],
   },
 };
-export const Error: Story = {
+export const ErrorState: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 23,
     errors: ["Error message"],
@@ -117,6 +120,7 @@ export const Error: Story = {
 };
 export const MultiError: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 23,
     errors: [
@@ -127,9 +131,9 @@ export const MultiError: Story = {
     ],
   },
 };
-// TODO: Fraction and Info
 export const Description: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     description: "This is the field description",
@@ -137,6 +141,7 @@ export const Description: Story = {
 };
 export const DescriptionDisable: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     disabled: true,
@@ -145,6 +150,7 @@ export const DescriptionDisable: Story = {
 };
 export const DescriptionWithWarning: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     description: "This is the field description",
@@ -153,6 +159,7 @@ export const DescriptionWithWarning: Story = {
 };
 export const DescriptionWithErros: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     description: "This is the field description",
@@ -161,6 +168,7 @@ export const DescriptionWithErros: Story = {
 };
 export const DescriptionWithMultiError: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     description: "This is the field description",
@@ -174,6 +182,7 @@ export const DescriptionWithMultiError: Story = {
 };
 export const Mandatory: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -181,6 +190,7 @@ export const Mandatory: Story = {
 };
 export const MandatoryDisable: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -189,6 +199,7 @@ export const MandatoryDisable: Story = {
 };
 export const MandatoryWarning: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -197,6 +208,7 @@ export const MandatoryWarning: Story = {
 };
 export const MandatoryWithError: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -205,6 +217,7 @@ export const MandatoryWithError: Story = {
 };
 export const MandatoryWithMultiErros: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -218,6 +231,7 @@ export const MandatoryWithMultiErros: Story = {
 };
 export const MandatoryWithDescription: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -226,6 +240,7 @@ export const MandatoryWithDescription: Story = {
 };
 export const MandatoryWithDescriptionisable: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -235,6 +250,7 @@ export const MandatoryWithDescriptionisable: Story = {
 };
 export const MandatoryWithDescriptionWarnings: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -244,6 +260,7 @@ export const MandatoryWithDescriptionWarnings: Story = {
 };
 export const MandatoryWithDescriptionErros: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,
@@ -253,6 +270,7 @@ export const MandatoryWithDescriptionErros: Story = {
 };
 export const MandatoryWithDescriptionMultiErros: Story = {
   args: {
+    name: "Label",
     label: "Label",
     value: 0,
     required: true,

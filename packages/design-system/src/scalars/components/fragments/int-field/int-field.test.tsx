@@ -5,12 +5,14 @@ import userEvent from "@testing-library/user-event";
 describe("IntField Component", () => {
   const mockOnChange = vi.fn();
   it("should match snapshot", () => {
-    const { container } = render(<IntField label="Test Label" />);
+    const { container } = render(<IntField label="Test Label" name="Label" />);
     expect(container).toMatchSnapshot();
   });
 
   it("should renders label when label its provided", () => {
-    render(<IntField label="Test Label" onChange={mockOnChange} />);
+    render(
+      <IntField label="Test Label" onChange={mockOnChange} name="Label" />,
+    );
     expect(screen.getByLabelText("Test Label")).toBeInTheDocument();
   });
 
@@ -20,6 +22,7 @@ describe("IntField Component", () => {
         label="Test Label"
         description="This is a description"
         onChange={mockOnChange}
+        name="Label"
       />,
     );
     expect(screen.getByText("This is a description")).toBeInTheDocument();
@@ -31,6 +34,7 @@ describe("IntField Component", () => {
         label="Test Label"
         onChange={mockOnChange}
         errors={["Error 1", "Error 2"]}
+        name="Label"
       />,
     );
     expect(screen.getByText("Error 1")).toBeInTheDocument();
@@ -43,6 +47,7 @@ describe("IntField Component", () => {
         label="Test Label"
         onChange={mockOnChange}
         warnings={["Warning 1", "Warning 2"]}
+        name="Label"
       />,
     );
     expect(screen.getByText("Warning 1")).toBeInTheDocument();
@@ -51,28 +56,47 @@ describe("IntField Component", () => {
 
   it("should calls onChange when the input value changes", async () => {
     const user = userEvent.setup();
-    render(<IntField label="Test Label" />);
+    render(<IntField label="Test Label" name="Label" />);
     const input = screen.getByLabelText("Test Label");
 
     await user.type(input, "10");
-    expect(input).toHaveValue("10");
+    expect(input).toHaveValue(10);
   });
 
   it("should disables the input when disabled prop is true", () => {
-    render(<IntField label="Test Label" onChange={mockOnChange} disabled />);
+    render(
+      <IntField
+        label="Test Label"
+        onChange={mockOnChange}
+        disabled
+        name="Label"
+      />,
+    );
     const input = screen.getByRole("spinbutton");
 
     expect(input).toBeDisabled();
   });
 
   it("should shows the input as required when required prop is true", () => {
-    render(<IntField label="Test Label" onChange={mockOnChange} required />);
+    render(
+      <IntField
+        label="Test Label"
+        onChange={mockOnChange}
+        required
+        name="Label"
+      />,
+    );
     expect(screen.getByRole("spinbutton")).toHaveAttribute("required");
   });
 
   it("should handles autoComplete set to true", () => {
     render(
-      <IntField label="Test Label" onChange={mockOnChange} autoComplete />,
+      <IntField
+        label="Test Label"
+        onChange={mockOnChange}
+        autoComplete
+        name="Label"
+      />,
     );
     expect(screen.getByRole("spinbutton")).toHaveAttribute(
       "autocomplete",
@@ -86,6 +110,7 @@ describe("IntField Component", () => {
         label="Test Label"
         onChange={mockOnChange}
         autoComplete={false}
+        name="Label"
       />,
     );
     expect(screen.getByLabelText("Test Label")).toHaveAttribute(
@@ -102,6 +127,7 @@ describe("IntField Component", () => {
         // eslint-disable-next-line tailwindcss/no-custom-classname
         className="custom-class"
         onChange={mockOnChange}
+        name="Label"
       />,
     );
     expect(screen.getByLabelText("Test Label")).toHaveClass("custom-class");
@@ -109,10 +135,15 @@ describe("IntField Component", () => {
 
   it("should supports a defaultValue prop", () => {
     render(
-      <IntField label="Test Label" defaultValue={5} onChange={mockOnChange} />,
+      <IntField
+        label="Test Label"
+        defaultValue={5}
+        onChange={mockOnChange}
+        name="Label"
+      />,
     );
     const input = screen.getByRole("spinbutton");
 
-    expect(input).toHaveValue("5");
+    expect(input).toHaveValue(5);
   });
 });
