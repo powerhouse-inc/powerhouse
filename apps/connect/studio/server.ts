@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createLogger, createServer, InlineConfig, Plugin } from 'vite';
 import { viteEnvs } from 'vite-envs';
+import { backupIndexHtml, removeBase64EnvValues } from './helpers';
 import { getStudioConfig, viteConnectDevStudioPlugin } from './vite-plugin';
 
 const studioDirname = fileURLToPath(new URL('.', import.meta.url));
@@ -37,6 +38,7 @@ function runShellScriptPlugin(scriptPath: string): Plugin {
                         console.error(
                             `Error executing the script: ${error.message}`,
                         );
+                        removeBase64EnvValues();
                         return;
                     }
                     if (stderr) {
@@ -49,6 +51,7 @@ function runShellScriptPlugin(scriptPath: string): Plugin {
 }
 
 export async function startServer() {
+    backupIndexHtml(true);
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
     const studioConfig = getStudioConfig();
 
