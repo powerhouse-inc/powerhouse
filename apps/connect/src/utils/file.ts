@@ -39,7 +39,8 @@ export async function exportFile(
     }
     try {
         const fileHandle = await window.showSaveFilePicker({
-            suggestedName: `${document.name || 'Untitled'}.${
+            // @ts-expect-error - Document model should know that name can be defined in global state
+            suggestedName: `${document.name || document.state?.global?.name || 'Untitled'}.${
                 extension ? `${extension}.` : ''
             }zip`,
         });
