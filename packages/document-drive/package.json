@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "license": "AGPL-3.0-only",
   "type": "module",
   "module": "./src/index.ts",
@@ -64,7 +64,7 @@
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",
     "document-model": "^2.4.1",
-    "document-model-libs": "^1.105.0",
+    "document-model-libs": "^1.106.0",
     "fake-indexeddb": "^5.0.2",
     "localforage": "^1.10.0",
     "msw": "^2.3.1",
