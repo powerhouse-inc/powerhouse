@@ -8,9 +8,15 @@ unless_exists: true
  */
 
 import { generateMock } from '@powerhousedao/codegen';
+import { utils as documentModelUtils } from 'document-model/document';
 
 import utils from '../../gen/utils';
-import { z } from '../../gen/schema';
+import {
+    z,
+<% actions.forEach(action => { _%>
+    <%= h.changeCase.pascal(action.name) %>Input,
+<% }); _%> 
+} from '../../gen/schema';
 import { reducer } from '../../gen/reducer';
 import * as creators from '../../gen/<%= module %>/creators';
 import { <%= h.changeCase.pascal(documentType) %>Document } from '../../gen/types';
@@ -24,7 +30,13 @@ describe('<%= h.changeCase.pascal(module) %> Operations', () => {
 
 <% actions.forEach(action => { _%>
     it('should handle <%= h.changeCase.camel(action.name) %> operation', () => {
-        const input = generateMock(z.<%= h.changeCase.pascal(action.name) %>InputSchema());
+        // generate a random id
+        // const id = documentModelUtils.hashKey();
+
+        const input: <%= h.changeCase.pascal(action.name) %>Input = generateMock(
+            z.<%= h.changeCase.pascal(action.name) %>InputSchema(),
+        );
+
         const updatedDocument = reducer(
             document,
             creators.<%= h.changeCase.camel(action.name) %>(input),
