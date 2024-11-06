@@ -39,7 +39,7 @@ export async function exportFile(
     }
     try {
         const fileHandle = await window.showSaveFilePicker({
-            suggestedName: `${document.name || 'Untitled'}.${
+            suggestedName: `${document.name || document.state?.global?.name || 'Untitled'}.${
                 extension ? `${extension}.` : ''
             }zip`,
         });

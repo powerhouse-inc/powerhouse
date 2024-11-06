@@ -47,7 +47,7 @@ export const validateDocument = (document: Document) => {
             ...documentModelUtils
                 .validateStateSchemaName(
                     specs.state[scope].schema,
-                    document.name,
+                    document.state.global.name,
                     !isGlobalScope ? scope : '',
                     !isGlobalScope,
                 )
