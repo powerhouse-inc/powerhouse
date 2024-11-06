@@ -1,3 +1,17 @@
+## 0.5.0 (2024-11-06)
+
+### 🚀 Features
+
+- **document-model-libs:** regenerate lockfile ([0effee2e](https://github.com/powerhouse-inc/powerhouse/commit/0effee2e))
+- qa updates 4 ([50ac4eb5](https://github.com/powerhouse-inc/powerhouse/commit/50ac4eb5))
+- **document-model-libs:** add more inputs ([37db4561](https://github.com/powerhouse-inc/powerhouse/commit/37db4561))
+- **document-model-libs:** regenerate lockfile ([cf76e91d](https://github.com/powerhouse-inc/powerhouse/commit/cf76e91d))
+- **document-model-libs:** address initial QA feedback ([7513155e](https://github.com/powerhouse-inc/powerhouse/commit/7513155e))
+
+### ❤️  Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 0.4.1 (2024-11-01)
 
 ### 🚀 Features

@@ -1,3 +1,14 @@
+## 2.6.0 (2024-11-06)
+
+### 🚀 Features
+
+- **document-model-libs:** regenerate lockfile ([0effee2e](https://github.com/powerhouse-inc/powerhouse/commit/0effee2e))
+- qa updates 4 ([50ac4eb5](https://github.com/powerhouse-inc/powerhouse/commit/50ac4eb5))
+
+### ❤️  Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 2.5.0 (2024-11-06)
 
 ### 🚀 Features
