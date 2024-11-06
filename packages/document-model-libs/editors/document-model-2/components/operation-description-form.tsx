@@ -41,10 +41,10 @@ export function OperationDescriptionForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (

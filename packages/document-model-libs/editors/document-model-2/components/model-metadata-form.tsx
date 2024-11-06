@@ -4,15 +4,8 @@ import { z } from "zod";
 import { Form, FormField, FormItem, FormControl, FormMessage } from "./form";
 import { useCallback } from "react";
 import { DocumentActionHandlers } from "../types";
-import { makeInitialSchemaDoc } from "../utils";
-import { GraphQLSchema, isObjectType, print } from "graphql";
-import { pascalCase } from "change-case";
-import {
-  renameType,
-  mapSchema,
-  MapperKind,
-  astFromObjectType,
-} from "@graphql-tools/utils";
+import { makeInitialSchemaDoc, renameSchemaType } from "../utils";
+import { GraphQLSchema } from "graphql";
 import { Textarea } from "./text-area";
 
 export const MetadataFormSchema = z.object({
@@ -29,7 +22,7 @@ export type MetadataFormValues = z.infer<typeof MetadataFormSchema>;
 type Props = MetadataFormValues & {
   handlers: DocumentActionHandlers;
   globalStateSchema: string;
-  globalStateInitialValue: string;
+  localStateSchema: string;
   schema: GraphQLSchema;
 };
 
@@ -51,8 +44,7 @@ export function ModelMetadata(props: Props) {
 }
 
 export function ModelNameForm(props: Props) {
-  const { name, handlers, globalStateSchema, globalStateInitialValue, schema } =
-    props;
+  const { name, handlers, globalStateSchema, localStateSchema, schema } = props;
   const nameFormSchema = MetadataFormSchema.pick({ name: true });
   type NameFormSchema = z.infer<typeof nameFormSchema>;
 
@@ -65,88 +57,49 @@ export function ModelNameForm(props: Props) {
 
   const { control, handleSubmit } = form;
 
-  function onSubmit({ name: newName }: NameFormSchema) {
-    handlers.setModelName(newName);
-    if (newName) {
-      if (!globalStateSchema) {
-        const initialSchemaDoc = makeInitialSchemaDoc(
-          globalStateSchema,
-          newName,
-          "global",
-        );
-        handlers.setStateSchema(initialSchemaDoc, "global");
+  const onSubmit = useCallback(
+    ({ name: newName }: NameFormSchema) => {
+      if (name === newName) {
+        return;
+      }
+      handlers.setModelName(newName);
 
-        if (!globalStateInitialValue) {
-          const initialStateDoc = "{}";
-          handlers.setInitialState(initialStateDoc, "global");
-        }
-      } else {
-        const oldGlobalStateType = schema.getType(`${pascalCase(name)}State`);
-        if (!oldGlobalStateType) {
-          throw new Error("Expected global state type");
-        }
-        const newGlobalStateType = renameType(
-          oldGlobalStateType,
-          `${pascalCase(newName)}State`,
-        );
-        const schemaWithNewType = mapSchema(schema, {
-          [MapperKind.TYPE]: (type) => {
-            if (type.name === oldGlobalStateType.name) {
-              return newGlobalStateType;
-            }
-            return type;
-          },
-        });
-        if (!isObjectType(newGlobalStateType)) {
-          throw new Error("Expected object type");
-        }
-        handlers.setStateSchema(
-          print(astFromObjectType(newGlobalStateType, schemaWithNewType)),
-          "global",
-        );
-        const oldLocalStateType = schema.getType(
-          `${pascalCase(name)}LocalState`,
-        );
-        if (!oldLocalStateType) {
-          return;
-        }
-        const newLocalStateType = renameType(
-          oldLocalStateType,
-          `${pascalCase(newName)}LocalState`,
-        );
-        const schemaWithNewLocalStateType = mapSchema(schema, {
-          [MapperKind.TYPE]: (type) => {
-            if (type.name === oldLocalStateType.name) {
-              return newLocalStateType;
-            }
-            return type;
-          },
-        });
-        if (!isObjectType(newLocalStateType)) {
-          throw new Error("Expected object type");
-        }
-        handlers.setStateSchema(
-          print(
-            astFromObjectType(newLocalStateType, schemaWithNewLocalStateType),
-          ),
+      const hasExistingSchema = !!globalStateSchema;
+
+      if (!hasExistingSchema) {
+        const initialSchemaDoc = makeInitialSchemaDoc(newName, "global");
+        handlers.setStateSchema(initialSchemaDoc, "global");
+        return;
+      }
+
+      const newSchema = renameSchemaType(schema, name, newName, "global");
+      handlers.setStateSchema(newSchema, "global");
+
+      if (localStateSchema) {
+        const newLocalStateSchema = renameSchemaType(
+          schema,
+          name,
+          newName,
           "local",
         );
+        handlers.setStateSchema(newLocalStateSchema, "local");
       }
-    }
-  }
+    },
+    [name, globalStateSchema, handlers, form],
+  );
 
   const handleBlur = useCallback(() => {
     form.handleSubmit(onSubmit)();
-  }, [form]);
+  }, [form, onSubmit]);
 
   const onEnterKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -207,10 +160,10 @@ export function DocumentTypeForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -270,10 +223,10 @@ export function ModelExtensionForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -333,10 +286,10 @@ export function DescriptionForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -395,10 +348,10 @@ export function AuthorNameForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (
@@ -459,10 +412,10 @@ export function AuthorWebsiteForm(props: Props) {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        form.handleSubmit(onSubmit)();
+        (e.target as HTMLTextAreaElement).blur();
       }
     },
-    [form],
+    [],
   );
 
   return (

@@ -36,6 +36,7 @@ export function OperationErrorForm(props: Props) {
       handlers.setOperationErrorName(operation.id, error.id, name);
     } else {
       handlers.addOperationError(operation.id, name);
+      form.reset({ name: "" });
     }
   }
 
@@ -59,7 +60,7 @@ export function OperationErrorForm(props: Props) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      form.handleSubmit(onSubmit)();
+                      (e.target as HTMLInputElement).blur();
                     }
                   }}
                 />
@@ -70,6 +71,7 @@ export function OperationErrorForm(props: Props) {
         />
         {!!error && (
           <button
+            tabIndex={-1}
             type="button"
             onClick={() => handlers.deleteOperationError(error.id)}
           >

@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "./form";
 import { Input } from "./input";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Icon } from "@powerhousedao/design-system";
 
 const OperationFormSchema = z.object({
@@ -16,10 +16,20 @@ type Props = {
   handlers: DocumentActionHandlers;
   module: Module;
   operation?: Operation;
+  autoFocus?: boolean;
 };
 export function OperationForm(props: Props) {
-  const { operation, module, handlers } = props;
+  const { operation, module, handlers, autoFocus } = props;
   const isEdit = !!operation;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
+    }
+  }, [autoFocus]);
 
   const form = useForm<z.infer<typeof OperationFormSchema>>({
     resolver: zodResolver(OperationFormSchema),
@@ -38,8 +48,8 @@ export function OperationForm(props: Props) {
       }
     } else {
       handlers.addOperationAndInitialSchema(module.id, name);
+      form.reset({ name: "" });
     }
-    form.reset({ name });
   }
 
   const handleBlur = useCallback(() => {
@@ -57,13 +67,19 @@ export function OperationForm(props: Props) {
             <FormItem>
               <FormControl>
                 <Input
-                  placeholder="Add operation"
                   {...field}
+                  ref={(e) => {
+                    if (e) {
+                      field.ref(e);
+                      inputRef.current = e;
+                    }
+                  }}
+                  placeholder="Add operation"
                   onBlur={handleBlur}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      form.handleSubmit(onSubmit)();
+                      (e.target as HTMLInputElement).blur();
                     }
                   }}
                 />
@@ -74,6 +90,7 @@ export function OperationForm(props: Props) {
         />
         {!!operation && (
           <button
+            tabIndex={-1}
             type="button"
             onClick={() => handlers.deleteOperation(operation.id)}
           >

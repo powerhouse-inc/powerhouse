@@ -706,6 +706,9 @@ importers:
       '@storybook/test':
         specifier: ^8.0.2
         version: 8.4.1(storybook@8.4.1)
+      '@types/lodash':
+        specifier: ^4.17.13
+        version: 4.17.13
       copy-anything:
         specifier: ^3.0.5
         version: 3.0.5
@@ -718,9 +721,9 @@ importers:
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
-      lodash.debounce:
-        specifier: ^4.0.8
-        version: 4.0.8
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
       mathjs:
         specifier: ^13.0.0
         version: 13.2.0
@@ -11052,7 +11055,6 @@ packages:
 
   /@types/lodash@4.17.13:
     resolution: {integrity: sha512-lfx+dftrEZcdBPczf9d0Qv0x+j/rfNCMuC6OcfXmO8gkfeNAY88PgKUbvG56whcN23gc27yenwF6oJZXGFpYxg==}
-    dev: true
 
   /@types/long@4.0.2:
     resolution: {integrity: sha512-MqTGEo5bj5t157U6fA/BiDynNkn0YknVdh48CMPkTSpFTVmvao5UQmm7uEF6xBEo7qIMAlY/JSleYaE6VOdpaA==}
@@ -17627,7 +17629,7 @@ packages:
       graphql: ^16.8.1
     dependencies:
       graphql: 16.9.0
-      lodash: 4.17.11
+      lodash: 4.17.21
       resolve-from: 4.0.0
     dev: true
 

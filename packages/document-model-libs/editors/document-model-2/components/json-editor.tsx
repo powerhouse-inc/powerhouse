@@ -1,4 +1,4 @@
-import { Annotation, EditorState } from "@codemirror/state";
+import { EditorState, Transaction } from "@codemirror/state";
 import { EditorView, ViewUpdate } from "@codemirror/view";
 import { useEffect, useRef } from "react";
 import { basicSetup } from "codemirror";
@@ -7,8 +7,6 @@ import { linter } from "@codemirror/lint";
 import { GraphQLSchema } from "graphql";
 import { ayuLight } from "thememirror";
 
-const jsonLinter = jsonParseLinter();
-const skipUpdateAnnotation = Annotation.define<boolean>();
 type Props = {
   schema: GraphQLSchema;
   doc: string;
@@ -20,77 +18,77 @@ export function JSONEditor(props: Props) {
   const { doc, readonly, updateDoc } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const stateRef = useRef<EditorState | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    stateRef.current = EditorState.create({
-      doc: doc || "{}",
+    if (!editorRef.current) return;
+
+    const state = EditorState.create({
+      doc,
       extensions: [
         basicSetup,
         ayuLight,
         json(),
-        linter(jsonLinter),
+        linter(jsonParseLinter()),
         EditorView.lineWrapping,
         EditorView.theme({
-          "&": {
-            fontSize: "18px",
-          },
+          "&": { fontSize: "18px" },
         }),
         EditorView.updateListener.of((update: ViewUpdate) => {
-          if (readonly) return;
+          if (readonly || !update.docChanged) return;
+
           if (
-            update.transactions.some((tr) =>
-              tr.annotation(skipUpdateAnnotation),
+            update.transactions.some(
+              (tr) => tr.annotation(Transaction.userEvent) === "external",
             )
-          ) {
+          )
             return;
-          }
-          if (update.docChanged) {
-            const newDoc = update.state.doc.toString();
-            const isValid = jsonLinter(update.view).length === 0;
-            if (!!newDoc && isValid && newDoc !== doc) {
-              // updateDoc(newDoc);
+
+          const newDoc = update.state.doc.toString();
+
+          try {
+            JSON.parse(newDoc);
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
             }
+            timeoutRef.current = setTimeout(() => {
+              updateDoc(newDoc);
+            }, 300);
+          } catch (e) {
+            /* do nothing */
           }
-        }),
-        EditorView.focusChangeEffect.of((state, focusing) => {
-          if (readonly || focusing) return null;
-          const newDoc = state.doc.toString();
-          if (!!newDoc && newDoc !== doc) {
-            updateDoc(newDoc);
-          }
-          return null;
         }),
         EditorState.readOnly.of(!!readonly),
       ],
     });
 
-    const view = new EditorView({
-      state: stateRef.current,
-      parent: editorRef.current!,
-    });
-
-    viewRef.current = view;
+    let view = viewRef.current;
+    if (!view) {
+      view = new EditorView({
+        state,
+        parent: editorRef.current,
+      });
+      viewRef.current = view;
+    } else {
+      view.setState(state);
+    }
 
     return () => {
-      view.destroy();
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-  }, []);
+  }, [readonly]);
 
   useEffect(() => {
-    if (!doc) return;
+    const view = viewRef.current;
+    if (!view) return;
 
-    const view = viewRef.current!;
-    const currentDoc = view.state.doc;
-    const currentDocString = currentDoc.toString();
-    if (currentDocString !== doc) {
+    const currentDoc = view.state.doc.toString();
+    if (currentDoc !== doc) {
       view.dispatch({
-        changes: {
-          from: 0,
-          to: currentDoc.length,
-          insert: doc,
-        },
-        annotations: skipUpdateAnnotation.of(true),
+        changes: { from: 0, to: currentDoc.length, insert: doc },
+        annotations: [Transaction.userEvent.of("external")],
       });
     }
   }, [doc]);
