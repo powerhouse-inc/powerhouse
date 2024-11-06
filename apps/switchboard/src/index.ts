@@ -15,6 +15,7 @@ import {
 } from "@powerhousedao/reactor-api";
 import * as searchListener from "@powerhousedao/general-document-indexer";
 import { getSchema as getAuthSchema } from "./subgraphs/auth/subgraph";
+import { getSchema as getAnalyticsSchema } from "./subgraphs/analytics/subgraph";
 import path from "path";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 
@@ -71,6 +72,11 @@ const main = async () => {
     await addSubgraph({
       name: "auth",
       getSchema: (driveServer) => getAuthSchema(driveServer),
+    });
+
+    await addSubgraph({
+      name: "analytics",
+      getSchema: (driveServer) => getAnalyticsSchema(driveServer),
     });
 
     // load switchboard-gui
