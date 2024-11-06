@@ -1,3 +1,10 @@
+# [1.0.0-dev.158](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.157...v1.0.0-dev.158) (2024-11-06)
+
+
+### Features
+
+* force usage of env variables when vite-envs.sh execution fails ([bc0c2f9](https://github.com/powerhouse-inc/document-model-electron/commit/bc0c2f943754a2646794073583b5bb306fadf572))
+
 # [1.0.0-dev.157](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.156...v1.0.0-dev.157) (2024-11-06)
 
 
