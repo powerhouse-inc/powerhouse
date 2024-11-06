@@ -1,3 +1,14 @@
+# [1.0.0-dev.160](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.159...v1.0.0-dev.160) (2024-11-06)
+
+
+### Features
+
+* add multiple checks for name ([7b4f356](https://github.com/powerhouse-inc/document-model-electron/commit/7b4f356ecd8dc20c609dc28c166a3dc0c75e9b0e))
+* bump document model libs ([6ac4852](https://github.com/powerhouse-inc/document-model-electron/commit/6ac48526e1be989e42761feb50ac31b49907a245))
+* **connect:** updated dependencies ([7dd6484](https://github.com/powerhouse-inc/document-model-electron/commit/7dd64842a7f9d01d4b1f0a37a4c439cabe136bd3))
+* update validator ([b91dc59](https://github.com/powerhouse-inc/document-model-electron/commit/b91dc59d13cbb0ac70a4711bc6359f07acb7b8bd))
+* use || for both checks ([f7e7ccd](https://github.com/powerhouse-inc/document-model-electron/commit/f7e7ccd05e4b163e6d518883fa38ac00837bdb8c))
+
 # [1.0.0-dev.159](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.158...v1.0.0-dev.159) (2024-11-06)
 
 
