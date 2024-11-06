@@ -44,7 +44,7 @@ export const TextareaField = React.forwardRef<
       lowercase = false,
       maxLength,
       minLength,
-      name: propName,
+      name,
       onChange,
       pattern,
       placeholder,
@@ -62,12 +62,10 @@ export const TextareaField = React.forwardRef<
     ref,
   ) => {
     const autoCompleteValue = autoComplete ? "on" : "off";
-    const spellCheckValue = spellCheck ? "true" : "false";
     const hasError = errors.length > 0;
 
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
-    const name = propName ?? `${prefix}-textarea`;
 
     const transformedValue = applyTransformers(value, {
       lowercase,
@@ -85,8 +83,9 @@ export const TextareaField = React.forwardRef<
     };
 
     useEffect(() => {
-      if (ref && "current" in ref && ref.current && autoExpand) {
-        adjustHeight(ref.current);
+      const textareaRef = ref && (ref as React.RefObject<HTMLTextAreaElement>);
+      if (textareaRef?.current && autoExpand) {
+        adjustHeight(textareaRef.current);
       }
     }, [value, autoExpand]);
 
@@ -197,7 +196,7 @@ export const TextareaField = React.forwardRef<
             placeholder={placeholder}
             ref={ref}
             rows={rows}
-            spellCheck={spellCheckValue}
+            spellCheck={spellCheck}
             value={transformedValue}
             {...props}
           />

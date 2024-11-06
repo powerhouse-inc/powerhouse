@@ -5,9 +5,25 @@ exports[`StringField > should match snapshot when multiline is true (textarea) 1
   <form
     novalidate=""
   >
-    <textarea
-      name="test"
-    />
+    <div
+      class="flex flex-col gap-2"
+    >
+      <div
+        class="relative"
+      >
+        <textarea
+          aria-invalid="false"
+          aria-label="Text area"
+          aria-required="false"
+          autocomplete="off"
+          class="flex w-full rounded-lg text-base leading-normal transition-all duration-200 font-normal font-sans text-gray-900 bg-white dark:text-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 placeholder:text-gray-500 dark:placeholder:text-gray-600 px-4 py-3 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-100 focus:ring-offset-0 dark:focus:border-gray-400 dark:focus:ring-gray-900/30 hover:border-gray-300 dark:hover:border-gray-700 focus:hover:border-gray-900 focus:hover:ring-gray-200 dark:focus:hover:border-gray-400 dark:focus:hover:ring-gray-900/40 active:border-gray-400 dark:active:border-gray-600 disabled:cursor-not-allowed disabled:border-gray-100 disabled:bg-gray-50 disabled:text-gray-400 dark:disabled:border-gray-800 dark:disabled:bg-gray-900/50 dark:disabled:text-gray-600 min-h-[120px] resize-y scrollbar scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent dark:scrollbar-thumb-gray-600"
+          id=":r0:-textarea"
+          name="test"
+          rows="3"
+          spellcheck="false"
+        />
+      </div>
+    </div>
   </form>
 </div>
 `;

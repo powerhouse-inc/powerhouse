@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { action } from "@storybook/addon-actions";
 import { TextareaField } from "./textarea-field";
 
 const meta = {
@@ -266,14 +265,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Basic Examples
-export const Default: Story = {
-  args: {
-    placeholder: "Enter your text here...",
-  },
-};
-
 export const WithLabel: Story = {
   args: {
+    name: "textarea",
     label: "Message",
     placeholder: "Enter your message",
   },
@@ -281,6 +275,7 @@ export const WithLabel: Story = {
 
 export const WithLabelAndDescription: Story = {
   args: {
+    name: "textarea",
     label: "Bio",
     description: "Tell us about yourself in a few sentences",
     placeholder: "I am...",
@@ -290,6 +285,7 @@ export const WithLabelAndDescription: Story = {
 // Validation States
 export const Required: Story = {
   args: {
+    name: "textarea",
     label: "Comments",
     required: true,
     placeholder: "This field is required",
@@ -298,6 +294,7 @@ export const Required: Story = {
 
 export const WithSingleWarning: Story = {
   args: {
+    name: "textarea",
     label: "Feedback",
     value: "OK",
     warnings: ["Your feedback seems quite short"],
@@ -306,8 +303,9 @@ export const WithSingleWarning: Story = {
 
 export const WithMultipleWarnings: Story = {
   args: {
+    name: "textarea",
     label: "Feedback",
-    value: "test",
+    value: "warnings",
     warnings: [
       "Consider providing more detailed feedback",
       "Your response may be too brief for proper evaluation",
@@ -317,8 +315,9 @@ export const WithMultipleWarnings: Story = {
 
 export const WithSingleError: Story = {
   args: {
+    name: "textarea",
     label: "Comments",
-    value: "ab",
+    value: "error",
     errors: ["Comments must be at least 10 characters long"],
     minLength: 10,
   },
@@ -326,8 +325,9 @@ export const WithSingleError: Story = {
 
 export const WithMultipleErrors: Story = {
   args: {
+    name: "textarea",
     label: "Comments",
-    value: "ab",
+    value: "errors",
     errors: [
       "Comments must be at least 10 characters long",
       "Comments must include a specific example",
@@ -338,8 +338,9 @@ export const WithMultipleErrors: Story = {
 
 export const WithWarningsAndErrors: Story = {
   args: {
+    name: "textarea",
     label: "Feedback",
-    value: "test",
+    value: "warnings and errors",
     warnings: [
       "Consider providing more detailed feedback",
       "Your response may be too brief",
@@ -354,6 +355,7 @@ export const WithWarningsAndErrors: Story = {
 // Length Constraints
 export const WithMinLength: Story = {
   args: {
+    name: "textarea",
     label: "Short answer",
     minLength: 20,
     placeholder: "Must be at least 20 characters",
@@ -363,26 +365,51 @@ export const WithMinLength: Story = {
 
 export const WithMaxLength: Story = {
   args: {
+    name: "textarea",
     label: "Brief response",
     maxLength: 50,
     placeholder: "Maximum 50 characters allowed",
     description: "Maximum length: 50 characters",
+    value: "", // Initial value
+  },
+  render: (args) => {
+    const [value, setValue] = useState(args.value || "");
+    return (
+      <TextareaField
+        {...args}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+    );
   },
 };
 
 export const WithMinAndMaxLength: Story = {
   args: {
+    name: "textarea",
     label: "Constrained response",
     minLength: 20,
     maxLength: 100,
     placeholder: "Between 20 and 100 characters",
     description: "Please provide between 20 and 100 characters",
+    value: "", // Initial value
+  },
+  render: (args) => {
+    const [value, setValue] = useState(args.value || "");
+    return (
+      <TextareaField
+        {...args}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+    );
   },
 };
 
 // Visual States
 export const Disabled: Story = {
   args: {
+    name: "textarea",
     label: "Disabled content",
     value: "This content cannot be edited",
     disabled: true,
@@ -391,6 +418,7 @@ export const Disabled: Story = {
 
 export const Focused: Story = {
   args: {
+    name: "textarea",
     label: "Focused textarea",
     placeholder: "This field is focused",
     autoFocus: true,
@@ -401,8 +429,19 @@ export const Focused: Story = {
 };
 
 // Special Features
+export const WithAutoComplete: Story = {
+  args: {
+    name: "textarea",
+    label: "Auto-complete enabled textarea",
+    autoComplete: true,
+    placeholder: "Browser auto-complete is enabled...",
+    description: "This field will show browser auto-complete suggestions",
+  },
+};
+
 export const WithSpellCheck: Story = {
   args: {
+    name: "textarea",
     label: "Spell-checked textarea",
     spellCheck: true,
     placeholder: "Spell checking is enabled...",
@@ -412,23 +451,16 @@ export const WithSpellCheck: Story = {
 
 export const WithCustomRows: Story = {
   args: {
+    name: "textarea",
     label: "Custom height textarea",
     rows: 10,
     placeholder: "This textarea shows 10 rows...",
   },
 };
 
-export const WithCharacterCounter: Story = {
-  args: {
-    label: "Limited text",
-    maxLength: 100,
-    value: "This text shows the character counter in action",
-    placeholder: "Start typing... (max 100 characters)",
-  },
-};
-
 export const AutoExpanding: Story = {
   args: {
+    name: "textarea",
     label: "Auto-expanding textarea",
     autoExpand: true,
     placeholder: "This will grow as you type...",
@@ -440,69 +472,81 @@ export const AutoExpanding: Story = {
 // Text Transformations
 export const WithTrimTransformation: Story = {
   args: {
+    name: "textarea",
     label: "Trimmed text",
     value: "  This text will have whitespace trimmed  ",
     trim: true,
     description: "Leading and trailing whitespace will be removed",
   },
+  render: (args) => {
+    const [value, setValue] = useState(args.value || "");
+    return (
+      <TextareaField
+        {...args}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+    );
+  },
 };
 
 export const WithUppercaseTransformation: Story = {
   args: {
+    name: "textarea",
     label: "Uppercase text",
     value: "This text will be uppercase",
     uppercase: true,
     description: "Text will be converted to uppercase",
   },
+  render: (args) => {
+    const [value, setValue] = useState(args.value || "");
+    return (
+      <TextareaField
+        {...args}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+    );
+  },
 };
 
-export const WithBothTransformations: Story = {
+export const WithLowercaseTransformation: Story = {
   args: {
+    name: "textarea",
+    label: "Lowercase text",
+    value: "THIS TEXT WILL BE LOWERCASE",
+    lowercase: true,
+    description: "Text will be converted to lowercase",
+  },
+  render: (args) => {
+    const [value, setValue] = useState(args.value || "");
+    return (
+      <TextareaField
+        {...args}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+    );
+  },
+};
+
+export const WithTrimAndUppercaseTransformations: Story = {
+  args: {
+    name: "textarea",
     label: "Transformed text",
     value: "  this will be trimmed and uppercase  ",
     trim: true,
     uppercase: true,
     description: "Text will be trimmed and converted to uppercase",
   },
-};
-
-// Controlled
-const ControlledTextarea = () => {
-  const [value, setValue] = useState("");
-  return (
-    <TextareaField
-      label="Controlled textarea"
-      value={value}
-      onChange={(e) => {
-        setValue(e.target.value);
-        action("onChange")(e);
-      }}
-      placeholder="Type something..."
-      description="This is a controlled component example"
-    />
-  );
-};
-
-export const Controlled: Story = {
-  render: () => <ControlledTextarea />,
-  parameters: {
-    docs: {
-      source: {
-        code: `
-const ControlledTextarea = () => {
-  const [value, setValue] = useState("");
-  return (
-    <TextareaField
-      label="Controlled textarea"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      placeholder="Type something..."
-      description="This is a controlled component example"
-    />
-  );
-};
-`,
-      },
-    },
+  render: (args) => {
+    const [value, setValue] = useState(args.value || "");
+    return (
+      <TextareaField
+        {...args}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+    );
   },
 };

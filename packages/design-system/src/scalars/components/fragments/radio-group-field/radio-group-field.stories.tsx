@@ -1,6 +1,4 @@
-import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { action } from "@storybook/addon-actions";
 import { RadioGroupField } from "./radio-group-field";
 
 const meta: Meta<typeof RadioGroupField> = {
@@ -191,54 +189,6 @@ export const WithOptionSelectedByDefault: Story = {
     defaultValue: "2",
     label: "Radio Group with option selected by default",
     radioOptions: defaultRadioOptions,
-  },
-};
-
-const ControlledRadioGroup = () => {
-  const [value, setValue] = useState("1");
-  const handleChange = (newValue: string) => {
-    setValue(newValue);
-    action("onChange")(newValue);
-  };
-
-  return (
-    <RadioGroupField
-      label="Controlled Radio Group"
-      onChange={handleChange}
-      radioOptions={defaultRadioOptions}
-      value={value}
-    />
-  );
-};
-
-export const Controlled: Story = {
-  render: () => <ControlledRadioGroup />,
-  parameters: {
-    docs: {
-      source: {
-        code: `
-const ControlledRadioGroup = () => {
-  const [value, setValue] = useState("1");
-  const handleChange = (newValue: string) => {
-    setValue(newValue);
-  };
-
-  return (
-    <RadioGroupField
-      label="Controlled Radio Group"
-      onChange={handleChange}
-      radioOptions={[
-        { label: "Option 1", value: "1" },
-        { label: "Option 2", value: "2" },
-        { label: "Option 3", value: "3" },
-      ]}
-      value={value}
-    />
-  );
-};
-        `,
-      },
-    },
   },
 };
 
