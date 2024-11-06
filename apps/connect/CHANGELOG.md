@@ -1,3 +1,11 @@
+# [1.0.0-dev.161](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.160...v1.0.0-dev.161) (2024-11-06)
+
+
+### Features
+
+* checks node version when running studio ([10ebfa9](https://github.com/powerhouse-inc/document-model-electron/commit/10ebfa90b8f2baaff04ee6c653cb780f713560ea))
+* debounce studio refresh when multiple files change ([aa8401d](https://github.com/powerhouse-inc/document-model-electron/commit/aa8401dd3b9ad58b28a2c6c0501ce1aac6bf3039))
+
 # [1.0.0-dev.160](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.159...v1.0.0-dev.160) (2024-11-06)
 
 

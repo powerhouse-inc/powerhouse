@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.160",
+    "version": "1.0.0-dev.161",
     "description": "Powerhouse Connect",
     "main": "./index.js",
     "type": "module",
@@ -9,7 +9,7 @@
         "connect": "./dist/studio/cli.js"
     },
     "engines": {
-        "node" : ">=18.0.0"
+        "node": ">=18.0.0"
     },
     "files": [
         "dist"
