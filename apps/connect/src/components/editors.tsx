@@ -98,7 +98,9 @@ export function DocumentEditor(props: EditorProps) {
         editor === undefined ||
         (!!document &&
             editor &&
-            !editor.documentTypes.includes(document.documentType));
+            !editor.documentTypes.includes(document.documentType) &&
+            !editor.documentTypes.includes('*'));
+
     const canUndo =
         !!document &&
         (document.revision.global > 0 || document.revision.local > 0);
