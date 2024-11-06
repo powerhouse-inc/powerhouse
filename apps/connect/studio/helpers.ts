@@ -6,7 +6,6 @@ const studioDirname = fileURLToPath(new URL('.', import.meta.url));
 const appPath = join(studioDirname, '..');
 
 export function backupIndexHtml(restore = false) {
-    console.log('Creating backup of index.html -- restore:', restore);
     const filePath = join(appPath, 'index.html');
     const backupPath = join(appPath, 'index.html.bak');
 
@@ -19,7 +18,6 @@ export function backupIndexHtml(restore = false) {
 
 export function removeBase64EnvValues() {
     backupIndexHtml();
-    console.log('Removing Base64 values from index.html');
 
     const filePath = join(appPath, 'index.html');
 
@@ -47,7 +45,6 @@ export function removeBase64EnvValues() {
                 console.error('Error writing file:', err);
                 return;
             }
-            console.log('File updated successfully!');
         });
     });
 }

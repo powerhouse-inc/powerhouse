@@ -28,6 +28,20 @@ logger.warn = (msg, options) => {
     loggerWarn(msg, options);
 };
 
+function ensureNodeVersion(minVersion = '20') {
+    const version = process.versions.node;
+    if (!version) {
+        return;
+    }
+
+    if (version < minVersion) {
+        console.error(
+            `Node version ${minVersion} or higher is required. Current version: ${version}`,
+        );
+        process.exit(1);
+    }
+}
+
 function runShellScriptPlugin(scriptPath: string): Plugin {
     return {
         name: 'vite-plugin-run-shell-script',
@@ -51,7 +65,12 @@ function runShellScriptPlugin(scriptPath: string): Plugin {
 }
 
 export async function startServer() {
+    // exits if node version is not compatible
+    ensureNodeVersion();
+
+    // backups index html if running on windows
     backupIndexHtml(true);
+
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
     const studioConfig = getStudioConfig();
 
