@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "./form";
 import { Input } from "./input";
 import { useCallback } from "react";
+import { Icon } from "@powerhousedao/design-system";
 
 const ModuleFormSchema = z.object({
   name: z.string(),
@@ -47,7 +48,7 @@ export function ModuleForm(props: Props) {
 
   return (
     <Form {...form}>
-      <form>
+      <form className="grid grid-cols-[1fr,auto] gap-1">
         <FormField
           control={form.control}
           name="name"
@@ -71,6 +72,14 @@ export function ModuleForm(props: Props) {
             </FormItem>
           )}
         />
+        {!!module && (
+          <button
+            type="button"
+            onClick={() => handlers.deleteModule(module.id)}
+          >
+            <Icon name="Xmark" />
+          </button>
+        )}
       </form>
     </Form>
   );

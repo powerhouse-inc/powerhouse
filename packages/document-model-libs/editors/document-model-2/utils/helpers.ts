@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { pascalCase } from "change-case";
 import { Author } from "document-model/document-model";
 import {
@@ -210,6 +208,7 @@ function getMinimalValue(
       existingValue !== undefined &&
       isValidScalarValue(typeName, existingValue)
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return existingValue;
     }
     switch (typeName) {
@@ -228,10 +227,13 @@ function getMinimalValue(
   }
 
   if (isEnumType(nullableType)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const enumValues = nullableType.getValues().map((v) => v.value);
     if (existingValue !== undefined && enumValues.includes(existingValue)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return existingValue;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return enumValues[0] || null;
   }
 
@@ -249,9 +251,11 @@ function getMinimalValue(
     const _existingValue = existingValue as Record<string, any> | undefined;
     for (const fieldName in fields) {
       const field = fields[fieldName];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const existingFieldValue = _existingValue
         ? _existingValue[fieldName]
         : undefined;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       result[fieldName] = getMinimalValue(
         field.type,
         schema,
@@ -303,6 +307,15 @@ export function makeMinimalObjectFromSDL(
     throw new Error(`Type "${typeName}" is not a valid ObjectType.`);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const minimalObject = getMinimalValue(type, effectiveSchema, existingValue);
   return JSON.stringify(minimalObject, null, 2);
+}
+
+function removeWhitespace(str: string) {
+  return str.replace(/\s+|\\n|\\t/g, "").toLowerCase();
+}
+
+export function compareStringsWithoutWhitespace(str1: string, str2: string) {
+  return removeWhitespace(str1) === removeWhitespace(str2);
 }

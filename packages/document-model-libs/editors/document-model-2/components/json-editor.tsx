@@ -1,6 +1,5 @@
 import { Annotation, EditorState } from "@codemirror/state";
 import { EditorView, ViewUpdate } from "@codemirror/view";
-import { oneDark } from "@codemirror/theme-one-dark";
 import { useEffect, useRef } from "react";
 import { basicSetup } from "codemirror";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
@@ -50,7 +49,7 @@ export function JSONEditor(props: Props) {
             const newDoc = update.state.doc.toString();
             const isValid = jsonLinter(update.view).length === 0;
             if (!!newDoc && isValid && newDoc !== doc) {
-              updateDoc(newDoc);
+              // updateDoc(newDoc);
             }
           }
         }),
@@ -91,7 +90,7 @@ export function JSONEditor(props: Props) {
           to: currentDoc.length,
           insert: doc,
         },
-        annotations: skipUpdateAnnotation.of(true), // Add this line
+        annotations: skipUpdateAnnotation.of(true),
       });
     }
   }, [doc]);

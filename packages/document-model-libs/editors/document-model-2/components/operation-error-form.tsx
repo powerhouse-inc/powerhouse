@@ -1,6 +1,5 @@
-import { Module, Operation } from "document-model/document-model";
+import { Operation, OperationError } from "document-model/document-model";
 import { DocumentActionHandlers } from "../types";
-import { toConstantCase } from "../schemas";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,38 +7,36 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "./form";
 import { Input } from "./input";
 import { useCallback } from "react";
 import { Icon } from "@powerhousedao/design-system";
+import { pascalCase } from "change-case";
 
-const OperationFormSchema = z.object({
+const OperationErrorFormSchema = z.object({
   name: z.string(),
 });
 type Props = {
   handlers: DocumentActionHandlers;
-  module: Module;
-  operation?: Operation;
+  operation: Operation;
+  error?: OperationError;
 };
-export function OperationForm(props: Props) {
-  const { operation, module, handlers } = props;
-  const isEdit = !!operation;
+export function OperationErrorForm(props: Props) {
+  const { operation, error, handlers } = props;
+  const isEdit = !!error;
 
-  const form = useForm<z.infer<typeof OperationFormSchema>>({
-    resolver: zodResolver(OperationFormSchema),
+  const form = useForm<z.infer<typeof OperationErrorFormSchema>>({
+    resolver: zodResolver(OperationErrorFormSchema),
     defaultValues: {
-      name: operation?.name ?? "",
+      name: error?.name ?? "",
     },
   });
 
-  function onSubmit(values: z.infer<typeof OperationFormSchema>) {
-    const name = toConstantCase(values.name);
+  function onSubmit(values: z.infer<typeof OperationErrorFormSchema>) {
+    const name = pascalCase(values.name);
     if (!name.length) return;
 
     if (isEdit) {
-      if (name !== operation.name) {
-        handlers.updateOperationName(operation.id, name);
-      }
+      handlers.setOperationErrorName(operation.id, error.id, name);
     } else {
-      handlers.addOperationAndInitialSchema(module.id, name);
+      handlers.addOperationError(operation.id, name);
     }
-    form.reset({ name });
   }
 
   const handleBlur = useCallback(() => {
@@ -48,16 +45,15 @@ export function OperationForm(props: Props) {
 
   return (
     <Form {...form}>
-      <form className="grid h-fit grid-cols-[1fr,auto] gap-1">
+      <form className="grid grid-cols-[1fr,auto] gap-1">
         <FormField
           control={form.control}
           name="name"
-          rules={{ required: "Operation name is required" }}
           render={({ field }) => (
             <FormItem>
               <FormControl>
                 <Input
-                  placeholder="Add operation"
+                  placeholder="Add reducer exception"
                   {...field}
                   onBlur={handleBlur}
                   onKeyDown={(e) => {
@@ -72,10 +68,10 @@ export function OperationForm(props: Props) {
             </FormItem>
           )}
         />
-        {!!operation && (
+        {!!error && (
           <button
             type="button"
-            onClick={() => handlers.deleteOperation(operation.id)}
+            onClick={() => handlers.deleteOperationError(error.id)}
           >
             <Icon name="Xmark" />
           </button>
