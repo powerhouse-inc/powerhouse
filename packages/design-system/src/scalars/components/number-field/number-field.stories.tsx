@@ -67,7 +67,7 @@ const meta = {
     numericType: {
       control: "text",
       description:
-        "Allows the input field to check type  Int | Float | NegativeInt| PositiveInt | NonNegativeInt| NonPositiveInt | NegativeFloat | PositiveFloat | NonNegativeFloat | NonPositiveFloat",
+        "Specifies the numeric type of the input field. Possible values are: PositiveInt (Positive integers), NegativeInt (Negative integers), NonNegativeInt (Non-negative integers, greater than or equal to 0), NonPositiveInt (Non-positive integers, less than or equal to 0), NegativeFloat (Negative float values), PositiveFloat (Positive float values), NonNegativeFloat (Non-negative float values, greater than or equal to 0.0), NonPositiveFloat (Non-positive float values, less than or equal to 0.0).",
     },
     step: {
       control: "number",

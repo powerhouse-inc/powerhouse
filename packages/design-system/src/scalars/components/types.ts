@@ -43,16 +43,14 @@ export interface TextProps {
 }
 
 export type NumericType =
-  | "Int"
-  | "Float"
-  | "NegativeInt"
-  | "PositiveInt"
-  | "NonNegativeInt"
-  | "NonPositiveInt"
-  | "NegativeFloat"
-  | "PositiveFloat"
-  | "NonNegativeFloat"
-  | "NonPositiveFloat";
+  | "PositiveInt" // Positive integers
+  | "NegativeInt" // Negative integers
+  | "NonNegativeInt" // Non-negative integers (>= 0)
+  | "NonPositiveInt" // Non-positive integers (<= 0)
+  | "NegativeFloat" // Negative float values
+  | "PositiveFloat" // Positive float values
+  | "NonNegativeFloat" // Non-negative float values (>= 0.0)
+  | "NonPositiveFloat"; // Non-positive float values (<= 0.0)
 
 export interface NumberProps {
   numericType?: NumericType;
