@@ -1,62 +1,67 @@
-import { GraphqlEditor } from "./graphql-editor";
-import { OperationDescriptionForm } from "./operation-description-form";
-import { OperationErrors } from "./operation-errors";
 import { OperationForm } from "./operation-form";
 import { DocumentActionHandlers } from "../types";
-import { Module } from "document-model/document-model";
+import { Module, Operation as TOperation } from "document-model/document-model";
 import { GraphQLSchema } from "graphql";
-import { useId } from "react";
+import { useId, useState } from "react";
+import { Operation, WrappedHandlers } from "./operation";
+import { Divider } from "./divider";
 
 type Props = {
   schema: GraphQLSchema;
   module: Module;
+  allOperations: TOperation[];
   handlers: DocumentActionHandlers;
-  isNewModule?: boolean;
+  shouldFocusNewOperation: boolean;
 };
-export function Operations({ schema, module, handlers, isNewModule }: Props) {
+export function Operations({
+  schema,
+  module,
+  handlers,
+  allOperations,
+  shouldFocusNewOperation,
+}: Props) {
+  const [lastCreatedOperationId, setLastCreatedOperationId] = useState<
+    string | null
+  >(null);
   const addOperationFormId = useId();
+  const allOperationNames = allOperations.map((o) => o.name).filter(Boolean);
+
+  const wrappedHandlers: WrappedHandlers = {
+    ...handlers,
+    addOperationAndInitialSchema: async (moduleId: string, name: string) => {
+      const operationId = await handlers.addOperationAndInitialSchema(
+        moduleId,
+        name,
+      );
+      if (operationId) {
+        setLastCreatedOperationId(operationId);
+      }
+      return operationId;
+    },
+  };
+
   return (
     <div>
       {module.operations.map((operation) => (
         <div key={operation.id}>
-          <div className="my-4 h-1 bg-gray-900"></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <OperationForm
-                operation={operation}
-                handlers={handlers}
-                module={module}
-              />
-              <div className="pr-7">
-                <OperationDescriptionForm
-                  operation={operation}
-                  handlers={handlers}
-                />
-              </div>
-              <div>
-                <h3 className="mb-1 mt-2 text-sm font-semibold">
-                  Reducer Exceptions
-                </h3>
-                <OperationErrors operation={operation} handlers={handlers} />
-              </div>
-            </div>
-            <GraphqlEditor
-              schema={schema}
-              doc={operation.schema ?? ""}
-              updateDoc={(newDoc) =>
-                handlers.updateOperationSchema(operation.id, newDoc)
-              }
-            />
-          </div>
+          <Operation
+            operation={operation}
+            module={module}
+            wrappedHandlers={wrappedHandlers}
+            schema={schema}
+            lastCreatedOperationId={lastCreatedOperationId}
+            allOperationNames={allOperationNames}
+          />
+          <Divider size="sm" margin="lg" />
         </div>
       ))}
-      <div className="mb-4 mt-6 h-1 bg-gray-900"></div>
       <div className="w-1/2 pr-2">
         <OperationForm
           key={addOperationFormId}
-          handlers={handlers}
+          handlers={wrappedHandlers}
           module={module}
-          autoFocus={isNewModule}
+          allOperationNames={allOperationNames}
+          focusOnMount={shouldFocusNewOperation}
         />
       </div>
     </div>

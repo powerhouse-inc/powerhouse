@@ -5,7 +5,7 @@ import { Divider } from "./components/divider";
 import { Errors } from "./components/errors";
 import { StateSchemas } from "./components/state-schemas";
 import { DocumentActionHandlers } from "./types";
-import { Module } from "document-model/document-model";
+import { Module, Operation } from "document-model/document-model";
 
 type Props = {
   modelName: string;
@@ -16,6 +16,7 @@ type Props = {
   localStateInitialValue: string;
   handlers: DocumentActionHandlers;
   modules: Module[];
+  operations: Operation[];
   errors: string;
 };
 export function _DocumentModelEditor(props: Props) {
@@ -27,6 +28,7 @@ export function _DocumentModelEditor(props: Props) {
     localStateSchema,
     localStateInitialValue,
     modules,
+    operations,
     handlers,
     errors,
   } = props;
@@ -46,8 +48,13 @@ export function _DocumentModelEditor(props: Props) {
       />
       <Errors errors={errors} />
       <Divider />
-      <h3 className="text-lg">Global Operations</h3>
-      <Modules schema={schema} modules={modules} handlers={handlers} />
+      <h3 className="mb-6 text-lg">Global Operations</h3>
+      <Modules
+        schema={schema}
+        modules={modules}
+        allOperations={operations}
+        handlers={handlers}
+      />
     </div>
   );
 }

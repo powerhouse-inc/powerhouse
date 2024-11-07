@@ -126,14 +126,26 @@ ${modules
         );
       },
 
-      addModule: (name: string) => {
-        if (
-          modules.some((module) =>
-            compareStringsWithoutWhitespace(module.name, name),
-          )
-        )
-          return;
-        dispatch(actions.addModule({ id: utils.hashKey(), name }));
+      addModule: (name: string): Promise<string | undefined> => {
+        return new Promise((resolve) => {
+          try {
+            if (
+              modules.some((module) =>
+                compareStringsWithoutWhitespace(module.name, name),
+              )
+            ) {
+              resolve(undefined);
+              return;
+            }
+
+            const id = utils.hashKey();
+            dispatch(actions.addModule({ id, name }));
+            resolve(id);
+          } catch (error) {
+            console.error("Failed to add module:", error);
+            resolve(undefined);
+          }
+        });
       },
 
       updateModuleName: (id: string, name: string) => {
@@ -165,24 +177,29 @@ ${modules
         name: string,
       ): Promise<string | undefined> => {
         return new Promise((resolve) => {
-          const moduleOperationNames =
-            modules
-              .find((module) => module.id === moduleId)
-              ?.operations.map((operation) => operation.name)
-              .filter(Boolean) ?? [];
+          try {
+            const moduleOperationNames =
+              modules
+                .find((module) => module.id === moduleId)
+                ?.operations.map((operation) => operation.name)
+                .filter(Boolean) ?? [];
 
-          if (
-            moduleOperationNames.some((opName) =>
-              compareStringsWithoutWhitespace(opName, name),
-            )
-          ) {
+            if (
+              moduleOperationNames.some((opName) =>
+                compareStringsWithoutWhitespace(opName, name),
+              )
+            ) {
+              resolve(undefined);
+              return;
+            }
+
+            const id = utils.hashKey();
+            dispatch(actions.addOperation({ id, moduleId, name }));
+            resolve(id);
+          } catch (error) {
+            console.error("Failed to add operation:", error);
             resolve(undefined);
-            return;
           }
-
-          const id = utils.hashKey();
-          dispatch(actions.addOperation({ id, moduleId, name }));
-          resolve(id);
         });
       },
 
@@ -234,22 +251,36 @@ ${modules
       deleteOperation: (id: string) =>
         dispatch(actions.deleteOperation({ id })),
 
-      addOperationError: (operationId: string, errorName: string) => {
-        const operation = operations.find(
-          (operation) => operation.id === operationId,
-        );
-        const operationErrorNames =
-          operation?.errors.map((error) => error.name).filter(Boolean) ?? [];
+      addOperationError: (
+        operationId: string,
+        errorName: string,
+      ): Promise<string | undefined> => {
+        return new Promise((resolve) => {
+          try {
+            const operation = operations.find(
+              (operation) => operation.id === operationId,
+            );
+            const operationErrorNames =
+              operation?.errors.map((error) => error.name).filter(Boolean) ??
+              [];
 
-        if (
-          operationErrorNames.some((name) =>
-            compareStringsWithoutWhitespace(name, errorName),
-          )
-        )
-          return;
+            if (
+              operationErrorNames.some((name) =>
+                compareStringsWithoutWhitespace(name, errorName),
+              )
+            ) {
+              resolve(undefined);
+              return;
+            }
 
-        const id = utils.hashKey();
-        dispatch(actions.addOperationError({ id, operationId, errorName }));
+            const id = utils.hashKey();
+            dispatch(actions.addOperationError({ id, operationId, errorName }));
+            resolve(id);
+          } catch (error) {
+            console.error("Failed to add operation error:", error);
+            resolve(undefined);
+          }
+        });
       },
 
       deleteOperationError: (id: string) =>
@@ -275,10 +306,26 @@ ${modules
         dispatch(actions.setOperationErrorName({ id: errorId, errorName }));
       },
 
-      addOperationAndInitialSchema: async (moduleId: string, name: string) => {
-        const id = await handlers.addOperation(moduleId, name);
-        if (!id) return;
-        handlers.updateOperationSchema(id, makeOperationInitialDoc(name));
+      addOperationAndInitialSchema: async (
+        moduleId: string,
+        name: string,
+      ): Promise<string | undefined> => {
+        try {
+          const id = await handlers.addOperation(moduleId, name);
+          if (!id) return undefined;
+
+          try {
+            handlers.updateOperationSchema(id, makeOperationInitialDoc(name));
+            return id;
+          } catch (error) {
+            console.error("Failed to update operation schema:", error);
+            // Consider if you want to delete the operation if schema update fails
+            return undefined;
+          }
+        } catch (error) {
+          console.error("Failed to add operation and schema:", error);
+          return undefined;
+        }
       },
     }),
     [
@@ -322,6 +369,7 @@ ${modules
         localStateInitialValue={localStateInitialValue}
         handlers={handlers}
         modules={modules}
+        operations={operations}
       />
     </main>
   );

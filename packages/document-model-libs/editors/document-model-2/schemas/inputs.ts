@@ -1,7 +1,6 @@
 import { z } from "zod";
 import validator from "validator";
 import { snakeCase, constantCase } from "change-case";
-import { EmptyStringSchema } from "./utils";
 
 const whitespaceRegex = /\s+/g;
 
@@ -13,52 +12,77 @@ export function replaceSpaces(s: string) {
   return s.replace(whitespaceRegex, "_");
 }
 
-export const NoWhitespaceSchema = z
-  .string()
-  .min(1)
-  .refine((s) => !containsSpaces(s), {
-    message: "Cannot contain spaces",
-  });
+type SchemaOptions = {
+  required?: boolean;
+  allowEmpty?: boolean;
+  unique?: string[];
+};
 
-export const ConstantCaseSchema = z.string().refine(validator.isUppercase, {
-  message: "Must be uppercase",
-});
+export function createNameSchema(options: SchemaOptions = {}) {
+  const { required = false, allowEmpty = false, unique = [] } = options;
 
-export const LowercaseSnakeCaseSchema = z
-  .string()
-  .refine(validator.isLowercase, {
-    message: "Must be lowercase",
-  });
+  const baseSchema = allowEmpty ? z.string() : z.string().min(1);
 
-export function UniqueNameSchema(names: string[]) {
-  return z
-    .string()
-    .min(1)
-    .refine((value) => {
-      return !names
+  const uniqueRefinement = baseSchema.refine(
+    (value) => {
+      if (!value && allowEmpty) return true;
+      return !unique
         .map((n) => n.toLowerCase())
         .includes(value.replace(/^\s+|\s+$/g, "_").toLowerCase());
-    }, "Name must be unique");
+    },
+    { message: "Item with this name already exists" },
+  );
+
+  if (!required) {
+    return unique.length > 0
+      ? z
+          .string()
+          .optional()
+          .refine(
+            (value) => {
+              if (value === undefined) return true;
+              if (!value && allowEmpty) return true;
+              return !unique
+                .map((n) => n.toLowerCase())
+                .includes(value.replace(/^\s+|\s+$/g, "_").toLowerCase());
+            },
+            { message: "Item with this name already exists" },
+          )
+      : z.string().optional();
+  }
+
+  return unique.length > 0 ? uniqueRefinement : baseSchema;
 }
 
-export const ToLowercaseSnakeCaseSchema = z
-  .string()
-  .toLowerCase()
-  .transform(replaceSpaces);
+export function createConstantCaseSchema(options: SchemaOptions = {}) {
+  return createNameSchema(options)
+    .transform((value) => (value ? value.toUpperCase() : value))
+    .refine((value) => !value || validator.isUppercase(value), {
+      message: "Must be uppercase",
+    });
+}
 
-export const ToConstantCaseSchema = z
-  .string()
-  .toUpperCase()
-  .transform(replaceSpaces);
+export function createLowercaseSnakeCaseSchema(options: SchemaOptions = {}) {
+  return createNameSchema(options)
+    .transform((value) => (value ? value.toLowerCase() : value))
+    .refine((value) => !value || validator.isLowercase(value), {
+      message: "Must be lowercase",
+    });
+}
 
-export function toLowercaseSnakeCase(value: string) {
-  return ToLowercaseSnakeCaseSchema.parse(
+export function toLowercaseSnakeCase(
+  value: string,
+  options: SchemaOptions = {},
+) {
+  return createLowercaseSnakeCaseSchema(options).parse(
     snakeCase(value),
   ) as LowercaseSnakeCase;
 }
 
-export function toConstantCase(value: string) {
-  return ToConstantCaseSchema.parse(constantCase(value)) as ConstantCase;
+export function toConstantCase(value: string, options: SchemaOptions = {}) {
+  return createConstantCaseSchema(options).parse(
+    constantCase(value),
+  ) as ConstantCase;
 }
 
 export type SnakeCase = `${string}_${string}`;
@@ -70,7 +94,7 @@ export type Prettify<T> = {
 
 export const AuthorSchema = z
   .object({
-    name: EmptyStringSchema,
+    name: createNameSchema({ allowEmpty: true }),
     website: z
       .union([z.string().url(), z.literal("")])
       .optional()

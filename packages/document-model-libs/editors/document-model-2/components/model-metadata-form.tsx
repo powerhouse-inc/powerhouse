@@ -1,12 +1,9 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Form, FormField, FormItem, FormControl, FormMessage } from "./form";
-import { useCallback } from "react";
 import { DocumentActionHandlers } from "../types";
-import { makeInitialSchemaDoc, renameSchemaType } from "../utils";
 import { GraphQLSchema } from "graphql";
-import { Textarea } from "./text-area";
+import { TextField } from "./text-field";
+import { useCallback } from "react";
+import { makeInitialSchemaDoc, renameSchemaType } from "../utils";
 
 export const MetadataFormSchema = z.object({
   name: z.string(),
@@ -45,20 +42,9 @@ export function ModelMetadata(props: Props) {
 
 export function ModelNameForm(props: Props) {
   const { name, handlers, globalStateSchema, localStateSchema, schema } = props;
-  const nameFormSchema = MetadataFormSchema.pick({ name: true });
-  type NameFormSchema = z.infer<typeof nameFormSchema>;
-
-  const form = useForm<NameFormSchema>({
-    resolver: zodResolver(nameFormSchema),
-    defaultValues: {
-      name,
-    },
-  });
-
-  const { control, handleSubmit } = form;
 
   const onSubmit = useCallback(
-    ({ name: newName }: NameFormSchema) => {
+    (newName: string) => {
       if (name === newName) {
         return;
       }
@@ -71,13 +57,17 @@ export function ModelNameForm(props: Props) {
         handlers.setStateSchema(initialSchemaDoc, "global");
         return;
       }
-
-      const newSchema = renameSchemaType(schema, name, newName, "global");
+      const newSchema = renameSchemaType(
+        globalStateSchema,
+        name,
+        newName,
+        "global",
+      );
       handlers.setStateSchema(newSchema, "global");
 
       if (localStateSchema) {
         const newLocalStateSchema = renameSchemaType(
-          schema,
+          localStateSchema,
           name,
           newName,
           "local",
@@ -85,362 +75,96 @@ export function ModelNameForm(props: Props) {
         handlers.setStateSchema(newLocalStateSchema, "local");
       }
     },
-    [name, globalStateSchema, handlers, form],
-  );
-
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form, onSubmit]);
-
-  const onEnterKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        (e.target as HTMLTextAreaElement).blur();
-      }
-    },
-    [],
+    [name, globalStateSchema, localStateSchema, handlers, schema],
   );
 
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormField
-          control={control}
-          name="name"
-          rules={{ required: "Model name is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Textarea
-                  placeholder="Model name"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={onEnterKeyDown}
-                  rows={1}
-                  className="mb-2 text-lg"
-                  autoFocus
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
-    </Form>
+    <TextField
+      name="name"
+      value={name}
+      onSubmit={onSubmit}
+      placeholder="Model name"
+      className="mb-2 text-lg"
+      required
+      focusOnMount
+    />
   );
 }
 
 export function DocumentTypeForm(props: Props) {
   const { documentType, handlers } = props;
 
-  const documentTypeFormSchema = MetadataFormSchema.pick({
-    documentType: true,
-  });
-  type DocumentTypeFormSchema = z.infer<typeof documentTypeFormSchema>;
-
-  const form = useForm<DocumentTypeFormSchema>({
-    resolver: zodResolver(documentTypeFormSchema),
-    defaultValues: {
-      documentType,
-    },
-  });
-
-  const { control, handleSubmit } = form;
-
-  function onSubmit({ documentType: newDocumentType }: DocumentTypeFormSchema) {
-    handlers.setModelId(newDocumentType);
-  }
-
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form]);
-
-  const onEnterKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        (e.target as HTMLTextAreaElement).blur();
-      }
-    },
-    [],
-  );
-
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormField
-          control={control}
-          name="documentType"
-          rules={{ required: "Document type is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Textarea
-                  placeholder="Document Type"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={onEnterKeyDown}
-                  rows={1}
-                  className="mb-2 w-1/2"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
-    </Form>
+    <TextField
+      name="documentType"
+      value={documentType}
+      onSubmit={handlers.setModelId}
+      placeholder="Document Type"
+      className="mb-2 w-1/2"
+      required
+    />
   );
 }
 
 export function ModelExtensionForm(props: Props) {
   const { extension, handlers } = props;
 
-  const extensionFormSchema = MetadataFormSchema.pick({
-    extension: true,
-  });
-  type ExtensionFormSchema = z.infer<typeof extensionFormSchema>;
-
-  const form = useForm<ExtensionFormSchema>({
-    resolver: zodResolver(extensionFormSchema),
-    defaultValues: {
-      extension,
-    },
-  });
-
-  const { control, handleSubmit } = form;
-
-  function onSubmit({ extension: newExtension }: ExtensionFormSchema) {
-    handlers.setModelExtension(newExtension);
-  }
-
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form]);
-
-  const onEnterKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        (e.target as HTMLTextAreaElement).blur();
-      }
-    },
-    [],
-  );
-
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormField
-          control={control}
-          name="extension"
-          rules={{ required: "Model extension is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Textarea
-                  placeholder="Model Extension"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={onEnterKeyDown}
-                  rows={1}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
-    </Form>
+    <TextField
+      name="extension"
+      value={extension}
+      onSubmit={handlers.setModelExtension}
+      placeholder="Model Extension"
+      className="mb-2"
+      required
+    />
   );
 }
 
 export function DescriptionForm(props: Props) {
   const { description, handlers } = props;
 
-  const descriptionFormSchema = MetadataFormSchema.pick({
-    description: true,
-  });
-
-  type DescriptionFormSchema = z.infer<typeof descriptionFormSchema>;
-
-  const form = useForm<DescriptionFormSchema>({
-    resolver: zodResolver(descriptionFormSchema),
-    defaultValues: {
-      description,
-    },
-  });
-
-  const { control, handleSubmit } = form;
-
-  function onSubmit({ description: newDescription }: DescriptionFormSchema) {
-    handlers.setModelDescription(newDescription);
-  }
-
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form]);
-
-  const onEnterKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        (e.target as HTMLTextAreaElement).blur();
-      }
-    },
-    [],
-  );
-
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormField
-          control={control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Textarea
-                  placeholder="Model Description"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={onEnterKeyDown}
-                  rows={2}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
-    </Form>
+    <TextField
+      name="description"
+      value={description}
+      onSubmit={handlers.setModelDescription}
+      placeholder="Model Description"
+      className="mb-2"
+      allowEmpty
+    />
   );
 }
 
 export function AuthorNameForm(props: Props) {
   const { authorName, handlers } = props;
 
-  const authorFormSchema = MetadataFormSchema.pick({
-    authorName: true,
-  });
-
-  type AuthorFormSchema = z.infer<typeof authorFormSchema>;
-
-  const form = useForm<AuthorFormSchema>({
-    resolver: zodResolver(authorFormSchema),
-    defaultValues: {
-      authorName,
-    },
-  });
-
-  const { control, handleSubmit } = form;
-
-  function onSubmit({ authorName: newAuthorName }: AuthorFormSchema) {
-    handlers.setAuthorName(newAuthorName);
-  }
-
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form]);
-
-  const onEnterKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        (e.target as HTMLTextAreaElement).blur();
-      }
-    },
-    [],
-  );
-
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormField
-          control={control}
-          name="authorName"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Textarea
-                  placeholder="Author Name"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={onEnterKeyDown}
-                  rows={1}
-                  className="mb-2"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
-    </Form>
+    <TextField
+      name="authorName"
+      value={authorName}
+      onSubmit={handlers.setAuthorName}
+      placeholder="Author Name"
+      className="mb-2"
+      allowEmpty
+    />
   );
 }
 
 export function AuthorWebsiteForm(props: Props) {
   const { authorWebsite, handlers } = props;
 
-  const authorFormSchema = MetadataFormSchema.pick({
-    authorWebsite: true,
-  });
-
-  type AuthorFormSchema = z.infer<typeof authorFormSchema>;
-
-  const form = useForm<AuthorFormSchema>({
-    resolver: zodResolver(authorFormSchema),
-    defaultValues: {
-      authorWebsite: authorWebsite ?? "",
-    },
-  });
-
-  const { control, handleSubmit } = form;
-
-  function onSubmit({ authorWebsite: newAuthorWebsite }: AuthorFormSchema) {
-    if (!!authorWebsite && !newAuthorWebsite) return;
-    handlers.setAuthorWebsite(newAuthorWebsite);
-  }
-
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form]);
-
-  const onEnterKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        (e.target as HTMLTextAreaElement).blur();
-      }
-    },
-    [],
-  );
-
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormField
-          control={control}
-          name="authorWebsite"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Textarea
-                  placeholder="https://my-website.com"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={onEnterKeyDown}
-                  rows={1}
-                  className="mb-2"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
-    </Form>
+    <TextField
+      name="authorWebsite"
+      value={authorWebsite}
+      onSubmit={(newAuthorWebsite) => {
+        if (!!authorWebsite && !newAuthorWebsite) return;
+        handlers.setAuthorWebsite(newAuthorWebsite);
+      }}
+      placeholder="https://my-website.com"
+      className="mb-2"
+      allowEmpty
+    />
   );
 }

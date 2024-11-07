@@ -1,84 +1,65 @@
 import { Operation, OperationError } from "document-model/document-model";
 import { DocumentActionHandlers } from "../types";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "./form";
-import { Input } from "./input";
-import { useCallback } from "react";
 import { Icon } from "@powerhousedao/design-system";
+import { TextField } from "./text-field";
 import { pascalCase } from "change-case";
+import { useRef } from "react";
 
-const OperationErrorFormSchema = z.object({
-  name: z.string(),
-});
 type Props = {
   handlers: DocumentActionHandlers;
   operation: Operation;
   error?: OperationError;
+  focusOnMount?: boolean;
+  onSubmit?: () => void;
 };
-export function OperationErrorForm(props: Props) {
-  const { operation, error, handlers } = props;
+
+export function OperationErrorForm({
+  operation,
+  error,
+  handlers,
+  focusOnMount,
+  onSubmit,
+}: Props) {
+  const textFieldRef = useRef<{ focus: () => void } | null>(null);
   const isEdit = !!error;
+  const allOperationErrorNames = operation.errors
+    .map((o) => o.name)
+    .filter(Boolean);
 
-  const form = useForm<z.infer<typeof OperationErrorFormSchema>>({
-    resolver: zodResolver(OperationErrorFormSchema),
-    defaultValues: {
-      name: error?.name ?? "",
-    },
-  });
-
-  function onSubmit(values: z.infer<typeof OperationErrorFormSchema>) {
-    const name = pascalCase(values.name);
-    if (!name.length) return;
+  const handleSubmit = (name: string) => {
+    const formattedName = pascalCase(name);
+    if (!formattedName.length) return;
 
     if (isEdit) {
-      handlers.setOperationErrorName(operation.id, error.id, name);
+      handlers.setOperationErrorName(operation.id, error.id, formattedName);
     } else {
-      handlers.addOperationError(operation.id, name);
-      form.reset({ name: "" });
+      handlers.addOperationError(operation.id, formattedName);
     }
-  }
-
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form]);
+    onSubmit?.();
+  };
 
   return (
-    <Form {...form}>
-      <form className="grid grid-cols-[1fr,auto] gap-1">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Input
-                  placeholder="Add reducer exception"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      (e.target as HTMLInputElement).blur();
-                    }
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {!!error && (
-          <button
-            tabIndex={-1}
-            type="button"
-            onClick={() => handlers.deleteOperationError(error.id)}
-          >
-            <Icon name="Xmark" />
-          </button>
-        )}
-      </form>
-    </Form>
+    <div className="grid grid-cols-[1fr,auto] gap-1">
+      <TextField
+        ref={textFieldRef}
+        name="name"
+        value={error?.name}
+        onSubmit={handleSubmit}
+        placeholder="Add reducer exception"
+        required
+        unique={allOperationErrorNames}
+        shouldReset
+        focusOnMount={focusOnMount}
+      />
+      {!!error && (
+        <button
+          tabIndex={-1}
+          type="button"
+          onClick={() => handlers.deleteOperationError(error.id)}
+        >
+          <Icon name="Xmark" />
+        </button>
+      )}
+    </div>
   );
 }

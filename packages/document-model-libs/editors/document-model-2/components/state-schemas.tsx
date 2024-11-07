@@ -104,10 +104,10 @@ export function StateSchemas(props: Props) {
   } = props;
 
   return (
-    <Tabs defaultValue="global" className="pb-8">
+    <Tabs className="pb-8" activationMode="manual" defaultValue="global">
       <div className="mb-10 mt-8 grid grid-cols-3 items-center">
         <div className="h-1 bg-gray-900"></div>
-        <TabsList className="flex" tabIndex={-1}>
+        <TabsList className="flex">
           <TabsTrigger value="global">Global</TabsTrigger>
           <TabsTrigger value="local">Local</TabsTrigger>
         </TabsList>
@@ -124,30 +124,30 @@ export function StateSchemas(props: Props) {
         />
       </TabsContent>
 
-      <TabsContent value="local">
+      <TabsContent
+        value="local"
+        className="grid w-full place-items-center pb-8"
+        tabIndex={-1}
+      >
         {!localStateSchema ? (
-          <div className="grid w-full place-items-center pb-8">
-            <button
-              className="mt-2 rounded border border-slate-800 bg-white px-2 py-1 text-slate-800"
-              onClick={() => {
-                const initialDoc = makeInitialSchemaDoc(modelName, "local");
-                handlers.setStateSchema(initialDoc, "local");
-                handlers.setInitialState("", "local");
-              }}
-            >
-              Add local state
-            </button>
-          </div>
+          <button
+            className="rounded border border-slate-800 bg-white px-2 py-1 text-slate-800"
+            onClick={() => {
+              const initialDoc = makeInitialSchemaDoc(modelName, "local");
+              handlers.setStateSchema(initialDoc, "local");
+              handlers.setInitialState("", "local");
+            }}
+          >
+            Add local state
+          </button>
         ) : (
-          <div>
-            <StateEditor
-              schema={schema}
-              stateSchema={localStateSchema}
-              initialValue={localStateInitialValue}
-              handlers={handlers}
-              scope="local"
-            />
-          </div>
+          <StateEditor
+            schema={schema}
+            stateSchema={localStateSchema}
+            initialValue={localStateInitialValue}
+            handlers={handlers}
+            scope="local"
+          />
         )}
       </TabsContent>
     </Tabs>
