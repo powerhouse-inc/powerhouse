@@ -1,31 +1,35 @@
 import { forwardRef, useId } from "react";
-import { Input } from "../input";
-import { FormLabel } from "../form-label";
-import { FormMessageList } from "../form-message";
-import { FormGroup } from "../form-group";
-import { ErrorHandling, FieldCommonProps, IntNumberProps } from "../../types";
-import { FormDescription } from "../form-description";
+import { Input } from "../fragments/input";
+import { FormLabel } from "../fragments/form-label";
+import { FormMessageList } from "../fragments/form-message";
+import { FormGroup } from "../fragments/form-group";
+import { ErrorHandling, FieldCommonProps, NumberProps } from "../types";
+import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
+import { getDisplayValue, regex } from "@/scalars/utils/utils";
 
 export interface NumberFieldProps
   extends Omit<
-    FieldCommonProps<string> &
-      IntNumberProps &
+    FieldCommonProps<string | number> &
+      NumberProps &
       ErrorHandling &
       React.InputHTMLAttributes<HTMLInputElement>,
-    "value" | "autoComplete" | "defaultValue"
+    "value" | "autoComplete" | "defaultValue" | "name" | "pattern"
   > {
-  value?: number;
   className?: string;
   autoComplete?: boolean;
   defaultValue?: number;
   allowNegative?: boolean;
+  name: string;
+  pattern?: RegExp;
+  value?: number | string;
 }
 
-export const IntField = forwardRef<HTMLInputElement, NumberFieldProps>(
+export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
   (
     {
       label,
+      name,
       description,
       value,
       defaultValue,
@@ -38,11 +42,15 @@ export const IntField = forwardRef<HTMLInputElement, NumberFieldProps>(
       minValue,
       maxValue,
       step,
-      //TODO: disabled by validation and improve those props
+      pattern,
+      //TODO: disabled by validation
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       allowNegative = true,
+      isBigInt = false,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      isBigInt,
+      numericType = "Int",
+      trailingZeros = false,
+      precision = 0,
       ...props
     },
     ref,
@@ -51,6 +59,16 @@ export const IntField = forwardRef<HTMLInputElement, NumberFieldProps>(
     const id = propId ?? generatedId;
     const autoCompleteValue =
       autoComplete === undefined ? undefined : autoComplete ? "on" : "off";
+
+    // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints, otherwise sets to "number" for standard numeric input.
+    const inputType = isBigInt ? "text" : "number";
+
+    const displayValue = getDisplayValue(
+      value,
+      isBigInt,
+      trailingZeros,
+      precision,
+    );
 
     return (
       <FormGroup>
@@ -67,6 +85,7 @@ export const IntField = forwardRef<HTMLInputElement, NumberFieldProps>(
         )}
         <Input
           id={id}
+          name={name}
           className={cn(
             // text and background style
             "text-end text-gray-900 dark:text-gray-50 dark:bg-[#252A34]  dark:border-[#485265]",
@@ -80,16 +99,15 @@ export const IntField = forwardRef<HTMLInputElement, NumberFieldProps>(
             "disabled:border-gray-300 dark:disabled:border-[#373E4D] disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:text-gray-500 dark:disabled:text-gray-700",
             className,
           )}
-          type="number"
-          inputMode="numeric"
-          pattern="[0-9]*"
+          pattern={isBigInt ? regex.toString() : pattern?.toString()}
+          type={inputType}
           min={minValue}
-          aria-invalid={!!errors?.length}
           max={maxValue}
-          autoComplete={autoCompleteValue}
           aria-valuemin={minValue}
           aria-valuemax={maxValue}
-          value={value}
+          aria-invalid={!!errors?.length}
+          autoComplete={autoCompleteValue}
+          value={displayValue}
           step={step}
           defaultValue={defaultValue ?? undefined}
           onChange={onChange}

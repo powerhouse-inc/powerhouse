@@ -42,19 +42,26 @@ export interface TextProps {
   spellCheck?: boolean;
 }
 
+export type NumericType =
+  | "Int"
+  | "Float"
+  | "NegativeInt"
+  | "PositiveInt"
+  | "NonNegativeInt"
+  | "NonPositiveInt"
+  | "NegativeFloat"
+  | "PositiveFloat"
+  | "NonNegativeFloat"
+  | "NonPositiveFloat";
+
 export interface NumberProps {
+  numericType?: NumericType;
   minValue?: number;
   maxValue?: number;
   step?: number;
   allowNegative?: boolean;
-}
-
-export interface IntNumberProps extends NumberProps {
-  isBigInt?: boolean;
-}
-
-export interface FloatNumberProps extends NumberProps {
   precision?: number;
   trailingZeros?: boolean;
   decimalRequired?: boolean;
+  isBigInt?: boolean;
 }

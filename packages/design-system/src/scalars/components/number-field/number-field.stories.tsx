@@ -1,12 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { IntField } from "./int-field";
+import { NumberField } from "./number-field";
+import { withForm } from "@/scalars/lib/decorators";
+import { useState } from "react";
 
 const meta = {
-  title: "Document Engineering/Fragments/IntField",
-  component: IntField,
+  title: "Document Engineering/Simple Components/Number Field",
+  component: NumberField,
   parameters: {
     layout: "centered",
   },
+  decorators: [withForm],
   tags: ["autodocs"],
   argTypes: {
     name: {
@@ -61,12 +64,35 @@ const meta = {
       control: "boolean",
       description: "Allows the input field to accept negative numbers",
     },
+    numericType: {
+      control: "text",
+      description:
+        "Allows the input field to check type  Int | Float | NegativeInt| PositiveInt | NonNegativeInt| NonPositiveInt | NegativeFloat | PositiveFloat | NonNegativeFloat | NonPositiveFloat",
+    },
+    step: {
+      control: "number",
+      description: "Step value for the input field",
+    },
+    precision: {
+      control: "number",
+      description: "Number of decimal places allowedd",
+    },
+    trailingZeros: {
+      control: "boolean",
+      description:
+        "When precision is set, for example to 2, determines if the the trailing zeros should be preserved ( for example: 25.00,7.50, etc.) or not ( for example: 25, 7.5).",
+    },
+    decimalRequired: {
+      control: "boolean",
+      description: "Whether a decimal point is required.",
+    },
   },
   args: {
+    name: "number-field",
     errors: [],
     warnings: [],
   },
-} satisfies Meta<typeof IntField>;
+} satisfies Meta<typeof NumberField>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -75,7 +101,7 @@ export const Default: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 5,
+    value: 0,
   },
 };
 export const DefaultActive: Story = {
@@ -281,5 +307,149 @@ export const MandatoryWithDescriptionMultiErros: Story = {
       "Error message number 3",
       "Error message number 4",
     ],
+  },
+};
+export const Fraction: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    // Allow trailing zeros after the decimal point for clarity in displaying fractional values.
+    // eslint-disable-next-line prettier/prettier
+    value: 0.00,
+    precision: 2,
+    trailingZeros: true,
+    step: 0.04,
+  },
+  render: (args) => {
+    const [value, setValue] = useState(args.value || 0);
+
+    return (
+      <NumberField
+        {...args}
+        value={value}
+        onChange={(e) => setValue(Number(e.target.value))}
+      />
+    );
+  },
+};
+
+export const FractionFilled: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    value: 138.2,
+    precision: 1,
+  },
+};
+
+export const FractionDisable: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    // Allow trailing zeros after the decimal point for clarity in displaying fractional values.
+    // eslint-disable-next-line prettier/prettier
+    value: 0.00,
+    disabled: true,
+    precision: 2,
+  },
+};
+
+export const FractionWithWarning: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    // Allow trailing zeros after the decimal point for clarity in displaying fractional values.
+    // eslint-disable-next-line prettier/prettier
+    value: 0.00,
+    trailingZeros: true,
+    precision: 2,
+    warnings: ["Warning message"],
+  },
+};
+export const FractionWithError: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    value: 140,
+    errors: ["Error message"],
+  },
+};
+
+export const FractionMultiErrors: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    value: 140,
+    errors: [
+      "Error message number 1",
+      "Error message number 2",
+      "Error message number 3",
+      "Error message number 4",
+    ],
+  },
+};
+export const FractionDescription: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    description: "This is the field description",
+    value: 140,
+  },
+};
+export const FractionDescriptionFilled: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    description: "This is the field description",
+    value: 138,
+  },
+};
+export const FractionDescriptionDisable: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    description: "This is the field description",
+    value: 0,
+    disabled: true,
+  },
+};
+export const FractionDescriptionWarning: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    description: "This is the field description",
+    value: 0,
+    warnings: ["Warning message"],
+  },
+};
+export const FractionDescriptionError: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    description: "This is the field description",
+    value: 0,
+    errors: ["Error message"],
+  },
+};
+export const FractionDescriptionMultiErrors: Story = {
+  args: {
+    label: "Label",
+    name: "Label",
+    value: 140,
+    errors: [
+      "Error message number 1",
+      "Error message number 2",
+      "Error message number 3",
+      "Error message number 4",
+    ],
+  },
+};
+
+export const IsBigInt: Story = {
+  args: {
+    name: "Label",
+    label: "Label",
+    value: "9999999999999999999",
+    isBigInt: true,
   },
 };
