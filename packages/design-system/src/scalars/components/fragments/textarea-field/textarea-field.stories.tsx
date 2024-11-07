@@ -550,3 +550,182 @@ export const WithTrimAndUppercaseTransformations: Story = {
     );
   },
 };
+
+// Design Variants
+export const ManualAdjustDefault: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    placeholder: "Placeholder",
+    maxLength: 500,
+  },
+};
+
+export const ManualAdjustActive: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    maxLength: 500,
+  },
+  parameters: {
+    pseudo: { focus: true },
+  },
+};
+
+export const ManualAdjustActiveMultiline: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    maxLength: 500,
+  },
+  parameters: {
+    pseudo: { focus: true },
+  },
+};
+
+export const ManualAdjustFilledNoFocus: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    maxLength: 500,
+  },
+};
+
+export const ManualAdjustWarning: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    maxLength: 90,
+  },
+};
+
+export const ManualAdjustWarningAndMessage: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    warnings: ["Warning message"],
+    maxLength: 90,
+  },
+};
+
+export const ManualAdjustError: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    maxLength: 80,
+  },
+};
+
+export const ManualAdjustErrorAndMessage: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    errors: ["Error message"],
+    maxLength: 80,
+  },
+};
+
+export const AutoAdjustDefault: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    placeholder: "Placeholder",
+    maxLength: 500,
+    autoExpand: true,
+  },
+};
+
+export const AutoAdjustActive: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    maxLength: 500,
+    autoExpand: true,
+  },
+  parameters: {
+    pseudo: { focus: true },
+  },
+};
+
+export const AutoAdjustActiveMultiline: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    maxLength: 500,
+    autoExpand: true,
+  },
+  parameters: {
+    pseudo: { focus: true },
+  },
+};
+
+export const AutoAdjustFilledNoFocus: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    maxLength: 500,
+    autoExpand: true,
+  },
+};
+
+export const AutoAdjustWarning: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    maxLength: 90,
+    autoExpand: true,
+  },
+};
+
+export const AutoAdjustWarningAndMessage: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    warnings: ["Warning message"],
+    maxLength: 90,
+    autoExpand: true,
+  },
+};
+
+export const AutoAdjustError: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    maxLength: 80,
+    autoExpand: true,
+  },
+};
+
+export const AutoAdjustErrorAndMessage: Story = {
+  args: {
+    name: "textarea",
+    label: "Label",
+    value:
+      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
+    errors: ["Error message"],
+    maxLength: 80,
+    autoExpand: true,
+  },
+};
