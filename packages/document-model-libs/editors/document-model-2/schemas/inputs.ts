@@ -23,7 +23,6 @@ export function createNameSchema(options: SchemaOptions = {}) {
 
   const baseSchema = allowEmpty ? z.string() : z.string().min(1);
 
-  // Create the uniqueness refinement
   const uniqueRefinement = baseSchema.refine(
     (value) => {
       if (!value && allowEmpty) return true;
@@ -34,7 +33,6 @@ export function createNameSchema(options: SchemaOptions = {}) {
     { message: "Item with this name already exists" },
   );
 
-  // Handle all combinations of required/optional and unique
   if (!required) {
     return unique.length > 0
       ? z
@@ -87,7 +85,6 @@ export function toConstantCase(value: string, options: SchemaOptions = {}) {
   ) as ConstantCase;
 }
 
-// Types remain the same
 export type SnakeCase = `${string}_${string}`;
 export type LowercaseSnakeCase = Lowercase<SnakeCase>;
 export type ConstantCase = Uppercase<SnakeCase>;
@@ -95,7 +92,6 @@ export type Prettify<T> = {
   [K in keyof T]: T[K];
 } & {};
 
-// Author schema with more flexibility
 export const AuthorSchema = z
   .object({
     name: createNameSchema({ allowEmpty: true }),
@@ -108,28 +104,3 @@ export const AuthorSchema = z
     name: "",
     website: "",
   });
-
-// Required, non-empty, unique name
-const requiredUniqueName = createNameSchema({
-  required: true,
-  allowEmpty: false,
-  unique: ["existing_name"],
-});
-
-// Optional but must be unique if provided
-const optionalUniqueName = createNameSchema({
-  required: false,
-  unique: ["existing_name"],
-});
-
-// Required but can be empty
-const requiredAllowEmptyName = createNameSchema({
-  required: true,
-  allowEmpty: true,
-});
-
-// For constant case with validation
-const constantCaseName = createConstantCaseSchema({
-  required: true,
-  unique: ["EXISTING_NAME"],
-});
