@@ -1,37 +1,71 @@
 import { ModuleForm } from "./module-form";
 import { Operations } from "./operations";
 import { DocumentActionHandlers } from "../types";
-import { Module } from "document-model/document-model";
+import { Module, Operation } from "document-model/document-model";
 import { GraphQLSchema } from "graphql";
-import { useId } from "react";
+import { useId, useState, useRef } from "react";
+import { Divider } from "./divider";
 
 type Props = {
   schema: GraphQLSchema;
   modules: Module[];
+  allOperations: Operation[];
   handlers: DocumentActionHandlers;
 };
-export function Modules({ schema, modules, handlers }: Props) {
+export function Modules({ schema, modules, allOperations, handlers }: Props) {
+  const [lastCreatedModuleId, setLastCreatedModuleId] = useState<string | null>(
+    null,
+  );
+  const focusTrapRef = useRef<HTMLDivElement>(null);
   const addModuleFormId = useId();
+
+  const wrappedHandlers = {
+    ...handlers,
+    addModule: async (name: string) => {
+      const moduleId = await handlers.addModule(name);
+      if (moduleId) {
+        setLastCreatedModuleId(moduleId);
+        focusTrapRef.current?.focus();
+      }
+      return moduleId;
+    },
+  };
+
   return (
     <div className="w-4/5">
-      {modules.map((module, index) => (
+      {modules.map((module) => (
         <div className="" key={module.id}>
-          <div className="mt-4">
-            <ModuleForm key={module.id} handlers={handlers} module={module} />
+          <div className="my-4">
+            <ModuleForm
+              modules={modules}
+              handlers={wrappedHandlers}
+              module={module}
+            />
+            <Divider />
           </div>
           <Operations
             schema={schema}
             module={module}
-            handlers={handlers}
-            isNewModule={
-              index === modules.length - 1 && module.operations.length === 0
-            }
+            handlers={wrappedHandlers}
+            allOperations={allOperations}
+            shouldFocusNewOperation={module.id === lastCreatedModuleId}
           />
         </div>
       ))}
-      <div className="mt-12 pb-12">
-        <ModuleForm key={addModuleFormId} handlers={handlers} />
+      <div className="mt-6 pb-12">
+        <ModuleForm
+          key={addModuleFormId}
+          modules={modules}
+          handlers={wrappedHandlers}
+        />
       </div>
+      {/* Focus trap to prevent tabbing out of the editor */}
+      <div
+        ref={focusTrapRef}
+        tabIndex={0}
+        className="size-0 overflow-hidden"
+        aria-hidden="true"
+      />
     </div>
   );
 }
