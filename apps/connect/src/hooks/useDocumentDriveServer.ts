@@ -268,6 +268,16 @@ export function useDocumentDriveServer() {
                     const { scope } = operation;
 
                     await addOperations(drive, fileNode.id, chunk);
+                    const driveDocument = documentDrives.find(
+                        documentDrive =>
+                            documentDrive.state.global.id === drive,
+                    );
+                    const waitForSync =
+                        driveDocument &&
+                        driveDocument.state.local.listeners.length > 0;
+                    if (!waitForSync) {
+                        continue;
+                    }
                     await new Promise<void>(resolve =>
                         reactor.on('strandUpdate', update => {
                             const sameScope =
