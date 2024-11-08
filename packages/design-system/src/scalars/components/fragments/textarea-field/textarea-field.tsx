@@ -62,6 +62,8 @@ export const TextareaField = React.forwardRef<
     ref,
   ) => {
     const autoCompleteValue = autoComplete ? "on" : "off";
+    const hasMaxLength = typeof maxLength === "number" && maxLength > 0;
+    const hasWarning = warnings.length > 0;
     const hasError = errors.length > 0;
 
     const prefix = useId();
@@ -101,7 +103,7 @@ export const TextareaField = React.forwardRef<
       <FormGroup>
         {label && (
           <FormLabel
-            className="mb-1.5 font-normal text-gray-900"
+            className="mb-1.5 font-normal"
             disabled={disabled}
             hasError={hasError}
             htmlFor={id}
@@ -118,16 +120,16 @@ export const TextareaField = React.forwardRef<
             autoComplete={autoCompleteValue}
             className={cn(
               // Base styles
-              "flex w-full rounded-lg text-base leading-normal transition-all duration-200",
-              "font-normal font-sans",
+              "flex w-full rounded-lg text-base leading-normal",
+              "font-normal font-inter",
 
               // Colors & Background
               "text-gray-900 bg-white",
               "dark:text-gray-100 dark:bg-gray-900",
 
-              // Border styles
-              "border border-gray-200",
-              "dark:border-gray-800",
+              // Border styles - Default state
+              "border border-gray-300",
+              "dark:border-gray-700",
 
               // Placeholder
               "placeholder:text-gray-500",
@@ -137,53 +139,48 @@ export const TextareaField = React.forwardRef<
               "px-4 py-3",
 
               // Focus state
-              "focus:border-gray-900 focus:outline-none",
-              "focus:ring-2 focus:ring-gray-100 focus:ring-offset-0",
-              "dark:focus:border-gray-400 dark:focus:ring-gray-900/30",
+              "focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2",
+              "dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0 dark:focus:border-gray-700 dark:focus:bg-gray-900",
 
               // Hover state
-              "hover:border-gray-300",
-              "dark:hover:border-gray-700",
-
-              // Focus + Hover combined state
-              "focus:hover:border-gray-900 focus:hover:ring-gray-200",
-              "dark:focus:hover:border-gray-400 dark:focus:hover:ring-gray-900/40",
-
-              // Active state
-              "active:border-gray-400",
-              "dark:active:border-gray-600",
+              "hover:border-gray-400",
+              "dark:hover:border-gray-600",
 
               // Disabled state
               "disabled:cursor-not-allowed",
-              "disabled:border-gray-100 disabled:bg-gray-50 disabled:text-gray-400",
-              "dark:disabled:border-gray-800 dark:disabled:bg-gray-900/50 dark:disabled:text-gray-600",
+              "disabled:bg-gray-50 disabled:border-gray-200 disabled:text-gray-500",
+              "dark:disabled:bg-gray-900/50 dark:disabled:border-gray-800 dark:disabled:text-gray-600",
+
+              // Warning states
+              hasWarning && [
+                "border-orange-500 bg-orange-50/50",
+                "dark:border-orange-400 dark:bg-orange-900/5",
+                "hover:border-orange-600",
+                "dark:hover:border-orange-300",
+                "focus:ring-0 focus:ring-offset-0",
+                "focus:border-orange-500",
+                "dark:focus:border-orange-400",
+              ],
 
               // Error states
               hasError && [
-                // Base error
-                "border-red-700 bg-red-50/50",
+                "border-red-500 bg-red-50/50",
                 "dark:border-red-400 dark:bg-red-900/5",
-
-                // Error hover
-                "hover:border-red-800",
+                "hover:border-red-600",
                 "dark:hover:border-red-300",
-
-                // Error focus
-                "focus:border-red-900 focus:ring-red-100",
-                "dark:focus:border-red-300 dark:focus:ring-red-900/30",
-
-                // Error focus + hover
-                "focus:hover:border-red-900 focus:hover:ring-red-200",
-                "dark:focus:hover:border-red-300 dark:focus:hover:ring-red-900/40",
+                "focus:ring-0 focus:ring-offset-0",
+                "focus:border-red-500",
+                "dark:focus:border-red-400",
               ],
 
-              // Resize behavior
-              autoExpand && "resize-none overflow-hidden",
-              !autoExpand && [
-                "min-h-[120px] resize-y",
-                "scrollbar scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent",
-                "dark:scrollbar-thumb-gray-600",
-              ],
+              // Resize behavior based on autoExpand
+              autoExpand
+                ? "resize-none overflow-hidden"
+                : [
+                    "min-h-[120px] resize-y",
+                    "scrollbar scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent",
+                    "dark:scrollbar-thumb-gray-600",
+                  ],
 
               className,
             )}
@@ -200,26 +197,36 @@ export const TextareaField = React.forwardRef<
             value={transformedValue}
             {...props}
           />
-          {maxLength && (
+          {hasMaxLength && (
             <div className="mt-1.5 flex justify-end">
               <CharacterCounter maxLength={maxLength} value={value ?? ""} />
             </div>
           )}
         </div>
         {description && (
-          <FormDescription className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+          <FormDescription
+            className={cn(
+              "mt-1.5",
+              hasMaxLength && "mt-0",
+              "dark:text-gray-400",
+            )}
+          >
             {description}
           </FormDescription>
         )}
-        {warnings.length > 0 && (
+        {hasWarning && (
           <FormMessageList
-            className="mt-1.5"
+            className={cn("mt-1.5", hasMaxLength && "mt-0")}
             messages={warnings}
             type="warning"
           />
         )}
         {hasError && (
-          <FormMessageList className="mt-1.5" messages={errors} type="error" />
+          <FormMessageList
+            className={cn("mt-1.5", hasMaxLength && "mt-0")}
+            messages={errors}
+            type="error"
+          />
         )}
       </FormGroup>
     );
