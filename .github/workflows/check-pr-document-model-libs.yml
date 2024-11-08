@@ -35,9 +35,6 @@ jobs:
       - name: Generate
         run: npx nx run document-model-libs:generate
 
-      - name: Format generated
-        run: npx nx run document-model-libs:format-generated
-
       - name: Lint
         run: npx nx run document-model-libs:lint
 
