@@ -14,7 +14,7 @@ const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, ".hygen", "templates");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function run(args: string[], { watch = false, format = true } = {}) {
+async function run(args: string[], { watch = false, skipFormat = false } = {}) {
   const result = await runner(args, {
     templates: defaultTemplates,
     cwd: process.cwd(),
@@ -30,7 +30,7 @@ async function run(args: string[], { watch = false, format = true } = {}) {
     },
     debug: !!process.env.DEBUG,
   });
-  if (format) {
+  if (!skipFormat) {
     const execa = await import("execa");
     const actions = result.actions as { status: string; subject: string }[];
     actions
@@ -50,7 +50,7 @@ async function run(args: string[], { watch = false, format = true } = {}) {
 
 export async function generateAll(
   dir: string,
-  { watch = false, format = true } = {},
+  { watch = false, skipFormat = false } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
   for (const directory of files.filter((f) => f.isDirectory())) {
@@ -65,7 +65,7 @@ export async function generateAll(
 
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
-      await generateDocumentModel(documentModel, dir, { watch, format });
+      await generateDocumentModel(documentModel, dir, { watch, skipFormat });
     } catch (error) {
       console.error(directory.name, error);
     }
@@ -75,7 +75,7 @@ export async function generateAll(
 export async function generateDocumentModel(
   documentModel: DocumentModel.DocumentModelState,
   dir: string,
-  { watch = false, format = true } = {},
+  { watch = false, skipFormat = false } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -87,7 +87,7 @@ export async function generateDocumentModel(
       "--root-dir",
       dir,
     ],
-    { watch, format },
+    { watch, skipFormat },
   );
 
   // Generate the module-specific files for the document model logic
@@ -105,7 +105,7 @@ export async function generateDocumentModel(
         "--module",
         module.name,
       ],
-      { watch, format },
+      { watch, skipFormat },
     );
   }
 }
@@ -116,7 +116,7 @@ export async function generateEditor(
   documentTypesMap: Record<string, string>,
   dir: string,
   documentModelsDir: string,
-  { format = true } = {},
+  { skipFormat = false } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -134,6 +134,6 @@ export async function generateEditor(
       "--document-models-dir",
       documentModelsDir,
     ],
-    { format },
+    { skipFormat },
   );
 }

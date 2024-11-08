@@ -1018,7 +1018,7 @@ importers:
   packages/ph-cli:
     dependencies:
       '@powerhousedao/codegen':
-        specifier: 0.13.0
+        specifier: 'workspace:'
         version: link:../codegen
       '@powerhousedao/connect':
         specifier: develop

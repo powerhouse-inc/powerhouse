@@ -65,9 +65,9 @@ function getDocumentTypesMap(dir: string) {
 }
 
 export async function generate(config: PowerhouseConfig) {
-  const { format, watch } = config;
-  await generateSchemas(config.documentModelsDir, { format, watch });
-  await generateAll(config.documentModelsDir, { format, watch });
+  const { skipFormat, watch } = config;
+  await generateSchemas(config.documentModelsDir, { skipFormat, watch });
+  await generateAll(config.documentModelsDir, { skipFormat, watch });
 }
 
 export async function generateFromFile(path: string, config: PowerhouseConfig) {
@@ -105,7 +105,7 @@ export async function generateEditor(
   documentTypes: string[],
   config: PowerhouseConfig,
 ) {
-  const { documentModelsDir, format } = config;
+  const { documentModelsDir, skipFormat } = config;
   const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
 
   const invalidType = documentTypes.find(
@@ -120,6 +120,6 @@ export async function generateEditor(
     docummentTypesMap,
     config.editorsDir,
     config.documentModelsDir,
-    { format },
+    { skipFormat },
   );
 }
