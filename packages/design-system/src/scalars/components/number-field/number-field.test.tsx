@@ -1,24 +1,26 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { IntField } from "./int-field";
 import userEvent from "@testing-library/user-event";
-describe("IntField Component", () => {
+import { NumberField } from "./number-field";
+describe("NumberField Component", () => {
   const mockOnChange = vi.fn();
   it("should match snapshot", () => {
-    const { container } = render(<IntField label="Test Label" name="Label" />);
+    const { container } = render(
+      <NumberField label="Test Label" name="Label" />,
+    );
     expect(container).toMatchSnapshot();
   });
 
   it("should renders label when label its provided", () => {
     render(
-      <IntField label="Test Label" onChange={mockOnChange} name="Label" />,
+      <NumberField label="Test Label" onChange={mockOnChange} name="Label" />,
     );
     expect(screen.getByLabelText("Test Label")).toBeInTheDocument();
   });
 
   it("should renders the description when provided", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         description="This is a description"
         onChange={mockOnChange}
@@ -30,7 +32,7 @@ describe("IntField Component", () => {
 
   it("should renders error messages when provided", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         onChange={mockOnChange}
         errors={["Error 1", "Error 2"]}
@@ -43,7 +45,7 @@ describe("IntField Component", () => {
 
   it("should renders warning messages when provided", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         onChange={mockOnChange}
         warnings={["Warning 1", "Warning 2"]}
@@ -56,7 +58,7 @@ describe("IntField Component", () => {
 
   it("should calls onChange when the input value changes", async () => {
     const user = userEvent.setup();
-    render(<IntField label="Test Label" name="Label" />);
+    render(<NumberField label="Test Label" name="Label" />);
     const input = screen.getByLabelText("Test Label");
 
     await user.type(input, "10");
@@ -65,7 +67,7 @@ describe("IntField Component", () => {
 
   it("should disables the input when disabled prop is true", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         onChange={mockOnChange}
         disabled
@@ -79,7 +81,7 @@ describe("IntField Component", () => {
 
   it("should shows the input as required when required prop is true", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         onChange={mockOnChange}
         required
@@ -91,7 +93,7 @@ describe("IntField Component", () => {
 
   it("should handles autoComplete set to true", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         onChange={mockOnChange}
         autoComplete
@@ -106,7 +108,7 @@ describe("IntField Component", () => {
 
   it("should handles autoComplete set to false", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         onChange={mockOnChange}
         autoComplete={false}
@@ -121,7 +123,7 @@ describe("IntField Component", () => {
 
   it("should renders input with provided className", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         // This a custom class for testing no a class for tailwindcss
         // eslint-disable-next-line tailwindcss/no-custom-classname
@@ -135,7 +137,7 @@ describe("IntField Component", () => {
 
   it("should supports a defaultValue prop", () => {
     render(
-      <IntField
+      <NumberField
         label="Test Label"
         defaultValue={5}
         onChange={mockOnChange}
