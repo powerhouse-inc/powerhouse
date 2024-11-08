@@ -14,7 +14,7 @@ const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, ".hygen", "templates");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function run(args: string[], { watch = false, format = false } = {}) {
+async function run(args: string[], { watch = false, format = true } = {}) {
   const result = await runner(args, {
     templates: defaultTemplates,
     cwd: process.cwd(),
@@ -50,7 +50,7 @@ async function run(args: string[], { watch = false, format = false } = {}) {
 
 export async function generateAll(
   dir: string,
-  { watch = false, format = false } = {},
+  { watch = false, format = true } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
   for (const directory of files.filter((f) => f.isDirectory())) {
@@ -75,7 +75,7 @@ export async function generateAll(
 export async function generateDocumentModel(
   documentModel: DocumentModel.DocumentModelState,
   dir: string,
-  { watch = false, format = false } = {},
+  { watch = false, format = true } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -116,7 +116,7 @@ export async function generateEditor(
   documentTypesMap: Record<string, string>,
   dir: string,
   documentModelsDir: string,
-  { format = false } = {},
+  { format = true } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
