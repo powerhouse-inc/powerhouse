@@ -157,11 +157,14 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       '@powerhousedao/analytics-engine-core':
+        specifier: ^0.3.0
+        version: 0.3.0
+      '@powerhousedao/analytics-engine-graphql':
         specifier: ^0.1.1
         version: 0.1.1
       '@powerhousedao/analytics-engine-pg':
-        specifier: ^0.1.0
-        version: 0.1.0(sqlite3@5.1.7)
+        specifier: ^0.3.0
+        version: 0.3.0(sqlite3@5.1.7)
       '@powerhousedao/general-document-indexer':
         specifier: 1.2.0
         version: 1.2.0(@electric-sql/pglite@0.2.12)(@libsql/client@0.14.0(bufferutil@4.0.8)(utf-8-validate@5.0.10))(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(@prisma/client@5.21.1(prisma@5.21.1))(@types/pg@8.11.10)(@types/react@18.3.12)(encoding@0.1.13)(graphql@16.9.0)(knex@3.1.0(pg@8.13.1)(sqlite3@5.1.7))(pg@8.13.1)(prisma@5.21.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sqlite3@5.1.7)(storybook@8.3.6(bufferutil@4.0.8)(utf-8-validate@5.0.10))
@@ -174,6 +177,9 @@ importers:
       '@powerhousedao/switchboard-gui':
         specifier: 0.2.0
         version: 0.2.0(@babel/core@7.26.0)(@types/react@18.3.12)(babel-plugin-macros@3.1.0)(bufferutil@4.0.8)(graphql-ws@5.16.0(graphql@16.9.0))(immer@10.1.1)(utf-8-validate@5.0.10)
+      '@types/luxon':
+        specifier: ^3.4.2
+        version: 3.4.2
       body-parser:
         specifier: ^1.20.3
         version: 1.20.3
@@ -216,6 +222,9 @@ importers:
       jwt-decode:
         specifier: ^4.0.0
         version: 4.0.0
+      luxon:
+        specifier: ^3.5.0
+        version: 3.5.0
       ms:
         specifier: ^2.1.3
         version: 2.1.3
@@ -1015,7 +1024,7 @@ importers:
         version: 0.10.0(@parcel/watcher@2.4.1)(@powerhousedao/scalars@1.5.0(graphql@16.9.0)(zod@3.23.8))(bufferutil@4.0.8)(encoding@0.1.13)(graphql@16.9.0)(typescript@5.6.3)(utf-8-validate@5.0.10)(zod@3.23.8)
       '@powerhousedao/connect':
         specifier: develop
-        version: 1.0.0-dev.161(@types/node@22.8.4)(lightningcss@1.27.0)(terser@5.36.0)
+        version: 1.0.0-dev.163(@types/node@22.8.4)(lightningcss@1.27.0)(terser@5.36.0)
       colorette:
         specifier: ^2.0.20
         version: 2.0.20
@@ -4525,17 +4534,17 @@ packages:
   '@popperjs/core@2.11.8':
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
 
-  '@powerhousedao/analytics-engine-core@0.1.0':
-    resolution: {integrity: sha512-pGBehMV7+zxzlkfYbq1SjAvfrn0VIPgT6HbczfYsGocRLaDIHE+ue8LKNi3ptPygbVi2eops3VkO5GyIVLbCkw==}
+  '@powerhousedao/analytics-engine-core@0.3.0':
+    resolution: {integrity: sha512-8Rl8U2P3u5Y+O8iXqEmN+Vjezal32SQ/ce05IgsZqOvtIpuiUmX44wdyufXw8qObxWFPdc7cyFXTHJ3yYUWlzw==}
 
-  '@powerhousedao/analytics-engine-core@0.1.1':
-    resolution: {integrity: sha512-e9zhroU2728IGIfIUaeK4WtYEuPfbuN1tw3Kno3Og7qiX0cGsJSDYAw5wpa8Ac64ylhF7ivSxRM2tjrPqEJ6OA==}
+  '@powerhousedao/analytics-engine-graphql@0.1.1':
+    resolution: {integrity: sha512-NJwskA6dnlDBMNnbcR8NRJqcR1OAd8ZTRFv8s7M9/WRLhD8kpX/0rQcffnZjKgqKBpVg/KeTG0I7vuRQRQz48w==}
 
-  '@powerhousedao/analytics-engine-knex@0.1.0':
-    resolution: {integrity: sha512-0mJrdl9u1QsEXREHHIyklbDba5vrYtczoqeW4NxBk9W1bVS5VkzL6XwMMDFQiGKeQuCxV/i4FSuOdgipTA3VCg==}
+  '@powerhousedao/analytics-engine-knex@0.3.0':
+    resolution: {integrity: sha512-a0diLxFy6ID0LJfjpyr8Xrgrc2xFEHnnLBDHY+P1fdvJMFHs3FnHrMmFvF2/VF9hZja+PhndgI4nGHZ4kynGLQ==}
 
-  '@powerhousedao/analytics-engine-pg@0.1.0':
-    resolution: {integrity: sha512-CzhpMzdAYgi74pTr6pgHNsfvPtgyeB044+EVXkbD5/r7imf5UDE/pQ/i/XzwNV3mZSeLocY+XCh8rRgOOqxpRQ==}
+  '@powerhousedao/analytics-engine-pg@0.3.0':
+    resolution: {integrity: sha512-0N90CJzgrjZONA7VzEQKq5ne0DuzGpjTj3ZeZyjoaOq4gKopVdX+6j7zHmbfFKx15bkY6/T/+VoIKt9WN+We0Q==}
 
   '@powerhousedao/codegen@0.10.0':
     resolution: {integrity: sha512-cABETbcepEhTMQWcIgVQjt8vwLLSAstVsO3YwNzM7dtzlojxPGqUufVCCkIl+4wdCtlRBKh3M06G0vWznNtzgg==}
@@ -4544,8 +4553,8 @@ packages:
       '@powerhousedao/scalars': latest
       graphql: ^16.8.1
 
-  '@powerhousedao/connect@1.0.0-dev.161':
-    resolution: {integrity: sha512-WrdjDp6Jee7iVHXtf4OhkPayz9oVj5lXF/RuM5H+mFkQalvHWLtF+Q0Gl4130XKabwW6c3W+cA3TizJVYdARYw==}
+  '@powerhousedao/connect@1.0.0-dev.163':
+    resolution: {integrity: sha512-qInCUV7nBSbmvs0B+zBxnfPGVuKaSJTXfe9QSzodIt7dXbmvsRR7Nght3RCnL8fbxTr/l1wNUvlCoAEMVHG2Kw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
@@ -17501,7 +17510,7 @@ snapshots:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       '@jridgewell/trace-mapping': 0.3.25
-      '@types/node': 22.8.4
+      '@types/node': 20.17.3
       chalk: 4.1.2
       collect-v8-coverage: 1.0.2
       exit: 0.1.2
@@ -18883,17 +18892,18 @@ snapshots:
 
   '@popperjs/core@2.11.8': {}
 
-  '@powerhousedao/analytics-engine-core@0.1.0':
+  '@powerhousedao/analytics-engine-core@0.3.0':
     dependencies:
       date-fns: 3.6.0
 
-  '@powerhousedao/analytics-engine-core@0.1.1':
+  '@powerhousedao/analytics-engine-graphql@0.1.1':
     dependencies:
-      date-fns: 3.6.0
+      '@powerhousedao/analytics-engine-core': 0.3.0
+      luxon: 3.5.0
 
-  '@powerhousedao/analytics-engine-knex@0.1.0(sqlite3@5.1.7)':
+  '@powerhousedao/analytics-engine-knex@0.3.0(sqlite3@5.1.7)':
     dependencies:
-      '@powerhousedao/analytics-engine-core': 0.1.0
+      '@powerhousedao/analytics-engine-core': 0.3.0
       '@types/luxon': 3.4.2
       '@types/node': 22.8.4
       '@types/pg': 8.11.10
@@ -18910,10 +18920,10 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/analytics-engine-pg@0.1.0(sqlite3@5.1.7)':
+  '@powerhousedao/analytics-engine-pg@0.3.0(sqlite3@5.1.7)':
     dependencies:
-      '@powerhousedao/analytics-engine-core': 0.1.0
-      '@powerhousedao/analytics-engine-knex': 0.1.0(sqlite3@5.1.7)
+      '@powerhousedao/analytics-engine-core': 0.3.0
+      '@powerhousedao/analytics-engine-knex': 0.3.0(sqlite3@5.1.7)
       date-fns: 3.6.0
       knex: 3.1.0(pg@8.13.1)(sqlite3@5.1.7)
       luxon: 3.5.0
@@ -18953,7 +18963,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@powerhousedao/connect@1.0.0-dev.161(@types/node@22.8.4)(lightningcss@1.27.0)(terser@5.36.0)':
+  '@powerhousedao/connect@1.0.0-dev.163(@types/node@22.8.4)(lightningcss@1.27.0)(terser@5.36.0)':
     dependencies:
       commander: 12.1.0
       vite: 5.4.10(@types/node@22.8.4)(lightningcss@1.27.0)(terser@5.36.0)
