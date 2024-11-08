@@ -3,7 +3,7 @@ import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
 import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
 import { readdirSync } from "node:fs";
 import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
-import * as prettier from "prettier";
+import { formatWithPrettierBeforeWrite } from "./utils";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })
@@ -87,14 +87,7 @@ export const generateSchema = (
     generates: documentModelConfig,
     watch,
     hooks: {
-      beforeOneFileWrite: [
-        async (outputFile: string, content: string) => {
-          const modifiedContent = await prettier.format(content, {
-            parser: "typescript",
-          });
-          return modifiedContent;
-        },
-      ],
+      beforeOneFileWrite: [formatWithPrettierBeforeWrite],
     },
   };
   return generate(config, true);
@@ -118,14 +111,7 @@ export const generateSchemas = (
     generates: documentModelConfigs,
     watch,
     hooks: {
-      beforeOneFileWrite: [
-        async (outputFile: string, content: string) => {
-          const modifiedContent = await prettier.format(content, {
-            parser: "typescript",
-          });
-          return modifiedContent;
-        },
-      ],
+      beforeOneFileWrite: [formatWithPrettierBeforeWrite],
     },
   };
   return generate(config, true);
