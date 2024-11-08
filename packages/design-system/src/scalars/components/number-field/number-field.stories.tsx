@@ -453,3 +453,75 @@ export const IsBigInt: Story = {
     isBigInt: true,
   },
 };
+
+// Step Stories
+export const Setp: Story = {
+  args: {
+    name: "Label",
+    label: "Label",
+    value: 0,
+    step: 10,
+    min: 20,
+  },
+  render: (args) => {
+    const [value, setValue] = useState(args.value || 0);
+
+    return (
+      <NumberField
+        {...args}
+        value={value}
+        onChange={(e) => setValue(Number(e.target.value))}
+      />
+    );
+  },
+};
+
+export const SetpFilled: Story = {
+  args: {
+    name: "Label",
+    label: "Label",
+    value: 23,
+    step: 10,
+  },
+};
+export const SetpDisable: Story = {
+  args: {
+    name: "Label",
+    label: "Label",
+    value: 1234,
+    disabled: true,
+    step: 10,
+  },
+};
+
+export const SetpWarning: Story = {
+  args: {
+    name: "Label",
+    label: "Label",
+    value: 23,
+    warnings: ["Warning message"],
+  },
+};
+export const SetpErrorState: Story = {
+  args: {
+    name: "Label",
+    label: "Label",
+    value: 23,
+    step: 10,
+    errors: ["Error message"],
+  },
+};
+export const SetpMultiError: Story = {
+  args: {
+    name: "Label",
+    label: "Label",
+    step: 10,
+    value: 23,
+    errors: [
+      "Error message number 1",
+      "Error message number 2",
+      "Error message number 3",
+      "Error message number 4",
+    ],
+  },
+};

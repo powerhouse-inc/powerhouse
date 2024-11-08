@@ -244,3 +244,13 @@ h6,
 p {
   color: var(--gray-900);
 }
+
+
+.show-arrows::-webkit-inner-spin-button,
+.show-arrows::-webkit-outer-spin-button {
+  -webkit-appearance: auto !important;
+  -moz-appearance: auto !important;
+  appearance: auto !important;
+  opacity: 0; 
+  opacity: 1;
+}

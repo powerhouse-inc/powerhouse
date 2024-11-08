@@ -87,8 +87,10 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
           id={id}
           name={name}
           className={cn(
+            // Allow the arrows step
+            "show-arrows",
             // text and background style
-            "text-end text-gray-900 dark:text-gray-50 dark:bg-[#252A34]  dark:border-[#485265]",
+            "text-gray-900 dark:text-gray-50 dark:bg-[#252A34]  dark:border-[#485265]",
             //Focus state text and placeholder
             "focus:text-gray-300 dark:focus:text-gray-700 placeholder:focus:text-gray-300 dark:placeholder:focus:text-gray-700",
             //Focus state ring style
