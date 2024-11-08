@@ -1,3 +1,11 @@
+# [1.0.0-dev.164](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.163...v1.0.0-dev.164) (2024-11-08)
+
+
+### Bug Fixes
+
+* add all operations when uploading zip to local drive ([4742f90](https://github.com/powerhouse-inc/document-model-electron/commit/4742f90607f302d4b0f729600a0ffa4b1ba74d74))
+* add public drive form url check ([c96c6f2](https://github.com/powerhouse-inc/document-model-electron/commit/c96c6f2d2491d36a955bcef9343666fbb09e9259))
+
 # [1.0.0-dev.163](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.162...v1.0.0-dev.163) (2024-11-07)
 
 
