@@ -774,7 +774,7 @@ importers:
         specifier: ^5.15.5
         version: 5.16.7(@emotion/react@11.13.3)(@emotion/styled@11.13.0)(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
       '@powerhousedao/codegen':
-        specifier: 0.13.0
+        specifier: workspace:*
         version: link:../codegen
       '@powerhousedao/design-system':
         specifier: ^1.6.0
@@ -782,9 +782,6 @@ importers:
       '@powerhousedao/scalars':
         specifier: ^1.7.0
         version: link:../scalars
-      '@prettier/sync':
-        specifier: ^0.5.2
-        version: 0.5.2(prettier@3.3.3)
       '@radix-ui/react-checkbox':
         specifier: ^1.1.2
         version: 1.1.2(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
@@ -8270,15 +8267,6 @@ packages:
       vite: 5.4.10(@types/node@22.8.6)(lightningcss@1.27.0)
     transitivePeerDependencies:
       - supports-color
-    dev: true
-
-  /@prettier/sync@0.5.2(prettier@3.3.3):
-    resolution: {integrity: sha512-Yb569su456XNx5BsH/Vyem7xD6g/y9iLmLUzRKM1a/dhU/D7HqqvkAG72znulXlMXztbV0iiu9O5AL8K98TzZQ==}
-    peerDependencies:
-      prettier: '*'
-    dependencies:
-      make-synchronized: 0.2.9
-      prettier: 3.3.3
     dev: true
 
   /@prisma/client@5.21.1(prisma@5.21.1):
@@ -20362,10 +20350,6 @@ packages:
       - supports-color
     dev: false
     optional: true
-
-  /make-synchronized@0.2.9:
-    resolution: {integrity: sha512-4wczOs8SLuEdpEvp3vGo83wh8rjJ78UsIk7DIX5fxdfmfMJGog4bQzxfvOwq7Q3yCHLC4jp1urPHIxRS/A93gA==}
-    dev: true
 
   /makeerror@1.0.12:
     resolution: {integrity: sha512-JmqCvUhmt43madlpFzG4BQzG2Z3m6tvQDNKdClZnO3VbIudJYmxsT0FNJMeiB2+JTSlTQTSbU8QdesVmwJcmLg==}
