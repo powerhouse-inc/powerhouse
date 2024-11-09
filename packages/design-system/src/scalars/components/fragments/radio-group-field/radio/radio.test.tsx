@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { Radio } from "./radio";
-import { RadioGroup } from "../radio-group";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Radio } from "./radio";
+import { RadioGroup } from "../radio-group";
 
 describe("Radio Component", () => {
   it("should match snapshot", () => {

@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TextareaField Component > should match snapshot with props 1`] = `
+<DocumentFragment>
+  <div
+    class="flex flex-col gap-2"
+  >
+    <label
+      class="inline-flex items-center text-sm leading-[22px] dark:text-gray-400 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900 mb-1.5 font-normal"
+      for=":r0:-textarea"
+      role="label"
+    >
+      Default Label
+      <span
+        class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+      >
+        *
+      </span>
+    </label>
+    <div
+      class="relative"
+    >
+      <textarea
+        aria-invalid="true"
+        aria-required="true"
+        autocomplete="off"
+        class="flex w-full rounded-lg text-base leading-normal font-normal font-inter text-gray-900 dark:text-gray-100 border placeholder:text-gray-500 dark:placeholder:text-gray-600 px-4 py-3 focus:outline-none focus:ring-gray-900 dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0 dark:focus:bg-gray-900 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:border-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-900/50 dark:disabled:border-gray-800 dark:disabled:text-gray-600 border-red-500 bg-red-50/50 dark:border-red-400 dark:bg-red-900/5 hover:border-red-600 dark:hover:border-red-300 focus:ring-0 focus:ring-offset-0 focus:border-red-500 dark:focus:border-red-400 min-h-[120px] resize-y scrollbar scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent dark:scrollbar-thumb-gray-600"
+        id=":r0:-textarea"
+        name="textarea"
+        rows="3"
+        spellcheck="false"
+      />
+      <div
+        class="mt-1.5 flex justify-end"
+      >
+        <div
+          class="flex items-center text-[10px]"
+        >
+          <span
+            class="text-gray-500"
+          >
+            0
+          </span>
+          <span
+            class="text-gray-300"
+          >
+            /100
+          </span>
+        </div>
+      </div>
+    </div>
+    <p
+      class="text-gray-600 font-inter text-sm font-normal leading-5 mt-0 dark:text-gray-400"
+    >
+      Default description
+    </p>
+    <p
+      class="mb-0 inline-flex items-center text-xs font-medium text-orange-900 dark:text-orange-900"
+      data-type="warning"
+    >
+      Warning
+    </p>
+    <p
+      class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-700"
+      data-type="error"
+    >
+      Error
+    </p>
+  </div>
+</DocumentFragment>
+`;

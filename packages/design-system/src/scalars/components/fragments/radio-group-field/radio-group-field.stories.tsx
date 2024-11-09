@@ -1,6 +1,4 @@
-import React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { action } from "@storybook/addon-actions";
 import { RadioGroupField } from "./radio-group-field";
 
 const meta: Meta<typeof RadioGroupField> = {
@@ -8,53 +6,115 @@ const meta: Meta<typeof RadioGroupField> = {
     className: {
       control: "text",
       description: "Additional CSS classes to apply to the Radio Group",
+      table: {
+        type: { summary: "string" },
+        category: "Styling",
+      },
     },
     defaultValue: {
       control: "text",
-      description: "Default selected value for the Radio Group",
+      description: "Default selected value for uncontrolled Radio Group",
+      table: {
+        type: { summary: "string" },
+        category: "State",
+      },
     },
     description: {
       control: "text",
       description: "Description for the Radio Group",
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning messages to display",
-      table: { defaultValue: { summary: "[]" } },
+      table: {
+        type: { summary: "string" },
+        category: "Content",
+      },
     },
     errors: {
       control: "object",
-      description: "Array of error messages to display",
-      table: { defaultValue: { summary: "[]" } },
+      description: "Array of error messages to display below the Radio Group",
+      table: {
+        type: { summary: "string[]" },
+        defaultValue: { summary: "[]" },
+        category: "Validation",
+      },
+    },
+    id: {
+      control: "text",
+      description: "Unique identifier for the Radio Group",
+      table: {
+        type: { summary: "string" },
+        category: "Technical",
+      },
     },
     label: {
       control: "text",
       description: "Label for the Radio Group",
+      table: {
+        type: { summary: "string" },
+        category: "Content",
+      },
+    },
+    name: {
+      control: "text",
+      description: "Name attribute for the Radio Group form field",
+      table: {
+        type: { summary: "string" },
+        category: "Technical",
+      },
     },
     onChange: {
       action: "onChange",
-      description: "Callback fired when the value changes",
+      description: "Callback fired when a radio option is selected",
+      table: {
+        type: { summary: "(value: string) => void" },
+        category: "Events",
+      },
     },
     radioOptions: {
       control: "object",
       description:
-        "Array of radio options with label, value and optional description",
-      table: { defaultValue: { summary: "[]" } },
+        "Array of radio options with label, value, description, and disabled state",
+      table: {
+        type: {
+          summary:
+            "Array<{ label: string; value: string; description?: string; disabled?: boolean; }>",
+        },
+        defaultValue: { summary: "[]" },
+        category: "Content",
+      },
     },
     required: {
       control: "boolean",
-      description:
-        "Indicates if selecting an option in the Radio Group is required",
-      table: { defaultValue: { summary: "false" } },
+      description: "Whether selecting an option is required",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: "Validation",
+      },
     },
     value: {
       control: "text",
-      description: "Currently selected value in the Radio Group",
+      description: "Currently selected value (for controlled component)",
+      table: {
+        type: { summary: "string" },
+        category: "State",
+      },
+    },
+    warnings: {
+      control: "object",
+      description: "Array of warning messages to display below the Radio Group",
+      table: {
+        type: { summary: "string[]" },
+        defaultValue: { summary: "[]" },
+        category: "Validation",
+      },
     },
   },
   component: RadioGroupField,
   parameters: {
-    controls: { sort: "requiredFirst" },
+    layout: "centered",
+    controls: {
+      sort: "requiredFirst",
+      expanded: true,
+    },
   },
   tags: ["autodocs"],
   title: "Document Engineering/Fragments/Radio Group Field",
@@ -129,54 +189,6 @@ export const WithOptionSelectedByDefault: Story = {
     defaultValue: "2",
     label: "Radio Group with option selected by default",
     radioOptions: defaultRadioOptions,
-  },
-};
-
-const ControlledRadioGroup = () => {
-  const [value, setValue] = React.useState("1");
-  const handleChange = (newValue: string) => {
-    setValue(newValue);
-    action("onChange")(newValue);
-  };
-
-  return (
-    <RadioGroupField
-      label="Controlled Radio Group"
-      onChange={handleChange}
-      radioOptions={defaultRadioOptions}
-      value={value}
-    />
-  );
-};
-
-export const Controlled: Story = {
-  render: () => <ControlledRadioGroup />,
-  parameters: {
-    docs: {
-      source: {
-        code: `
-const ControlledRadioGroup = () => {
-  const [value, setValue] = React.useState("1");
-  const handleChange = (newValue: string) => {
-    setValue(newValue);
-  };
-
-  return (
-    <RadioGroupField
-      label="Controlled Radio Group"
-      onChange={handleChange}
-      radioOptions={[
-        { label: "Option 1", value: "1" },
-        { label: "Option 2", value: "2" },
-        { label: "Option 3", value: "3" },
-      ]}
-      value={value}
-    />
-  );
-};
-        `,
-      },
-    },
   },
 };
 
