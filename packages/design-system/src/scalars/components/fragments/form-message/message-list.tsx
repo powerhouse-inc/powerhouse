@@ -12,13 +12,18 @@ export const FormMessageList: React.FC<FormMessageListProps> = ({
   messages,
   type = "info",
   className,
+  ...props
 }) => {
   if (messages.length === 0) {
     return null;
   }
 
   if (messages.length === 1) {
-    return <FormMessage type={type}>{messages[0]}</FormMessage>;
+    return (
+      <FormMessage type={type} {...props}>
+        {messages[0]}
+      </FormMessage>
+    );
   }
 
   const typeClasses: Record<FormMessageType, string> = {
@@ -28,7 +33,7 @@ export const FormMessageList: React.FC<FormMessageListProps> = ({
   };
 
   return (
-    <ul className={cn("flex flex-col gap-1", className)}>
+    <ul className={cn("flex flex-col gap-1", className)} {...props}>
       {messages.map((message) => (
         <FormMessage
           key={message}
