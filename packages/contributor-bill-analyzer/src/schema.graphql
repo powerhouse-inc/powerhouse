@@ -1,0 +1,10 @@
+type Query {
+  compensation(projectCode: String, token: String): [Compensation!]!
+}
+
+type Compensation {
+  projectCode: String!
+  amount: Int!
+  token: String!
+  updatedAt: DateTime!
+}
