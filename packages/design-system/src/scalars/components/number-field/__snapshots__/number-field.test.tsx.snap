@@ -2,24 +2,28 @@
 
 exports[`NumberField Component > should match snapshot 1`] = `
 <div>
-  <div
-    class="flex flex-col gap-2"
+  <form
+    novalidate=""
   >
-    <label
-      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
-      for=":r0:"
-      role="label"
+    <div
+      class="flex flex-col gap-2"
     >
-      Test Label
-    </label>
-    <input
-      aria-invalid="false"
-      class="flex h-10 w-full rounded-md text-sm border border-gray-300 bg-background px-3 py-2 ring-offset-background focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed show-arrows text-gray-900 dark:text-gray-50 dark:bg-[#252A34] dark:border-[#485265] focus:text-gray-300 dark:focus:text-gray-700 placeholder:focus:text-gray-300 dark:placeholder:focus:text-gray-700 focus-visible:ring-[#9DA6B9] focus-visible:ring-offset-1 dark:ring-offset-[#252A34] placeholder:focus:ml-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 disabled:border-gray-300 dark:disabled:border-[#373E4D] disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:text-gray-500 dark:disabled:text-gray-700"
-      id=":r0:"
-      name="Label"
-      type="number"
-      value=""
-    />
-  </div>
+      <label
+        class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+        for=":r0:"
+        role="label"
+      >
+        Test Label
+      </label>
+      <input
+        aria-invalid="false"
+        class="flex h-10 w-full rounded-md text-sm border border-gray-300 bg-background px-3 py-2 ring-offset-background focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed show-arrows text-gray-900 dark:text-gray-50 dark:bg-[#252A34] dark:border-[#485265] focus:text-gray-300 dark:focus:text-gray-700 placeholder:focus:text-gray-300 dark:placeholder:focus:text-gray-700 focus-visible:ring-[#9DA6B9] focus-visible:ring-offset-1 dark:ring-offset-[#252A34] placeholder:focus:ml-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 disabled:border-gray-300 dark:disabled:border-[#373E4D] disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:text-gray-500 dark:disabled:text-gray-700"
+        id=":r0:"
+        name="Label"
+        type="number"
+        value=""
+      />
+    </div>
+  </form>
 </div>
 `;
