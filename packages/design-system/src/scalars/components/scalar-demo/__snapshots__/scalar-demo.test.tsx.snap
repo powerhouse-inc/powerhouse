@@ -3,7 +3,7 @@
 exports[`ScalarDemo Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="rounded-md bg-yellow-200 p-3"
+    class="bg-yellow-200 rounded-md p-3"
   >
     Scalar Demo: test
   </div>

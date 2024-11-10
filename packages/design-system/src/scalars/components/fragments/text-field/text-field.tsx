@@ -12,9 +12,9 @@ import { withFieldValidation } from "../with-field-validation";
 export interface TextFieldProps
   extends Omit<
     FieldCommonProps<string> &
-      TextProps &
+      Omit<React.InputHTMLAttributes<HTMLInputElement>, "pattern"> &
       ErrorHandling &
-      React.InputHTMLAttributes<HTMLInputElement>,
+      TextProps,
     "value" | "autoComplete"
   > {
   value?: string;
@@ -63,7 +63,7 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
         )}
         <Input
           value={transformedValue}
-          defaultValue={defaultValue ?? undefined}
+          defaultValue={defaultValue}
           onChange={onChange}
           pattern={pattern?.toString()}
           autoComplete={autoCompleteValue}
