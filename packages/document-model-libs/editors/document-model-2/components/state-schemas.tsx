@@ -103,13 +103,11 @@ export function StateSchemas(props: Props) {
 
   return (
     <Tabs className="pb-8" activationMode="manual" defaultValue="global">
-      <div className="mb-10 mt-8 grid grid-cols-3 items-center">
-        <div className="h-1 bg-gray-900"></div>
-        <TabsList className="flex">
+      <div className="mb-10 mt-8">
+        <TabsList className="mx-auto flex max-w-sm">
           <TabsTrigger value="global">Global</TabsTrigger>
           <TabsTrigger value="local">Local</TabsTrigger>
         </TabsList>
-        <div className="h-1 bg-gray-900"></div>
       </div>
 
       <TabsContent value="global" tabIndex={-1}>

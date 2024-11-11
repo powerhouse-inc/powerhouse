@@ -31,7 +31,7 @@ export function Modules({ modules, allOperations, handlers }: Props) {
   };
 
   return (
-    <div className="w-4/5">
+    <div className="">
       {modules.map((module) => (
         <div className="" key={module.id}>
           <div className="my-4">
