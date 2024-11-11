@@ -1,25 +1,30 @@
 // namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
+import * as EthereumAddress from './EthereumAddress';
 import * as AmountPercentage from './AmountPercentage';
 import * as EmailAddress from './EmailAddress';
 
 // export types -- DO NOT REMOVE OR EDIT THIS COMMENT
+export type { ScalarType as EthereumAddressScalarType } from './EthereumAddress';
 export type { ScalarType as AmountPercentageScalarType } from './AmountPercentage';
 export type { ScalarType as EmailAddressScalarType } from './EmailAddress';
 
 export {
     // export object -- DO NOT REMOVE OR EDIT THIS COMMENT
+    EthereumAddress,
     AmountPercentage,
     EmailAddress,
 };
 
 export const resolvers = {
     // export resolvers -- DO NOT REMOVE OR EDIT THIS COMMENT
+    EthereumAddress: EthereumAddress.scalar,
     AmountPercentage: AmountPercentage.scalar,
     EmailAddress: EmailAddress.scalar,
 };
 
 export const typeDefs = [
     // export typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
+    EthereumAddress.typedef,
     AmountPercentage.typedef,
     EmailAddress.typedef,
     'scalar Date',
@@ -34,6 +39,7 @@ export const typeDefs = [
 
 export const generatorTypeDefs = {
     // export generator typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
+    [EthereumAddress.config.name]: EthereumAddress.type,
     [EmailAddress.config.name]: EmailAddress.type,
     [AmountPercentage.config.name]: AmountPercentage.type,
     Date: 'string',
@@ -48,6 +54,7 @@ export const generatorTypeDefs = {
 
 export const validationSchema = {
     // export validation schema -- DO NOT REMOVE OR EDIT THIS COMMENT
+    [EthereumAddress.config.name]: EthereumAddress.stringSchema,
     [EmailAddress.config.name]: EmailAddress.stringSchema,
     [AmountPercentage.config.name]: AmountPercentage.stringSchema,
     Date: 'z.string()',
