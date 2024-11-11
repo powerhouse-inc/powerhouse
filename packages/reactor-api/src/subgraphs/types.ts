@@ -1,8 +1,8 @@
-import { IncomingHttpHeaders } from "node:http";
-import { BaseDocumentDriveServer } from "document-drive";
+import type { IncomingHttpHeaders } from "http";
+import { IDocumentDriveServer } from "document-drive";
 
 export type Context = {
-  driveServer: BaseDocumentDriveServer;
+  driveServer: IDocumentDriveServer;
   driveId?: string;
   headers: IncomingHttpHeaders;
   db: unknown;

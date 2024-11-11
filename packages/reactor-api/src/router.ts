@@ -3,7 +3,7 @@ import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { BaseDocumentDriveServer } from "document-drive";
+import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
 import {
   InternalListenerManager,
@@ -18,9 +18,7 @@ const getLocalSubgraphConfig = (subgraphName: string) =>
 
 let listenerManager: InternalListenerManager | undefined;
 
-export const getListenerManager = async (
-  driveServer: BaseDocumentDriveServer
-) => {
+export const getListenerManager = async (driveServer: IDocumentDriveServer) => {
   if (!listenerManager) {
     listenerManager = new InternalListenerManager(driveServer);
     await listenerManager.init();
@@ -28,7 +26,7 @@ export const getListenerManager = async (
   return listenerManager;
 };
 
-export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
+export const updateRouter = async (driveServer: IDocumentDriveServer) => {
   const newRouter = Router();
   newRouter.use(cors());
   newRouter.use(bodyParser.json());
@@ -62,7 +60,7 @@ export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
             driveServer,
             ...getAdditionalContextFields(),
           }),
-      })
+      }),
     );
     console.log(`Setting up [${subgraphConfig.name}] subgraph at ${path}`);
   }
@@ -72,16 +70,16 @@ export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
   console.log("All subgraphs started.");
 };
 
-let docDriveServer: BaseDocumentDriveServer;
+let docDriveServer: IDocumentDriveServer;
 export const initReactorRouter = async (
   path: string,
   app: express.Express,
-  driveServer: BaseDocumentDriveServer
+  driveServer: IDocumentDriveServer,
 ) => {
   docDriveServer = driveServer;
   const models = driveServer.getDocumentModels();
   const driveModel = models.find(
-    (it) => it.documentModel.name === "DocumentDrive"
+    (it) => it.documentModel.name === "DocumentDrive",
   );
 
   if (!driveModel) {
@@ -90,21 +88,21 @@ export const initReactorRouter = async (
 
   await updateRouter(driveServer);
   driveServer.on("documentModels", () => {
-    updateRouter(driveServer);
+    updateRouter(driveServer).catch((error: unknown) => console.error(error));
   });
 
   app.use(path, (req, res, next) => reactorRouter(req, res, next));
 };
 
 export const addSubgraph = async (
-  subgraph: (typeof SUBGRAPH_REGISTRY)[number]
+  subgraph: (typeof SUBGRAPH_REGISTRY)[number],
 ) => {
   SUBGRAPH_REGISTRY.unshift(subgraph);
   await updateRouter(docDriveServer);
 };
 
 export const registerInternalListener = async (
-  module: InternalListenerModule
+  module: InternalListenerModule,
 ) => {
   if (!listenerManager) {
     throw new Error("Listener manager not initialized");

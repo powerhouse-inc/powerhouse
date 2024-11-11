@@ -37,26 +37,24 @@
     "build": "prisma generate"
   },
   "peerDependencies": {
+    "@powerhousedao/scalars": "latest",
+    "change-case": "^5.4.4",
     "document-model": "^2.3.1",
     "document-model-libs": "^1.104.0",
-    "@powerhousedao/scalars": "latest"
-  },
-  "optionalDependencies": {
-    "@prisma/client": "^5.18.0",
-    "localforage": "^1.10.0",
-    "redis": "^4.6.15",
-    "sequelize": "^6.37.3",
-    "sqlite3": "^5.1.7"
-  },
-  "dependencies": {
-    "change-case": "^5.4.4",
-    "exponential-backoff": "^3.1.1",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
     "nanoevents": "^9.0.0",
     "sanitize-filename": "^1.6.3",
     "uuid": "^9.0.1"
+  },
+  "optionalDependencies": {
+    "@prisma/client": "^5.18.0",
+    "exponential-backoff": "^3.1.1",
+    "localforage": "^1.10.0",
+    "redis": "^4.6.15",
+    "sequelize": "^6.37.3",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@powerhousedao/scalars": "latest",
@@ -72,6 +70,14 @@
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
     "webdriverio": "^9.0.9",
-    "vitest-fetch-mock": "^0.3.0"
+    "vitest-fetch-mock": "^0.3.0",
+    "change-case": "^5.4.4",
+    "exponential-backoff": "^3.1.1",
+    "graphql": "^16.9.0",
+    "graphql-request": "^6.1.0",
+    "json-stringify-deterministic": "^1.0.12",
+    "nanoevents": "^9.0.0",
+    "sanitize-filename": "^1.6.3",
+    "uuid": "^9.0.1"
   }
 }

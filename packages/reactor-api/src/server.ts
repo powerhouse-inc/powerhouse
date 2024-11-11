@@ -1,4 +1,4 @@
-import { BaseDocumentDriveServer } from "document-drive";
+import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
 import { initReactorRouter } from "./router";
 type Options = {
@@ -9,8 +9,8 @@ type Options = {
 const DEFAULT_PORT = 4000;
 
 export async function startAPI(
-  reactor: BaseDocumentDriveServer,
-  options: Options
+  reactor: IDocumentDriveServer,
+  options: Options,
 ) {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();

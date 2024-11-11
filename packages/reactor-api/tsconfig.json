@@ -12,7 +12,10 @@
     "noImplicitAny": true,
     "skipLibCheck": true,
     "emitDeclarationOnly": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "document-drive": ["../document-drive/src/index.ts"]
+    }
   },
   "include": ["src/**/*", "*.config.ts"]
 }
