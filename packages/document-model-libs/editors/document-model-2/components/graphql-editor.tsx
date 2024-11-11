@@ -1,33 +1,28 @@
-import { EditorState, Transaction, Compartment } from "@codemirror/state";
+import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { EditorView, ViewUpdate, keymap } from "@codemirror/view";
 import { ayuLight } from "thememirror";
 import { graphql } from "cm6-graphql";
-import { useEffect, useRef } from "react";
-import { GraphQLSchema, parse } from "graphql";
+import { useEffect, useRef, useState } from "react";
 import { basicSetup } from "codemirror";
 import { indentWithTab } from "@codemirror/commands";
-import {
-  validateGraphQlDocuments,
-  createDefaultRules,
-  isDocumentString,
-} from "@graphql-tools/utils";
-
-const rules = createDefaultRules().filter(
-  (rule) => rule.name !== "ExecutableDefinitionsRule",
-);
+import { useSchemaContext } from "../context/schema-context";
 
 type Props = {
-  schema: GraphQLSchema;
-  doc: string;
+  id: string;
   readonly?: boolean;
-  updateDoc: (newDoc: string) => void;
+  updateDocumentInModel: (newDoc: string) => void;
 };
 
 export function GraphqlEditor(props: Props) {
-  const { doc, schema, readonly, updateDoc } = props;
+  const { id, readonly, updateDocumentInModel } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const graphqlCompartment = useRef(new Compartment());
+  const { sharedSchema, getDocument, updateSharedSchema, handleSchemaErrors } =
+    useSchemaContext();
+  const doc = getDocument(id);
+  const [errors, setErrors] = useState("");
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -37,11 +32,7 @@ export function GraphqlEditor(props: Props) {
       extensions: [
         basicSetup,
         ayuLight,
-        graphqlCompartment.current.of(
-          graphql(schema, {
-            showErrorOnInvalidSchema: true,
-          }),
-        ),
+        graphqlCompartment.current.of(graphql(sharedSchema)),
         EditorView.lineWrapping,
         EditorView.theme({
           "&": { fontSize: "18px" },
@@ -57,14 +48,18 @@ export function GraphqlEditor(props: Props) {
             return;
 
           const newDoc = update.state.doc.toString();
-          if (!isDocumentString(newDoc)) return;
-
-          try {
-            validateGraphQlDocuments(schema, [parse(newDoc)], rules);
-            updateDoc(newDoc);
-          } catch (e) {
-            /* do nothing */
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
           }
+          timeoutRef.current = setTimeout(() => {
+            updateDocumentInModel(newDoc);
+            const result = updateSharedSchema(id, newDoc);
+            if (!result.success) {
+              setErrors(result.errors);
+            } else {
+              setErrors("");
+            }
+          }, 300);
         }),
         EditorState.readOnly.of(!!readonly),
         keymap.of([indentWithTab]),
@@ -95,13 +90,9 @@ export function GraphqlEditor(props: Props) {
     if (!view) return;
 
     view.dispatch({
-      effects: graphqlCompartment.current.reconfigure(
-        graphql(schema, {
-          showErrorOnInvalidSchema: true,
-        }),
-      ),
+      effects: graphqlCompartment.current.reconfigure(graphql(sharedSchema)),
     });
-  }, [schema]);
+  }, [sharedSchema]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -116,5 +107,19 @@ export function GraphqlEditor(props: Props) {
     }
   }, [doc]);
 
-  return <div ref={editorRef} />;
+  useEffect(() => {
+    const result = handleSchemaErrors(id, doc);
+    if (!result.success) {
+      setErrors(result.errors);
+    } else {
+      setErrors("");
+    }
+  }, []);
+
+  return (
+    <div>
+      <div ref={editorRef} />
+      <p className="mt-1 text-red-500">{errors}</p>
+    </div>
+  );
 }
