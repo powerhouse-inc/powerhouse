@@ -1030,7 +1030,7 @@ importers:
         version: link:../codegen
       '@powerhousedao/connect':
         specifier: develop
-        version: 1.0.0-dev.155(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.9.0)(document-model-libs@packages+document-model-libs)
+        version: 1.0.0-dev.166(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.9.0)(document-model-libs@packages+document-model-libs)
       '@powerhousedao/design-system':
         specifier: ^1.7.1
         version: link:../design-system
@@ -8130,8 +8130,9 @@ packages:
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
     dev: true
 
-  /@powerhousedao/connect@1.0.0-dev.155(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.9.0)(document-model-libs@packages+document-model-libs):
-    resolution: {integrity: sha512-urPss9KhtVw0kIdVyGdvVf+4fRM1QbqGhGjd1nLG1b2PeD3iaxfVnMvwX39Nex0lGoD9uxJQEa4Tc9d+svW5YA==}
+  /@powerhousedao/connect@1.0.0-dev.166(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.9.0)(document-model-libs@packages+document-model-libs):
+    resolution: {integrity: sha512-91y/hwLB+0Z/s4fqOKfKK6aFaBx0BlBc5Gpn9Euhw7ftVqLF/A5QVlH2tu9V9tnx1QnPpg8ABIzpuCwRTKcTVA==}
+    engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
       '@powerhousedao/design-system': latest
