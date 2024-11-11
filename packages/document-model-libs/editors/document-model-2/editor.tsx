@@ -54,15 +54,19 @@ export default function Editor(
 
   useEffect(() => {
     try {
-      const newSchema = buildSchema(`
-${hiddenQueryTypeDefDoc}
-${globalStateSchema}
-${localStateSchema}
-${modules
-  .flatMap((module) => module.operations.map((operation) => operation.schema))
-  .filter(Boolean)
-  .join("\n")}
-`);
+      const schemaString = `
+      ${hiddenQueryTypeDefDoc}
+      ${globalStateSchema}
+      ${localStateSchema}
+      ${modules
+        .flatMap((module) =>
+          module.operations.map((operation) => operation.schema),
+        )
+        .filter(Boolean)
+        .join("\n")}
+      `;
+
+      const newSchema = buildSchema(schemaString);
       setSchema(newSchema);
       setErrors("");
     } catch (e) {

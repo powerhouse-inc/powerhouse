@@ -1,10 +1,11 @@
 import { EditorState, Transaction, Compartment } from "@codemirror/state";
-import { EditorView, ViewUpdate } from "@codemirror/view";
+import { EditorView, ViewUpdate, keymap } from "@codemirror/view";
 import { ayuLight } from "thememirror";
 import { graphql } from "cm6-graphql";
 import { useEffect, useRef } from "react";
 import { GraphQLSchema, parse } from "graphql";
 import { basicSetup } from "codemirror";
+import { indentWithTab } from "@codemirror/commands";
 import {
   validateGraphQlDocuments,
   createDefaultRules,
@@ -59,19 +60,14 @@ export function GraphqlEditor(props: Props) {
           if (!isDocumentString(newDoc)) return;
 
           try {
-            const errors = validateGraphQlDocuments(
-              schema,
-              [parse(newDoc)],
-              rules,
-            );
-            if (!errors.length) {
-              updateDoc(newDoc);
-            }
+            validateGraphQlDocuments(schema, [parse(newDoc)], rules);
+            updateDoc(newDoc);
           } catch (e) {
             /* do nothing */
           }
         }),
         EditorState.readOnly.of(!!readonly),
+        keymap.of([indentWithTab]),
       ],
     });
 
