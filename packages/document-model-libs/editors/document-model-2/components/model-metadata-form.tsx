@@ -23,16 +23,18 @@ type Props = MetadataFormValues & {
 
 export function ModelMetadata(props: Props) {
   return (
-    <div className="grid grid-cols-[2fr,1fr] gap-8">
-      <div>
-        <ModelNameForm {...props} />
-        <DocumentTypeForm {...props} />
-        <DescriptionForm {...props} />
-      </div>
-      <div>
-        <AuthorNameForm {...props} />
-        <AuthorWebsiteForm {...props} />
-        <ModelExtensionForm {...props} />
+    <div>
+      <ModelNameForm {...props} />
+      <div className="grid grid-cols-[2fr,1fr] gap-8">
+        <div>
+          <DocumentTypeForm {...props} />
+          <DescriptionForm {...props} />
+        </div>
+        <div>
+          <AuthorNameForm {...props} />
+          <AuthorWebsiteForm {...props} />
+          <ModelExtensionForm {...props} />
+        </div>
       </div>
     </div>
   );
@@ -82,7 +84,7 @@ export function ModelNameForm(props: Props) {
       value={name}
       onSubmit={onSubmit}
       placeholder="Model name"
-      className="mb-2 text-lg"
+      className="mb-2 border-none pl-0 text-xl font-bold text-gray-900"
       required
       focusOnMount
     />
@@ -130,6 +132,7 @@ export function DescriptionForm(props: Props) {
       placeholder="Model Description"
       className="mb-2"
       allowEmpty
+      rows={4}
     />
   );
 }

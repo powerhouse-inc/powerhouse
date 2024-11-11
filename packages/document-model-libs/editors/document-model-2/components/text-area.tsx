@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "../utils";
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 export interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
@@ -26,7 +26,7 @@ export const Textarea = forwardRef<TextareaHandle, TextareaProps>(
       onInput?.(e);
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = "auto";
@@ -38,7 +38,7 @@ export const Textarea = forwardRef<TextareaHandle, TextareaProps>(
       <textarea
         {...props}
         className={cn(
-          "flex h-4 w-full rounded-md border border-gray-400 bg-transparent px-3 py-1 text-sm focus-visible:bg-gray-200 focus-visible:outline-none focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "w-full resize-none rounded-md border border-gray-200 bg-transparent px-3 pb-[10px] pt-2 text-sm text-gray-800 placeholder:text-gray-600 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         ref={textareaRef}
