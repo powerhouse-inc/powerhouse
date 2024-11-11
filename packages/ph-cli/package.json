@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -30,13 +30,13 @@
     "tsup": "^8.3.0"
   },
   "dependencies": {
-    "@powerhousedao/codegen": "0.13.0",
+    "@powerhousedao/codegen": "0.13.1",
     "@powerhousedao/connect": "develop",
-    "@powerhousedao/design-system": "^1.6.0",
-    "@powerhousedao/scalars": "^1.7.0",
+    "@powerhousedao/design-system": "^1.7.0",
+    "@powerhousedao/scalars": "^1.8.0",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
-    "document-model-libs": "^1.108.0",
+    "document-model-libs": "^1.109.0",
     "graphql": "^16.8.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

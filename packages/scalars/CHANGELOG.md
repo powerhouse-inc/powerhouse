@@ -1,3 +1,13 @@
+## 1.8.0 (2024-11-11)
+
+### 🚀 Features
+
+- **scalars, design-system:** added EthereumAddress and AmountTokens scalars ([e5124e19](https://github.com/powerhouse-inc/powerhouse/commit/e5124e19))
+
+### ❤️  Thank You
+
+- Guillermo Puente Sandoval
+
 ## 1.7.0 (2024-11-06)
 
 ### 🚀 Features
