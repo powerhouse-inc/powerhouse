@@ -88,7 +88,7 @@ export function GraphqlEditor(props: Props) {
         viewRef.current = null;
       }
     };
-  }, [readonly]);
+  }, [readonly, schema]);
 
   useEffect(() => {
     const view = viewRef.current;
