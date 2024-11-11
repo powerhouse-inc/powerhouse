@@ -3,6 +3,7 @@ import { actions } from "../../../document-models/contributor-bill";
 import { drizzle } from "drizzle-orm/connect";
 import { contributorBillAnalyzer, powtLineItem } from "../src/schema";
 import { PgDatabase } from "drizzle-orm/pg-core";
+import { resolvers } from "../src/resolvers";
 
 describe("powt calculation", () => {
   let db: PgDatabase<any, any, any>;
@@ -18,7 +19,7 @@ describe("powt calculation", () => {
     const powtLineItem = actions.addPowtLineItem({
       amount: 100,
       id: "cc29b53f-57a0-4ee3-b3cf-b4fb08170c47",
-      projectCode: "1",
+      projectCode: "POW-001",
       description: "1",
     });
 
@@ -41,7 +42,7 @@ describe("powt calculation", () => {
     const powtLineItem2 = actions.addPowtLineItem({
       amount: 100,
       id: "3f4c9d93-f344-4cfe-8e6d-bf7387f39097",
-      projectCode: "1",
+      projectCode: "POW-001",
       description: "1",
     });
     await transmit(
@@ -74,6 +75,7 @@ describe("powt calculation", () => {
     const powtLineItem2 = actions.updatePowtLineItem({
       amount: 10,
       powtLineItemId: "3f4c9d93-f344-4cfe-8e6d-bf7387f39097",
+      projectCode: "POW-001",
     });
 
     await transmit(
@@ -121,5 +123,15 @@ describe("powt calculation", () => {
     const result = await db.select().from(contributorBillAnalyzer);
 
     expect(result[0].amount).toBe(100);
+  });
+
+  it("should get compensation", async () => {
+    const [entry] = await resolvers.Query.compensation(
+      null,
+      { projectCode: "POW-001", token: undefined },
+      { db }
+    );
+
+    expect(entry.amount).toBe(100);
   });
 });

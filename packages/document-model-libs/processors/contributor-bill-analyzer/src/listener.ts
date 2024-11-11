@@ -25,7 +25,6 @@ export async function transmit(
   strands: InternalTransmitterUpdate[],
   db: PgDatabase<any, any, any>
 ) {
-  console.log("transmitting strands", strands);
   for (const strand of strands) {
     await handleStrand(strand, db);
   }
@@ -37,7 +36,6 @@ async function handleAddPowtLineItem(
   input: AddPowtLineItemInput,
   db: PgDatabase<any, any, any>
 ) {
-  console.log("adding powt line item", input);
   const result = await db
     .insert(powtLineItem)
     .values({ ...input, projectCode: input.projectCode ?? "" })
