@@ -1,6 +1,6 @@
-import { FormInput } from "@/connect";
-import { schema } from "@powerhousedao/scalars/EthereumAddress";
 import { useState } from "react";
+import { FormInput } from "@/connect";
+import { EthereumAddress as EthereumAddressScalar } from "@powerhousedao/scalars";
 
 export interface EthereumAddressProps {
   onChange?: (address: string, isValidAddress: boolean) => void;
@@ -11,7 +11,7 @@ export const EthereumAddress: React.FC<EthereumAddressProps> = ({
 }) => {
   const [address, setAddress] = useState("");
 
-  const result = schema.safeParse(address);
+  const result = EthereumAddressScalar.schema.safeParse(address);
 
   const errors = result.error?.errors.map((error) => error.message).join(", ");
 

@@ -369,9 +369,6 @@ importers:
       '@internationalized/date':
         specifier: ^3.5.6
         version: 3.5.6
-      '@powerhousedao/scalars':
-        specifier: 1.8.0
-        version: link:../scalars
       '@radix-ui/react-dialog':
         specifier: ^1.0.5
         version: 1.1.2(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
@@ -448,6 +445,9 @@ importers:
       '@hookform/devtools':
         specifier: ^4.3.1
         version: 4.3.1(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
+      '@powerhousedao/scalars':
+        specifier: 1.8.0
+        version: link:../scalars
       '@storybook/addon-actions':
         specifier: ^8.3.4
         version: 8.4.1(storybook@8.4.1)
