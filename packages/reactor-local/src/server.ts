@@ -9,6 +9,7 @@ import {
 import { DocumentDriveServer, DriveAlreadyExistsError } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
+import * as contributorBillAnalyzerListener from "document-model-libs/processors/contributor-bill-analyzer";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
@@ -16,11 +17,11 @@ import { drizzle } from "drizzle-orm/connect";
 import path from "path";
 import * as searchListener from "@powerhousedao/general-document-indexer";
 dotenv.config();
-
+console.log(contributorBillAnalyzerListener);
 // start document drive server with all available document models & filesystem storage
 const driveServer = new DocumentDriveServer(
   [DocumentModelLib, ...Object.values(DocumentModelsLibs)] as DocumentModel[],
-  new FilesystemStorage(path.join(__dirname, "../file-storage")),
+  new FilesystemStorage(path.join(__dirname, "../file-storage"))
 );
 
 // Start GraphQL API
@@ -76,9 +77,26 @@ const startServer = async () => {
         createSchema(
           driveServer,
           searchListener.resolvers as GraphQLResolverMap,
-          searchListener.typeDefs,
+          searchListener.typeDefs
         ),
       name: "search/:drive",
+    });
+
+    registerInternalListener({
+      name: "contributor-bill-analyzer",
+      options: contributorBillAnalyzerListener.options,
+      transmit: (strands) =>
+        contributorBillAnalyzerListener.transmit(strands, db),
+    });
+
+    addSubgraph({
+      getSchema: () =>
+        createSchema(
+          driveServer,
+          contributorBillAnalyzerListener.resolvers,
+          contributorBillAnalyzerListener.typeDefs
+        ),
+      name: "contributor-bill-analyzer",
     });
   } catch (e) {
     console.error("App crashed", e);

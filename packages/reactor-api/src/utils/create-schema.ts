@@ -1,9 +1,8 @@
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import { BaseDocumentDriveServer } from "document-drive";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { BaseDocumentDriveServer } from "document-drive";
 import { parse } from "graphql";
+import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 
 export const createSchema = (
   documentDriveServer: BaseDocumentDriveServer,
@@ -63,7 +62,7 @@ export const getDocumentModelTypeDefs = (
 
   // add the mutation and query types
   const schema = `
-      scalar DateTime
+      ${scalarsTypeDefs.join("\n")}
       interface IDocument {
           name: String!
           documentType: String!
