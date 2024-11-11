@@ -369,6 +369,9 @@ importers:
       '@internationalized/date':
         specifier: ^3.5.6
         version: 3.5.6
+      '@powerhousedao/scalars':
+        specifier: workspace:*
+        version: link:../scalars
       '@radix-ui/react-dialog':
         specifier: ^1.0.5
         version: 1.1.2(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
@@ -437,7 +440,10 @@ importers:
         version: 2.21.38(typescript@5.6.3)(zod@3.23.8)
       wagmi:
         specifier: ^2.12.17
-        version: 2.12.25(@tanstack/react-query@5.59.16)(@types/react@18.3.12)(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)(typescript@5.6.3)(viem@2.21.38)
+        version: 2.12.25(@tanstack/react-query@5.59.16)(@types/react@18.3.12)(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)(typescript@5.6.3)(viem@2.21.38)(zod@3.23.8)
+      zod:
+        specifier: ^3.23.8
+        version: 3.23.8
     devDependencies:
       '@hookform/devtools':
         specifier: ^4.3.1
@@ -9611,10 +9617,10 @@ packages:
       - '@types/node'
     dev: true
 
-  /@safe-global/safe-apps-provider@0.18.3(typescript@5.6.3):
+  /@safe-global/safe-apps-provider@0.18.3(typescript@5.6.3)(zod@3.23.8):
     resolution: {integrity: sha512-f/0cNv3S4v7p8rowAjj0hDCg8Q8P/wBjp5twkNWeBdvd0RDr7BuRBPPk74LCqmjQ82P+1ltLlkmVFSmxTIT7XQ==}
     dependencies:
-      '@safe-global/safe-apps-sdk': 9.1.0(typescript@5.6.3)
+      '@safe-global/safe-apps-sdk': 9.1.0(typescript@5.6.3)(zod@3.23.8)
       events: 3.3.0
     transitivePeerDependencies:
       - bufferutil
@@ -9623,7 +9629,7 @@ packages:
       - zod
     dev: false
 
-  /@safe-global/safe-apps-sdk@9.1.0(typescript@5.6.3):
+  /@safe-global/safe-apps-sdk@9.1.0(typescript@5.6.3)(zod@3.23.8):
     resolution: {integrity: sha512-N5p/ulfnnA2Pi2M3YeWjULeWbjo7ei22JwU/IXnhoHzKq3pYCN6ynL9mJBOlvDVv892EgLPCWCOwQk/uBT2v0Q==}
     dependencies:
       '@safe-global/safe-gateway-typescript-sdk': 3.22.2
@@ -11788,7 +11794,7 @@ packages:
     resolution: {integrity: sha512-L2RPSAwUFbgZH20etwrXyVyCBu9OxRSi8T/38QsvnkJyvq2LufW2lDCOzm7t/U9C1mkhJGWYfCuFBCmIuNivrg==}
     dev: true
 
-  /@wagmi/connectors@5.3.3(@types/react@18.3.12)(@wagmi/core@2.14.1)(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)(typescript@5.6.3)(viem@2.21.38):
+  /@wagmi/connectors@5.3.3(@types/react@18.3.12)(@wagmi/core@2.14.1)(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)(typescript@5.6.3)(viem@2.21.38)(zod@3.23.8):
     resolution: {integrity: sha512-RUgwgqX7H+qg1lXBhLqcG0D5xb8USlAv4MVai4r5YpRw6lxpDvELFXxHN4ldZuUARKhH7Q3ZpfvdWyEXY+wn9w==}
     peerDependencies:
       '@wagmi/core': 2.14.1
@@ -11800,8 +11806,8 @@ packages:
     dependencies:
       '@coinbase/wallet-sdk': 4.1.0
       '@metamask/sdk': 0.30.1(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)
-      '@safe-global/safe-apps-provider': 0.18.3(typescript@5.6.3)
-      '@safe-global/safe-apps-sdk': 9.1.0(typescript@5.6.3)
+      '@safe-global/safe-apps-provider': 0.18.3(typescript@5.6.3)(zod@3.23.8)
+      '@safe-global/safe-apps-sdk': 9.1.0(typescript@5.6.3)(zod@3.23.8)
       '@wagmi/core': 2.14.1(@types/react@18.3.12)(react@18.3.1)(typescript@5.6.3)(use-sync-external-store@1.2.0)(viem@2.21.38)
       '@walletconnect/ethereum-provider': 2.17.0(@types/react@18.3.12)(react@18.3.1)
       cbw-sdk: /@coinbase/wallet-sdk@3.9.3
@@ -26667,7 +26673,7 @@ packages:
       xml-name-validator: 5.0.0
     dev: true
 
-  /wagmi@2.12.25(@tanstack/react-query@5.59.16)(@types/react@18.3.12)(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)(typescript@5.6.3)(viem@2.21.38):
+  /wagmi@2.12.25(@tanstack/react-query@5.59.16)(@types/react@18.3.12)(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)(typescript@5.6.3)(viem@2.21.38)(zod@3.23.8):
     resolution: {integrity: sha512-RdQCDbTv1+b7fWCAoLEYX0loymqLnhmNrMZq1gfPEs6cOhEHYOQeZtJWnyaXOD5+3xIFw+xoA0xDNvAHVbtbKw==}
     peerDependencies:
       '@tanstack/react-query': '>=5.0.0'
@@ -26679,7 +26685,7 @@ packages:
         optional: true
     dependencies:
       '@tanstack/react-query': 5.59.16(react@18.3.1)
-      '@wagmi/connectors': 5.3.3(@types/react@18.3.12)(@wagmi/core@2.14.1)(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)(typescript@5.6.3)(viem@2.21.38)
+      '@wagmi/connectors': 5.3.3(@types/react@18.3.12)(@wagmi/core@2.14.1)(react-dom@18.3.1)(react-native@0.76.1)(react@18.3.1)(typescript@5.6.3)(viem@2.21.38)(zod@3.23.8)
       '@wagmi/core': 2.14.1(@types/react@18.3.12)(react@18.3.1)(typescript@5.6.3)(use-sync-external-store@1.2.0)(viem@2.21.38)
       react: 18.3.1
       typescript: 5.6.3
