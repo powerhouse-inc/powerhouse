@@ -165,4 +165,46 @@ describe("withFieldValidation", () => {
     expect(handleSubmit).not.toHaveBeenCalled();
     expect(await screen.findByTestId("error-message")).toBeInTheDocument();
   });
+
+  it("should validate custom validators", async () => {
+    const WrappedComponentWithCustomValidator =
+      withFieldValidation<TextFieldProps>(TextFieldTesting, {
+        validations: {
+          _isPrime: () => (value: string) => {
+            return Number(value) % 2 === 0 || "Custom error message";
+          },
+        },
+      });
+    renderWithForm(<WrappedComponentWithCustomValidator name="test" />);
+
+    const input = screen.getByTestId("test-input");
+    await userEvent.type(input, "3");
+    await userEvent.keyboard("{Enter}");
+
+    expect(await screen.findByTestId("error-message")).toBeInTheDocument();
+  });
+
+  it("should validate custom validators using parent props", async () => {
+    const WrappedComponentWithCustomValidator =
+      withFieldValidation<TextFieldProps>(TextFieldTesting, {
+        validations: {
+          _autoCompleteRequireLength3: (props) => (value: string) => {
+            return props.autoComplete
+              ? value.length > 3
+                ? true
+                : "Error"
+              : true;
+          },
+        },
+      });
+    renderWithForm(
+      <WrappedComponentWithCustomValidator name="test" autoComplete />,
+    );
+
+    const input = screen.getByTestId("test-input");
+    await userEvent.type(input, "12");
+    await userEvent.keyboard("{Enter}");
+
+    expect(await screen.findByTestId("error-message")).toBeInTheDocument();
+  });
 });
