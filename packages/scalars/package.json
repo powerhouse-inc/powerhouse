@@ -44,6 +44,11 @@
       "import": "./dist/es/src/index.js",
       "types": "./dist/types/src/index.d.ts"
     },
+    "./index": {
+      "require": "./dist/cjs/src/scalars/index.js",
+      "import": "./dist/es/src/scalars/index.js",
+      "types": "./dist/types/src/scalars/index.d.ts"
+    },
     "./EmailAddress": {
       "require": "./dist/cjs/src/scalars/EmailAddress.js",
       "import": "./dist/es/src/scalars/EmailAddress.js",

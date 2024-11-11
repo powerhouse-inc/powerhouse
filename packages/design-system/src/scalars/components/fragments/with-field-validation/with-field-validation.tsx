@@ -6,6 +6,8 @@ interface PossibleProps extends FieldCommonProps<any>, ErrorHandling {
   pattern?: RegExp;
   maxLength?: number;
   minLength?: number;
+  minValue?: number;
+  maxValue?: number;
 }
 
 interface PossibleEventsProps {
@@ -125,6 +127,18 @@ export const withFieldValidation = <T extends PossibleProps>(
             minLength: {
               value: props.minLength,
               message: `This field must be more than ${props.minLength} characters`,
+            },
+          }),
+          ...(props.minValue && {
+            min: {
+              value: props.minValue,
+              message: `This field must be more than ${props.minValue}`,
+            },
+          }),
+          ...(props.maxValue && {
+            max: {
+              value: props.maxValue,
+              message: `This field must be less than ${props.maxValue}`,
             },
           }),
           ...(props.customValidator && {
