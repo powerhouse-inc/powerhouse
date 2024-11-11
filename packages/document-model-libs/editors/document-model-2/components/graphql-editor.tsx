@@ -83,7 +83,7 @@ export function GraphqlEditor(props: Props) {
         viewRef.current = null;
       }
     };
-  }, [readonly]);
+  }, [readonly, sharedSchema]);
 
   useEffect(() => {
     const view = viewRef.current;
