@@ -9,7 +9,6 @@ unless_exists: true
 */
 
 import { <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations } from '../../gen/<%= module %>/operations';
-import { default as Exceptions } from '../../gen/<%= module %>/exceptions';
 
 export const reducer: <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations = {
 <% actions.forEach(action => { _%>
