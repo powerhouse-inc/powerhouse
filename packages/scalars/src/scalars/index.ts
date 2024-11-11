@@ -1,15 +1,18 @@
 // namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
+import * as AmountTokens from './AmountTokens';
 import * as EthereumAddress from './EthereumAddress';
 import * as AmountPercentage from './AmountPercentage';
 import * as EmailAddress from './EmailAddress';
 
 // export types -- DO NOT REMOVE OR EDIT THIS COMMENT
+export type { ScalarType as AmountTokensScalarType } from './AmountTokens';
 export type { ScalarType as EthereumAddressScalarType } from './EthereumAddress';
 export type { ScalarType as AmountPercentageScalarType } from './AmountPercentage';
 export type { ScalarType as EmailAddressScalarType } from './EmailAddress';
 
 export {
     // export object -- DO NOT REMOVE OR EDIT THIS COMMENT
+    AmountTokens,
     EthereumAddress,
     AmountPercentage,
     EmailAddress,
@@ -17,6 +20,7 @@ export {
 
 export const resolvers = {
     // export resolvers -- DO NOT REMOVE OR EDIT THIS COMMENT
+    AmountTokens: AmountTokens.scalar,
     EthereumAddress: EthereumAddress.scalar,
     AmountPercentage: AmountPercentage.scalar,
     EmailAddress: EmailAddress.scalar,
@@ -24,6 +28,7 @@ export const resolvers = {
 
 export const typeDefs = [
     // export typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
+    AmountTokens.typedef,
     EthereumAddress.typedef,
     AmountPercentage.typedef,
     EmailAddress.typedef,
@@ -39,6 +44,7 @@ export const typeDefs = [
 
 export const generatorTypeDefs = {
     // export generator typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
+    [AmountTokens.config.name]: AmountTokens.type,
     [EthereumAddress.config.name]: EthereumAddress.type,
     [EmailAddress.config.name]: EmailAddress.type,
     [AmountPercentage.config.name]: AmountPercentage.type,
@@ -54,6 +60,7 @@ export const generatorTypeDefs = {
 
 export const validationSchema = {
     // export validation schema -- DO NOT REMOVE OR EDIT THIS COMMENT
+    [AmountTokens.config.name]: AmountTokens.stringSchema,
     [EthereumAddress.config.name]: EthereumAddress.stringSchema,
     [EmailAddress.config.name]: EmailAddress.stringSchema,
     [AmountPercentage.config.name]: AmountPercentage.stringSchema,
