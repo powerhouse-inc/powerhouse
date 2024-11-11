@@ -1,25 +1,27 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NumberField } from "./number-field";
+import { renderWithForm } from "@/scalars/lib/testing";
+
 describe("NumberField Component", () => {
   const mockOnChange = vi.fn();
   it("should match snapshot", () => {
-    const { container } = render(
+    const { container } = renderWithForm(
       <NumberField label="Test Label" name="Label" />,
     );
     expect(container).toMatchSnapshot();
   });
 
   it("should renders label when label its provided", () => {
-    render(
+    renderWithForm(
       <NumberField label="Test Label" onChange={mockOnChange} name="Label" />,
     );
     expect(screen.getByLabelText("Test Label")).toBeInTheDocument();
   });
 
   it("should renders the description when provided", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         description="This is a description"
@@ -31,7 +33,7 @@ describe("NumberField Component", () => {
   });
 
   it("should renders error messages when provided", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         onChange={mockOnChange}
@@ -44,7 +46,7 @@ describe("NumberField Component", () => {
   });
 
   it("should renders warning messages when provided", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         onChange={mockOnChange}
@@ -58,7 +60,7 @@ describe("NumberField Component", () => {
 
   it("should calls onChange when the input value changes", async () => {
     const user = userEvent.setup();
-    render(<NumberField label="Test Label" name="Label" />);
+    renderWithForm(<NumberField label="Test Label" name="Label" />);
     const input = screen.getByLabelText("Test Label");
 
     await user.type(input, "10");
@@ -66,7 +68,7 @@ describe("NumberField Component", () => {
   });
 
   it("should disables the input when disabled prop is true", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         onChange={mockOnChange}
@@ -80,7 +82,7 @@ describe("NumberField Component", () => {
   });
 
   it("should shows the input as required when required prop is true", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         onChange={mockOnChange}
@@ -92,7 +94,7 @@ describe("NumberField Component", () => {
   });
 
   it("should handles autoComplete set to true", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         onChange={mockOnChange}
@@ -107,7 +109,7 @@ describe("NumberField Component", () => {
   });
 
   it("should handles autoComplete set to false", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         onChange={mockOnChange}
@@ -122,7 +124,7 @@ describe("NumberField Component", () => {
   });
 
   it("should renders input with provided className", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         // This a custom class for testing no a class for tailwindcss
@@ -136,7 +138,7 @@ describe("NumberField Component", () => {
   });
 
   it("should supports a defaultValue prop", () => {
-    render(
+    renderWithForm(
       <NumberField
         label="Test Label"
         defaultValue={5}

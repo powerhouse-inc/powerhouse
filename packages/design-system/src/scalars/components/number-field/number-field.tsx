@@ -7,13 +7,17 @@ import { ErrorHandling, FieldCommonProps, NumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { getDisplayValue, regex } from "@/scalars/utils/utils";
+import { withFieldValidation } from "../fragments/with-field-validation";
 
 export interface NumberFieldProps
   extends Omit<
     FieldCommonProps<string | number> &
       NumberProps &
       ErrorHandling &
-      React.InputHTMLAttributes<HTMLInputElement>,
+      Omit<
+        React.InputHTMLAttributes<HTMLInputElement>,
+        "min" | "max" | "minLength" | "maxLength"
+      >,
     "value" | "autoComplete" | "defaultValue" | "name" | "pattern"
   > {
   className?: string;
@@ -25,7 +29,7 @@ export interface NumberFieldProps
   value?: number | string;
 }
 
-export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
+const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   (
     {
       label,
@@ -121,5 +125,20 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
         {errors && <FormMessageList messages={errors} type="error" />}
       </FormGroup>
     );
+  },
+);
+
+export const NumberField = withFieldValidation<NumberFieldProps>(
+  NumberFieldRaw,
+  {
+    validations: {
+      _positive: (props) => (value) => {
+        return props.allowNegative
+          ? true
+          : Number(value) > 0
+            ? true
+            : "Value must be positive";
+      },
+    },
   },
 );
