@@ -1,6 +1,7 @@
 import React from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
-import type { FieldCommonProps, ErrorHandling } from "../../types";
+import type { FieldCommonProps, ErrorHandling, NumericType } from "../../types";
+import { numberCustomValidator } from "../../number-field/numberCustomValidator";
 
 interface PossibleProps extends FieldCommonProps<any>, ErrorHandling {
   pattern?: RegExp;
@@ -8,6 +9,8 @@ interface PossibleProps extends FieldCommonProps<any>, ErrorHandling {
   minLength?: number;
   minValue?: number;
   maxValue?: number;
+  allowNegative?: boolean;
+  numericType?: NumericType;
 }
 
 interface PossibleEventsProps {
@@ -151,3 +154,12 @@ export const withFieldValidation = <T extends PossibleProps>(
     );
   };
 };
+
+// numberCustomValidator(value, {
+//   minValue: props.minValue,
+//   maxValue: props.maxValue,
+//   // step: props.step,
+//   allowNegative: props.allowNegative,
+//   // isBigInt: props.isBigInt,
+//   numericType: props.numericType,
+// }),

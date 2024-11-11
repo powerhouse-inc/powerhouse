@@ -461,7 +461,7 @@ export const Setp: Story = {
     label: "Label",
     value: 0,
     step: 10,
-    min: 20,
+    minValue: 20,
   },
   render: (args) => {
     const [value, setValue] = useState(args.value || 0);

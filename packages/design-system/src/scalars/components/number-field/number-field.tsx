@@ -6,7 +6,7 @@ import { FormGroup } from "../fragments/form-group";
 import { ErrorHandling, FieldCommonProps, NumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
-import { getDisplayValue, regex } from "@/scalars/utils/utils";
+import { getDisplayValue } from "@/scalars/utils/utils";
 import { withFieldValidation } from "../fragments/with-field-validation";
 
 export interface NumberFieldProps
@@ -52,7 +52,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       allowNegative = true,
       isBigInt = false,
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      numericType = "Int",
+      numericType = "PositiveInt",
       trailingZeros = false,
       precision = 0,
       ...props
@@ -66,6 +66,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
 
     // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints, otherwise sets to "number" for standard numeric input.
     const inputType = isBigInt ? "text" : "number";
+    // const inputType =  "number";
 
     const displayValue = getDisplayValue(
       value,
@@ -74,6 +75,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       precision,
     );
 
+    // console.log(">>>>>", typeof value);
     return (
       <FormGroup>
         {label && (
@@ -105,7 +107,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             "disabled:border-gray-300 dark:disabled:border-[#373E4D] disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:text-gray-500 dark:disabled:text-gray-700",
             className,
           )}
-          pattern={isBigInt ? regex.toString() : pattern?.toString()}
+          pattern={pattern?.toString()}
           type={inputType}
           min={minValue}
           max={maxValue}
