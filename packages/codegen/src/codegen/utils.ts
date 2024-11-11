@@ -4,6 +4,7 @@ import {
   utils,
 } from "document-model/document-model";
 import fs from "node:fs";
+import * as prettier from "prettier";
 
 export async function loadDocumentModel(
   path: string,
@@ -34,4 +35,14 @@ export async function loadDocumentModel(
       ? new Error(`Document model not found.`)
       : error;
   }
+}
+
+export async function formatWithPrettierBeforeWrite(
+  outputFile: string,
+  content: string,
+) {
+  const modifiedContent = await prettier.format(content, {
+    parser: "typescript",
+  });
+  return modifiedContent;
 }

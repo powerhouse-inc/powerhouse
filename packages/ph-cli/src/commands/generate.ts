@@ -15,7 +15,7 @@ export const generate: CommandActionType<
       interactive?: boolean;
       editors?: string;
       documentModels?: string;
-      format?: boolean;
+      skipFormat?: boolean;
       watch?: boolean;
       editor?: string;
       documentTypes?: string;
@@ -31,7 +31,7 @@ export const generate: CommandActionType<
       ...(options.documentModels && {
         documentModelsDir: options.documentModels,
       }),
-      ...(options.format && { format: options.format }),
+      ...(options.skipFormat && { skipFormat: options.skipFormat }),
       ...(options.interactive && { interactive: options.interactive }),
       ...(options.watch && { watch: options.watch }),
     },
@@ -79,7 +79,7 @@ export function generateCommand(program: Command) {
     .option("-e, --editor <type>", "Editor Name")
     .option("--document-models <type>", "Path to the document models directory")
     .option("--document-types <type>", "Supported document types by the editor")
-    .option("-f, --format", "Format the generated code")
+    .option("-sf, --skip-format", "Skip formatting the generated code")
     .option("-w, --watch", "Watch the generated code")
     .action(generate);
 }

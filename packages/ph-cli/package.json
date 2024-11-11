@@ -30,7 +30,7 @@
     "tsup": "^8.3.0"
   },
   "dependencies": {
-    "@powerhousedao/codegen": "0.13.1",
+    "@powerhousedao/codegen": "workspace:",
     "@powerhousedao/connect": "develop",
     "@powerhousedao/design-system": "^1.7.1",
     "@powerhousedao/scalars": "^1.8.0",
