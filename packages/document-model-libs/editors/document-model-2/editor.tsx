@@ -1,8 +1,6 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import {
   compareStringsWithoutWhitespace,
-  hiddenQueryTypeDefDoc,
-  initialSchema,
   makeOperationInitialDoc,
   Scope,
 } from ".";
@@ -14,8 +12,8 @@ import {
 } from "document-model/document-model";
 import { EditorProps, OperationScope, utils } from "document-model/document";
 import { DocumentModelEditor } from "./document-model-editor";
-import { buildSchema } from "graphql";
 import { ModelMetadata } from "./components/model-metadata-form";
+import { SchemaContextProvider } from "./context/schema-context";
 
 export default function Editor(
   props: EditorProps<
@@ -49,32 +47,6 @@ export default function Editor(
     () => modules.flatMap((module) => module.operations),
     [modules],
   );
-  const [schema, setSchema] = useState(initialSchema);
-  const [errors, setErrors] = useState("");
-
-  useEffect(() => {
-    try {
-      const schemaString = `
-      ${hiddenQueryTypeDefDoc}
-      ${globalStateSchema}
-      ${localStateSchema}
-      ${modules
-        .flatMap((module) =>
-          module.operations.map((operation) => operation.schema),
-        )
-        .filter(Boolean)
-        .join("\n")}
-      `;
-
-      const newSchema = buildSchema(schemaString);
-      setSchema(newSchema);
-      setErrors("");
-    } catch (e) {
-      if (e instanceof Error) {
-        setErrors(e.message);
-      }
-    }
-  }, [hiddenQueryTypeDefDoc, globalStateSchema, localStateSchema, modules]);
 
   const handlers = useMemo(
     () => ({
@@ -351,30 +323,33 @@ export default function Editor(
 
   return (
     <main className="mx-auto min-h-dvh max-w-screen-lg px-4 pt-8">
-      <ModelMetadata
-        name={modelName}
-        documentType={documentType}
-        extension={extension}
-        description={description}
-        authorName={authorName}
-        authorWebsite={authorWebsite ?? ""}
-        handlers={handlers}
+      <SchemaContextProvider
         globalStateSchema={globalStateSchema}
         localStateSchema={localStateSchema}
-        schema={schema}
-      />
-      <DocumentModelEditor
-        errors={errors}
-        schema={schema}
-        modelName={modelName}
-        globalStateSchema={globalStateSchema}
-        globalStateInitialValue={globalStateInitialValue}
-        localStateSchema={localStateSchema}
-        localStateInitialValue={localStateInitialValue}
-        handlers={handlers}
-        modules={modules}
         operations={operations}
-      />
+      >
+        <ModelMetadata
+          name={modelName}
+          documentType={documentType}
+          extension={extension}
+          description={description}
+          authorName={authorName}
+          authorWebsite={authorWebsite ?? ""}
+          handlers={handlers}
+          globalStateSchema={globalStateSchema}
+          localStateSchema={localStateSchema}
+        />
+        <DocumentModelEditor
+          modelName={modelName}
+          globalStateSchema={globalStateSchema}
+          globalStateInitialValue={globalStateInitialValue}
+          localStateSchema={localStateSchema}
+          localStateInitialValue={localStateInitialValue}
+          handlers={handlers}
+          modules={modules}
+          operations={operations}
+        />
+      </SchemaContextProvider>
     </main>
   );
 }

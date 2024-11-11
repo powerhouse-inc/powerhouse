@@ -1,25 +1,23 @@
-import { typeDefs } from "@powerhousedao/scalars";
 import { makeMinimalObjectFromSDL, makeInitialSchemaDoc } from "../utils";
 import { GraphqlEditor } from "./graphql-editor";
 import { JSONEditor } from "./json-editor";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 import { DocumentActionHandlers } from "../types";
 import { useState } from "react";
-import { GraphQLSchema } from "graphql";
 import { capitalCase } from "change-case";
+import { useSchemaContext } from "../context/schema-context";
+import { hiddenQueryTypeDefDoc } from "../constants";
 
 type Props = {
   modelName: string;
-  schema: GraphQLSchema;
   globalStateSchema: string;
-  globalStateInitialValue: string;
   localStateSchema: string;
+  globalStateInitialValue: string;
   localStateInitialValue: string;
   handlers: DocumentActionHandlers;
 };
 
 type StateEditorProps = {
-  schema: GraphQLSchema;
   stateSchema: string;
   initialValue: string;
   handlers: DocumentActionHandlers;
@@ -27,12 +25,12 @@ type StateEditorProps = {
 };
 
 function StateEditor({
-  schema,
   stateSchema,
   initialValue,
   handlers,
   scope,
 }: StateEditorProps) {
+  const { sharedSchema } = useSchemaContext();
   const [showStandardLib, setShowStandardLib] = useState(false);
 
   return (
@@ -42,10 +40,10 @@ function StateEditor({
         <div>
           {showStandardLib && (
             <GraphqlEditor
-              doc={typeDefs.join("\n")}
-              schema={schema}
+              doc={hiddenQueryTypeDefDoc}
+              id="standard-lib"
               readonly
-              updateDoc={() => {}}
+              updateDocumentInModel={() => {}}
             />
           )}
           <button
@@ -57,8 +55,10 @@ function StateEditor({
           <div className="pt-2">
             <GraphqlEditor
               doc={stateSchema}
-              schema={schema}
-              updateDoc={(newDoc) => handlers.setStateSchema(newDoc, scope)}
+              id={scope}
+              updateDocumentInModel={(newDoc) =>
+                handlers.setStateSchema(newDoc, scope)
+              }
             />
           </div>
         </div>
@@ -69,7 +69,7 @@ function StateEditor({
               className="rounded border border-slate-800 bg-white px-2 py-1 text-slate-800"
               onClick={() => {
                 const updatedStateDoc = makeMinimalObjectFromSDL(
-                  schema,
+                  sharedSchema,
                   stateSchema,
                   initialValue ? JSON.parse(initialValue) : {},
                 );
@@ -81,7 +81,6 @@ function StateEditor({
           </div>
           <div className="pt-2">
             <JSONEditor
-              schema={schema}
               doc={initialValue}
               updateDoc={(newDoc) => handlers.setInitialState(newDoc, scope)}
             />
@@ -94,7 +93,6 @@ function StateEditor({
 
 export function StateSchemas(props: Props) {
   const {
-    schema,
     modelName,
     globalStateSchema,
     localStateSchema,
@@ -116,7 +114,6 @@ export function StateSchemas(props: Props) {
 
       <TabsContent value="global" tabIndex={-1}>
         <StateEditor
-          schema={schema}
           stateSchema={globalStateSchema}
           initialValue={globalStateInitialValue}
           handlers={handlers}
@@ -142,7 +139,6 @@ export function StateSchemas(props: Props) {
           </button>
         ) : (
           <StateEditor
-            schema={schema}
             stateSchema={localStateSchema}
             initialValue={localStateInitialValue}
             handlers={handlers}
