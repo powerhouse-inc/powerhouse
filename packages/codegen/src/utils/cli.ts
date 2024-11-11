@@ -8,7 +8,7 @@ export type PowerhouseConfig = {
   documentModelsDir: string;
   editorsDir: string;
   interactive?: boolean;
-  format?: boolean;
+  skipFormat?: boolean;
   watch?: boolean;
 };
 
@@ -18,16 +18,17 @@ const DEFAULT_EDITORS_DIR = "./editors";
 export const DEFAULT_CONFIG: PowerhouseConfig = {
   documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,
   editorsDir: DEFAULT_EDITORS_DIR,
+  skipFormat: false,
 };
 
 export const configSpec = {
   "--document-models": String,
   "--editors": String,
   "--interactive": Boolean,
-  "--format": Boolean,
+  "--skip-format": Boolean,
   "--watch": Boolean,
   "-i": "--interactive",
-  "-f": "--format",
+  "-sf": "--skip-format",
   "-w": "--watch",
 } as const;
 
@@ -68,8 +69,8 @@ export function parseConfig(argv: string[]) {
     config.editorsDir = args["--editors"];
   }
 
-  if ("--format" in args) {
-    config.format = true;
+  if ("--skip-format" in args) {
+    config.skipFormat = true;
   }
   if ("--interactive" in args) {
     config.interactive = true;

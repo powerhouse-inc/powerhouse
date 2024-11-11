@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/general-document-indexer",
-  "version": "1.3.1",
+  "version": "1.3.4",
   "description": "general document indexer read model",
   "main": "dist/index.mjs",
   "publishConfig": {
@@ -13,10 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "document-drive": "^1.3.1",
+    "document-drive": "^1.3.4",
     "document-model": "^2.6.0",
-    "document-model-libs": "^1.108.0",
-    "@powerhousedao/scalars": "^1.7.0",
+    "document-model-libs": "^1.110.0",
+    "@powerhousedao/scalars": "^1.8.0",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1"
   },

@@ -3,6 +3,7 @@ import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
 import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
 import { readdirSync } from "node:fs";
 import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
+import { formatWithPrettierBeforeWrite } from "./utils";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })
@@ -77,15 +78,16 @@ export function schemaConfig(
 export const generateSchema = (
   model: string,
   dir: string,
-  { watch = false, format = false } = {},
+  { watch = false, skipFormat = false } = {},
 ) => {
   const documentModelConfig = schemaConfig(model, dir);
+
   const config: CodegenConfig = {
     overwrite: true,
     generates: documentModelConfig,
     watch,
     hooks: {
-      afterOneFileWrite: format ? ["prettier --ignore-path --write"] : [],
+      beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
     },
   };
   return generate(config, true);
@@ -93,7 +95,7 @@ export const generateSchema = (
 
 export const generateSchemas = (
   dir: string,
-  { watch = false, format = false } = {},
+  { watch = false, skipFormat = false } = {},
 ) => {
   const documentModels = getDirectories(dir);
   const documentModelConfigs = documentModels.reduce(
@@ -109,7 +111,7 @@ export const generateSchemas = (
     generates: documentModelConfigs,
     watch,
     hooks: {
-      afterOneFileWrite: format ? ["prettier --ignore-path --write"] : [],
+      beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
     },
   };
   return generate(config, true);
