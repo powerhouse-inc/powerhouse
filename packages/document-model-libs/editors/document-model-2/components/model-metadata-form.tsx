@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { DocumentActionHandlers } from "../types";
-import { GraphQLSchema } from "graphql";
 import { TextField } from "./text-field";
 import { useCallback } from "react";
 import { makeInitialSchemaDoc, renameSchemaType } from "../utils";
@@ -20,7 +19,6 @@ type Props = MetadataFormValues & {
   handlers: DocumentActionHandlers;
   globalStateSchema: string;
   localStateSchema: string;
-  schema: GraphQLSchema;
 };
 
 export function ModelMetadata(props: Props) {
@@ -41,7 +39,7 @@ export function ModelMetadata(props: Props) {
 }
 
 export function ModelNameForm(props: Props) {
-  const { name, handlers, globalStateSchema, localStateSchema, schema } = props;
+  const { name, handlers, globalStateSchema, localStateSchema } = props;
 
   const onSubmit = useCallback(
     (newName: string) => {
@@ -75,7 +73,7 @@ export function ModelNameForm(props: Props) {
         handlers.setStateSchema(newLocalStateSchema, "local");
       }
     },
-    [name, globalStateSchema, localStateSchema, handlers, schema],
+    [name, globalStateSchema, localStateSchema, handlers],
   );
 
   return (

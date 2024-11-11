@@ -1,8 +1,8 @@
-import { BaseDocumentDriveServer } from "document-drive";
+import { IDocumentDriveServer } from "document-drive";
 import { IncomingHttpHeaders } from "http";
 
 export interface Context {
   headers: IncomingHttpHeaders;
   driveId: string | undefined;
-  driveServer: BaseDocumentDriveServer;
+  driveServer: IDocumentDriveServer;
 }

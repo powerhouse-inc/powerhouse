@@ -1,3 +1,23 @@
+## 1.9.0 (2024-11-11)
+
+### 🚀 Features
+
+- **ph-cli,reactor-local:** integrate local reactor into ph-cli ([92f2f530](https://github.com/powerhouse-inc/powerhouse/commit/92f2f530))
+- **codegen:** regenerate lockfile ([31c2d0c5](https://github.com/powerhouse-inc/powerhouse/commit/31c2d0c5))
+- **ph-cli:** update cli to format by default ([7418e777](https://github.com/powerhouse-inc/powerhouse/commit/7418e777))
+- **codegen:** remove format generated from action ([5d7e1c48](https://github.com/powerhouse-inc/powerhouse/commit/5d7e1c48))
+- **codegen:** use prettier api to format typescript from gql ([8896d86e](https://github.com/powerhouse-inc/powerhouse/commit/8896d86e))
+
+### 🩹 Fixes
+
+- **design-system:** fix scalars import ([#506](https://github.com/powerhouse-inc/powerhouse/pull/506))
+
+### ❤️  Thank You
+
+- acaldas
+- Guillermo Puente Sandoval
+- ryanwolhuter
+
 ## 1.8.0 (2024-11-11)
 
 ### 🚀 Features

@@ -11,10 +11,5 @@ export default defineConfig({
   platform: "node",
   target: "node20",
   cjsInterop: true,
-  dts: {
-    entry: {
-      index: "src/index.ts",
-      cli: "src/cli.ts",
-    },
-  },
+  dts: true,
 });

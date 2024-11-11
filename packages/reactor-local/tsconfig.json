@@ -2,7 +2,6 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "target": "ESNext",
     "allowJs": true,
     "resolveJsonModule": true,
     "moduleDetection": "force",
@@ -16,7 +15,10 @@
     "module": "ESNext",
     "noEmit": true,
     "lib": ["ESNext"],
-    "types": ["node", "./types.d.ts"]
+    "types": ["node", "./types.d.ts"],
+    "paths": {
+      "document-drive": ["../document-drive/src/index.ts"]
+    }
   },
   "include": ["./"]
 }

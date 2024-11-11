@@ -4,11 +4,9 @@ import { useEffect, useRef } from "react";
 import { basicSetup } from "codemirror";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { linter } from "@codemirror/lint";
-import { GraphQLSchema } from "graphql";
 import { ayuLight } from "thememirror";
 
 type Props = {
-  schema: GraphQLSchema;
   doc: string;
   readonly?: boolean;
   updateDoc: (newDoc: string) => void;

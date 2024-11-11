@@ -4,7 +4,7 @@ import { OperationDescriptionForm } from "./operation-description-form";
 import { OperationErrors } from "./operation-errors";
 import { OperationForm } from "./operation-form";
 import { DocumentActionHandlers } from "../types";
-import { GraphQLSchema } from "graphql";
+
 export type WrappedHandlers = DocumentActionHandlers & {
   addOperationAndInitialSchema: (
     moduleId: string,
@@ -12,7 +12,6 @@ export type WrappedHandlers = DocumentActionHandlers & {
   ) => Promise<string | undefined>;
 };
 type Props = {
-  schema: GraphQLSchema;
   lastCreatedOperationId: string | null;
   operation: Operation;
   module: Module;
@@ -26,7 +25,6 @@ export function Operation(props: Props) {
     wrappedHandlers,
     allOperationNames,
     lastCreatedOperationId,
-    schema,
   } = props;
   return (
     <div key={operation.id}>
@@ -47,9 +45,9 @@ export function Operation(props: Props) {
           </div>
         </div>
         <GraphqlEditor
-          schema={schema}
           doc={operation.schema ?? ""}
-          updateDoc={(newDoc) =>
+          id={operation.id}
+          updateDocumentInModel={(newDoc) =>
             wrappedHandlers.updateOperationSchema(operation.id, newDoc)
           }
         />

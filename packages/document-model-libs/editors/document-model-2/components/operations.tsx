@@ -7,14 +7,12 @@ import { Operation, WrappedHandlers } from "./operation";
 import { Divider } from "./divider";
 
 type Props = {
-  schema: GraphQLSchema;
   module: Module;
   allOperations: TOperation[];
   handlers: DocumentActionHandlers;
   shouldFocusNewOperation: boolean;
 };
 export function Operations({
-  schema,
   module,
   handlers,
   allOperations,
@@ -48,7 +46,6 @@ export function Operations({
             operation={operation}
             module={module}
             wrappedHandlers={wrappedHandlers}
-            schema={schema}
             lastCreatedOperationId={lastCreatedOperationId}
             allOperationNames={allOperationNames}
           />

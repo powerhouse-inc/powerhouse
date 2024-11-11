@@ -29,7 +29,7 @@ const mockDocument = {
           state: {
             global: {
               schema:
-                'type TestState {\n  "Add your global state fields here"\n  _placeholder: String\n}',
+                'type TestState {\n  "Add your global state fields here"\n  _placeholder: Date\n}',
               initialValue: '{\n  "_placeholder": ""\n}',
               examples: [],
             },

@@ -7,12 +7,11 @@ import { useId, useState, useRef } from "react";
 import { Divider } from "./divider";
 
 type Props = {
-  schema: GraphQLSchema;
   modules: Module[];
   allOperations: Operation[];
   handlers: DocumentActionHandlers;
 };
-export function Modules({ schema, modules, allOperations, handlers }: Props) {
+export function Modules({ modules, allOperations, handlers }: Props) {
   const [lastCreatedModuleId, setLastCreatedModuleId] = useState<string | null>(
     null,
   );
@@ -44,7 +43,6 @@ export function Modules({ schema, modules, allOperations, handlers }: Props) {
             <Divider />
           </div>
           <Operations
-            schema={schema}
             module={module}
             handlers={wrappedHandlers}
             allOperations={allOperations}

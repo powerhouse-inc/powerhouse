@@ -1,53 +1,68 @@
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
+import { startAPI } from "@powerhousedao/reactor-api";
 import {
-  addSubgraph,
-  createSchema,
-  registerInternalListener,
-  setAdditionalContextFields,
-  startAPI,
-} from "@powerhousedao/reactor-api";
-import { DocumentDriveServer, DriveAlreadyExistsError } from "document-drive";
+  DocumentDriveServer,
+  DriveAlreadyExistsError,
+  DriveInput,
+  IReceiver,
+} from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import * as contributorBillAnalyzerListener from "document-model-libs/processors/contributor-bill-analyzer";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
-import dotenv from "dotenv";
+import { ListenerFilter } from "document-model-libs/document-drive";
+import { registerInternalListener } from "@powerhousedao/reactor-api";
+import { addSubgraph } from "@powerhousedao/reactor-api";
+import { createSchema } from "@powerhousedao/reactor-api";
 import { drizzle } from "drizzle-orm/connect";
-import path from "path";
-import * as searchListener from "@powerhousedao/general-document-indexer";
+const dirname =
+  import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
+
 dotenv.config();
-console.log(contributorBillAnalyzerListener);
-// start document drive server with all available document models & filesystem storage
-const driveServer = new DocumentDriveServer(
-  [DocumentModelLib, ...Object.values(DocumentModelsLibs)] as DocumentModel[],
-  new FilesystemStorage(path.join(__dirname, "../file-storage"))
-);
 
-// Start GraphQL API
-const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
+export type StartServerOptions = {
+  connect?: {
+    port?: string | number;
+  };
+  reactor?: {
+    storagePath?: string;
+    drive?: DriveInput;
+  };
+};
 
-const startServer = async () => {
-  const db = await drizzle("pglite", "./dev.db");
+const startServer = async (options?: StartServerOptions) => {
+  const serverPort = Number(options?.connect?.port ?? process.env.PORT ?? 4001);
+  const storagePath =
+    options?.reactor?.storagePath ?? path.join(dirname, "./file-storage");
+  const drive = options?.reactor?.drive ?? {
+    global: {
+      id: "powerhouse",
+      name: "Powerhouse",
+      icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
+      slug: "powerhouse",
+    },
+    local: {
+      availableOffline: true,
+      listeners: [],
+      sharingType: "public",
+      triggers: [],
+    },
+  };
+  // start document drive server with all available document models & filesystem storage
+  const driveServer = new DocumentDriveServer(
+    [DocumentModelLib, ...Object.values(DocumentModelsLibs)] as DocumentModel[],
+    new FilesystemStorage(storagePath)
+  );
 
   // init drive server
   await driveServer.initialize();
+
   try {
     // add default drive
-    await driveServer.addDrive({
-      global: {
-        id: "powerhouse",
-        name: "Powerhouse",
-        icon: "powerhouse",
-        slug: "powerhouse",
-      },
-      local: {
-        availableOffline: true,
-        listeners: [],
-        sharingType: "public",
-        triggers: [],
-      },
-    });
+    await driveServer.addDrive(drive);
   } catch (e) {
     if (e instanceof DriveAlreadyExistsError) {
       console.info("Default drive already exists. Skipping...");
@@ -62,34 +77,16 @@ const startServer = async () => {
       port: serverPort,
     });
 
-    setAdditionalContextFields({ db });
+    const db = await drizzle("pglite", "./dev.db");
 
-    // register general document indexer listener
     await registerInternalListener({
-      name: "search",
-      options: searchListener.options,
-      transmit: (strands) => searchListener.transmit(strands, db),
-    });
-
-    // add general document indexer subgraph
-    await addSubgraph({
-      getSchema: () =>
-        createSchema(
-          driveServer,
-          searchListener.resolvers as GraphQLResolverMap,
-          searchListener.typeDefs
-        ),
-      name: "search/:drive",
-    });
-
-    registerInternalListener({
       name: "contributor-bill-analyzer",
       options: contributorBillAnalyzerListener.options,
       transmit: (strands) =>
         contributorBillAnalyzerListener.transmit(strands, db),
     });
 
-    addSubgraph({
+    await addSubgraph({
       getSchema: () =>
         createSchema(
           driveServer,
@@ -101,6 +98,22 @@ const startServer = async () => {
   } catch (e) {
     console.error("App crashed", e);
   }
+
+  return {
+    getDocumentPath: (driveId: string, documentId: string): string => {
+      return path.join(storagePath, driveId, `${documentId}.json`);
+    },
+    addListener: (
+      driveId: string,
+      receiver: IReceiver,
+      options: {
+        listenerId: string;
+        label: string;
+        block: boolean;
+        filter: ListenerFilter;
+      }
+    ) => driveServer.addInternalListener(driveId, receiver, options),
+  };
 };
 
 export { startServer };
