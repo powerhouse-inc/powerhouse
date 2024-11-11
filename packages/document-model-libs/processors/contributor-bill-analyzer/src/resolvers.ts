@@ -27,8 +27,6 @@ export const resolvers = {
         }
       }
 
-      console.log(token, projectCode, where);
-
       if (where) {
         query.where(where);
       }
