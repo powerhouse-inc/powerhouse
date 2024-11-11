@@ -5,7 +5,7 @@ import {
   AddPowtLineItemInput,
   DeletePowtLineItemInput,
   UpdatePowtLineItemInput,
-} from "../../document-models/contributor-bill";
+} from "../../../document-models/contributor-bill";
 import { contributorBillAnalyzer, powtLineItem } from "./schema";
 
 export const options: Omit<Listener, "driveId"> = {
@@ -25,6 +25,7 @@ export async function transmit(
   strands: InternalTransmitterUpdate[],
   db: PgDatabase<any, any, any>
 ) {
+  console.log("transmitting strands", strands);
   for (const strand of strands) {
     await handleStrand(strand, db);
   }
@@ -36,12 +37,16 @@ async function handleAddPowtLineItem(
   input: AddPowtLineItemInput,
   db: PgDatabase<any, any, any>
 ) {
-  const [entry] = await db
+  console.log("adding powt line item", input);
+  const result = await db
     .insert(powtLineItem)
     .values({ ...input, projectCode: input.projectCode ?? "" })
-    .returning();
+    .returning()
+    .catch(console.log);
 
-  await recalcualateProjectCode(entry.projectCode!, db);
+  if (result) {
+    await recalcualateProjectCode(result[0].projectCode!, db);
+  }
 }
 
 async function handleUpdatePowtLineItem(
