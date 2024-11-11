@@ -32,6 +32,18 @@ readdirSync(editorsDir, { withFileTypes: true })
     }
   });
 
+readdirSync("./processors", {
+  withFileTypes: true,
+})
+  .filter((dirent) => dirent.isDirectory())
+  .map((dirent) => dirent.name)
+  .forEach((name) => {
+    const editorPath = resolve("./processors", name, "src", "index.ts");
+    if (existsSync(editorPath)) {
+      entry[`processors/${name}`] = editorPath;
+    }
+  });
+
 export default defineConfig(({ mode }) => {
   const external = [
     "react",

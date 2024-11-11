@@ -3,14 +3,12 @@ import { resolvers } from "./resolvers";
 
 const typeDefs = `
  type Query {
-  compensation(projectCode: String, token: String): [Compensation!]!
+  powtComp: [POWtComp!]!
 }
 
-type Compensation {
+type POWtComp {
   projectCode: String!
   amount: Int!
-  token: String!
-  updatedAt: DateTime!
 }
 `;
 

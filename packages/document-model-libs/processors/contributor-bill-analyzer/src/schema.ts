@@ -1,6 +1,4 @@
 import {
-  date,
-  foreignKey,
   integer,
   pgTable,
   primaryKey,
@@ -9,17 +7,16 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const contributorBillAnalyzer = pgTable(
-  "contributor_bill_analyzer",
+export const powtCompensation = pgTable(
+  "powt_compensation",
   {
     projectCode: text("projectCode").notNull(),
     amount: integer("amount").notNull(),
-    token: text("token").notNull(),
     updatedAt: timestamp("updatedAt").notNull(),
   },
   (table) => ({
     pk: primaryKey({
-      columns: [table.projectCode, table.token],
+      columns: [table.projectCode],
     }),
   })
 );

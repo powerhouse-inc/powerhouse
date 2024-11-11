@@ -1,15 +1,18 @@
-import { transmit } from "../src/listener";
+import { options, transmit } from "../src/listener";
 import { actions } from "../../../document-models/contributor-bill";
 import { drizzle } from "drizzle-orm/connect";
-import { contributorBillAnalyzer, powtLineItem } from "../src/schema";
+import { powtCompensation, powtLineItem } from "../src/schema";
 import { PgDatabase } from "drizzle-orm/pg-core";
 import { resolvers } from "../src/resolvers";
+import { buildSchema, graphql } from "graphql";
+import { typeDefs } from "../src";
+import { describe, it, beforeAll, afterAll } from "vitest";
 
 describe("powt calculation", () => {
   let db: PgDatabase<any, any, any>;
   beforeAll(async () => {
     db = await drizzle("pglite", "./dev.db");
-    await db.delete(contributorBillAnalyzer).execute();
+    await db.delete(powtCompensation).execute();
     await db.delete(powtLineItem).execute();
   });
 
@@ -67,14 +70,14 @@ describe("powt calculation", () => {
       db
     );
 
-    const result = await db.select().from(contributorBillAnalyzer);
+    const result = await db.select().from(powtCompensation);
     expect(result[0].amount).toBe(200);
   });
 
   it("should update powt line item", async () => {
     const powtLineItem2 = actions.updatePowtLineItem({
       amount: 10,
-      powtLineItemId: "3f4c9d93-f344-4cfe-8e6d-bf7387f39097",
+      lineItemId: "3f4c9d93-f344-4cfe-8e6d-bf7387f39097",
       projectCode: "POW-001",
     });
 
@@ -94,14 +97,14 @@ describe("powt calculation", () => {
       db
     );
 
-    const result = await db.select().from(contributorBillAnalyzer);
+    const result = await db.select().from(powtCompensation);
 
     expect(result[0].amount).toBe(110);
   });
 
   it("should delete powt line item", async () => {
     const powtLineItem2 = actions.deletePowtLineItem({
-      powtLineItemId: "3f4c9d93-f344-4cfe-8e6d-bf7387f39097",
+      lineItemId: "3f4c9d93-f344-4cfe-8e6d-bf7387f39097",
     });
 
     await transmit(
@@ -120,18 +123,37 @@ describe("powt calculation", () => {
       db
     );
 
-    const result = await db.select().from(contributorBillAnalyzer);
+    const result = await db.select().from(powtCompensation);
 
     expect(result[0].amount).toBe(100);
   });
 
-  it("should get compensation", async () => {
-    const [entry] = await resolvers.Query.compensation(
+  it("should get powt compensation", async () => {
+    const [entry] = await resolvers.Query.powtComp(
       null,
-      { projectCode: "POW-001", token: undefined },
+      { projectCode: "POW-001" },
       { db }
     );
 
     expect(entry.amount).toBe(100);
+  });
+
+  it.only("should get powt compentation with graphql query", async () => {
+    const schema = buildSchema(typeDefs);
+    const { data, errors } = await graphql({
+      schema,
+      source: `{ powtComp { amount } } `,
+      rootValue: {
+        resolvers,
+      },
+    });
+
+    expect(errors).toBeNull();
+    expect(data).toBeDefined();
+
+    const powtComp = data?.powtComp;
+
+    // @ts-ignore
+    expect(powtComp[0].amount).toBe(100);
   });
 });

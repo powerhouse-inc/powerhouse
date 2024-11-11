@@ -1,12 +1,12 @@
 import { InternalTransmitterUpdate, Listener } from "document-drive";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { PgDatabase } from "drizzle-orm/pg-core";
 import {
   AddPowtLineItemInput,
   DeletePowtLineItemInput,
   UpdatePowtLineItemInput,
 } from "../../../document-models/contributor-bill";
-import { contributorBillAnalyzer, powtLineItem } from "./schema";
+import { powtCompensation, powtLineItem } from "./schema";
 
 export const options: Omit<Listener, "driveId"> = {
   listenerId: "contributor-bill-analyzer",
@@ -54,7 +54,7 @@ async function handleUpdatePowtLineItem(
   const [entry] = await db
     .select()
     .from(powtLineItem)
-    .where(eq(powtLineItem.id, input.powtLineItemId));
+    .where(eq(powtLineItem.id, input.lineItemId));
 
   if (!entry) {
     return;
@@ -67,7 +67,7 @@ async function handleUpdatePowtLineItem(
       amount: input.amount ?? 0,
       projectCode: input.projectCode ?? "",
     })
-    .where(eq(powtLineItem.id, input.powtLineItemId));
+    .where(eq(powtLineItem.id, input.lineItemId));
 
   await recalcualateProjectCode(entry.projectCode!, db);
 }
@@ -78,7 +78,7 @@ async function handleDeletePowtLineItem(
 ) {
   const [entry] = await db
     .delete(powtLineItem)
-    .where(eq(powtLineItem.id, input.powtLineItemId))
+    .where(eq(powtLineItem.id, input.lineItemId))
     .returning();
 
   await recalcualateProjectCode(entry.projectCode!, db);
@@ -97,19 +97,18 @@ async function recalcualateProjectCode(
 
   const [existing] = await db
     .select()
-    .from(contributorBillAnalyzer)
-    .where(eq(contributorBillAnalyzer.projectCode, projectCode));
+    .from(powtCompensation)
+    .where(eq(powtCompensation.projectCode, projectCode));
 
   if (existing) {
     await db
-      .update(contributorBillAnalyzer)
+      .update(powtCompensation)
       .set({ amount, updatedAt: new Date() })
-      .where(eq(contributorBillAnalyzer.projectCode, projectCode));
+      .where(eq(powtCompensation.projectCode, projectCode));
   } else {
-    await db.insert(contributorBillAnalyzer).values({
+    await db.insert(powtCompensation).values({
       projectCode,
       amount,
-      token: "POWT",
       updatedAt: new Date(),
     });
   }

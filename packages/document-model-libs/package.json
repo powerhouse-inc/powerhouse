@@ -54,6 +54,11 @@
       "import": "./dist/es/utils.js",
       "require": "./dist/cjs/utils.cjs",
       "types": "./dist/utils.d.ts"
+    },
+    "./processors/contributor-bill-analyzer": {
+      "import": "./dist/es/processors/contributor-bill-analyzer.js",
+      "require": "./dist/cjs/processors/contributor-bill-analyzer.cjs",
+      "types": "./dist/processors/contributor-bill-analyzer.d.ts"
     }
   },
   "scripts": {
