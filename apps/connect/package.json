@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.166",
+    "version": "1.0.0-dev.167",
     "description": "Powerhouse Connect",
     "main": "./index.js",
     "type": "module",
