@@ -1,8 +1,12 @@
 import React from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
-import type { FieldCommonProps, ErrorHandling } from "../../types";
+import type {
+  FieldCommonProps,
+  ErrorHandling,
+  ValidatorHandler,
+} from "../../types";
 
-interface PossibleProps extends FieldCommonProps<any>, ErrorHandling {
+interface PossibleProps extends FieldCommonProps<unknown>, ErrorHandling {
   pattern?: RegExp;
   maxLength?: number;
   minLength?: number;
@@ -15,8 +19,13 @@ interface PossibleEventsProps {
   onBlur?: (event: React.FocusEvent<unknown>) => unknown;
 }
 
+export interface ValidationOptions<T> {
+  validations?: Record<string, (parentProps: T) => ValidatorHandler>;
+}
+
 export const withFieldValidation = <T extends PossibleProps>(
   Component: React.ComponentType<T>,
+  options?: ValidationOptions<T>,
 ) => {
   return ({ value, name, showErrorOnBlur, showErrorOnChange, ...props }: T) => {
     const { onChange: onChangeProp, onBlur: onBlurProp } =
@@ -141,11 +150,27 @@ export const withFieldValidation = <T extends PossibleProps>(
               message: `This field must be less than ${props.maxValue}`,
             },
           }),
-          ...(props.customValidator && {
-            validate: {
+          validate: {
+            ...(props.customValidator && {
               customValidator: props.customValidator,
-            },
-          }),
+            }),
+            ...(options?.validations
+              ? Object.fromEntries(
+                  Object.entries(options.validations).map(
+                    ([key, validatorFactory]) => {
+                      const propsWithValues = {
+                        value,
+                        name,
+                        showErrorOnBlur,
+                        showErrorOnChange,
+                        ...props,
+                      };
+                      return [key, validatorFactory(propsWithValues as T)];
+                    },
+                  ),
+                )
+              : {}),
+          },
         }}
       />
     );

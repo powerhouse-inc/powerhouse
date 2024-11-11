@@ -128,5 +128,17 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   },
 );
 
-export const NumberField =
-  withFieldValidation<NumberFieldProps>(NumberFieldRaw);
+export const NumberField = withFieldValidation<NumberFieldProps>(
+  NumberFieldRaw,
+  {
+    validations: {
+      _positive: (props) => (value) => {
+        return props.allowNegative
+          ? true
+          : Number(value) > 0
+            ? true
+            : "Value must be positive";
+      },
+    },
+  },
+);
