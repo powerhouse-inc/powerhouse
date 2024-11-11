@@ -1,3 +1,10 @@
+# [1.0.0-dev.166](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.165...v1.0.0-dev.166) (2024-11-11)
+
+
+### Features
+
+* **connect:** update design-system ([fa209bd](https://github.com/powerhouse-inc/document-model-electron/commit/fa209bdd6a07073e9edbb259e1691eb9b47effa5))
+
 # [1.0.0-dev.165](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.164...v1.0.0-dev.165) (2024-11-11)
 
 
