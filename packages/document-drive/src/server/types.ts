@@ -22,6 +22,10 @@ import type {
 } from "document-model/document";
 import { Unsubscribe } from "nanoevents";
 import { BaseDocumentDriveServer } from ".";
+import {
+  IReceiver as IInternalListener,
+  IInternalTransmitter,
+} from "./listener/transmitter/internal";
 import { IReadModeDriveServer } from "../read-mode/types";
 import { RunAsap } from "../utils";
 import { IDefaultDrivesManager } from "../utils/default-drives-manager";
@@ -443,6 +447,17 @@ export abstract class AbstractDocumentDriveServer {
     syncUnitId: string,
   ): SyncStatus | SynchronizationUnitNotFoundError;
 
+  abstract addInternalListener(
+    driveId: string,
+    receiver: IInternalListener,
+    options: {
+      listenerId: string;
+      label: string;
+      block: boolean;
+      filter: ListenerFilter;
+    },
+  ): Promise<IInternalTransmitter>;
+
   /** Synchronization methods */
   abstract getSynchronizationUnits(
     driveId: string,
@@ -486,12 +501,10 @@ export abstract class AbstractDocumentDriveServer {
 
   /** Event methods **/
   protected abstract emit<K extends keyof DriveEvents>(
-    this: this,
     event: K,
     ...args: Parameters<DriveEvents[K]>
   ): void;
   abstract on<K extends keyof DriveEvents>(
-    this: this,
     event: K,
     cb: DriveEvents[K],
   ): Unsubscribe;
@@ -518,10 +531,13 @@ export const DefaultListenerManagerOptions = {
   sequentialUpdates: true,
 };
 
-export type IBaseDocumentDriveServer = Pick<
-  AbstractDocumentDriveServer,
-  keyof AbstractDocumentDriveServer
->;
+type PublicKeys<T> = {
+  [K in keyof T]: T extends { [P in K]: T[K] } ? K : never;
+}[keyof T];
+
+type PublicPart<T> = Pick<T, PublicKeys<T>>;
+
+export type IBaseDocumentDriveServer = PublicPart<AbstractDocumentDriveServer>;
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
   IDefaultDrivesManager &
