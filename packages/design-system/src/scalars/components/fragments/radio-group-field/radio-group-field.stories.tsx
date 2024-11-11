@@ -3,6 +3,15 @@ import { RadioGroupField } from "./radio-group-field";
 
 const meta: Meta<typeof RadioGroupField> = {
   argTypes: {
+    autoFocus: {
+      control: "boolean",
+      description: "Whether the Radio Group should be focused on mount",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: "Behavior",
+      },
+    },
     className: {
       control: "text",
       description: "Additional CSS classes to apply to the Radio Group",

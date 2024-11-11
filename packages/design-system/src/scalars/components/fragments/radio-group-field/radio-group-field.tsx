@@ -12,6 +12,7 @@ export interface RadioOption {
 }
 
 export interface RadioGroupFieldProps {
+  autoFocus?: boolean;
   className?: string;
   defaultValue?: string;
   description?: string;
@@ -27,12 +28,13 @@ export interface RadioGroupFieldProps {
 }
 
 export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
+  autoFocus = false,
   className,
   defaultValue,
   description,
   warnings = [],
   errors = [],
-  id,
+  id: propId,
   label,
   name,
   onChange,
@@ -43,12 +45,14 @@ export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
   const hasLabel = label !== undefined;
   const hasError = errors.length > 0;
   const prefix = useId();
+  const id = propId ?? `${prefix}-radio-group`;
 
   return (
     <RadioGroup
       aria-invalid={hasError}
       aria-label={!hasLabel ? "Radio group" : undefined}
       aria-required={required}
+      autoFocus={autoFocus}
       className={className}
       defaultValue={defaultValue}
       id={id}

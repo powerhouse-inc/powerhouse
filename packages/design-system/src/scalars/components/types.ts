@@ -11,6 +11,7 @@ export interface FormFieldProps {
   id?: string;
   name: string;
   label?: React.ReactNode;
+  autoFocus?: boolean;
 }
 
 export interface FieldCommonProps<T> extends FormFieldProps {
@@ -62,4 +63,25 @@ export interface NumberProps {
   trailingZeros?: boolean;
   decimalRequired?: boolean;
   isBigInt?: boolean;
+}
+
+export interface SelectProps {
+  options: {
+    icon?: React.ComponentType<{ className?: string }>;
+    value: string;
+    label: string;
+    disabled?: boolean;
+  }[];
+  placeholder?: string;
+  searchable?: boolean;
+  asModal?: boolean;
+  asChild?: boolean;
+}
+
+export interface EnumProps {
+  optionLabels: Record<string, string>;
+  disabledOptions?: string[];
+  multiple?: boolean;
+  searchable?: boolean;
+  onChange?: (value: string | string[]) => void;
 }
