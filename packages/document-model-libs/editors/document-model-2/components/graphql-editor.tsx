@@ -6,24 +6,23 @@ import { useEffect, useRef, useState } from "react";
 import { basicSetup } from "codemirror";
 import { indentWithTab } from "@codemirror/commands";
 import { useSchemaContext } from "../context/schema-context";
+import { Errors } from "./errors";
 
 type Props = {
   id: string;
+  doc: string;
   readonly?: boolean;
   updateDocumentInModel: (newDoc: string) => void;
 };
 
 export function GraphqlEditor(props: Props) {
-  const { id, readonly, updateDocumentInModel } = props;
+  const { id, doc, readonly, updateDocumentInModel } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const graphqlCompartment = useRef(new Compartment());
-  const { sharedSchema, getDocument, updateSharedSchema, handleSchemaErrors } =
-    useSchemaContext();
-  const doc = getDocument(id);
+  const { sharedSchema, updateSharedSchema } = useSchemaContext();
   const [errors, setErrors] = useState("");
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     if (!editorRef.current) return;
 
@@ -39,7 +38,6 @@ export function GraphqlEditor(props: Props) {
         }),
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (readonly || !update.docChanged) return;
-
           if (
             update.transactions.some(
               (tr) => tr.annotation(Transaction.userEvent) === "external",
@@ -54,10 +52,12 @@ export function GraphqlEditor(props: Props) {
           timeoutRef.current = setTimeout(() => {
             updateDocumentInModel(newDoc);
             const result = updateSharedSchema(id, newDoc);
-            if (!result.success) {
-              setErrors(result.errors);
-            } else {
+            if (result.success) {
               setErrors("");
+              return;
+            }
+            if (result.errors) {
+              setErrors((prev) => `${prev}\n${result.errors}`);
             }
           }, 300);
         }),
@@ -66,16 +66,10 @@ export function GraphqlEditor(props: Props) {
       ],
     });
 
-    let view = viewRef.current;
-    if (!view) {
-      view = new EditorView({
-        state,
-        parent: editorRef.current,
-      });
-      viewRef.current = view;
-    } else {
-      view.setState(state);
-    }
+    viewRef.current = new EditorView({
+      state,
+      parent: editorRef.current,
+    });
 
     return () => {
       if (viewRef.current) {
@@ -83,7 +77,7 @@ export function GraphqlEditor(props: Props) {
         viewRef.current = null;
       }
     };
-  }, [readonly, sharedSchema]);
+  }, []);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -97,7 +91,6 @@ export function GraphqlEditor(props: Props) {
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-
     const currentDoc = view.state.doc.toString();
     if (currentDoc !== doc) {
       view.dispatch({
@@ -108,7 +101,7 @@ export function GraphqlEditor(props: Props) {
   }, [doc]);
 
   useEffect(() => {
-    const result = handleSchemaErrors(id, doc);
+    const result = updateSharedSchema(id, doc);
     if (!result.success) {
       setErrors(result.errors);
     } else {
@@ -119,7 +112,7 @@ export function GraphqlEditor(props: Props) {
   return (
     <div>
       <div ref={editorRef} />
-      <p className="mt-1 text-red-500">{errors}</p>
+      <Errors errors={errors} />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { typeDefs } from "@powerhousedao/scalars";
 import { makeMinimalObjectFromSDL, makeInitialSchemaDoc } from "../utils";
 import { GraphqlEditor } from "./graphql-editor";
 import { JSONEditor } from "./json-editor";
@@ -6,14 +5,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 import { DocumentActionHandlers } from "../types";
 import { useState } from "react";
 import { capitalCase } from "change-case";
-import { schema } from "@powerhousedao/scalars/AmountTokens";
 import { useSchemaContext } from "../context/schema-context";
+import { hiddenQueryTypeDefDoc } from "../constants";
 
 type Props = {
   modelName: string;
   globalStateSchema: string;
-  globalStateInitialValue: string;
   localStateSchema: string;
+  globalStateInitialValue: string;
   localStateInitialValue: string;
   handlers: DocumentActionHandlers;
 };
@@ -41,6 +40,7 @@ function StateEditor({
         <div>
           {showStandardLib && (
             <GraphqlEditor
+              doc={hiddenQueryTypeDefDoc}
               id="standard-lib"
               readonly
               updateDocumentInModel={() => {}}
@@ -54,6 +54,7 @@ function StateEditor({
           </button>
           <div className="pt-2">
             <GraphqlEditor
+              doc={stateSchema}
               id={scope}
               updateDocumentInModel={(newDoc) =>
                 handlers.setStateSchema(newDoc, scope)

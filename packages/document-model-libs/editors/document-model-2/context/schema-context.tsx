@@ -55,7 +55,18 @@ export const SchemaContext = createContext<TSchemaContext>({
 export function SchemaContextProvider(props: TSchemaContextProps) {
   const { children, globalStateSchema, localStateSchema, operations } = props;
   const [sharedSchema, setSharedSchema] = useState(initialSchema);
-  const [documents, setDocuments] = useState(new Map<string, string>());
+  const [documents, setDocuments] = useState(() => {
+    const newDocuments = new Map<string, string>();
+    newDocuments.set("standard-lib", hiddenQueryTypeDefDoc);
+    newDocuments.set("global", globalStateSchema);
+    newDocuments.set("local", localStateSchema);
+    for (const operation of operations) {
+      if (operation.schema) {
+        newDocuments.set(operation.id, operation.schema);
+      }
+    }
+    return newDocuments;
+  });
 
   useEffect(() => {
     setDocuments((prev) => {

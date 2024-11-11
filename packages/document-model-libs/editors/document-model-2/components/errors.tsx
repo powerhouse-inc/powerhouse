@@ -4,8 +4,8 @@ type Props = {
 
 export function Errors({ errors }: Props) {
   return (
-    <div>
-      {errors.split("\n").map((error) => (
+    <div className="mt-1">
+      {Array.from(new Set(errors.split("\n"))).map((error) => (
         <p className="text-red-900" key={error}>
           {error}
         </p>

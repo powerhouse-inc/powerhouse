@@ -45,6 +45,7 @@ export function Operation(props: Props) {
           </div>
         </div>
         <GraphqlEditor
+          doc={operation.schema ?? ""}
           id={operation.id}
           updateDocumentInModel={(newDoc) =>
             wrappedHandlers.updateOperationSchema(operation.id, newDoc)
