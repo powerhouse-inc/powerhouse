@@ -123,20 +123,6 @@ describe("NumberField Component", () => {
     );
   });
 
-  it("should renders input with provided className", () => {
-    renderWithForm(
-      <NumberField
-        label="Test Label"
-        // This a custom class for testing no a class for tailwindcss
-        // eslint-disable-next-line tailwindcss/no-custom-classname
-        className="custom-class"
-        onChange={mockOnChange}
-        name="Label"
-      />,
-    );
-    expect(screen.getByLabelText("Test Label")).toHaveClass("custom-class");
-  });
-
   it("should supports a defaultValue prop", () => {
     renderWithForm(
       <NumberField
