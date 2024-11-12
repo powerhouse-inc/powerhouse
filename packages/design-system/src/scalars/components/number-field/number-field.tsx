@@ -137,7 +137,13 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
           ? true
           : Number(value) > 0
             ? true
-            : "Value must be positive";
+            : ` ${props.label} be a positive value`;
+      },
+      _isBigInt: (props) => (value: string) => {
+        const isLargeNumber = Math.abs(Number(value)) > Number.MAX_SAFE_INTEGER;
+        return isLargeNumber && !props.isBigInt
+          ? "Value is too large for standard integer, set isBigInt to true"
+          : true;
       },
     },
   },
