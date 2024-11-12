@@ -13,8 +13,9 @@ import {
   initialSchema,
   specialDocIds,
 } from "../constants/documents";
-import { buildSchema, GraphQLSchema } from "graphql";
+import { buildSchema, GraphQLSchema, parse } from "graphql";
 import { isDocumentString } from "@graphql-tools/utils";
+import { validateSDL } from "graphql/validation/validate";
 
 type TSchemaContext = {
   sharedSchema: GraphQLSchema;
@@ -92,17 +93,48 @@ export function SchemaContextProvider(props: TSchemaContextProps) {
 
   const handleSchemaErrors: TSchemaContext["handleSchemaErrors"] = useCallback(
     (id: string, newDoc: string) => {
-      if (!isDocumentString(newDoc)) return { success: false, errors: "" };
+      if (!isDocumentString(newDoc))
+        return { success: false, errors: "Invalid document string" };
       const newDocuments = new Map(documents);
       newDocuments.set(id, newDoc);
+
       try {
+        // Track starting line of the document we're validating
+        let targetDocStartLine = 1;
+        for (const [docId, content] of newDocuments.entries()) {
+          if (docId === id) break;
+          targetDocStartLine += content.split("\n").length;
+        }
+        const targetDocEndLine = targetDocStartLine + newDoc.split("\n").length;
+
         const newSchemaString = Array.from(newDocuments.values()).join("\n");
+        const documentNode = parse(newSchemaString);
+
+        const errors = validateSDL(documentNode);
+        if (errors.length > 0) {
+          // Filter errors to only those within our document's line range
+          const relevantErrors = errors.filter((error) => {
+            const errorLine = error.locations?.[0]?.line;
+            return (
+              errorLine != null &&
+              errorLine >= targetDocStartLine &&
+              errorLine < targetDocEndLine
+            );
+          });
+
+          return {
+            success: false,
+            errors: relevantErrors.map((e) => e.message).join("\n"),
+          };
+        }
+
         const newSharedSchema = buildSchema(newSchemaString);
         return {
           success: true,
           schema: newSharedSchema,
         };
       } catch (e) {
+        console.log({ id, newDoc });
         return {
           success: false,
           errors: (e as Error).message,
