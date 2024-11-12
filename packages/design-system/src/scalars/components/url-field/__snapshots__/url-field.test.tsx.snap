@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`UrlField > should match snapshot 1`] = `
+<div>
+  <form
+    novalidate=""
+  >
+    <div
+      class="flex flex-col gap-2"
+    >
+      <label
+        class="inline-flex items-center text-sm font-medium leading-[22px] dark:text-gray-400 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900"
+        for=":r0:"
+        role="label"
+      >
+        Website URL
+        <span
+          class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+        >
+          *
+        </span>
+      </label>
+      <div
+        class="flex items-center"
+      >
+        <input
+          class="flex h-10 rounded-md text-sm text-gray-900 border border-gray-300 bg-background px-3 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 w-auto rounded-r-none border-r-0 focus:z-10"
+          readonly=""
+          style="width: 64px;"
+          value="http://"
+        />
+        <input
+          class="flex h-10 w-full rounded-md text-sm text-gray-900 border border-gray-300 bg-background px-3 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 focus:z-10 rounded-l-none"
+          id=":r0:"
+          name="test-url"
+          placeholder="https://example.com"
+          required=""
+          role="textbox"
+          type="url"
+          value=""
+        />
+      </div>
+      <p
+        class="text-gray-600 font-inter text-sm font-normal leading-5"
+      >
+        Enter your website URL
+      </p>
+      <p
+        class="mb-0 inline-flex items-center text-xs font-medium text-orange-900 dark:text-orange-900"
+        data-type="warning"
+      >
+        URL may be unreachable
+      </p>
+      <p
+        class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-700"
+        data-type="error"
+      >
+        Invalid URL format
+      </p>
+    </div>
+  </form>
+</div>
+`;

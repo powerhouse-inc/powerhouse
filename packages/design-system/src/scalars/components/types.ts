@@ -3,8 +3,8 @@ export type ErrorMessage = string;
 export type ValidatorResult = ErrorMessage | boolean;
 
 export type ValidatorHandler = (
-  value: any,
-  formState: Record<string, any>,
+  value: unknown,
+  formState: Record<string, unknown>,
 ) => ValidatorResult | Promise<ValidatorResult>;
 
 export interface FormFieldProps {

@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useId } from "react";
 import { Input } from "../input";
 import { FormLabel } from "../form-label";
 import { FormMessageList } from "../form-message";
@@ -42,6 +42,8 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
     },
     ref,
   ) => {
+    const idGenerated = useId();
+    const id = props.id ?? idGenerated;
     const transformedValue = applyTransformers(value, {
       trim: !!trim,
       uppercase: !!uppercase,
@@ -54,6 +56,7 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
       <FormGroup>
         {label && (
           <FormLabel
+            htmlFor={id}
             required={props.required}
             disabled={props.disabled}
             hasError={!!errors?.length}
@@ -62,6 +65,7 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
           </FormLabel>
         )}
         <Input
+          id={id}
           value={transformedValue}
           defaultValue={defaultValue}
           onChange={onChange}
