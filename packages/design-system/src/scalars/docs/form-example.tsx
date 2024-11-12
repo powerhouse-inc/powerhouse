@@ -40,6 +40,7 @@ const FormExample = () => {
               placeholder="25"
               required
               allowNegative={false}
+              precision={0}
             />
             <NumberField
               showErrorOnBlur

@@ -13,18 +13,22 @@ export const validateIsBigInt =
   (props: NumberFieldProps) => (value: string) => {
     const isLargeNumber = Math.abs(Number(value)) > Number.MAX_SAFE_INTEGER;
     return isLargeNumber && !props.isBigInt
-      ? "Value is too large for standard integer, set isBigInt to true"
+      ? "Value is too large for standard integer"
       : true;
   };
 
 export const validatePrecision =
   (props: NumberFieldProps) => (value: string) => {
-    if (props.precision === 0) return true;
     if (props.precision === undefined) return true;
+
     const decimalPart = value.toString().split(".")[1];
-    return decimalPart && decimalPart.length <= (props.precision ?? 0)
+    if (props.precision === 0) {
+      return !decimalPart ? true : "Value must be an integer";
+    }
+
+    return decimalPart && decimalPart.length <= props.precision
       ? true
-      : `Value must have ${props.precision} decimal places`;
+      : `Value must have ${props.precision} decimal places or fewer`;
   };
 
 export const validateTrailingZeros =

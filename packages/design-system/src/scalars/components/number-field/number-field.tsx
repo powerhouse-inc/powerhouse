@@ -99,7 +99,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           name={name}
           className={cn(
             // Allow the arrows step
-            "show-arrows",
+            step && "show-arrows",
             // text and background style
             "text-gray-900 dark:text-gray-50 dark:bg-[#252A34]  dark:border-[#485265]",
             //Focus state text and placeholder
