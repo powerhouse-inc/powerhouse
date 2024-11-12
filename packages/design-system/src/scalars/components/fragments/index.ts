@@ -6,6 +6,7 @@ export * from "./form-group";
 export * from "./form-label";
 export * from "./form-message";
 export * from "./input";
+export * from "./radio-group-field";
 export * from "./text-field";
 export * from "./textarea-field";
 export * from "./toggle-field";

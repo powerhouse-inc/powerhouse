@@ -1,6 +1,6 @@
 import { Button } from "@/powerhouse/components/button";
 import { BooleanField, NumberField, StringField } from "../components";
-import { Form } from "../components/fragments";
+import { Form, RadioGroupField } from "../components/fragments";
 
 const FormExample = () => {
   const onSubmit = async (data: any) => {
@@ -19,6 +19,7 @@ const FormExample = () => {
         phone: "",
         age: NaN,
         notifications: true,
+        sex: "",
         subscribe: true,
         termsAndConditions: false,
       }}
@@ -33,7 +34,6 @@ const FormExample = () => {
               required
               maxLength={50}
             />
-
             <NumberField
               name="age"
               label="Age"
@@ -42,6 +42,18 @@ const FormExample = () => {
               allowNegative={false}
               precision={0}
             />
+            <div className="col-span-2 mb-4">
+              <RadioGroupField
+                name="sex"
+                label="Sex"
+                options={[
+                  { label: "Male", value: "male" },
+                  { label: "Female", value: "female" },
+                  { label: "Other", value: "other" },
+                ]}
+                required
+              />
+            </div>
             <NumberField
               showErrorOnBlur
               name="height"

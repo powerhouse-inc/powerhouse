@@ -1,8 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { withForm } from "@/scalars/lib/decorators";
 import { RadioGroupField } from "./radio-group-field";
 
 const meta: Meta<typeof RadioGroupField> = {
   argTypes: {
+    autoFocus: {
+      control: "boolean",
+      description: "Whether the Radio Group should be focused on mount",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: "Behavior",
+      },
+    },
     className: {
       control: "text",
       description: "Additional CSS classes to apply to the Radio Group",
@@ -25,6 +35,15 @@ const meta: Meta<typeof RadioGroupField> = {
       table: {
         type: { summary: "string" },
         category: "Content",
+      },
+    },
+    disabled: {
+      control: "boolean",
+      description: "Whether the radio group is disabled",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: "State",
       },
     },
     errors: {
@@ -68,10 +87,10 @@ const meta: Meta<typeof RadioGroupField> = {
         category: "Events",
       },
     },
-    radioOptions: {
+    options: {
       control: "object",
       description:
-        "Array of radio options with label, value, description, and disabled state",
+        "Array of options with label, value, description, and disabled state",
       table: {
         type: {
           summary:
@@ -109,6 +128,7 @@ const meta: Meta<typeof RadioGroupField> = {
     },
   },
   component: RadioGroupField,
+  decorators: [withForm],
   parameters: {
     layout: "centered",
     controls: {
@@ -124,7 +144,7 @@ export default meta;
 
 type Story = StoryObj<typeof RadioGroupField>;
 
-const defaultRadioOptions = [
+const defaultOptions = [
   { label: "Option 1", value: "1" },
   { label: "Option 2", value: "2" },
   { label: "Option 3", value: "3" },
@@ -132,70 +152,79 @@ const defaultRadioOptions = [
 
 export const WithoutLabel: Story = {
   args: {
-    radioOptions: defaultRadioOptions,
+    name: "radio-group",
+    options: defaultOptions,
   },
 };
 
 export const WithLabel: Story = {
   args: {
+    name: "radio-group",
     label: "Radio Group with label",
-    radioOptions: defaultRadioOptions,
+    options: defaultOptions,
   },
 };
 
 export const WithLabelAndDescription: Story = {
   args: {
+    name: "radio-group",
     description: "This is a helpful description for the Radio Group",
     label: "Radio Group with label and description",
-    radioOptions: defaultRadioOptions,
+    options: defaultOptions,
   },
 };
 
 export const WithWarnings: Story = {
   args: {
+    name: "radio-group",
     warnings: ["Warning 1", "Warning 2"],
     label: "Radio Group with warnings",
-    radioOptions: defaultRadioOptions,
+    options: defaultOptions,
   },
 };
 
 export const WithErrors: Story = {
   args: {
+    name: "radio-group",
     errors: ["Error 1", "Error 2"],
     label: "Radio Group with errors",
-    radioOptions: defaultRadioOptions,
+    options: defaultOptions,
   },
 };
 
 export const WithWarningsAndErrors: Story = {
   args: {
+    name: "radio-group",
     warnings: ["Warning 1", "Warning 2"],
     errors: ["Error 1", "Error 2"],
     label: "Radio Group with warnings and errors",
-    radioOptions: defaultRadioOptions,
+    options: defaultOptions,
   },
 };
 
 export const Required: Story = {
   args: {
+    name: "radio-group",
     label: "Required Radio Group",
-    radioOptions: defaultRadioOptions,
+    options: defaultOptions,
     required: true,
   },
 };
 
 export const WithOptionSelectedByDefault: Story = {
   args: {
+    name: "radio-group",
     defaultValue: "2",
     label: "Radio Group with option selected by default",
-    radioOptions: defaultRadioOptions,
+    options: defaultOptions,
   },
 };
 
 export const WithDescriptionInOptions: Story = {
   args: {
+    name: "radio-group",
     label: "Radio Group with description in the options",
-    radioOptions: [
+    options: [
       {
         description: "Description for option 1",
         label: "Option 1",
@@ -212,8 +241,9 @@ export const WithDescriptionInOptions: Story = {
 
 export const WithDisabledOptions: Story = {
   args: {
+    name: "radio-group",
     label: "Radio Group with disabled options",
-    radioOptions: [
+    options: [
       { label: "Option 1", value: "1" },
       { label: "Option 2 (Disabled)", value: "2", disabled: true },
       { label: "Option 3", value: "3" },
@@ -224,5 +254,15 @@ export const WithDisabledOptions: Story = {
         description: "This option is disabled and has a description",
       },
     ],
+  },
+};
+
+export const Disabled: Story = {
+  args: {
+    name: "radio-group",
+    label: "Disabled Radio Group",
+    disabled: true,
+    options: defaultOptions,
+    value: defaultOptions[0].value,
   },
 };
