@@ -1,21 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithForm } from "@/scalars/lib/testing";
 import { RadioGroupField } from "./radio-group-field";
 
 describe("RadioGroupField Component", () => {
   it("should match snapshot", () => {
-    const { asFragment } = render(
-      <RadioGroupField radioOptions={[{ label: "Option 1", value: "1" }]} />,
+    const { asFragment } = renderWithForm(
+      <RadioGroupField
+        name="radio-group"
+        options={[{ label: "Option 1", value: "1" }]}
+      />,
     );
     expect(asFragment()).toMatchSnapshot();
   });
 
   it("should render radio options with label", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         label="Group Label"
-        radioOptions={[
+        options={[
           { label: "Option 1", value: "1" },
           { label: "Option 2", value: "2" },
         ]}
@@ -30,10 +35,11 @@ describe("RadioGroupField Component", () => {
   it("should call onChange when a Radio label is clicked", async () => {
     const onChangeMock = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         onChange={onChangeMock}
-        radioOptions={[
+        options={[
           { label: "Option 1", value: "1" },
           { label: "Option 2", value: "2" },
         ]}
@@ -46,10 +52,11 @@ describe("RadioGroupField Component", () => {
 
   it("should change the value when a different radio is selected", async () => {
     const user = userEvent.setup();
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         defaultValue="1"
-        radioOptions={[
+        options={[
           { label: "Option 1", value: "1" },
           { label: "Option 2", value: "2" },
         ]}
@@ -65,36 +72,38 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should display description when provided", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         label="Group Label"
         description="Group Description"
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
-    // Check that the info icon fallback is rendered
     const iconFallback = screen.getByTestId("icon-fallback");
     expect(iconFallback).toBeInTheDocument();
     expect(iconFallback).toHaveStyle({ width: "16px", height: "16px" });
   });
 
   it("should show a warning when provided", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         label="Group Label"
         warnings={["Warning message"]}
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
     expect(screen.getByText("Warning message")).toBeInTheDocument();
   });
 
   it("should show an error when provided", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         label="Group Label"
         errors={["Error message"]}
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
     const radioGroup = screen.getByRole("radiogroup");
@@ -103,26 +112,33 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should have aria-label when no label is provided", () => {
-    render(
-      <RadioGroupField radioOptions={[{ label: "Option 1", value: "1" }]} />,
+    renderWithForm(
+      <RadioGroupField
+        name="radio-group"
+        options={[{ label: "Option 1", value: "1" }]}
+      />,
     );
     const radioGroup = screen.getByRole("radiogroup");
     expect(radioGroup).toHaveAttribute("aria-label", "Radio group");
   });
 
   it("should generate unique ids when not provided", () => {
-    render(
-      <RadioGroupField radioOptions={[{ label: "Option 1", value: "1" }]} />,
+    renderWithForm(
+      <RadioGroupField
+        name="radio-group"
+        options={[{ label: "Option 1", value: "1" }]}
+      />,
     );
     const radioGroup = screen.getByRole("radiogroup");
     expect(radioGroup.id).toMatch(/^.*-radio-group$/);
   });
 
   it("should use provided id when specified", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
         id="custom-id"
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        name="radio-group"
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
     const radioGroup = screen.getByRole("radiogroup");
@@ -130,11 +146,12 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should handle required state", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         label="Group Label"
         required
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
     const radioGroup = screen.getByRole("radiogroup");
@@ -142,10 +159,11 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should handle defaultValue", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         defaultValue="2"
-        radioOptions={[
+        options={[
           { label: "Option 1", value: "1" },
           { label: "Option 2", value: "2" },
         ]}
@@ -156,10 +174,11 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should handle controlled value", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         value="1"
-        radioOptions={[
+        options={[
           { label: "Option 1", value: "1" },
           { label: "Option 2", value: "2" },
         ]}
@@ -170,12 +189,13 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should apply custom className", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         // Custom className for testing purposes
         // eslint-disable-next-line tailwindcss/no-custom-classname
         className="custom-class"
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
     const radioGroup = screen.getByRole("radiogroup");
@@ -183,11 +203,12 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should handle multiple warnings", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         label="Group Label"
         warnings={["Warning 1", "Warning 2"]}
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
     expect(screen.getByText("Warning 1")).toBeInTheDocument();
@@ -195,11 +216,12 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should handle multiple errors", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         label="Group Label"
         errors={["Error 1", "Error 2"]}
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
     expect(screen.getByText("Error 1")).toBeInTheDocument();
@@ -207,12 +229,13 @@ describe("RadioGroupField Component", () => {
   });
 
   it("should show both warnings and errors when provided", () => {
-    render(
+    renderWithForm(
       <RadioGroupField
+        name="radio-group"
         label="Group Label"
         warnings={["Warning message"]}
         errors={["Error message"]}
-        radioOptions={[{ label: "Option 1", value: "1" }]}
+        options={[{ label: "Option 1", value: "1" }]}
       />,
     );
     expect(screen.getByText("Warning message")).toBeInTheDocument();

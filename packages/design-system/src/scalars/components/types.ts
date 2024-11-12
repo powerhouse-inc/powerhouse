@@ -11,6 +11,7 @@ export interface FormFieldProps {
   id?: string;
   name: string;
   label?: React.ReactNode;
+  autoFocus?: boolean;
 }
 
 export interface FieldCommonProps<T> extends FormFieldProps {
