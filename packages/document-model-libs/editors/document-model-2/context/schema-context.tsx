@@ -134,7 +134,6 @@ export function SchemaContextProvider(props: TSchemaContextProps) {
           schema: newSharedSchema,
         };
       } catch (e) {
-        console.log({ id, newDoc });
         return {
           success: false,
           errors: (e as Error).message,
