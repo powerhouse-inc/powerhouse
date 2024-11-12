@@ -14,6 +14,7 @@ import { EditorProps, OperationScope, utils } from "document-model/document";
 import { DocumentModelEditor } from "./document-model-editor";
 import { ModelMetadata } from "./components/model-metadata-form";
 import { SchemaContextProvider } from "./context/schema-context";
+import { Divider } from "./components/divider";
 
 export default function Editor(
   props: EditorProps<
@@ -322,33 +323,36 @@ export default function Editor(
   );
 
   return (
-    <main className="mx-auto min-h-dvh max-w-6xl bg-gray-50 px-4 pt-8">
+    <main className="min-h-dvh bg-gray-50">
       <SchemaContextProvider
         globalStateSchema={globalStateSchema}
         localStateSchema={localStateSchema}
         operations={operations}
       >
-        <ModelMetadata
-          name={modelName}
-          documentType={documentType}
-          extension={extension}
-          description={description}
-          authorName={authorName}
-          authorWebsite={authorWebsite ?? ""}
-          handlers={handlers}
-          globalStateSchema={globalStateSchema}
-          localStateSchema={localStateSchema}
-        />
-        <DocumentModelEditor
-          modelName={modelName}
-          globalStateSchema={globalStateSchema}
-          globalStateInitialValue={globalStateInitialValue}
-          localStateSchema={localStateSchema}
-          localStateInitialValue={localStateInitialValue}
-          handlers={handlers}
-          modules={modules}
-          operations={operations}
-        />
+        <div className="mx-auto max-w-6xl px-4 pt-8">
+          <ModelMetadata
+            name={modelName}
+            documentType={documentType}
+            extension={extension}
+            description={description}
+            authorName={authorName}
+            authorWebsite={authorWebsite ?? ""}
+            handlers={handlers}
+            globalStateSchema={globalStateSchema}
+            localStateSchema={localStateSchema}
+          />
+          <Divider />
+          <DocumentModelEditor
+            modelName={modelName}
+            globalStateSchema={globalStateSchema}
+            globalStateInitialValue={globalStateInitialValue}
+            localStateSchema={localStateSchema}
+            localStateInitialValue={localStateInitialValue}
+            handlers={handlers}
+            modules={modules}
+            operations={operations}
+          />
+        </div>
       </SchemaContextProvider>
     </main>
   );

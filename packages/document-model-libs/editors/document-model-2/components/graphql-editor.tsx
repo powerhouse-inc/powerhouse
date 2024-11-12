@@ -16,16 +16,16 @@ type Props = {
 };
 
 export function GraphqlEditor(props: Props) {
-  const { id, doc, readonly, updateDocumentInModel } = props;
+  const { id, doc, readonly = false, updateDocumentInModel } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const graphqlCompartment = useRef(new Compartment());
   const { sharedSchema, updateSharedSchema } = useSchemaContext();
   const [errors, setErrors] = useState("");
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  useEffect(() => {
-    if (!editorRef.current) return;
 
+  useEffect(() => {
+    if (viewRef.current) return;
     const state = EditorState.create({
       doc,
       extensions: [
@@ -45,6 +45,8 @@ export function GraphqlEditor(props: Props) {
           )
             return;
 
+          setErrors("");
+
           const newDoc = update.state.doc.toString();
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -52,23 +54,19 @@ export function GraphqlEditor(props: Props) {
           timeoutRef.current = setTimeout(() => {
             updateDocumentInModel(newDoc);
             const result = updateSharedSchema(id, newDoc);
-            if (result.success) {
-              setErrors("");
-              return;
-            }
-            if (result.errors) {
-              setErrors((prev) => `${prev}\n${result.errors}`);
+            if (!result.success && result.errors) {
+              setErrors(result.errors);
             }
           }, 300);
         }),
-        EditorState.readOnly.of(!!readonly),
+        EditorState.readOnly.of(readonly),
         keymap.of([indentWithTab]),
       ],
     });
 
     viewRef.current = new EditorView({
       state,
-      parent: editorRef.current,
+      parent: editorRef.current!,
     });
 
     return () => {
@@ -112,7 +110,7 @@ export function GraphqlEditor(props: Props) {
   return (
     <div>
       <div ref={editorRef} />
-      <Errors errors={errors} />
+      {!readonly && <Errors errors={errors} />}
     </div>
   );
 }

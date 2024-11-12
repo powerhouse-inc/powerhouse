@@ -1,7 +1,6 @@
 import { Module, Operation } from "document-model/document-model";
 import { DocumentActionHandlers } from "../types";
 import { toConstantCase } from "../schemas";
-import { Icon } from "@powerhousedao/design-system";
 import { TextField } from "./text-field";
 
 type Props = {
@@ -22,8 +21,12 @@ export function OperationForm({
   const isEdit = !!operation;
 
   const handleSubmit = async (name: string) => {
+    if (isEdit && name === "") {
+      handlers.deleteOperation(operation.id);
+      return;
+    }
+
     const formattedName = toConstantCase(name);
-    if (!formattedName.length) return;
 
     if (isEdit) {
       if (formattedName !== operation.name) {
@@ -34,27 +37,25 @@ export function OperationForm({
     }
   };
 
+  const handleChange = (value: string) => {
+    if (isEdit && value === "") {
+      handlers.deleteOperation(operation.id);
+    }
+  };
+
   return (
-    <div className="grid h-fit grid-cols-[1fr,auto] gap-1">
-      <TextField
-        name="name"
-        value={operation?.name}
-        onSubmit={handleSubmit}
-        placeholder="Add operation"
-        required
-        shouldReset
-        focusOnMount={focusOnMount}
-        unique={allOperationNames}
-      />
-      {!!operation && (
-        <button
-          tabIndex={-1}
-          type="button"
-          onClick={() => handlers.deleteOperation(operation.id)}
-        >
-          <Icon name="Xmark" />
-        </button>
-      )}
-    </div>
+    <TextField
+      name="name"
+      value={operation?.name}
+      label={isEdit ? "Operation name" : "Add operation"}
+      onSubmit={handleSubmit}
+      onChange={handleChange}
+      placeholder="Add operation"
+      required={!isEdit}
+      allowEmpty={!isEdit}
+      shouldReset={!isEdit}
+      focusOnMount={focusOnMount}
+      unique={allOperationNames}
+    />
   );
 }

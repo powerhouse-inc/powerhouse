@@ -23,21 +23,23 @@ type Props = MetadataFormValues & {
 
 export function ModelMetadata(props: Props) {
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div>
       <ModelNameForm {...props} />
-      <div className="grid flex-1 grid-cols-3 items-start gap-4">
-        <div className="col-span-2 flex h-full flex-col gap-4">
-          <div className="shrink-0">
-            <DocumentTypeForm {...props} />
+      <div className="flex h-full flex-col gap-4">
+        <div className="grid flex-1 grid-cols-3 items-start gap-4">
+          <div className="col-span-2 flex h-full flex-col gap-4">
+            <div className="shrink-0">
+              <DocumentTypeForm {...props} />
+            </div>
+            <div className="min-h-0 flex-1">
+              <DescriptionForm {...props} />
+            </div>
           </div>
-          <div className="min-h-0 flex-1">
-            <DescriptionForm {...props} />
+          <div className="col-span-1 flex flex-col gap-4">
+            <AuthorNameForm {...props} />
+            <AuthorWebsiteForm {...props} />
+            <ModelExtensionForm {...props} />
           </div>
-        </div>
-        <div className="col-span-1 flex flex-col gap-4">
-          <AuthorNameForm {...props} />
-          <AuthorWebsiteForm {...props} />
-          <ModelExtensionForm {...props} />
         </div>
       </div>
     </div>
@@ -88,7 +90,7 @@ export function ModelNameForm(props: Props) {
       value={name}
       onSubmit={onSubmit}
       placeholder="Model name"
-      className="mb-2 border-none pl-0 text-xl font-bold text-gray-900"
+      className="border-none pl-0 text-xl font-bold text-gray-900"
       required
       focusOnMount
     />

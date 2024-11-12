@@ -1,10 +1,8 @@
 import { OperationForm } from "./operation-form";
 import { DocumentActionHandlers } from "../types";
 import { Module, Operation as TOperation } from "document-model/document-model";
-import { GraphQLSchema } from "graphql";
 import { useId, useState } from "react";
 import { Operation, WrappedHandlers } from "./operation";
-import { Divider } from "./divider";
 
 type Props = {
   module: Module;
@@ -49,10 +47,9 @@ export function Operations({
             lastCreatedOperationId={lastCreatedOperationId}
             allOperationNames={allOperationNames}
           />
-          <Divider size="sm" margin="lg" />
         </div>
       ))}
-      <div className="w-1/2 pr-2">
+      <div className="mt-6 w-1/2 pr-6">
         <OperationForm
           key={addOperationFormId}
           handlers={wrappedHandlers}

@@ -33,6 +33,7 @@ type TextFieldProps = {
   allowEmpty?: boolean;
   unique?: string[];
   shouldReset?: boolean;
+  onChange?: (value: string) => void;
 };
 
 type TextFieldHandle = {
@@ -54,6 +55,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
       required = false,
       allowEmpty = false,
       shouldReset = false,
+      onChange,
     },
     ref,
   ) => {
@@ -117,6 +119,14 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
       [],
     );
 
+    const handleChange = useCallback(
+      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newValue = e.target.value;
+        onChange?.(newValue);
+      },
+      [onChange],
+    );
+
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
     }));
@@ -127,7 +137,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
           control={form.control}
           name={name}
           render={({ field }) => (
-            <FormItem className="grid h-full grid-rows-[auto,1fr] gap-2">
+            <FormItem className="grid h-full grid-rows-[auto,1fr] gap-2 overflow-visible">
               {!!label && (
                 <FormLabel
                   htmlFor={name}
@@ -148,6 +158,10 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
                   }}
                   placeholder={placeholder}
                   onBlur={handleBlur}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    handleChange(e);
+                  }}
                   onKeyDown={onEnterKeyDown}
                   rows={rows}
                   className={className}

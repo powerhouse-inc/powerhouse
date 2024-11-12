@@ -7,7 +7,12 @@ import {
   useMemo,
   useState,
 } from "react";
-import { hiddenQueryTypeDefDoc, initialSchema } from "../constants/documents";
+import {
+  hiddenQueryTypeDefDoc,
+  typeDefsDoc,
+  initialSchema,
+  specialDocIds,
+} from "../constants/documents";
 import { buildSchema, GraphQLSchema } from "graphql";
 import { isDocumentString } from "@graphql-tools/utils";
 
@@ -57,9 +62,10 @@ export function SchemaContextProvider(props: TSchemaContextProps) {
   const [sharedSchema, setSharedSchema] = useState(initialSchema);
   const [documents, setDocuments] = useState(() => {
     const newDocuments = new Map<string, string>();
-    newDocuments.set("standard-lib", hiddenQueryTypeDefDoc);
-    newDocuments.set("global", globalStateSchema);
-    newDocuments.set("local", localStateSchema);
+    newDocuments.set(specialDocIds.hiddenQueryTypeDef, hiddenQueryTypeDefDoc);
+    newDocuments.set(specialDocIds.standardLib, typeDefsDoc);
+    newDocuments.set(specialDocIds.global, globalStateSchema);
+    newDocuments.set(specialDocIds.local, localStateSchema);
     for (const operation of operations) {
       if (operation.schema) {
         newDocuments.set(operation.id, operation.schema);
@@ -71,9 +77,10 @@ export function SchemaContextProvider(props: TSchemaContextProps) {
   useEffect(() => {
     setDocuments((prev) => {
       const newDocuments = new Map<string, string>(prev);
-      newDocuments.set("standard-lib", hiddenQueryTypeDefDoc);
-      newDocuments.set("global", globalStateSchema);
-      newDocuments.set("local", localStateSchema);
+      newDocuments.set(specialDocIds.hiddenQueryTypeDef, hiddenQueryTypeDefDoc);
+      newDocuments.set(specialDocIds.standardLib, typeDefsDoc);
+      newDocuments.set(specialDocIds.global, globalStateSchema);
+      newDocuments.set(specialDocIds.local, localStateSchema);
       for (const operation of operations) {
         if (operation.schema) {
           newDocuments.set(operation.id, operation.schema);

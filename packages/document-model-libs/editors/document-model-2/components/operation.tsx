@@ -27,23 +27,22 @@ export function Operation(props: Props) {
     lastCreatedOperationId,
   } = props;
   return (
-    <div key={operation.id}>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <OperationForm
-            operation={operation}
-            handlers={wrappedHandlers}
-            module={module}
-            allOperationNames={allOperationNames}
-          />
-          <div className="pr-7">
-            <OperationDescriptionForm
-              operation={operation}
-              handlers={wrappedHandlers}
-              focusOnMount={operation.id === lastCreatedOperationId}
-            />
-          </div>
-        </div>
+    <div className="mt-4 grid grid-cols-2 gap-x-12">
+      <div className="flex flex-col gap-2">
+        <OperationForm
+          operation={operation}
+          handlers={wrappedHandlers}
+          module={module}
+          allOperationNames={allOperationNames}
+        />
+        <OperationDescriptionForm
+          operation={operation}
+          handlers={wrappedHandlers}
+          focusOnMount={operation.id === lastCreatedOperationId}
+        />
+      </div>
+
+      <div className="relative top-8">
         <GraphqlEditor
           doc={operation.schema ?? ""}
           id={operation.id}
@@ -51,12 +50,12 @@ export function Operation(props: Props) {
             wrappedHandlers.updateOperationSchema(operation.id, newDoc)
           }
         />
-        <div className="col-span-1">
-          <h3 className="mb-1 mt-2 text-sm font-semibold">
-            Reducer Exceptions
-          </h3>
-          <OperationErrors operation={operation} handlers={wrappedHandlers} />
-        </div>
+      </div>
+      <div>
+        <h3 className="my-2 text-sm font-medium text-gray-700">
+          Reducer Exceptions
+        </h3>
+        <OperationErrors operation={operation} handlers={wrappedHandlers} />
       </div>
     </div>
   );

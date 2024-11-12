@@ -4,7 +4,17 @@ import { typeDefs } from "@powerhousedao/scalars";
 export const hiddenQueryTypeDefDoc = `type Query {
   _hidden: String
 }
-${typeDefs.join("\n")}
 `;
 
-export const initialSchema = buildSchema(hiddenQueryTypeDefDoc);
+export const typeDefsDoc = typeDefs.join("\n");
+
+export const initialSchemaDoc = `${hiddenQueryTypeDefDoc}\n${typeDefsDoc}`;
+
+export const initialSchema = buildSchema(initialSchemaDoc);
+
+export const specialDocIds = {
+  hiddenQueryTypeDef: "hidden-query-type-defs",
+  standardLib: "standard-lib",
+  global: "global",
+  local: "local",
+} as const;

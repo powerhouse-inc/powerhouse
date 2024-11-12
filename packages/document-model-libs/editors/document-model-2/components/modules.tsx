@@ -1,13 +1,10 @@
-import { ModuleForm } from "./module-form";
-import { Operations } from "./operations";
 import { DocumentActionHandlers } from "../types";
-import { Module, Operation } from "document-model/document-model";
-import { GraphQLSchema } from "graphql";
-import { useId, useState, useRef } from "react";
-import { Divider } from "./divider";
+import { Module as TModule, Operation } from "document-model/document-model";
+import { useState, useRef } from "react";
+import { Module } from "./module";
 
 type Props = {
-  modules: Module[];
+  modules: TModule[];
   allOperations: Operation[];
   handlers: DocumentActionHandlers;
 };
@@ -16,7 +13,6 @@ export function Modules({ modules, allOperations, handlers }: Props) {
     null,
   );
   const focusTrapRef = useRef<HTMLDivElement>(null);
-  const addModuleFormId = useId();
 
   const wrappedHandlers = {
     ...handlers,
@@ -31,32 +27,24 @@ export function Modules({ modules, allOperations, handlers }: Props) {
   };
 
   return (
-    <div className="">
+    <div className="flex flex-col gap-2">
       {modules.map((module) => (
-        <div className="" key={module.id}>
-          <div className="my-4">
-            <ModuleForm
-              modules={modules}
-              handlers={wrappedHandlers}
-              module={module}
-            />
-            <Divider />
-          </div>
-          <Operations
-            module={module}
-            handlers={wrappedHandlers}
-            allOperations={allOperations}
-            shouldFocusNewOperation={module.id === lastCreatedModuleId}
-          />
-        </div>
-      ))}
-      <div className="mt-6 pb-12">
-        <ModuleForm
-          key={addModuleFormId}
+        <Module
+          key={module.id}
+          module={module}
           modules={modules}
-          handlers={wrappedHandlers}
+          allOperations={allOperations}
+          lastCreatedModuleId={lastCreatedModuleId}
+          wrappedHandlers={wrappedHandlers}
         />
-      </div>
+      ))}
+      <Module
+        key="add-module"
+        modules={modules}
+        allOperations={allOperations}
+        lastCreatedModuleId={lastCreatedModuleId}
+        wrappedHandlers={wrappedHandlers}
+      />
       {/* Focus trap to prevent tabbing out of the editor */}
       <div
         ref={focusTrapRef}

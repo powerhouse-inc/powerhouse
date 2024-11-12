@@ -1,6 +1,5 @@
 import { Operation, OperationError } from "document-model/document-model";
 import { DocumentActionHandlers } from "../types";
-import { Icon } from "@powerhousedao/design-system";
 import { TextField } from "./text-field";
 import { pascalCase } from "change-case";
 import { useRef } from "react";
@@ -27,8 +26,12 @@ export function OperationErrorForm({
     .filter(Boolean);
 
   const handleSubmit = (name: string) => {
+    if (isEdit && name === "") {
+      handlers.deleteOperationError(error.id);
+      return;
+    }
+
     const formattedName = pascalCase(name);
-    if (!formattedName.length) return;
 
     if (isEdit) {
       handlers.setOperationErrorName(operation.id, error.id, formattedName);
@@ -38,28 +41,25 @@ export function OperationErrorForm({
     onSubmit?.();
   };
 
+  const handleChange = (value: string) => {
+    if (isEdit && value === "") {
+      handlers.deleteOperation(operation.id);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-[1fr,auto] gap-1">
-      <TextField
-        ref={textFieldRef}
-        name="name"
-        value={error?.name}
-        onSubmit={handleSubmit}
-        placeholder="Add reducer exception"
-        required
-        unique={allOperationErrorNames}
-        shouldReset
-        focusOnMount={focusOnMount}
-      />
-      {!!error && (
-        <button
-          tabIndex={-1}
-          type="button"
-          onClick={() => handlers.deleteOperationError(error.id)}
-        >
-          <Icon name="Xmark" />
-        </button>
-      )}
-    </div>
+    <TextField
+      ref={textFieldRef}
+      name="name"
+      value={error?.name}
+      onSubmit={handleSubmit}
+      onChange={handleChange}
+      placeholder="Add exception"
+      required={!isEdit}
+      allowEmpty={!isEdit}
+      shouldReset={!isEdit}
+      unique={allOperationErrorNames}
+      focusOnMount={focusOnMount}
+    />
   );
 }
