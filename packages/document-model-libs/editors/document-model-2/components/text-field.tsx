@@ -8,7 +8,14 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormField, FormItem, FormControl, FormMessage } from "./form";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormControl,
+  FormMessage,
+  FormLabel,
+} from "./form";
 import { Textarea, TextareaHandle } from "./text-area";
 import { createNameSchema } from "../schemas";
 import { compareStringsWithoutWhitespace } from "../utils/helpers";
@@ -17,6 +24,7 @@ type TextFieldProps = {
   name: string;
   value: string | null | undefined;
   onSubmit: (value: string) => void;
+  label?: string;
   placeholder?: string;
   className?: string;
   rows?: number;
@@ -37,6 +45,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
       name,
       value,
       onSubmit,
+      label,
       placeholder,
       unique,
       className = "",
@@ -118,10 +127,19 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
           control={form.control}
           name={name}
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="grid h-full grid-rows-[auto,1fr] gap-2">
+              {!!label && (
+                <FormLabel
+                  htmlFor={name}
+                  className="text-sm font-medium text-gray-700"
+                >
+                  {label}
+                </FormLabel>
+              )}
               <FormControl>
                 <Textarea
                   {...field}
+                  id={name}
                   ref={(node) => {
                     if (node) {
                       field.ref(node.element);

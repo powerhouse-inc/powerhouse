@@ -23,14 +23,18 @@ type Props = MetadataFormValues & {
 
 export function ModelMetadata(props: Props) {
   return (
-    <div>
+    <div className="flex h-full flex-col gap-4">
       <ModelNameForm {...props} />
-      <div className="grid grid-cols-[2fr,1fr] gap-8">
-        <div>
-          <DocumentTypeForm {...props} />
-          <DescriptionForm {...props} />
+      <div className="grid flex-1 grid-cols-3 items-start gap-4">
+        <div className="col-span-2 flex h-full flex-col gap-4">
+          <div className="shrink-0">
+            <DocumentTypeForm {...props} />
+          </div>
+          <div className="min-h-0 flex-1">
+            <DescriptionForm {...props} />
+          </div>
         </div>
-        <div>
+        <div className="col-span-1 flex flex-col gap-4">
           <AuthorNameForm {...props} />
           <AuthorWebsiteForm {...props} />
           <ModelExtensionForm {...props} />
@@ -96,11 +100,11 @@ export function DocumentTypeForm(props: Props) {
 
   return (
     <TextField
-      name="documentType"
+      label="Document Type"
+      name="powerhouse/document-model"
       value={documentType}
       onSubmit={handlers.setModelId}
       placeholder="Document Type"
-      className="mb-2 w-1/2"
       required
     />
   );
@@ -114,8 +118,8 @@ export function ModelExtensionForm(props: Props) {
       name="extension"
       value={extension}
       onSubmit={handlers.setModelExtension}
-      placeholder="Model Extension"
-      className="mb-2"
+      label="Model Extension"
+      placeholder="Example .phdm"
       required
     />
   );
@@ -127,12 +131,12 @@ export function DescriptionForm(props: Props) {
   return (
     <TextField
       name="description"
+      label="Model Description"
       value={description}
       onSubmit={handlers.setModelDescription}
-      placeholder="Model Description"
-      className="mb-2"
+      placeholder="Describe your document to others"
       allowEmpty
-      rows={4}
+      className="h-full"
     />
   );
 }
@@ -145,8 +149,8 @@ export function AuthorNameForm(props: Props) {
       name="authorName"
       value={authorName}
       onSubmit={handlers.setAuthorName}
-      placeholder="Author Name"
-      className="mb-2"
+      label="Author Name"
+      placeholder="Username or organisation"
       allowEmpty
     />
   );
@@ -159,12 +163,12 @@ export function AuthorWebsiteForm(props: Props) {
     <TextField
       name="authorWebsite"
       value={authorWebsite}
+      label="Website URL"
       onSubmit={(newAuthorWebsite) => {
         if (!!authorWebsite && !newAuthorWebsite) return;
         handlers.setAuthorWebsite(newAuthorWebsite);
       }}
-      placeholder="https://my-website.com"
-      className="mb-2"
+      placeholder="https://www.powerhouse.inc/"
       allowEmpty
     />
   );

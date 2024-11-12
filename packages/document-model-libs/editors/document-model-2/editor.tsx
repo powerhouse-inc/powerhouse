@@ -322,7 +322,7 @@ export default function Editor(
   );
 
   return (
-    <main className="mx-auto min-h-dvh max-w-screen-lg bg-gray-50 px-4 pt-8">
+    <main className="mx-auto min-h-dvh max-w-6xl bg-gray-50 px-4 pt-8">
       <SchemaContextProvider
         globalStateSchema={globalStateSchema}
         localStateSchema={localStateSchema}
