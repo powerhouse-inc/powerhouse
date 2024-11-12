@@ -50,7 +50,8 @@ export type NumericType =
   | "NegativeFloat" // Negative float values
   | "PositiveFloat" // Positive float values
   | "NonNegativeFloat" // Non-negative float values (>= 0.0)
-  | "NonPositiveFloat"; // Non-positive float values (<= 0.0)
+  | "NonPositiveFloat" // Non-positive float values (<= 0.0)
+  | "BigInt";
 
 export interface NumberProps {
   numericType?: NumericType;

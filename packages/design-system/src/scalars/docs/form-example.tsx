@@ -48,14 +48,7 @@ const FormExample = () => {
                 placeholder="25"
                 required
                 allowNegative={false}
-                customValidator={(value) =>
-                  numberCustomValidator(value, {
-                    minValue: 0,
-                    maxValue: 100,
-                    numericType: "NegativeFloat",
-                    precision: 2,
-                  })
-                }
+                isBigInt={false}
               />
 
               <StringField
