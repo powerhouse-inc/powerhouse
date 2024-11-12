@@ -8,6 +8,13 @@ import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { getDisplayValue, regex } from "@/scalars/utils/utils";
 import { withFieldValidation } from "../fragments/with-field-validation";
+import {
+  validateDecimalRequired,
+  validateIsBigInt,
+  validatePositive,
+  validatePrecision,
+  validateTrailingZeros,
+} from "./numberFieldValidations";
 
 export interface NumberFieldProps
   extends Omit<
@@ -132,19 +139,11 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
   NumberFieldRaw,
   {
     validations: {
-      _positive: (props) => (value) => {
-        return props.allowNegative
-          ? true
-          : Number(value) > 0
-            ? true
-            : ` ${props.label} be a positive value`;
-      },
-      _isBigInt: (props) => (value: string) => {
-        const isLargeNumber = Math.abs(Number(value)) > Number.MAX_SAFE_INTEGER;
-        return isLargeNumber && !props.isBigInt
-          ? "Value is too large for standard integer, set isBigInt to true"
-          : true;
-      },
+      _positive: validatePositive,
+      _isBigInt: validateIsBigInt,
+      _precision: validatePrecision,
+      _trailingZeros: validateTrailingZeros,
+      _decimalRequired: validateDecimalRequired,
     },
   },
 );

@@ -39,9 +39,20 @@ const FormExample = () => {
               label="Age"
               placeholder="25"
               required
-              minValue={18}
+              allowNegative={false}
             />
-
+            <NumberField
+              showErrorOnBlur
+              name="height"
+              label="Height (cm)"
+              placeholder="180"
+              required
+              allowNegative={false}
+              isBigInt={false}
+              precision={2}
+              trailingZeros
+              decimalRequired
+            />
             <StringField
               name="email"
               label="Email"
