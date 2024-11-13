@@ -21,7 +21,7 @@ import {
   useEditorContext,
   useModal,
 } from "@/rwa";
-import { ReactElement, useCallback, useMemo } from "react";
+import { ReactElement, ReactNode, useCallback, useMemo } from "react";
 import {
   Control,
   FormState,
@@ -29,11 +29,12 @@ import {
   UseFormWatch,
 } from "react-hook-form";
 import { CashBalanceChange } from "../components/table/transactions/cash-balance-change";
+import { EntryTimeLabel } from "../components/inputs/entry-time-label";
 
 type Input = {
   label: string;
   Input: () => string | React.JSX.Element;
-  inputLabel?: string | null;
+  inputLabel?: ReactNode | null;
 };
 
 type Props = {
@@ -72,7 +73,6 @@ export function useFormInputs(props: Props): {
     },
     [showModal],
   );
-
   return useMemo(() => {
     switch (tableName) {
       case tableNames.ASSET: {
@@ -251,8 +251,6 @@ export function useFormInputs(props: Props): {
         const { errors } = _formState as FormState<Payload>;
         const control = _control as Control<Payload>;
         const type = watch("type");
-        const entryTimeInputValue =
-          watch("entryTime") ?? new Date().toISOString();
         const isFeesTransaction = !!type && feesTransactions.includes(type);
         const isAssetTransaction =
           !!type && assetGroupTransactions.includes(type);
@@ -302,9 +300,7 @@ export function useFormInputs(props: Props): {
                 })}
               />
             ),
-            inputLabel: entryTimeInputValue
-              ? formatDateForDisplay(new Date(entryTimeInputValue))
-              : null,
+            inputLabel: <EntryTimeLabel control={control} />,
           },
           isFeesTransaction
             ? {
