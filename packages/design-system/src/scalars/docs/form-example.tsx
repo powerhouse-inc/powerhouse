@@ -85,10 +85,14 @@ const FormExample = () => {
 
           <StringField
             name="bio"
-            label="Bio"
+            label="Bio (length: 20-100 characters, pattern: letters, numbers and spaces)"
             placeholder="I am a software engineer..."
+            minLength={20}
+            maxLength={100}
             multiline
-            maxLength={500}
+            pattern={/^[a-zA-Z0-9 ]+$/}
+            required
+            showErrorOnChange
           />
 
           <BooleanField
