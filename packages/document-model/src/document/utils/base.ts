@@ -468,8 +468,8 @@ export function replayDocument<T, A extends Action, L>(
   );
   // gets the last modified timestamp from the latest operation
   const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
-    const operation = curr[curr.length - 1];
-    if (operation.timestamp > acc) {
+    const operation = curr.at(-1);
+    if (operation && operation.timestamp > acc) {
       acc = operation.timestamp;
     }
     return acc;

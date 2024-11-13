@@ -1,33 +1,32 @@
 name: Check PR Monorepo Build
 
 on:
-    workflow_dispatch:
-    push:
-        branches: ['main']
-    pull_request:
-        branches: ['main']
-        types: [opened, synchronize]
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize]
 
 env:
   NX_ISOLATE_PLUGINS: false
 
 jobs:
-    build:
-        name: Build Monorepo
-        runs-on: ubuntu-latest
-        container: node:22
+  build:
+    name: Build Monorepo
+    runs-on: ubuntu-latest
+    container: node:22
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install PNPM
-              uses: pnpm/action-setup@v3
-              with:
-                  version: latest-8
-                  run_install: false
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
-            - name: Install Dependencies
-              run: pnpm install --frozen-lockfile
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
 
-            - name: Build Monorepo
-              run: npx nx run-many --target=build --all --skip-nx-cache
+      - name: Build Monorepo
+        run: npx nx run-many --target=build --all --skip-nx-cache

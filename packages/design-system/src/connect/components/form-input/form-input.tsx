@@ -3,7 +3,7 @@ import { twJoin, twMerge } from "tailwind-merge";
 
 type InputProps = ComponentPropsWithRef<"input">;
 type FormInputProps = Omit<InputProps, "className"> & {
-  readonly icon: React.JSX.Element;
+  readonly icon?: React.JSX.Element;
   readonly errorMessage?: string;
   readonly isTouched?: boolean;
   readonly isDirty?: boolean;
@@ -38,9 +38,12 @@ export const FormInput = forwardRef(function FormInput(
           containerClassName,
         )}
       >
-        <span className={twJoin((!isDirty || isError) && "text-slate-200")}>
-          {icon}
-        </span>
+        {icon && (
+          <span className={twJoin((!isDirty || isError) && "text-slate-200")}>
+            {icon}
+          </span>
+        )}
+
         <input
           {...delegatedProps}
           className={twMerge(

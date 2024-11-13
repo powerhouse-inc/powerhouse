@@ -66,8 +66,8 @@ describe("ConnectSearchBar Component", () => {
       target: { value: "test" },
     });
 
-    expect(onChange).toBeCalledTimes(1);
-    expect(onChange).toBeCalledWith("test");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("test");
   });
 
   it("should display filter selected in filter label", () => {

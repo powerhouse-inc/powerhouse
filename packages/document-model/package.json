@@ -1,13 +1,13 @@
 {
   "name": "document-model",
-  "version": "2.2.0",
+  "version": "2.6.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
     "dist"
   ],
   "types": "dist/node/index.d.ts",
-  "main": "dist/node/cjs/index.cjs",
+  "main": "dist/node/cjs/index.js",
   "module": "dist/node/es/index.js",
   "browser": "dist/browser/es/index.js",
   "type": "module",
@@ -27,11 +27,11 @@
     ".": {
       "node": {
         "import": "./dist/node/es/index.js",
-        "require": "./dist/node/cjs/index.cjs",
+        "require": "./dist/node/cjs/index.js",
         "types": "./dist/node/index.d.ts"
       },
       "import": "./dist/browser/es/index.js",
-      "require": "./dist/browser/cjs/index.cjs",
+      "require": "./dist/browser/cjs/index.js",
       "types": "./dist/browser/index.d.ts"
     },
     "./document": {

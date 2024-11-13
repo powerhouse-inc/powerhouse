@@ -27,6 +27,10 @@ export type InternalTransmitterUpdate<
   state: T["state"][S];
 };
 
+export interface IInternalTransmitter extends ITransmitter {
+  setReceiver(receiver: IReceiver): void;
+}
+
 export class InternalTransmitter implements ITransmitter {
   private drive: IBaseDocumentDriveServer;
   private listener: Listener;

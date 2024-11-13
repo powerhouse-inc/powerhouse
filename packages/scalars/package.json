@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/scalars",
-  "version": "1.1.0-canary.34",
+  "version": "1.9.0",
   "license": "AGPL-3.0-only",
   "publishConfig": {
     "access": "public"
@@ -44,15 +44,20 @@
       "import": "./dist/es/src/index.js",
       "types": "./dist/types/src/index.d.ts"
     },
-    "./index": {
-      "require": "./dist/cjs/src/scalars/index.js",
-      "import": "./dist/es/src/scalars/index.js",
-      "types": "./dist/types/src/scalars/index.d.ts"
+    "./EthereumAddress": {
+      "require": "./dist/cjs/src/scalars/EthereumAddress.js",
+      "import": "./dist/es/src/scalars/EthereumAddress.js",
+      "types": "./dist/types/src/scalars/EthereumAddress.d.ts"
     },
     "./EmailAddress": {
       "require": "./dist/cjs/src/scalars/EmailAddress.js",
       "import": "./dist/es/src/scalars/EmailAddress.js",
       "types": "./dist/types/src/scalars/EmailAddress.d.ts"
+    },
+    "./AmountTokens": {
+      "require": "./dist/cjs/src/scalars/AmountTokens.js",
+      "import": "./dist/es/src/scalars/AmountTokens.js",
+      "types": "./dist/types/src/scalars/AmountTokens.d.ts"
     },
     "./AmountPercentage": {
       "require": "./dist/cjs/src/scalars/AmountPercentage.js",
