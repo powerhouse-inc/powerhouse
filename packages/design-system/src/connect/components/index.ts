@@ -2,7 +2,6 @@ export * from "./animated-loader";
 export * from "./breadcrumbs";
 export * from "./combobox";
 export * from "./cookie-banner";
-export * from "./date-time-input";
 export * from "./default-editor-loader";
 export * from "./disclosure";
 export * from "./divider";

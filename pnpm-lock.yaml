@@ -782,7 +782,7 @@ importers:
         specifier: 0.14.1
         version: link:../codegen
       '@powerhousedao/design-system':
-        specifier: ^1.7.2
+        specifier: workspace:*
         version: link:../design-system
       '@powerhousedao/scalars':
         specifier: ^1.9.0
