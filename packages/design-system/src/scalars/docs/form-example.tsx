@@ -41,6 +41,7 @@ const FormExample = () => {
               required
               allowNegative={false}
               precision={0}
+              showErrorOnBlur
             />
             <div className="col-span-2 mb-4">
               <RadioGroupField

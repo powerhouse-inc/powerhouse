@@ -38,7 +38,7 @@ export const validateTrailingZeros =
       value.toString().split(".")[1]?.length === props.precision;
     return hasTrailingZeros
       ? true
-      : `Value must have exactly ${props.precision} decimal places with trailing zeros if needed`;
+      : `Value must have exactly ${props.precision} decimal places`;
   };
 
 export const validateDecimalRequired =
