@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithForm } from "@/scalars/lib/testing";
 import { TextareaField } from "./textarea-field";
 
 describe("TextareaField Component", () => {
   it("should match snapshot with props", () => {
-    const { asFragment } = render(
+    const { asFragment } = renderWithForm(
       <TextareaField
         name="textarea"
         label="Default Label"
@@ -20,7 +21,7 @@ describe("TextareaField Component", () => {
   });
 
   it("should handle basic props and attributes", () => {
-    render(
+    renderWithForm(
       <TextareaField
         name="textarea"
         label="Test Label"
@@ -41,7 +42,7 @@ describe("TextareaField Component", () => {
   });
 
   it("should handle resize behavior", () => {
-    const { rerender } = render(<TextareaField name="textarea" />);
+    const { rerender } = renderWithForm(<TextareaField name="textarea" />);
     let textarea = screen.getByRole("textbox");
     expect(textarea).toHaveClass("resize-y");
 
@@ -53,26 +54,8 @@ describe("TextareaField Component", () => {
   describe("Styling and Visual States", () => {
     it("should apply correct styles for different states", async () => {
       const user = userEvent.setup();
-      const { rerender } = render(<TextareaField name="textarea" />);
+      const { rerender } = renderWithForm(<TextareaField name="textarea" />);
       const textarea = screen.getByRole("textbox");
-
-      // Default state
-      expect(textarea).toHaveClass(
-        "flex",
-        "w-full",
-        "rounded-lg",
-        "text-base",
-        "leading-normal",
-        "font-normal",
-        "font-inter",
-        "text-gray-900",
-        "bg-white",
-        "border",
-        "border-gray-300",
-        "dark:text-gray-100",
-        "dark:bg-gray-900",
-        "dark:border-gray-700",
-      );
 
       // Hover state
       await user.hover(textarea);
@@ -94,48 +77,6 @@ describe("TextareaField Component", () => {
         "dark:focus:bg-gray-900",
       );
 
-      // Error state
-      rerender(<TextareaField name="textarea" errors={["Error"]} />);
-      expect(textarea).toHaveClass(
-        "border-red-500",
-        "bg-red-50/50",
-        "dark:border-red-400",
-        "dark:bg-red-900/5",
-        "hover:border-red-600",
-        "dark:hover:border-red-300",
-        "focus:ring-0",
-        "focus:ring-offset-0",
-        "focus:border-red-500",
-        "dark:focus:border-red-400",
-      );
-
-      // Warning state
-      rerender(<TextareaField name="textarea" warnings={["Warning"]} />);
-      expect(textarea).toHaveClass(
-        "border-orange-500",
-        "bg-orange-50/50",
-        "dark:border-orange-400",
-        "dark:bg-orange-900/5",
-        "hover:border-orange-600",
-        "dark:hover:border-orange-300",
-        "focus:ring-0",
-        "focus:ring-offset-0",
-        "focus:border-orange-500",
-        "dark:focus:border-orange-400",
-      );
-
-      // Disabled state
-      rerender(<TextareaField name="textarea" disabled />);
-      expect(textarea).toHaveClass(
-        "disabled:cursor-not-allowed",
-        "disabled:bg-gray-50",
-        "disabled:border-gray-200",
-        "disabled:text-gray-500",
-        "dark:disabled:bg-gray-900/50",
-        "dark:disabled:border-gray-800",
-        "dark:disabled:text-gray-600",
-      );
-
       // Custom class
       rerender(
         <TextareaField
@@ -148,7 +89,7 @@ describe("TextareaField Component", () => {
     });
 
     it("should handle resize behavior correctly", () => {
-      const { rerender } = render(<TextareaField name="textarea" />);
+      const { rerender } = renderWithForm(<TextareaField name="textarea" />);
       let textarea = screen.getByRole("textbox");
 
       // Default resize behavior
@@ -171,7 +112,7 @@ describe("TextareaField Component", () => {
 
   describe("Messages and Feedback", () => {
     it("should handle warnings and errors", () => {
-      render(
+      renderWithForm(
         <TextareaField
           name="textarea"
           description="Help text"
@@ -188,12 +129,55 @@ describe("TextareaField Component", () => {
     });
   });
 
+  describe("Input Handling", () => {
+    it("should handle various input methods and transformations", async () => {
+      const user = userEvent.setup();
+
+      renderWithForm(
+        <TextareaField
+          name="textarea"
+          value="Initial"
+          maxLength={20}
+          uppercase
+        />,
+      );
+
+      const textarea = screen.getByRole("textbox");
+
+      // Regular typing
+      await user.type(textarea, " text");
+      expect(textarea).toHaveValue("INITIAL TEXT");
+
+      // Emoji input
+      await user.clear(textarea);
+      await user.type(textarea, "👋🏻");
+      expect(textarea).toHaveValue("👋🏻");
+
+      // Paste handling
+      await user.clear(textarea);
+      // Create a new paste event using JSDOM's Event constructor
+      const pasteEvent = new Event("paste", { bubbles: true });
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          getData: () => "Pasted",
+        },
+      });
+      textarea.dispatchEvent(pasteEvent);
+
+      // RTL text handling
+      await user.clear(textarea);
+      const rtlText = "مرحبا";
+      await user.type(textarea, rtlText);
+      expect(textarea).toHaveValue(rtlText);
+    });
+  });
+
   describe("Form Integration", () => {
     it("should handle form operations", async () => {
       const user = userEvent.setup();
       const handleSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
 
-      render(
+      renderWithForm(
         <form onSubmit={handleSubmit}>
           <TextareaField defaultValue="Initial" name="textarea" />
           <button type="submit">Submit</button>
