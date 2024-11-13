@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import {
   spawn,
   fork,
@@ -9,7 +10,8 @@ import {
 import { Command } from "commander";
 import { blue, green, red } from "colorette";
 import { CommandActionType } from "../types.js";
-import type { ReactorOptions } from "./reactor.js";
+import { DefaultReactorOptions, type ReactorOptions } from "./reactor.js";
+import { getConfig } from "../utils.js";
 
 const CONNECT_BIN_PATH = "node_modules/.bin/connect";
 const __dirname =
@@ -22,13 +24,18 @@ function spawnLocalReactor(options?: ReactorOptions) {
     { silent: true },
   ) as ChildProcessWithoutNullStreams;
 
-  return new Promise<void>((resolve) => {
+  return new Promise<{ driveUrl: string }>((resolve) => {
+    child.on("message", (message) => {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const text = message.toString();
+
+      if (text.startsWith("driveUrl:")) {
+        const driveUrl = text.substring("driveUrl:".length);
+        resolve({ driveUrl });
+      }
+    });
     child.stdout.on("data", (data: Buffer) => {
       const message = data.toString();
-      if (message.includes("All subgraphs started.")) {
-        resolve();
-      }
-
       const lines = message.split("\n").filter((line) => line.trim().length);
       for (const line of lines) {
         process.stdout.write(blue(`[Reactor]: ${line}\n`));
@@ -48,10 +55,17 @@ function spawnLocalReactor(options?: ReactorOptions) {
   });
 }
 
-async function spawnConnect(projectPath?: string) {
+async function spawnConnect(
+  projectPath?: string,
+  options?: {
+    localDocumentModels?: string;
+    localEditors?: string;
+    localReactorUrl?: string;
+  },
+) {
   let binPath = path.join(projectPath || ".", "node_modules/.bin/connect");
-
   if (!fs.existsSync(binPath)) {
+    const require = createRequire(import.meta.url);
     const packagePath = require.resolve("@powerhousedao/connect/package.json");
     const packageDir = path.dirname(packagePath);
 
@@ -63,7 +77,9 @@ async function spawnConnect(projectPath?: string) {
       env: {
         ...process.env,
         // TODO add studio variables?
-        PH_CONNECT_DEFAULT_DRIVES_URL: "http://localhost:4001/d/powerhouse",
+        LOCAL_DOCUMENT_MODELS: options?.localDocumentModels,
+        LOCAL_DOCUMENT_EDITORS: options?.localEditors,
+        PH_CONNECT_DEFAULT_DRIVES_URL: options?.localReactorUrl,
       },
     });
 
@@ -83,11 +99,32 @@ async function spawnConnect(projectPath?: string) {
 }
 
 export const dev: CommandActionType<
-  [{ projectPath?: string; generate?: boolean }]
-> = async ({ projectPath, generate }) => {
+  [
+    {
+      projectPath?: string;
+      generate?: boolean;
+      watch?: boolean;
+      reactorPort?: number;
+    },
+  ]
+> = async ({
+  projectPath,
+  generate,
+  watch,
+  reactorPort = DefaultReactorOptions.port,
+}) => {
   try {
-    await spawnLocalReactor({ generate });
-    await spawnConnect(projectPath);
+    const config = getConfig();
+    const { driveUrl } = await spawnLocalReactor({
+      generate,
+      port: reactorPort,
+      watch,
+    });
+    await spawnConnect(projectPath, {
+      localDocumentModels: config.documentModelsDir,
+      localEditors: config.editorsDir,
+      localReactorUrl: driveUrl,
+    });
   } catch (error) {
     console.error(error);
   }
@@ -99,5 +136,10 @@ export function devCommand(program: Command) {
     .description("Starts dev environment")
     .option("--project-path <type>", "path to the project")
     .option("--generate", "generate code when document model is updated")
+    .option("--reactor-port <port>", "port to use for the reactor")
+    .option(
+      "-w, --watch",
+      "if the reactor should watch for local changes to document models and processors",
+    )
     .action(dev);
 }

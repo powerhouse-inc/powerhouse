@@ -12,6 +12,11 @@
   "bin": {
     "ph": "dist/cli.js"
   },
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli.js",
+    "./utils": "./dist/utils.js"
+  },
   "files": [
     "dist"
   ],
