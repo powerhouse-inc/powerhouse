@@ -173,13 +173,13 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-drive:
-        specifier: ^1.4.2
+        specifier: ^1.4.3
         version: link:../../packages/document-drive
       document-model:
         specifier: ^2.6.0
         version: link:../../packages/document-model
       document-model-libs:
-        specifier: ^1.112.0
+        specifier: ^1.113.0
         version: link:../../packages/document-model-libs
       dotenv:
         specifier: ^16.4.5
@@ -585,7 +585,7 @@ importers:
         specifier: ^2.6.0
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.112.0
+        specifier: ^1.113.0
         version: link:../document-model-libs
       fake-indexeddb:
         specifier: ^5.0.2
@@ -782,7 +782,7 @@ importers:
         specifier: 0.14.1
         version: link:../codegen
       '@powerhousedao/design-system':
-        specifier: workspace:*
+        specifier: 1.8.0
         version: link:../design-system
       '@powerhousedao/scalars':
         specifier: ^1.9.0
@@ -1001,13 +1001,13 @@ importers:
         specifier: ^1.9.0
         version: link:../scalars
       document-drive:
-        specifier: ^1.4.2
+        specifier: ^1.4.3
         version: link:../document-drive
       document-model:
         specifier: ^2.6.0
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.112.0
+        specifier: ^1.113.0
         version: link:../document-model-libs
       drizzle-kit:
         specifier: ^0.25.0
@@ -1032,10 +1032,10 @@ importers:
         specifier: develop
         version: 1.0.0-dev.166(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.9.0)(document-model-libs@packages+document-model-libs)
       '@powerhousedao/design-system':
-        specifier: ^1.7.2
+        specifier: ^1.8.0
         version: link:../design-system
       '@powerhousedao/reactor-local':
-        specifier: ^1.4.2
+        specifier: ^1.5.0
         version: link:../reactor-local
       '@powerhousedao/scalars':
         specifier: ^1.9.0
@@ -1047,7 +1047,7 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0
       document-model-libs:
-        specifier: ^1.112.0
+        specifier: ^1.113.0
         version: link:../document-model-libs
       graphql:
         specifier: ^16.8.1
@@ -1061,7 +1061,7 @@ importers:
     devDependencies:
       document-drive:
         specifier: 1.4.2
-        version: link:../document-drive
+        version: 1.4.2(@powerhousedao/scalars@packages+scalars)(change-case@5.4.4)(document-model-libs@packages+document-model-libs)(document-model@packages+document-model)(graphql-request@6.1.0)(graphql@16.9.0)(json-stringify-deterministic@1.0.12)(nanoevents@9.1.0)(sanitize-filename@1.6.3)(uuid@9.0.1)
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@swc/core@1.5.29)(@types/node@22.9.0)(typescript@5.6.3)
@@ -1084,7 +1084,7 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-model-libs:
-        specifier: ^1.112.0
+        specifier: ^1.113.0
         version: link:../document-model-libs
       express:
         specifier: ^4.21.1
@@ -1115,7 +1115,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       document-drive:
-        specifier: ^1.4.2
+        specifier: ^1.4.3
         version: link:../document-drive
       document-model:
         specifier: ^2.6.0
@@ -1142,10 +1142,10 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
-        specifier: ^1.3.7
+        specifier: ^1.3.8
         version: link:../general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: ^1.4.2
+        specifier: ^1.5.0
         version: link:../reactor-api
       '@powerhousedao/scalars':
         specifier: ^1.9.0
@@ -1160,7 +1160,7 @@ importers:
         specifier: ^2.6.0
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.112.0
+        specifier: ^1.113.0
         version: link:../document-model-libs
       dotenv:
         specifier: ^16.4.5
@@ -1224,7 +1224,7 @@ importers:
         specifier: ^8.11.10
         version: 8.11.10
       document-drive:
-        specifier: ^1.4.2
+        specifier: ^1.4.3
         version: link:../document-drive
       postcss:
         specifier: ^8.4.47
@@ -4626,7 +4626,6 @@ packages:
   /@gar/promisify@1.1.3:
     resolution: {integrity: sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /@graphql-codegen/add@5.0.3(graphql@16.9.0):
@@ -7230,7 +7229,6 @@ packages:
     dependencies:
       '@gar/promisify': 1.1.3
       semver: 7.6.3
-    dev: false
     optional: true
 
   /@npmcli/move-file@1.1.2:
@@ -7241,7 +7239,6 @@ packages:
     dependencies:
       mkdirp: 1.0.4
       rimraf: 3.0.2
-    dev: false
     optional: true
 
   /@nx/devkit@20.0.0(nx@20.0.0):
@@ -8341,7 +8338,6 @@ packages:
         optional: true
     dependencies:
       prisma: 5.21.1
-    dev: false
     optional: true
 
   /@prisma/debug@5.21.1:
@@ -9312,7 +9308,6 @@ packages:
       '@redis/client': ^1.0.0
     dependencies:
       '@redis/client': 1.6.0
-    dev: false
     optional: true
 
   /@redis/client@1.6.0:
@@ -9323,7 +9318,6 @@ packages:
       cluster-key-slot: 1.1.2
       generic-pool: 3.9.0
       yallist: 4.0.0
-    dev: false
     optional: true
 
   /@redis/graph@1.1.1(@redis/client@1.6.0):
@@ -9333,7 +9327,6 @@ packages:
       '@redis/client': ^1.0.0
     dependencies:
       '@redis/client': 1.6.0
-    dev: false
     optional: true
 
   /@redis/json@1.0.7(@redis/client@1.6.0):
@@ -9343,7 +9336,6 @@ packages:
       '@redis/client': ^1.0.0
     dependencies:
       '@redis/client': 1.6.0
-    dev: false
     optional: true
 
   /@redis/search@1.2.0(@redis/client@1.6.0):
@@ -9353,7 +9345,6 @@ packages:
       '@redis/client': ^1.0.0
     dependencies:
       '@redis/client': 1.6.0
-    dev: false
     optional: true
 
   /@redis/time-series@1.1.0(@redis/client@1.6.0):
@@ -9363,7 +9354,6 @@ packages:
       '@redis/client': ^1.0.0
     dependencies:
       '@redis/client': 1.6.0
-    dev: false
     optional: true
 
   /@repeaterjs/repeater@3.0.4:
@@ -10897,7 +10887,6 @@ packages:
     resolution: {integrity: sha512-RbzJvlNzmRq5c3O09UipeuXno4tA1FE6ikOjxZK0tuxVv3412l64l5t1W5pj4+rJq9vpkm/kwiR07aZXnsKPxw==}
     engines: {node: '>= 6'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /@tootallnate/quickjs-emscripten@0.23.0:
@@ -11009,7 +10998,6 @@ packages:
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
     dependencies:
       '@types/ms': 0.7.34
-    dev: false
 
   /@types/doctrine@0.0.9:
     resolution: {integrity: sha512-eOIHzCUSH7SMfonMG1LsC2f8vxBFtho6NGBznK41R84YzPuvSBzrhEps33IsQiOW9+VL6NQ9DbjQJznk/S4uRA==}
@@ -12501,7 +12489,6 @@ packages:
   /abbrev@1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /abitype@1.0.6(typescript@5.6.3)(zod@3.23.8):
@@ -12570,7 +12557,6 @@ packages:
       debug: 4.3.7
     transitivePeerDependencies:
       - supports-color
-    dev: false
     optional: true
 
   /agent-base@7.1.1:
@@ -12587,7 +12573,6 @@ packages:
     requiresBuild: true
     dependencies:
       humanize-ms: 1.2.1
-    dev: false
     optional: true
 
   /aggregate-error@2.1.0:
@@ -12758,7 +12743,6 @@ packages:
   /aproba@2.0.0:
     resolution: {integrity: sha512-lYe4Gx7QT+MKGbDsA+Z+he/Wtef0BiwDOlK/XkBrdfsh9J/jPPXbX0tE9x9cl27Tmu5gg3QUbUrQYa/y+KOHPQ==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /arch@2.2.0:
@@ -12799,7 +12783,6 @@ packages:
     dependencies:
       delegates: 1.0.0
       readable-stream: 3.6.2
-    dev: false
     optional: true
 
   /arg@4.1.3:
@@ -13389,7 +13372,6 @@ packages:
     requiresBuild: true
     dependencies:
       file-uri-to-path: 1.0.0
-    dev: false
     optional: true
 
   /bl@4.1.0:
@@ -13641,7 +13623,6 @@ packages:
       unique-filename: 1.1.1
     transitivePeerDependencies:
       - bluebird
-    dev: false
     optional: true
 
   /cacheable-lookup@5.0.4:
@@ -13894,14 +13875,12 @@ packages:
   /chownr@1.1.4:
     resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /chownr@2.0.0:
     resolution: {integrity: sha512-bIomtDF5KGpdogkLd9VspvFzk9KfpyyGlS8YFVZl7TGPBHL5snIOnxeshwVgPteQ9b4Eydl+pVbIyE1DcvCWgQ==}
     engines: {node: '>=10'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /chromatic@11.16.3:
@@ -14109,7 +14088,6 @@ packages:
     resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
     engines: {node: '>=0.10.0'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /cm6-graphql@0.1.1(@codemirror/autocomplete@6.18.2)(@codemirror/language@6.10.3)(@codemirror/lint@6.8.2)(@codemirror/state@6.4.1)(@codemirror/view@6.34.1)(@lezer/highlight@1.2.1)(graphql@16.9.0):
@@ -14184,7 +14162,6 @@ packages:
     resolution: {integrity: sha512-qiBjkpbMLO/HL68y+lh4q0/O1MZFj2RX6X/KmMa3+gJD3z+WwI1ZzDHysvqHGS3mP6mznPckpXmw1nI9cJjyRg==}
     hasBin: true
     requiresBuild: true
-    dev: false
     optional: true
 
   /color@3.2.1:
@@ -14323,7 +14300,6 @@ packages:
   /console-control-strings@1.1.0:
     resolution: {integrity: sha512-ty/fTekppD2fIwRvnZAVdeOiGd1c7YXEixbgJTNzqcxJWKQnjJ/V1bNEEE6hygpM3WjwHFUVK6HTjWSzV4a8sQ==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /constant-case@2.0.0:
@@ -15115,7 +15091,6 @@ packages:
   /delegates@1.0.0:
     resolution: {integrity: sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /denodeify@1.2.1:
@@ -15177,7 +15152,6 @@ packages:
     resolution: {integrity: sha512-bwy0MGW55bG41VqxxypOsdSdGqLwXPI/focwgTYCFMbdUiBAxLg9CFzG08sz2aqzknwiX7Hkl0bQENjg8iLByw==}
     engines: {node: '>=8'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /detect-newline@3.1.0:
@@ -15287,6 +15261,51 @@ packages:
       - supports-color
       - tedious
     dev: false
+
+  /document-drive@1.4.2(@powerhousedao/scalars@packages+scalars)(change-case@5.4.4)(document-model-libs@packages+document-model-libs)(document-model@packages+document-model)(graphql-request@6.1.0)(graphql@16.9.0)(json-stringify-deterministic@1.0.12)(nanoevents@9.1.0)(sanitize-filename@1.6.3)(uuid@9.0.1):
+    resolution: {integrity: sha512-Ki0vjtqlbGSl7Jqie11u2Rf9pqyIRmnyEXLRf9ZJao9xZC+3sDvyY301aGcGbepFGHlT2+ezQ3svrOdBdz/4TA==}
+    peerDependencies:
+      '@powerhousedao/scalars': latest
+      change-case: ^5.4.4
+      document-model: ^2.3.1
+      document-model-libs: ^1.104.0
+      graphql: ^16.8.1
+      graphql-request: ^6.1.0
+      json-stringify-deterministic: ^1.0.12
+      nanoevents: ^9.0.0
+      sanitize-filename: ^1.6.3
+      uuid: ^9.0.1
+    dependencies:
+      '@powerhousedao/scalars': link:packages/scalars
+      change-case: 5.4.4
+      document-model: link:packages/document-model
+      document-model-libs: link:packages/document-model-libs
+      graphql: 16.9.0
+      graphql-request: 6.1.0(graphql@16.9.0)
+      json-stringify-deterministic: 1.0.12
+      nanoevents: 9.1.0
+      sanitize-filename: 1.6.3
+      uuid: 9.0.1
+    optionalDependencies:
+      '@prisma/client': 5.21.1(prisma@5.21.1)
+      exponential-backoff: 3.1.1
+      localforage: 1.10.0
+      redis: 4.7.0
+      sequelize: 6.37.5(pg@8.13.1)(sqlite3@5.1.7)
+      sqlite3: 5.1.7
+    transitivePeerDependencies:
+      - bluebird
+      - ibm_db
+      - mariadb
+      - mysql2
+      - oracledb
+      - pg
+      - pg-hstore
+      - prisma
+      - snowflake-sdk
+      - supports-color
+      - tedious
+    dev: true
 
   /document-model-editors@1.0.1(document-model@packages+document-model)(react-dom@18.3.1)(react@18.3.1)(storybook@8.4.1):
     resolution: {integrity: sha512-fRUAGRQQQaEh0QiefLspUtJqodutTMfMz80oGcyh1PFoR3S4jozMdmMWukAJxqx+lapzSmMMteTnnslC+JWslw==}
@@ -15446,7 +15465,6 @@ packages:
   /dottie@2.0.6:
     resolution: {integrity: sha512-iGCHkfUc5kFekGiqhe8B/mdaurD+lakO9txNnTvKtA6PISrw86LgqHvRzWYPyoE2Ph5aMIrCw9/uko6XHTKCwA==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /drange@1.1.1:
@@ -15713,7 +15731,6 @@ packages:
     requiresBuild: true
     dependencies:
       iconv-lite: 0.6.3
-    dev: false
     optional: true
 
   /end-of-stream@1.4.4:
@@ -15782,7 +15799,6 @@ packages:
   /err-code@2.0.3:
     resolution: {integrity: sha512-2bmlRpNKBxT/CRmPOlyISQpNj+qSeYvcym/uT0Jx2bMOlKLtSy1ZmLuVxSEKKyor/N5yhvp/ZiG1oE3DEYMSFA==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /error-ex@1.3.2:
@@ -16583,7 +16599,6 @@ packages:
     resolution: {integrity: sha512-XYfuKMvj4O35f/pOXLObndIRvyQ+/+6AhODh+OKWj9S9498pHHn/IMszH+gt0fBCRWMNfk1ZSp5x3AifmnI2vg==}
     engines: {node: '>=6'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /expect-type@1.1.0:
@@ -16603,7 +16618,6 @@ packages:
 
   /exponential-backoff@3.1.1:
     resolution: {integrity: sha512-dX7e/LHVJ6W3DE1MHWi9S1EYzDESENfLrYohG2G++ovZrYOkm4Knwa0mc1cn84xJOR4KEU0WSchhLbd0UklbHw==}
-    dev: false
 
   /express@4.21.1:
     resolution: {integrity: sha512-YSFlK1Ee0/GC8QaO91tHcDxJiE/X4FbpAyQWkxAvG6AXCuR65YzK8ua6D9hvi/TzUfZMpc+BwuM1IPw8fmQBiQ==}
@@ -16888,7 +16902,6 @@ packages:
   /file-uri-to-path@1.0.0:
     resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /filelist@1.0.4:
@@ -17178,7 +17191,6 @@ packages:
     requiresBuild: true
     dependencies:
       minipass: 3.3.6
-    dev: false
     optional: true
 
   /fs.realpath@1.0.0:
@@ -17235,7 +17247,6 @@ packages:
       string-width: 4.2.3
       strip-ansi: 6.0.0
       wide-align: 1.1.5
-    dev: false
     optional: true
 
   /geckodriver@4.5.1:
@@ -17260,7 +17271,6 @@ packages:
     resolution: {integrity: sha512-hymDOu5B53XvN4QT9dBmZxPX4CWhBPPLguTZ9MMFeFa/Kg0xWVfylOVNlJji/E7yTZWFd/q9GO5TxDLq156D7g==}
     engines: {node: '>= 4'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /gensync@1.0.0-beta.2:
@@ -17396,7 +17406,6 @@ packages:
   /github-from-package@0.0.0:
     resolution: {integrity: sha512-SyHy3T1v2NUXn29OsWdxmK6RwHD+vkj3v8en8AOBZ1wBQ/hCAQ5bAQTD02kW4W9tUp/3Qh6J8r9EvntiyCmOOw==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /glob-parent@5.1.2:
@@ -18009,7 +18018,6 @@ packages:
   /has-unicode@2.0.1:
     resolution: {integrity: sha512-8Rf9Y83NBReMnx0gFzA8JImQACstCYWUplepDa9xprwwtmgEZUF0h/i5xSA625zB/I37EtrswSST6OXxwaaIJQ==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /hash-base@3.0.4:
@@ -18158,7 +18166,6 @@ packages:
       debug: 4.3.7
     transitivePeerDependencies:
       - supports-color
-    dev: false
     optional: true
 
   /http-proxy-agent@7.0.2:
@@ -18209,7 +18216,6 @@ packages:
       debug: 4.3.7
     transitivePeerDependencies:
       - supports-color
-    dev: false
     optional: true
 
   /https-proxy-agent@7.0.5:
@@ -18239,7 +18245,6 @@ packages:
     requiresBuild: true
     dependencies:
       ms: 2.1.3
-    dev: false
     optional: true
 
   /husky@8.0.3:
@@ -18420,13 +18425,11 @@ packages:
   /infer-owner@1.0.4:
     resolution: {integrity: sha512-IClj+Xz94+d7irH5qRyfJonOdfTzuDaifE6ZPWfx0N0+/ATZCbuTPq2prFl526urkQd90WyUKIh1DfBQ2hMz9A==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /inflection@1.13.4:
     resolution: {integrity: sha512-6I/HUDeYFfuNCVS3td055BaXBwKYuzw7K3ExVMStBowKo9oOAMJIXIHvdyR3iboTCp1b+1i5DSkIZTcwIktuDw==}
     engines: {'0': node >= 0.4.0}
-    dev: false
 
   /inflight@1.0.6:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
@@ -18672,7 +18675,6 @@ packages:
   /is-lambda@1.0.1:
     resolution: {integrity: sha512-z7CMFGNrENq5iFB9Bqo64Xk6Y9sg+epq1myIcdHaGnbMTYOxvzsEtdYqQUylB7LxfkvgrrjP32T6Ywciio9UIQ==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /is-lower-case@1.1.3:
@@ -19837,7 +19839,6 @@ packages:
     requiresBuild: true
     dependencies:
       immediate: 3.0.6
-    dev: false
     optional: true
 
   /lie@3.3.0:
@@ -20083,7 +20084,6 @@ packages:
     requiresBuild: true
     dependencies:
       lie: 3.1.1
-    dev: false
     optional: true
 
   /locate-app@2.5.0:
@@ -20421,7 +20421,6 @@ packages:
     transitivePeerDependencies:
       - bluebird
       - supports-color
-    dev: false
     optional: true
 
   /make-synchronized@0.2.9:
@@ -20918,7 +20917,6 @@ packages:
     requiresBuild: true
     dependencies:
       minipass: 3.3.6
-    dev: false
     optional: true
 
   /minipass-fetch@1.4.1:
@@ -20931,7 +20929,6 @@ packages:
       minizlib: 2.1.2
     optionalDependencies:
       encoding: 0.1.13
-    dev: false
     optional: true
 
   /minipass-flush@1.0.5:
@@ -20940,7 +20937,6 @@ packages:
     requiresBuild: true
     dependencies:
       minipass: 3.3.6
-    dev: false
     optional: true
 
   /minipass-pipeline@1.2.4:
@@ -20949,7 +20945,6 @@ packages:
     requiresBuild: true
     dependencies:
       minipass: 3.3.6
-    dev: false
     optional: true
 
   /minipass-sized@1.0.3:
@@ -20958,7 +20953,6 @@ packages:
     requiresBuild: true
     dependencies:
       minipass: 3.3.6
-    dev: false
     optional: true
 
   /minipass@3.3.6:
@@ -20967,14 +20961,12 @@ packages:
     requiresBuild: true
     dependencies:
       yallist: 4.0.0
-    dev: false
     optional: true
 
   /minipass@5.0.0:
     resolution: {integrity: sha512-3FnjYuehv9k6ovOEbyOswadCDPX1piCfhV8ncmYtHOjuPwylVWsghTLo7rabjC3Rx5xD4HDx8Wm1xnMF7S5qFQ==}
     engines: {node: '>=8'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /minipass@7.1.2:
@@ -20988,7 +20980,6 @@ packages:
     dependencies:
       minipass: 3.3.6
       yallist: 4.0.0
-    dev: false
     optional: true
 
   /mipd@0.0.7(typescript@5.6.3):
@@ -21005,7 +20996,6 @@ packages:
   /mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /mkdirp@0.5.6:
@@ -21037,13 +21027,11 @@ packages:
     requiresBuild: true
     dependencies:
       moment: 2.30.1
-    dev: false
     optional: true
 
   /moment@2.30.1:
     resolution: {integrity: sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /monaco-editor@0.45.0:
@@ -21185,7 +21173,6 @@ packages:
   /napi-build-utils@1.0.2:
     resolution: {integrity: sha512-ONmRUqK7zj7DWX0D9ADe03wbwOBZxNAfF20PlGfCWQcD3+/MakShIHrMqx9YwPTfxDdF1zLeL+RGZiR9kGMLdg==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /natural-compare@1.4.0:
@@ -21204,7 +21191,6 @@ packages:
   /negotiator@0.6.4:
     resolution: {integrity: sha512-myRT3DiWPHqho5PrJaIRyaMv2kgYf0mUVgBNOYMuCH5Ki1yEiQaf/ZJuQ62nvpc44wL5WDbTX7yGJi1Neevw8w==}
     engines: {node: '>= 0.6'}
-    dev: false
 
   /neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
@@ -21336,7 +21322,6 @@ packages:
     requiresBuild: true
     dependencies:
       semver: 7.6.3
-    dev: false
     optional: true
 
   /node-abort-controller@3.1.1:
@@ -21349,7 +21334,6 @@ packages:
 
   /node-addon-api@7.1.1:
     resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
-    dev: false
 
   /node-dir@0.1.17:
     resolution: {integrity: sha512-tmPX422rYgofd4epzrNoOXiE8XFZYOcCq1vD7MAXCDO+O+zndlA2ztdKKMa+EeuBG5tHETpr4ml4RGgpqDCCAg==}
@@ -21424,7 +21408,6 @@ packages:
     transitivePeerDependencies:
       - bluebird
       - supports-color
-    dev: false
     optional: true
 
   /node-html-parser@6.1.13:
@@ -21490,7 +21473,6 @@ packages:
     requiresBuild: true
     dependencies:
       abbrev: 1.1.1
-    dev: false
     optional: true
 
   /normalize-package-data@6.0.2:
@@ -21648,7 +21630,6 @@ packages:
       console-control-strings: 1.1.0
       gauge: 4.0.4
       set-blocking: 2.0.0
-    dev: false
     optional: true
 
   /nth-check@2.1.1:
@@ -22403,12 +22384,10 @@ packages:
   /pg-cloudflare@1.1.1:
     resolution: {integrity: sha512-xWPagP/4B6BgFO+EKz3JONXv3YDgvkbVrGw2mTo3D6tVDQRh1e7cqVGvyR3BE+eQgAvx1XhW/iEASj4/jCWl3Q==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /pg-connection-string@2.7.0:
     resolution: {integrity: sha512-PI2W9mv53rXJQEOb8xNR8lH7Hr+EKa6oJa38zsK0S/ky2er16ios1wLKhZyxzD7jUReiWokc9WK5nxSnC7W1TA==}
-    dev: false
 
   /pg-int8@1.0.1:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
@@ -22424,7 +22403,6 @@ packages:
       pg: '>=8.0'
     dependencies:
       pg: 8.13.1
-    dev: false
 
   /pg-protocol@1.7.0:
     resolution: {integrity: sha512-hTK/mE36i8fDDhgDFjy6xNOG+LCorxLG3WO17tku+ij6sVHXh1jQUJ8hYAnRhNla4QVD2H8er/FOjc/+EgC6yQ==}
@@ -22438,7 +22416,6 @@ packages:
       postgres-bytea: 1.0.0
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
-    dev: false
 
   /pg-types@4.0.2:
     resolution: {integrity: sha512-cRL3JpS3lKMGsKaWndugWQoLOCoP+Cic8oseVcbr0qhPzYD5DWXK+RZ9LY9wxRf7RQia4SCwQlXk0q6FCPrVng==}
@@ -22468,13 +22445,11 @@ packages:
       pgpass: 1.0.5
     optionalDependencies:
       pg-cloudflare: 1.1.1
-    dev: false
 
   /pgpass@1.0.5:
     resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
     dependencies:
       split2: 4.2.0
-    dev: false
 
   /picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -22720,7 +22695,6 @@ packages:
   /postgres-array@2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
     engines: {node: '>=4'}
-    dev: false
 
   /postgres-array@3.0.2:
     resolution: {integrity: sha512-6faShkdFugNQCLwucjPcY5ARoW1SlbnrZjmGl0IrrqewpvxvhSLHimCVzqeuULCbG0fQv7Dtk1yDbG3xv7Veog==}
@@ -22729,7 +22703,6 @@ packages:
   /postgres-bytea@1.0.0:
     resolution: {integrity: sha512-xy3pmLuQqRBZBXDULy7KbaitYqLcmxigw14Q5sj8QBVLqEwXfeybIKVWiqAXTlcvdvb0+xkOtDbfQMOf4lST1w==}
     engines: {node: '>=0.10.0'}
-    dev: false
 
   /postgres-bytea@3.0.0:
     resolution: {integrity: sha512-CNd4jim9RFPkObHSjVHlVrxoVQXz7quwNFpz7RY1okNNme49+sVyiTvTRobiLV548Hx/hb1BG+iE7h9493WzFw==}
@@ -22740,7 +22713,6 @@ packages:
   /postgres-date@1.0.7:
     resolution: {integrity: sha512-suDmjLVQg78nMK2UZ454hAG+OAW+HQPZ6n++TNDUX+L0+uUlLywnoxJKDou51Zm+zTCjrCl0Nq6J9C5hP9vK/Q==}
     engines: {node: '>=0.10.0'}
-    dev: false
 
   /postgres-date@2.1.0:
     resolution: {integrity: sha512-K7Juri8gtgXVcDfZttFKVmhglp7epKb1K4pgrkLxehjqkrgPhfG6OO8LHLkfaqkbpjNRnra018XwAr1yQFWGcA==}
@@ -22751,7 +22723,6 @@ packages:
     engines: {node: '>=0.10.0'}
     dependencies:
       xtend: 4.0.2
-    dev: false
 
   /postgres-interval@3.0.0:
     resolution: {integrity: sha512-BSNDnbyZCXSxgA+1f5UU2GmwhoI0aU5yMxRGO8CdFEcY2BQF9xm/7MqKnYoM1nJDk8nONNWDk9WeSmePFhQdlw==}
@@ -22789,7 +22760,6 @@ packages:
       simple-get: 4.0.1
       tar-fs: 2.1.1
       tunnel-agent: 0.6.0
-    dev: false
     optional: true
 
   /prelude-ls@1.2.1:
@@ -22869,7 +22839,6 @@ packages:
     peerDependenciesMeta:
       bluebird:
         optional: true
-    dev: false
     optional: true
 
   /promise-limit@2.7.0:
@@ -22883,7 +22852,6 @@ packages:
     dependencies:
       err-code: 2.0.3
       retry: 0.12.0
-    dev: false
     optional: true
 
   /promise@7.3.1:
@@ -23555,7 +23523,6 @@ packages:
       '@redis/json': 1.0.7(@redis/client@1.6.0)
       '@redis/search': 1.2.0(@redis/client@1.6.0)
       '@redis/time-series': 1.1.0(@redis/client@1.6.0)
-    dev: false
     optional: true
 
   /reflect.getprototypeof@1.0.6:
@@ -23801,14 +23768,12 @@ packages:
   /retry-as-promised@7.0.4:
     resolution: {integrity: sha512-XgmCoxKWkDofwH8WddD0w85ZfqYz+ZHlr5yo+3YUCfycWawU56T5ckWXsScsj5B8tqUcIG67DxXByo3VUgiAdA==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /retry@0.12.0:
     resolution: {integrity: sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==}
     engines: {node: '>= 4'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /retry@0.13.1:
@@ -24127,7 +24092,6 @@ packages:
     resolution: {integrity: sha512-G9c0qlIWQSK29pR/5U2JF5dDQeqqHRragoyahj/Nx4KOOQ3CPPfzxnfqFPCSB7x5UgjOgnZ61nSxz+fjDpRlJg==}
     engines: {node: '>= 10.0.0'}
     requiresBuild: true
-    dev: false
     optional: true
 
   /sequelize@6.37.5(pg@8.13.1)(sqlite3@5.1.7):
@@ -24184,7 +24148,6 @@ packages:
       wkx: 0.5.0
     transitivePeerDependencies:
       - supports-color
-    dev: false
     optional: true
 
   /serialize-error@11.0.3:
@@ -24320,7 +24283,6 @@ packages:
   /simple-concat@1.0.1:
     resolution: {integrity: sha512-cSFtAPtRhljv69IK0hTVZQ+OfE9nePi/rtJmw5UjHeVyVroEqJXP1sFztKUy1qU+xvz3u/sfYJLa947b7nAN2Q==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /simple-get@4.0.1:
@@ -24330,7 +24292,6 @@ packages:
       decompress-response: 6.0.0
       once: 1.4.0
       simple-concat: 1.0.1
-    dev: false
     optional: true
 
   /simple-swizzle@0.2.2:
@@ -24446,7 +24407,6 @@ packages:
       socks: 2.8.3
     transitivePeerDependencies:
       - supports-color
-    dev: false
     optional: true
 
   /socks-proxy-agent@8.0.4:
@@ -24599,7 +24559,6 @@ packages:
     transitivePeerDependencies:
       - bluebird
       - supports-color
-    dev: false
     optional: true
 
   /sshpk@1.18.0:
@@ -24624,7 +24583,6 @@ packages:
     requiresBuild: true
     dependencies:
       minipass: 3.3.6
-    dev: false
     optional: true
 
   /stack-trace@0.0.10:
@@ -25097,7 +25055,6 @@ packages:
       mkdirp-classic: 0.5.3
       pump: 3.0.2
       tar-stream: 2.2.0
-    dev: false
     optional: true
 
   /tar-fs@3.0.6:
@@ -25139,7 +25096,6 @@ packages:
       minizlib: 2.1.2
       mkdirp: 1.0.4
       yallist: 4.0.0
-    dev: false
     optional: true
 
   /telejson@7.2.0:
@@ -25353,7 +25309,6 @@ packages:
   /toposort-class@1.0.1:
     resolution: {integrity: sha512-OsLcGGbYF3rMjPUf8oKktyvCiUxSbqMMS39m33MAjLTC1DVIH6x3WSt63/M77ihI09+Sdfk1AXvfhCEeUmC7mg==}
     requiresBuild: true
-    dev: false
     optional: true
 
   /totalist@3.0.1:
@@ -25964,7 +25919,6 @@ packages:
     requiresBuild: true
     dependencies:
       unique-slug: 2.0.2
-    dev: false
     optional: true
 
   /unique-slug@2.0.2:
@@ -25972,7 +25926,6 @@ packages:
     requiresBuild: true
     dependencies:
       imurmurhash: 0.1.4
-    dev: false
     optional: true
 
   /unique-string@3.0.0:
@@ -27214,7 +27167,6 @@ packages:
     requiresBuild: true
     dependencies:
       string-width: 4.2.3
-    dev: false
     optional: true
 
   /wildcard-match@5.1.3:
@@ -27250,7 +27202,6 @@ packages:
     requiresBuild: true
     dependencies:
       '@types/node': 20.17.5
-    dev: false
     optional: true
 
   /word-wrap@1.2.5:
