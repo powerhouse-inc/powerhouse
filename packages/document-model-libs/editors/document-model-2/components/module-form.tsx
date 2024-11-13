@@ -1,16 +1,15 @@
 import { Module } from "document-model/document-model";
 import { DocumentActionHandlers } from "../types";
 import { toLowercaseSnakeCase } from "../schemas";
-import { Icon } from "@powerhousedao/design-system";
 import { TextField } from "./text-field";
 
 type Props = {
   handlers: DocumentActionHandlers;
-  modules: Module[];
+  modules?: Module[];
   module?: Module;
 };
 
-export function ModuleForm({ modules, module, handlers }: Props) {
+export function ModuleForm({ module, handlers, modules = [] }: Props) {
   const isEdit = !!module;
   const moduleNames = modules.map((m) => m.name);
 
@@ -28,26 +27,16 @@ export function ModuleForm({ modules, module, handlers }: Props) {
   };
 
   return (
-    <div className="grid grid-cols-[1fr,auto] gap-1">
-      <TextField
-        key={module?.id ?? "new"}
-        name="name"
-        value={module?.name}
-        onSubmit={handleSubmit}
-        placeholder="Add module"
-        unique={moduleNames}
-        required
-        shouldReset
-      />
-      {!!module && (
-        <button
-          tabIndex={-1}
-          type="button"
-          onClick={() => handlers.deleteModule(module.id)}
-        >
-          <Icon name="Xmark" />
-        </button>
-      )}
-    </div>
+    <TextField
+      key={module?.id ?? "new"}
+      name="name"
+      label={isEdit ? "Module name" : "Add module"}
+      value={module?.name}
+      onSubmit={handleSubmit}
+      placeholder="Add module"
+      unique={moduleNames}
+      shouldReset={!isEdit}
+      required
+    />
   );
 }

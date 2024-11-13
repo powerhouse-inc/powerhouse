@@ -30,8 +30,9 @@ export function OperationDescriptionForm({
       onSubmit={(newDescription) =>
         handlers.setOperationDescription(operation.id, newDescription)
       }
+      label="Operation description"
+      allowEmpty
       placeholder="Operation Description"
-      rows={2}
     />
   );
 }

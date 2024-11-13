@@ -1,7 +1,7 @@
 import { Operation } from "document-model/document-model";
 import { DocumentActionHandlers } from "../types";
 import { OperationErrorForm } from "./operation-error-form";
-import { useId, useState, useEffect } from "react";
+import { useId, useState } from "react";
 
 type Props = {
   operation: Operation;
@@ -24,7 +24,7 @@ export function OperationErrors({ operation, handlers }: Props) {
   };
 
   return (
-    <ul className="grid list-disc gap-2 pl-4">
+    <ul className="ml-4 list-disc">
       {operation.errors.map((error) => (
         <li key={error.id}>
           <OperationErrorForm
@@ -34,7 +34,7 @@ export function OperationErrors({ operation, handlers }: Props) {
           />
         </li>
       ))}
-      <li className="pr-6">
+      <li>
         <OperationErrorForm
           operation={operation}
           handlers={wrappedHandlers}
