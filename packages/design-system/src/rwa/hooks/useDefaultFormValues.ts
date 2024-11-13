@@ -13,7 +13,7 @@ import {
   TableItemType,
   TableName,
 } from "../types";
-import { convertToDateTimeLocalFormat } from "../utils";
+import { isoDateStringToDateInput } from "../utils";
 
 export function useDefaultFormValues(args: {
   tableName: TableName;
@@ -40,7 +40,7 @@ export function useDefaultFormValues(args: {
         case tableNames.TRANSACTION:
           return {
             type: allGroupTransactionTypes[0],
-            entryTime: convertToDateTimeLocalFormat(new Date()),
+            entryTime: isoDateStringToDateInput(new Date().toISOString(), true),
             cashAmount: null,
             fixedIncomeId: null,
             fixedIncomeAmount: null,
@@ -78,7 +78,9 @@ export function useDefaultFormValues(args: {
           fixedIncomeTypeId: item.fixedIncomeTypeId,
           spvId: item.spvId,
           name: item.name,
-          maturity: item.maturity,
+          maturity: item.maturity
+            ? isoDateStringToDateInput(item.maturity)
+            : null,
           ISIN: item.ISIN,
           CUSIP: item.CUSIP,
           coupon: item.coupon,
@@ -89,7 +91,9 @@ export function useDefaultFormValues(args: {
         return {
           id: item.id,
           type: item.type,
-          entryTime: convertToDateTimeLocalFormat(item.entryTime),
+          entryTime: item.entryTime
+            ? isoDateStringToDateInput(item.entryTime, true)
+            : null,
           cashAmount: item.cashTransaction.amount ?? null,
           fixedIncomeId: item.fixedIncomeTransaction?.assetId ?? null,
           fixedIncomeAmount: item.fixedIncomeTransaction?.amount ?? null,

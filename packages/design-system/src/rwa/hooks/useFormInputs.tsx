@@ -1,4 +1,3 @@
-import { DateTimeLocalInput } from "@/connect";
 import {
   Account,
   allGroupTransactionTypes,
@@ -67,7 +66,6 @@ export function useFormInputs(props: Props): {
     fixedIncomes,
   } = useEditorContext();
   const { showModal } = useModal();
-
   const showCreateItemModal = useCallback(
     (tableName: TableName) => () => {
       showModal("createItem", { tableName });
@@ -81,9 +79,9 @@ export function useFormInputs(props: Props): {
         const tableItem = _tableItem as TableItemType<"ASSET"> | null;
         type Payload = FormInputsByTableName["ASSET"];
         const register = _register as UseFormRegister<Payload>;
-        const watch = _watch as UseFormWatch<Payload>;
         const formState = _formState as FormState<Payload>;
         const { errors } = formState;
+
         const control = _control as Control<Payload>;
         const derivedInputsToDisplay =
           operation !== "create" && !!tableItem
@@ -110,11 +108,6 @@ export function useFormInputs(props: Props): {
                 },
               ]
             : [];
-
-        const maturityInputValue =
-          operation === "view" && tableItem
-            ? tableItem.maturity
-            : watch("maturity") || tableItem?.maturity;
 
         const inputs = [
           {
@@ -189,20 +182,17 @@ export function useFormInputs(props: Props): {
           {
             label: "Maturity",
             Input: () => (
-              <DateTimeLocalInput
+              <input
+                className="h-8 w-full rounded-md bg-gray-100 px-3 disabled:bg-transparent disabled:p-0"
+                step={1}
+                type="date"
                 {...register("maturity", {
                   disabled: operation === "view",
-                  setValueAs: (value) => {
-                    if (value === "") return null;
-                    return value as string;
-                  },
                 })}
-                inputType="date"
-                name="maturity"
               />
             ),
-            inputLabel: maturityInputValue
-              ? formatDateForDisplay(maturityInputValue, true)
+            inputLabel: tableItem?.maturity
+              ? formatDateForDisplay(tableItem.maturity, true)
               : null,
           },
           {
@@ -302,12 +292,14 @@ export function useFormInputs(props: Props): {
           {
             label: "Entry Time",
             Input: () => (
-              <DateTimeLocalInput
+              <input
+                className="h-8 w-full rounded-md bg-gray-100 px-3 disabled:bg-transparent disabled:p-0"
+                step={1}
+                type="datetime-local"
                 {...register("entryTime", {
-                  required: true,
                   disabled: operation === "view",
+                  required: "Entry time is required",
                 })}
-                name="entryTime"
               />
             ),
             inputLabel: entryTimeInputValue
