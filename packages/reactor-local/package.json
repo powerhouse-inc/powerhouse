@@ -43,6 +43,7 @@
     "pg": "^8.13.0",
     "sanitize-filename": "^1.6.3",
     "uuid": "^11.0.2",
+    "vite": "^5.4.11",
     "vite-node": "^2.1.2"
   },
   "devDependencies": {

@@ -14,7 +14,7 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./cli": "./dist/hygen.js",
+    "./cli": "./dist/cli.js",
     "./utils": "./dist/utils.js"
   },
   "files": [

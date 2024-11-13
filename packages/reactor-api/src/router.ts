@@ -87,6 +87,7 @@ export const initReactorRouter = async (
   }
 
   await updateRouter(driveServer);
+
   driveServer.on("documentModels", () => {
     updateRouter(driveServer).catch((error: unknown) => console.error(error));
   });

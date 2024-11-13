@@ -18,4 +18,6 @@ export async function startAPI(
   await initReactorRouter("/", app, reactor);
 
   app.listen(port);
+
+  return app;
 }

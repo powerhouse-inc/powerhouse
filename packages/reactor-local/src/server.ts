@@ -1,11 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
+import { createServer as createViteServer } from "vite";
 import { startAPI } from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
   DriveInput,
+  InternalTransmitter,
   IReceiver,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
@@ -20,20 +22,16 @@ const dirname =
 dotenv.config();
 
 export type StartServerOptions = {
-  connect?: {
-    port?: string | number;
-  };
-  reactor?: {
-    storagePath?: string;
-    drive?: DriveInput;
-  };
+  dev?: boolean;
+  port?: string | number;
+  storagePath?: string;
+  drive?: DriveInput;
 };
 
-const startServer = async (options?: StartServerOptions) => {
-  const serverPort = Number(options?.connect?.port ?? process.env.PORT ?? 4001);
-  const storagePath =
-    options?.reactor?.storagePath ?? path.join(dirname, "./file-storage");
-  const drive = options?.reactor?.drive ?? {
+export const DefaultStartServerOptions = {
+  port: 4001,
+  storagePath: path.join(dirname, "./file-storage"),
+  drive: {
     global: {
       id: "powerhouse",
       name: "Powerhouse",
@@ -46,22 +44,62 @@ const startServer = async (options?: StartServerOptions) => {
       sharingType: "public",
       triggers: [],
     },
+  },
+} satisfies StartServerOptions;
+
+export type LocalReactor = {
+  driveUrl: string;
+  getDocumentPath: (driveId: string, documentId: string) => string;
+  addListener: (
+    driveId: string,
+    receiver: IReceiver,
+    options: {
+      listenerId: string;
+      label: string;
+      block: boolean;
+      filter: ListenerFilter;
+    },
+  ) => Promise<InternalTransmitter>;
+};
+
+const baseDocumentModels = [
+  DocumentModelLib,
+  ...Object.values(DocumentModelsLibs),
+] as DocumentModel[];
+
+const startServer = async (
+  options?: StartServerOptions,
+): Promise<LocalReactor> => {
+  const { port, storagePath, drive, dev } = {
+    ...DefaultStartServerOptions,
+    ...options,
   };
+  const serverPort = Number(process.env.PORT ?? port);
+
   // start document drive server with all available document models & filesystem storage
   const driveServer = new DocumentDriveServer(
-    [DocumentModelLib, ...Object.values(DocumentModelsLibs)] as DocumentModel[],
+    baseDocumentModels,
     new FilesystemStorage(storagePath),
   );
 
   // init drive server
   await driveServer.initialize();
 
+  let driveId = drive.global.slug ?? drive.global.id;
+  let driveUrl = "";
   try {
     // add default drive
-    await driveServer.addDrive(drive);
+    const driveDoc = await driveServer.addDrive(drive);
+    driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
   } catch (e) {
     if (e instanceof DriveAlreadyExistsError) {
       console.info("Default drive already exists. Skipping...");
+      if (driveId) {
+        const driveDoc = await (drive.global.slug
+          ? driveServer.getDriveBySlug(drive.global.slug)
+          : driveServer.getDrive(driveId));
+        driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
+      }
     } else {
       throw e;
     }
@@ -69,14 +107,41 @@ const startServer = async (options?: StartServerOptions) => {
 
   try {
     // start api
-    await startAPI(driveServer, {
+    const app = await startAPI(driveServer, {
       port: serverPort,
     });
+    driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
+    console.log(`  ➜  Reactor:   ${driveUrl}`);
+
+    if (dev) {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "custom",
+        build: {
+          rollupOptions: {
+            input: [],
+          },
+        },
+      });
+      app.use(vite.middlewares);
+
+      const documentModelsPath = path.join(process.cwd(), "./document-models");
+      console.log("Loading document models from", documentModelsPath);
+      const localDMs = (await vite.ssrLoadModule(documentModelsPath)) as Record<
+        string,
+        DocumentModel
+      >;
+      driveServer.setDocumentModels([
+        ...baseDocumentModels,
+        ...Object.values(localDMs),
+      ]);
+    }
   } catch (e) {
     console.error("App crashed", e);
   }
 
   return {
+    driveUrl,
     getDocumentPath: (driveId: string, documentId: string): string => {
       return path.join(storagePath, driveId, `${documentId}.json`);
     },

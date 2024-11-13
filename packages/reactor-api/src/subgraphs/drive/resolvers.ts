@@ -54,7 +54,6 @@ export const resolvers = {
         initialState: document.initialState.state.global,
         __typename: dm?.documentModel.name,
       };
-      console.log(response);
       return response;
     },
     system: () => ({ sync: {} }),
@@ -90,7 +89,6 @@ export const resolvers = {
         actions.addListener({ listener }),
       );
 
-      console.log(result);
       if (result.status !== "SUCCESS" && result.error) {
         throw new Error(
           `Listener couldn't be registered: ${result.error.message}`,
