@@ -173,13 +173,13 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-drive:
-        specifier: ^1.4.1
+        specifier: ^1.4.2
         version: link:../../packages/document-drive
       document-model:
         specifier: ^2.6.0
         version: link:../../packages/document-model
       document-model-libs:
-        specifier: ^1.111.0
+        specifier: ^1.112.0
         version: link:../../packages/document-model-libs
       dotenv:
         specifier: ^16.4.5
@@ -585,7 +585,7 @@ importers:
         specifier: ^2.6.0
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.111.0
+        specifier: ^1.112.0
         version: link:../document-model-libs
       fake-indexeddb:
         specifier: ^5.0.2
@@ -1001,13 +1001,13 @@ importers:
         specifier: ^1.9.0
         version: link:../scalars
       document-drive:
-        specifier: ^1.4.1
+        specifier: ^1.4.2
         version: link:../document-drive
       document-model:
         specifier: ^2.6.0
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.111.0
+        specifier: ^1.112.0
         version: link:../document-model-libs
       drizzle-kit:
         specifier: ^0.25.0
@@ -1035,7 +1035,7 @@ importers:
         specifier: ^1.7.2
         version: link:../design-system
       '@powerhousedao/reactor-local':
-        specifier: ^1.4.1
+        specifier: ^1.4.2
         version: link:../reactor-local
       '@powerhousedao/scalars':
         specifier: ^1.9.0
@@ -1047,7 +1047,7 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0
       document-model-libs:
-        specifier: ^1.111.0
+        specifier: ^1.112.0
         version: link:../document-model-libs
       graphql:
         specifier: ^16.8.1
@@ -1060,7 +1060,7 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       document-drive:
-        specifier: 1.4.1
+        specifier: 1.4.2
         version: link:../document-drive
       ts-node:
         specifier: ^10.9.2
@@ -1084,7 +1084,7 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       document-model-libs:
-        specifier: ^1.111.0
+        specifier: ^1.112.0
         version: link:../document-model-libs
       express:
         specifier: ^4.21.1
@@ -1115,7 +1115,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       document-drive:
-        specifier: ^1.4.1
+        specifier: ^1.4.2
         version: link:../document-drive
       document-model:
         specifier: ^2.6.0
@@ -1142,10 +1142,10 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
-        specifier: ^1.3.6
+        specifier: ^1.3.7
         version: link:../general-document-indexer
       '@powerhousedao/reactor-api':
-        specifier: ^1.4.1
+        specifier: ^1.4.2
         version: link:../reactor-api
       '@powerhousedao/scalars':
         specifier: ^1.9.0
@@ -1160,7 +1160,7 @@ importers:
         specifier: ^2.6.0
         version: link:../document-model
       document-model-libs:
-        specifier: ^1.111.0
+        specifier: ^1.112.0
         version: link:../document-model-libs
       dotenv:
         specifier: ^16.4.5
@@ -1221,7 +1221,7 @@ importers:
         specifier: ^8.11.10
         version: 8.11.10
       document-drive:
-        specifier: ^1.4.1
+        specifier: ^1.4.2
         version: link:../document-drive
       postcss:
         specifier: ^8.4.47
