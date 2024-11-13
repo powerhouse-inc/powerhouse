@@ -57,7 +57,6 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = ({
         <Input
           id={id}
           type="url"
-          role="textbox"
           {...props}
           value={props.value ?? ""} // make sure it doesn't change from uncontrolled to controlled
           className={cn("focus:z-10", showProtocol && "rounded-l-none")}
