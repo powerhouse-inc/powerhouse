@@ -90,7 +90,7 @@
     "@monaco-editor/react": "^4.6.0",
     "@mui/material": "^5.15.5",
     "@powerhousedao/codegen": "0.14.1",
-    "@powerhousedao/design-system": "1.8.0",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/scalars": "^1.9.0",
     "@prettier/sync": "^0.5.2",
     "@radix-ui/react-checkbox": "^1.1.2",
