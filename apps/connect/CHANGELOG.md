@@ -1,3 +1,10 @@
+# [1.0.0-dev.168](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.167...v1.0.0-dev.168) (2024-11-13)
+
+
+### Features
+
+* updated document editor design ([64e7cd1](https://github.com/powerhouse-inc/document-model-electron/commit/64e7cd1ffc93bfd1e7aef2ce1e15d714d3d232fe))
+
 # [1.0.0-dev.167](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.166...v1.0.0-dev.167) (2024-11-11)
 
 
