@@ -3,7 +3,7 @@ import {
   type SchemaEditorProps,
 } from "../common/graphql-editor";
 import { pascalCase } from "change-case";
-import { styles } from "document-model-libs/utils";
+import { styles } from "../utils";
 import { GraphQLSchema } from "graphql";
 import type { editor } from "monaco-editor";
 import { useEffect, useRef, useState } from "react";

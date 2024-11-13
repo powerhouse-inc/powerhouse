@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { TextInputVariant, stylesVariant } from "document-model-libs/utils";
 import {
   ScopeFrameworkElement,
   ScopeFrameworkElementType,
 } from "../../../document-models/scope-framework";
+import { TextInputVariant } from "../../utils/components/textInputVariant";
+import { stylesVariant } from "../../utils/components";
 
 interface AtlasElementProps {
   readonly element: ScopeFrameworkElement;

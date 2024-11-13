@@ -1,4 +1,4 @@
-import { lazyWithPreload } from "document-model-libs/utils";
+import { lazyWithPreload } from "../utils";
 import type {
   ScopeFrameworkAction,
   ScopeFrameworkLocalState,

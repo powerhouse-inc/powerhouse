@@ -1,0 +1,88 @@
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar Amount_Percentage
+scalar EmailAddress
+scalar Date
+scalar DateTime
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+type ContributorBillState {
+  issued: Date!
+  issuer: EthereumAddress
+  due: Date
+  stableComp: [StableCoinLineItem!]!
+  powtComp: [PowtLineItem!]!
+  recipient: EthereumAddress
+}
+
+type StableCoinLineItem {
+  id: ID!
+  description: String
+  amount: Amount_Money!
+  currency: Currency!
+}
+
+type PowtLineItem {
+  id: ID!
+  description: String
+  amount: Amount_Tokens!
+  projectCode: String
+}
+
+
+
+# contributor_bill
+
+input CreateContributorBillInput {
+  issued: Date!
+  issuer: EthereumAddress
+  due: Date
+  recipient: EthereumAddress
+}
+
+input AddStablecoinLineItemInput {
+  id: ID!
+  description: String
+  amount: Amount_Money!
+  currency: Currency!
+}
+
+input AddPowtLineItemInput {
+  id: ID!
+  description: String
+  amount: Amount_Tokens!
+  projectCode: String
+}
+
+input UpdateStablecoinLineItemInput {
+  lineItemId: ID!
+  description: String
+  amount: Amount_Money
+  currency: Currency
+}
+
+input UpdatePowtLineItemInput {
+  lineItemId: ID!
+  description: String
+  amount: Amount_Tokens!
+  projectCode: String
+}
+
+input DeleteStablecoinLineItemInput {
+  lineItemId: ID!
+}
+
+input DeletePowtLineItemInput {
+  lineItemId: ID!
+}
+
+input UpdateContributorBillInput {
+  issued: Date
+  issuer: EthereumAddress
+  due: Date
+  recipient: EthereumAddress
+}

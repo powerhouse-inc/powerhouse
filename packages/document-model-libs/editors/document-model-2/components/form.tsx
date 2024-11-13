@@ -8,13 +8,10 @@ import {
   FieldValues,
   FormProvider,
 } from "react-hook-form";
-import {
-  cn,
-  FormFieldContext,
-  FormItemContext,
-  useFormField,
-  Label,
-} from "editors/document-model-2";
+import { FormFieldContext, FormItemContext } from "../context/form-context";
+import { cn } from "../utils/style";
+import { useFormField } from "../hooks/useFormField";
+import { Label } from "./label";
 
 const Form = FormProvider;
 

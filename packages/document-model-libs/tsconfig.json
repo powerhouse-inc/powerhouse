@@ -17,6 +17,7 @@
     "baseUrl": "./",
     "allowJs": true,
     "paths": {
+      "document-drive": ["../document-drive"],
       "document-model-libs/utils": ["./editors/utils"],
       "document-model-libs/utils/*": ["./editors/utils/*"]
     }

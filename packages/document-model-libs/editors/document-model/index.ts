@@ -4,7 +4,7 @@ import type {
   DocumentModelState,
   DocumentModelLocalState,
 } from "document-model/document-model";
-import { lazyWithPreload } from "document-model-libs/utils";
+import { lazyWithPreload } from "../utils";
 
 export const module: ExtendedEditor<
   DocumentModelState,

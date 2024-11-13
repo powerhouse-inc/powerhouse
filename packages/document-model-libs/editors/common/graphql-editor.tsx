@@ -1,5 +1,5 @@
 import type { SchemaEditorProps } from "@theguild/editor";
-import { lazyWithPreload, styles } from "document-model-libs/utils";
+import { lazyWithPreload, styles } from "../utils";
 import {
   constrainedEditor,
   ConstrainedEditorRestriction,

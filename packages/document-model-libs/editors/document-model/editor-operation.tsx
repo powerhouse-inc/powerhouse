@@ -1,4 +1,4 @@
-import { TextInput, styles } from "document-model-libs/utils";
+import { TextInput, styles } from "../utils";
 import GraphQLEditor from "../common/graphql-editor";
 import { pascalCase } from "change-case";
 import { OperationScope } from "document-model/document";

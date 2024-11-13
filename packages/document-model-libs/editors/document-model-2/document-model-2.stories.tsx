@@ -1,6 +1,6 @@
 import { reducer, utils } from "document-model/document-model";
 import Editor from "./editor";
-import { createDocumentStory } from "document-model-libs/utils";
+import { createDocumentStory } from "../utils";
 
 const mockDocument = {
   name: "",

@@ -4,7 +4,7 @@ import {
   BudgetStatementLocalState,
   BudgetStatementState,
 } from "../../document-models/budget-statement";
-import { lazyWithPreload } from "document-model-libs/utils";
+import { lazyWithPreload } from "../utils";
 
 export const module: ExtendedEditor<
   BudgetStatementState,

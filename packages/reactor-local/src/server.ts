@@ -2,7 +2,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
-import { startAPI } from "@powerhousedao/reactor-api";
+import {
+  setAdditionalContextFields,
+  startAPI,
+} from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
@@ -12,9 +15,16 @@ import {
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
+import * as contributorBillAnalyzerListener from "document-model-libs/processors/contributor-bill-analyzer";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import { ListenerFilter } from "document-model-libs/document-drive";
+import {
+  createSchema,
+  addSubgraph,
+  registerInternalListener,
+} from "@powerhousedao/reactor-api";
+import { drizzle } from "drizzle-orm/connect";
 
 const dirname =
   import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
@@ -136,6 +146,28 @@ const startServer = async (
         ...Object.values(localDMs),
       ]);
     }
+
+    const db = await drizzle("pglite", "./dev.db");
+    setAdditionalContextFields({ db });
+
+    await registerInternalListener({
+      name: "contributor-bill-analyzer",
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      options: contributorBillAnalyzerListener.options as any,
+      transmit: (strands) =>
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        contributorBillAnalyzerListener.transmit(strands, db as any),
+    });
+
+    await addSubgraph({
+      getSchema: () =>
+        createSchema(
+          driveServer,
+          contributorBillAnalyzerListener.resolvers,
+          contributorBillAnalyzerListener.typeDefs,
+        ),
+      name: "contributor-bill-analyzer",
+    });
   } catch (e) {
     console.error("App crashed", e);
   }

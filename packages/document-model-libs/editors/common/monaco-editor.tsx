@@ -1,4 +1,4 @@
-import { lazyWithPreload } from "document-model-libs/utils";
+import { lazyWithPreload } from "../utils";
 
 export type { EditorProps } from "@monaco-editor/react";
 

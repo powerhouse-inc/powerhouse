@@ -5,7 +5,7 @@ import type {
   RealWorldAssetsAction,
 } from "../../document-models/real-world-assets";
 import type { ExtendedEditor } from "../types";
-import { lazyWithPreload } from "document-model-libs/utils";
+import { lazyWithPreload } from "../utils";
 
 export const module: ExtendedEditor<
   RealWorldAssetsState,

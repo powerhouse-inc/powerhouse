@@ -54,6 +54,11 @@
       "import": "./dist/es/utils.js",
       "require": "./dist/cjs/utils.cjs",
       "types": "./dist/utils.d.ts"
+    },
+    "./processors/contributor-bill-analyzer": {
+      "import": "./dist/es/processors/contributor-bill-analyzer.js",
+      "require": "./dist/cjs/processors/contributor-bill-analyzer.cjs",
+      "types": "./dist/processors/contributor-bill-analyzer.d.ts"
     }
   },
   "scripts": {
@@ -135,6 +140,8 @@
     "crypto-browserify": "^3.12.0",
     "document-model": "^2.6.0",
     "document-model-editors": "^1.0.1",
+    "drizzle-kit": "^0.25.0",
+    "drizzle-orm": "^0.34.1",
     "dspot-powerhouse-components": "^1.1.0",
     "graphql": "^16.9.0",
     "graphql-codegen-typescript-validation-schema": "^0.16.0",

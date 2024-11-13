@@ -1,7 +1,4 @@
-import {
-  createDocumentStory,
-  EditorStoryComponent,
-} from "document-model-libs/utils";
+import { createDocumentStory, EditorStoryComponent } from "../utils";
 import {
   RealWorldAssetsAction,
   RealWorldAssetsLocalState,

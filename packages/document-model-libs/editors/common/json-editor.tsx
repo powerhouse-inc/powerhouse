@@ -1,6 +1,6 @@
 import CodeEditor, { type EditorProps } from "./monaco-editor";
 import { useEffect, useState } from "react";
-import { styles } from "document-model-libs/utils";
+import { styles } from "../utils";
 
 type IProps = Omit<EditorProps, "value" | "onChange" | "theme"> & {
   readonly value: JSON;

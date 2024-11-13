@@ -1,0 +1,125 @@
+{
+    "id": "powerhouse/contributorbill",
+    "name": "ContributorBill",
+    "extension": ".phd",
+    "description": "Contributor Bill model",
+    "author": {
+        "name": "Powerhouse",
+        "website": "https://powerhouse.inc"
+    },
+    "specifications": [
+        {
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "global": {
+                    "schema": "type ContributorBillState {\n  issued: Date!\n  issuer: EthereumAddress\n  due: Date\n  stableComp: [StableCoinLineItem!]!\n  powtComp: [PowtLineItem!]!\n  recipient: EthereumAddress\n}\n\ntype StableCoinLineItem {\n  id: ID!\n  description: String\n  amount: Amount_Money!\n  currency: Currency!\n}\n\ntype PowtLineItem {\n  id: ID!\n  description: String\n  amount: Amount_Tokens!\n  projectCode: String\n}",
+                    "initialValue": "{\n  \"issued\": \"\",\n  \"issuer\": \"\",\n  \"due\": \"\",\n  \"stableComp\": [],\n  \"powtComp\": [],\n  \"recipient\": \"\"\n}",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                }
+            },
+            "modules": [
+                {
+                    "id": "muz1EWlnacU3ZjmoKZsZHye97lk=",
+                    "name": "contributor_bill",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "hljQ9GL42kvX5PN2s13C03iWC64=",
+                            "name": "CREATE_CONTRIBUTOR_BILL",
+                            "description": "",
+                            "schema": "input CreateContributorBillInput {\n  issued: Date!\n  issuer: EthereumAddress\n  due: Date\n  recipient: EthereumAddress\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "bBqWmzrVLGWMZjeDFc7hS1pBBTc=",
+                            "name": "ADD_STABLECOIN_LINE_ITEM",
+                            "description": "",
+                            "schema": "input AddStablecoinLineItemInput {\n  id: ID!\n  description: String\n  amount: Amount_Money!\n  currency: Currency!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "ndWeC6BHxpjWp23jIqlRP3jzcX0=",
+                            "name": "ADD_POWT_LINE_ITEM",
+                            "description": "",
+                            "schema": "input AddPowtLineItemInput {\n  id: ID!\n  description: String\n  amount: Amount_Tokens!\n  projectCode: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "6TFiD0677vqk/l26x0cZE9KdJOk=",
+                            "name": "UPDATE_STABLECOIN_LINE_ITEM",
+                            "description": "",
+                            "schema": "input UpdateStablecoinLineItemInput {\n  lineItemId: ID!\n  description: String\n  amount: Amount_Money\n  currency: Currency\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "ruBm5qWetO87fUrlgUmhnFzsP2E=",
+                            "name": "UPDATE_POWT_LINE_ITEM",
+                            "description": "",
+                            "schema": "input UpdatePowtLineItemInput {\n  lineItemId: ID!\n  description: String\n  amount: Amount_Tokens!\n  projectCode: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "TnCGRN190vtnrKs9pVtz+/i74mw=",
+                            "name": "DELETE_STABLECOIN_LINE_ITEM",
+                            "description": "",
+                            "schema": "input DeleteStablecoinLineItemInput {\n  lineItemId: ID!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "Vq9KFkG2ZUQEkW4n+T3ChmC8h7E=",
+                            "name": "DELETE_POWT_LINE_ITEM",
+                            "description": "",
+                            "schema": "input DeletePowtLineItemInput {\n  lineItemId: ID!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "JJ1TxeskkmDFMK53K+h1rl7MYKI=",
+                            "name": "UPDATE_CONTRIBUTOR_BILL",
+                            "description": "",
+                            "schema": "input UpdateContributorBillInput {\n  issued: Date\n  issuer: EthereumAddress\n  due: Date\n  recipient: EthereumAddress\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
