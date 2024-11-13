@@ -108,10 +108,14 @@ export const DefaultActive: Story = {
   args: {
     name: "Label",
     label: "Label",
-    placeholder: "23",
+    autoFocus: true,
   },
 };
-
+DefaultActive.parameters = {
+  pseudo: {
+    active: true,
+  },
+};
 export const Filled: Story = {
   args: {
     name: "Label",
@@ -174,38 +178,7 @@ export const DescriptionDisable: Story = {
     description: "This is the field description",
   },
 };
-export const DescriptionWithWarning: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    description: "This is the field description",
-    warnings: ["Warning message"],
-  },
-};
-export const DescriptionWithErros: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    description: "This is the field description",
-    errors: ["Error message"],
-  },
-};
-export const DescriptionWithMultiError: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    description: "This is the field description",
-    errors: [
-      "Error message number 1",
-      "Error message number 2",
-      "Error message number 3",
-      "Error message number 4",
-    ],
-  },
-};
+
 export const Mandatory: Story = {
   args: {
     name: "Label",
@@ -223,93 +196,9 @@ export const MandatoryDisable: Story = {
     disabled: true,
   },
 };
-export const MandatoryWarning: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    warnings: ["Warning message"],
-  },
-};
-export const MandatoryWithError: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    errors: ["Error message"],
-  },
-};
-export const MandatoryWithMultiErros: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    errors: [
-      "Error message number 1",
-      "Error message number 2",
-      "Error message number 3",
-      "Error message number 4",
-    ],
-  },
-};
-export const MandatoryWithDescription: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    description: "This is a description",
-  },
-};
-export const MandatoryWithDescriptionisable: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    disabled: true,
-    description: "This is a description",
-  },
-};
-export const MandatoryWithDescriptionWarnings: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    description: "This is a description",
-    warnings: ["Warning message"],
-  },
-};
-export const MandatoryWithDescriptionErros: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    description: "This is a description",
-    errors: ["Error message"],
-  },
-};
-export const MandatoryWithDescriptionMultiErros: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    description: "This is a description",
-    errors: [
-      "Error message number 1",
-      "Error message number 2",
-      "Error message number 3",
-      "Error message number 4",
-    ],
-  },
-};
-export const Fraction: Story = {
+
+// Float Stories
+export const FloatNumber: Story = {
   args: {
     label: "Label",
     name: "Label",
@@ -318,7 +207,6 @@ export const Fraction: Story = {
     value: 0.00,
     precision: 2,
     trailingZeros: true,
-    step: 0.04,
   },
   render: (args) => {
     const [value, setValue] = useState(args.value || 0);
@@ -332,119 +220,7 @@ export const Fraction: Story = {
     );
   },
 };
-
-export const FractionFilled: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    value: 138.2,
-    precision: 1,
-  },
-};
-
-export const FractionDisable: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    // Allow trailing zeros after the decimal point for clarity in displaying fractional values.
-    // eslint-disable-next-line prettier/prettier
-    value: 0.00,
-    disabled: true,
-    precision: 2,
-  },
-};
-
-export const FractionWithWarning: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    // Allow trailing zeros after the decimal point for clarity in displaying fractional values.
-    // eslint-disable-next-line prettier/prettier
-    value: 0.00,
-    trailingZeros: true,
-    precision: 2,
-    warnings: ["Warning message"],
-  },
-};
-export const FractionWithError: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    value: 140,
-    errors: ["Error message"],
-  },
-};
-
-export const FractionMultiErrors: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    value: 140,
-    errors: [
-      "Error message number 1",
-      "Error message number 2",
-      "Error message number 3",
-      "Error message number 4",
-    ],
-  },
-};
-export const FractionDescription: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    description: "This is the field description",
-    value: 140,
-  },
-};
-export const FractionDescriptionFilled: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    description: "This is the field description",
-    value: 138,
-  },
-};
-export const FractionDescriptionDisable: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    description: "This is the field description",
-    value: 0,
-    disabled: true,
-  },
-};
-export const FractionDescriptionWarning: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    description: "This is the field description",
-    value: 0,
-    warnings: ["Warning message"],
-  },
-};
-export const FractionDescriptionError: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    description: "This is the field description",
-    value: 0,
-    errors: ["Error message"],
-  },
-};
-export const FractionDescriptionMultiErrors: Story = {
-  args: {
-    label: "Label",
-    name: "Label",
-    value: 140,
-    errors: [
-      "Error message number 1",
-      "Error message number 2",
-      "Error message number 3",
-      "Error message number 4",
-    ],
-  },
-};
-
+// BigInt Stories
 export const IsBigInt: Story = {
   args: {
     name: "Label",
@@ -461,7 +237,7 @@ export const Setp: Story = {
     label: "Label",
     value: 0,
     step: 10,
-    min: 20,
+    minValue: 20,
   },
   render: (args) => {
     const [value, setValue] = useState(args.value || 0);
@@ -473,55 +249,5 @@ export const Setp: Story = {
         onChange={(e) => setValue(Number(e.target.value))}
       />
     );
-  },
-};
-
-export const SetpFilled: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 23,
-    step: 10,
-  },
-};
-export const SetpDisable: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 1234,
-    disabled: true,
-    step: 10,
-  },
-};
-
-export const SetpWarning: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 23,
-    warnings: ["Warning message"],
-  },
-};
-export const SetpErrorState: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 23,
-    step: 10,
-    errors: ["Error message"],
-  },
-};
-export const SetpMultiError: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    step: 10,
-    value: 23,
-    errors: [
-      "Error message number 1",
-      "Error message number 2",
-      "Error message number 3",
-      "Error message number 4",
-    ],
   },
 };
