@@ -2,11 +2,11 @@ import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { EditorView, ViewUpdate, keymap } from "@codemirror/view";
 import { ayuLight } from "thememirror";
 import { graphql } from "cm6-graphql";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { basicSetup } from "codemirror";
 import { indentWithTab } from "@codemirror/commands";
 import { useSchemaContext } from "../context/schema-context";
-import { Errors } from "./errors";
+import { linter, lintGutter, Diagnostic } from "@codemirror/lint";
 
 type Props = {
   id: string;
@@ -20,9 +20,47 @@ export function GraphqlEditor(props: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const graphqlCompartment = useRef(new Compartment());
-  const { sharedSchema, updateSharedSchema } = useSchemaContext();
-  const [errors, setErrors] = useState("");
+  const { sharedSchema, updateSharedSchema, handleSchemaErrors } =
+    useSchemaContext();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const graphqlLinter = useMemo(() => {
+    return linter((view) => {
+      const doc = view.state.doc.toString();
+      const result = handleSchemaErrors(id, doc);
+
+      if (result.success) return [];
+
+      const diagnostics: Diagnostic[] = [];
+      const lines = doc.split("\n");
+      const errors = result.errors.split("\n");
+
+      for (const error of errors) {
+        const lineMatch = /line (\d+)/i.exec(error);
+        if (lineMatch) {
+          const line = parseInt(lineMatch[1]) - 1;
+          const from = view.state.doc.line(line + 1).from;
+          const to = view.state.doc.line(line + 1).to;
+
+          diagnostics.push({
+            from,
+            to,
+            severity: "error",
+            message: error,
+          });
+        } else {
+          diagnostics.push({
+            from: 0,
+            to: view.state.doc.length,
+            severity: "error",
+            message: error,
+          });
+        }
+      }
+
+      return diagnostics;
+    });
+  }, [id, handleSchemaErrors]);
 
   useEffect(() => {
     if (viewRef.current) return;
@@ -36,6 +74,8 @@ export function GraphqlEditor(props: Props) {
         EditorView.theme({
           "&": { fontSize: "18px" },
         }),
+        lintGutter(),
+        graphqlLinter,
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (readonly || !update.docChanged) return;
           if (
@@ -45,8 +85,6 @@ export function GraphqlEditor(props: Props) {
           )
             return;
 
-          setErrors("");
-
           const newDoc = update.state.doc.toString();
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -55,7 +93,7 @@ export function GraphqlEditor(props: Props) {
             updateDocumentInModel(newDoc);
             const result = updateSharedSchema(id, newDoc);
             if (!result.success && result.errors) {
-              setErrors(result.errors);
+              handleSchemaErrors(id, newDoc);
             }
           }, 300);
         }),
@@ -98,19 +136,9 @@ export function GraphqlEditor(props: Props) {
     }
   }, [doc]);
 
-  useEffect(() => {
-    const result = updateSharedSchema(id, doc);
-    if (!result.success) {
-      setErrors(result.errors);
-    } else {
-      setErrors("");
-    }
-  }, []);
-
   return (
     <div>
       <div ref={editorRef} />
-      {!readonly && <Errors errors={errors} />}
     </div>
   );
 }
