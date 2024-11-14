@@ -13,7 +13,7 @@ export const options: Omit<Listener, "driveId"> = {
   filter: {
     branch: ["main"],
     documentId: ["*"],
-    documentType: ["powerhouse/contributor-bill"],
+    documentType: ["powerhouse/contributor-bill", "powerhouse/contributorbill"],
     scope: ["global"],
   },
   block: false,
@@ -119,12 +119,16 @@ async function handleStrand(
   db: PgDatabase<any, any, any>,
 ) {
   for (const op of strand.operations) {
-    if (op.type === "ADD_POWT_LINE_ITEM") {
-      await handleAddPowtLineItem(op.input as AddPowtLineItemInput, db);
-    } else if (op.type === "UPDATE_POWT_LINE_ITEM") {
-      await handleUpdatePowtLineItem(op.input as UpdatePowtLineItemInput, db);
-    } else if (op.type === "DELETE_POWT_LINE_ITEM") {
-      await handleDeletePowtLineItem(op.input as DeletePowtLineItemInput, db);
+    try {
+      if (op.type === "ADD_POWT_LINE_ITEM") {
+        await handleAddPowtLineItem(op.input as AddPowtLineItemInput, db);
+      } else if (op.type === "UPDATE_POWT_LINE_ITEM") {
+        await handleUpdatePowtLineItem(op.input as UpdatePowtLineItemInput, db);
+      } else if (op.type === "DELETE_POWT_LINE_ITEM") {
+        await handleDeletePowtLineItem(op.input as DeletePowtLineItemInput, db);
+      }
+    } catch (e) {
+      console.error(e);
     }
   }
 }

@@ -25,7 +25,7 @@ export const reducer: ContributorBillContributorBillOperations = {
   },
   addPowtLineItemOperation(state, action, dispatch) {
     state.powtComp.push({
-      id: documentModelUtils.hashKey(),
+      id: action.input.id,
       description: action.input.description || "",
       amount: action.input.amount,
       projectCode: action.input.projectCode || "",

@@ -78,7 +78,8 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "dev:watch": "vite build --watch",
-    "yalc-push": "vite build && yalc push"
+    "yalc-push": "vite build && yalc push",
+    "connect": "connect --config-file ./powerhouse.config.json"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.18.1",
@@ -95,6 +96,7 @@
     "@monaco-editor/react": "^4.6.0",
     "@mui/material": "^5.15.5",
     "@powerhousedao/codegen": "0.14.1",
+    "@powerhousedao/connect": "1.0.0-dev.170",
     "@powerhousedao/design-system": "1.8.0",
     "@powerhousedao/scalars": "^1.9.0",
     "@prettier/sync": "^0.5.2",

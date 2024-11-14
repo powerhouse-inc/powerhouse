@@ -18,17 +18,17 @@ export const powtCompensation = pgTable(
     pk: primaryKey({
       columns: [table.projectCode],
     }),
-  })
+  }),
 );
 
 export const powtLineItem = pgTable(
   "powt_line_item",
   {
-    id: uuid("id").notNull(),
+    id: text("id").notNull(),
     projectCode: text("projectCode").notNull(),
     amount: integer("amount").notNull(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.id] }),
-  })
+  }),
 );
