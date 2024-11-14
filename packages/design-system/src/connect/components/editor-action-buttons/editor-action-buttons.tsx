@@ -1,12 +1,12 @@
 import { Icon } from "@/powerhouse";
 
-type Props = {
-  readonly onSwitchboardLinkClick: (() => void) | undefined;
+export type EditorActionButtonsProps = {
+  readonly onSwitchboardLinkClick?: (() => void) | undefined;
   readonly onExport: () => void;
   readonly onClose: () => void;
   readonly onShowRevisionHistory: () => void;
 };
-export function EditorActionButtons(props: Props) {
+export function EditorActionButtons(props: EditorActionButtonsProps) {
   const { onSwitchboardLinkClick, onExport, onClose, onShowRevisionHistory } =
     props;
 

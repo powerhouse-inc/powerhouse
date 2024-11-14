@@ -1,4 +1,3 @@
-import { fixupPluginRules } from "@eslint/compat";
 import { default as eslint } from "@eslint/js";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactPlugin from "eslint-plugin-react";
@@ -129,6 +128,7 @@ export default tseslint.config(
           "twMerge",
           "twJoin",
           "mergeClassNameProps",
+          "cn",
         ],
       },
     },
@@ -149,8 +149,8 @@ export default tseslint.config(
       },
     },
     plugins: {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      "react-hooks": fixupPluginRules(reactHooksPlugin),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      "react-hooks": reactHooksPlugin,
     },
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     rules: {

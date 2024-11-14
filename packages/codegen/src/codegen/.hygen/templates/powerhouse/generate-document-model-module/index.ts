@@ -27,6 +27,7 @@ export default {
             name: a.name,
             hasInput: a.schema !== null,
             hasAttachment: a.schema?.includes(": Attachment"),
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             scope: a.scope || "global",
             state: a.scope === "global" ? "" : a.scope, // the state this action affects
           }))

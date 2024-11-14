@@ -1,19 +1,23 @@
 import { type CodegenConfig, generate } from "@graphql-codegen/cli";
 import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
-import { readdirSync } from "fs";
+import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
+import { readdirSync } from "node:fs";
+import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
+import { formatWithPrettierBeforeWrite } from "./utils";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory())
     .map((dirent) => dirent.name);
 
-const tsConfig: TypeScriptPluginConfig = {
+export const tsConfig: TypeScriptPluginConfig = {
   strictScalars: true,
   scalars: {
     Unknown: "unknown",
     DateTime: "string",
     Attachment: "string",
     Address: "`${string}:0x${string}`",
+    ...(generatorTypeDefs as Record<string, string>),
   },
   enumsAsTypes: true,
   allowEnumStringTypes: true,
@@ -25,7 +29,32 @@ const tsConfig: TypeScriptPluginConfig = {
   inputMaybeValue: "T | null | undefined",
 };
 
-function schemaConfig(name: string, dir: string): CodegenConfig["generates"] {
+export type ValidationSchemaConfigType = Parameters<typeof plugin>[2];
+
+export const validationConfig: ValidationSchemaConfigType = {
+  importFrom: `./types`,
+  schema: "zod",
+  ...tsConfig,
+  scalarSchemas: {
+    Unknown: "z.unknown()",
+    DateTime: "z.string().datetime()",
+    Attachment: "z.string()",
+    Address:
+      "z.custom<`${string}:0x${string}`>((val) => /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string))",
+    ...(validationSchema as Record<string, string>),
+  },
+  directives: {
+    equals: {
+      value: ["regex", "/^$1$/"],
+    },
+  },
+  withObjectType: true,
+};
+
+export function schemaConfig(
+  name: string,
+  dir: string,
+): CodegenConfig["generates"] {
   return {
     [`${dir}/${name}/gen/schema/types.ts`]: {
       schema: [
@@ -41,24 +70,7 @@ function schemaConfig(name: string, dir: string): CodegenConfig["generates"] {
     [`${dir}/${name}/gen/schema/zod.ts`]: {
       schema: `${dir}/${name}/schema.graphql`,
       plugins: ["@acaldas/graphql-codegen-typescript-validation-schema"],
-      config: {
-        importFrom: `./types`,
-        schema: "zod",
-        ...tsConfig,
-        scalarSchemas: {
-          Unknown: "z.unknown()",
-          DateTime: "z.string().datetime()",
-          Attachment: "z.string()",
-          Address:
-            "z.custom<`${string}:0x${string}`>((val) => /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string))",
-        },
-        directives: {
-          equals: {
-            value: ["regex", "/^$1$/"],
-          },
-        },
-        withObjectType: true,
-      },
+      config: validationConfig,
     },
   };
 }
@@ -66,15 +78,16 @@ function schemaConfig(name: string, dir: string): CodegenConfig["generates"] {
 export const generateSchema = (
   model: string,
   dir: string,
-  { watch = false, format = false } = {},
+  { watch = false, skipFormat = false } = {},
 ) => {
   const documentModelConfig = schemaConfig(model, dir);
+
   const config: CodegenConfig = {
     overwrite: true,
     generates: documentModelConfig,
     watch,
     hooks: {
-      afterOneFileWrite: format ? ["prettier --ignore-path --write"] : [],
+      beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
     },
   };
   return generate(config, true);
@@ -82,7 +95,7 @@ export const generateSchema = (
 
 export const generateSchemas = (
   dir: string,
-  { watch = false, format = false } = {},
+  { watch = false, skipFormat = false } = {},
 ) => {
   const documentModels = getDirectories(dir);
   const documentModelConfigs = documentModels.reduce(
@@ -98,7 +111,7 @@ export const generateSchemas = (
     generates: documentModelConfigs,
     watch,
     hooks: {
-      afterOneFileWrite: format ? ["prettier --ignore-path --write"] : [],
+      beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
     },
   };
   return generate(config, true);

@@ -38,6 +38,7 @@ export default defineConfig(({ mode }) => {
     "react/jsx-runtime",
     "react-dom",
     /^document-model\//,
+    "@powerhousedao/scalars",
   ];
 
   return {
@@ -50,6 +51,7 @@ export default defineConfig(({ mode }) => {
         path: "path-browserify",
         crypto: "crypto-browserify",
         "document-model-libs/utils": resolve(__dirname, "./editors/utils"),
+        editors: resolve(__dirname, "./editors"),
       },
     },
     build: {

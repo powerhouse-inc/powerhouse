@@ -3,3 +3,4 @@ node_modules/
 .nx/workspace-data
 **/dist/
 .pnpm-store/
+.next

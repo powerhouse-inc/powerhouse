@@ -140,7 +140,9 @@ export function FileItem(props: FileItemProps) {
           {uiNode.name}
         </div>
         <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800">
-          {nodePath.map((node) => node.name).join(" / ")}
+          {"documentType" in uiNode
+            ? uiNode.documentType
+            : nodePath.map((node) => node.name).join(" / ")}
         </div>
       </div>
       {isAllowedToCreateDocuments ? (
