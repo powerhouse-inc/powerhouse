@@ -15,7 +15,7 @@ export interface RadioOption {
 
 export interface RadioGroupFieldProps
   extends FieldCommonProps<string>,
-  ErrorHandling {
+    ErrorHandling {
   options: RadioOption[];
   onChange?: (value: string) => void;
 }
