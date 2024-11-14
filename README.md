@@ -1,20 +1,20 @@
 # Devcon 2024 Demo
 
-- pnpm i
-- pnpm build
+- `pnpm i`
+- `pnpm build`
 
 In one terminal start Local Reactor to start listening to `ADD_POWT_LINE_ITEM` operations:
 
-- cd packages/reactor-local
-- npx drizzle-kit push
-- node dist/cli.js
+- `cd packages/reactor-local`
+- `npx drizzle-kit push`
+- `node dist/cli.js`
 
 In another terminal start Connect and populate the reactor drive:
 
-- cd packages/document-model-libs
-- pnpm connect
+- `cd packages/document-model-libs
+- `pnpm connect`
 - Add remote drive `http://localhost:4001/d/powerhouse`
-- Create contributor bills on the Powerhouse remove drive (not on "My Local Drive") and add POWT line items
+- `Create contributor bills on the Powerhouse remove drive (not on "My Local Drive") and add POWT line items
 
 The graphQL query can be done at http://localhost:4001/contributor-bill-analyzer with:
 
