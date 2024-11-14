@@ -65,3 +65,24 @@ export interface NumberProps {
   decimalRequired?: boolean;
   isBigInt?: boolean;
 }
+
+export interface SelectProps {
+  options?: {
+    icon?: React.ComponentType<{ className?: string }>;
+    value: string;
+    label: string;
+    disabled?: boolean;
+  }[];
+  placeholder?: string;
+  searchable?: boolean;
+  asModal?: boolean;
+  asChild?: boolean;
+}
+
+export interface EnumProps {
+  optionLabels: Record<string, string>;
+  disabledOptions?: string[];
+  multiple?: boolean;
+  searchable?: boolean;
+  onChange?: (value: string | string[]) => void;
+}

@@ -28,7 +28,7 @@ const RadioGroupFieldRaw: React.FC<RadioGroupFieldProps> = ({
   disabled = false,
   warnings = [],
   errors = [],
-  id,
+  id: propId,
   label,
   name,
   onChange,
@@ -39,6 +39,7 @@ const RadioGroupFieldRaw: React.FC<RadioGroupFieldProps> = ({
   const hasLabel = label !== undefined;
   const hasError = errors.length > 0;
   const prefix = useId();
+  const id = propId ?? `${prefix}-radio-group`;
 
   return (
     <RadioGroup
