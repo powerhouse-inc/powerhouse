@@ -15,76 +15,126 @@ const meta = {
     name: {
       control: "text",
       description: "Name attribute for the input field",
+      table: {
+        type: { summary: "string" },
+      },
     },
     label: {
       control: "text",
       description: "Label text displayed above the input field",
+      table: {
+        type: { summary: "string" },
+      },
     },
     description: {
       control: "text",
       description: "Helper text displayed below the input field",
+      table: {
+        type: { summary: "string" },
+      },
     },
     value: {
       control: "number",
       description: "Controlled value of the input field",
+      table: {
+        type: { summary: "number" },
+      },
     },
     required: {
       control: "boolean",
       description: "Whether the field is required",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+      },
     },
     disabled: {
       control: "boolean",
       description: "Whether the input field is disabled",
+      table: {
+        defaultValue: { summary: "false" },
+        type: { summary: "boolean" },
+      },
     },
     placeholder: {
       control: "text",
       description: "Placeholder text shown when field is empty",
+      table: {
+        type: { summary: "string" },
+      },
     },
     minValue: {
       control: "number",
       description: "Minimum number of characters allowed",
+      table: {
+        type: { summary: "number" },
+      },
     },
     maxValue: {
       control: "number",
       description: "Maximum number of characters allowed",
-    },
-    autoComplete: {
-      control: "boolean",
-      description: "AutoComplete attribute for the input field",
+      table: {
+        type: { summary: "number" },
+      },
     },
     errors: {
       control: "object",
       description: "Array of error messages to display below the field",
+      table: {
+        defaultValue: { summary: "[]" },
+        type: { summary: "string[]" },
+      },
     },
     warnings: {
       control: "object",
       description: "Array of warning messages to display below the field",
+      table: { defaultValue: { summary: "[]" }, type: { summary: "string[]" } },
     },
     allowNegative: {
       control: "boolean",
       description: "Allows the input field to accept negative numbers",
+      table: { type: { summary: "boolean" } },
     },
     numericType: {
       control: "text",
       description:
-        "Specifies the numeric type of the input field. Possible values are: PositiveInt (Positive integers), NegativeInt (Negative integers), NonNegativeInt (Non-negative integers, greater than or equal to 0), NonPositiveInt (Non-positive integers, less than or equal to 0), NegativeFloat (Negative float values), PositiveFloat (Positive float values), NonNegativeFloat (Non-negative float values, greater than or equal to 0.0), NonPositiveFloat (Non-positive float values, less than or equal to 0.0).",
+        "Specifies the numeric type of the input field. Possible values are:\n\n\n" +
+        "- PositiveInt: Positive whole numbers (e.g., 1, 2, 3)\n\n" +
+        "- NegativeInt: Negative whole numbers (e.g., -1, -2, -3)\n\n" +
+        "- NonNegativeInt: Zero and positive whole numbers (e.g., 0, 2)\n\n" +
+        "- NonPositiveInt: Zero and negative whole numbers (e.g., 0, -2)\n\n" +
+        "- PositiveFloat: Positive decimals (e.g., 1.0, 2.5)\n\n" +
+        "- NegativeFloat: Negative decimals (e.g., -1.0, -2.5)\n\n" +
+        "- NonNegativeFloat: Zero and positive decimals (e.g., 0.0, 1.0)\n\n" +
+        "- NonPositiveFloat: Zero and negative decimals (e.g., 0.0, -1.0)\n\n" +
+        "- BigInt: Large integers (e.g., 9999999999999999999)\n\n",
+      table: {
+        type: {
+          summary:
+            '"PositiveInt" | "NegativeInt" | "NonNegativeInt" | "NonPositiveInt" | "PositiveFloat" | "NegativeFloat" | "NonNegativeFloat" | "NonPositiveFloat" | "BigInt"',
+        },
+      },
     },
     step: {
       control: "number",
       description: "Step value for the input field",
+      table: { type: { summary: "number" } },
     },
     precision: {
       control: "number",
       description: "Number of decimal places allowedd",
+      table: { type: { summary: "number" } },
     },
     trailingZeros: {
       control: "boolean",
       description:
         "When precision is set, for example to 2, determines if the the trailing zeros should be preserved ( for example: 25.00,7.50, etc.) or not ( for example: 25, 7.5).",
+      table: { type: { summary: "boolean" } },
     },
     decimalRequired: {
       control: "boolean",
       description: "Whether a decimal point is required.",
+      table: { type: { summary: "boolean" } },
     },
   },
   args: {
@@ -101,7 +151,7 @@ export const Default: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 0,
+    placeholder: "0",
   },
 };
 export const DefaultActive: Story = {

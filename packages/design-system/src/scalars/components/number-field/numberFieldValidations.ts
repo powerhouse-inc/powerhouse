@@ -6,7 +6,7 @@ export const validatePositive =
       ? true
       : Number(value) > 0
         ? true
-        : "Value must be a positive value";
+        : "Value must be a poasdasdassitive value";
   };
 
 export const validateIsBigInt =
@@ -19,13 +19,18 @@ export const validateIsBigInt =
 
 export const validatePrecision =
   (props: NumberFieldProps) => (value: string) => {
-    if (props.precision === undefined) return true;
+    // Si precision no está definida, solo permitimos enteros
+    if (props.precision === undefined) {
+      return !value.includes(".") ? true : "Value must be an integer";
+    }
 
+    // Comprobamos la parte decimal del valor si se especifica precision
     const decimalPart = value.toString().split(".")[1];
     if (props.precision === 0) {
       return !decimalPart ? true : "Value must be an integer";
     }
 
+    // Validamos la cantidad de decimales cuando precision está definida
     return decimalPart && decimalPart.length <= props.precision
       ? true
       : `Value must have ${props.precision} decimal places or fewer`;
@@ -38,7 +43,7 @@ export const validateTrailingZeros =
       value.toString().split(".")[1]?.length === props.precision;
     return hasTrailingZeros
       ? true
-      : `Value must have exactly ${props.precision} decimal places with trailing zeros if needed`;
+      : `Value must have exactly ${props.precision} decimal places`;
   };
 
 export const validateDecimalRequired =
