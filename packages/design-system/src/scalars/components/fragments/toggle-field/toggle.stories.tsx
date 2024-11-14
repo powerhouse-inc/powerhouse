@@ -70,9 +70,16 @@ const meta: Meta<typeof ToggleField> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
+export const DefaultChecked: Story = {
   args: {
     value: true,
+  },
+};
+
+export const Unchecked: Story = {
+  name: "Unchecked",
+  args: {
+    value: false,
   },
 };
 
@@ -81,13 +88,6 @@ export const CheckedWithLabel: Story = {
   args: {
     value: true,
     label: "Active",
-  },
-};
-
-export const Unchecked: Story = {
-  name: "Unchecked without label",
-  args: {
-    value: false,
   },
 };
 
@@ -100,35 +100,17 @@ export const UncheckedWithLabel: Story = {
 };
 
 export const DisabledChecked: Story = {
-  name: "Disabled checked without label",
+  name: "Disabled checked",
   args: {
     value: true,
     disabled: true,
-  },
-};
-
-export const DisabledCheckedWithLabel: Story = {
-  name: "Disabled checked with label",
-  args: {
-    disabled: true,
-    value: true,
-    label: "Active",
   },
 };
 
 export const DisabledUncheckedWithoutLabel: Story = {
-  name: "Disabled unchecked without label",
+  name: "Disabled unchecked",
   args: {
     value: false,
     disabled: true,
-  },
-};
-
-export const DisabledUncheckedWithLabel: Story = {
-  name: "Disabled unchecked with label",
-  args: {
-    disabled: true,
-    value: false,
-    label: "Active",
   },
 };

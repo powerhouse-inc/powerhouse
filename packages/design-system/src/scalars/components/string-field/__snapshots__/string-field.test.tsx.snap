@@ -17,7 +17,7 @@ exports[`StringField > should match snapshot when multiline is true (textarea) 1
           aria-required="false"
           autocomplete="off"
           class="flex w-full rounded-lg text-base leading-normal font-normal font-inter text-gray-900 bg-white dark:text-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 placeholder:text-gray-500 dark:placeholder:text-gray-600 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0 dark:focus:border-gray-700 dark:focus:bg-gray-900 hover:border-gray-400 dark:hover:border-gray-600 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:border-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-900/50 dark:disabled:border-gray-800 dark:disabled:text-gray-600 min-h-[120px] resize-y scrollbar scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent dark:scrollbar-thumb-gray-600"
-          id=":r0:-textarea"
+          id=":r1:-textarea"
           name="test"
           rows="3"
           spellcheck="false"
@@ -38,6 +38,7 @@ exports[`StringField > should match snapshot with minimal props 1`] = `
     >
       <input
         class="flex h-10 w-full rounded-md text-sm text-gray-900 border border-gray-300 bg-background px-3 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500"
+        id=":r0:"
         name="test"
         value=""
       />

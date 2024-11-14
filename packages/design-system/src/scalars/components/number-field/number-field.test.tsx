@@ -93,50 +93,6 @@ describe("NumberField Component", () => {
     expect(screen.getByRole("spinbutton")).toHaveAttribute("required");
   });
 
-  it("should handles autoComplete set to true", () => {
-    renderWithForm(
-      <NumberField
-        label="Test Label"
-        onChange={mockOnChange}
-        autoComplete
-        name="Label"
-      />,
-    );
-    expect(screen.getByRole("spinbutton")).toHaveAttribute(
-      "autocomplete",
-      "on",
-    );
-  });
-
-  it("should handles autoComplete set to false", () => {
-    renderWithForm(
-      <NumberField
-        label="Test Label"
-        onChange={mockOnChange}
-        autoComplete={false}
-        name="Label"
-      />,
-    );
-    expect(screen.getByLabelText("Test Label")).toHaveAttribute(
-      "autocomplete",
-      "off",
-    );
-  });
-
-  it("should renders input with provided className", () => {
-    renderWithForm(
-      <NumberField
-        label="Test Label"
-        // This a custom class for testing no a class for tailwindcss
-        // eslint-disable-next-line tailwindcss/no-custom-classname
-        className="custom-class"
-        onChange={mockOnChange}
-        name="Label"
-      />,
-    );
-    expect(screen.getByLabelText("Test Label")).toHaveClass("custom-class");
-  });
-
   it("should supports a defaultValue prop", () => {
     renderWithForm(
       <NumberField

@@ -1,29 +1,36 @@
-import { DocumentModel } from "document-model";
-import fs from "fs";
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Logger, runner } from "hygen";
-import path from "path";
+import { DocumentModel } from "document-model";
 import { loadDocumentModel } from "./utils";
 
+const require = createRequire(import.meta.url);
+
+const __dirname =
+  import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, ".hygen", "templates");
 
-async function run(args: string[], { watch = false, format = false } = {}) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function run(args: string[], { watch = false, skipFormat = false } = {}) {
   const result = await runner(args, {
     templates: defaultTemplates,
     cwd: process.cwd(),
     logger,
     createPrompter: () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-require-imports
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return require("enquirer");
     },
     exec: (action, body) => {
       const opts = body && body.length > 0 ? { input: body } : {};
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-require-imports
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       return require("execa").shell(action, opts);
     },
     debug: !!process.env.DEBUG,
   });
-  if (format) {
+  if (!skipFormat) {
     const execa = await import("execa");
     const actions = result.actions as { status: string; subject: string }[];
     actions
@@ -43,7 +50,7 @@ async function run(args: string[], { watch = false, format = false } = {}) {
 
 export async function generateAll(
   dir: string,
-  { watch = false, format = false } = {},
+  { watch = false, skipFormat = false } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
   for (const directory of files.filter((f) => f.isDirectory())) {
@@ -58,7 +65,7 @@ export async function generateAll(
 
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
-      await generateDocumentModel(documentModel, dir, { watch, format });
+      await generateDocumentModel(documentModel, dir, { watch, skipFormat });
     } catch (error) {
       console.error(directory.name, error);
     }
@@ -68,7 +75,7 @@ export async function generateAll(
 export async function generateDocumentModel(
   documentModel: DocumentModel.DocumentModelState,
   dir: string,
-  { watch = false, format = false } = {},
+  { watch = false, skipFormat = false } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -80,7 +87,7 @@ export async function generateDocumentModel(
       "--root-dir",
       dir,
     ],
-    { watch, format },
+    { watch, skipFormat },
   );
 
   // Generate the module-specific files for the document model logic
@@ -98,7 +105,7 @@ export async function generateDocumentModel(
         "--module",
         module.name,
       ],
-      { watch, format },
+      { watch, skipFormat },
     );
   }
 }
@@ -109,7 +116,7 @@ export async function generateEditor(
   documentTypesMap: Record<string, string>,
   dir: string,
   documentModelsDir: string,
-  { format = false } = {},
+  { skipFormat = false } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -127,6 +134,6 @@ export async function generateEditor(
       "--document-models-dir",
       documentModelsDir,
     ],
-    { format },
+    { skipFormat },
   );
 }

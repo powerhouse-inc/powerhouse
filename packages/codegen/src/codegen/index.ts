@@ -1,13 +1,14 @@
 #! /usr/bin/env node
 import { DocumentModelState } from "document-model/document-model";
+import { typeDefs } from "@powerhousedao/scalars";
 import {
   generateAll,
   generateEditor as _generateEditor,
   generateDocumentModel,
 } from "./hygen";
 import { generateSchemas, generateSchema } from "./graphql";
-import type { PowerhouseConfig } from "../utils";
-import fs from "fs";
+import type { PowerhouseConfig } from "../utils/index";
+import fs from "node:fs";
 import { join, resolve } from "path";
 import { paramCase, pascalCase } from "change-case";
 import { loadDocumentModel } from "./utils";
@@ -16,9 +17,9 @@ function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
     documentModel.specifications[documentModel.specifications.length - 1];
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!spec) {
-    console.log(`No spec found for ${documentModel.id}`);
-    return;
+    throw new Error(`No spec found for ${documentModel.id}`);
   }
 
   const {
@@ -64,9 +65,9 @@ function getDocumentTypesMap(dir: string) {
 }
 
 export async function generate(config: PowerhouseConfig) {
-  const { format, watch } = config;
-  await generateSchemas(config.documentModelsDir, { format, watch });
-  await generateAll(config.documentModelsDir, { format, watch });
+  const { skipFormat, watch } = config;
+  await generateSchemas(config.documentModelsDir, { skipFormat, watch });
+  await generateAll(config.documentModelsDir, { skipFormat, watch });
 }
 
 export async function generateFromFile(path: string, config: PowerhouseConfig) {
@@ -83,7 +84,11 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
   );
 
   // bundle graphql schemas together
-  const schemaStr = generateGraphqlSchema(documentModel);
+  const schemaStr = [
+    typeDefs.join("\n"), // inject ph scalars
+    generateGraphqlSchema(documentModel),
+  ].join("\n");
+
   if (schemaStr) {
     fs.writeFileSync(
       join(config.documentModelsDir, name, `schema.graphql`),
@@ -100,7 +105,7 @@ export async function generateEditor(
   documentTypes: string[],
   config: PowerhouseConfig,
 ) {
-  const { documentModelsDir, format } = config;
+  const { documentModelsDir, skipFormat } = config;
   const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
 
   const invalidType = documentTypes.find(
@@ -115,6 +120,6 @@ export async function generateEditor(
     docummentTypesMap,
     config.editorsDir,
     config.documentModelsDir,
-    { format },
+    { skipFormat },
   );
 }

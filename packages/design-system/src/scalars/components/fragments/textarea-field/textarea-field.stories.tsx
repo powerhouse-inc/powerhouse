@@ -1,10 +1,11 @@
-import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { withForm } from "@/scalars/lib/decorators";
 import { TextareaField } from "./textarea-field";
 
 const meta = {
   title: "Document Engineering/Fragments/TextareaField",
   component: TextareaField,
+  decorators: [withForm],
   parameters: {
     layout: "centered",
     controls: {
@@ -148,16 +149,6 @@ const meta = {
         category: "Technical",
       },
     },
-    onChange: {
-      action: "onChange",
-      description: "Callback fired when the textarea value changes",
-      table: {
-        type: {
-          summary: "(event: React.ChangeEvent<HTMLTextAreaElement>) => void",
-        },
-        category: "Events",
-      },
-    },
     pattern: {
       control: "text",
       description: "Regular expression pattern for input validation",
@@ -264,7 +255,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Basic Examples
+// Basic examples
 export const WithLabel: Story = {
   args: {
     name: "textarea",
@@ -282,7 +273,7 @@ export const WithLabelAndDescription: Story = {
   },
 };
 
-// Validation States
+// Validation states
 export const Required: Story = {
   args: {
     name: "textarea",
@@ -352,7 +343,7 @@ export const WithWarningsAndErrors: Story = {
   },
 };
 
-// Length Constraints
+// Length constraints
 export const WithMinLength: Story = {
   args: {
     name: "textarea",
@@ -370,43 +361,10 @@ export const WithMaxLength: Story = {
     maxLength: 50,
     placeholder: "Maximum 50 characters allowed",
     description: "Maximum length: 50 characters",
-    value: "", // Initial value
-  },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || "");
-    return (
-      <TextareaField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-    );
   },
 };
 
-export const WithMinAndMaxLength: Story = {
-  args: {
-    name: "textarea",
-    label: "Constrained response",
-    minLength: 20,
-    maxLength: 100,
-    placeholder: "Between 20 and 100 characters",
-    description: "Please provide between 20 and 100 characters",
-    value: "", // Initial value
-  },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || "");
-    return (
-      <TextareaField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-    );
-  },
-};
-
-// Visual States
+// Visual states
 export const Disabled: Story = {
   args: {
     name: "textarea",
@@ -428,17 +386,7 @@ export const Focused: Story = {
   },
 };
 
-// Special Features
-export const WithAutoComplete: Story = {
-  args: {
-    name: "textarea",
-    label: "Auto-complete enabled textarea",
-    autoComplete: true,
-    placeholder: "Browser auto-complete is enabled...",
-    description: "This field will show browser auto-complete suggestions",
-  },
-};
-
+// Special features
 export const WithSpellCheck: Story = {
   args: {
     name: "textarea",
@@ -446,15 +394,6 @@ export const WithSpellCheck: Story = {
     spellCheck: true,
     placeholder: "Spell checking is enabled...",
     description: "This field will check your spelling",
-  },
-};
-
-export const WithCustomRows: Story = {
-  args: {
-    name: "textarea",
-    label: "Custom height textarea",
-    rows: 10,
-    placeholder: "This textarea shows 10 rows...",
   },
 };
 
@@ -469,7 +408,7 @@ export const AutoExpanding: Story = {
   },
 };
 
-// Text Transformations
+// Text transformations
 export const WithTrimTransformation: Story = {
   args: {
     name: "textarea",
@@ -477,16 +416,6 @@ export const WithTrimTransformation: Story = {
     value: "  This text will have whitespace trimmed  ",
     trim: true,
     description: "Leading and trailing whitespace will be removed",
-  },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || "");
-    return (
-      <TextareaField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-    );
   },
 };
 
@@ -498,16 +427,6 @@ export const WithUppercaseTransformation: Story = {
     uppercase: true,
     description: "Text will be converted to uppercase",
   },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || "");
-    return (
-      <TextareaField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-    );
-  },
 };
 
 export const WithLowercaseTransformation: Story = {
@@ -518,60 +437,9 @@ export const WithLowercaseTransformation: Story = {
     lowercase: true,
     description: "Text will be converted to lowercase",
   },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || "");
-    return (
-      <TextareaField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-    );
-  },
 };
 
-export const WithTrimAndUppercaseTransformations: Story = {
-  args: {
-    name: "textarea",
-    label: "Transformed text",
-    value: "  this will be trimmed and uppercase  ",
-    trim: true,
-    uppercase: true,
-    description: "Text will be trimmed and converted to uppercase",
-  },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || "");
-    return (
-      <TextareaField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-    );
-  },
-};
-
-// Design Variants
-export const ManualAdjustDefault: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    placeholder: "Placeholder",
-    maxLength: 500,
-  },
-};
-
-export const ManualAdjustActive: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    maxLength: 500,
-  },
-  parameters: {
-    pseudo: { focus: true },
-  },
-};
-
+// Some design variants
 export const ManualAdjustActiveMultiline: Story = {
   args: {
     name: "textarea",
@@ -595,7 +463,7 @@ export const ManualAdjustFilledNoFocus: Story = {
   },
 };
 
-export const ManualAdjustWarning: Story = {
+export const ManualAdjustWarningCounter: Story = {
   args: {
     name: "textarea",
     label: "Label",
@@ -605,57 +473,13 @@ export const ManualAdjustWarning: Story = {
   },
 };
 
-export const ManualAdjustWarningAndMessage: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    warnings: ["Warning message"],
-    maxLength: 90,
-  },
-};
-
-export const ManualAdjustError: Story = {
+export const ManualAdjustErrorCounter: Story = {
   args: {
     name: "textarea",
     label: "Label",
     value:
       "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
     maxLength: 80,
-  },
-};
-
-export const ManualAdjustErrorAndMessage: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    errors: ["Error message"],
-    maxLength: 80,
-  },
-};
-
-export const AutoAdjustDefault: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    placeholder: "Placeholder",
-    maxLength: 500,
-    autoExpand: true,
-  },
-};
-
-export const AutoAdjustActive: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    maxLength: 500,
-    autoExpand: true,
-  },
-  parameters: {
-    pseudo: { focus: true },
   },
 };
 
@@ -680,52 +504,6 @@ export const AutoAdjustFilledNoFocus: Story = {
     value:
       "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
     maxLength: 500,
-    autoExpand: true,
-  },
-};
-
-export const AutoAdjustWarning: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    maxLength: 90,
-    autoExpand: true,
-  },
-};
-
-export const AutoAdjustWarningAndMessage: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    warnings: ["Warning message"],
-    maxLength: 90,
-    autoExpand: true,
-  },
-};
-
-export const AutoAdjustError: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    maxLength: 80,
-    autoExpand: true,
-  },
-};
-
-export const AutoAdjustErrorAndMessage: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    errors: ["Error message"],
-    maxLength: 80,
     autoExpand: true,
   },
 };

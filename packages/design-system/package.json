@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.1.0-canary.31",
+  "version": "1.9.1-canary.0",
   "description": "",
   "files": [
     "/dist"
@@ -78,7 +78,7 @@
     "camelcase": "^8.0.0",
     "chromatic": "^11.11.0",
     "cross-env": "^7.0.3",
-    "document-model": "2.2.0",
+    "document-model": "2.6.0",
     "fast-xml-parser": "^4.3.4",
     "jsdom": "^24.0.0",
     "lightningcss": "^1.27.0",
@@ -88,12 +88,14 @@
     "rollup-plugin-visualizer": "^5.12.0",
     "storybook": "^8.3.4",
     "storybook-addon-pseudo-states": "^4.0.2",
-    "tsx": "^4.19.1"
+    "tsx": "^4.19.1",
+    "@powerhousedao/scalars": "1.9.0"
   },
   "peerDependencies": {
-    "document-model": "^2.1.0",
+    "document-model": "^2.3.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@powerhousedao/scalars": "1.8.0"
   },
   "dependencies": {
     "@internationalized/date": "^3.5.6",
@@ -130,6 +132,7 @@
     "tailwindcss-animate": "^1.0.7",
     "usehooks-ts": "^3.1.0",
     "viem": "^2.16.1",
-    "wagmi": "^2.12.17"
+    "wagmi": "^2.12.17",
+    "zod": "^3.23.8"
   }
 }

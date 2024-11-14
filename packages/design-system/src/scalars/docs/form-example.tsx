@@ -1,6 +1,6 @@
 import { Button } from "@/powerhouse/components/button";
 import { BooleanField, NumberField, StringField } from "../components";
-import { Form } from "../components/fragments";
+import { Form, RadioGroupField } from "../components/fragments";
 
 const FormExample = () => {
   const onSubmit = async (data: any) => {
@@ -19,6 +19,7 @@ const FormExample = () => {
         phone: "",
         age: NaN,
         notifications: true,
+        sex: "",
         subscribe: true,
         termsAndConditions: false,
       }}
@@ -33,15 +34,38 @@ const FormExample = () => {
               required
               maxLength={50}
             />
-
             <NumberField
               name="age"
               label="Age"
               placeholder="25"
               required
-              minValue={18}
+              allowNegative={false}
+              precision={0}
             />
-
+            <div className="col-span-2 mb-4">
+              <RadioGroupField
+                name="sex"
+                label="Sex"
+                options={[
+                  { label: "Male", value: "male" },
+                  { label: "Female", value: "female" },
+                  { label: "Other", value: "other" },
+                ]}
+                required
+              />
+            </div>
+            <NumberField
+              showErrorOnBlur
+              name="height"
+              label="Height (cm)"
+              placeholder="180"
+              required
+              allowNegative={false}
+              isBigInt={false}
+              precision={2}
+              trailingZeros
+              decimalRequired
+            />
             <StringField
               name="email"
               label="Email"
@@ -61,10 +85,14 @@ const FormExample = () => {
 
           <StringField
             name="bio"
-            label="Bio"
+            label="Bio (length: 20-100 characters, pattern: letters, numbers and spaces)"
             placeholder="I am a software engineer..."
+            minLength={20}
+            maxLength={100}
             multiline
-            maxLength={500}
+            pattern={/^[a-zA-Z0-9 ]+$/}
+            required
+            showErrorOnChange
           />
 
           <BooleanField

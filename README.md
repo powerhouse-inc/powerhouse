@@ -17,7 +17,10 @@ This repository uses pnpm workspaces and Nx to manage a monorepo with multiple p
     cd <repo-directory>
     ```
 2. Install the dependencies: `pnpm install`
-3. Run a project or app: `npx nx <run_command_for_the_package_or_app> <package_or_app_name>`;
+3. Build with: `pnpm build`
+4. Run a project or app: `npx nx <run_command_for_the_package_or_app> <package_or_app_name>`;
+
+> For example, to run the Switchboard application in `/apps/switchboard/`, use `npx nx start @powerhousedao/switchboard`.
 
 ## Linking Dependencies Between Projects and Packages <a id="linking-deps"></a>
 

@@ -1,6 +1,8 @@
 import React, { useId } from "react";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
+import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
+import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
 import { Radio } from "./radio";
 import { RadioGroup } from "./radio-group";
 
@@ -11,34 +13,26 @@ export interface RadioOption {
   disabled?: boolean;
 }
 
-export interface RadioGroupFieldProps {
-  autoFocus?: boolean;
-  className?: string;
-  defaultValue?: string;
-  description?: string;
-  warnings?: string[];
-  errors?: string[];
-  id?: string;
-  label?: string;
-  name?: string;
+export interface RadioGroupFieldProps
+  extends FieldCommonProps<string>,
+  ErrorHandling {
+  options: RadioOption[];
   onChange?: (value: string) => void;
-  radioOptions: RadioOption[];
-  required?: boolean;
-  value?: string;
 }
 
-export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
+const RadioGroupFieldRaw: React.FC<RadioGroupFieldProps> = ({
   autoFocus = false,
   className,
   defaultValue,
   description,
+  disabled = false,
   warnings = [],
   errors = [],
   id: propId,
   label,
   name,
   onChange,
-  radioOptions = [],
+  options = [],
   required = false,
   value,
 }) => {
@@ -61,6 +55,7 @@ export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
         onChange?.(newValue);
       }}
       value={value}
+      disabled={disabled}
     >
       {hasLabel && (
         <FormLabel
@@ -68,11 +63,12 @@ export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
           hasError={hasError}
           htmlFor={id}
           required={required}
+          disabled={disabled}
         >
           {label}
         </FormLabel>
       )}
-      {radioOptions.map((option, index) => (
+      {options.map((option, index) => (
         <div
           key={`${prefix}-radio-${index}-${option.value}`}
           className="flex items-center gap-2.5"
@@ -83,7 +79,7 @@ export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
             label={option.label}
             value={option.value}
             description={option.description}
-            disabled={option.disabled}
+            disabled={disabled || option.disabled}
             hasError={hasError}
           />
         </div>
@@ -95,3 +91,6 @@ export const RadioGroupField: React.FC<RadioGroupFieldProps> = ({
     </RadioGroup>
   );
 };
+
+export const RadioGroupField =
+  withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);

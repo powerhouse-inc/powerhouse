@@ -8,6 +8,13 @@ import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { getDisplayValue, regex } from "@/scalars/utils/utils";
 import { withFieldValidation } from "../fragments/with-field-validation";
+import {
+  validateDecimalRequired,
+  validateIsBigInt,
+  validatePositive,
+  validatePrecision,
+  validateTrailingZeros,
+} from "./numberFieldValidations";
 
 export interface NumberFieldProps
   extends Omit<
@@ -18,12 +25,10 @@ export interface NumberFieldProps
         React.InputHTMLAttributes<HTMLInputElement>,
         "min" | "max" | "minLength" | "maxLength"
       >,
-    "value" | "autoComplete" | "defaultValue" | "name" | "pattern"
+    "value" | "defaultValue" | "name" | "pattern"
   > {
   className?: string;
-  autoComplete?: boolean;
   defaultValue?: number;
-  allowNegative?: boolean;
   name: string;
   pattern?: RegExp;
   value?: number | string;
@@ -41,18 +46,12 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       errors,
       warnings,
       className,
-      autoComplete,
       id: propId,
       minValue,
       maxValue,
       step,
       pattern,
-      //TODO: disabled by validation
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      allowNegative = true,
       isBigInt = false,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      numericType = "Int",
       trailingZeros = false,
       precision = 0,
       ...props
@@ -61,8 +60,6 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   ) => {
     const generatedId = useId();
     const id = propId ?? generatedId;
-    const autoCompleteValue =
-      autoComplete === undefined ? undefined : autoComplete ? "on" : "off";
 
     // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints, otherwise sets to "number" for standard numeric input.
     const inputType = isBigInt ? "text" : "number";
@@ -92,7 +89,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           name={name}
           className={cn(
             // Allow the arrows step
-            "show-arrows",
+            step && "show-arrows",
             // text and background style
             "text-gray-900 dark:text-gray-50 dark:bg-[#252A34]  dark:border-[#485265]",
             //Focus state text and placeholder
@@ -112,10 +109,9 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           aria-valuemin={minValue}
           aria-valuemax={maxValue}
           aria-invalid={!!errors?.length}
-          autoComplete={autoCompleteValue}
           value={displayValue}
           step={step}
-          defaultValue={defaultValue ?? undefined}
+          defaultValue={defaultValue}
           onChange={onChange}
           {...props}
           ref={ref}
@@ -132,13 +128,11 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
   NumberFieldRaw,
   {
     validations: {
-      _positive: (props) => (value) => {
-        return props.allowNegative
-          ? true
-          : Number(value) > 0
-            ? true
-            : "Value must be positive";
-      },
+      _positive: validatePositive,
+      _isBigInt: validateIsBigInt,
+      _precision: validatePrecision,
+      _trailingZeros: validateTrailingZeros,
+      _decimalRequired: validateDecimalRequired,
     },
   },
 );

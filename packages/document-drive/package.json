@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.0.2",
+  "version": "1.4.4",
   "license": "AGPL-3.0-only",
   "type": "module",
   "module": "./src/index.ts",
@@ -37,17 +37,40 @@
     "build": "prisma generate"
   },
   "peerDependencies": {
-    "document-model": "^2.1.0",
-    "document-model-libs": "^1.92.0"
+    "@powerhousedao/scalars": "latest",
+    "change-case": "^5.4.4",
+    "document-model": "^2.3.1",
+    "document-model-libs": "^1.104.0",
+    "graphql": "^16.9.0",
+    "graphql-request": "^6.1.0",
+    "json-stringify-deterministic": "^1.0.12",
+    "nanoevents": "^9.0.0",
+    "sanitize-filename": "^1.6.3",
+    "uuid": "^9.0.1"
   },
   "optionalDependencies": {
     "@prisma/client": "^5.18.0",
+    "exponential-backoff": "^3.1.1",
     "localforage": "^1.10.0",
     "redis": "^4.6.15",
     "sequelize": "^6.37.3",
     "sqlite3": "^5.1.7"
   },
-  "dependencies": {
+  "devDependencies": {
+    "@powerhousedao/scalars": "latest",
+    "@prisma/client": "5.17.0",
+    "@types/node": "^20.14.11",
+    "@types/uuid": "^9.0.8",
+    "document-model": "^2.6.0",
+    "document-model-libs": "^1.114.0",
+    "fake-indexeddb": "^5.0.2",
+    "localforage": "^1.10.0",
+    "msw": "^2.3.1",
+    "prisma": "^5.18.0",
+    "sequelize": "^6.37.2",
+    "sqlite3": "^5.1.7",
+    "webdriverio": "^9.0.9",
+    "vitest-fetch-mock": "^0.3.0",
     "change-case": "^5.4.4",
     "exponential-backoff": "^3.1.1",
     "graphql": "^16.9.0",
@@ -56,20 +79,5 @@
     "nanoevents": "^9.0.0",
     "sanitize-filename": "^1.6.3",
     "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "@prisma/client": "5.17.0",
-    "@types/node": "^20.14.11",
-    "@types/uuid": "^9.0.8",
-    "document-model": "2.2.0",
-    "document-model-libs": "1.94.0",
-    "fake-indexeddb": "^5.0.2",
-    "localforage": "^1.10.0",
-    "msw": "^2.3.1",
-    "prisma": "^5.18.0",
-    "sequelize": "^6.37.2",
-    "sqlite3": "^5.1.7",
-    "webdriverio": "^9.0.9",
-    "vitest-fetch-mock": "^0.3.0"
   }
 }

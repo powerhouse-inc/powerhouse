@@ -1,0 +1,10 @@
+type Query {
+  search(title: String!, type: String!): [SearchResult!]!
+}
+
+type SearchResult {
+  driveId: String!
+  documentId: String!
+  title: String!
+  type: String!
+}

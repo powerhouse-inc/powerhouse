@@ -3,8 +3,9 @@ import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { FormGroup } from "@/scalars/components/fragments/form-group";
 import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { applyTransformers } from "@/scalars/lib/transformers";
 import { CharacterCounter } from "@/scalars/components/fragments/character-counter";
+import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
+import { applyTransformers } from "@/scalars/lib/transformers";
 import { cn } from "@/scalars/lib/utils";
 import {
   ErrorHandling,
@@ -25,16 +26,12 @@ export interface TextareaProps
   autoExpand?: boolean;
 }
 
-export const TextareaField = React.forwardRef<
-  HTMLTextAreaElement,
-  TextareaProps
->(
+const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
     {
       autoComplete = false,
       autoExpand = false,
       className,
-      customValidator,
       defaultValue,
       description,
       disabled = false,
@@ -46,12 +43,9 @@ export const TextareaField = React.forwardRef<
       minLength,
       name,
       onChange,
-      pattern,
       placeholder,
       required = false,
       rows = 3,
-      showErrorOnBlur = false,
-      showErrorOnChange = false,
       spellCheck = false,
       trim = false,
       uppercase = false,
@@ -189,13 +183,13 @@ export const TextareaField = React.forwardRef<
             id={id}
             minLength={minLength}
             name={name}
-            onChange={handleChange}
             placeholder={placeholder}
             ref={ref}
             rows={rows}
             spellCheck={spellCheck}
-            value={transformedValue}
             {...props}
+            value={transformedValue}
+            onChange={handleChange}
           />
           {hasMaxLength && (
             <div className="mt-1.5 flex justify-end">
@@ -232,3 +226,6 @@ export const TextareaField = React.forwardRef<
     );
   },
 );
+
+export const TextareaField =
+  withFieldValidation<TextareaProps>(TextareaFieldRaw);

@@ -1,5 +1,10 @@
-import { DocumentModelState, utils, z } from "document-model/document-model";
-import fs from "fs";
+import {
+  DocumentModelDocument,
+  DocumentModelState,
+  utils,
+} from "document-model/document-model";
+import fs from "node:fs";
+import * as prettier from "prettier";
 
 export async function loadDocumentModel(
   path: string,
@@ -13,17 +18,31 @@ export async function loadDocumentModel(
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");
-      const document = JSON.parse(data) as DocumentModelState;
-      // z.DocumentModelStateSchema().parse(document);
-      documentModel = document;
+      const parsedData = JSON.parse(data) as
+        | DocumentModelDocument
+        | DocumentModelState;
+      if ("state" in parsedData) {
+        documentModel = parsedData.state.global;
+      } else {
+        documentModel = parsedData;
+      }
     } else {
       throw new Error("File type not supported. Must be zip or json.");
     }
     return documentModel;
   } catch (error) {
-    // @ts-expect-error
-    throw error.code === "MODULE_NOT_FOUND"
+    throw (error as { code?: string }).code === "MODULE_NOT_FOUND"
       ? new Error(`Document model not found.`)
       : error;
   }
+}
+
+export async function formatWithPrettierBeforeWrite(
+  outputFile: string,
+  content: string,
+) {
+  const modifiedContent = await prettier.format(content, {
+    parser: "typescript",
+  });
+  return modifiedContent;
 }
