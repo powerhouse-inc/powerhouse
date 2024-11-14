@@ -2,7 +2,7 @@ import { z } from "zod";
 import { DocumentActionHandlers } from "../types";
 import { TextField } from "./text-field";
 import { useCallback } from "react";
-import { makeInitialSchemaDoc, renameSchemaType } from "../utils";
+import { handleModelNameChange } from "../utils/helpers";
 
 export const MetadataFormSchema = z.object({
   name: z.string(),
@@ -22,6 +22,7 @@ type Props = MetadataFormValues & {
 };
 
 export function ModelMetadata(props: Props) {
+  console.log("name", props.name);
   return (
     <div>
       <ModelNameForm {...props} />
@@ -56,30 +57,13 @@ export function ModelNameForm(props: Props) {
       }
       handlers.setModelName(newName);
 
-      const hasExistingSchema = !!globalStateSchema;
-
-      if (!hasExistingSchema) {
-        const initialSchemaDoc = makeInitialSchemaDoc(newName, "global");
-        handlers.setStateSchema(initialSchemaDoc, "global");
-        return;
-      }
-      const newSchema = renameSchemaType(
-        globalStateSchema,
-        name,
+      handleModelNameChange({
+        oldName: name,
         newName,
-        "global",
-      );
-      handlers.setStateSchema(newSchema, "global");
-
-      if (localStateSchema) {
-        const newLocalStateSchema = renameSchemaType(
-          localStateSchema,
-          name,
-          newName,
-          "local",
-        );
-        handlers.setStateSchema(newLocalStateSchema, "local");
-      }
+        globalStateSchema,
+        localStateSchema,
+        setStateSchema: handlers.setStateSchema,
+      });
     },
     [name, globalStateSchema, localStateSchema, handlers],
   );
