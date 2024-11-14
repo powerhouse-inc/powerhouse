@@ -22,7 +22,6 @@ type Props = MetadataFormValues & {
 };
 
 export function ModelMetadata(props: Props) {
-  console.log("name", props.name);
   return (
     <div>
       <ModelNameForm {...props} />
