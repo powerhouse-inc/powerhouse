@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`SingleSelectField Component > should match snapshot 1`] = `
+exports[`SelectField Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
     class="flex flex-col gap-2"
@@ -15,11 +15,11 @@ exports[`SingleSelectField Component > should match snapshot 1`] = `
     <button
       aria-expanded="false"
       aria-invalid="false"
-      aria-label="Single select"
+      aria-label="Select"
       aria-required="false"
-      class="gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground flex w-full min-h-10 h-auto items-center justify-between p-1 min-w-[200px] rounded-md border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 dark:focus:ring-gray-400 dark:focus:ring-offset-gray-900"
-      id=":r0:-single-select"
-      name="single-select"
+      class="gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground flex w-full min-h-10 h-auto items-center justify-between p-1 rounded-md border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:border-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 dark:focus:ring-gray-400 dark:focus:ring-offset-gray-900"
+      id=":r0:-select"
+      name="select"
       role="combobox"
     >
       <div

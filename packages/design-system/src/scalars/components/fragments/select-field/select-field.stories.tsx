@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { MultiSelectField } from "./multi-select-field";
+import { SelectField } from "./select-field";
 import { CircleIcon, HomeIcon, StarIcon } from "lucide-react";
 
-const meta: Meta<typeof MultiSelectField> = {
-  title: "Document Engineering/Fragments/MultiSelectField",
-  component: MultiSelectField,
+const meta: Meta<typeof SelectField> = {
+  title: "Document Engineering/Fragments/SelectField",
+  component: SelectField,
   parameters: {
     layout: "padded",
     controls: {
@@ -216,15 +216,25 @@ const meta: Meta<typeof MultiSelectField> = {
         category: "Styling",
       },
     },
+    multiple: {
+      control: "boolean",
+      description: "Whether multiple options can be selected",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: "Behavior",
+      },
+    },
   },
   args: {
-    name: "multi-select",
+    name: "select-field",
     errors: [],
     warnings: [],
   },
-} satisfies Meta<typeof MultiSelectField>;
+} satisfies Meta<typeof SelectField>;
 
 export default meta;
+
 type Story = StoryObj<typeof meta>;
 
 const defaultOptions = [
@@ -236,83 +246,84 @@ const defaultOptions = [
 export const Default: Story = {
   args: {
     options: defaultOptions,
-    placeholder: "Select options",
   },
 };
 
 export const WithLabel: Story = {
   args: {
-    label: "Select options",
+    label: "Choose from the list",
     options: defaultOptions,
-    placeholder: "Choose from the list",
   },
 };
 
 export const WithLabelAndDescription: Story = {
   args: {
-    label: "Favorite Icons",
-    description: "Choose your favorite icons from the list",
+    label: "Favorite icon",
+    description: "Choose your favorite icon from the list",
     options: defaultOptions,
-    placeholder: "Select icons",
+    placeholder: "Select an icon",
   },
 };
 
 export const Required: Story = {
   args: {
-    label: "Required Field",
-    required: true,
+    label: "Required",
     options: defaultOptions,
     placeholder: "Must select at least one option",
+    required: true,
   },
 };
 
 export const WithDefaultValue: Story = {
   args: {
-    label: "Preset Selection",
-    defaultValue: ["star", "home"],
+    label: "Preset selection",
     options: defaultOptions,
+    defaultValue: ["star"],
   },
 };
 
 export const WithMaxItemsToShow: Story = {
   args: {
-    label: "Limited Display",
+    label: "Limited display",
     description: "Only shows 2 selected items at a time",
-    maxSelectedOptionsToShow: 2,
     options: defaultOptions,
+    multiple: true,
+    maxSelectedOptionsToShow: 2,
   },
 };
 
 export const Disabled: Story = {
   args: {
-    label: "Disabled Field",
+    label: "Disabled",
     disabled: true,
     options: defaultOptions,
-    value: ["home", "star"],
+    value: ["home"],
   },
 };
 
 export const WithError: Story = {
   args: {
-    label: "Error State",
+    label: "Error",
     options: defaultOptions,
     value: ["home"],
+    multiple: true,
     errors: ["Please select at least two options"],
   },
 };
 
 export const WithWarning: Story = {
   args: {
-    label: "Warning State",
+    label: "Warning",
     options: defaultOptions,
     value: ["circle", "star"],
+    multiple: true,
     warnings: ["Some selected options may not be available in the future"],
   },
 };
 
 export const Searchable: Story = {
   args: {
-    label: "Searchable Select",
+    label: "Searchable",
     description: "Type to search through options",
     options: defaultOptions,
     searchable: true,
@@ -321,10 +332,18 @@ export const Searchable: Story = {
 
 export const WithDisabledOption: Story = {
   args: {
-    label: "With Disabled Option",
+    label: "With a disabled option",
     options: [
       ...defaultOptions,
-      { value: "disabled", label: "Disabled Option", disabled: true },
+      { value: "disabled", label: "Disabled option", disabled: true },
     ],
+  },
+};
+
+export const Multiple: Story = {
+  args: {
+    label: "Multi select",
+    options: defaultOptions,
+    multiple: true,
   },
 };

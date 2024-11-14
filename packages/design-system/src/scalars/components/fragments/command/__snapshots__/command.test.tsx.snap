@@ -1,0 +1,18 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Command Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground"
+    cmdk-root=""
+    tabindex="-1"
+  >
+    <label
+      cmdk-label=""
+      for="radix-:r2:"
+      id="radix-:r1:"
+      style="position: absolute; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border-width: 0px;"
+    />
+  </div>
+</DocumentFragment>
+`;

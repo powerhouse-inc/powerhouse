@@ -66,7 +66,7 @@ export interface NumberProps {
 }
 
 export interface SelectProps {
-  options: {
+  options?: {
     icon?: React.ComponentType<{ className?: string }>;
     value: string;
     label: string;

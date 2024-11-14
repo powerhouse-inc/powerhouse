@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Separator Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="shrink-0 bg-border h-[1px] w-full"
+    data-orientation="horizontal"
+    role="none"
+  />
+</DocumentFragment>
+`;
