@@ -11,7 +11,7 @@ In one terminal start Local Reactor to start listening to `ADD_POWT_LINE_ITEM` o
 
 In another terminal start Connect and populate the reactor drive:
 
-- `cd packages/document-model-libs
+- `cd packages/document-model-libs`
 - `pnpm connect`
 - Add remote drive `http://localhost:4001/d/powerhouse`
 - `Create contributor bills on the Powerhouse remove drive (not on "My Local Drive") and add POWT line items
