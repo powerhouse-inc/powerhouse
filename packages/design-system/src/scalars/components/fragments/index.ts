@@ -12,3 +12,4 @@ export * from "./textarea-field";
 export * from "./toggle-field";
 export * from "./tooltip";
 export * from "./with-field-validation";
+export * from "./select-field";
