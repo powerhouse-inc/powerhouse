@@ -1,3 +1,5 @@
+import { currencies } from "../lib/data";
+
 export type ErrorMessage = string;
 
 export type ValidatorResult = ErrorMessage | boolean;
@@ -85,4 +87,29 @@ export interface EnumProps {
   multiple?: boolean;
   searchable?: boolean;
   onChange?: (value: string | string[]) => void;
+}
+
+export type CurrencyCode = (typeof currencies)[number];
+
+export interface Amount {
+  amount: number | string;
+}
+
+export interface AmountCurrency {
+  amount: number;
+  currency: CurrencyCode;
+}
+
+export interface AmountPercentage {
+  amount: number;
+}
+
+export type TypeAmount = "Amount" | "AmountCurrency" | "AmountPercentage";
+
+export type AmountValue = Amount | AmountCurrency | AmountPercentage;
+export interface AmountProps {
+  value: AmountValue;
+  type: TypeAmount;
+  allowedCurrencies?: string[];
+  allowedTokens?: string[];
 }

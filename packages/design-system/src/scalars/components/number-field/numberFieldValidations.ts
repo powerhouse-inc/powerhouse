@@ -2,10 +2,9 @@ import { NumberFieldProps } from "./number-field";
 
 export const validatePositive =
   (props: NumberFieldProps) => (value: unknown) => {
-    const stringValue = String(value);
     return props.allowNegative
       ? true
-      : Number(stringValue) > 0
+      : Number(value) > 0
         ? true
         : "Value must be a positive value";
   };
