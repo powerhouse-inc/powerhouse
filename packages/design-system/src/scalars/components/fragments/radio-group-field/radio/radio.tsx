@@ -49,12 +49,12 @@ export const Radio = React.forwardRef<
             "focus:hover:ring-blue-200",
             "dark:focus:hover:ring-blue-900/40",
             disabled && [
-              "border-gray-600 cursor-not-allowed opacity-50 hover:border-gray-600",
+              "cursor-not-allowed border-gray-600 opacity-50 hover:border-gray-600",
               "dark:border-gray-400 dark:hover:border-gray-400",
             ],
             hasError && [
-              "border-red-700 focus:ring-red-100 hover:border-red-900 focus:hover:ring-red-200",
-              "dark:border-red-400 dark:focus:ring-red-800 dark:hover:border-red-300 dark:focus:hover:ring-red-700",
+              "border-red-700 hover:border-red-900 focus:ring-red-100 focus:hover:ring-red-200",
+              "dark:border-red-400 dark:hover:border-red-300 dark:focus:ring-red-800 dark:focus:hover:ring-red-700",
             ],
             className,
           )}

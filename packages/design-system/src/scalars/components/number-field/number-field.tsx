@@ -91,15 +91,15 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             // Allow the arrows step
             step && "show-arrows",
             // text and background style
-            "text-gray-900 dark:text-gray-50 dark:bg-[#252A34]  dark:border-[#485265]",
+            "text-gray-900 dark:border-[#485265] dark:bg-[#252A34]  dark:text-gray-50",
             //Focus state text and placeholder
-            "focus:text-gray-300 dark:focus:text-gray-700 placeholder:focus:text-gray-300 dark:placeholder:focus:text-gray-700",
+            "focus:text-gray-300 placeholder:focus:text-gray-300 dark:focus:text-gray-700 dark:placeholder:focus:text-gray-700",
             //Focus state ring style
             "focus-visible:ring-[#9DA6B9] focus-visible:ring-offset-1 dark:ring-offset-[#252A34]",
             //Placeholder
-            "placeholder:focus:ml-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700",
+            "placeholder:text-gray-300 placeholder:focus:ml-0.5 dark:placeholder:text-gray-700",
             // Disabled state
-            "disabled:border-gray-300 dark:disabled:border-[#373E4D] disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:text-gray-500 dark:disabled:text-gray-700",
+            "disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:border-gray-300 disabled:text-gray-500 dark:disabled:border-[#373E4D] dark:disabled:text-gray-700",
             className,
           )}
           pattern={isBigInt ? regex.toString() : pattern?.toString()}

@@ -1,8 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { StringField } from "./string-field";
 import { withForm } from "@/scalars/lib/decorators";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  PrebuiltArgTypes,
+  StorybookControlCategory,
+} from "@/scalars/lib/storybook-arg-types";
 
-const meta = {
+const meta: Meta<typeof StringField> = {
   title: "Document Engineering/Simple Components/String Field",
   component: StringField,
   decorators: [withForm],
@@ -11,84 +17,47 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    label: {
-      control: "text",
-      description: "Label text displayed above the input field",
-    },
-    description: {
-      control: "text",
-      description: "Helper text displayed below the input field",
-    },
-    value: {
-      control: "text",
-      description: "Current value of the input field",
-    },
-    required: {
-      control: "boolean",
-      description: "Whether the field is required",
-    },
-    disabled: {
-      control: "boolean",
-      description: "Whether the field is disabled",
-    },
-    placeholder: {
-      control: "text",
-      description: "Placeholder text shown when field is empty",
-    },
+    ...getDefaultArgTypes(),
+    ...PrebuiltArgTypes.placeholder,
+    ...PrebuiltArgTypes.autoComplete,
+    ...PrebuiltArgTypes.spellCheck,
+
     multiline: {
       control: "boolean",
       description: "Whether to render as a multi-line textarea",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
     },
     autoExpand: {
       control: "boolean",
       description:
         "Whether textarea should automatically expand as content grows",
+      if: {
+        arg: "multiline",
+        eq: true,
+      },
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
     },
-    minLength: {
-      control: "number",
-      description: "Minimum number of characters allowed",
-    },
-    maxLength: {
-      control: "number",
-      description: "Maximum number of characters allowed",
-    },
-    pattern: {
-      control: "text",
-      description: "Regular expression pattern to validate input",
-    },
-    trim: {
-      control: "boolean",
-      description: "Whether to trim whitespace from input",
-    },
-    uppercase: {
-      control: "boolean",
-      description: "Whether to transform input to uppercase",
-    },
-    lowercase: {
-      control: "boolean",
-      description: "Whether to transform input to lowercase",
-    },
-    autoComplete: {
-      control: "text",
-      description: "HTML autocomplete attribute value",
-    },
-    spellCheck: {
-      control: "boolean",
-      description: "Whether to enable browser spell checking",
-    },
-    errors: {
-      control: "object",
-      description: "Array of error messages to display",
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning messages to display",
-    },
+    ...PrebuiltArgTypes.trim,
+    ...PrebuiltArgTypes.uppercase,
+    ...PrebuiltArgTypes.lowercase,
+
+    ...getValidationArgTypes(),
+    ...PrebuiltArgTypes.minLength,
+    ...PrebuiltArgTypes.maxLength,
+    ...PrebuiltArgTypes.pattern,
   },
   args: {
     name: "string-field",
   },
-} satisfies Meta<typeof StringField>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;

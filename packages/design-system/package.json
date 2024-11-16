@@ -17,7 +17,8 @@
     "./style.css": {
       "import": "./dist/style.css",
       "require": "./dist/style.css"
-    }
+    },
+    "./scalars": "./dist/scalars/index.js"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

@@ -20,11 +20,11 @@ const Checkbox = React.forwardRef<
       // Base styles
       "peer size-4 shrink-0 rounded",
       // Border & Shadow
-      "border border-input shadow-sm shadow-black/[.04]",
+      "border-input border shadow-sm shadow-black/[.04]",
       // Background & Ring
       "ring-offset-background transition-shadow",
       // Focus styles
-      "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "focus-visible:border-ring focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
       // Disabled state
       "disabled:cursor-not-allowed disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-gray-500",
       // Checked & Indeterminate states
