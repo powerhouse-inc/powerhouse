@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { withFieldValidation } from "./with-field-validation";
-import { Form } from "../form";
+import { Form } from "../../form";
 import { FormGroup } from "../form-group";
 import { TextFieldProps } from "../text-field";
 import { FormLabel } from "../form-label";
@@ -138,10 +138,7 @@ describe("withFieldValidation", () => {
     const submitButton = screen.getByRole("button", { name: "Submit" });
     await userEvent.click(submitButton);
 
-    expect(handleSubmit).toHaveBeenCalledWith(
-      { test: "default" },
-      expect.anything(),
-    );
+    expect(handleSubmit).toHaveBeenCalledWith({ test: "default" });
   });
 
   it("should not submit values if the form has errors", async () => {

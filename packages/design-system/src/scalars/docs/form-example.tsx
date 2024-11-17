@@ -1,6 +1,6 @@
 import { Button } from "@/powerhouse/components/button";
 import { BooleanField, NumberField, StringField } from "../components";
-import { Form, RadioGroupField } from "../components/fragments";
+import { Form, RadioGroupField } from "../components";
 
 const FormExample = () => {
   const onSubmit = async (data: any) => {

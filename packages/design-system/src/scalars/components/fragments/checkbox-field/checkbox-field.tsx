@@ -30,7 +30,7 @@ const CheckboxRaw: React.FC<CheckboxFieldProps> = ({
 
   return (
     <div className={cn("flex flex-col gap-2")}>
-      <div className={cn("flex items-center space-x-2 group", className)}>
+      <div className={cn("group flex items-center space-x-2", className)}>
         <Checkbox
           id={id}
           name={name}

@@ -95,10 +95,10 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
               "m-1",
               "transition duration-200 ease-in-out",
               "hover:-translate-y-0.5 hover:scale-105",
-              "bg-transparent border-gray-200 text-gray-700",
-              "hover:bg-gray-50 hover:border-gray-300",
+              "border-gray-200 bg-transparent text-gray-700",
+              "hover:border-gray-300 hover:bg-gray-50",
               "dark:border-gray-700 dark:text-gray-300",
-              "dark:hover:bg-gray-700 dark:hover:border-gray-600",
+              "dark:hover:border-gray-600 dark:hover:bg-gray-700",
               "rounded-md",
             )}
           >

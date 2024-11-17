@@ -1,5 +1,5 @@
 import { Decorator } from "@storybook/react";
-import { Form } from "../components/fragments";
+import { Form } from "../components";
 
 export const withForm: Decorator = (Story) => {
   const onSubmit = (data: any) => {

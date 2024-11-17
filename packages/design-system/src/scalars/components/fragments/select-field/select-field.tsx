@@ -132,11 +132,11 @@ export const SelectField = React.forwardRef<
               aria-required={required}
               aria-expanded={isPopoverOpen}
               className={cn(
-                "flex w-full min-h-10 h-auto items-center justify-between p-1",
+                "flex h-auto min-h-10 w-full items-center justify-between p-1",
                 "rounded-md border border-gray-200 bg-white",
-                "hover:bg-gray-50 hover:border-gray-300",
+                "hover:border-gray-300 hover:bg-gray-50",
                 "dark:border-gray-700 dark:bg-gray-800",
-                "dark:hover:bg-gray-700 dark:hover:border-gray-600",
+                "dark:hover:border-gray-600 dark:hover:bg-gray-700",
                 "focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1",
                 "dark:focus:ring-gray-400 dark:focus:ring-offset-gray-900",
                 disabled && [

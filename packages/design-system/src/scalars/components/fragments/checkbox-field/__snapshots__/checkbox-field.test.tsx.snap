@@ -9,12 +9,12 @@ exports[`CheckboxField > should match snapshot 1`] = `
       class="flex flex-col gap-2"
     >
       <div
-        class="flex items-center space-x-2 group"
+        class="group flex items-center space-x-2"
       >
         <button
           aria-checked="mixed"
           aria-invalid="false"
-          class="peer size-4 shrink-0 rounded border border-input shadow-sm shadow-black/[.04] ring-offset-background transition-shadow focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-gray-500 data-[state]:border-gray-700 dark:data-[state]:border-gray-400 data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-gray-400 dark:data-[state=indeterminate]:bg-gray-400 data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-gray-900 dark:data-[state=indeterminate]:text-gray-900 data-[invalid=true]:data-[state]:border-red-800 data-[invalid=true]:data-[state=checked]:bg-red-800 data-[invalid=true]:data-[state=indeterminate]:bg-red-800"
+          class="peer size-4 shrink-0 rounded border-input border shadow-sm shadow-black/[.04] ring-offset-background transition-shadow focus-visible:border-ring focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-gray-500 data-[state]:border-gray-700 dark:data-[state]:border-gray-400 data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-gray-400 dark:data-[state=indeterminate]:bg-gray-400 data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-gray-900 dark:data-[state=indeterminate]:text-gray-900 data-[invalid=true]:data-[state]:border-red-800 data-[invalid=true]:data-[state=checked]:bg-red-800 data-[invalid=true]:data-[state=indeterminate]:bg-red-800"
           data-invalid="false"
           data-state="indeterminate"
           id=":r0:"

@@ -24,13 +24,13 @@ exports[`UrlField > should match snapshot 1`] = `
         class="flex items-center"
       >
         <input
-          class="flex h-10 rounded-md text-sm text-gray-900 border border-gray-300 bg-background px-3 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 w-auto rounded-r-none border-r-0 focus:z-10"
+          class="flex h-10 rounded-md text-sm text-gray-900 bg-background border border-gray-300 px-3 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 w-auto rounded-r-none border-r-0 focus:z-10"
           readonly=""
           style="width: 64px;"
           value="http://"
         />
         <input
-          class="flex h-10 w-full rounded-md text-sm text-gray-900 border border-gray-300 bg-background px-3 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 focus:z-10 rounded-l-none"
+          class="flex h-10 w-full rounded-md text-sm text-gray-900 bg-background border border-gray-300 px-3 py-2 placeholder:text-gray-600 ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 focus:z-10 rounded-l-none"
           id=":r0:"
           name="test-url"
           placeholder="https://example.com"
@@ -40,7 +40,7 @@ exports[`UrlField > should match snapshot 1`] = `
         />
       </div>
       <p
-        class="text-gray-600 font-inter text-sm font-normal leading-5"
+        class="font-inter text-sm font-normal leading-5 text-gray-600"
       >
         Enter your website URL
       </p>

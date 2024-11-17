@@ -1,6 +1,5 @@
 export * from "./character-counter";
 export * from "./checkbox-field";
-export * from "./form";
 export * from "./form-description";
 export * from "./form-group";
 export * from "./form-label";

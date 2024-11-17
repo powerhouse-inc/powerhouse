@@ -16,7 +16,7 @@ const FormDescription: React.FC<FormDescriptionProps> = ({
   return (
     <Component
       className={cn(
-        "text-gray-600 font-inter text-sm font-normal leading-5",
+        "font-inter text-sm font-normal leading-5 text-gray-600",
         className,
       )}
     >

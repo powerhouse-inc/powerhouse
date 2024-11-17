@@ -64,7 +64,7 @@ export const Content: React.FC<ContentProps> = ({
                 <div className="flex items-center">
                   <div
                     className={cn(
-                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                      "mr-2 flex size-4 items-center justify-center rounded-sm border",
                       "border-gray-900 dark:border-gray-100",
                       selectedValues.length ===
                         options.filter((opt) => !opt.disabled).length
@@ -96,13 +96,13 @@ export const Content: React.FC<ContentProps> = ({
                 className={cn(
                   "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700",
                   option.disabled &&
-                    "opacity-50 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent",
+                    "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
                 )}
               >
                 {multiple ? (
                   <div
                     className={cn(
-                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                      "mr-2 flex size-4 items-center justify-center rounded-sm border",
                       "border-gray-900 dark:border-gray-100",
                       isSelected
                         ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
@@ -115,7 +115,7 @@ export const Content: React.FC<ContentProps> = ({
                 ) : (
                   <div
                     className={cn(
-                      "mr-2 flex h-4 w-4 items-center justify-center rounded-full border",
+                      "mr-2 flex size-4 items-center justify-center rounded-full border",
                       isSelected
                         ? "border-gray-900 dark:border-gray-100"
                         : "border-gray-400 dark:border-gray-600",

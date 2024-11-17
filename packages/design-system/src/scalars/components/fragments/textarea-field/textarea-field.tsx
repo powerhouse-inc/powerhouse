@@ -115,11 +115,11 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             className={cn(
               // Base styles
               "flex w-full rounded-lg text-base leading-normal",
-              "font-normal font-inter",
+              "font-inter font-normal",
 
               // Colors & Background
-              "text-gray-900 bg-white",
-              "dark:text-gray-100 dark:bg-gray-900",
+              "bg-white text-gray-900",
+              "dark:bg-gray-900 dark:text-gray-100",
 
               // Border styles - Default state
               "border border-gray-300",
@@ -134,7 +134,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Focus state
               "focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2",
-              "dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0 dark:focus:border-gray-700 dark:focus:bg-gray-900",
+              "dark:focus:border-gray-700 dark:focus:bg-gray-900 dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0",
 
               // Hover state
               "hover:border-gray-400",
@@ -142,12 +142,12 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Disabled state
               "disabled:cursor-not-allowed",
-              "disabled:bg-gray-50 disabled:border-gray-200 disabled:text-gray-500",
-              "dark:disabled:bg-gray-900/50 dark:disabled:border-gray-800 dark:disabled:text-gray-600",
+              "disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-500",
+              "dark:disabled:border-gray-800 dark:disabled:bg-gray-900/50 dark:disabled:text-gray-600",
 
               // Warning states
               hasWarning && [
-                "border-orange-500 bg-orange-50/50",
+                "bg-orange-50/50 border-orange-500",
                 "dark:border-orange-400 dark:bg-orange-900/5",
                 "hover:border-orange-600",
                 "dark:hover:border-orange-300",
@@ -158,7 +158,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Error states
               hasError && [
-                "border-red-500 bg-red-50/50",
+                "bg-red-50/50 border-red-500",
                 "dark:border-red-400 dark:bg-red-900/5",
                 "hover:border-red-600",
                 "dark:hover:border-red-300",

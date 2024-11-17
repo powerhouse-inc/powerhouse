@@ -1,5 +1,5 @@
 import { render, RenderResult } from "@testing-library/react";
-import { Form } from "../components/fragments";
+import { Form } from "../components";
 
 export const renderWithForm = (
   children: React.ReactNode,
