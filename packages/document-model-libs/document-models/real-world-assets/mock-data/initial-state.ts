@@ -130,7 +130,7 @@ export const initialState: RealWorldAssetsState = {
     {
       id: "lHExR6QgOChLhp1hLpMgwp6DSb8=",
       type: "AssetPurchase",
-      entryTime: "2021-03-10T08:00:00.000Z",
+      entryTime: "2021-03-10T08:00:00.123Z",
       cashBalanceChange: -1,
       unitPrice: 1,
       serviceProviderFeeTypeId: null,

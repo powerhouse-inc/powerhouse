@@ -1,8 +1,13 @@
 import { formatInTimeZone } from "date-fns-tz/formatInTimeZone";
 
-export function formatDateForDisplay(date: Date | string, displayTime = true) {
+export function formatDateForDisplay(
+  date: Date | string,
+  displayTime = true,
+  isUTC = false,
+) {
   const formatString = displayTime ? "yyyy/MM/dd, HH:mm:ss zzz" : "yyyy/MM/dd";
-  return formatInTimeZone(date, getTimeZone(), formatString);
+  const timeZone = isUTC ? "UTC" : getTimeZone();
+  return formatInTimeZone(date, timeZone, formatString);
 }
 
 export function isISODate(str: string) {
@@ -19,7 +24,7 @@ export function isoDateStringToDateInput(
   isoDateString: string,
   withTime = false,
 ) {
-  const format = withTime ? "yyyy-MM-dd'T'HH:mm:ss.SSS" : "yyyy-MM-dd";
+  const format = withTime ? "yyyy-MM-dd'T'HH:mm:ss" : "yyyy-MM-dd";
   const timeZone = getTimeZone();
   return formatInTimeZone(isoDateString, timeZone, format);
 }
