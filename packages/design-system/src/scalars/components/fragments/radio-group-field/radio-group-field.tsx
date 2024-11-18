@@ -2,23 +2,18 @@ import React, { useId } from "react";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
+import {
+  FieldCommonProps,
+  ErrorHandling,
+  RadioGroupProps,
+} from "@/scalars/components/types";
 import { Radio } from "./radio";
 import { RadioGroup } from "./radio-group";
 
-export interface RadioOption {
-  label: string;
-  value: string;
-  description?: string;
-  disabled?: boolean;
-}
-
 export interface RadioGroupFieldProps
   extends FieldCommonProps<string>,
-    ErrorHandling {
-  options: RadioOption[];
-  onChange?: (value: string) => void;
-}
+    ErrorHandling,
+    RadioGroupProps {}
 
 const RadioGroupFieldRaw: React.FC<RadioGroupFieldProps> = ({
   autoFocus = false,
