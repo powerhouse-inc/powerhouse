@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { UrlField } from "./url-field";
 import { withForm } from "@/scalars/lib/decorators";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  PrebuiltArgTypes,
+  StorybookControlCategory,
+} from "@/scalars/lib/storybook-arg-types";
 
 const meta: Meta<typeof UrlField> = {
   title: "Document Engineering/Simple Components/URL Field",
@@ -11,45 +17,20 @@ const meta: Meta<typeof UrlField> = {
   },
   tags: ["autodocs"],
   argTypes: {
-    label: {
-      control: "text",
-      description: "Label text displayed above the input field",
-    },
-    description: {
-      control: "text",
-      description: "Helper text displayed below the input field",
-    },
-    value: {
-      control: "text",
-      description: "Current value of the input field",
-    },
-    required: {
-      control: "boolean",
-      description: "Whether the field is required",
-    },
-    disabled: {
-      control: "boolean",
-      description: "Whether the field is disabled",
-    },
-    placeholder: {
-      control: "text",
-      description: "Placeholder text shown when field is empty",
-    },
+    ...getDefaultArgTypes(),
+    ...PrebuiltArgTypes.placeholder,
+
     allowedProtocols: {
       control: "object",
       description: "Allowed protocols for the URL",
       table: {
+        type: { summary: "Array<string>" },
         defaultValue: { summary: "['http', 'https']" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    errors: {
-      control: "object",
-      description: "Array of error messages to display",
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning messages to display",
-    },
+
+    ...getValidationArgTypes(),
   },
   args: {
     name: "url-field",
