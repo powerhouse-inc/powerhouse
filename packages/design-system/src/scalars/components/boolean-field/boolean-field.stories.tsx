@@ -1,65 +1,37 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { BooleanField } from "./boolean-field";
 import { withForm } from "@/scalars/lib/decorators";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  StorybookControlCategory,
+} from "@/scalars/lib/storybook-arg-types";
 
 const meta = {
   title: "Document Engineering/Simple Components/Boolean Field",
   component: BooleanField,
   decorators: [withForm],
   argTypes: {
+    ...getDefaultArgTypes({
+      valueControlType: "boolean",
+      valueType: "boolean",
+    }),
+
     isToggle: {
       control: "boolean",
-      description: "Whether the field is a toggle",
-      table: { defaultValue: { summary: "false" } },
+      description: "Whether the field is a toggle or checkbox",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
     },
-    id: {
-      control: "text",
-      description: "Unique identifier for the field",
-    },
-    name: {
-      control: "text",
-      description: "Name attribute for the field",
-    },
-    label: {
-      control: "text",
-      description: "Label for the field",
-    },
-    description: {
-      control: "text",
-      description: "Description text below the label",
-    },
-    value: {
-      control: "boolean",
-      description: "Current value of the field",
-    },
-    defaultValue: {
-      control: "boolean",
-      description: "Default value for the field",
-    },
-    required: {
-      control: "boolean",
-      description: "Whether the field is required",
-      table: { defaultValue: { summary: "false" } },
-    },
-    disabled: {
-      control: "boolean",
-      description: "Whether the field is disabled",
-      table: { defaultValue: { summary: "false" } },
-    },
-    errors: {
-      control: "object",
-      description: "Array of error messages to display",
-      table: { defaultValue: { summary: "[]" } },
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning messages to display",
-      table: { defaultValue: { summary: "[]" } },
-    },
-    className: {
-      control: "text",
-      description: "Additional CSS class names",
-    },
+
+    ...getValidationArgTypes({
+      enabledArgTypes: {
+        customValidator: false,
+      },
+    }),
   },
   args: {
     name: "boolean-field",

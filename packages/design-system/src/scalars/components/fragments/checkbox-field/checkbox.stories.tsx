@@ -1,6 +1,10 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { CheckboxField } from "./checkbox-field";
 import { withForm } from "@/scalars/lib/decorators";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+} from "@/scalars/lib/storybook-arg-types";
 
 const meta: Meta<typeof CheckboxField> = {
   component: CheckboxField,
@@ -8,45 +12,15 @@ const meta: Meta<typeof CheckboxField> = {
   tags: ["autodocs"],
   decorators: [withForm],
   argTypes: {
-    value: {
-      control: "boolean",
-      description: "Whether the checkbox is checked",
-    },
-    disabled: {
-      control: "boolean",
-      description: "Whether the checkbox is disabled",
-    },
-    onChange: {
-      action: "checked changed",
-      description: "Callback when the checked state changes",
-    },
-    className: {
-      control: "text",
-      description: "Additional CSS class names",
-    },
-    label: {
-      control: "text",
-      description: "Label for the checkbox",
-    },
-    required: {
-      control: "boolean",
-      description: "Whether the checkbox is required",
-      table: {
-        defaultValue: { summary: "false" },
+    ...getDefaultArgTypes({
+      valueControlType: "boolean",
+      valueType: "boolean",
+    }),
+    ...getValidationArgTypes({
+      enabledArgTypes: {
+        customValidator: false,
       },
-    },
-    description: {
-      control: "text",
-      description: "Additional description text below the label",
-    },
-    errors: {
-      control: "object",
-      description: "Array of error messages to display",
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning messages to display",
-    },
+    }),
   },
   args: {
     errors: [],

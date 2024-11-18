@@ -2,6 +2,11 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { TextField } from "./text-field";
 import { useState } from "react";
 import { withForm } from "@/scalars/lib/decorators";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  PrebuiltArgTypes,
+} from "@/scalars/lib/storybook-arg-types";
 
 const meta = {
   title: "Document Engineering/Fragments/TextField",
@@ -12,58 +17,19 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    name: {
-      control: "text",
-      description: "Name attribute for the input field",
-    },
-    label: {
-      control: "text",
-      description: "Label text displayed above the input field",
-    },
-    description: {
-      control: "text",
-      description: "Helper text displayed below the input field",
-    },
-    value: {
-      control: "text",
-      description: "Controlled value of the input field",
-    },
-    required: {
-      control: "boolean",
-      description: "Whether the field is required",
-    },
-    disabled: {
-      control: "boolean",
-      description: "Whether the input field is disabled",
-    },
-    placeholder: {
-      control: "text",
-      description: "Placeholder text shown when field is empty",
-    },
-    minLength: {
-      control: "number",
-      description: "Minimum number of characters allowed",
-    },
-    maxLength: {
-      control: "number",
-      description: "Maximum number of characters allowed",
-    },
-    autoComplete: {
-      control: "boolean",
-      description: "AutoComplete attribute for the input field",
-    },
-    spellCheck: {
-      control: "boolean",
-      description: "SpellCheck attribute for the input field",
-    },
-    errors: {
-      control: "object",
-      description: "Array of error messages to display below the field",
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning messages to display below the field",
-    },
+    ...getDefaultArgTypes(),
+    ...PrebuiltArgTypes.placeholder,
+    ...PrebuiltArgTypes.autoComplete,
+    ...PrebuiltArgTypes.spellCheck,
+
+    ...PrebuiltArgTypes.trim,
+    ...PrebuiltArgTypes.uppercase,
+    ...PrebuiltArgTypes.lowercase,
+
+    ...getValidationArgTypes(),
+    ...PrebuiltArgTypes.minLength,
+    ...PrebuiltArgTypes.maxLength,
+    ...PrebuiltArgTypes.pattern,
   },
   args: {
     errors: [],
