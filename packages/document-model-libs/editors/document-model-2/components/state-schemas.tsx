@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 import { DocumentActionHandlers } from "../types";
 import { useState } from "react";
 import { useSchemaContext } from "../context/schema-context";
-import { specialDocIds, typeDefsDoc } from "../constants";
+import { typeDefsDoc } from "../constants";
 import { Button } from "./button";
 
 type Props = {
@@ -30,7 +30,7 @@ function StateEditor({
   handlers,
   scope,
 }: StateEditorProps) {
-  const { sharedSchema } = useSchemaContext();
+  const sharedSchema = useSchemaContext();
   const [showStandardLib, setShowStandardLib] = useState(false);
 
   return (
@@ -62,14 +62,12 @@ function StateEditor({
         {showStandardLib && (
           <GraphqlEditor
             doc={typeDefsDoc}
-            id={specialDocIds.standardLib}
             readonly
             updateDocumentInModel={() => {}}
           />
         )}
         <GraphqlEditor
           doc={stateSchema}
-          id={specialDocIds[scope]}
           updateDocumentInModel={(newDoc) =>
             handlers.setStateSchema(newDoc, scope)
           }
