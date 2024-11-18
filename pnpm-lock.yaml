@@ -456,6 +456,9 @@ importers:
       tailwind-merge:
         specifier: ^2.5.2
         version: 2.5.3
+      tailwind-scrollbar:
+        specifier: ^3.1.0
+        version: 3.1.0(tailwindcss@3.4.13)
       tailwindcss:
         specifier: ^3.4.12
         version: 3.4.13(ts-node@10.9.1)
@@ -580,9 +583,6 @@ importers:
       storybook-addon-pseudo-states:
         specifier: ^4.0.2
         version: 4.0.2(react-dom@18.3.1)(react@18.3.1)(storybook@8.3.5)
-      tailwind-scrollbar:
-        specifier: ^3.1.0
-        version: 3.1.0(tailwindcss@3.4.13)
       tsx:
         specifier: ^4.19.1
         version: 4.19.1
@@ -26159,7 +26159,7 @@ packages:
       tailwindcss: 3.x
     dependencies:
       tailwindcss: 3.4.13(ts-node@10.9.1)
-    dev: true
+    dev: false
 
   /tailwindcss-animate@1.0.7(tailwindcss@3.4.13):
     resolution: {integrity: sha512-bl6mpH3T7I3UFxuvDEXLxy/VuFxBk5bbzplh7tXI68mwMokNYd1t9qPBHlnyTwfa4JGC4zP516I1hYYtQ/vspA==}
