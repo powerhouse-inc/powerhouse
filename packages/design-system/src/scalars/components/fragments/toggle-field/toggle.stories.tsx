@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ToggleField } from "./toggle-field";
 import { withForm } from "@/scalars/lib/decorators";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+} from "@/scalars/lib/storybook-arg-types";
 
 const meta: Meta<typeof ToggleField> = {
   title: "Document Engineering/Fragments/Toggle Field",
@@ -8,57 +12,19 @@ const meta: Meta<typeof ToggleField> = {
   component: ToggleField,
   decorators: [withForm],
   argTypes: {
-    value: {
-      control: "boolean",
-      description: "Indicates if the toggle is checked",
-    },
-    defaultValue: {
-      control: "boolean",
-      description: "Default value for the toggle",
-    },
-    disabled: {
-      control: "boolean",
-      description: "Indicates if the toggle is disabled",
-      table: { defaultValue: { summary: "false" } },
-    },
-    label: {
-      control: "text",
-      description: "Label for the toggle",
-    },
-    description: {
-      control: "text",
-      description: "Description for the toggle",
-    },
-    errors: {
-      control: "object",
-      description: "Array of error objects to display",
-      table: { defaultValue: { summary: "[]" } },
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning objects to display",
-      table: { defaultValue: { summary: "[]" } },
-    },
-    required: {
-      control: "boolean",
-      description: "Indicates if the toggle is required",
-      table: { defaultValue: { summary: "false" } },
-    },
-    className: {
-      control: "text",
-      description: "Additional CSS classes for styling",
-    },
-    onChange: {
-      action: "checked changed",
-      description: "Callback when the checked state changes",
-      table: {
-        type: { summary: "(checked: boolean) => void" },
+    ...getDefaultArgTypes({
+      enabledArgTypes: {
+        value: true,
+        defaultValue: true,
       },
-    },
-    name: {
-      control: "text",
-      description: "Name attribute for the toggle input",
-    },
+      valueControlType: "boolean",
+      valueType: "true",
+    }),
+    ...getValidationArgTypes({
+      enabledArgTypes: {
+        customValidator: false,
+      },
+    }),
   },
   args: {
     name: "toggle",
