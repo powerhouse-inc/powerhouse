@@ -188,6 +188,26 @@ export const PrebuiltArgTypes = {
       },
     },
   },
+  minValue: {
+    minValue: {
+      control: "number",
+      description: "Minimum number  allowed",
+      table: {
+        type: { summary: "number" },
+        category: StorybookControlCategory.VALIDATION,
+      },
+    },
+  },
+  maxValue: {
+    maxValue: {
+      control: "number",
+      description: "Maximum number  allowed",
+      table: {
+        type: { summary: "number" },
+        category: StorybookControlCategory.VALIDATION,
+      },
+    },
+  },
   pattern: {
     pattern: {
       control: "text",
@@ -230,6 +250,47 @@ export const PrebuiltArgTypes = {
         type: { summary: "boolean" },
         defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+  },
+  allowNegative: {
+    allowNegative: {
+      control: "boolean",
+      description: "Allows the input field to accept negative numbers",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.VALIDATION,
+      },
+    },
+  },
+  precision: {
+    precision: {
+      control: "number",
+      description: "Number of decimal places allowedd",
+      table: {
+        type: { summary: "number" },
+        category: StorybookControlCategory.VALIDATION,
+      },
+    },
+  },
+  trailingZeros: {
+    trailingZeros: {
+      control: "boolean",
+      description:
+        "When precision is set, for example to 2, determines if the the trailing zeros should be preserved ( for example: 25.00,7.50, etc.) or not ( for example: 25, 7.5).",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.VALIDATION,
+      },
+    },
+  },
+  decimalRequired: {
+    decimalRequired: {
+      control: "boolean",
+      description: "Whether a decimal point is required.",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.VALIDATION,
       },
     },
   },
