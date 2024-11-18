@@ -13,12 +13,8 @@ const meta: Meta<typeof ToggleField> = {
   decorators: [withForm],
   argTypes: {
     ...getDefaultArgTypes({
-      enabledArgTypes: {
-        value: true,
-        defaultValue: true,
-      },
       valueControlType: "boolean",
-      valueType: "true",
+      valueType: "boolean",
     }),
     ...getValidationArgTypes({
       enabledArgTypes: {
