@@ -96,7 +96,6 @@ describe("TextareaField Component", () => {
       expect(textarea).toHaveClass(
         "min-h-[120px]",
         "resize-y",
-        "scrollbar",
         "scrollbar-thin",
         "scrollbar-thumb-gray-300",
         "scrollbar-track-transparent",

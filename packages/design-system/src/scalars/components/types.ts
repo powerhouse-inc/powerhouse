@@ -68,6 +68,16 @@ export interface NumberProps {
   isBigInt?: boolean;
 }
 
+export interface RadioGroupProps {
+  options?: {
+    value: string;
+    label: string;
+    description?: string;
+    disabled?: boolean;
+  }[];
+  onChange?: (value: string) => void;
+}
+
 export interface SelectProps {
   options?: {
     icon?: React.ComponentType<{ className?: string }>;
@@ -76,18 +86,34 @@ export interface SelectProps {
     disabled?: boolean;
   }[];
   placeholder?: string;
+  maxSelectedOptionsToShow?: number;
+  multiple?: boolean;
   searchable?: boolean;
   asModal?: boolean;
   asChild?: boolean;
-}
-
-export interface EnumProps {
-  optionLabels: Record<string, string>;
-  disabledOptions?: string[];
-  multiple?: boolean;
-  searchable?: boolean;
   onChange?: (value: string | string[]) => void;
 }
+
+export interface EnumBaseProps {
+  optionLabels?: Record<string, string>;
+  disabledOptions?: string[];
+}
+
+export type EnumProps =
+  | (EnumBaseProps & {
+      variant: "RadioGroup";
+      onChange?: RadioGroupProps["onChange"];
+    })
+  | (EnumBaseProps & {
+      variant: "Select";
+      placeholder?: SelectProps["placeholder"];
+      maxSelectedOptionsToShow?: SelectProps["maxSelectedOptionsToShow"];
+      multiple?: SelectProps["multiple"];
+      searchable?: SelectProps["searchable"];
+      asModal?: SelectProps["asModal"];
+      asChild?: SelectProps["asChild"];
+      onChange?: SelectProps["onChange"];
+    });
 
 export type CurrencyCode = (typeof currencies)[number];
 

@@ -11,31 +11,26 @@ import { FormDescription } from "@/scalars/components/fragments/form-description
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { cn } from "@/scalars/lib/utils";
 import {
-  ErrorHandling,
   FieldCommonProps,
+  ErrorHandling,
   SelectProps,
 } from "@/scalars/components/types";
 import { useSelectField } from "./use-select-field";
 import { SelectedContent } from "./selected-content";
 import { Content } from "./content";
 
-type SelectBaseProps = Omit<
+type SelectFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
-  | keyof ErrorHandling
   | keyof FieldCommonProps<string | string[]>
+  | keyof ErrorHandling
   | keyof SelectProps
-  | "onChange"
 >;
 
 export interface SelectFieldProps
-  extends SelectBaseProps,
-    ErrorHandling,
+  extends SelectFieldBaseProps,
     FieldCommonProps<string | string[]>,
-    SelectProps {
-  multiple?: boolean;
-  maxSelectedOptionsToShow?: number;
-  onChange?: (value: string | string[]) => void;
-}
+    ErrorHandling,
+    SelectProps {}
 
 export const SelectField = React.forwardRef<
   HTMLButtonElement,

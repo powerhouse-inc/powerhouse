@@ -8,21 +8,21 @@ import { withFieldValidation } from "@/scalars/components/fragments/with-field-v
 import { applyTransformers } from "@/scalars/lib/transformers";
 import { cn } from "@/scalars/lib/utils";
 import {
-  ErrorHandling,
   FieldCommonProps,
+  ErrorHandling,
   TextProps,
 } from "@/scalars/components/types";
 
-type TextareaBaseProps = Omit<
+type TextareaFieldBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
-  keyof FieldCommonProps<string> | keyof TextProps | keyof ErrorHandling
+  keyof FieldCommonProps<string> | keyof ErrorHandling | keyof TextProps
 >;
 
 export interface TextareaProps
-  extends TextareaBaseProps,
+  extends TextareaFieldBaseProps,
     FieldCommonProps<string>,
-    TextProps,
-    ErrorHandling {
+    ErrorHandling,
+    TextProps {
   autoExpand?: boolean;
 }
 
@@ -115,7 +115,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             className={cn(
               // Base styles
               "flex w-full rounded-lg text-base leading-normal",
-              "font-inter font-normal",
+              "font-sans font-normal",
 
               // Colors & Background
               "bg-white text-gray-900",
@@ -147,7 +147,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Warning states
               hasWarning && [
-                "bg-orange-50/50 border-orange-500",
+                "border-orange-500 bg-orange-50/50",
                 "dark:border-orange-400 dark:bg-orange-900/5",
                 "hover:border-orange-600",
                 "dark:hover:border-orange-300",
@@ -158,7 +158,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Error states
               hasError && [
-                "bg-red-50/50 border-red-500",
+                "border-red-500 bg-red-50/50",
                 "dark:border-red-400 dark:bg-red-900/5",
                 "hover:border-red-600",
                 "dark:hover:border-red-300",
@@ -172,8 +172,8 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
                 ? "resize-none overflow-hidden"
                 : [
                     "min-h-[120px] resize-y",
-                    "scrollbar scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent",
-                    "dark:scrollbar-thumb-gray-600",
+                    "scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent",
+                    "dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-900",
                   ],
 
               className,

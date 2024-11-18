@@ -2,6 +2,7 @@ import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
 import defaultTheme from "tailwindcss/defaultTheme";
 import plugin from "tailwindcss/plugin";
+import scrollbar from "tailwind-scrollbar";
 
 const theme = {
   fontFamily: {
@@ -132,6 +133,7 @@ const theme = {
 
 const plugins = [
   animate,
+  scrollbar({ nocompatible: true }),
   plugin(function ({ addVariant }) {
     addVariant("collapsed", ":merge(.group).collapsed &");
     addVariant("collapsing", ":merge(.group).collapsing &");
