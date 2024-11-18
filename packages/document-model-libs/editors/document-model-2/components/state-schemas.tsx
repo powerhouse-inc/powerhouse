@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useSchemaContext } from "../context/schema-context";
 import { typeDefsDoc } from "../constants";
 import { Button } from "./button";
+import { ensureValidStateSchemaName } from "../utils/linting";
 
 type Props = {
   modelName: string;
@@ -18,6 +19,7 @@ type Props = {
 };
 
 type StateEditorProps = {
+  modelName: string;
   stateSchema: string;
   initialValue: string;
   handlers: DocumentActionHandlers;
@@ -25,6 +27,7 @@ type StateEditorProps = {
 };
 
 function StateEditor({
+  modelName,
   stateSchema,
   initialValue,
   handlers,
@@ -70,6 +73,9 @@ function StateEditor({
           doc={stateSchema}
           updateDocumentInModel={(newDoc) =>
             handlers.setStateSchema(newDoc, scope)
+          }
+          customLinter={(doc) =>
+            ensureValidStateSchemaName(doc, modelName, scope)
           }
         />
       </div>
@@ -135,6 +141,7 @@ export function StateSchemas(props: Props) {
 
       <TabsContent value="global" tabIndex={-1}>
         <StateEditor
+          modelName={modelName}
           stateSchema={globalStateSchema}
           initialValue={globalStateInitialValue}
           handlers={handlers}
@@ -158,6 +165,7 @@ export function StateSchemas(props: Props) {
           </div>
         ) : (
           <StateEditor
+            modelName={modelName}
             stateSchema={localStateSchema}
             initialValue={localStateInitialValue}
             handlers={handlers}

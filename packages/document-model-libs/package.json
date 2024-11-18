@@ -73,7 +73,7 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "dev:watch": "vite build --watch",
-    "dev:watch:yalc": "nodemon --watch dist --exec \"yalc push --no-scripts\" --delay 1000ms"
+    "yalc-watch": "nodemon --watch dist --exec \"yalc push --no-scripts\" --delay 1000ms"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.18.3",

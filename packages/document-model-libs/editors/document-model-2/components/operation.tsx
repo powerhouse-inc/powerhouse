@@ -4,6 +4,7 @@ import { OperationDescriptionForm } from "./operation-description-form";
 import { OperationErrors } from "./operation-errors";
 import { OperationForm } from "./operation-form";
 import { DocumentActionHandlers } from "../types";
+import { ensureValidOperationSchemaInputName } from "../utils/linting";
 
 export type WrappedHandlers = DocumentActionHandlers & {
   addOperationAndInitialSchema: (
@@ -45,9 +46,13 @@ export function Operation(props: Props) {
       <div className="relative top-8">
         <GraphqlEditor
           doc={operation.schema ?? ""}
-          id={operation.id}
           updateDocumentInModel={(newDoc) =>
             wrappedHandlers.updateOperationSchema(operation.id, newDoc)
+          }
+          customLinter={(doc) =>
+            operation.name
+              ? ensureValidOperationSchemaInputName(doc, operation.name)
+              : []
           }
         />
       </div>

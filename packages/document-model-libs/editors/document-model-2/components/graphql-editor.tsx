@@ -41,16 +41,10 @@ type Props = {
   doc: string;
   readonly?: boolean;
   updateDocumentInModel: (newDoc: string) => void;
+  customLinter?: (doc: string) => Diagnostic[];
 };
 
 function convertGraphQLErrorToDiagnostic(error: GraphQLError): Diagnostic {
-  const pos = error.locations?.[0]
-    ? {
-        line: error.locations[0].line - 1,
-        column: error.locations[0].column - 1,
-      }
-    : { line: 0, column: 0 };
-
   return {
     from: error.locations?.[0] ? (error.positions?.[0] ?? 0) : 0,
     to: error.locations?.[0] ? (error.positions?.[0] ?? 0) + 1 : 1,
@@ -60,7 +54,7 @@ function convertGraphQLErrorToDiagnostic(error: GraphQLError): Diagnostic {
 }
 
 export function GraphqlEditor(props: Props) {
-  const { doc, readonly = false, updateDocumentInModel } = props;
+  const { doc, readonly = false, updateDocumentInModel, customLinter } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const graphqlCompartment = useRef(new Compartment());
@@ -128,38 +122,56 @@ export function GraphqlEditor(props: Props) {
             keymap.of([indentWithTab]),
             linter((view) => {
               const doc = view.state.doc.toString();
-              if (!isDocumentString(doc)) return [];
-              try {
-                const newDocNode = parse(doc);
+              let diagnostics: Diagnostic[] = [];
 
-                // Get the names of types being defined in the current document
-                const currentTypeNames = new Set(
-                  newDocNode.definitions
-                    .filter((def) => "name" in def && def.name)
-                    .map(
-                      (def) => (def as { name: { value: string } }).name.value,
-                    ),
-                );
-
-                // Create a filtered schema excluding the types we're currently editing
-                const filteredSchema = filterSchema({
-                  schema: sharedSchema,
-                  typeFilter: (typeName) => !currentTypeNames.has(typeName),
-                });
-
-                // Validate against the filtered schema
-                const errors = validateSDL(newDocNode, filteredSchema).map(
-                  (error) => locatedError(error, newDocNode),
-                );
-
-                const diagnostics = errors.map(convertGraphQLErrorToDiagnostic);
-                return diagnostics;
-              } catch (error) {
-                if (error instanceof GraphQLError) {
-                  return [convertGraphQLErrorToDiagnostic(error)];
-                }
-                return [];
+              if (customLinter) {
+                diagnostics = diagnostics.concat(customLinter(doc));
               }
+
+              if (isDocumentString(doc)) {
+                try {
+                  const newDocNode = parse(doc);
+
+                  const currentTypeNames = new Set(
+                    newDocNode.definitions
+                      .filter((def) => "name" in def && def.name)
+                      .map(
+                        (def) =>
+                          (def as { name: { value: string } }).name.value,
+                      ),
+                  );
+
+                  const filteredSchema = filterSchema({
+                    schema: sharedSchema,
+                    typeFilter: (typeName) => !currentTypeNames.has(typeName),
+                  });
+
+                  const errors = validateSDL(newDocNode, filteredSchema)
+                    .map((error) => locatedError(error, newDocNode))
+                    .filter(
+                      (error, index, self) =>
+                        index ===
+                        self.findIndex(
+                          (e) =>
+                            e.message === error.message &&
+                            e.locations?.[0]?.line ===
+                              error.locations?.[0]?.line &&
+                            e.locations?.[0]?.column ===
+                              error.locations?.[0]?.column,
+                        ),
+                    );
+
+                  diagnostics = diagnostics.concat(
+                    errors.map(convertGraphQLErrorToDiagnostic),
+                  );
+                } catch (error) {
+                  if (error instanceof GraphQLError) {
+                    diagnostics.push(convertGraphQLErrorToDiagnostic(error));
+                  }
+                }
+              }
+
+              return diagnostics;
             }),
           ],
         }),
