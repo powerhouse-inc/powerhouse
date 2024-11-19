@@ -91,6 +91,9 @@ const theme = {
     "orange-700": "hsl(var(--color-orange-700) / <alpha-value>)",
     "orange-800": "hsl(var(--color-orange-800) / <alpha-value>)",
     "orange-900": "hsl(var(--color-orange-900) / <alpha-value>)",
+    "charcoal-300": "hsl(var(--color-charcoal-300) / <alpha-value>)",
+    "charcoal-700": "hsl(var(--color-charcoal-700) / <alpha-value>)",
+    "charcoal-900": "hsl(var(--color-charcoal-900) / <alpha-value>)",
   },
   boxShadow: {
     ...defaultTheme.boxShadow,

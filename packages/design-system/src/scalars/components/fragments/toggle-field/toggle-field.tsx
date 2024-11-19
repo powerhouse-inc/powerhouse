@@ -49,6 +49,7 @@ const ToggleRaw: React.FC<ToggleFieldProps> = ({
             disabled={disabled}
             required={required}
             description={description}
+            data-testid="label-testid"
             id={`${id}-label`}
           >
             {label}

@@ -48,6 +48,7 @@ const CheckboxRaw: React.FC<CheckboxFieldProps> = ({
           hasError={hasError}
           description={description}
           className={cn(!disabled && "group-hover:cursor-pointer")}
+          data-testid="label-testid"
         >
           {label}
         </FormLabel>
