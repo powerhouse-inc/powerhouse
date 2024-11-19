@@ -5,6 +5,7 @@ import {
   getDefaultArgTypes,
   getValidationArgTypes,
 } from "@/scalars/lib/storybook-arg-types";
+import { useEffect, useState } from "react";
 
 const meta: Meta<typeof CheckboxField> = {
   component: CheckboxField,
@@ -16,6 +17,7 @@ const meta: Meta<typeof CheckboxField> = {
       valueControlType: "boolean",
       valueType: "boolean",
     }),
+
     ...getValidationArgTypes({
       enabledArgTypes: {
         customValidator: false,
@@ -50,7 +52,7 @@ export const Checked: Story = {
 
 export const Indeterminate: Story = {
   args: {
-    value: undefined,
+    value: "indeterminate",
     label: "Indeterminate Checkbox",
   },
 };
@@ -129,5 +131,47 @@ export const WithWarningsAndErrors: Story = {
     label: "Checkbox with Warnings and Errors",
     warnings: ["This is a warning", "Another warning"],
     errors: ["This is an error", "Another error"],
+  },
+};
+
+export const WithCircularThreeStates: Story = {
+  args: {
+    value: "indeterminate",
+    label: "Circular Three States Checkbox",
+  },
+  parameters: {
+    docs: {
+      source: {
+        type: "auto",
+      },
+    },
+  },
+  render: ({ value, defaultValue, ...args }) => {
+    const [state, setState] = useState(
+      value ?? defaultValue ?? "indeterminate",
+    );
+
+    const handleChange = () => {
+      const nextState =
+        state === true
+          ? "indeterminate"
+          : state === "indeterminate"
+            ? false
+            : true;
+      setState(nextState);
+      return nextState;
+    };
+
+    return (
+      <div>
+        <p className="mb-5 text-sm text-gray-500">
+          This checkbox rotate its state between true, false and indeterminate
+          when it is clicked. To archive this behavior, the field need to be
+          controlled.
+        </p>
+
+        <CheckboxField {...args} value={state} onChange={handleChange} />
+      </div>
+    );
   },
 };

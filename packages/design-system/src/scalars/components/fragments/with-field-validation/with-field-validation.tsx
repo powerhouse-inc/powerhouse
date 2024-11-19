@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 import type {
   FieldCommonProps,
@@ -21,18 +21,19 @@ interface PossibleEventsProps {
 
 export interface ValidationOptions<T> {
   validations?: Record<string, (parentProps: T) => ValidatorHandler>;
+  transformValue?: (value: any) => any;
 }
 
 export const withFieldValidation = <T extends PossibleProps>(
   Component: React.ComponentType<T>,
   options?: ValidationOptions<T>,
-) => {
+): React.ComponentType<T> => {
   return ({ value, name, showErrorOnBlur, showErrorOnChange, ...props }: T) => {
     const { onChange: onChangeProp, onBlur: onBlurProp } =
       props as PossibleEventsProps;
     const {
       control,
-      formState: { errors: formErrors },
+      formState: { errors: formErrors, defaultValues },
       trigger,
       setValue,
     } = useFormContext();
@@ -42,6 +43,21 @@ export const withFieldValidation = <T extends PossibleProps>(
       ...(props.errors ?? []),
       ...(formErrors[name]?.message ? [formErrors[name].message] : []),
     ];
+
+    const [initialized, setInitialized] = useState(false);
+    useEffect(() => {
+      if (initialized) {
+        setValue(name, value);
+        setInitialized(true);
+      } else {
+        // set default value
+        if (value === undefined) {
+          setValue(name, props.defaultValue ?? defaultValues?.[name]);
+        }
+      }
+      // initialized can not be in the dependencies because it would cause
+      // a change of the value on initial render
+    }, [value]);
 
     if (value !== undefined && !onChangeProp) {
       console.warn(

@@ -1,13 +1,13 @@
 import { useId } from "react";
 import { FormLabel } from "../form-label";
-import { Checkbox } from "./checkbox";
+import { Checkbox, CheckboxValue } from "./checkbox";
 import { cn } from "@/scalars/lib/utils";
 import { FormMessageList } from "../form-message";
 import { FieldCommonProps } from "../../types";
 import { withFieldValidation } from "../with-field-validation";
 
-export interface CheckboxFieldProps extends FieldCommonProps<boolean> {
-  onChange?: (checked: boolean) => void;
+export interface CheckboxFieldProps extends FieldCommonProps<CheckboxValue> {
+  onChange?: (checked: CheckboxValue) => void;
 }
 
 const CheckboxRaw: React.FC<CheckboxFieldProps> = ({
@@ -23,10 +23,17 @@ const CheckboxRaw: React.FC<CheckboxFieldProps> = ({
   warnings,
   onChange,
   className,
+  ...props
 }) => {
   const generatedId = useId();
   const id = idProp ?? generatedId;
   const hasError = !!errors?.length;
+
+  const castValue = (value: unknown) => {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return value;
+  };
 
   return (
     <div className={cn("flex flex-col gap-2")}>
@@ -34,12 +41,13 @@ const CheckboxRaw: React.FC<CheckboxFieldProps> = ({
         <Checkbox
           id={id}
           name={name}
-          checked={value ?? defaultValue}
+          checked={castValue(value ?? defaultValue) as CheckboxValue}
           disabled={disabled}
           onCheckedChange={onChange}
           required={required}
           invalid={hasError}
           aria-invalid={hasError}
+          {...props}
         />
         <FormLabel
           htmlFor={id}
@@ -59,5 +67,7 @@ const CheckboxRaw: React.FC<CheckboxFieldProps> = ({
 };
 
 const CheckboxField = withFieldValidation<CheckboxFieldProps>(CheckboxRaw);
+
+CheckboxField.displayName = "CheckboxField";
 
 export { CheckboxField };
