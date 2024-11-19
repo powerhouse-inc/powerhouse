@@ -17,15 +17,15 @@ describe("EnumField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = () => {};
 
   it("should match snapshot", () => {
-    const { container } = renderWithForm(<EnumField {...defaultProps} />);
-    expect(container).toMatchSnapshot();
+    const { asFragment } = renderWithForm(<EnumField {...defaultProps} />);
+    expect(asFragment()).toMatchSnapshot();
   });
 
   it("should match snapshot with Select variant", () => {
-    const { container } = renderWithForm(
+    const { asFragment } = renderWithForm(
       <EnumField {...defaultProps} variant="Select" />,
     );
-    expect(container).toMatchSnapshot();
+    expect(asFragment()).toMatchSnapshot();
   });
 
   it("should render label when provided", () => {

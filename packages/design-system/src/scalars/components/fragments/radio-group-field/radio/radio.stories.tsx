@@ -42,6 +42,9 @@ const meta: Meta<typeof Radio> = {
       </RadioGroup>
     ),
   ],
+  parameters: {
+    layout: "centered",
+  },
   title: "Document Engineering/Fragments/Radio",
 };
 
