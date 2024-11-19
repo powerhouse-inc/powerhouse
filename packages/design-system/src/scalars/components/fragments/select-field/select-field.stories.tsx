@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { SelectField } from "./select-field";
 import { CircleIcon, HomeIcon, StarIcon } from "lucide-react";
+import { withForm } from "@/scalars/lib/decorators";
 
 const meta: Meta<typeof SelectField> = {
   title: "Document Engineering/Fragments/SelectField",
@@ -13,6 +14,7 @@ const meta: Meta<typeof SelectField> = {
     },
   },
   decorators: [
+    withForm,
     (Story) => (
       <div style={{ maxWidth: "280px", margin: "1rem auto 0" }}>
         <Story />

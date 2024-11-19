@@ -9,6 +9,7 @@ import { FormGroup } from "@/scalars/components/fragments/form-group";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormDescription } from "@/scalars/components/fragments/form-description";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
+import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import { cn } from "@/scalars/lib/utils";
 import {
   FieldCommonProps,
@@ -32,10 +33,7 @@ export interface SelectFieldProps
     ErrorHandling,
     SelectProps {}
 
-export const SelectField = React.forwardRef<
-  HTMLButtonElement,
-  SelectFieldProps
->(
+const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
   (
     {
       // core functionality props
@@ -116,6 +114,7 @@ export const SelectField = React.forwardRef<
               ref={ref}
               id={id}
               name={name}
+              type="button"
               role="combobox"
               autoFocus={autoFocus}
               onClick={handleTogglePopover}
@@ -191,3 +190,6 @@ export const SelectField = React.forwardRef<
     );
   },
 );
+
+export const SelectField =
+  withFieldValidation<SelectFieldProps>(SelectFieldRaw);

@@ -79,14 +79,6 @@ const meta: Meta<typeof RadioGroupField> = {
         category: "Technical",
       },
     },
-    onChange: {
-      action: "onChange",
-      description: "Callback fired when a radio option is selected",
-      table: {
-        type: { summary: "(value: string) => void" },
-        category: "Events",
-      },
-    },
     options: {
       control: "object",
       description:
