@@ -4,6 +4,8 @@ import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
 import { cn } from "@/scalars/lib/utils";
 
+export type CheckboxValue = boolean | "indeterminate";
+
 export type CheckboxProps = React.ComponentPropsWithoutRef<
   typeof CheckboxPrimitive.Root
 > & {
@@ -35,12 +37,12 @@ const Checkbox = React.forwardRef<
       "data-[invalid=true]:data-[state]:border-red-800 data-[invalid=true]:data-[state=checked]:bg-red-800 data-[invalid=true]:data-[state=indeterminate]:bg-red-800",
       className,
     )}
-    checked={checked === undefined ? "indeterminate" : checked}
+    checked={checked}
     data-invalid={invalid}
     {...props}
   >
     <CheckboxPrimitive.Indicator className="text-current flex items-center justify-center">
-      {checked === undefined ? (
+      {checked === "indeterminate" ? (
         <svg
           width="9"
           height="9"
