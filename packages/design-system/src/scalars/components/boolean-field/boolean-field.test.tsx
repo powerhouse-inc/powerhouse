@@ -28,25 +28,30 @@ describe("BooleanField", () => {
     expect(container).toMatchSnapshot();
   });
 
-  it("should pass all props to ToggleField when isToggle is true", () => {
-    const { getByRole } = renderWithForm(
-      <BooleanField name="test" {...commonProps} isToggle={true} />,
+  it("should pass all props to ToggleField when isToggle is true", async () => {
+    const { getByRole, findByTestId } = renderWithForm(
+      <BooleanField
+        name="test"
+        {...commonProps}
+        isToggle={true}
+        label="Test Label"
+      />,
     );
     const toggle = getByRole("switch");
     expect(toggle).toBeChecked();
     expect(toggle).toBeEnabled();
-    const toggleLabel = getByRole("label");
+    const toggleLabel = await findByTestId("label-testid");
     expect(toggleLabel).toHaveAttribute("for", toggle.id);
   });
 
   it("should pass all props to CheckboxField when isToggle is false", () => {
-    const { getByRole } = renderWithForm(
+    const { getByRole, getByTestId } = renderWithForm(
       <BooleanField name="test" {...commonProps} isToggle={false} />,
     );
     const checkbox = getByRole("checkbox");
     expect(checkbox).toBeChecked();
     expect(checkbox).toBeEnabled();
-    const checkboxLabel = getByRole("label");
+    const checkboxLabel = getByTestId("label-testid");
     expect(checkboxLabel).toHaveAttribute("for", checkbox.id);
   });
 });

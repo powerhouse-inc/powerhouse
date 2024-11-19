@@ -9,15 +9,14 @@ exports[`NumberField Component > should match snapshot 1`] = `
       class="flex flex-col gap-2"
     >
       <label
-        class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+        class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50"
         for=":r0:"
-        role="label"
       >
         Test Label
       </label>
       <input
         aria-invalid="false"
-        class="flex h-10 w-full rounded-md text-sm bg-background border border-gray-300 px-3 py-2 ring-offset-background focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed text-gray-900 dark:border-[#485265] dark:bg-[#252A34] dark:text-gray-50 focus:text-gray-300 placeholder:focus:text-gray-300 dark:focus:text-gray-700 dark:placeholder:focus:text-gray-700 focus-visible:ring-[#9DA6B9] focus-visible:ring-offset-1 dark:ring-offset-[#252A34] placeholder:text-gray-300 placeholder:focus:ml-0.5 dark:placeholder:text-gray-700 disabled:bg-[#FFFFFF]dark:disabled:bg-[#252A34] disabled:border-gray-300 disabled:text-gray-500 dark:disabled:border-[#373E4D] dark:disabled:text-gray-700"
+        class="flex h-10 w-full rounded-md text-sm text-gray-900 dark:text-gray-50 dark:bg-charcoal-900 dark:border-charcoal-700 border border-gray-300 bg-white px-3 py-2 font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 dark:focus-visible:ring-charcoal-300 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500"
         id=":r0:"
         name="Label"
         type="number"

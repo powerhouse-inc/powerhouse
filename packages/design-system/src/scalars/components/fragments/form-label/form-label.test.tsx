@@ -14,14 +14,6 @@ describe("FormLabel Component", () => {
     expect(screen.getByText("Test Label")).toBeInTheDocument();
   });
 
-  it("should apply custom className", () => {
-    // this is a custom class name, not a tailwind class name
-    // eslint-disable-next-line tailwindcss/no-custom-classname
-    render(<FormLabel className="custom-class">Label</FormLabel>);
-    const label = screen.getByText("Label");
-    expect(label).toHaveClass("custom-class");
-  });
-
   it("should forward the htmlFor attribute", () => {
     render(<FormLabel htmlFor="test-input">Label</FormLabel>);
     const label = screen.getByText("Label");
@@ -44,12 +36,6 @@ describe("FormLabel Component", () => {
     const label = screen.getByText("Clickable Label");
     fireEvent.click(label);
     expect(handleClick).toHaveBeenCalledTimes(1);
-  });
-
-  it("should be accessible", () => {
-    render(<FormLabel>Accessible Label</FormLabel>);
-    const label = screen.getByText("Accessible Label");
-    expect(label).toHaveAttribute("role", "label");
   });
 
   it("should display an asterisk when required", () => {

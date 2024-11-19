@@ -54,13 +54,13 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
           value="on"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] dark:text-gray-400 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900 group-hover:cursor-pointer"
+          class="inline-flex items-center text-sm font-medium leading-[22px] dark:text-gray-50 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900 group-hover:cursor-pointer"
+          data-testid="label-testid"
           for=":r2:"
-          role="label"
         >
           Test Field
           <span
-            class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+            class="ml-1 text-blue-900 group-hover:text-gray-900 dark:group-hover:text-slate-50"
           >
             *
           </span>
@@ -130,14 +130,14 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
           value="on"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 ml-2"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50 ml-2"
+          data-testid="label-testid"
           for=":r0:"
           id=":r0:-label"
-          role="label"
         >
           Test Field
           <span
-            class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+            class="ml-1 text-blue-900 group-hover:text-gray-900 dark:group-hover:text-slate-50"
           >
             *
           </span>

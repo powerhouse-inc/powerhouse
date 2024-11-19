@@ -42,9 +42,8 @@ exports[`EnumField Component > should match snapshot 1`] = `
           value="option1"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50"
           for=":r0:-radio-0-option1"
-          role="label"
         >
           Option 1
         </label>
@@ -75,9 +74,8 @@ exports[`EnumField Component > should match snapshot 1`] = `
           value="option2"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50"
           for=":r0:-radio-1-option2"
-          role="label"
         >
           Option 2
         </label>
@@ -108,9 +106,8 @@ exports[`EnumField Component > should match snapshot 1`] = `
           value="option3"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50"
           for=":r0:-radio-2-option3"
-          role="label"
         >
           Option 3
         </label>
