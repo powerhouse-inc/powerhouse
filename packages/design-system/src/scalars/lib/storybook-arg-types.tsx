@@ -83,10 +83,10 @@ export const PrebuiltArgTypes = {
   },
   autoComplete: {
     autoComplete: {
-      control: "text",
+      control: "boolean",
       description: "HTML autocomplete attribute value",
       table: {
-        type: { summary: "string" },
+        type: { summary: "boolean" },
         category: StorybookControlCategory.DEFAULT,
       },
     },
@@ -191,7 +191,7 @@ export const PrebuiltArgTypes = {
   minValue: {
     minValue: {
       control: "number",
-      description: "Minimum number  allowed",
+      description: "Minimum number allowed",
       table: {
         type: { summary: "number" },
         category: StorybookControlCategory.VALIDATION,
@@ -201,7 +201,7 @@ export const PrebuiltArgTypes = {
   maxValue: {
     maxValue: {
       control: "number",
-      description: "Maximum number  allowed",
+      description: "Maximum number allowed",
       table: {
         type: { summary: "number" },
         category: StorybookControlCategory.VALIDATION,
