@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
 import { TextareaField } from "./textarea-field";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  PrebuiltArgTypes,
+  StorybookControlCategory,
+} from "@/scalars/lib/storybook-arg-types";
 
 const meta = {
   title: "Document Engineering/Fragments/TextareaField",
@@ -15,16 +21,11 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    autoComplete: {
-      control: "boolean",
-      description:
-        "Whether to enable browser autocompletion for the textarea field",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Behavior",
-      },
-    },
+    ...getDefaultArgTypes(),
+    ...PrebuiltArgTypes.placeholder,
+    ...PrebuiltArgTypes.autoComplete,
+    ...PrebuiltArgTypes.spellCheck,
+
     autoExpand: {
       control: "boolean",
       description:
@@ -32,223 +33,33 @@ const meta = {
       table: {
         type: { summary: "boolean" },
         defaultValue: { summary: "false" },
-        category: "Behavior",
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    autoFocus: {
-      control: "boolean",
-      description:
-        "Whether the textarea should automatically receive focus on mount",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Behavior",
-      },
-    },
-    className: {
-      control: "text",
-      description: "Additional CSS classes to apply to the textarea",
-      table: {
-        type: { summary: "string" },
-        category: "Styling",
-      },
-    },
-    customValidator: {
-      description:
-        "Custom validation function that returns error message or null",
-      table: {
-        type: { summary: "(value: string) => string | null" },
-        category: "Validation",
-      },
-    },
-    defaultValue: {
-      control: "text",
-      description: "Initial value for uncontrolled component usage",
-      table: {
-        type: { summary: "string" },
-        category: "State",
-      },
-    },
-    description: {
-      control: "text",
-      description: "Helper text displayed below the textarea field",
-      table: {
-        type: { summary: "string" },
-        category: "Content",
-      },
-    },
-    disabled: {
-      control: "boolean",
-      description: "Whether the textarea field is disabled",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "State",
-      },
-    },
-    errors: {
-      control: "object",
-      description:
-        "Array of error messages to display below the textarea field",
-      table: {
-        type: { summary: "string[]" },
-        defaultValue: { summary: "[]" },
-        category: "Validation",
-      },
-    },
-    id: {
-      control: "text",
-      description:
-        "Unique identifier for the textarea field. Auto-generated if not provided",
-      table: {
-        type: { summary: "string" },
-        category: "Technical",
-      },
-    },
-    label: {
-      control: "text",
-      description:
-        "Label text displayed above the textarea field for accessibility and UX",
-      table: {
-        type: { summary: "string" },
-        category: "Content",
-      },
-    },
-    lowercase: {
-      control: "boolean",
-      description:
-        "Transforms input text to lowercase. Cannot be used with uppercase",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Text Transformation",
-      },
-    },
-    maxLength: {
-      control: "number",
-      description: "Maximum number of characters allowed in the textarea",
-      table: {
-        type: { summary: "number" },
-        category: "Validation",
-      },
-    },
-    minLength: {
-      control: "number",
-      description: "Minimum number of characters required in the textarea",
-      table: {
-        type: { summary: "number" },
-        category: "Validation",
-      },
-    },
-    name: {
-      control: "text",
-      description:
-        "Name attribute for the textarea field. Auto-generated if not provided",
-      table: {
-        type: { summary: "string" },
-        category: "Technical",
-      },
-    },
-    pattern: {
-      control: "text",
-      description: "Regular expression pattern for input validation",
-      table: {
-        type: { summary: "string" },
-        category: "Validation",
-      },
-    },
-    placeholder: {
-      control: "text",
-      description: "Placeholder text displayed when the textarea is empty",
-      table: {
-        type: { summary: "string" },
-        category: "Content",
-      },
-    },
-    required: {
-      control: "boolean",
-      description: "Whether the textarea input is required",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Validation",
-      },
-    },
+
     rows: {
       control: "number",
       description: "Number of visible text lines in the textarea",
       table: {
         type: { summary: "number" },
         defaultValue: { summary: "3" },
-        category: "Appearance",
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    showErrorOnBlur: {
-      control: "boolean",
-      description:
-        "Whether to display validation errors when the field loses focus",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Validation",
-      },
-    },
-    showErrorOnChange: {
-      control: "boolean",
-      description: "Whether to display validation errors as the user types",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Validation",
-      },
-    },
-    spellCheck: {
-      control: "boolean",
-      description: "Whether to enable browser spell checking on the textarea",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Behavior",
-      },
-    },
-    trim: {
-      control: "boolean",
-      description:
-        "Whether to remove leading and trailing whitespace from the value",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Text Transformation",
-      },
-    },
-    uppercase: {
-      control: "boolean",
-      description:
-        "Transforms input text to uppercase. Cannot be used with lowercase",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-        category: "Text Transformation",
-      },
-    },
-    value: {
-      control: "text",
-      description:
-        "Controlled value of the textarea field. Use with onChange handler",
-      table: {
-        type: { summary: "string" },
-        category: "State",
-      },
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning messages to display below the textarea",
-      table: {
-        type: { summary: "string[]" },
-        defaultValue: { summary: "[]" },
-        category: "Validation",
-      },
-    },
+
+    ...PrebuiltArgTypes.trim,
+    ...PrebuiltArgTypes.uppercase,
+    ...PrebuiltArgTypes.lowercase,
+
+    ...getValidationArgTypes(),
+    ...PrebuiltArgTypes.minLength,
+    ...PrebuiltArgTypes.maxLength,
+    ...PrebuiltArgTypes.pattern,
+  },
+  args: {
+    name: "textarea",
+    errors: [],
+    warnings: [],
   },
 } satisfies Meta<typeof TextareaField>;
 
@@ -256,57 +67,47 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Basic examples
-export const WithLabel: Story = {
+export const Default: Story = {
   args: {
-    name: "textarea",
     label: "Message",
     placeholder: "Enter your message",
   },
 };
 
-export const WithLabelAndDescription: Story = {
+export const WithDescription: Story = {
   args: {
-    name: "textarea",
     label: "Bio",
-    description: "Tell us about yourself in a few sentences",
+    description: "Tell us a little bit about yourself",
     placeholder: "I am...",
   },
 };
 
-// Validation states
 export const Required: Story = {
   args: {
-    name: "textarea",
     label: "Comments",
     required: true,
     placeholder: "This field is required",
   },
 };
 
-export const WithSingleWarning: Story = {
+export const WithValue: Story = {
   args: {
-    name: "textarea",
-    label: "Feedback",
-    value: "OK",
-    warnings: ["Your feedback seems quite short"],
+    label: "Comments",
+    value: "This is a pre-filled value",
   },
 };
 
-export const WithMultipleWarnings: Story = {
+export const Disabled: Story = {
   args: {
-    name: "textarea",
-    label: "Feedback",
-    value: "warnings",
-    warnings: [
-      "Consider providing more detailed feedback",
-      "Your response may be too brief for proper evaluation",
-    ],
+    label: "Disabled content",
+    value: "This content cannot be edited",
+    disabled: true,
   },
 };
 
-export const WithSingleError: Story = {
+// Validation states
+export const WithError: Story = {
   args: {
-    name: "textarea",
     label: "Comments",
     value: "error",
     errors: ["Comments must be at least 10 characters long"],
@@ -314,92 +115,17 @@ export const WithSingleError: Story = {
   },
 };
 
-export const WithMultipleErrors: Story = {
+export const WithWarning: Story = {
   args: {
-    name: "textarea",
-    label: "Comments",
-    value: "errors",
-    errors: [
-      "Comments must be at least 10 characters long",
-      "Comments must include a specific example",
-    ],
-    minLength: 10,
-  },
-};
-
-export const WithWarningsAndErrors: Story = {
-  args: {
-    name: "textarea",
     label: "Feedback",
-    value: "warnings and errors",
-    warnings: [
-      "Consider providing more detailed feedback",
-      "Your response may be too brief",
-    ],
-    errors: [
-      "Feedback must be at least 10 characters long",
-      "Feedback must include specific examples",
-    ],
-  },
-};
-
-// Length constraints
-export const WithMinLength: Story = {
-  args: {
-    name: "textarea",
-    label: "Short answer",
-    minLength: 20,
-    placeholder: "Must be at least 20 characters",
-    description: "Minimum length: 20 characters",
-  },
-};
-
-export const WithMaxLength: Story = {
-  args: {
-    name: "textarea",
-    label: "Brief response",
-    maxLength: 50,
-    placeholder: "Maximum 50 characters allowed",
-    description: "Maximum length: 50 characters",
-  },
-};
-
-// Visual states
-export const Disabled: Story = {
-  args: {
-    name: "textarea",
-    label: "Disabled content",
-    value: "This content cannot be edited",
-    disabled: true,
-  },
-};
-
-export const Focused: Story = {
-  args: {
-    name: "textarea",
-    label: "Focused textarea",
-    placeholder: "This field is focused",
-    autoFocus: true,
-  },
-  parameters: {
-    pseudo: { focus: true },
+    value: "OK",
+    warnings: ["Your feedback seems quite short"],
   },
 };
 
 // Special features
-export const WithSpellCheck: Story = {
+export const WithAutoExpand: Story = {
   args: {
-    name: "textarea",
-    label: "Spell-checked textarea",
-    spellCheck: true,
-    placeholder: "Spell checking is enabled...",
-    description: "This field will check your spelling",
-  },
-};
-
-export const AutoExpanding: Story = {
-  args: {
-    name: "textarea",
     label: "Auto-expanding textarea",
     autoExpand: true,
     placeholder: "This will grow as you type...",
@@ -408,10 +134,18 @@ export const AutoExpanding: Story = {
   },
 };
 
-// Text transformations
-export const WithTrimTransformation: Story = {
+export const WithSpellCheck: Story = {
   args: {
-    name: "textarea",
+    label: "Spell-checked textarea",
+    spellCheck: true,
+    placeholder: "Spell checking is enabled...",
+    description: "This field will check your spelling",
+  },
+};
+
+// Text transformations
+export const WithTrim: Story = {
+  args: {
     label: "Trimmed text",
     value: "  This text will have whitespace trimmed  ",
     trim: true,
@@ -419,9 +153,8 @@ export const WithTrimTransformation: Story = {
   },
 };
 
-export const WithUppercaseTransformation: Story = {
+export const WithUppercase: Story = {
   args: {
-    name: "textarea",
     label: "Uppercase text",
     value: "This text will be uppercase",
     uppercase: true,
@@ -429,9 +162,8 @@ export const WithUppercaseTransformation: Story = {
   },
 };
 
-export const WithLowercaseTransformation: Story = {
+export const WithLowercase: Story = {
   args: {
-    name: "textarea",
     label: "Lowercase text",
     value: "THIS TEXT WILL BE LOWERCASE",
     lowercase: true,
@@ -439,71 +171,11 @@ export const WithLowercaseTransformation: Story = {
   },
 };
 
-// Some design variants
-export const ManualAdjustActiveMultiline: Story = {
+export const WithMaxLength: Story = {
   args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    maxLength: 500,
-  },
-  parameters: {
-    pseudo: { focus: true },
-  },
-};
-
-export const ManualAdjustFilledNoFocus: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    maxLength: 500,
-  },
-};
-
-export const ManualAdjustWarningCounter: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    maxLength: 90,
-  },
-};
-
-export const ManualAdjustErrorCounter: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    maxLength: 80,
-  },
-};
-
-export const AutoAdjustActiveMultiline: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    maxLength: 500,
-    autoExpand: true,
-  },
-  parameters: {
-    pseudo: { focus: true },
-  },
-};
-
-export const AutoAdjustFilledNoFocus: Story = {
-  args: {
-    name: "textarea",
-    label: "Label",
-    value:
-      "Lorem ipsum dolor sit amet consectetur. Facilisis femet nunc porta porttitor. Vel at.",
-    maxLength: 500,
-    autoExpand: true,
+    label: "Character limited textarea",
+    maxLength: 100,
+    value: "This textarea has a maximum length of 100 characters.",
+    description: "You can enter up to 100 characters in this field",
   },
 };
