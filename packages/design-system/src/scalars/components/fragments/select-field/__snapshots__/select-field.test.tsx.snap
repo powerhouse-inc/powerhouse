@@ -24,6 +24,7 @@ exports[`SelectField Component > should match snapshot 1`] = `
         id=":r0:-select"
         name="select"
         role="combobox"
+        type="button"
       >
         <div
           class="mx-auto flex w-full items-center justify-between"

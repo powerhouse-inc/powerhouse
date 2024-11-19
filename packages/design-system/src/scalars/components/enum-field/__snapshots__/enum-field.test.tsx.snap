@@ -144,6 +144,7 @@ exports[`EnumField Component > should match snapshot with Select variant 1`] = `
         id=":r8:-select"
         name="enum"
         role="combobox"
+        type="button"
       >
         <div
           class="mx-auto flex w-full items-center justify-between"
