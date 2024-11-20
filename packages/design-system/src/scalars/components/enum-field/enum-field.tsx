@@ -1,3 +1,4 @@
+import React from "react";
 import { RadioGroupField } from "@/scalars/components/fragments/radio-group-field";
 import { SelectField } from "@/scalars/components/fragments/select-field";
 import {
@@ -16,22 +17,26 @@ export interface EnumOption {
 
 export type EnumFieldProps = FieldCommonProps<string | string[]> &
   ErrorHandling &
-  EnumProps;
+  EnumProps & {
+    options?: EnumOption[];
+  };
 
 export const EnumField: React.FC<EnumFieldProps> = ({
   variant,
+  options = [],
   optionLabels = {},
   disabledOptions = [],
   ...props
 }) => {
-  // Transform options based on optionLabels
-  const transformedOptions: EnumOption[] = Object.entries(optionLabels).map(
-    ([value, label]) => ({
-      value,
-      label: label || value,
-      disabled: disabledOptions.includes(value),
-    }),
-  );
+  // Transform options based on optionLabels if no direct options provided
+  const transformedOptions: EnumOption[] =
+    options.length > 0
+      ? options
+      : Object.entries(optionLabels).map(([value, label]) => ({
+          value,
+          label: label || value,
+          disabled: disabledOptions.includes(value),
+        }));
 
   if (variant === "RadioGroup") {
     return (
@@ -55,3 +60,5 @@ export const EnumField: React.FC<EnumFieldProps> = ({
     />
   );
 };
+
+EnumField.displayName = "EnumField";

@@ -56,14 +56,13 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
       warnings = [],
 
       // behavior props
-      asChild = false,
       asModal = false,
       searchable = false,
 
       // display props
       description,
       maxSelectedOptionsToShow = 3,
-      placeholder = multiple ? "Select options" : "Select an option",
+      placeholder,
       className,
 
       ...props
@@ -109,9 +108,8 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
           onOpenChange={setIsPopoverOpen}
           modal={asModal}
         >
-          <PopoverTrigger asChild={asChild} disabled={disabled}>
+          <PopoverTrigger asChild={true}>
             <Button
-              ref={ref}
               id={id}
               name={name}
               type="button"
@@ -142,6 +140,7 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
                 className,
               )}
               {...props}
+              ref={ref}
             >
               <SelectedContent
                 selectedValues={selectedValues}
@@ -191,5 +190,10 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
   },
 );
 
-export const SelectField =
-  withFieldValidation<SelectFieldProps>(SelectFieldRaw);
+export const SelectField = withFieldValidation<SelectFieldProps>(
+  SelectFieldRaw,
+) as React.ForwardRefExoticComponent<
+  SelectFieldProps & React.RefAttributes<HTMLButtonElement>
+>;
+
+SelectField.displayName = "SelectField";

@@ -130,4 +130,22 @@ describe("EnumField Component", () => {
     expect(screen.getByText("option1")).toBeInTheDocument();
     expect(screen.getByText("option2")).toBeInTheDocument();
   });
+
+  it("should handle options provided directly instead of optionLabels", () => {
+    renderWithForm(
+      <EnumField
+        name="enum"
+        variant="RadioGroup"
+        options={[
+          { value: "option1", label: "Option 1" },
+          { value: "option2", label: "Option 2" },
+          { value: "option3", label: "Option 3" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Option 1")).toBeInTheDocument();
+    expect(screen.getByText("Option 2")).toBeInTheDocument();
+    expect(screen.getByText("Option 3")).toBeInTheDocument();
+  });
 });
