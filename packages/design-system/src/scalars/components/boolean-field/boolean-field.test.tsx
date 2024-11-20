@@ -1,3 +1,4 @@
+import { getByLabelText, getByText } from "@testing-library/react";
 import { BooleanField } from "./boolean-field";
 import { renderWithForm } from "@/scalars/lib/testing";
 
@@ -29,24 +30,24 @@ describe("BooleanField", () => {
   });
 
   it("should pass all props to ToggleField when isToggle is true", () => {
-    const { getByRole } = renderWithForm(
+    const { getByRole, queryByText } = renderWithForm(
       <BooleanField name="test" {...commonProps} isToggle={true} />,
     );
     const toggle = getByRole("switch");
     expect(toggle).toBeChecked();
     expect(toggle).toBeEnabled();
-    const toggleLabel = getByRole("label");
+    const toggleLabel = queryByText("Test Field");
     expect(toggleLabel).toHaveAttribute("for", toggle.id);
   });
 
   it("should pass all props to CheckboxField when isToggle is false", () => {
-    const { getByRole } = renderWithForm(
+    const { getByRole, getByText } = renderWithForm(
       <BooleanField name="test" {...commonProps} isToggle={false} />,
     );
     const checkbox = getByRole("checkbox");
     expect(checkbox).toBeChecked();
     expect(checkbox).toBeEnabled();
-    const checkboxLabel = getByRole("label");
+    const checkboxLabel = getByText("Test Field");
     expect(checkboxLabel).toHaveAttribute("for", checkbox.id);
   });
 });

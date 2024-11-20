@@ -77,23 +77,11 @@ export const Default: Story = {
     placeholder: "0",
   },
 };
-export const DefaultActive: Story = {
+export const Active: Story = {
   args: {
     name: "Label",
     label: "Label",
     autoFocus: true,
-  },
-};
-DefaultActive.parameters = {
-  pseudo: {
-    active: true,
-  },
-};
-export const Filled: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 23,
   },
 };
 export const Disable: Story = {
@@ -104,8 +92,15 @@ export const Disable: Story = {
     disabled: true,
   },
 };
-
-export const Warning: Story = {
+export const Required: Story = {
+  args: {
+    name: "Label",
+    label: "Label",
+    value: 345,
+    required: true,
+  },
+};
+export const WithWarning: Story = {
   args: {
     name: "Label",
     label: "Label",
@@ -113,7 +108,7 @@ export const Warning: Story = {
     warnings: ["Warning message"],
   },
 };
-export const ErrorState: Story = {
+export const WithError: Story = {
   args: {
     name: "Label",
     label: "Label",
@@ -121,7 +116,7 @@ export const ErrorState: Story = {
     errors: ["Error message"],
   },
 };
-export const MultiError: Story = {
+export const WithMultipleErrors: Story = {
   args: {
     name: "Label",
     label: "Label",
@@ -134,44 +129,26 @@ export const MultiError: Story = {
     ],
   },
 };
-export const Description: Story = {
+
+export const WithValue: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 0,
-    description: "This is the field description",
-  },
-};
-export const DescriptionDisable: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    disabled: true,
-    description: "This is the field description",
+    value: 23,
   },
 };
 
-export const Mandatory: Story = {
+export const WithDescription: Story = {
   args: {
     name: "Label",
     label: "Label",
     value: 0,
-    required: true,
-  },
-};
-export const MandatoryDisable: Story = {
-  args: {
-    name: "Label",
-    label: "Label",
-    value: 0,
-    required: true,
-    disabled: true,
+    description: "This is the field description",
   },
 };
 
 // Float Stories
-export const FloatNumber: Story = {
+export const WithFloatNumber: Story = {
   args: {
     label: "Label",
     name: "Label",
@@ -194,7 +171,7 @@ export const FloatNumber: Story = {
   },
 };
 // BigInt Stories
-export const IsBigInt: Story = {
+export const WithBigInt: Story = {
   args: {
     name: "Label",
     label: "Label",
@@ -204,7 +181,7 @@ export const IsBigInt: Story = {
 };
 
 // Step Stories
-export const Setp: Story = {
+export const WithStep: Story = {
   args: {
     name: "Label",
     label: "Label",

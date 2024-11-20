@@ -25,9 +25,8 @@ exports[`RadioGroup Component > should match snapshot 1`] = `
       value="1"
     />
     <label
-      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50"
       for=":r1:-radio"
-      role="label"
     >
       Option 1
     </label>
@@ -45,9 +44,8 @@ exports[`RadioGroup Component > should match snapshot 1`] = `
       value="2"
     />
     <label
-      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50"
       for=":r3:-radio"
-      role="label"
     >
       Option 2
     </label>
