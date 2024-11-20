@@ -9,13 +9,12 @@ exports[`TextareaField Component > should match snapshot with props 1`] = `
       class="flex flex-col gap-2"
     >
       <label
-        class="inline-flex items-center text-sm leading-[22px] dark:text-gray-400 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900 mb-1.5 font-normal"
+        class="inline-flex items-center text-sm leading-[22px] dark:text-gray-50 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900 mb-1.5 font-normal"
         for=":r0:-textarea"
-        role="label"
       >
         Default Label
         <span
-          class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+          class="ml-1 text-blue-900 group-hover:text-gray-900 dark:group-hover:text-slate-50"
         >
           *
         </span>
@@ -27,7 +26,7 @@ exports[`TextareaField Component > should match snapshot with props 1`] = `
           aria-invalid="true"
           aria-required="true"
           autocomplete="off"
-          class="flex w-full rounded-lg text-base leading-normal font-sans font-normal text-gray-900 dark:text-gray-100 border placeholder:text-gray-500 dark:placeholder:text-gray-600 px-4 py-3 focus:outline-none focus:ring-gray-900 dark:focus:bg-gray-900 dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:border-gray-800 dark:disabled:bg-gray-900/50 dark:disabled:text-gray-600 bg-red-50/50 border-red-500 dark:border-red-400 dark:bg-red-900/5 hover:border-red-600 dark:hover:border-red-300 focus:ring-0 focus:ring-offset-0 focus:border-red-500 dark:focus:border-red-400 min-h-[120px] resize-y scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600"
+          class="flex w-full rounded-lg text-base leading-normal font-sans font-normal text-gray-900 dark:text-gray-100 border placeholder:text-gray-500 dark:placeholder:text-gray-600 px-4 py-3 focus:outline-none focus:ring-gray-900 dark:focus:bg-gray-900 dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:border-gray-800 dark:disabled:bg-gray-900/50 dark:disabled:text-gray-600 border-red-500 bg-red-50/50 dark:border-red-400 dark:bg-red-900/5 hover:border-red-600 dark:hover:border-red-300 focus:ring-0 focus:ring-offset-0 focus:border-red-500 dark:focus:border-red-400 min-h-[120px] resize-y scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600"
           id=":r0:-textarea"
           name="textarea"
           rows="3"

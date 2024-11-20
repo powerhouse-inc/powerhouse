@@ -12,36 +12,16 @@ exports[`CheckboxField > should match snapshot 1`] = `
         class="group flex items-center space-x-2"
       >
         <button
-          aria-checked="mixed"
+          aria-checked="false"
           aria-invalid="false"
           class="peer size-4 shrink-0 rounded border-input border shadow-sm shadow-black/[.04] ring-offset-background transition-shadow focus-visible:border-ring focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-gray-500 data-[state]:border-gray-700 dark:data-[state]:border-gray-400 data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-gray-400 dark:data-[state=indeterminate]:bg-gray-400 data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-gray-900 dark:data-[state=indeterminate]:text-gray-900 data-[invalid=true]:data-[state]:border-red-800 data-[invalid=true]:data-[state=checked]:bg-red-800 data-[invalid=true]:data-[state=indeterminate]:bg-red-800"
           data-invalid="false"
-          data-state="indeterminate"
+          data-state="unchecked"
           id=":r0:"
           role="checkbox"
           type="button"
           value="on"
-        >
-          <span
-            class="text-current flex items-center justify-center"
-            data-state="indeterminate"
-            style="pointer-events: none;"
-          >
-            <svg
-              fill="currentcolor"
-              height="9"
-              viewBox="0 0 9 9"
-              width="9"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                clip-rule="evenodd"
-                d="M0.75 4.5C0.75 4.08579 1.08579 3.75 1.5 3.75H7.5C7.91421 3.75 8.25 4.08579 8.25 4.5C8.25 4.91421 7.91421 5.25 7.5 5.25H1.5C1.08579 5.25 0.75 4.91421 0.75 4.5Z"
-                fill-rule="evenodd"
-              />
-            </svg>
-          </span>
-        </button>
+        />
         <input
           aria-hidden="true"
           name="test"
@@ -51,9 +31,8 @@ exports[`CheckboxField > should match snapshot 1`] = `
           value="on"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 group-hover:cursor-pointer"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50 group-hover:cursor-pointer"
           for=":r0:"
-          role="label"
         >
           Test Label
         </label>

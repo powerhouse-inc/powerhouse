@@ -90,7 +90,6 @@ export interface SelectProps {
   multiple?: boolean;
   searchable?: boolean;
   asModal?: boolean;
-  asChild?: boolean;
   onChange?: (value: string | string[]) => void;
 }
 
@@ -111,7 +110,6 @@ export type EnumProps =
       multiple?: SelectProps["multiple"];
       searchable?: SelectProps["searchable"];
       asModal?: SelectProps["asModal"];
-      asChild?: SelectProps["asChild"];
       onChange?: SelectProps["onChange"];
     });
 

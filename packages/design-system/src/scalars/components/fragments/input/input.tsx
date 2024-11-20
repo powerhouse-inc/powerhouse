@@ -10,17 +10,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           // Base styles
-          "flex h-10 w-full rounded-md text-sm text-gray-900",
+          "flex h-10 w-full rounded-md text-sm text-gray-900 dark:text-gray-50",
           // Border & Background
-          "border-input bg-background border border-gray-300",
+          "dark:bg-charcoal-900 dark:border-charcoal-700 border border-gray-300 bg-white",
           // Padding
           "px-3 py-2",
           // Placeholder
-          "placeholder:text-gray-600",
-          // Background & Ring
-          "ring-offset-background",
+          "font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500",
           // Focus styles
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 dark:focus-visible:ring-charcoal-300",
           // Disabled state
           "disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500",
           className,

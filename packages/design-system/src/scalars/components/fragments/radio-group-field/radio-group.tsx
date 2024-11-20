@@ -22,10 +22,12 @@ export const RadioGroup = React.forwardRef<
       className={cn("flex flex-col gap-2.5", className)}
       id={id}
       name={name}
-      ref={ref}
       {...props}
+      ref={ref}
     >
       {children}
     </RadioGroupPrimitive.Root>
   );
 });
+
+RadioGroup.displayName = "RadioGroup";

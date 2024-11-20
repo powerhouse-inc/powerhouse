@@ -20,11 +20,6 @@ describe("SelectField Component", () => {
     expect(asFragment()).toMatchSnapshot();
   });
 
-  it("should render with default placeholder", () => {
-    renderWithForm(<SelectField name="select" options={defaultOptions} />);
-    expect(screen.getByText("Select an option")).toBeInTheDocument();
-  });
-
   it("should render with custom placeholder", () => {
     renderWithForm(
       <SelectField
@@ -161,7 +156,7 @@ describe("SelectField Component", () => {
   // Edge Cases
   it("should handle empty options array", () => {
     renderWithForm(<SelectField name="select" options={[]} />);
-    expect(screen.getByText("Select an option")).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveValue("");
   });
 
   it("should handle value when provided", () => {

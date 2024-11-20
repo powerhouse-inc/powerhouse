@@ -25,8 +25,8 @@ export const Radio = React.forwardRef<
       disabled = false,
       hasError = false,
       id: propId,
-      label = "",
-      value = "",
+      label,
+      value,
       ...props
     },
     ref,
@@ -40,44 +40,41 @@ export const Radio = React.forwardRef<
           aria-disabled={disabled}
           aria-invalid={hasError}
           className={cn(
-            "aspect-square size-4 rounded-full border-2 border-blue-700",
-            "dark:border-blue-400",
-            "focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-0",
-            "dark:focus:ring-blue-900/30",
-            "hover:border-blue-900",
-            "dark:hover:border-blue-300",
-            "focus:hover:ring-blue-200",
-            "dark:focus:hover:ring-blue-900/40",
+            "group",
+            "aspect-square size-4 rounded-full border-2 border-gray-800",
+            "dark:border-gray-400",
+            "focus:outline-none focus:ring-2 focus:ring-gray-300/40 focus:ring-offset-0",
+            "dark:focus:ring-gray-500/40",
+            "hover:border-gray-900",
+            "dark:hover:border-gray-50",
+            "focus:hover:ring-gray-400/40",
+            "dark:focus:hover:ring-gray-400/40",
             disabled && [
-              "cursor-not-allowed border-gray-600 opacity-50 hover:border-gray-600",
-              "dark:border-gray-400 dark:hover:border-gray-400",
+              "cursor-not-allowed border-gray-600 opacity-70 hover:border-gray-600",
+              "dark:border-gray-600 dark:hover:border-gray-600",
             ],
             hasError && [
-              "border-red-700 hover:border-red-900 focus:ring-red-100 focus:hover:ring-red-200",
-              "dark:border-red-400 dark:hover:border-red-300 dark:focus:ring-red-800 dark:focus:hover:ring-red-700",
+              "border-red-700 hover:border-red-900 focus:ring-transparent focus:hover:ring-transparent",
+              "dark:border-red-700 dark:hover:border-red-900 dark:focus:ring-transparent dark:focus:hover:ring-transparent",
             ],
             className,
           )}
           disabled={disabled}
           id={id}
-          ref={ref}
           value={value}
           {...props}
+          ref={ref}
         >
           <RadioGroupPrimitive.Indicator
             className={cn(
               "relative flex size-full items-center justify-center",
-              "after:block after:size-2 after:rounded-full after:bg-blue-700 after:content-['']",
-              "dark:after:bg-blue-400",
-              "after:hover:bg-blue-900",
-              "dark:after:hover:bg-blue-300",
+              "after:block after:size-2 after:rounded-full after:bg-gray-800 after:content-['']",
+              "dark:after:bg-gray-400",
+              "group-hover:after:bg-gray-900",
+              "dark:group-hover:after:bg-gray-50",
               disabled && [
                 "after:bg-gray-600 after:hover:bg-gray-600",
-                "dark:after:bg-gray-400 dark:after:hover:bg-gray-400",
-              ],
-              hasError && [
-                "after:bg-red-700 after:hover:bg-red-900",
-                "dark:after:bg-red-400 dark:after:hover:bg-red-300",
+                "dark:after:bg-gray-600 dark:after:hover:bg-gray-600",
               ],
             )}
           />

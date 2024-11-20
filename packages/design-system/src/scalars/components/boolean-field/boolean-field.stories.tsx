@@ -13,9 +13,22 @@ const meta = {
   decorators: [withForm],
   argTypes: {
     ...getDefaultArgTypes({
+      enabledArgTypes: {
+        value: false,
+      },
       valueControlType: "boolean",
       valueType: "boolean",
     }),
+
+    value: {
+      control: "inline-radio",
+      options: ["indeterminate", true, false],
+      description: "Current value of the input field",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.DEFAULT,
+      },
+    },
 
     isToggle: {
       control: "boolean",
@@ -30,6 +43,8 @@ const meta = {
     ...getValidationArgTypes({
       enabledArgTypes: {
         customValidator: false,
+        showErrorOnBlur: false,
+        showErrorOnChange: false,
       },
     }),
   },
