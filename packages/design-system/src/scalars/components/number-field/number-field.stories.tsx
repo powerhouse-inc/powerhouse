@@ -75,6 +75,7 @@ export const Default: Story = {
     name: "Label",
     label: "Label",
     placeholder: "0",
+    showErrorOnBlur: true,
   },
 };
 export const Active: Story = {
@@ -82,6 +83,9 @@ export const Active: Story = {
     name: "Label",
     label: "Label",
     autoFocus: true,
+  },
+  parameters: {
+    pseudo: { focus: true },
   },
 };
 export const Disable: Story = {
@@ -158,17 +162,6 @@ export const WithFloatNumber: Story = {
     precision: 2,
     trailingZeros: true,
   },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || 0);
-
-    return (
-      <NumberField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(Number(e.target.value))}
-      />
-    );
-  },
 };
 // BigInt Stories
 export const WithBigInt: Story = {
@@ -185,19 +178,8 @@ export const WithStep: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 0,
+    value: 456,
     step: 10,
     minValue: 20,
-  },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || 0);
-
-    return (
-      <NumberField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(Number(e.target.value))}
-      />
-    );
   },
 };

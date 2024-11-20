@@ -4,7 +4,7 @@ export const validatePositive =
   (props: NumberFieldProps) => (value: unknown) => {
     return props.allowNegative
       ? true
-      : Number(value) > 0
+      : Number(value) >= 0 || value === undefined
         ? true
         : "Value must be a positive value";
   };
