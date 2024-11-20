@@ -19,6 +19,8 @@ const meta: Meta<typeof ToggleField> = {
     ...getValidationArgTypes({
       enabledArgTypes: {
         customValidator: false,
+        showErrorOnBlur: false,
+        showErrorOnChange: false,
       },
     }),
   },

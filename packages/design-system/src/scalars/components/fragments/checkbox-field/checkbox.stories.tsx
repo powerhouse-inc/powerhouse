@@ -5,7 +5,7 @@ import {
   getDefaultArgTypes,
   getValidationArgTypes,
 } from "@/scalars/lib/storybook-arg-types";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const meta: Meta<typeof CheckboxField> = {
   component: CheckboxField,
@@ -21,6 +21,8 @@ const meta: Meta<typeof CheckboxField> = {
     ...getValidationArgTypes({
       enabledArgTypes: {
         customValidator: false,
+        showErrorOnBlur: false,
+        showErrorOnChange: false,
       },
     }),
   },
@@ -142,7 +144,25 @@ export const WithCircularThreeStates: Story = {
   parameters: {
     docs: {
       source: {
-        type: "auto",
+        type: "code",
+        format: true,
+        code: `
+        const [state, setState] = useState("indeterminate");
+
+        const handleChange = () => {
+          // rotate between true, false and indeterminate
+          const nextState = state === true ? false : state === "indeterminate" ? false : true;
+          setState(nextState);
+
+          // return the new value to ensure the form internal state is updated
+          // and kept in sync with the controlled component state
+          return nextState;
+        };
+
+        return (
+          <CheckboxField label="Checkbox" value={state} onChange={handleChange} />
+        );
+        `,
       },
     },
   },
