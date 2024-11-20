@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
 import { AmountField } from "./amount-field";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  PrebuiltArgTypes,
+  StorybookControlCategory,
+} from "@/scalars/lib/storybook-arg-types";
 
 const meta = {
   title: "Document Engineering/Complex Components/AmountField",
@@ -11,100 +17,18 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    name: {
-      control: "text",
-      description: "Name attribute for the input field",
-      table: {
-        type: { summary: "string" },
-      },
-    },
-    label: {
-      control: "text",
-      description: "Label text displayed above the input field",
-      table: {
-        type: { summary: "string" },
-      },
-    },
-    description: {
-      control: "text",
-      description: "Helper text displayed below the input field",
-      table: {
-        type: { summary: "string" },
-      },
-    },
-    value: {
-      control: "number",
-      description: "Controlled value of the input field",
-      table: {
-        type: { summary: "number" },
-      },
-    },
-    required: {
-      control: "boolean",
-      description: "Whether the field is required",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
-      },
-    },
-    disabled: {
-      control: "boolean",
-      description: "Whether the input field is disabled",
-      table: {
-        defaultValue: { summary: "false" },
-        type: { summary: "boolean" },
-      },
-    },
-    placeholder: {
-      control: "text",
-      description: "Placeholder text shown when field is empty",
-      table: {
-        type: { summary: "string" },
-      },
-    },
-    minValue: {
-      control: "number",
-      description: "Minimum number of characters allowed",
-      table: {
-        type: { summary: "number" },
-      },
-    },
-    maxValue: {
-      control: "number",
-      description: "Maximum number of characters allowed",
-      table: {
-        type: { summary: "number" },
-      },
-    },
-    errors: {
+    // TODO:Improve the AmountType descriptions
+
+    allowedCurrencies: {
       control: "object",
-      description: "Array of error messages to display below the field",
-      table: {
-        defaultValue: { summary: "[]" },
-        type: { summary: "string[]" },
-      },
-    },
-    warnings: {
-      control: "object",
-      description: "Array of warning messages to display below the field",
-      table: { defaultValue: { summary: "[]" }, type: { summary: "string[]" } },
-    },
-    allowNegative: {
-      control: "boolean",
-      description: "Allows the input field to accept negative numbers",
-      table: { type: { summary: "boolean" } },
-    },
-    precision: {
-      control: "number",
-      description: "Number of decimal places allowedd",
-      table: { type: { summary: "number" } },
-    },
-    trailingZeros: {
-      control: "boolean",
       description:
-        "When precision is set, for example to 2, determines if the the trailing zeros should be preserved ( for example: 25.00,7.50, etc.) or not ( for example: 25, 7.5).",
-      table: { type: { summary: "boolean" } },
+        "Array of custom error messages. These errors are going to be added to the internal validation errors if there's any.",
+      table: {
+        type: { summary: "string[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
     },
+
     type: {
       control: "select",
       options: [
@@ -118,6 +42,18 @@ const meta = {
         "Value types: Amount, AmountCurrency, AmountFiat, AmountToken, and AmountPercentage.",
       table: { type: { summary: "boolean" } },
     },
+    ...getDefaultArgTypes({
+      valueControlType: "AmountType",
+      valueType: "AmountType",
+    }),
+    ...PrebuiltArgTypes.placeholder,
+    ...getValidationArgTypes(),
+    ...PrebuiltArgTypes.minValue,
+    ...PrebuiltArgTypes.maxValue,
+    ...PrebuiltArgTypes.allowNegative,
+    ...PrebuiltArgTypes.precision,
+    ...PrebuiltArgTypes.trailingZeros,
+    ...PrebuiltArgTypes.decimalRequired,
   },
   args: {
     errors: [],
@@ -131,31 +67,40 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
+    selectName: "currency",
     label: "Enter Amount ",
     name: "amount",
-    type: "Amount",
     value: {
-      amount: 300,
+      type: "Amount",
+      details: {
+        amount: 345,
+      },
     },
   },
 };
 export const DefaultWithPercent: Story = {
   args: {
+    selectName: "currency",
     label: "Enter Percentage",
     name: "amount",
-    type: "AmountPercentage",
     value: {
-      amount: 300,
+      type: "AmountPercentage",
+      details: {
+        amount: 345,
+      },
     },
   },
 };
 export const DisableWithPercent: Story = {
   args: {
+    selectName: "currency",
     label: "Enter Percentage ",
     name: "amount",
-    type: "AmountPercentage",
     value: {
-      amount: 300,
+      type: "AmountPercentage",
+      details: {
+        amount: 345,
+      },
     },
     disabled: true,
   },
@@ -163,12 +108,90 @@ export const DisableWithPercent: Story = {
 
 export const ActiveWithPercent: Story = {
   args: {
+    selectName: "currency",
     label: "Enter Percentage ",
     name: "amount",
-    type: "AmountPercentage",
     value: {
-      amount: 300,
+      type: "AmountPercentage",
+      details: {
+        amount: 345,
+      },
     },
+
+    numberProps: {
+      autoFocus: true,
+    },
+  },
+};
+
+export const DefaultWithCurrency: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    allowedCurrencies: ["USD", "EUR"],
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+  },
+};
+
+export const ActiveWithCurrency: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    allowedCurrencies: ["USD", "EUR"],
     autoFocus: true,
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+    numberProps: {
+      autoFocus: true,
+    },
+  },
+};
+export const DisableWithCurrency: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    allowedCurrencies: ["USD", "EUR"],
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+    disabled: true,
+  },
+};
+export const HoverWithCurrency: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    allowedCurrencies: ["USD", "EUR"],
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+  },
+  parameters: {
+    pseudo: {
+      hover: true,
+    },
   },
 };

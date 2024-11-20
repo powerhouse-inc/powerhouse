@@ -84,11 +84,7 @@ export const DefaultActive: Story = {
     autoFocus: true,
   },
 };
-DefaultActive.parameters = {
-  pseudo: {
-    active: true,
-  },
-};
+
 export const Filled: Story = {
   args: {
     name: "Label",
