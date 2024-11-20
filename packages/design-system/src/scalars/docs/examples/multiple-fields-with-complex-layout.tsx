@@ -1,8 +1,8 @@
 import { Button } from "@/powerhouse/components/button";
-import { BooleanField, NumberField, StringField } from "../components";
-import { Form, RadioGroupField } from "../components";
+import { BooleanField, NumberField, StringField } from "../../components";
+import { Form, RadioGroupField } from "../../components";
 
-const FormExample = () => {
+const MultipleFieldsWithComplexLayout = () => {
   const onSubmit = async (data: any) => {
     // simulate a slow network request
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -19,7 +19,7 @@ const FormExample = () => {
         phone: "",
         age: NaN,
         notifications: true,
-        sex: "",
+        gender: "",
         subscribe: true,
         termsAndConditions: false,
       }}
@@ -43,18 +43,6 @@ const FormExample = () => {
               precision={0}
               showErrorOnBlur
             />
-            <div className="col-span-2 mb-4">
-              <RadioGroupField
-                name="sex"
-                label="Sex"
-                options={[
-                  { label: "Male", value: "male" },
-                  { label: "Female", value: "female" },
-                  { label: "Other", value: "other" },
-                ]}
-                required
-              />
-            </div>
             <NumberField
               showErrorOnBlur
               name="height"
@@ -96,6 +84,17 @@ const FormExample = () => {
             showErrorOnChange
           />
 
+          <RadioGroupField
+            name="gender"
+            label="Gender"
+            options={[
+              { label: "Male", value: "male" },
+              { label: "Female", value: "female" },
+              { label: "Other", value: "other" },
+            ]}
+            required
+          />
+
           <BooleanField
             name="notifications"
             label="Receive notifications"
@@ -127,4 +126,4 @@ const FormExample = () => {
   );
 };
 
-export default FormExample;
+export default MultipleFieldsWithComplexLayout;
