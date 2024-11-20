@@ -9,7 +9,10 @@ describe("RadioGroupField Component", () => {
     const { asFragment } = renderWithForm(
       <RadioGroupField
         name="radio-group"
-        options={[{ label: "Option 1", value: "1" }]}
+        options={[
+          { label: "Option 1", value: "1" },
+          { label: "Option 2", value: "2" },
+        ]}
       />,
     );
     expect(asFragment()).toMatchSnapshot();
@@ -173,7 +176,7 @@ describe("RadioGroupField Component", () => {
     expect(selectedRadio).toBeChecked();
   });
 
-  it("should handle controlled value", () => {
+  it("should handle value", () => {
     renderWithForm(
       <RadioGroupField
         name="radio-group"

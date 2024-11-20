@@ -147,7 +147,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Warning states
               hasWarning && [
-                "bg-orange-50/50 border-orange-500",
+                "border-orange-500 bg-orange-50/50",
                 "dark:border-orange-400 dark:bg-orange-900/5",
                 "hover:border-orange-600",
                 "dark:hover:border-orange-300",
@@ -158,7 +158,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Error states
               hasError && [
-                "bg-red-50/50 border-red-500",
+                "border-red-500 bg-red-50/50",
                 "dark:border-red-400 dark:bg-red-900/5",
                 "hover:border-red-600",
                 "dark:hover:border-red-300",
@@ -184,10 +184,10 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             minLength={minLength}
             name={name}
             placeholder={placeholder}
-            ref={ref}
             rows={rows}
             spellCheck={spellCheck}
             {...props}
+            ref={ref}
             value={transformedValue}
             onChange={handleChange}
           />
@@ -227,5 +227,10 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   },
 );
 
-export const TextareaField =
-  withFieldValidation<TextareaProps>(TextareaFieldRaw);
+export const TextareaField = withFieldValidation<TextareaProps>(
+  TextareaFieldRaw,
+) as React.ForwardRefExoticComponent<
+  TextareaProps & React.RefAttributes<HTMLTextAreaElement>
+>;
+
+TextareaField.displayName = "TextareaField";

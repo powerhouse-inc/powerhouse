@@ -9,6 +9,7 @@ import { FormLabel } from "../form-label";
 import { Input } from "../input";
 import { FormMessageList } from "../form-message";
 import { renderWithForm } from "@/scalars/lib/testing";
+import { ValidatorHandler } from "../../types";
 
 // Test component that will be wrapped
 
@@ -97,7 +98,10 @@ describe("withFieldValidation", () => {
     };
 
     renderWithForm(
-      <WrappedComponent name="test" customValidator={customValidator} />,
+      <WrappedComponent
+        name="test"
+        customValidator={customValidator as ValidatorHandler}
+      />,
     );
 
     const input = screen.getByTestId("test-input");
@@ -167,9 +171,10 @@ describe("withFieldValidation", () => {
     const WrappedComponentWithCustomValidator =
       withFieldValidation<TextFieldProps>(TextFieldTesting, {
         validations: {
-          _isPrime: () => (value: string) => {
-            return Number(value) % 2 === 0 || "Custom error message";
-          },
+          _isPrime: () =>
+            ((value: string) => {
+              return Number(value) % 2 === 0 || "Custom error message";
+            }) as ValidatorHandler,
         },
       });
     renderWithForm(<WrappedComponentWithCustomValidator name="test" />);
@@ -185,13 +190,14 @@ describe("withFieldValidation", () => {
     const WrappedComponentWithCustomValidator =
       withFieldValidation<TextFieldProps>(TextFieldTesting, {
         validations: {
-          _autoCompleteRequireLength3: (props) => (value: string) => {
-            return props.autoComplete
-              ? value.length > 3
-                ? true
-                : "Error"
-              : true;
-          },
+          _autoCompleteRequireLength3: (props) =>
+            ((value: string) => {
+              return props.autoComplete
+                ? value.length > 3
+                  ? true
+                  : "Error"
+                : true;
+            }) as ValidatorHandler,
         },
       });
     renderWithForm(

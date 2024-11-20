@@ -24,7 +24,7 @@ exports[`RadioGroupField Component > should match snapshot 1`] = `
           aria-checked="false"
           aria-disabled="false"
           aria-invalid="false"
-          class="aspect-square size-4 rounded-full border-2 border-blue-700 dark:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:ring-offset-0 dark:focus:ring-blue-900/30 hover:border-blue-900 dark:hover:border-blue-300 focus:hover:ring-blue-200 dark:focus:hover:ring-blue-900/40"
+          class="group aspect-square size-4 rounded-full border-2 border-gray-800 dark:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300/40 focus:ring-offset-0 dark:focus:ring-gray-500/40 hover:border-gray-900 dark:hover:border-gray-50 focus:hover:ring-gray-400/40 dark:focus:hover:ring-gray-400/40"
           data-radix-collection-item=""
           data-state="unchecked"
           id=":r0:-radio-0-1"
@@ -46,6 +46,39 @@ exports[`RadioGroupField Component > should match snapshot 1`] = `
           for=":r0:-radio-0-1"
         >
           Option 1
+        </label>
+      </div>
+      <div
+        class="flex items-center gap-2.5"
+        role="presentation"
+      >
+        <button
+          aria-checked="false"
+          aria-disabled="false"
+          aria-invalid="false"
+          class="group aspect-square size-4 rounded-full border-2 border-gray-800 dark:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300/40 focus:ring-offset-0 dark:focus:ring-gray-500/40 hover:border-gray-900 dark:hover:border-gray-50 focus:hover:ring-gray-400/40 dark:focus:hover:ring-gray-400/40"
+          data-radix-collection-item=""
+          data-state="unchecked"
+          id=":r0:-radio-1-2"
+          role="radio"
+          tabindex="-1"
+          type="button"
+          value="2"
+        />
+        <input
+          aria-hidden="true"
+          name="radio-group"
+          style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 0px; height: 0px;"
+          tabindex="-1"
+          type="radio"
+          value="2"
+        />
+        <label
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+          for=":r0:-radio-1-2"
+          role="label"
+        >
+          Option 2
         </label>
       </div>
     </div>

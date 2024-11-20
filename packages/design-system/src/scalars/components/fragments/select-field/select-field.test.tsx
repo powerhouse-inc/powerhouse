@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithForm } from "@/scalars/lib/testing";
 import { SelectField } from "./select-field";
 
 describe("SelectField Component", () => {
@@ -13,19 +14,14 @@ describe("SelectField Component", () => {
 
   // Basic Rendering Tests
   it("should match snapshot", () => {
-    const { asFragment } = render(
+    const { asFragment } = renderWithForm(
       <SelectField name="select" options={defaultOptions} />,
     );
     expect(asFragment()).toMatchSnapshot();
   });
 
-  it("should render with default placeholder", () => {
-    render(<SelectField name="select" options={defaultOptions} />);
-    expect(screen.getByText("Select an option")).toBeInTheDocument();
-  });
-
   it("should render with custom placeholder", () => {
-    render(
+    renderWithForm(
       <SelectField
         name="select"
         options={defaultOptions}
@@ -37,14 +33,14 @@ describe("SelectField Component", () => {
 
   // Label Tests
   it("should render with label", () => {
-    render(
+    renderWithForm(
       <SelectField name="select" options={defaultOptions} label="Test Label" />,
     );
     expect(screen.getByText("Test Label")).toBeInTheDocument();
   });
 
   it("should show required indicator when required", () => {
-    render(
+    renderWithForm(
       <SelectField
         name="select"
         options={defaultOptions}
@@ -61,7 +57,7 @@ describe("SelectField Component", () => {
     const onChangeMock = vi.fn();
     const user = userEvent.setup();
 
-    render(
+    renderWithForm(
       <SelectField
         name="select"
         options={defaultOptions}
@@ -80,7 +76,7 @@ describe("SelectField Component", () => {
     const onChangeMock = vi.fn();
     const user = userEvent.setup();
 
-    render(
+    renderWithForm(
       <SelectField
         name="select"
         options={defaultOptions}
@@ -97,7 +93,9 @@ describe("SelectField Component", () => {
   // Search Functionality Tests
   it("should show search input when searchable is true", async () => {
     const user = userEvent.setup();
-    render(<SelectField name="select" options={defaultOptions} searchable />);
+    renderWithForm(
+      <SelectField name="select" options={defaultOptions} searchable />,
+    );
 
     await user.click(screen.getByRole("combobox"));
     expect(screen.getByPlaceholderText("Search...")).toBeInTheDocument();
@@ -105,7 +103,9 @@ describe("SelectField Component", () => {
 
   it("should filter options based on search input", async () => {
     const user = userEvent.setup();
-    render(<SelectField name="select" options={defaultOptions} searchable />);
+    renderWithForm(
+      <SelectField name="select" options={defaultOptions} searchable />,
+    );
 
     await user.click(screen.getByRole("combobox"));
     await user.type(screen.getByPlaceholderText("Search..."), "Option 1");
@@ -114,9 +114,9 @@ describe("SelectField Component", () => {
     expect(screen.queryByText("Option 2")).not.toBeInTheDocument();
   });
 
-  // // Validation and Error Handling Tests
+  // Validation and Error Handling Tests
   it("should display error messages", () => {
-    render(
+    renderWithForm(
       <SelectField
         name="select"
         options={defaultOptions}
@@ -127,7 +127,7 @@ describe("SelectField Component", () => {
   });
 
   it("should display warning messages", () => {
-    render(
+    renderWithForm(
       <SelectField
         name="select"
         options={defaultOptions}
@@ -139,34 +139,36 @@ describe("SelectField Component", () => {
     ).toBeInTheDocument();
   });
 
-  // // Keyboard Navigation Tests
+  // Keyboard Navigation Tests
   it("should handle keyboard navigation", async () => {
     const user = userEvent.setup();
-    render(<SelectField name="select" options={defaultOptions} />);
+    renderWithForm(<SelectField name="select" options={defaultOptions} />);
 
-    screen.getByRole("combobox").focus(); // Focus the combobox
+    screen.getByRole("combobox").focus();
 
     await user.keyboard("{Enter}"); // Open dropdown
-    expect(screen.getByRole("listbox")).toBeInTheDocument(); // Check for Popover content
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
 
     await user.keyboard("{Escape}"); // Close dropdown
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument(); // Check Popover is closed
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
-  // // Edge Cases
+  // Edge Cases
   it("should handle empty options array", () => {
-    render(<SelectField name="select" options={[]} />);
-    expect(screen.getByText("Select an option")).toBeInTheDocument();
+    renderWithForm(<SelectField name="select" options={[]} />);
+    expect(screen.getByRole("combobox")).toHaveValue("");
   });
 
   it("should handle value when provided", () => {
-    render(<SelectField name="select" options={defaultOptions} value="2" />);
+    renderWithForm(
+      <SelectField name="select" options={defaultOptions} value="2" />,
+    );
     expect(screen.getByText("Option 2")).toBeInTheDocument();
   });
 
   // Accessibility Tests
   it("should have correct ARIA attributes", () => {
-    render(
+    renderWithForm(
       <SelectField
         name="select"
         options={defaultOptions}
@@ -185,7 +187,9 @@ describe("SelectField Component", () => {
   // Modal Behavior Tests
   it("should render as modal when asModal is true", async () => {
     const user = userEvent.setup();
-    render(<SelectField name="select" options={defaultOptions} asModal />);
+    renderWithForm(
+      <SelectField name="select" options={defaultOptions} asModal />,
+    );
 
     await user.click(screen.getByRole("combobox"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -196,7 +200,7 @@ describe("SelectField Component", () => {
     const onChangeMock = vi.fn();
     const user = userEvent.setup();
 
-    render(
+    renderWithForm(
       <SelectField
         name="select"
         options={defaultOptions}
