@@ -9,6 +9,7 @@ describe("RadioGroup Component", () => {
     const { asFragment } = render(
       <RadioGroup name="radio-group">
         <Radio label="Option 1" value="1" />
+        <Radio label="Option 2" value="2" />
       </RadioGroup>,
     );
     expect(asFragment()).toMatchSnapshot();
@@ -109,7 +110,7 @@ describe("RadioGroup Component", () => {
     expect(selectedRadio).toBeChecked();
   });
 
-  it("should handle controlled value", () => {
+  it("should handle value", () => {
     render(
       <RadioGroup name="radio-group" value="1">
         <Radio label="Option 1" value="1" />

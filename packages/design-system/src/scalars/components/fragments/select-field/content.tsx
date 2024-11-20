@@ -96,7 +96,7 @@ export const Content: React.FC<ContentProps> = ({
                 className={cn(
                   "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700",
                   option.disabled &&
-                    "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
+                    "cursor-not-allowed opacity-75 hover:bg-transparent dark:hover:bg-transparent",
                 )}
               >
                 {multiple ? (
@@ -107,7 +107,7 @@ export const Content: React.FC<ContentProps> = ({
                       isSelected
                         ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
                         : "opacity-50 [&_svg]:invisible",
-                      option.disabled && "opacity-25",
+                      option.disabled && "opacity-75",
                     )}
                   >
                     <CheckIcon className="size-4" />
@@ -120,7 +120,7 @@ export const Content: React.FC<ContentProps> = ({
                         ? "border-gray-900 dark:border-gray-100"
                         : "border-gray-400 dark:border-gray-600",
                       "bg-white dark:bg-gray-800",
-                      option.disabled && "opacity-25",
+                      option.disabled && "opacity-75",
                     )}
                   >
                     {isSelected && (
@@ -132,14 +132,14 @@ export const Content: React.FC<ContentProps> = ({
                   <IconComponent
                     className={cn(
                       "mr-2 size-4 text-gray-500 dark:text-gray-400",
-                      option.disabled && "opacity-50",
+                      option.disabled && "opacity-75",
                     )}
                   />
                 )}
                 <span
                   className={cn(
                     "text-gray-900 dark:text-gray-100",
-                    option.disabled && "text-gray-400 dark:text-gray-600",
+                    option.disabled && "text-gray-500 dark:text-gray-400",
                   )}
                 >
                   {option.label}

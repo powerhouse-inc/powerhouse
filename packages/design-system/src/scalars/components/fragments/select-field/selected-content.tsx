@@ -11,7 +11,7 @@ interface SelectedContentProps {
   options?: SelectProps["options"];
   multiple: boolean;
   maxSelectedOptionsToShow: number;
-  placeholder: string;
+  placeholder?: string;
   disabled: boolean;
   toggleOption: (value: string) => void;
   handleClear: () => void;
@@ -33,7 +33,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
     return (
       <div className="mx-auto flex w-full items-center justify-between">
         <span className="mx-3 text-sm text-gray-500 dark:text-gray-400">
-          {placeholder}
+          {placeholder ?? ""}
         </span>
         <ChevronDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
       </div>

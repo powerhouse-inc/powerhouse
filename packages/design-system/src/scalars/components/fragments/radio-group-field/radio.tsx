@@ -25,8 +25,8 @@ export const Radio = React.forwardRef<
       disabled = false,
       hasError = false,
       id: propId,
-      label = "",
-      value = "",
+      label,
+      value,
       ...props
     },
     ref,
@@ -60,9 +60,9 @@ export const Radio = React.forwardRef<
           )}
           disabled={disabled}
           id={id}
-          ref={ref}
           value={value}
           {...props}
+          ref={ref}
         >
           <RadioGroupPrimitive.Indicator
             className={cn(
