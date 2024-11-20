@@ -1,46 +1,35 @@
 import React, { FC, useId } from "react";
-import {
-  AmountProps,
-  AmountValue,
-  ErrorHandling,
-  FieldCommonProps,
-  NumberProps,
-} from "../types";
-import { NumberField } from "../number-field";
+import { AmountType, InputNumberProps } from "../types";
+import { NumberField, NumberFieldProps } from "../number-field";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
+  SelectField,
+  SelectFieldProps,
 } from "../fragments";
-import { cn } from "@/scalars/lib/utils";
 import { useAmountField } from "./use-amount-field";
+import { cn } from "@/scalars/lib";
 
-export interface AmountFieldProps
-  extends Omit<
-    FieldCommonProps<string | number> &
-      NumberProps &
-      ErrorHandling &
-      AmountProps &
-      Omit<
-        React.InputHTMLAttributes<HTMLInputElement>,
-        "min" | "max" | "minLength" | "maxLength"
-      >,
-    "value" | "defaultValue" | "name" | "pattern"
-  > {
+export interface AmountFieldProps extends InputNumberProps {
   className?: string;
-  defaultValue?: number;
+  defaultValue?: AmountType;
   name: string;
   pattern?: RegExp;
-  value?: AmountValue;
+  numberProps?: Omit<NumberFieldProps, "name">;
+  selectProps?: Omit<SelectFieldProps, "name">;
+  value?: AmountType;
+  allowedCurrencies?: string[];
+  allowedTokens?: string[];
+  selectName: string;
 }
+
 // TODO: Think about pass reference in here
 const AmountField: FC<AmountFieldProps> = ({
   name,
   label,
   value,
-  type = "Amount",
-
   id: propId,
   precision = 0,
   minValue,
@@ -55,18 +44,28 @@ const AmountField: FC<AmountFieldProps> = ({
   warnings,
   description,
   defaultValue,
-  // TODO: Disable for next iterations in validations
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  selectName,
   allowedCurrencies = [],
+  // Disable becasue its WIP, and this are default config
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   allowedTokens = [],
-  ...props
+  numberProps,
+  selectProps,
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
-  const { isPercent, valueToDisplay } = useAmountField({
-    type,
+  const {
+    isPercent,
+    isCurrency,
+    isSearchable,
+    options,
+    valueInput,
+    defaultInput,
+    valueCurrency,
+  } = useAmountField({
     value,
+    allowedCurrencies,
+    defaultValue,
   });
 
   return (
@@ -85,12 +84,12 @@ const AmountField: FC<AmountFieldProps> = ({
       <div className={cn("relative flex items-center gap-1")}>
         <div className={cn("relative flex items-center")}>
           <NumberField
-            defaultValue={defaultValue}
             required={required}
             disabled={disabled}
             name={name}
+            defaultValue={defaultInput}
             id={id}
-            value={valueToDisplay}
+            value={valueInput}
             maxValue={maxValue}
             precision={precision}
             minValue={minValue}
@@ -98,7 +97,7 @@ const AmountField: FC<AmountFieldProps> = ({
             trailingZeros={trailingZeros}
             onChange={onChange}
             className={cn("flex-1 pr-6 outline-none", className)}
-            {...props}
+            {...(numberProps || {})}
           />
           {isPercent && (
             <span
@@ -111,6 +110,25 @@ const AmountField: FC<AmountFieldProps> = ({
             </span>
           )}
         </div>
+        {!isPercent && isCurrency && (
+          <div>
+            <SelectField
+              value={valueCurrency}
+              defaultValue={["USD"]}
+              searchable={isSearchable}
+              name={selectName}
+              className={cn(
+                "relative flex w-[81px] items-center",
+                selectProps?.className,
+              )}
+              required={required}
+              disabled={disabled}
+              options={options}
+              asChild
+              {...(selectProps || {})}
+            />
+          </div>
+        )}
       </div>
       {description && <FormDescription>{description}</FormDescription>}
       {warnings && <FormMessageList messages={warnings} type="warning" />}

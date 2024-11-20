@@ -3,7 +3,7 @@ import { Input } from "../fragments/input";
 import { FormLabel } from "../fragments/form-label";
 import { FormMessageList } from "../fragments/form-message";
 import { FormGroup } from "../fragments/form-group";
-import { ErrorHandling, FieldCommonProps, NumberProps } from "../types";
+import { InputNumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { getDisplayValue, regex } from "@/scalars/utils/utils";
@@ -16,19 +16,9 @@ import {
   validateTrailingZeros,
 } from "./numberFieldValidations";
 
-export interface NumberFieldProps
-  extends Omit<
-    FieldCommonProps<string | number> &
-      NumberProps &
-      ErrorHandling &
-      Omit<
-        React.InputHTMLAttributes<HTMLInputElement>,
-        "min" | "max" | "minLength" | "maxLength"
-      >,
-    "value" | "defaultValue" | "name" | "pattern"
-  > {
+export interface NumberFieldProps extends InputNumberProps {
   className?: string;
-  defaultValue?: number;
+  defaultValue?: number | string;
   name: string;
   pattern?: RegExp;
   value?: number | string;

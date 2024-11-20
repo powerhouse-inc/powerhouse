@@ -1,4 +1,4 @@
-import { currencies } from "../lib/data";
+import { currencies } from "../lib/currency-list";
 
 export type ErrorMessage = string;
 
@@ -117,25 +117,40 @@ export type EnumProps =
 
 export type CurrencyCode = (typeof currencies)[number];
 
-export interface Amount {
+export interface AmountBase {
   amount: number | string;
 }
 
-export interface AmountCurrency {
-  amount: number;
+export interface AmountCurrency extends AmountBase {
   currency: CurrencyCode;
 }
 
-export interface AmountPercentage {
+export interface AmountPercentageBase {
   amount: number;
 }
 
-export type TypeAmount = "Amount" | "AmountCurrency" | "AmountPercentage";
+export type AmountType =
+  | { type: "Amount"; details: AmountBase }
+  | { type: "AmountCurrency"; details: AmountCurrency }
+  | { type: "AmountPercentage"; details: AmountPercentageBase };
 
-export type AmountValue = Amount | AmountCurrency | AmountPercentage;
-export interface AmountProps {
-  value: AmountValue;
-  type: TypeAmount;
-  allowedCurrencies?: string[];
-  allowedTokens?: string[];
+export interface InputNumberProps
+  extends Omit<
+    FieldCommonProps<string | number> &
+      NumberProps &
+      ErrorHandling &
+      Omit<
+        React.InputHTMLAttributes<HTMLInputElement>,
+        "min" | "max" | "minLength" | "maxLength"
+      >,
+    "value" | "defaultValue" | "name" | "pattern"
+  > {
+  name: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  precision?: number;
+  trailingZeros?: boolean;
+  allowNegative?: boolean;
+  isBigInt?: boolean;
 }
