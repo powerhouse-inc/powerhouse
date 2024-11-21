@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { TextField } from "./text-field";
 import { useCallback } from "react";
-import { makeInitialSchemaDoc, renameSchemaType } from "../utils";
+import {
+  handleModelNameChange,
+  makeInitialSchemaDoc,
+  renameSchemaType,
+} from "../utils";
 import { Scope } from "../types";
 
 export const MetadataFormSchema = z.object({
@@ -92,6 +96,13 @@ export function ModelNameForm(props: Props) {
         );
         setStateSchema(newLocalStateSchema, "local");
       }
+      handleModelNameChange({
+        oldName: name,
+        newName,
+        globalStateSchema,
+        localStateSchema,
+        setStateSchema,
+      });
     },
     [name, globalStateSchema, localStateSchema, setStateSchema],
   );

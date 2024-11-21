@@ -346,3 +346,65 @@ export function renameSchemaType(
 
   return print(updatedAst);
 }
+
+export function initializeModelSchema(params: {
+  modelName: string;
+  setStateSchema: (schema: string, scope: Scope) => void;
+}) {
+  const { modelName, setStateSchema } = params;
+  const initialSchemaDoc = makeInitialSchemaDoc(modelName, "global");
+  setStateSchema(initialSchemaDoc, "global");
+}
+
+export function updateModelSchemaNames(params: {
+  oldName: string;
+  newName: string;
+  globalStateSchema: string;
+  localStateSchema: string;
+  setStateSchema: (schema: string, scope: Scope) => void;
+}) {
+  const {
+    oldName,
+    newName,
+    globalStateSchema,
+    localStateSchema,
+    setStateSchema,
+  } = params;
+
+  const newSchema = renameSchemaType(
+    globalStateSchema,
+    oldName,
+    newName,
+    "global",
+  );
+  setStateSchema(newSchema, "global");
+
+  if (localStateSchema) {
+    const newLocalStateSchema = renameSchemaType(
+      localStateSchema,
+      oldName,
+      newName,
+      "local",
+    );
+    setStateSchema(newLocalStateSchema, "local");
+  }
+}
+
+export function handleModelNameChange(params: {
+  oldName: string;
+  newName: string;
+  globalStateSchema: string;
+  localStateSchema: string;
+  setStateSchema: (schema: string, scope: Scope) => void;
+}) {
+  const { oldName, newName, globalStateSchema, setStateSchema } = params;
+
+  const hasExistingSchema = !!globalStateSchema;
+
+  if (!hasExistingSchema) {
+    initializeModelSchema({ modelName: newName, setStateSchema });
+    return;
+  }
+
+  updateModelSchemaNames(params);
+}

@@ -1,6 +1,7 @@
-import { useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import {
   compareStringsWithoutWhitespace,
+  initializeModelSchema,
   makeOperationInitialDoc,
   Scope,
 } from ".";
@@ -24,7 +25,7 @@ export default function Editor(
     DocumentModelLocalState
   >,
 ) {
-  const { document, dispatch } = props;
+  const { document, documentNodeName, dispatch } = props;
   const {
     name: modelName,
     id: documentType,
@@ -49,6 +50,25 @@ export default function Editor(
     () => modules.flatMap((module) => module.operations),
     [modules],
   );
+  const shouldSetInitialName = useRef(
+    !modelName && !!documentNodeName && operations.length === 0,
+  );
+
+  useEffect(() => {
+    if (!shouldSetInitialName.current || !documentNodeName) return;
+
+    dispatch(actions.setModelName({ name: documentNodeName }));
+
+    // Initialize schema if it's the first time setting the name
+    initializeModelSchema({
+      modelName: documentNodeName,
+      setStateSchema: (schema: string, scope: Scope) => {
+        dispatch(actions.setStateSchema({ schema, scope }));
+      },
+    });
+
+    shouldSetInitialName.current = false;
+  }, [documentNodeName]);
 
   const operationSchemasSdl = useMemo(
     () => operations.flatMap((operation) => operation.schema ?? []).join("\n"),
@@ -162,21 +182,6 @@ export default function Editor(
       )
         return;
       dispatch(actions.setModuleName({ id, name }));
-    },
-    [modules],
-  );
-
-  const setModuleDescription = useCallback(
-    (id: string, description: string) => {
-      const oldModuleDescription = modules.find(
-        (module) => module.id === id,
-      )?.description;
-      if (
-        oldModuleDescription &&
-        compareStringsWithoutWhitespace(oldModuleDescription, description)
-      )
-        return;
-      dispatch(actions.setModuleDescription({ id, description }));
     },
     [modules],
   );

@@ -890,7 +890,7 @@ importers:
         specifier: ^3.12.0
         version: 3.12.1
       document-model:
-        specifier: ^2.6.0
+        specifier: workspace:*
         version: link:../document-model
       document-model-editors:
         specifier: ^1.0.1
