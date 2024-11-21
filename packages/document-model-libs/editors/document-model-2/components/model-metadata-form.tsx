@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { DocumentActionHandlers } from "../types";
 import { TextField } from "./text-field";
 import { useCallback } from "react";
 import { makeInitialSchemaDoc, renameSchemaType } from "../utils";
+import { Scope } from "../types";
 
 export const MetadataFormSchema = z.object({
   name: z.string(),
@@ -16,9 +16,15 @@ export const MetadataFormSchema = z.object({
 export type MetadataFormValues = z.infer<typeof MetadataFormSchema>;
 
 type Props = MetadataFormValues & {
-  handlers: DocumentActionHandlers;
   globalStateSchema: string;
   localStateSchema: string;
+  setModelName: (name: string) => void;
+  setModelId: (id: string) => void;
+  setModelExtension: (extension: string) => void;
+  setModelDescription: (description: string) => void;
+  setAuthorName: (authorName: string) => void;
+  setAuthorWebsite: (authorWebsite: string) => void;
+  setStateSchema: (schema: string, scope: Scope) => void;
 };
 
 export function ModelMetadata(props: Props) {
@@ -47,20 +53,26 @@ export function ModelMetadata(props: Props) {
 }
 
 export function ModelNameForm(props: Props) {
-  const { name, handlers, globalStateSchema, localStateSchema } = props;
+  const {
+    name,
+    globalStateSchema,
+    localStateSchema,
+    setModelName,
+    setStateSchema,
+  } = props;
 
   const onSubmit = useCallback(
     (newName: string) => {
       if (name === newName) {
         return;
       }
-      handlers.setModelName(newName);
+      setModelName(newName);
 
       const hasExistingSchema = !!globalStateSchema;
 
       if (!hasExistingSchema) {
         const initialSchemaDoc = makeInitialSchemaDoc(newName, "global");
-        handlers.setStateSchema(initialSchemaDoc, "global");
+        setStateSchema(initialSchemaDoc, "global");
         return;
       }
       const newSchema = renameSchemaType(
@@ -69,7 +81,7 @@ export function ModelNameForm(props: Props) {
         newName,
         "global",
       );
-      handlers.setStateSchema(newSchema, "global");
+      setStateSchema(newSchema, "global");
 
       if (localStateSchema) {
         const newLocalStateSchema = renameSchemaType(
@@ -78,10 +90,10 @@ export function ModelNameForm(props: Props) {
           newName,
           "local",
         );
-        handlers.setStateSchema(newLocalStateSchema, "local");
+        setStateSchema(newLocalStateSchema, "local");
       }
     },
-    [name, globalStateSchema, localStateSchema, handlers],
+    [name, globalStateSchema, localStateSchema, setStateSchema],
   );
 
   return (
@@ -98,14 +110,14 @@ export function ModelNameForm(props: Props) {
 }
 
 export function DocumentTypeForm(props: Props) {
-  const { documentType, handlers } = props;
+  const { documentType, setModelId } = props;
 
   return (
     <TextField
       label="Document Type"
       name="powerhouse/document-model"
       value={documentType}
-      onSubmit={handlers.setModelId}
+      onSubmit={setModelId}
       placeholder="Document Type"
       required
     />
@@ -113,13 +125,13 @@ export function DocumentTypeForm(props: Props) {
 }
 
 export function ModelExtensionForm(props: Props) {
-  const { extension, handlers } = props;
+  const { extension, setModelExtension } = props;
 
   return (
     <TextField
       name="extension"
       value={extension}
-      onSubmit={handlers.setModelExtension}
+      onSubmit={setModelExtension}
       label="Model Extension"
       placeholder="Example .phdm"
       required
@@ -128,14 +140,14 @@ export function ModelExtensionForm(props: Props) {
 }
 
 export function DescriptionForm(props: Props) {
-  const { description, handlers } = props;
+  const { description, setModelDescription } = props;
 
   return (
     <TextField
       name="description"
       label="Model Description"
       value={description}
-      onSubmit={handlers.setModelDescription}
+      onSubmit={setModelDescription}
       placeholder="Describe your document to others"
       allowEmpty
       className="h-full"
@@ -144,13 +156,13 @@ export function DescriptionForm(props: Props) {
 }
 
 export function AuthorNameForm(props: Props) {
-  const { authorName, handlers } = props;
+  const { authorName, setAuthorName } = props;
 
   return (
     <TextField
       name="authorName"
       value={authorName}
-      onSubmit={handlers.setAuthorName}
+      onSubmit={setAuthorName}
       label="Author Name"
       placeholder="Username or organisation"
       allowEmpty
@@ -159,7 +171,7 @@ export function AuthorNameForm(props: Props) {
 }
 
 export function AuthorWebsiteForm(props: Props) {
-  const { authorWebsite, handlers } = props;
+  const { authorWebsite, setAuthorWebsite } = props;
 
   return (
     <TextField
@@ -168,7 +180,7 @@ export function AuthorWebsiteForm(props: Props) {
       label="Website URL"
       onSubmit={(newAuthorWebsite) => {
         if (!!authorWebsite && !newAuthorWebsite) return;
-        handlers.setAuthorWebsite(newAuthorWebsite);
+        setAuthorWebsite(newAuthorWebsite);
       }}
       placeholder="https://www.powerhouse.inc/"
       allowEmpty

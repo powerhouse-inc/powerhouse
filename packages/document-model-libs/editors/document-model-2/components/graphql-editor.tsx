@@ -1,8 +1,8 @@
 import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { EditorView, ViewUpdate, keymap } from "@codemirror/view";
 import { ayuLight } from "thememirror";
-import { graphql } from "cm6-graphql";
-import { useEffect, useRef } from "react";
+import { getSchema, graphql } from "cm6-graphql";
+import { memo, useEffect, useRef } from "react";
 import { indentWithTab } from "@codemirror/commands";
 import { useSchemaContext } from "../context/schema-context";
 import {
@@ -20,7 +20,7 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from "@codemirror/language";
-import { lintKeymap } from "@codemirror/lint";
+import { forceLinting, lintKeymap } from "@codemirror/lint";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import {
   crosshairCursor,
@@ -34,13 +34,20 @@ import {
 } from "@codemirror/view";
 import { isDocumentString, filterSchema } from "@graphql-tools/utils";
 import { Diagnostic, linter } from "@codemirror/lint";
-import { GraphQLError, locatedError, parse } from "graphql";
+import {
+  buildSchema,
+  GraphQLError,
+  GraphQLSchema,
+  locatedError,
+  parse,
+  printSchema,
+} from "graphql";
 import { validateSDL } from "graphql/validation/validate";
 
 type Props = {
   doc: string;
   readonly?: boolean;
-  updateDocumentInModel: (newDoc: string) => void;
+  updateDocumentInModel?: (newDoc: string) => void;
   customLinter?: (doc: string) => Diagnostic[];
 };
 
@@ -53,16 +60,72 @@ function convertGraphQLErrorToDiagnostic(error: GraphQLError): Diagnostic {
   };
 }
 
-export function GraphqlEditor(props: Props) {
+function makeLinter(
+  schema: GraphQLSchema,
+  customLinter?: (doc: string) => Diagnostic[],
+) {
+  return linter((view) => {
+    const doc = view.state.doc.toString();
+    let diagnostics: Diagnostic[] = [];
+
+    if (customLinter) {
+      diagnostics = diagnostics.concat(customLinter(doc));
+    }
+
+    if (isDocumentString(doc)) {
+      try {
+        const newDocNode = parse(doc);
+
+        const currentTypeNames = new Set(
+          newDocNode.definitions
+            .filter((def) => "name" in def && def.name)
+            .map((def) => (def as { name: { value: string } }).name.value),
+        );
+
+        const filteredSchema = filterSchema({
+          schema,
+          typeFilter: (typeName) => !currentTypeNames.has(typeName),
+        });
+
+        const errors = validateSDL(newDocNode, filteredSchema)
+          .map((error) => locatedError(error, newDocNode))
+          .filter(
+            (error, index, self) =>
+              index ===
+              self.findIndex(
+                (e) =>
+                  e.message === error.message &&
+                  e.locations?.[0]?.line === error.locations?.[0]?.line &&
+                  e.locations?.[0]?.column === error.locations?.[0]?.column,
+              ),
+          );
+
+        diagnostics = diagnostics.concat(
+          errors.map(convertGraphQLErrorToDiagnostic),
+        );
+      } catch (error) {
+        if (error instanceof GraphQLError) {
+          diagnostics.push(convertGraphQLErrorToDiagnostic(error));
+        }
+      }
+    }
+
+    return diagnostics;
+  });
+}
+
+export const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
   const { doc, readonly = false, updateDocumentInModel, customLinter } = props;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const graphqlCompartment = useRef(new Compartment());
+  const linterCompartment = useRef(new Compartment());
   const sharedSchema = useSchemaContext();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!viewRef.current) {
+      const schema = buildSchema(sharedSchema);
       viewRef.current = new EditorView({
         state: EditorState.create({
           doc,
@@ -95,7 +158,8 @@ export function GraphqlEditor(props: Props) {
               indentWithTab,
             ]),
             ayuLight,
-            graphqlCompartment.current.of(graphql(sharedSchema)),
+            graphqlCompartment.current.of(graphql(schema)),
+            linterCompartment.current.of(makeLinter(schema, customLinter)),
             EditorView.lineWrapping,
             EditorView.theme({
               "&": { fontSize: "18px" },
@@ -115,68 +179,16 @@ export function GraphqlEditor(props: Props) {
                 clearTimeout(timeoutRef.current);
               }
               timeoutRef.current = setTimeout(() => {
-                updateDocumentInModel(newDoc);
-              }, 300);
+                updateDocumentInModel?.(newDoc);
+              }, 500);
             }),
             EditorState.readOnly.of(readonly),
             keymap.of([indentWithTab]),
-            linter((view) => {
-              const doc = view.state.doc.toString();
-              let diagnostics: Diagnostic[] = [];
-
-              if (customLinter) {
-                diagnostics = diagnostics.concat(customLinter(doc));
-              }
-
-              if (isDocumentString(doc)) {
-                try {
-                  const newDocNode = parse(doc);
-
-                  const currentTypeNames = new Set(
-                    newDocNode.definitions
-                      .filter((def) => "name" in def && def.name)
-                      .map(
-                        (def) =>
-                          (def as { name: { value: string } }).name.value,
-                      ),
-                  );
-
-                  const filteredSchema = filterSchema({
-                    schema: sharedSchema,
-                    typeFilter: (typeName) => !currentTypeNames.has(typeName),
-                  });
-
-                  const errors = validateSDL(newDocNode, filteredSchema)
-                    .map((error) => locatedError(error, newDocNode))
-                    .filter(
-                      (error, index, self) =>
-                        index ===
-                        self.findIndex(
-                          (e) =>
-                            e.message === error.message &&
-                            e.locations?.[0]?.line ===
-                              error.locations?.[0]?.line &&
-                            e.locations?.[0]?.column ===
-                              error.locations?.[0]?.column,
-                        ),
-                    );
-
-                  diagnostics = diagnostics.concat(
-                    errors.map(convertGraphQLErrorToDiagnostic),
-                  );
-                } catch (error) {
-                  if (error instanceof GraphQLError) {
-                    diagnostics.push(convertGraphQLErrorToDiagnostic(error));
-                  }
-                }
-              }
-
-              return diagnostics;
-            }),
           ],
         }),
         parent: editorRef.current!,
       });
+      forceLinting(viewRef.current);
     }
     return () => {
       if (viewRef.current) {
@@ -189,11 +201,28 @@ export function GraphqlEditor(props: Props) {
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
+    const existingSchema = getSchema(view.state);
+    const existingSchemaString = existingSchema
+      ? printSchema(existingSchema)
+      : null;
+    if (!existingSchema || existingSchemaString !== sharedSchema) {
+      try {
+        const newSchema = buildSchema(sharedSchema);
 
-    view.dispatch({
-      effects: graphqlCompartment.current.reconfigure(graphql(sharedSchema)),
-    });
-  }, [sharedSchema]);
+        view.dispatch({
+          effects: [
+            graphqlCompartment.current.reconfigure(graphql(newSchema)),
+            linterCompartment.current.reconfigure(
+              makeLinter(newSchema, customLinter),
+            ),
+          ],
+        });
+        forceLinting(view);
+      } catch (error) {
+        console.debug("in schema update", error);
+      }
+    }
+  }, [sharedSchema, customLinter]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -204,8 +233,9 @@ export function GraphqlEditor(props: Props) {
         changes: { from: 0, to: currentDoc.length, insert: doc },
         annotations: [Transaction.userEvent.of("external")],
       });
+      forceLinting(view);
     }
   }, [doc]);
 
   return <div ref={editorRef} />;
-}
+});

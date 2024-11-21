@@ -1,6 +1,7 @@
 import { pascalCase } from "change-case";
 import { Author } from "document-model/document-model";
 import {
+  buildASTSchema,
   extendSchema,
   getNullableType,
   GraphQLScalarType,
@@ -266,10 +267,11 @@ function getMinimalValue(
 }
 
 export function makeMinimalObjectFromSDL(
-  schema: GraphQLSchema,
+  schemaSdl: string,
   sdl: string,
   existingValue?: any,
 ) {
+  const schema = buildASTSchema(parse(schemaSdl));
   const typeAST = parse(sdl);
 
   // Extract the type names from the SDL

@@ -1,5 +1,5 @@
 import { EditorState, Transaction } from "@codemirror/state";
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { ayuLight } from "thememirror";
 import {
   autocompletion,
@@ -7,7 +7,12 @@ import {
   closeBracketsKeymap,
   completionKeymap,
 } from "@codemirror/autocomplete";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from "@codemirror/commands";
 import {
   bracketMatching,
   defaultHighlightStyle,
@@ -39,11 +44,12 @@ type Props = {
   updateDoc: (newDoc: string) => void;
 };
 
-export function JSONEditor(props: Props) {
+export const JSONEditor = memo(function JSONEditor(props: Props) {
   const { doc, readonly, updateDoc } = props;
   const parentRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (!viewRef.current) {
       const state = EditorState.create({
@@ -101,13 +107,13 @@ export function JSONEditor(props: Props) {
               }
               timeoutRef.current = setTimeout(() => {
                 updateDoc(newDoc);
-              }, 300);
-            } catch (e) {
-              console.error(e);
-              /* do nothing */
+              }, 500);
+            } catch (error) {
+              console.debug("in json editor update", error);
             }
           }),
           EditorState.readOnly.of(!!readonly),
+          keymap.of([indentWithTab]),
         ],
       });
 
@@ -122,7 +128,7 @@ export function JSONEditor(props: Props) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [readonly]);
+  }, []);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -138,4 +144,4 @@ export function JSONEditor(props: Props) {
   }, [doc]);
 
   return <div ref={parentRef} />;
-}
+});

@@ -1,4 +1,5 @@
 import { Diagnostic } from "@codemirror/lint";
+import { isDocumentString } from "@graphql-tools/utils";
 import { pascalCase, sentenceCase } from "change-case";
 import { parse, Kind } from "graphql";
 
@@ -7,6 +8,8 @@ export function ensureDocumentContainsNodeWithNameAndType(
   nodeName: string,
   nodeType: keyof typeof Kind,
 ): boolean {
+  if (!doc || !isDocumentString(doc)) return true;
+
   const parsedDoc = parse(doc);
 
   return parsedDoc.definitions.some((def) => {
@@ -19,7 +22,9 @@ export function ensureDocumentContainsNodeWithNameAndType(
 export function createNodeTypeAndNameDiagnostic(
   doc: string,
   errorMessage: string,
-): Diagnostic {
+): Diagnostic | undefined {
+  if (!doc || !isDocumentString(doc)) return;
+
   const parsedDoc = parse(doc);
   const firstNode = parsedDoc.definitions[0];
 
@@ -38,6 +43,7 @@ export function ensureValidStateSchemaName(
   modelName: string,
   scope: string,
 ) {
+  if (!doc || !isDocumentString(doc)) return [];
   const requiredTypeName = `${pascalCase(modelName)}${scope === "local" ? "Local" : ""}State`;
   if (
     !ensureDocumentContainsNodeWithNameAndType(
@@ -51,16 +57,18 @@ export function ensureValidStateSchemaName(
         doc,
         `${sentenceCase(scope)} state schema must be named ${requiredTypeName}`,
       ),
-    ];
+    ].filter(Boolean);
   }
 
   return [];
 }
 
 export function ensureValidOperationSchemaInputName(
-  doc: string,
+  doc: string | undefined,
   operationName: string,
 ) {
+  if (!doc || !isDocumentString(doc)) return [];
+
   const requiredTypeName = `${pascalCase(operationName)}Input`;
   if (
     !ensureDocumentContainsNodeWithNameAndType(
@@ -74,7 +82,7 @@ export function ensureValidOperationSchemaInputName(
         doc,
         `Operation schema must contain an input type named ${requiredTypeName}`,
       ),
-    ];
+    ].filter(Boolean);
   }
 
   return [];
