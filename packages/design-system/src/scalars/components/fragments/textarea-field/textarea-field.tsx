@@ -147,7 +147,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Warning states
               hasWarning && [
-                "border-orange-500 bg-orange-50/50",
+                "bg-orange-50/50 border-orange-500",
                 "dark:border-orange-400 dark:bg-orange-900/5",
                 "hover:border-orange-600",
                 "dark:hover:border-orange-300",
@@ -158,7 +158,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               // Error states
               hasError && [
-                "border-red-500 bg-red-50/50",
+                "bg-red-50/50 border-red-500",
                 "dark:border-red-400 dark:bg-red-900/5",
                 "hover:border-red-600",
                 "dark:hover:border-red-300",
