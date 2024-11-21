@@ -1,74 +1,128 @@
 import { EditorState, Transaction } from "@codemirror/state";
-import { EditorView, ViewUpdate } from "@codemirror/view";
-import { useEffect, useRef } from "react";
-import { basicSetup } from "codemirror";
-import { json, jsonParseLinter } from "@codemirror/lang-json";
-import { linter } from "@codemirror/lint";
+import { memo, useEffect, useRef } from "react";
 import { ayuLight } from "thememirror";
+import {
+  autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
+  completionKeymap,
+} from "@codemirror/autocomplete";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from "@codemirror/commands";
+import {
+  bracketMatching,
+  defaultHighlightStyle,
+  foldGutter,
+  foldKeymap,
+  indentOnInput,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import { linter, lintKeymap } from "@codemirror/lint";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import {
+  crosshairCursor,
+  drawSelection,
+  dropCursor,
+  EditorView,
+  ViewUpdate,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  highlightSpecialChars,
+  keymap,
+  lineNumbers,
+  rectangularSelection,
+} from "@codemirror/view";
+import { json, jsonLanguage, jsonParseLinter } from "@codemirror/lang-json";
 
 type Props = {
   doc: string;
   readonly?: boolean;
+  /* Updates the editor when the document changes */
   updateDoc: (newDoc: string) => void;
 };
 
-export function JSONEditor(props: Props) {
-  const { doc, readonly, updateDoc } = props;
-  const editorRef = useRef<HTMLDivElement>(null);
+export const JSONEditor = memo(function JSONEditor(props: Props) {
+  const { doc, readonly = false, updateDoc } = props;
+  const parentRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (!viewRef.current) {
+      const state = EditorState.create({
+        doc,
+        extensions: [
+          lineNumbers(),
+          highlightActiveLineGutter(),
+          highlightSpecialChars(),
+          history(),
+          foldGutter(),
+          drawSelection(),
+          dropCursor(),
+          EditorState.allowMultipleSelections.of(true),
+          indentOnInput(),
+          syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+          bracketMatching(),
+          closeBrackets(),
+          autocompletion(),
+          rectangularSelection(),
+          crosshairCursor(),
+          highlightActiveLine(),
+          highlightSelectionMatches(),
+          keymap.of([
+            ...closeBracketsKeymap,
+            ...defaultKeymap,
+            ...searchKeymap,
+            ...historyKeymap,
+            ...foldKeymap,
+            ...completionKeymap,
+            ...lintKeymap,
+          ]),
+          ayuLight,
+          jsonLanguage,
+          json(),
+          linter(jsonParseLinter()),
+          EditorView.lineWrapping,
+          EditorView.theme({
+            "&": { fontSize: "18px" },
+          }),
+          EditorView.updateListener.of((update: ViewUpdate) => {
+            if (readonly || !update.docChanged) return;
 
-    const state = EditorState.create({
-      doc,
-      extensions: [
-        basicSetup,
-        ayuLight,
-        json(),
-        linter(jsonParseLinter()),
-        EditorView.lineWrapping,
-        EditorView.theme({
-          "&": { fontSize: "18px" },
-        }),
-        EditorView.updateListener.of((update: ViewUpdate) => {
-          if (readonly || !update.docChanged) return;
-
-          if (
-            update.transactions.some(
-              (tr) => tr.annotation(Transaction.userEvent) === "external",
+            // ignore updates from the outside
+            if (
+              update.transactions.some(
+                (tr) => tr.annotation(Transaction.userEvent) === "external",
+              )
             )
-          )
-            return;
+              return;
 
-          const newDoc = update.state.doc.toString();
+            const newDoc = update.state.doc.toString();
 
-          try {
-            JSON.parse(newDoc);
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
+            try {
+              if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+              }
+              timeoutRef.current = setTimeout(() => {
+                updateDoc(newDoc);
+              }, 500);
+            } catch (error) {
+              console.debug("in json editor update", error);
             }
-            timeoutRef.current = setTimeout(() => {
-              updateDoc(newDoc);
-            }, 300);
-          } catch (e) {
-            /* do nothing */
-          }
-        }),
-        EditorState.readOnly.of(!!readonly),
-      ],
-    });
-
-    let view = viewRef.current;
-    if (!view) {
-      view = new EditorView({
-        state,
-        parent: editorRef.current,
+          }),
+          EditorState.readOnly.of(readonly),
+          keymap.of([indentWithTab]),
+        ],
       });
-      viewRef.current = view;
-    } else {
-      view.setState(state);
+
+      viewRef.current = new EditorView({
+        state,
+        parent: parentRef.current!,
+      });
     }
 
     return () => {
@@ -76,8 +130,9 @@ export function JSONEditor(props: Props) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [readonly]);
+  }, []);
 
+  /* Updates the editor when the document changes */
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -91,5 +146,5 @@ export function JSONEditor(props: Props) {
     }
   }, [doc]);
 
-  return <div ref={editorRef} />;
-}
+  return <div ref={parentRef} />;
+});
