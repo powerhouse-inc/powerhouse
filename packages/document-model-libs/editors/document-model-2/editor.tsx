@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   compareStringsWithoutWhitespace,
+  initializeModelSchema,
   makeOperationInitialDoc,
   Scope,
 } from ".";
@@ -23,7 +24,7 @@ export default function Editor(
     DocumentModelLocalState
   >,
 ) {
-  const { document, dispatch } = props;
+  const { document, documentNodeName, dispatch } = props;
   const {
     name: modelName,
     id: documentType,
@@ -48,6 +49,25 @@ export default function Editor(
     () => modules.flatMap((module) => module.operations),
     [modules],
   );
+  const shouldSetInitialName = useRef(
+    !modelName && !!documentNodeName && operations.length === 0,
+  );
+
+  useEffect(() => {
+    if (!shouldSetInitialName.current || !documentNodeName) return;
+
+    dispatch(actions.setModelName({ name: documentNodeName }));
+
+    // Initialize schema if it's the first time setting the name
+    initializeModelSchema({
+      modelName: documentNodeName,
+      setStateSchema: (schema: string, scope: Scope) => {
+        dispatch(actions.setStateSchema({ schema, scope }));
+      },
+    });
+
+    shouldSetInitialName.current = false;
+  }, [documentNodeName, dispatch]);
 
   const handlers = useMemo(
     () => ({
