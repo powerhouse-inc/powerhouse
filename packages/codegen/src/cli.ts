@@ -1,5 +1,5 @@
 #! /usr/bin/env node
-import { generate, generateEditor, generateFromFile } from "./codegen/index";
+import { generate, generateEditor, generateFromFile, generateProcessor } from "./codegen/index";
 import {
   parseArgs,
   getConfig,
@@ -11,10 +11,15 @@ function parseCommand(argv: string[]) {
   const args = parseArgs(argv, {
     "--editor": String,
     "-e": "--editor",
+    "--processor": String,
     "--document-types": String,
   });
   const editorName = args["--editor"];
+  const processorName = args["--processor"];
+
   return {
+    processor: !!processorName,
+    processorName,
     editor: !!editorName,
     editorName,
     documentTypes: args["--document-types"],
@@ -33,12 +38,23 @@ async function main() {
   }
 
   const command = parseCommand(argv);
+
   if (command.editor) {
     if (!command.editorName) {
       throw new Error("Editor name is required (--editor or -e)");
     }
     await generateEditor(
       command.editorName,
+      command.documentTypes?.split(/[|,;]/g) ?? [],
+      config,
+    );
+  } else if (command.processor) {
+    if (!command.processorName) {
+      throw new Error("processor name is required (--processor)");
+    }
+
+    await generateProcessor(
+      command.processorName,
       command.documentTypes?.split(/[|,;]/g) ?? [],
       config,
     );
