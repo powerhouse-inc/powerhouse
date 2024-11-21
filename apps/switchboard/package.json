@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.1.94",
+  "version": "2.1.102",
   "main": "index.js",
   "scripts": {
     "start": "vite-node src/index.ts",
@@ -23,9 +23,9 @@
     "@powerhousedao/scalars": "^1.9.0",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
-    "document-drive": "^1.4.4",
-    "document-model": "^2.6.0",
-    "document-model-libs": "^1.114.0",
+    "document-drive": "^1.4.5",
+    "document-model": "^2.7.0",
+    "document-model-libs": "^1.115.0",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1",
