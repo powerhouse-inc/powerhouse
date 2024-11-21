@@ -1,5 +1,6 @@
 import { DocumentDriveServer } from "document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
@@ -18,14 +19,18 @@ import { getSchema as getAuthSchema } from "./subgraphs/auth/subgraph";
 import { getSchema as getAnalyticsSchema } from "./subgraphs/analytics/subgraph";
 import path from "path";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { transmit as analyticsTransmit, options as analyticsOptions } from "./subgraphs/analytics/listener";
 
 dotenv.config();
 
 // start document drive server with all available document models
-const driveServer = new DocumentDriveServer([
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
-] as DocumentModel[]);
+const driveServer = new DocumentDriveServer(
+  [
+    DocumentModelLib,
+    ...Object.values(DocumentModelsLibs),
+  ] as DocumentModel[],
+  new FilesystemStorage(path.join(__dirname, "../file-storage")),
+);
 
 // Create a monolith express app for all subgraphs
 const app = express();
@@ -66,6 +71,12 @@ const main = async () => {
       transmit(strands) {
         return searchListener.transmit(strands, db);
       },
+    });
+
+    await registerInternalListener({
+      name: "analytics",
+      options: analyticsOptions,
+      transmit: analyticsTransmit,
     });
 
     // add auth subgraph
