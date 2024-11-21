@@ -49,7 +49,9 @@ export default function Editor(
     () => modules.flatMap((module) => module.operations),
     [modules],
   );
-  const shouldSetInitialName = useRef(!modelName);
+  const shouldSetInitialName = useRef(
+    !modelName && !!documentNodeName && operations.length === 0,
+  );
 
   useEffect(() => {
     if (!shouldSetInitialName.current || !documentNodeName) return;
