@@ -245,6 +245,7 @@ export function DocumentEditor(props: EditorProps) {
                             error={error}
                             context={context}
                             document={document}
+                            documentNodeName={selectedNode.name}
                             dispatch={dispatch}
                             onClose={onClose}
                             onExport={onExport}
