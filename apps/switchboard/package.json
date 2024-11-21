@@ -4,7 +4,7 @@
   "version": "2.1.17",
   "main": "index.js",
   "scripts": {
-    "start": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vite-node src/index.ts",
+    "start": "DATABASE_URL='' PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vite-node src/index.ts",
     "codegen": "gql-gen --config codegen.yml"
   },
   "author": "",
@@ -18,7 +18,7 @@
     "@heroicons/react": "^2.1.5",
     "@libsql/client": "^0.14.0",
     "@powerhousedao/analytics-engine-core": "^0.3.0",
-    "@powerhousedao/analytics-engine-graphql": "^0.1.1",
+    "@powerhousedao/analytics-engine-graphql": "^0.2.0",
     "@powerhousedao/analytics-engine-pg": "^0.3.0",
     "@powerhousedao/general-document-indexer": "1.2.0",
     "@powerhousedao/reactor-api": "1.2.1",

@@ -32,9 +32,15 @@ async function handle(strand: InternalTransmitterUpdate) {
   const analytics = get();
 
   await Promise.all(strand.operations.map((operation) => {
-    console.log('[Analytics] Operation!!!', operation);
-
     const start = DateTime.fromISO(operation.timestamp);
+    const dimensions: any = {
+      type: AnalyticsPath.fromString(`operation/type/${operation.type}`),
+      drive: AnalyticsPath.fromString(`drive/${strand.driveId}`),
+    };
+
+    if (strand.documentId) {
+      dimensions["document"] = AnalyticsPath.fromString(`document/${strand.documentId}/${strand.scope}`);
+    }
 
     return analytics.addSeriesValues([
       {
@@ -42,11 +48,7 @@ async function handle(strand: InternalTransmitterUpdate) {
         start,
         value: 1,
         metric: "Count",
-        dimensions: {
-          type: AnalyticsPath.fromString(`operation/type/${operation.type}`),
-          drive: AnalyticsPath.fromString(`drive/${strand.driveId}`),
-          document: AnalyticsPath.fromString(`document/${strand.documentId}/${strand.scope}`),
-        },
+        dimensions,
       },
     ]);
   }));

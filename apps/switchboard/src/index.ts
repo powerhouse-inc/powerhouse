@@ -20,6 +20,10 @@ import { getSchema as getAnalyticsSchema } from "./subgraphs/analytics/subgraph"
 import path from "path";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { transmit as analyticsTransmit, options as analyticsOptions } from "./subgraphs/analytics/listener";
+import { logger } from "document-drive/logger";
+import get from "./subgraphs/analytics/service";
+import { AnalyticsModel } from "@powerhousedao/analytics-engine-graphql";
+import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 
 dotenv.config();
 
@@ -41,8 +45,12 @@ const main = async () => {
   try {
     // init db
     if (process.env.DATABASE_URL && process.env.DATABASE_URL !== "") {
+      logger.info("Indexer processor using postgres database.");
+
       db = await drizzle("node-postgres", process.env.DATABASE_URL);
     } else {
+      logger.info("Indexer processor using pglite database.");
+
       db = await drizzle("pglite", "./dev.db");
     }
 
@@ -53,6 +61,13 @@ const main = async () => {
     await initReactorRouter("/", app, driveServer);
 
     setAdditionalContextFields({ db });
+    setAdditionalContextFields({
+      dataSources: {
+        db: {
+          Analytics: new AnalyticsModel(new AnalyticsQueryEngine(get()))
+        }
+      }
+    });
 
     // add search subgraph @todo: automatically add all subgraphs
     await addSubgraph({
@@ -65,6 +80,7 @@ const main = async () => {
         ),
     });
 
+    /*
     await registerInternalListener({
       ...searchListener,
       name: "general-document-indexer",
@@ -72,7 +88,9 @@ const main = async () => {
         return searchListener.transmit(strands, db);
       },
     });
+    */
 
+    // analytics listener
     await registerInternalListener({
       name: "analytics",
       options: analyticsOptions,

@@ -10,7 +10,7 @@ export default function get(): IAnalyticsStore {
       throw new Error('PG_CONNECTION_STRING not set');
     }
 
-    store = new PostgresAnalyticsStore(connectionString);
+    store = new PostgresAnalyticsStore(connectionString, (i, q) => console.log(`[PG] ${i}: ${q}`));
   }
 
   return store;
