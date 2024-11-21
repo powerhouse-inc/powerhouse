@@ -47,10 +47,15 @@ import { validateSDL } from "graphql/validation/validate";
 type Props = {
   doc: string;
   readonly?: boolean;
+  /* Updates the document in the model, should be wrapped in `useCallback` in the parent */
   updateDocumentInModel?: (newDoc: string) => void;
+  /* Custom linter to add special lint rules for specific documents, should be wrapped in `useCallback` in the parent */
   customLinter?: (doc: string) => Diagnostic[];
 };
 
+/* Converts a GraphQLError to a Diagnostic
+   GraphQLError uses a zero-indexed line and column, but the editor uses a one-indexed line and column
+*/
 function convertGraphQLErrorToDiagnostic(error: GraphQLError): Diagnostic {
   return {
     from: error.locations?.[0] ? (error.positions?.[0] ?? 0) : 0,
@@ -60,6 +65,13 @@ function convertGraphQLErrorToDiagnostic(error: GraphQLError): Diagnostic {
   };
 }
 
+/* Creates a linter that checks the document for errors
+   This works in combination with the built-in linting provided by the graphql extension
+   We need to recreate this linter when the schema changes or if a custom linter is provided
+   It first checks the document for linting errors
+   Then it checks if the document is a valid document string
+   Then it checks if the document is valid against the schema
+*/
 function makeLinter(
   schema: GraphQLSchema,
   customLinter?: (doc: string) => Diagnostic[],
@@ -82,6 +94,7 @@ function makeLinter(
             .map((def) => (def as { name: { value: string } }).name.value),
         );
 
+        // we need to filter out the existing types in the document from the schema to prevent duplicate type errors in the validation
         const filteredSchema = filterSchema({
           schema,
           typeFilter: (typeName) => !currentTypeNames.has(typeName),
@@ -166,6 +179,7 @@ export const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
             }),
             EditorView.updateListener.of((update: ViewUpdate) => {
               if (readonly || !update.docChanged) return;
+              // since we also update the editor from the outside when the document changes, we need to ignore those updates
               if (
                 update.transactions.some(
                   (tr) => tr.annotation(Transaction.userEvent) === "external",
@@ -198,6 +212,7 @@ export const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
     };
   }, []);
 
+  /* Reconfigures the editor when the schema changes */
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -224,6 +239,7 @@ export const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
     }
   }, [sharedSchema, customLinter]);
 
+  /* Updates the editor when the document changes */
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;

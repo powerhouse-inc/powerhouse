@@ -15,21 +15,23 @@ import {
   printSchema,
   validate,
 } from "graphql";
-import {
-  createDefaultRules,
-  isDocumentNode,
-  isDocumentString,
-} from "@graphql-tools/utils";
+import { createDefaultRules, isDocumentString } from "@graphql-tools/utils";
+
+/* Required to make the schema "count" as an actual schema */
 const hiddenQueryTypeDefinitions = parse(hiddenQueryTypeDefDoc).definitions;
-const typeDefsDefinitions = parse(typeDefsDoc).definitions;
+/* Scalar definitions from the Powerhouse standard library */
+const standardLibCustomScalarDefinitions = parse(typeDefsDoc).definitions;
+/* These are always included when updating the shared schema, because they do not change */
 const alwaysIncludedDefinitions = [
   ...hiddenQueryTypeDefinitions,
-  ...typeDefsDefinitions,
+  ...standardLibCustomScalarDefinitions,
 ];
+/* We use almost all of the standard graphql rules, but not the ExecutableDefinitionsRule because our schemas are not intended to be executed */
 const rules = createDefaultRules().filter(
   (rule) => rule.name !== "ExecutableDefinitionsRule",
 );
 
+/* The shared schema is just a string to make memoization easier */
 type TSchemaContext = string;
 
 type TSchemaContextProps = {
@@ -39,6 +41,10 @@ type TSchemaContextProps = {
   children: React.ReactNode;
 };
 
+/* 
+ Makes one SDL string from all of the definitions in the state and operation schemas
+ Uses try catch to prevent errors from breaking the editor
+*/
 function makeSharedSchemaSdl(
   existingSchemaSdl: string,
   globalStateSchemaSdl?: string,
@@ -62,6 +68,10 @@ function makeSharedSchemaSdl(
   }
 }
 
+/* 
+ Combines all of the definitions in the state and operation schemas into one document node
+ Uses try catch to prevent errors from breaking the editor
+*/
 function makeSafeDocumentNode(schema: GraphQLSchema, asts: DocumentNode[]) {
   try {
     const definitions: DefinitionNode[] = [...alwaysIncludedDefinitions];
@@ -90,6 +100,10 @@ function makeSafeDocumentNode(schema: GraphQLSchema, asts: DocumentNode[]) {
   }
 }
 
+/* 
+ Validates an ast against the schema
+ Uses try catch to prevent errors from breaking the editor
+*/
 function safeValidateAst(schema: GraphQLSchema, ast: DocumentNode) {
   try {
     const errors = validate(schema, ast, rules);
@@ -100,6 +114,10 @@ function safeValidateAst(schema: GraphQLSchema, ast: DocumentNode) {
   }
 }
 
+/* 
+ Parses an SDL string into an ast
+ Uses try catch abd checks if the SDL is a valid document string to prevent errors from breaking the editor
+*/
 function safeParseSdl(sdl: string) {
   try {
     if (!sdl || !isDocumentString(sdl)) return null;
@@ -113,6 +131,11 @@ function safeParseSdl(sdl: string) {
 export const SchemaContext = createContext<TSchemaContext>(
   printSchema(initialSchema),
 );
+
+/* 
+ Provides the shared schema to the editor
+ We use the sdl string form to make memoization easier
+*/
 export function SchemaContextProvider(props: TSchemaContextProps) {
   const {
     children,

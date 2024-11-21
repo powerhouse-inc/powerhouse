@@ -41,11 +41,12 @@ import { json, jsonLanguage, jsonParseLinter } from "@codemirror/lang-json";
 type Props = {
   doc: string;
   readonly?: boolean;
+  /* Updates the editor when the document changes */
   updateDoc: (newDoc: string) => void;
 };
 
 export const JSONEditor = memo(function JSONEditor(props: Props) {
-  const { doc, readonly, updateDoc } = props;
+  const { doc, readonly = false, updateDoc } = props;
   const parentRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -92,6 +93,7 @@ export const JSONEditor = memo(function JSONEditor(props: Props) {
           EditorView.updateListener.of((update: ViewUpdate) => {
             if (readonly || !update.docChanged) return;
 
+            // ignore updates from the outside
             if (
               update.transactions.some(
                 (tr) => tr.annotation(Transaction.userEvent) === "external",
@@ -112,7 +114,7 @@ export const JSONEditor = memo(function JSONEditor(props: Props) {
               console.debug("in json editor update", error);
             }
           }),
-          EditorState.readOnly.of(!!readonly),
+          EditorState.readOnly.of(readonly),
           keymap.of([indentWithTab]),
         ],
       });
@@ -130,6 +132,7 @@ export const JSONEditor = memo(function JSONEditor(props: Props) {
     };
   }, []);
 
+  /* Updates the editor when the document changes */
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
