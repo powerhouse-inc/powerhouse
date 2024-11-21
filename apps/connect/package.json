@@ -52,8 +52,8 @@
         "vite-envs": "^4.4.5"
     },
     "peerDependencies": {
-        "@powerhousedao/scalars": "latest",
         "@powerhousedao/design-system": "latest",
+        "@powerhousedao/scalars": "latest",
         "document-model-libs": "latest"
     },
     "devDependencies": {
@@ -90,8 +90,8 @@
         "cypress": "^13.11.0",
         "did-key-creator": "^1.2.0",
         "document-drive": "^1.0.2",
-        "document-model": "^2.7.0",
-        "document-model-libs": "^1.115.0",
+        "document-model": "^2.7.1",
+        "document-model-libs": "^1.116.0",
         "electron": "30.0.0",
         "electron-is-dev": "^3.0.1",
         "electron-playwright-helpers": "^1.7.1",
@@ -109,6 +109,7 @@
         "jotai": "^2.1.0",
         "lint-staged": "^15.2.0",
         "localforage": "^1.10.0",
+        "lz-string": "^1.5.0",
         "playwright": "^1.41.2",
         "playwright-core": "^1.41.2",
         "postcss": "^8.4.33",

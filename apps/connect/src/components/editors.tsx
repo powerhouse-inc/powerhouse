@@ -197,8 +197,11 @@ export function DocumentEditor(props: EditorProps) {
     }
 
     const EditorComponent = editor.Component;
-    const { disableExternalControls, documentToolbarEnabled } =
-        editor.config || {};
+    const {
+        disableExternalControls,
+        documentToolbarEnabled,
+        showSwitchboardLink,
+    } = editor.config || {};
 
     return (
         <div className="relative h-full" id="document-editor-context">
@@ -212,6 +215,9 @@ export function DocumentEditor(props: EditorProps) {
                             setShowRevisionHistory(true)
                         }
                         title={document.name}
+                        {...(showSwitchboardLink && {
+                            onSwitchboardLinkClick: onOpenSwitchboardLink,
+                        })}
                     />
                 )}
             {!disableExternalControls && (

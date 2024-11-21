@@ -1,3 +1,5 @@
+import LZString from 'lz-string';
+
 const rwaQuery = `... on RealWorldAssets {
         state {
             portfolio {
@@ -100,7 +102,11 @@ const budgetStatement = `... on BudgetStatement {
     }
   }`;
 
-const getQuery = (documentId: string, documentType: string) => {
+const getQuery = (
+    documentId: string,
+    documentType: string,
+    encodeQuery = true,
+) => {
     let query = ``;
 
     if (documentType === 'powerhouse/account-snapshot') {
@@ -115,16 +121,39 @@ const getQuery = (documentId: string, documentType: string) => {
         query = rwaQuery;
     }
 
-    return encodeURIComponent(`query {
-        document(id:"${documentId}") {
-            name
-            documentType
-            revision
-            created
-            lastModified
-            ${query}
-          }
-      }`);
+    const queryString = `query {
+  document(id:"${documentId}") {
+    name
+    documentType
+    revision
+    created
+    lastModified
+    ${query}
+  }
+}`;
+
+    if (!encodeQuery) {
+        return queryString;
+    }
+
+    return encodeURIComponent(queryString);
+};
+
+const getLocalReactorUrl = (
+    remoteUrl: string,
+    documentType: string,
+    documentId: string,
+) => {
+    const query = getQuery(documentId, documentType, false);
+
+    const explorerURLState = LZString.compressToEncodedURIComponent(
+        JSON.stringify({
+            document: query.trim(),
+        }),
+    );
+
+    const url = remoteUrl + `?explorerURLState=${explorerURLState}`;
+    return url.toString();
 };
 
 export const getSwitchboardUrl = (
@@ -132,6 +161,10 @@ export const getSwitchboardUrl = (
     documentType: string,
     documentId: string,
 ) => {
+    if (remoteUrl.includes('localhost')) {
+        return getLocalReactorUrl(remoteUrl, documentType, documentId);
+    }
+
     const explorerUrl = remoteUrl.replace(/\/d\//, '/graphql/');
     const query = getQuery(documentId, documentType);
     const url = explorerUrl + `?query=${query}`;
