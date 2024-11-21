@@ -14,18 +14,17 @@ import { cn } from "@/scalars/lib";
 
 export interface AmountFieldProps extends InputNumberProps {
   className?: string;
-  defaultValue?: AmountType;
   name: string;
   pattern?: RegExp;
   numberProps?: Omit<NumberFieldProps, "name">;
   selectProps?: Omit<SelectFieldProps, "name">;
-  value?: AmountType;
   allowedCurrencies?: string[];
   allowedTokens?: string[];
   selectName: string;
+  value?: AmountType;
+  defaultValue?: AmountType;
 }
 
-// TODO: Think about pass reference in here
 const AmountField: FC<AmountFieldProps> = ({
   name,
   label,
@@ -55,19 +54,17 @@ const AmountField: FC<AmountFieldProps> = ({
   const generatedId = useId();
   const id = propId ?? generatedId;
   const {
-    isPercent,
     isCurrency,
+    isPercent,
     isSearchable,
-    options,
     valueInput,
-    defaultInput,
     valueCurrency,
+    options,
   } = useAmountField({
     value,
     allowedCurrencies,
     defaultValue,
   });
-
   return (
     <FormGroup>
       {label && (
@@ -87,9 +84,9 @@ const AmountField: FC<AmountFieldProps> = ({
             required={required}
             disabled={disabled}
             name={name}
-            defaultValue={defaultInput}
-            id={id}
+            defaultValue={valueInput}
             value={valueInput}
+            id={id}
             maxValue={maxValue}
             precision={precision}
             minValue={minValue}
@@ -114,17 +111,12 @@ const AmountField: FC<AmountFieldProps> = ({
           <div>
             <SelectField
               value={valueCurrency}
-              defaultValue={["USD"]}
+              defaultValue={valueCurrency}
               searchable={isSearchable}
               name={selectName}
-              className={cn(
-                "relative flex w-[81px] items-center",
-                selectProps?.className,
-              )}
               required={required}
               disabled={disabled}
               options={options}
-              asChild
               {...(selectProps || {})}
             />
           </div>

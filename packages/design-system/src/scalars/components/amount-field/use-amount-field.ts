@@ -3,8 +3,8 @@ import { AmountType, CurrencyCode } from "../types";
 
 interface UseAmountFieldProps {
   value?: AmountType;
-  allowedCurrencies?: string[];
   defaultValue?: AmountType;
+  allowedCurrencies?: string[];
 }
 
 export const useAmountField = ({
@@ -12,12 +12,12 @@ export const useAmountField = ({
   value,
   defaultValue,
 }: UseAmountFieldProps) => {
-  const initialValue = value ?? defaultValue;
+  let valueCurrency;
+  const initialValue = value ?? defaultValue ?? ({} as AmountType);
+  const { type, details } = initialValue;
 
-  const isPercent = initialValue?.type === "AmountPercentage";
-  const isCurrency = initialValue?.type === "AmountCurrency";
-
-  let valueCurrency: CurrencyCode = "USD";
+  const isPercent = type === "AmountPercentage";
+  const isCurrency = type === "AmountCurrency";
 
   const options = currencies
     .filter((code) => allowedCurrencies.includes(code))
@@ -26,11 +26,10 @@ export const useAmountField = ({
       label: code,
     }));
 
-  const valueInput = initialValue?.details.amount || undefined;
-  const defaultInput = initialValue?.details.amount || undefined;
+  const valueInput = details.amount;
 
-  if (initialValue?.type === "AmountCurrency") {
-    valueCurrency = initialValue.details.currency;
+  if (type === "AmountCurrency") {
+    valueCurrency = details.currency;
   }
   const isSearchable = options.length >= 5;
 
@@ -39,7 +38,6 @@ export const useAmountField = ({
     options,
     isSearchable,
     isCurrency,
-    defaultInput,
     valueInput,
     valueCurrency,
   };

@@ -17,8 +17,6 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    // TODO:Improve the AmountType descriptions
-
     allowedCurrencies: {
       control: "object",
       description:
@@ -28,23 +26,34 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-
-    type: {
-      control: "select",
-      options: [
-        "Amount",
-        "AmountCurrency",
-        "AmountToken",
-        "AmountToken",
-        "AmountPercentage",
-      ],
-      description:
-        "Value types: Amount, AmountCurrency, AmountFiat, AmountToken, and AmountPercentage.",
-      table: { type: { summary: "boolean" } },
+    selectName: {
+      control: "object",
+      description: "Add the label for the select",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
     },
+    numberProps: {
+      control: "object",
+      description: "All the props options for number field",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    selectProps: {
+      control: "object",
+      description: "All the props options for select field",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    // TODO:Improve the AmountType descriptions for the value
     ...getDefaultArgTypes({
-      valueControlType: "AmountType",
-      valueType: "AmountType",
+      valueControlType: "object",
+      valueType: "object",
     }),
     ...PrebuiltArgTypes.placeholder,
     ...getValidationArgTypes(),
@@ -78,20 +87,21 @@ export const Default: Story = {
     },
   },
 };
-export const DefaultWithPercent: Story = {
+export const Percent: Story = {
   args: {
     selectName: "currency",
-    label: "Enter Percentage",
+    label: "Enter Percentage ",
     name: "amount",
     value: {
       type: "AmountPercentage",
       details: {
-        amount: 345,
+        amount: 9,
       },
     },
   },
 };
-export const DisableWithPercent: Story = {
+
+export const PercentWithActive: Story = {
   args: {
     selectName: "currency",
     label: "Enter Percentage ",
@@ -102,29 +112,29 @@ export const DisableWithPercent: Story = {
         amount: 345,
       },
     },
-    disabled: true,
-  },
-};
-
-export const ActiveWithPercent: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Percentage ",
-    name: "amount",
-    value: {
-      type: "AmountPercentage",
-      details: {
-        amount: 345,
-      },
-    },
-
     numberProps: {
       autoFocus: true,
     },
   },
+  parameters: {
+    pseudo: { focus: true },
+  },
+};
+export const PercentWithDisable: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Percentage ",
+    name: "amount",
+    defaultValue: {
+      type: "AmountPercentage",
+      details: {
+        amount: 345,
+      },
+    },
+  },
 };
 
-export const DefaultWithCurrency: Story = {
+export const Currency: Story = {
   args: {
     selectName: "currency",
     label: "Enter Amount and Select Currency",
@@ -139,27 +149,7 @@ export const DefaultWithCurrency: Story = {
     },
   },
 };
-
-export const ActiveWithCurrency: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    autoFocus: true,
-    value: {
-      type: "AmountCurrency",
-      details: {
-        amount: 345,
-        currency: "USD",
-      },
-    },
-    numberProps: {
-      autoFocus: true,
-    },
-  },
-};
-export const DisableWithCurrency: Story = {
+export const CurrencyWithDisable: Story = {
   args: {
     selectName: "currency",
     label: "Enter Amount and Select Currency",
@@ -175,6 +165,25 @@ export const DisableWithCurrency: Story = {
     disabled: true,
   },
 };
+export const CurrencyWithActive: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    allowedCurrencies: ["USD", "EUR"],
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+    numberProps: {
+      autoFocus: true,
+    },
+  },
+};
+
 export const HoverWithCurrency: Story = {
   args: {
     selectName: "currency",
