@@ -1,3 +1,13 @@
+## 2.7.1 (2024-11-21)
+
+### 🩹 Fixes
+
+- **document-model:** do not generate a new timestamp for operations ([#544](https://github.com/powerhouse-inc/powerhouse/pull/544))
+
+### ❤️  Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 2.7.0 (2024-11-21)
 
 ### 🚀 Features
