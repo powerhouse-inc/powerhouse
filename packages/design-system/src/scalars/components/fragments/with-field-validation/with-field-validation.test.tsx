@@ -92,23 +92,34 @@ describe("withFieldValidation", () => {
     expect(await screen.findByTestId("error-message")).toBeInTheDocument();
   });
 
-  it("should handle custom validation", async () => {
-    const customValidator = (value: string) => {
+  it("should handle extra component validators", async () => {
+    const validator = (value: string) => {
       return value === "valid" || "Custom error message";
     };
 
-    renderWithForm(
-      <WrappedComponent
-        name="test"
-        customValidator={customValidator as ValidatorHandler}
-      />,
-    );
+    renderWithForm(<WrappedComponent name="test" validators={validator} />);
 
     const input = screen.getByTestId("test-input");
     await userEvent.type(input, "invalid");
     await userEvent.keyboard("{Enter}");
 
     expect(await screen.findByTestId("error-message")).toBeInTheDocument();
+  });
+
+  it("should handle multiple extra component validators", async () => {
+    const validator1 = vi.fn().mockReturnValue(true);
+    const validator2 = vi.fn().mockReturnValue(true);
+
+    renderWithForm(
+      <WrappedComponent name="test" validators={[validator1, validator2]} />,
+    );
+
+    const input = screen.getByTestId("test-input");
+    await userEvent.type(input, "test");
+    await userEvent.keyboard("{Enter}");
+
+    expect(validator1).toHaveBeenCalledTimes(1);
+    expect(validator2).toHaveBeenCalledTimes(1);
   });
 
   it("should handle multiple validation rules", async () => {
@@ -168,16 +179,18 @@ describe("withFieldValidation", () => {
   });
 
   it("should validate custom validators", async () => {
-    const WrappedComponentWithCustomValidator =
-      withFieldValidation<TextFieldProps>(TextFieldTesting, {
+    const WrappedComponentWithValidator = withFieldValidation<TextFieldProps>(
+      TextFieldTesting,
+      {
         validations: {
           _isPrime: () =>
             ((value: string) => {
               return Number(value) % 2 === 0 || "Custom error message";
             }) as ValidatorHandler,
         },
-      });
-    renderWithForm(<WrappedComponentWithCustomValidator name="test" />);
+      },
+    );
+    renderWithForm(<WrappedComponentWithValidator name="test" />);
 
     const input = screen.getByTestId("test-input");
     await userEvent.type(input, "3");
@@ -187,8 +200,9 @@ describe("withFieldValidation", () => {
   });
 
   it("should validate custom validators using parent props", async () => {
-    const WrappedComponentWithCustomValidator =
-      withFieldValidation<TextFieldProps>(TextFieldTesting, {
+    const WrappedComponentWithValidator = withFieldValidation<TextFieldProps>(
+      TextFieldTesting,
+      {
         validations: {
           _autoCompleteRequireLength3: (props) =>
             ((value: string) => {
@@ -199,10 +213,9 @@ describe("withFieldValidation", () => {
                 : true;
             }) as ValidatorHandler,
         },
-      });
-    renderWithForm(
-      <WrappedComponentWithCustomValidator name="test" autoComplete />,
+      },
     );
+    renderWithForm(<WrappedComponentWithValidator name="test" autoComplete />);
 
     const input = screen.getByTestId("test-input");
     await userEvent.type(input, "12");
