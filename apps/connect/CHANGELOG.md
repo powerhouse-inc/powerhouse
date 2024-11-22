@@ -1,3 +1,10 @@
+# [1.0.0-dev.172](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.171...v1.0.0-dev.172) (2024-11-22)
+
+
+### Features
+
+* **connect:** enable switchboard link in document toolbar ([f2976ce](https://github.com/powerhouse-inc/document-model-electron/commit/f2976ce391909ff291a0238e70820093190d5b62))
+
 # [1.0.0-dev.171](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.170...v1.0.0-dev.171) (2024-11-21)
 
 
