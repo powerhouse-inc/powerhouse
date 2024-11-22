@@ -30,6 +30,11 @@ export const FormLabel: React.FC<FormLabelProps> = ({
     className,
   );
 
+  if (!children) {
+    // no label provided
+    return null;
+  }
+
   const extraProps = {
     ...htmlLabelProps,
   };
