@@ -5,8 +5,8 @@ export type ErrorMessage = string;
 export type ValidatorResult = ErrorMessage | boolean;
 
 export type ValidatorHandler = (
-  value: unknown,
-  formState: Record<string, unknown>,
+  value: any,
+  formState: Record<string, any>,
 ) => ValidatorResult | Promise<ValidatorResult>;
 
 export interface FormFieldProps {
@@ -30,7 +30,7 @@ export interface FieldCommonProps<T> extends FormFieldProps {
 export interface ErrorHandling {
   showErrorOnBlur?: boolean;
   showErrorOnChange?: boolean;
-  customValidator?: ValidatorHandler;
+  validators?: ValidatorHandler[] | ValidatorHandler;
 }
 
 export interface TextProps {

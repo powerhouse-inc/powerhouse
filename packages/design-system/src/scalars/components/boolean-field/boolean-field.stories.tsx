@@ -42,7 +42,7 @@ const meta = {
 
     ...getValidationArgTypes({
       enabledArgTypes: {
-        customValidator: false,
+        validators: false,
         showErrorOnBlur: false,
         showErrorOnChange: false,
       },

@@ -28,7 +28,14 @@ export const withFieldValidation = <T extends PossibleProps>(
   Component: React.ComponentType<T>,
   options?: ValidationOptions<T>,
 ): React.ComponentType<T> => {
-  return ({ value, name, showErrorOnBlur, showErrorOnChange, ...props }: T) => {
+  return ({
+    value,
+    name,
+    showErrorOnBlur,
+    showErrorOnChange,
+    validators: customValidators,
+    ...props
+  }: T) => {
     const { onChange: onChangeProp, onBlur: onBlurProp } =
       props as PossibleEventsProps;
     const {
@@ -43,6 +50,11 @@ export const withFieldValidation = <T extends PossibleProps>(
       ...(props.errors ?? []),
       ...(formErrors[name]?.message ? [formErrors[name].message] : []),
     ];
+
+    if (errors.length === 0 && !!formErrors[name]) {
+      // the field is invalid but no error message was provided
+      errors.push("Invalid value");
+    }
 
     const [initialized, setInitialized] = useState(false);
     useEffect(() => {
@@ -167,9 +179,6 @@ export const withFieldValidation = <T extends PossibleProps>(
             },
           }),
           validate: {
-            ...(props.customValidator && {
-              customValidator: props.customValidator,
-            }),
             ...(options?.validations
               ? Object.fromEntries(
                   Object.entries(options.validations).map(
@@ -184,6 +193,17 @@ export const withFieldValidation = <T extends PossibleProps>(
                       return [key, validatorFactory(propsWithValues as T)];
                     },
                   ),
+                )
+              : {}),
+            ...(customValidators !== undefined
+              ? Object.fromEntries(
+                  (Array.isArray(customValidators)
+                    ? customValidators
+                    : [customValidators]
+                  ).map((validator, index) => [
+                    `customValidation${index}`,
+                    validator,
+                  ]),
                 )
               : {}),
           },

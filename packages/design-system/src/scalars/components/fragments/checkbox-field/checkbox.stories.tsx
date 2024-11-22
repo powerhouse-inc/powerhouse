@@ -20,7 +20,7 @@ const meta: Meta<typeof CheckboxField> = {
 
     ...getValidationArgTypes({
       enabledArgTypes: {
-        customValidator: false,
+        validators: false,
         showErrorOnBlur: false,
         showErrorOnChange: false,
       },
