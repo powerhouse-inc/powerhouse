@@ -30,6 +30,15 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    isBigInt: {
+      control: "boolean",
+      description:
+        "Indicates whether the input value should be treated as a BigInt. When true, the value can represent large integers beyond the safe integer limit of JavaScript.",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     numericType: {
       control: "text",
       description:
@@ -154,7 +163,7 @@ export const WithFloatNumber: Story = {
     name: "Label",
     // Allow trailing zeros after the decimal point for clarity in displaying fractional values.
     // eslint-disable-next-line prettier/prettier
-    value: 0.00,
+    value: 0.0,
     precision: 2,
     trailingZeros: true,
   },
@@ -188,16 +197,5 @@ export const WithStep: Story = {
     value: 0,
     step: 10,
     minValue: 20,
-  },
-  render: (args) => {
-    const [value, setValue] = useState(args.value || 0);
-
-    return (
-      <NumberField
-        {...args}
-        value={value}
-        onChange={(e) => setValue(Number(e.target.value))}
-      />
-    );
   },
 };
