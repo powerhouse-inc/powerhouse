@@ -15,6 +15,7 @@ import { SelectProps } from "@/scalars/components/types";
 interface ContentProps {
   selectedValues: string[];
   options?: SelectProps["options"];
+  optionsCheckmark: "Auto" | "None";
   multiple: boolean;
   searchable: boolean;
   toggleOption: (value: string) => void;
@@ -24,6 +25,7 @@ interface ContentProps {
 export const Content: React.FC<ContentProps> = ({
   selectedValues,
   options = [],
+  optionsCheckmark,
   multiple,
   searchable,
   toggleOption,
@@ -52,13 +54,13 @@ export const Content: React.FC<ContentProps> = ({
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
         <CommandGroup>
-          {multiple && (
+          {multiple && optionsCheckmark === "Auto" && (
             <>
               <CommandItem
                 onSelect={toggleAll}
                 className={cn(
                   "flex items-center justify-between",
-                  "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700",
+                  "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900",
                 )}
               >
                 <div className="flex items-center">
@@ -94,39 +96,46 @@ export const Content: React.FC<ContentProps> = ({
                 key={option.value}
                 onSelect={() => !option.disabled && toggleOption(option.value)}
                 className={cn(
-                  "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700",
+                  "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900",
                   option.disabled &&
                     "cursor-not-allowed opacity-75 hover:bg-transparent dark:hover:bg-transparent",
+                  optionsCheckmark === "None" &&
+                    isSelected &&
+                    "bg-gray-300 dark:bg-gray-700",
                 )}
               >
-                {multiple ? (
-                  <div
-                    className={cn(
-                      "mr-2 flex size-4 items-center justify-center rounded-sm border",
-                      "border-gray-900 dark:border-gray-100",
-                      isSelected
-                        ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
-                        : "opacity-50 [&_svg]:invisible",
-                      option.disabled && "opacity-75",
+                {optionsCheckmark === "Auto" && (
+                  <>
+                    {multiple ? (
+                      <div
+                        className={cn(
+                          "mr-2 flex size-4 items-center justify-center rounded-sm border",
+                          "border-gray-900 dark:border-gray-100",
+                          isSelected
+                            ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                            : "opacity-50 [&_svg]:invisible",
+                          option.disabled && "opacity-75",
+                        )}
+                      >
+                        <CheckIcon className="size-4" />
+                      </div>
+                    ) : (
+                      <div
+                        className={cn(
+                          "mr-2 flex size-4 items-center justify-center rounded-full border",
+                          isSelected
+                            ? "border-gray-900 dark:border-gray-100"
+                            : "border-gray-400 dark:border-gray-600",
+                          "bg-white dark:bg-gray-800",
+                          option.disabled && "opacity-75",
+                        )}
+                      >
+                        {isSelected && (
+                          <div className="size-2 rounded-full bg-gray-900 dark:bg-gray-100" />
+                        )}
+                      </div>
                     )}
-                  >
-                    <CheckIcon className="size-4" />
-                  </div>
-                ) : (
-                  <div
-                    className={cn(
-                      "mr-2 flex size-4 items-center justify-center rounded-full border",
-                      isSelected
-                        ? "border-gray-900 dark:border-gray-100"
-                        : "border-gray-400 dark:border-gray-600",
-                      "bg-white dark:bg-gray-800",
-                      option.disabled && "opacity-75",
-                    )}
-                  >
-                    {isSelected && (
-                      <div className="size-2 rounded-full bg-gray-900 dark:bg-gray-100" />
-                    )}
-                  </div>
+                  </>
                 )}
                 {IconComponent && (
                   <IconComponent

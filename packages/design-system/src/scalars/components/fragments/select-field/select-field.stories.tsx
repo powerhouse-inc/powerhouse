@@ -75,6 +75,17 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
+    optionsCheckmark: {
+      control: "radio",
+      options: ["Auto", "None"],
+      description: "Whether to show checkmarks in options",
+      table: {
+        type: { summary: '"Auto" | "None"' },
+        defaultValue: { summary: '"Auto"' },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
     ...getValidationArgTypes(),
   },
   args: {
@@ -198,5 +209,15 @@ export const WithMaxItemsToShow: Story = {
     placeholder: "Select icons",
     multiple: true,
     maxSelectedOptionsToShow: 2,
+  },
+};
+
+export const WithoutCheckmarks: Story = {
+  args: {
+    label: "No checkmarks",
+    description: "Options without checkmark indicators",
+    options: defaultOptions,
+    optionsCheckmark: "None",
+    placeholder: "Select icons",
   },
 };

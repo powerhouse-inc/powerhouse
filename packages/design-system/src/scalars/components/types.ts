@@ -85,6 +85,7 @@ export interface SelectProps {
     label: string;
     disabled?: boolean;
   }[];
+  optionsCheckmark?: "Auto" | "None";
   placeholder?: string;
   maxSelectedOptionsToShow?: number;
   multiple?: boolean;
@@ -93,25 +94,16 @@ export interface SelectProps {
   onChange?: (value: string | string[]) => void;
 }
 
-export interface EnumBaseProps {
-  optionLabels?: Record<string, string>;
-  disabledOptions?: string[];
-}
-
 export type EnumProps =
-  | (EnumBaseProps & {
+  | ({
+      variant?: "Auto";
+    } & (RadioGroupProps | SelectProps))
+  | ({
       variant: "RadioGroup";
-      onChange?: RadioGroupProps["onChange"];
-    })
-  | (EnumBaseProps & {
+    } & RadioGroupProps)
+  | ({
       variant: "Select";
-      placeholder?: SelectProps["placeholder"];
-      maxSelectedOptionsToShow?: SelectProps["maxSelectedOptionsToShow"];
-      multiple?: SelectProps["multiple"];
-      searchable?: SelectProps["searchable"];
-      asModal?: SelectProps["asModal"];
-      onChange?: SelectProps["onChange"];
-    });
+    } & SelectProps);
 
 export type CurrencyCode = (typeof currencies)[number];
 

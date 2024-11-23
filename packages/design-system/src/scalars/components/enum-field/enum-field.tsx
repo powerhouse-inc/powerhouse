@@ -7,58 +7,48 @@ import {
   EnumProps,
 } from "@/scalars/components/types";
 
-export interface EnumOption {
-  icon?: React.ComponentType<{ className?: string }>;
-  value: string;
-  label: string;
-  description?: string;
-  disabled?: boolean;
-}
-
 export type EnumFieldProps = FieldCommonProps<string | string[]> &
   ErrorHandling &
-  EnumProps & {
-    options?: EnumOption[];
-  };
+  EnumProps;
+
+type RadioGroupVariant = Omit<
+  EnumFieldProps,
+  "defaultValue" | "value" | "onChange"
+> & {
+  defaultValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
+};
+
+type SelectVariant = Omit<
+  EnumFieldProps,
+  "defaultValue" | "value" | "onChange"
+> & {
+  defaultValue?: string[];
+  value?: string[];
+  onChange?: (value: string | string[]) => void;
+};
 
 export const EnumField: React.FC<EnumFieldProps> = ({
-  variant,
+  variant = "Auto",
   options = [],
-  optionLabels = {},
-  disabledOptions = [],
   ...props
 }) => {
-  // Transform options based on optionLabels if no direct options provided
-  const transformedOptions: EnumOption[] =
-    options.length > 0
-      ? options
-      : Object.entries(optionLabels).map(([value, label]) => ({
-          value,
-          label: label || value,
-          disabled: disabledOptions.includes(value),
-        }));
-
-  if (variant === "RadioGroup") {
-    return (
-      <RadioGroupField
-        {...props}
-        defaultValue={props.defaultValue as string}
-        value={props.value as string}
-        onChange={props.onChange as (value: string) => void}
-        options={transformedOptions}
-      />
+  if (variant === "Auto") {
+    return options.length < 6 ? (
+      <RadioGroupField options={options} {...(props as RadioGroupVariant)} />
+    ) : (
+      <SelectField options={options} {...(props as SelectVariant)} />
     );
   }
 
-  return (
-    <SelectField
-      {...props}
-      defaultValue={props.defaultValue as string[]}
-      value={props.value as string[]}
-      onChange={props.onChange as (value: string | string[]) => void}
-      options={transformedOptions}
-    />
-  );
+  if (variant === "RadioGroup") {
+    return (
+      <RadioGroupField options={options} {...(props as RadioGroupVariant)} />
+    );
+  }
+
+  return <SelectField options={options} {...(props as SelectVariant)} />;
 };
 
 EnumField.displayName = "EnumField";
