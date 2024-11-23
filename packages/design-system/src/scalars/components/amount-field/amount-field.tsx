@@ -110,6 +110,7 @@ const AmountField: FC<AmountFieldProps> = ({
         {!isPercent && isCurrency && (
           <div>
             <SelectField
+              optionsCheckmark="None"
               value={valueCurrency}
               defaultValue={valueCurrency}
               searchable={isSearchable}
