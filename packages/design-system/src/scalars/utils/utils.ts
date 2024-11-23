@@ -8,6 +8,9 @@ export function getDisplayValue(
   precision: number,
 ): string | number | undefined {
   if (isBigInt) {
+    if (typeof value === "string") {
+      return value.replace(/\D/g, "");
+    }
     return BigInt(value ?? 0).toString();
   }
 
