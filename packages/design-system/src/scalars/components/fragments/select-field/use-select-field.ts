@@ -4,7 +4,6 @@ import { SelectProps } from "@/scalars/components/types";
 interface UseSelectFieldProps {
   options?: SelectProps["options"];
   multiple?: boolean;
-  maxSelectedOptionsToShow?: number;
   defaultValue?: string | string[];
   value?: string | string[];
   onChange?: (value: string | string[]) => void;
@@ -13,7 +12,6 @@ interface UseSelectFieldProps {
 export function useSelectField({
   options = [],
   multiple = false,
-  maxSelectedOptionsToShow = 3,
   defaultValue,
   value,
   onChange,
@@ -64,12 +62,6 @@ export function useSelectField({
     onChange?.(multiple ? newValues : newValues[0]);
   }, [options, selectedValues, multiple, onChange]);
 
-  const clearExtraOptions = useCallback(() => {
-    const newValues = selectedValues.slice(0, maxSelectedOptionsToShow);
-    setSelectedValues(newValues);
-    onChange?.(multiple ? newValues : newValues[0]);
-  }, [selectedValues, maxSelectedOptionsToShow, multiple, onChange]);
-
   return {
     selectedValues,
     isPopoverOpen,
@@ -78,6 +70,5 @@ export function useSelectField({
     handleClear,
     toggleAll,
     handleTogglePopover,
-    clearExtraOptions,
   };
 }

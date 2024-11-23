@@ -8,11 +8,11 @@ describe("EnumField Component", () => {
   const defaultProps = {
     name: "enum",
     variant: "RadioGroup" as const,
-    optionLabels: {
-      option1: "Option 1",
-      option2: "Option 2",
-      option3: "Option 3",
-    },
+    options: [
+      { value: "option1", label: "Option 1" },
+      { value: "option2", label: "Option 2" },
+      { value: "option3", label: "Option 3" },
+    ],
   };
   window.HTMLElement.prototype.scrollIntoView = () => {};
 
@@ -54,16 +54,6 @@ describe("EnumField Component", () => {
   it("should render error messages when provided", () => {
     renderWithForm(<EnumField {...defaultProps} errors={["Error message"]} />);
     expect(screen.getByText("Error message")).toBeInTheDocument();
-  });
-
-  it("should disable options specified in disabledOptions", () => {
-    renderWithForm(
-      <EnumField {...defaultProps} disabledOptions={["option1"]} />,
-    );
-    const options = screen.getAllByRole("radio");
-    expect(options[0]).toBeDisabled();
-    expect(options[1]).not.toBeDisabled();
-    expect(options[2]).not.toBeDisabled();
   });
 
   it("should handle value changes in RadioGroup variant", async () => {
@@ -109,43 +99,21 @@ describe("EnumField Component", () => {
     expect(select).toBeDisabled();
   });
 
-  it("should transform options based on optionLabels", () => {
-    renderWithForm(<EnumField {...defaultProps} />);
-    expect(screen.getByText("Option 1")).toBeInTheDocument();
-    expect(screen.getByText("Option 2")).toBeInTheDocument();
-    expect(screen.getByText("Option 3")).toBeInTheDocument();
-  });
-
-  it("should use value as label when no label provided in optionLabels", () => {
-    renderWithForm(
-      <EnumField
-        name="enum"
-        variant="RadioGroup"
-        optionLabels={{
-          option1: "",
-          option2: "",
-        }}
-      />,
-    );
-    expect(screen.getByText("option1")).toBeInTheDocument();
-    expect(screen.getByText("option2")).toBeInTheDocument();
-  });
-
-  it("should handle options provided directly instead of optionLabels", () => {
-    renderWithForm(
-      <EnumField
-        name="enum"
-        variant="RadioGroup"
-        options={[
-          { value: "option1", label: "Option 1" },
-          { value: "option2", label: "Option 2" },
-          { value: "option3", label: "Option 3" },
-        ]}
-      />,
-    );
-
-    expect(screen.getByText("Option 1")).toBeInTheDocument();
-    expect(screen.getByText("Option 2")).toBeInTheDocument();
-    expect(screen.getByText("Option 3")).toBeInTheDocument();
+  it("should default to Select variant when no variant provided and has 7 options", () => {
+    const propsWithSevenOptions = {
+      name: "enum",
+      options: [
+        { value: "option1", label: "Option 1" },
+        { value: "option2", label: "Option 2" },
+        { value: "option3", label: "Option 3" },
+        { value: "option4", label: "Option 4" },
+        { value: "option5", label: "Option 5" },
+        { value: "option6", label: "Option 6" },
+        { value: "option7", label: "Option 7" },
+      ],
+    };
+    renderWithForm(<EnumField {...propsWithSevenOptions} />);
+    // Verify it renders as a Select
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 });

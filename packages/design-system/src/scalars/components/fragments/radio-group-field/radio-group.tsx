@@ -2,7 +2,7 @@ import React, { useId } from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import { cn } from "@/scalars/lib/utils";
 
-export interface RadioGroupProps
+export interface CustomizableRadioGroupProps
   extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root> {
   children: React.ReactNode;
   className?: string;
@@ -12,7 +12,7 @@ export interface RadioGroupProps
 
 export const RadioGroup = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Root>,
-  RadioGroupProps
+  CustomizableRadioGroupProps
 >(({ children, className, id: propId, name, ...props }, ref) => {
   const prefix = useId();
   const id = propId ?? `${prefix}-radio-group`;

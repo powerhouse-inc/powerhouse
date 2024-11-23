@@ -33,11 +33,11 @@ const meta: Meta<typeof EnumField> = {
 
     variant: {
       control: "radio",
-      options: ["RadioGroup", "Select"],
-      description: "Display variant of the enum field",
+      options: ["Auto", "RadioGroup", "Select"],
+      description: "Enum field variant",
       table: {
-        type: { summary: '"RadioGroup" | "Select"' },
-        defaultValue: { summary: "RadioGroup" },
+        type: { summary: '"Auto" | "RadioGroup" | "Select"' },
+        defaultValue: { summary: "Auto" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -50,26 +50,6 @@ const meta: Meta<typeof EnumField> = {
           summary:
             "Array<{ label: string; value: string; icon?: IconComponent; description?: string; disabled?: boolean; }>",
         },
-        defaultValue: { summary: "[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
-    optionLabels: {
-      control: "object",
-      description: "Object mapping of values to labels",
-      table: {
-        type: { summary: "Record<string, string>" },
-        defaultValue: { summary: "{}" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
-    disabledOptions: {
-      control: "object",
-      description: "Array of disabled option values",
-      table: {
-        type: { summary: "string[]" },
         defaultValue: { summary: "[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
@@ -90,12 +70,10 @@ type EnumFieldArgs = {
   defaultValue?: string | string[];
   description?: string;
   disabled?: boolean;
-  disabledOptions?: string[];
   errors?: string[];
   label?: string;
   multiple?: boolean;
   name?: string;
-  optionLabels?: Record<string, string>;
   options?: {
     value: string;
     label: string;
@@ -107,7 +85,7 @@ type EnumFieldArgs = {
   required?: boolean;
   searchable?: boolean;
   value?: string;
-  variant: "RadioGroup" | "Select";
+  variant: "Auto" | "RadioGroup" | "Select";
   warnings?: string[];
 };
 
@@ -122,7 +100,6 @@ const defaultOptions = [
 export const Default: Story = {
   args: {
     label: "Select an option",
-    variant: "RadioGroup",
     options: defaultOptions,
   },
 };
@@ -132,9 +109,10 @@ export const WithDescription: Story = {
     label: "Select an option",
     description: "Choose your preferred option from the list",
     variant: "RadioGroup",
-    options: defaultOptions.map((opt) => ({
+    options: defaultOptions.map((opt, index) => ({
       ...opt,
-      description: `Description for ${opt.label} option`,
+      description:
+        index === 2 ? `Description for ${opt.label} option` : undefined,
     })),
   },
 };
@@ -226,31 +204,5 @@ export const SearchableSelect: Story = {
     options: defaultOptions,
     placeholder: "Search and select an option",
     searchable: true,
-  },
-};
-
-// Using optionLabels
-export const UsingOptionLabels: Story = {
-  args: {
-    label: "Using optionLabels",
-    variant: "RadioGroup",
-    optionLabels: {
-      option1: "First Option",
-      option2: "Second Option",
-      option3: "Third Option",
-    },
-  },
-};
-
-export const UsingDisabledOptions: Story = {
-  args: {
-    label: "Using disabledOptions",
-    variant: "RadioGroup",
-    optionLabels: {
-      option1: "Available Option",
-      option2: "Disabled Option",
-      option3: "Another Available Option",
-    },
-    disabledOptions: ["option2"],
   },
 };
