@@ -5,8 +5,8 @@ export type ErrorMessage = string;
 export type ValidatorResult = ErrorMessage | boolean;
 
 export type ValidatorHandler = (
-  value: unknown,
-  formState: Record<string, unknown>,
+  value: any,
+  formState: Record<string, any>,
 ) => ValidatorResult | Promise<ValidatorResult>;
 
 export interface FormFieldProps {
@@ -30,7 +30,7 @@ export interface FieldCommonProps<T> extends FormFieldProps {
 export interface ErrorHandling {
   showErrorOnBlur?: boolean;
   showErrorOnChange?: boolean;
-  customValidator?: ValidatorHandler;
+  validators?: ValidatorHandler[] | ValidatorHandler;
 }
 
 export interface TextProps {
@@ -85,6 +85,7 @@ export interface SelectProps {
     label: string;
     disabled?: boolean;
   }[];
+  optionsCheckmark?: "Auto" | "None";
   placeholder?: string;
   maxSelectedOptionsToShow?: number;
   multiple?: boolean;
@@ -93,25 +94,16 @@ export interface SelectProps {
   onChange?: (value: string | string[]) => void;
 }
 
-export interface EnumBaseProps {
-  optionLabels?: Record<string, string>;
-  disabledOptions?: string[];
-}
-
 export type EnumProps =
-  | (EnumBaseProps & {
+  | ({
+      variant?: "Auto";
+    } & (RadioGroupProps | SelectProps))
+  | ({
       variant: "RadioGroup";
-      onChange?: RadioGroupProps["onChange"];
-    })
-  | (EnumBaseProps & {
+    } & RadioGroupProps)
+  | ({
       variant: "Select";
-      placeholder?: SelectProps["placeholder"];
-      maxSelectedOptionsToShow?: SelectProps["maxSelectedOptionsToShow"];
-      multiple?: SelectProps["multiple"];
-      searchable?: SelectProps["searchable"];
-      asModal?: SelectProps["asModal"];
-      onChange?: SelectProps["onChange"];
-    });
+    } & SelectProps);
 
 export type CurrencyCode = (typeof currencies)[number];
 

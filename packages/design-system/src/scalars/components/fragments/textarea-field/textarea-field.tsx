@@ -49,7 +49,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       spellCheck = false,
       trim = false,
       uppercase = false,
-      value,
+      value: propValue,
       warnings = [],
       ...props
     },
@@ -63,11 +63,10 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
 
-    const transformedValue = applyTransformers(value, {
-      lowercase,
-      trim,
-      uppercase,
-    });
+    const value =
+      propValue !== undefined
+        ? applyTransformers(propValue, { lowercase, trim, uppercase })
+        : propValue;
 
     const adjustHeight = (element: HTMLTextAreaElement) => {
       if (autoExpand) {
@@ -78,20 +77,53 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     };
 
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      if (autoExpand) {
+        adjustHeight(e.currentTarget);
+      }
+
+      // Transform and directly modify the value before sending it through onChange
+      e.target.value = applyTransformers(e.target.value, {
+        lowercase,
+        trim,
+        uppercase,
+      });
+
+      // Call the original onChange
+      onChange?.(e);
+    };
+
+    // Initial transformation if needed
+    useEffect(() => {
+      if (propValue !== undefined) {
+        const transformedValue = applyTransformers(propValue, {
+          lowercase,
+          trim,
+          uppercase,
+        });
+
+        if (transformedValue !== propValue) {
+          const e = new Event("change", {
+            bubbles: true,
+          }) as unknown as React.ChangeEvent<HTMLTextAreaElement>;
+          Object.defineProperty(e, "target", {
+            value: { value: transformedValue },
+          });
+          Object.defineProperty(e, "currentTarget", {
+            value: { value: transformedValue },
+          });
+
+          onChange?.(e);
+        }
+      }
+    }, []);
+
     useEffect(() => {
       const textareaRef = ref && (ref as React.RefObject<HTMLTextAreaElement>);
       if (textareaRef?.current && autoExpand) {
         adjustHeight(textareaRef.current);
       }
     }, [value, autoExpand]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      if (autoExpand) {
-        adjustHeight(e.currentTarget);
-      }
-      // Preserve existing onChange handler
-      onChange?.(e);
-    };
 
     return (
       <FormGroup>
@@ -186,10 +218,10 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             placeholder={placeholder}
             rows={rows}
             spellCheck={spellCheck}
+            value={value}
+            onChange={handleChange}
             {...props}
             ref={ref}
-            value={transformedValue}
-            onChange={handleChange}
           />
           {hasMaxLength && (
             <div className="mt-1.5 flex justify-end">

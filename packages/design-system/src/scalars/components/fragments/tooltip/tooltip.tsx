@@ -29,15 +29,20 @@ const TooltipContent = ({
     <Content
       {...props}
       className={cn(
-        // Layout
-        "z-50 overflow-hidden rounded-md px-3 py-1.5",
-        // Colors & Typography
-        "bg-primary text-primary-foreground text-xs shadow-lg",
+        // Base styles
+        "z-50 overflow-hidden rounded-md text-sm",
+        // Colors & Border
+        "border border-gray-200 bg-white text-gray-900 dark:border-gray-900 dark:bg-slate-900 dark:text-gray-200",
+        // Padding & Shadow
+        "px-3 py-1.5 shadow-md",
         // Animations
         "animate-in fade-in-0 zoom-in-95",
         "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-        "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
-        "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        // Slide animations based on position
+        "data-[side=bottom]:slide-in-from-top-2",
+        "data-[side=left]:slide-in-from-right-2",
+        "data-[side=right]:slide-in-from-left-2",
+        "data-[side=top]:slide-in-from-bottom-2",
         className,
       )}
     >
@@ -63,7 +68,9 @@ const Tooltip: React.FC<TooltipProps> = ({
     >
       <Trigger asChild={triggerAsChild}>{children}</Trigger>
       <Portal>
-        <TooltipContent {...rest}>{content}</TooltipContent>
+        <TooltipContent sideOffset={3} {...rest}>
+          {content}
+        </TooltipContent>
       </Portal>
     </Root>
   );

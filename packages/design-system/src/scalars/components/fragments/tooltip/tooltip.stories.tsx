@@ -75,7 +75,7 @@ export const CustomStyle: Story = {
   args: {
     content: "Custom styled tooltip",
     children: <button>Hover for custom tooltip</button>,
-    className: "bg-blue-500 text-white",
+    className: "bg-blue-500 text-white dark:bg-blue-600 dark:text-white",
   },
 };
 

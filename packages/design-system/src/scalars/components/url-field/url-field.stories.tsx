@@ -9,7 +9,7 @@ import {
 } from "@/scalars/lib/storybook-arg-types";
 
 const meta: Meta<typeof UrlField> = {
-  title: "Document Engineering/Simple Components/URL Field",
+  title: "Document Engineering/Simple Components/Url Field",
   component: UrlField,
   decorators: [withForm],
   parameters: {

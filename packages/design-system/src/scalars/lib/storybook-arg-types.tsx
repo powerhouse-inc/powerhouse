@@ -104,12 +104,12 @@ export const PrebuiltArgTypes = {
   },
 
   // validation
-  customValidator: {
-    customValidator: {
+  validators: {
+    validators: {
       control: "object",
       description: "Custom validator function",
       table: {
-        type: { summary: "function" },
+        type: { summary: "function | function[]" },
         category: StorybookControlCategory.VALIDATION,
         readonly: true,
       },
@@ -354,7 +354,7 @@ export function getDefaultArgTypes(
 
 export interface ValidationArgTypesOptions {
   enabledArgTypes?: {
-    customValidator?: boolean;
+    validators?: boolean;
     showErrorOnBlur?: boolean;
     showErrorOnChange?: boolean;
     required?: boolean;
@@ -371,7 +371,7 @@ export function getValidationArgTypes(
   const argTypes = options.enabledArgTypes ?? {};
 
   return {
-    ...(argTypes.customValidator !== false && PrebuiltArgTypes.customValidator),
+    ...(argTypes.validators !== false && PrebuiltArgTypes.validators),
     ...(argTypes.showErrorOnBlur !== false && PrebuiltArgTypes.showErrorOnBlur),
     ...(argTypes.showErrorOnChange !== false &&
       PrebuiltArgTypes.showErrorOnChange),

@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronDown, XCircle, XIcon } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, XIcon } from "lucide-react";
 import { Badge } from "@/scalars/components/fragments/badge";
 import { Button } from "@/scalars/components/fragments/button";
 import { Separator } from "@/scalars/components/fragments/separator";
@@ -10,32 +10,36 @@ interface SelectedContentProps {
   selectedValues: string[];
   options?: SelectProps["options"];
   multiple: boolean;
+  searchable: boolean;
   maxSelectedOptionsToShow: number;
   placeholder?: string;
   disabled: boolean;
-  toggleOption: (value: string) => void;
   handleClear: () => void;
-  clearExtraOptions: () => void;
 }
 
 export const SelectedContent: React.FC<SelectedContentProps> = ({
   selectedValues,
   options = [],
   multiple,
+  searchable,
   maxSelectedOptionsToShow,
   placeholder,
   disabled,
-  toggleOption,
   handleClear,
-  clearExtraOptions,
 }) => {
   if (selectedValues.length === 0) {
     return (
       <div className="mx-auto flex w-full items-center justify-between">
-        <span className="mx-3 text-sm text-gray-500 dark:text-gray-400">
-          {placeholder ?? ""}
-        </span>
-        <ChevronDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+        {placeholder !== undefined && (
+          <span className="mx-3 text-sm text-gray-500 dark:text-gray-400">
+            {placeholder}
+          </span>
+        )}
+        {searchable ? (
+          <ChevronsUpDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+        ) : (
+          <ChevronDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+        )}
       </div>
     );
   }
@@ -71,21 +75,6 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             >
               {IconComponent && <IconComponent className="mr-2 size-4" />}
               {option?.label}
-              {multiple && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleOption(value);
-                  }}
-                  className="ml-1 size-4 p-0 hover:bg-transparent"
-                >
-                  <XCircle className="size-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
-                </Button>
-              )}
             </Badge>
           );
         })}
@@ -103,19 +92,6 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             )}
           >
             {`+ ${selectedValues.length - maxSelectedOptionsToShow} more`}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                clearExtraOptions();
-              }}
-              className="ml-1 size-4 p-0 hover:bg-transparent"
-            >
-              <XCircle className="size-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
-            </Button>
           </Badge>
         )}
       </div>
@@ -139,7 +115,11 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             <Separator orientation="vertical" className="flex h-full min-h-6" />
           </>
         )}
-        <ChevronDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+        {searchable ? (
+          <ChevronsUpDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+        ) : (
+          <ChevronDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+        )}
       </div>
     </div>
   );
