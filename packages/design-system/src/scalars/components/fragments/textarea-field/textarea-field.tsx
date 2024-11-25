@@ -1,4 +1,4 @@
-import React, { useId, useCallback, useEffect } from "react";
+import React, { useId, useEffect } from "react";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { FormGroup } from "@/scalars/components/fragments/form-group";
@@ -30,7 +30,7 @@ const textareaBaseStyles = cn(
   // Base styles
   "flex w-full rounded-md text-sm leading-normal",
   // Colors & Background
-  "dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white",
+  "border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900",
   // Placeholder
   "font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500",
   // Padding & Spacing

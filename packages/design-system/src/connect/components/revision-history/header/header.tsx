@@ -34,7 +34,7 @@ export function Header(props: Props) {
     >
       <div className="flex items-center gap-3">
         <button
-          className="shadow-button rounded-lg bg-gray-50 p-1 text-slate-100"
+          className="rounded-lg bg-gray-50 p-1 text-slate-100 shadow-button"
           onClick={onClose}
         >
           <Icon name="VariantArrowLeft" />

@@ -121,7 +121,6 @@ export default tseslint.config(
     },
     settings: {
       tailwindcss: {
-        config: "./packages/design-system/tailwind.config.ts",
         callees: [
           "classnames",
           "clsx",

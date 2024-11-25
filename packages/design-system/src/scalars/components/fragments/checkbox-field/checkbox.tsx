@@ -41,7 +41,7 @@ const Checkbox = React.forwardRef<
     data-invalid={invalid}
     {...props}
   >
-    <CheckboxPrimitive.Indicator className="flex items-center justify-center text-current">
+    <CheckboxPrimitive.Indicator className="text-current flex items-center justify-center">
       {checked === "indeterminate" ? (
         <svg
           width="9"
