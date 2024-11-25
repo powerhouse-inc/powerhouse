@@ -1,13 +1,11 @@
 import { NumberFieldProps } from "./number-field";
 
 export const validatePositive =
-  (props: NumberFieldProps) => (value: unknown) => {
-    return props.allowNegative
+  ({ allowNegative }: NumberFieldProps) =>
+  (value: unknown): true | string =>
+    allowNegative || value === undefined || Number(value) > 0
       ? true
-      : Number(value) > 0
-        ? true
-        : "Value must be a positive value";
-  };
+      : "Value must be a positive value";
 
 export const validateIsBigInt =
   (props: NumberFieldProps) => (value: unknown) => {
