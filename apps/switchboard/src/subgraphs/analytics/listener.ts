@@ -26,12 +26,12 @@ export async function transmit(strands: InternalTransmitterUpdate[]) {
   return Promise.resolve();
 }
 
-const source = AnalyticsPath.fromString('switchboard/default');
-
 async function handle(strand: InternalTransmitterUpdate) {
   const analytics = get();
 
   await Promise.all(strand.operations.map((operation) => {
+    const source = AnalyticsPath.fromString(`switchboard/default/${strand.driveId}`);
+
     const start = DateTime.fromISO(operation.timestamp);
     const dimensions: any = {
       type: AnalyticsPath.fromString(`operation/type/${operation.type}`),
@@ -41,6 +41,10 @@ async function handle(strand: InternalTransmitterUpdate) {
     if (strand.documentId) {
       dimensions["document"] = AnalyticsPath.fromString(`document/${strand.documentId}/${strand.scope}`);
     }
+
+    // todo: +1, -1 for doc created and destroyed
+    
+    // todo: count documents of each type (ADD_FILE, input.documentType)
 
     return analytics.addSeriesValues([
       {
