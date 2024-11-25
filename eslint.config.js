@@ -166,5 +166,5 @@ export default tseslint.config(
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,
     },
-  },
+  }
 );
