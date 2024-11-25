@@ -1,4 +1,5 @@
 import React, { useId } from "react";
+import { cn } from "@/scalars/lib/utils";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
@@ -50,7 +51,7 @@ const RadioGroupFieldRaw = React.forwardRef<
         aria-label={!hasLabel ? "Radio group" : undefined}
         aria-required={required}
         autoFocus={autoFocus}
-        className={className}
+        className={cn("flex flex-col gap-2", className)}
         defaultValue={defaultValue}
         id={id}
         name={name}
@@ -76,7 +77,7 @@ const RadioGroupFieldRaw = React.forwardRef<
         {options.map((option, index) => (
           <div
             key={`${prefix}-radio-${index}-${option.value}`}
-            className="flex items-center gap-2.5"
+            className="flex items-center gap-2"
             role="presentation"
           >
             <Radio

@@ -1,6 +1,5 @@
 import React, { useId } from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
-import { cn } from "@/scalars/lib/utils";
 
 export interface CustomizableRadioGroupProps
   extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root> {
@@ -19,7 +18,7 @@ export const RadioGroup = React.forwardRef<
 
   return (
     <RadioGroupPrimitive.Root
-      className={cn("flex flex-col gap-2.5", className)}
+      className={className}
       id={id}
       name={name}
       {...props}
