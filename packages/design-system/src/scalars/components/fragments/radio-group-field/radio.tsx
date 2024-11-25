@@ -41,8 +41,8 @@ export const Radio = React.forwardRef<
           aria-invalid={hasError}
           className={cn(
             "group peer",
-            "aspect-square size-4 rounded-full border-2 border-gray-800 dark:border-slate-50",
-            "hover:border-gray-900 dark:hover:border-slate-50",
+            "aspect-square size-4 rounded-full border border-gray-800 dark:border-gray-400",
+            "hover:border-gray-900 dark:hover:border-gray-50",
             disabled && [
               "cursor-not-allowed border-gray-600 hover:border-gray-600",
               "dark:border-gray-600 dark:hover:border-gray-600",
@@ -65,10 +65,10 @@ export const Radio = React.forwardRef<
               "after:absolute after:left-1/2 after:top-1/2 after:size-2.5",
               "after:-translate-x-1/2 after:-translate-y-1/2",
               "after:rounded-full after:bg-gray-800 after:content-['']",
-              "dark:after:bg-slate-50",
+              "dark:after:bg-gray-400",
               !disabled && [
                 "group-hover:after:bg-gray-900",
-                "dark:group-hover:after:bg-slate-50",
+                "dark:group-hover:after:bg-gray-50",
               ],
               disabled && ["after:bg-gray-600", "dark:after:bg-gray-600"],
             )}
