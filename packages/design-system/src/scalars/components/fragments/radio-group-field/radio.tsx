@@ -47,7 +47,7 @@ export const Radio = React.forwardRef<
             "dark:focus:ring-gray-500/40",
             "focus:hover:ring-gray-400/40 dark:focus:hover:ring-gray-400/40",
             disabled && [
-              "cursor-not-allowed border-gray-600 opacity-70 hover:border-gray-600",
+              "cursor-not-allowed border-gray-600 hover:border-gray-600",
               "dark:border-gray-600 dark:hover:border-gray-600",
             ],
             hasError && [
