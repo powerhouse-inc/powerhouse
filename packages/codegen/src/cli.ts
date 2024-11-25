@@ -1,5 +1,10 @@
 #! /usr/bin/env node
-import { generate, generateEditor, generateFromFile, generateProcessor } from "./codegen/index";
+import {
+  generate,
+  generateEditor,
+  generateFromFile,
+  generateProcessor,
+} from "./codegen/index";
 import {
   parseArgs,
   getConfig,

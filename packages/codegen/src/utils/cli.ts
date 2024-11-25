@@ -86,7 +86,7 @@ export function parseConfig(argv: string[]) {
 }
 
 export async function promptDirectories(
-  config: PowerhouseConfig = DEFAULT_CONFIG
+  config: PowerhouseConfig = DEFAULT_CONFIG,
 ) {
   return prompt<Pick<PowerhouseConfig, "documentModelsDir" | "editorsDir">>([
     {

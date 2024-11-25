@@ -129,5 +129,5 @@ export async function generateProcessor(
   documentTypes: string[],
   config: PowerhouseConfig,
 ) {
-  console.log(console.log('generateProcessor'));
+  console.log(console.log("generateProcessor"));
 }
