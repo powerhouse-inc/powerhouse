@@ -121,6 +121,7 @@ export default tseslint.config(
     },
     settings: {
       tailwindcss: {
+        config: "./packages/design-system/tailwind.config.ts",
         callees: [
           "classnames",
           "clsx",
@@ -166,5 +167,5 @@ export default tseslint.config(
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,
     },
-  },
+  }
 );

@@ -20,28 +20,28 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({ address }) => {
 
   const ensNameAndAddress = (
     <>
-      <p className="mb-2 h-4 text-sm text-gray-800 duration-1000 animate-in fade-in">
+      <p className="animate-in fade-in mb-2 h-4 text-sm text-gray-800 duration-1000">
         {ensName}
       </p>
-      <p className="h-3 text-xs text-gray-600 duration-1000 animate-in fade-in">
+      <p className="animate-in fade-in h-3 text-xs text-gray-600 duration-1000">
         {formattedAddress}
       </p>
     </>
   );
 
   const addressOnly = (
-    <p className="text-sm text-gray-800 duration-1000 animate-in fade-in">
+    <p className="animate-in fade-in text-sm text-gray-800 duration-1000">
       {formattedAddress}
     </p>
   );
 
   return (
     <div
-      className="flex gap-2 rounded-sm py-2.5 collapsed:justify-center
-            collapsed:px-1 expanding:justify-center expanding:px-1"
+      className="collapsed:justify-center collapsed:px-1 expanding:justify-center expanding:px-1 flex
+            gap-2 rounded-sm py-2.5"
     >
       <ENSAvatar address={address} size="40px" />
-      <div className="grid w-full items-center font-semibold collapsed:hidden expanding:hidden">
+      <div className="collapsed:hidden expanding:hidden grid w-full items-center font-semibold">
         {loadingUser ? usernameAndAddressLoader : null}
         {!loadingUser && !!ensName && ensNameAndAddress}
         {!loadingUser && !ensName && addressOnly}

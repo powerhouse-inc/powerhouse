@@ -15,7 +15,7 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
     <SidebarHeader
       {...props}
       className={twMerge(
-        "mb-4 flex justify-between gap-4 px-4 pt-11 collapsed:justify-center",
+        "collapsed:justify-center mb-4 flex justify-between gap-4 px-4 pt-11",
         className,
       )}
     >
@@ -28,10 +28,10 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
         )}
       </div>
       <button
-        className="rounded-md border border-gray-100 p-3 outline-none hover:bg-slate-50
-                collapsed:rotate-180 collapsed:border-gray-100/10 collapsed:bg-gray-100
-                collapsed:shadow-sidebar collapsed:hover:bg-slate-50
-                expanding:hidden"
+        className="collapsed:rotate-180 collapsed:border-gray-100/10 collapsed:bg-gray-100 collapsed:shadow-sidebar collapsed:hover:bg-slate-50 expanding:hidden
+                rounded-md border border-gray-100
+                p-3 outline-none
+                hover:bg-slate-50"
         onClick={() => onToggle()}
       >
         <Icon className="text-gray-600" name="ArrowLeft" size={16} />

@@ -20,7 +20,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     <SidebarFooter
       {...props}
       className={twMerge(
-        "bg-gray-50 p-4 collapsed:px-1 expanding:px-1",
+        "collapsed:px-1 expanding:px-1 bg-gray-50 p-4",
         className,
       )}
     >
@@ -32,11 +32,11 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         )}
       </div>
       <button
-        className="mt-3 flex w-full cursor-pointer gap-3 outline-none collapsed:px-3 expanding:px-3"
+        className="collapsed:px-3 expanding:px-3 mt-3 flex w-full cursor-pointer gap-3 outline-none"
         onClick={onClickSettings}
       >
         <Icon className="text-gray-600" name="Settings" />
-        <span className="text-sm font-semibold leading-6 text-gray-800 collapsed:hidden expanding:hidden">
+        <span className="collapsed:hidden expanding:hidden text-sm font-semibold leading-6 text-gray-800">
           Settings
         </span>
       </button>

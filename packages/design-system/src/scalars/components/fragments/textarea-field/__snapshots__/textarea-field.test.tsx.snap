@@ -9,7 +9,7 @@ exports[`TextareaField Component > should match snapshot with props 1`] = `
       class="flex flex-col gap-2"
     >
       <label
-        class="inline-flex items-center text-sm leading-[22px] dark:text-gray-50 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900 mb-1.5 font-normal"
+        class="inline-flex items-center text-sm font-medium leading-[22px] dark:text-gray-50 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900"
         for=":r0:-textarea"
       >
         Default Label
@@ -26,14 +26,13 @@ exports[`TextareaField Component > should match snapshot with props 1`] = `
           aria-invalid="true"
           aria-required="true"
           autocomplete="off"
-          class="flex w-full rounded-lg text-base leading-normal font-sans font-normal text-gray-900 dark:text-gray-100 border placeholder:text-gray-500 dark:placeholder:text-gray-600 px-4 py-3 focus:outline-none focus:ring-gray-900 dark:focus:bg-gray-900 dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:border-gray-800 dark:disabled:bg-gray-900/50 dark:disabled:text-gray-600 bg-red-50/50 border-red-500 dark:border-red-400 dark:bg-red-900/5 hover:border-red-600 dark:hover:border-red-300 focus:ring-0 focus:ring-offset-0 focus:border-red-500 dark:focus:border-red-400 min-h-[120px] resize-y scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600"
+          class="flex w-full rounded-md text-sm leading-normal dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500 px-3 py-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 min-h-[120px] resize-y scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600"
           id=":r0:-textarea"
           name="textarea"
           rows="3"
-          spellcheck="false"
         />
         <div
-          class="mt-1.5 flex justify-end"
+          class="mt-0.5 flex justify-end"
         >
           <div
             class="flex items-center text-[10px]"
@@ -52,7 +51,7 @@ exports[`TextareaField Component > should match snapshot with props 1`] = `
         </div>
       </div>
       <p
-        class="font-inter text-sm font-normal leading-5 text-gray-600 mt-0 dark:text-gray-400"
+        class="font-inter text-sm font-normal leading-5 text-gray-600"
       >
         Default description
       </p>
