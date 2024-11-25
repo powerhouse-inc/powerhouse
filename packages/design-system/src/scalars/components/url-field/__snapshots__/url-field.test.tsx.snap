@@ -39,7 +39,7 @@ exports[`UrlField > should match snapshot 1`] = `
         />
       </div>
       <p
-        class="font-inter text-sm font-normal leading-5 text-gray-600"
+        class="font-sans text-sm font-normal leading-5 text-gray-600"
       >
         Enter your website URL
       </p>
