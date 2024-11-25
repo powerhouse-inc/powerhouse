@@ -1,12 +1,13 @@
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import { IDocumentDriveServer } from "document-drive";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 import { parse } from "graphql";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
   resolvers: GraphQLResolverMap,
-  typeDefs: string,
+  typeDefs: string
 ) =>
   buildSubgraphSchema([
     {
@@ -17,7 +18,7 @@ export const createSchema = (
 
 export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
-  typeDefs: string,
+  typeDefs: string
 ) => {
   const documentModels = documentDriveServer.getDocumentModels();
   let dmSchema = "";
@@ -30,7 +31,7 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll(`: Account`, `: ${documentModel.name}Account`)
                 .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
                 .replaceAll("scalar DateTime", "")
-                .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
+                .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
             )
             .join("\n")};
   
@@ -44,7 +45,7 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
                 .replaceAll("type AccountSnapshotLocalState", "")
                 .replaceAll("type BudgetStatementLocalState", "")
-                .replaceAll("type ScopeFrameworkLocalState", ""),
+                .replaceAll("type ScopeFrameworkLocalState", "")
             )
             .join("\n")};
   
@@ -61,7 +62,8 @@ export const getDocumentModelTypeDefs = (
 
   // add the mutation and query types
   const schema = `
-      scalar DateTime
+      ${scalarsTypeDefs.join("\n")}
+      
       interface IDocument {
           name: String!
           documentType: String!
