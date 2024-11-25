@@ -52,6 +52,7 @@ export const updateRouter = async (driveServer: IDocumentDriveServer) => {
     const path = `/${subgraphConfig.name}`;
     newRouter.use(
       path,
+      // @ts-ignore
       expressMiddleware(server, {
         context: ({ req }): Promise<Context> =>
           Promise.resolve({
@@ -60,7 +61,7 @@ export const updateRouter = async (driveServer: IDocumentDriveServer) => {
             driveServer,
             ...getAdditionalContextFields(),
           }),
-      }),
+      })
     );
     console.log(`Setting up [${subgraphConfig.name}] subgraph at ${path}`);
   }
@@ -74,12 +75,12 @@ let docDriveServer: IDocumentDriveServer;
 export const initReactorRouter = async (
   path: string,
   app: express.Express,
-  driveServer: IDocumentDriveServer,
+  driveServer: IDocumentDriveServer
 ) => {
   docDriveServer = driveServer;
   const models = driveServer.getDocumentModels();
   const driveModel = models.find(
-    (it) => it.documentModel.name === "DocumentDrive",
+    (it) => it.documentModel.name === "DocumentDrive"
   );
 
   if (!driveModel) {
@@ -96,14 +97,14 @@ export const initReactorRouter = async (
 };
 
 export const addSubgraph = async (
-  subgraph: (typeof SUBGRAPH_REGISTRY)[number],
+  subgraph: (typeof SUBGRAPH_REGISTRY)[number]
 ) => {
   SUBGRAPH_REGISTRY.unshift(subgraph);
   await updateRouter(docDriveServer);
 };
 
 export const registerInternalListener = async (
-  module: InternalListenerModule,
+  module: InternalListenerModule
 ) => {
   if (!listenerManager) {
     throw new Error("Listener manager not initialized");
