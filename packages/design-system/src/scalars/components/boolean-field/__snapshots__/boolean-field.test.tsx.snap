@@ -54,7 +54,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
           value="on"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] dark:text-gray-50 dark:group-hover:text-slate-50 text-red-700 group-hover:text-red-900 group-hover:cursor-pointer"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-red-700 group-hover:text-red-900 dark:text-red-700 dark:group-hover:text-red-900 group-hover:cursor-pointer"
           for=":r2:"
         >
           Test Field
@@ -80,7 +80,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
         Test warning
       </p>
       <p
-        class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-700"
+        class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-900"
         data-type="error"
       >
         Test error
@@ -156,7 +156,7 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
         Test warning
       </p>
       <p
-        class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-700"
+        class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-900"
         data-type="error"
       >
         Test error

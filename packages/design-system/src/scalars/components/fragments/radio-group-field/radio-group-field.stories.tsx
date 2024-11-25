@@ -109,13 +109,14 @@ export const WithWarning: Story = {
     label: "Radio Group with warnings",
     warnings: ["Your selection may need review"],
     options: defaultOptions,
+    defaultValue: "3",
   },
 };
 
 // Special features
 export const WithDescriptionInOptions: Story = {
   args: {
-    label: "Radio Group with option descriptions",
+    label: "Radio Group with description in options",
     options: [
       {
         label: "Option 1",
