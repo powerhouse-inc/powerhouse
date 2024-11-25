@@ -1,29 +1,44 @@
-import { currencies } from "@/scalars/lib/data";
-import { AmountValue, TypeAmount } from "../types";
+import { currencies } from "@/scalars/lib/currency-list";
+import { AmountType, CurrencyCode } from "../types";
 
 interface UseAmountFieldProps {
-  type: TypeAmount;
-  value?: AmountValue;
+  value?: AmountType;
+  defaultValue?: AmountType;
   allowedCurrencies?: string[];
-  allowedTokens?: string[];
 }
 
-export const useAmountField = ({ type, value }: UseAmountFieldProps) => {
+export const useAmountField = ({
+  allowedCurrencies = [],
+  value,
+  defaultValue,
+}: UseAmountFieldProps) => {
+  let valueCurrency;
+  const initialValue = value ?? defaultValue ?? ({} as AmountType);
+  const { type, details } = initialValue;
+
   const isPercent = type === "AmountPercentage";
+  const isCurrency = type === "AmountCurrency";
 
-  const currencyOptions = currencies.map((code) => ({
-    value: code.toLowerCase(),
-    label: code,
-  }));
-  const valueToDisplay = value?.amount || 0;
+  const options = currencies
+    .filter((code) => allowedCurrencies.includes(code))
+    .map((code) => ({
+      value: code.toString(),
+      label: code,
+    }));
 
-  const isSearchable = currencyOptions.length >= 5;
+  const valueInput = details.amount;
+
+  if (type === "AmountCurrency") {
+    valueCurrency = details.currency;
+  }
+  const isSearchable = options.length >= 5;
 
   return {
     isPercent,
-    value,
-    currencyOptions,
+    options,
     isSearchable,
-    valueToDisplay,
+    isCurrency,
+    valueInput,
+    valueCurrency,
   };
 };

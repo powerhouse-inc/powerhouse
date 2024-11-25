@@ -1,4 +1,4 @@
-import { currencies } from "../lib/data";
+import { currencies } from "../lib/currency-list";
 
 export type ErrorMessage = string;
 
@@ -85,6 +85,7 @@ export interface SelectProps {
     label: string;
     disabled?: boolean;
   }[];
+  optionsCheckmark?: "Auto" | "None";
   placeholder?: string;
   maxSelectedOptionsToShow?: number;
   multiple?: boolean;
@@ -93,47 +94,53 @@ export interface SelectProps {
   onChange?: (value: string | string[]) => void;
 }
 
-export interface EnumBaseProps {
-  optionLabels?: Record<string, string>;
-  disabledOptions?: string[];
-}
-
 export type EnumProps =
-  | (EnumBaseProps & {
+  | ({
+      variant?: "Auto";
+    } & (RadioGroupProps | SelectProps))
+  | ({
       variant: "RadioGroup";
-      onChange?: RadioGroupProps["onChange"];
-    })
-  | (EnumBaseProps & {
+    } & RadioGroupProps)
+  | ({
       variant: "Select";
-      placeholder?: SelectProps["placeholder"];
-      maxSelectedOptionsToShow?: SelectProps["maxSelectedOptionsToShow"];
-      multiple?: SelectProps["multiple"];
-      searchable?: SelectProps["searchable"];
-      asModal?: SelectProps["asModal"];
-      onChange?: SelectProps["onChange"];
-    });
+    } & SelectProps);
 
 export type CurrencyCode = (typeof currencies)[number];
 
-export interface Amount {
+export interface AmountBase {
   amount: number | string;
 }
 
-export interface AmountCurrency {
-  amount: number;
+export interface AmountCurrency extends AmountBase {
   currency: CurrencyCode;
 }
 
-export interface AmountPercentage {
+export interface AmountPercentageBase {
   amount: number;
 }
 
-export type TypeAmount = "Amount" | "AmountCurrency" | "AmountPercentage";
+export type AmountType =
+  | { type: "Amount"; details: AmountBase }
+  | { type: "AmountCurrency"; details: AmountCurrency }
+  | { type: "AmountPercentage"; details: AmountPercentageBase };
 
-export type AmountValue = Amount | AmountCurrency | AmountPercentage;
-export interface AmountProps {
-  value: AmountValue;
-  type: TypeAmount;
-  allowedCurrencies?: string[];
-  allowedTokens?: string[];
+export interface InputNumberProps
+  extends Omit<
+    FieldCommonProps<string | number> &
+      NumberProps &
+      ErrorHandling &
+      Omit<
+        React.InputHTMLAttributes<HTMLInputElement>,
+        "min" | "max" | "minLength" | "maxLength"
+      >,
+    "value" | "defaultValue" | "name" | "pattern"
+  > {
+  name: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  precision?: number;
+  trailingZeros?: boolean;
+  allowNegative?: boolean;
+  isBigInt?: boolean;
 }

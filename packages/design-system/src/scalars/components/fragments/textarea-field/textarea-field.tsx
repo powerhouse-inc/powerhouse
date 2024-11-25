@@ -1,4 +1,4 @@
-import React, { useId, useCallback } from "react";
+import React, { useId, useCallback, useEffect } from "react";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { FormGroup } from "@/scalars/components/fragments/form-group";
@@ -63,7 +63,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       rows = 3,
       trim,
       uppercase,
-      value,
+      value: propValue,
       warnings,
       ...props
     },
@@ -75,29 +75,71 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
 
-    const transformedValue = applyTransformers(value, {
-      lowercase: !!lowercase,
-      trim: !!trim,
-      uppercase: !!uppercase,
-    });
+    const value =
+      propValue !== undefined
+        ? applyTransformers(propValue, {
+            lowercase: !!lowercase,
+            trim: !!trim,
+            uppercase: !!uppercase,
+          })
+        : propValue;
 
-    const adjustHeight = useCallback(
-      (element: HTMLTextAreaElement) => {
-        if (autoExpand) {
-          // Set to scrollHeight to expand based on content
-          element.style.height = `${element.scrollHeight}px`;
-        }
-      },
-      [autoExpand],
-    );
+    const adjustHeight = (element: HTMLTextAreaElement) => {
+      if (autoExpand) {
+        // Reset height to allow shrinking
+        element.style.height = "auto";
+        // Set to scrollHeight to expand based on content
+        element.style.height = `${element.scrollHeight}px`;
+      }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (autoExpand) {
         adjustHeight(e.currentTarget);
       }
-      // Preserve existing onChange handler
+
+      // Transform and directly modify the value before sending it through onChange
+      e.target.value = applyTransformers(e.target.value, {
+        lowercase: !!lowercase,
+        trim: !!trim,
+        uppercase: !!uppercase,
+      });
+
+      // Call the original onChange
       onChange?.(e);
     };
+
+    // Initial transformation if needed
+    useEffect(() => {
+      if (propValue !== undefined) {
+        const transformedValue = applyTransformers(propValue, {
+          lowercase: !!lowercase,
+          trim: !!trim,
+          uppercase: !!uppercase,
+        });
+
+        if (transformedValue !== propValue) {
+          const e = new Event("change", {
+            bubbles: true,
+          }) as unknown as React.ChangeEvent<HTMLTextAreaElement>;
+          Object.defineProperty(e, "target", {
+            value: { value: transformedValue },
+          });
+          Object.defineProperty(e, "currentTarget", {
+            value: { value: transformedValue },
+          });
+
+          onChange?.(e);
+        }
+      }
+    }, []);
+
+    useEffect(() => {
+      const textareaRef = ref && (ref as React.RefObject<HTMLTextAreaElement>);
+      if (textareaRef?.current && autoExpand) {
+        adjustHeight(textareaRef.current);
+      }
+    }, [value, autoExpand]);
 
     return (
       <FormGroup>
@@ -133,7 +175,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             ref={ref}
             id={id}
             name={name}
-            value={transformedValue}
+            value={value}
             defaultValue={defaultValue}
             minLength={minLength}
             placeholder={placeholder}

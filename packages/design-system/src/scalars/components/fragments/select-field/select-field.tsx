@@ -38,6 +38,7 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
     {
       // core functionality props
       options = [],
+      optionsCheckmark = "Auto",
       multiple = false,
       defaultValue,
       value,
@@ -80,11 +81,9 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
       handleClear,
       toggleAll,
       handleTogglePopover,
-      clearExtraOptions,
     } = useSelectField({
       options,
       multiple,
-      maxSelectedOptionsToShow,
       defaultValue,
       value,
       onChange,
@@ -146,12 +145,11 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
                 selectedValues={selectedValues}
                 options={options}
                 multiple={multiple}
+                searchable={searchable}
                 maxSelectedOptionsToShow={maxSelectedOptionsToShow}
                 placeholder={placeholder}
                 disabled={disabled}
-                toggleOption={toggleOption}
                 handleClear={handleClear}
-                clearExtraOptions={clearExtraOptions}
               />
             </Button>
           </PopoverTrigger>
@@ -163,6 +161,7 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
             <Content
               selectedValues={selectedValues}
               options={options}
+              optionsCheckmark={optionsCheckmark}
               multiple={multiple}
               searchable={searchable}
               toggleOption={toggleOption}

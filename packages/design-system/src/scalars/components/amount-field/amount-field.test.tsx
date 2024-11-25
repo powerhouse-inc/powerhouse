@@ -7,11 +7,15 @@ describe("AmountField Component", () => {
   it("should match snapshot", () => {
     const { container } = renderWithForm(
       <AmountField
+        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
         value={{
-          amount: 100,
+          type: "Amount",
+          details: {
+            amount: 345,
+          },
         }}
       />,
     );
@@ -21,12 +25,15 @@ describe("AmountField Component", () => {
   it("should render label when provided", () => {
     renderWithForm(
       <AmountField
+        selectName="currency"
         label="Amount Label"
         name="amount"
         value={{
-          amount: 300,
+          type: "Amount",
+          details: {
+            amount: 345,
+          },
         }}
-        type="Amount"
       />,
     );
     expect(screen.getByLabelText("Amount Label")).toBeInTheDocument();
@@ -35,12 +42,15 @@ describe("AmountField Component", () => {
   it("should render error messages when provided", () => {
     renderWithForm(
       <AmountField
+        selectName="currency"
         label="Amount Label"
         name="amount"
         value={{
-          amount: 300,
+          type: "Amount",
+          details: {
+            amount: 345,
+          },
         }}
-        type="Amount"
         errors={["Error 1", "Error 2"]}
       />,
     );
@@ -51,12 +61,15 @@ describe("AmountField Component", () => {
   it("should render the percentage sign if the type is percent", () => {
     renderWithForm(
       <AmountField
+        selectName="currency"
         label="Amount Label"
         name="amount"
         value={{
-          amount: 400,
+          type: "AmountPercentage",
+          details: {
+            amount: 345,
+          },
         }}
-        type="AmountPercentage"
       />,
     );
     expect(screen.getByText("%")).toBeInTheDocument();
@@ -65,10 +78,14 @@ describe("AmountField Component", () => {
   it("should disable the input when disabled prop is true", () => {
     renderWithForm(
       <AmountField
+        selectName="currency"
         label="Amount Label"
         name="amount"
         value={{
-          amount: 330,
+          type: "Amount",
+          details: {
+            amount: 345,
+          },
         }}
         disabled
         type="Amount"
@@ -82,10 +99,14 @@ describe("AmountField Component", () => {
   it("should set the input as required when required prop is true", () => {
     renderWithForm(
       <AmountField
+        selectName="currency"
         label="Amount Label"
         name="amount"
         value={{
-          amount: 330,
+          type: "Amount",
+          details: {
+            amount: 345,
+          },
         }}
         required
         type="Amount"
@@ -97,10 +118,14 @@ describe("AmountField Component", () => {
   it("should render the description when provided", () => {
     renderWithForm(
       <AmountField
+        selectName="currency"
         label="Amount Label"
         name="amount"
         value={{
-          amount: 330,
+          type: "Amount",
+          details: {
+            amount: 345,
+          },
         }}
         disabled
         type="Amount"

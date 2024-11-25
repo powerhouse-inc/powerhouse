@@ -29,7 +29,7 @@ exports[`AmountField Component > should match snapshot 1`] = `
               id=":r0:"
               name="amount"
               type="number"
-              value="100"
+              value="345"
             />
           </div>
         </div>
