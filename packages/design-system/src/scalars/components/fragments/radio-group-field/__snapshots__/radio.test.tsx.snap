@@ -15,7 +15,7 @@ exports[`Radio Component > should match snapshot 1`] = `
       aria-checked="false"
       aria-disabled="false"
       aria-invalid="false"
-      class="group/radio peer/radio aspect-square size-4 rounded-full border border-gray-800 dark:border-gray-400 hover:border-gray-900 dark:hover:border-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300/40 focus:ring-offset-0 dark:focus:ring-gray-500/40 focus:hover:ring-gray-400/40 dark:focus:hover:ring-gray-400/40"
+      class="group peer aspect-square size-4 rounded-full border border-gray-800 dark:border-gray-400 hover:border-gray-900 dark:hover:border-gray-50"
       data-radix-collection-item=""
       data-state="unchecked"
       id=":r1:-radio"
@@ -25,7 +25,7 @@ exports[`Radio Component > should match snapshot 1`] = `
       value="test"
     />
     <label
-      class="inline-flex items-center text-sm font-medium leading-[22px] group-hover:text-gray-900 dark:group-hover:text-slate-50 cursor-pointer text-gray-800 dark:text-gray-400 peer-hover/radio:text-gray-900 dark:peer-hover/radio:text-gray-50"
+      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
       for=":r1:-radio"
     >
       Test Label
