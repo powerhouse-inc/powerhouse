@@ -1,6 +1,5 @@
 import { Icon } from "@/powerhouse/components/icon";
 import React from "react";
-import { twMerge } from "tailwind-merge";
 import { Tooltip, TooltipProvider } from "../tooltip";
 import { cn } from "@/scalars/lib";
 
@@ -23,7 +22,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   className,
   ...htmlLabelProps
 }) => {
-  const classes = twMerge(
+  const classes = cn(
     "inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50",
     hasError &&
       "text-red-700 group-hover:text-red-900 dark:text-red-700 dark:group-hover:text-red-900",

@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { NumberField } from "./number-field";
 import { withForm } from "@/scalars/lib/decorators";
-import { useState } from "react";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -166,7 +165,7 @@ export const WithFloatNumber: Story = {
     label: "Label",
     name: "Label",
     // Allow trailing zeros after the decimal point for clarity in displaying fractional values.
-    // eslint-disable-next-line prettier/prettier
+
     value: 0.0,
     precision: 2,
     trailingZeros: true,

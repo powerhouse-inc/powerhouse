@@ -51,64 +51,6 @@ describe("TextareaField Component", () => {
     expect(textarea).toHaveClass("resize-none", "overflow-hidden");
   });
 
-  describe("Styling and Visual States", () => {
-    it("should apply correct styles for different states", async () => {
-      const user = userEvent.setup();
-      const { rerender } = renderWithForm(<TextareaField name="textarea" />);
-      const textarea = screen.getByRole("textbox");
-
-      // Hover state
-      await user.hover(textarea);
-      expect(textarea).toHaveClass(
-        "hover:border-gray-400",
-        "dark:hover:border-gray-600",
-      );
-
-      // Focus state
-      await user.tab();
-      expect(textarea).toHaveClass(
-        "focus:outline-none",
-        "focus:ring-2",
-        "focus:ring-gray-900",
-        "focus:ring-offset-2",
-        "dark:focus:ring-gray-700",
-        "dark:focus:ring-offset-0",
-        "dark:focus:border-gray-700",
-        "dark:focus:bg-gray-900",
-      );
-
-      // Custom class
-      rerender(
-        <TextareaField
-          name="textarea"
-          // eslint-disable-next-line tailwindcss/no-custom-classname
-          className="custom-class"
-        />,
-      );
-      expect(textarea).toHaveClass("custom-class");
-    });
-
-    it("should handle resize behavior correctly", () => {
-      const { rerender } = renderWithForm(<TextareaField name="textarea" />);
-      let textarea = screen.getByRole("textbox");
-
-      // Default resize behavior
-      expect(textarea).toHaveClass(
-        "min-h-[120px]",
-        "resize-y",
-        "scrollbar-thin",
-        "scrollbar-thumb-gray-300",
-        "scrollbar-track-transparent",
-        "dark:scrollbar-thumb-gray-600",
-      );
-
-      // Auto-expand behavior
-      rerender(<TextareaField name="textarea" autoExpand />);
-      textarea = screen.getByRole("textbox");
-      expect(textarea).toHaveClass("resize-none", "overflow-hidden");
-    });
-  });
-
   describe("Messages and Feedback", () => {
     it("should handle warnings and errors", () => {
       renderWithForm(

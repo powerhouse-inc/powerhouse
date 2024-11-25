@@ -26,6 +26,22 @@ export interface TextareaProps
   autoExpand?: boolean;
 }
 
+const textareaBaseStyles = cn(
+  // Base styles
+  "flex w-full rounded-md text-sm leading-normal",
+  // Colors & Background
+  "border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900",
+  // Placeholder
+  "font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500",
+  // Padding & Spacing
+  "px-3 py-2",
+  // Focus state
+  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 focus-visible:ring-offset-white",
+  "dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900",
+  // Disabled state
+  "disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500",
+);
+
 const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
     {
@@ -34,38 +50,38 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       className,
       defaultValue,
       description,
-      disabled = false,
-      errors = [],
+      errors,
       id: propId,
       label,
-      lowercase = false,
+      lowercase,
       maxLength,
       minLength,
       name,
       onChange,
       placeholder,
-      required = false,
+      required,
       rows = 3,
-      spellCheck = false,
-      trim = false,
-      uppercase = false,
+      trim,
+      uppercase,
       value: propValue,
-      warnings = [],
+      warnings,
       ...props
     },
     ref,
   ) => {
     const autoCompleteValue = autoComplete ? "on" : "off";
-    const hasMaxLength = typeof maxLength === "number" && maxLength > 0;
-    const hasWarning = warnings.length > 0;
-    const hasError = errors.length > 0;
+    const hasError = errors && errors.length > 0;
 
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
 
     const value =
       propValue !== undefined
-        ? applyTransformers(propValue, { lowercase, trim, uppercase })
+        ? applyTransformers(propValue, {
+            lowercase: !!lowercase,
+            trim: !!trim,
+            uppercase: !!uppercase,
+          })
         : propValue;
 
     const adjustHeight = (element: HTMLTextAreaElement) => {
@@ -84,9 +100,9 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
       // Transform and directly modify the value before sending it through onChange
       e.target.value = applyTransformers(e.target.value, {
-        lowercase,
-        trim,
-        uppercase,
+        lowercase: !!lowercase,
+        trim: !!trim,
+        uppercase: !!uppercase,
       });
 
       // Call the original onChange
@@ -97,9 +113,9 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     useEffect(() => {
       if (propValue !== undefined) {
         const transformedValue = applyTransformers(propValue, {
-          lowercase,
-          trim,
-          uppercase,
+          lowercase: !!lowercase,
+          trim: !!trim,
+          uppercase: !!uppercase,
         });
 
         if (transformedValue !== propValue) {
@@ -129,10 +145,9 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <FormGroup>
         {label && (
           <FormLabel
-            className="mb-1.5 font-normal"
-            disabled={disabled}
-            hasError={hasError}
             htmlFor={id}
+            disabled={props.disabled}
+            hasError={hasError}
             required={required}
           >
             {label}
@@ -141,63 +156,10 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <div className="relative">
           <textarea
             aria-invalid={hasError}
-            aria-label={label ? undefined : "Text area"}
             aria-required={required}
             autoComplete={autoCompleteValue}
             className={cn(
-              // Base styles
-              "flex w-full rounded-lg text-base leading-normal",
-              "font-sans font-normal",
-
-              // Colors & Background
-              "bg-white text-gray-900",
-              "dark:bg-gray-900 dark:text-gray-100",
-
-              // Border styles - Default state
-              "border border-gray-300",
-              "dark:border-gray-700",
-
-              // Placeholder
-              "placeholder:text-gray-500",
-              "dark:placeholder:text-gray-600",
-
-              // Padding & Spacing
-              "px-4 py-3",
-
-              // Focus state
-              "focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2",
-              "dark:focus:border-gray-700 dark:focus:bg-gray-900 dark:focus:ring-2 dark:focus:ring-gray-700 dark:focus:ring-offset-0",
-
-              // Hover state
-              "hover:border-gray-400",
-              "dark:hover:border-gray-600",
-
-              // Disabled state
-              "disabled:cursor-not-allowed",
-              "disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-500",
-              "dark:disabled:border-gray-800 dark:disabled:bg-gray-900/50 dark:disabled:text-gray-600",
-
-              // Warning states
-              hasWarning && [
-                "border-orange-500 bg-orange-50/50",
-                "dark:border-orange-400 dark:bg-orange-900/5",
-                "hover:border-orange-600",
-                "dark:hover:border-orange-300",
-                "focus:ring-0 focus:ring-offset-0",
-                "focus:border-orange-500",
-                "dark:focus:border-orange-400",
-              ],
-
-              // Error states
-              hasError && [
-                "border-red-500 bg-red-50/50",
-                "dark:border-red-400 dark:bg-red-900/5",
-                "hover:border-red-600",
-                "dark:hover:border-red-300",
-                "focus:ring-0 focus:ring-offset-0",
-                "focus:border-red-500",
-                "dark:focus:border-red-400",
-              ],
+              textareaBaseStyles,
 
               // Resize behavior based on autoExpand
               autoExpand
@@ -210,50 +172,26 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
               className,
             )}
-            defaultValue={defaultValue}
-            disabled={disabled}
+            ref={ref}
             id={id}
-            minLength={minLength}
             name={name}
+            value={value}
+            defaultValue={defaultValue}
+            minLength={minLength}
             placeholder={placeholder}
             rows={rows}
-            spellCheck={spellCheck}
-            value={value}
             onChange={handleChange}
             {...props}
-            ref={ref}
           />
-          {hasMaxLength && (
-            <div className="mt-1.5 flex justify-end">
+          {maxLength && (
+            <div className="mt-0.5 flex justify-end">
               <CharacterCounter maxLength={maxLength} value={value ?? ""} />
             </div>
           )}
         </div>
-        {description && (
-          <FormDescription
-            className={cn(
-              "mt-1.5",
-              hasMaxLength && "mt-0",
-              "dark:text-gray-400",
-            )}
-          >
-            {description}
-          </FormDescription>
-        )}
-        {hasWarning && (
-          <FormMessageList
-            className={cn("mt-1.5", hasMaxLength && "mt-0")}
-            messages={warnings}
-            type="warning"
-          />
-        )}
-        {hasError && (
-          <FormMessageList
-            className={cn("mt-1.5", hasMaxLength && "mt-0")}
-            messages={errors}
-            type="error"
-          />
-        )}
+        {description && <FormDescription>{description}</FormDescription>}
+        {warnings && <FormMessageList messages={warnings} type="warning" />}
+        {errors && <FormMessageList messages={errors} type="error" />}
       </FormGroup>
     );
   },
