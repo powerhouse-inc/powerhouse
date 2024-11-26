@@ -123,3 +123,11 @@ export async function generateEditor(
     { skipFormat },
   );
 }
+
+export async function generateProcessor(
+  name: string,
+  documentTypes: string[],
+  config: PowerhouseConfig,
+) {
+  console.log(console.log("generateProcessor"));
+}
