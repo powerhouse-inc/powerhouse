@@ -9,13 +9,12 @@ import { cn } from "@/scalars/lib";
 import { getDisplayValue, regex } from "@/scalars/utils/utils";
 import { withFieldValidation } from "../fragments/with-field-validation";
 import {
-  mapToValidationProps,
   validateDecimalRequired,
   validateIsBigInt,
   validatePositive,
   validatePrecision,
   validateTrailingZeros,
-} from "./numberFieldValidations";
+} from "./number-field-validations";
 
 export interface NumberFieldProps extends InputNumberProps {
   className?: string;
@@ -122,13 +121,11 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
   NumberFieldRaw,
   {
     validations: {
-      _positive: (props) => validatePositive(mapToValidationProps(props)),
-      _isBigInt: (props) => validateIsBigInt(mapToValidationProps(props)),
-      _precision: (props) => validatePrecision(mapToValidationProps(props)),
-      _trailingZeros: (props) =>
-        validateTrailingZeros(mapToValidationProps(props)),
-      _decimalRequired: (props) =>
-        validateDecimalRequired(mapToValidationProps(props)),
+      _positive: validatePositive,
+      _isBigInt: validateIsBigInt,
+      _precision: validatePrecision,
+      _trailingZeros: validateTrailingZeros,
+      _decimalRequired: validateDecimalRequired,
     },
   },
 );

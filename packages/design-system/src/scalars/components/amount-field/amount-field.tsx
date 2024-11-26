@@ -13,9 +13,12 @@ import {
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
 import {
-  mapToValidationProps,
-  validatePositive,
-} from "../number-field/numberFieldValidations";
+  validateDecimalRequiredAmount,
+  validateIsBigIntAmount,
+  validatePositiveAmount,
+  validatePrecisionAmount,
+  validateTrailingZerosAmount,
+} from "./amount-field-validations";
 
 export interface AmountFieldProps
   extends Omit<InputNumberProps, "onChange" | "onBlur"> {
@@ -102,7 +105,6 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
               .value as unknown as number)
           : undefined,
     });
-
     onChange(newValue);
   };
 
@@ -194,68 +196,11 @@ export const AmountField = withFieldValidation<AmountFieldProps>(
   AmountFieldRaw,
   {
     validations: {
-      _positive:
-        ({ allowNegative }: AmountFieldProps) =>
-        (value: AmountType): true | string => {
-          const {
-            details: { amount },
-          } = value;
-          return allowNegative || Number(amount) >= 0
-            ? true
-            : "Value must be a positive value";
-        },
-
-      _isBigInt:
-        ({ isBigInt }: AmountFieldProps) =>
-        (value: AmountType) => {
-          const {
-            details: { amount },
-          } = value;
-          const stringValue = String(amount);
-          const isLargeNumber =
-            Math.abs(Number(stringValue)) > Number.MAX_SAFE_INTEGER;
-          return isLargeNumber && !isBigInt
-            ? "Value is too large for standard integer"
-            : true;
-        },
-      _precision:
-        ({ precision }: AmountFieldProps) =>
-        (value: unknown) => {
-          const stringValue = String(value);
-          if (precision === undefined) {
-            return !stringValue.includes(".")
-              ? true
-              : "Value must be an integer";
-          }
-
-          const decimalPart = stringValue.split(".")[1];
-          if (precision === 0) {
-            return !decimalPart ? true : "Value must be an integer";
-          }
-
-          return decimalPart && decimalPart.length <= precision
-            ? true
-            : `Value must have ${precision} decimal places or fewer`;
-        },
-      _trailingZeros:
-        ({ trailingZeros, precision }: AmountFieldProps) =>
-        (value: unknown) => {
-          const stringValue = String(value);
-          if (!trailingZeros) return true;
-          const hasTrailingZeros =
-            stringValue.split(".")[1]?.length === precision;
-          return hasTrailingZeros
-            ? true
-            : `Value must have exactly ${precision} decimal places`;
-        },
-      _decimalRequired:
-        ({ decimalRequired }: AmountFieldProps) =>
-        (value: unknown) => {
-          const stringValue = String(value);
-          return decimalRequired && !stringValue.includes(".")
-            ? "Value must include a decimal point"
-            : true;
-        },
+      _positive: validatePositiveAmount,
+      _isBigInt: validateIsBigIntAmount,
+      _precision: validatePrecisionAmount,
+      _trailingZeros: validateTrailingZerosAmount,
+      _decimalRequired: validateDecimalRequiredAmount,
     },
   },
 );
