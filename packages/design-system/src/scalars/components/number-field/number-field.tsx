@@ -54,6 +54,9 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints, otherwise sets to "number" for standard numeric input.
     const inputType = isBigInt ? "text" : "number";
 
+    const blockInvalidChar = (e: React.KeyboardEvent<HTMLInputElement>) =>
+      ["e", "E"].includes(e.key) && e.preventDefault();
+
     const displayValue = getDisplayValue(
       value,
       isBigInt,
@@ -88,6 +91,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           aria-valuemin={minValue}
           aria-valuemax={maxValue}
           aria-invalid={!!errors?.length}
+          onKeyDown={blockInvalidChar}
           value={displayValue}
           step={step}
           defaultValue={defaultValue}
