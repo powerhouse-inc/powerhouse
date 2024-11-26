@@ -41,15 +41,15 @@ const meta = {
       control: "text",
       description:
         "Specifies the numeric type of the input field. Possible values are:\n\n\n" +
-        "- PositiveInt: Positive whole numbers (e.g., 1, 2, 3)\n\n" +
-        "- NegativeInt: Negative whole numbers (e.g., -1, -2, -3)\n\n" +
-        "- NonNegativeInt: Zero and positive whole numbers (e.g., 0, 2)\n\n" +
-        "- NonPositiveInt: Zero and negative whole numbers (e.g., 0, -2)\n\n" +
-        "- PositiveFloat: Positive decimals (e.g., 1.0, 2.5)\n\n" +
-        "- NegativeFloat: Negative decimals (e.g., -1.0, -2.5)\n\n" +
-        "- NonNegativeFloat: Zero and positive decimals (e.g., 0.0, 1.0)\n\n" +
-        "- NonPositiveFloat: Zero and negative decimals (e.g., 0.0, -1.0)\n\n" +
-        "- BigInt: Large integers (e.g., 9999999999999999999)\n\n",
+        "- PositiveInt: Positive whole numbers (1, 2, 3)\n" +
+        "- NegativeInt: Negative whole numbers (-1, -2, -3)\n" +
+        "- NonNegativeInt: Zero and positive whole numbers (0, 2)\n" +
+        "- NonPositiveInt: Zero and negative whole numbers ( 0, -2)\n" +
+        "- PositiveFloat: Positive decimals (1.0, 2.5)\n" +
+        "- NegativeFloat: Negative decimals (-1.0, -2.5)\n" +
+        "- NonNegativeFloat: Zero and positive decimals (0.0, 1.0)\n" +
+        "- NonPositiveFloat: Zero and negative decimals (0.0, -1.0)\n" +
+        "- BigInt: Large integers (999999999999999999)\n",
       table: {
         type: {
           summary:

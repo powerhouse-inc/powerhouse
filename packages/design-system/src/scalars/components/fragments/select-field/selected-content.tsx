@@ -5,6 +5,7 @@ import { Button } from "@/scalars/components/fragments/button";
 import { Separator } from "@/scalars/components/fragments/separator";
 import { cn } from "@/scalars/lib/utils";
 import { SelectProps } from "@/scalars/components/types";
+import { Icon, type IconName } from "@/powerhouse/components/icon";
 
 interface SelectedContentProps {
   selectedValues: string[];
@@ -27,6 +28,18 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
   disabled,
   handleClear,
 }) => {
+  const renderIcon = (
+    IconComponent:
+      | IconName
+      | React.ComponentType<{ className?: string }>
+      | undefined,
+  ) => {
+    if (typeof IconComponent === "string") {
+      return <Icon name={IconComponent} size={16} className="mr-2" />;
+    }
+    return IconComponent && <IconComponent className="mr-2 size-4" />;
+  };
+
   if (selectedValues.length === 0) {
     return (
       <div className="mx-auto flex w-full items-center justify-between">
@@ -49,7 +62,6 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
       <div className={cn("flex flex-wrap items-center", !multiple && "w-full")}>
         {selectedValues.slice(0, maxSelectedOptionsToShow).map((value) => {
           const option = options.find((o) => o.value === value);
-          const IconComponent = option?.icon;
           return (
             <Badge
               key={value}
@@ -73,7 +85,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
                 "rounded-md",
               )}
             >
-              {IconComponent && <IconComponent className="mr-2 size-4" />}
+              {renderIcon(option?.icon)}
               {option?.label}
             </Badge>
           );

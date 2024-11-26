@@ -37,6 +37,16 @@ const meta = {
       },
     },
 
+    multiline: {
+      control: "boolean",
+      description: "Whether the textarea should accept multiple lines of text",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "true" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
     rows: {
       control: "number",
       description: "Number of visible text lines in the textarea",
@@ -131,6 +141,17 @@ export const WithAutoExpand: Story = {
     placeholder: "This will grow as you type...",
     description:
       "The textarea will automatically expand as you type more content",
+  },
+};
+
+export const WithAutoExpandSingleLine: Story = {
+  args: {
+    label: "Single-line auto-expanding textarea",
+    autoExpand: true,
+    multiline: false,
+    placeholder: "This will grow as you type...",
+    description:
+      "This textarea does not accept line breaks or the Enter key, but will expand.",
   },
 };
 

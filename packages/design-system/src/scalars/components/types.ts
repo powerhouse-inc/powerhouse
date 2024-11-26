@@ -1,4 +1,5 @@
 import { currencies } from "../lib/currency-list";
+import type { IconName } from "@/powerhouse/components/icon";
 
 export type ErrorMessage = string;
 
@@ -80,7 +81,7 @@ export interface RadioGroupProps {
 
 export interface SelectProps {
   options?: {
-    icon?: React.ComponentType<{ className?: string }>;
+    icon?: IconName | React.ComponentType<{ className?: string }>;
     value: string;
     label: string;
     disabled?: boolean;

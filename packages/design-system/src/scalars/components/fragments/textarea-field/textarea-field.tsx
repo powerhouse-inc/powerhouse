@@ -24,13 +24,14 @@ export interface TextareaProps
     ErrorHandling,
     TextProps {
   autoExpand?: boolean;
+  multiline?: boolean;
 }
 
 const textareaBaseStyles = cn(
   // Base styles
   "flex w-full rounded-md text-sm leading-normal",
   // Colors & Background
-  "border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900",
+  "dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white",
   // Placeholder
   "font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500",
   // Padding & Spacing
@@ -47,6 +48,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     {
       autoComplete = false,
       autoExpand = false,
+      multiline = true,
       className,
       defaultValue,
       description,
@@ -84,29 +86,50 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           })
         : propValue;
 
-    const adjustHeight = (element: HTMLTextAreaElement) => {
-      if (autoExpand) {
+    const adjustHeight = () => {
+      const textarea = document.getElementById(id);
+      if (textarea) {
         // Reset height to allow shrinking
-        element.style.height = "auto";
+        textarea.style.height = "auto";
         // Set to scrollHeight to expand based on content
-        element.style.height = `${element.scrollHeight}px`;
+        textarea.style.height = `${textarea.scrollHeight}px`;
       }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      if (autoExpand) {
-        adjustHeight(e.currentTarget);
+      // Prevent line breaks if multiline is false
+      let newValue = e.target.value;
+      if (!multiline) {
+        newValue = newValue.replace(/\n/g, "");
       }
 
-      // Transform and directly modify the value before sending it through onChange
-      e.target.value = applyTransformers(e.target.value, {
+      // Transform and directly modify the value
+      newValue = applyTransformers(newValue, {
         lowercase: !!lowercase,
         trim: !!trim,
         uppercase: !!uppercase,
       });
 
+      // Update the textarea value
+      e.target.value = newValue;
+
       // Call the original onChange
       onChange?.(e);
+
+      // Adjust height after processing the value
+      if (autoExpand) {
+        adjustHeight();
+      }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Prevent Enter key if multiline is false
+      if (!multiline && e.key === "Enter") {
+        e.preventDefault();
+      }
+
+      // Call the original onKeyDown
+      props.onKeyDown?.(e);
     };
 
     // Initial transformation if needed
@@ -131,15 +154,12 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
           onChange?.(e);
         }
+
+        if (autoExpand) {
+          adjustHeight();
+        }
       }
     }, []);
-
-    useEffect(() => {
-      const textareaRef = ref && (ref as React.RefObject<HTMLTextAreaElement>);
-      if (textareaRef?.current && autoExpand) {
-        adjustHeight(textareaRef.current);
-      }
-    }, [value, autoExpand]);
 
     return (
       <FormGroup>
@@ -181,6 +201,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             placeholder={placeholder}
             rows={rows}
             onChange={handleChange}
+            onKeyDown={handleKeyDown}
             {...props}
           />
           {maxLength && (
