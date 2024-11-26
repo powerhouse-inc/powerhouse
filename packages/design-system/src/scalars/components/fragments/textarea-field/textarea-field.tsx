@@ -126,7 +126,6 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       // Prevent Enter key if multiline is false
       if (!multiline && e.key === "Enter") {
         e.preventDefault();
-        e.stopPropagation();
       }
 
       // Call the original onKeyDown
