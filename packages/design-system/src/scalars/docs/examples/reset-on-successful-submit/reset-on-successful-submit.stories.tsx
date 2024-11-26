@@ -19,11 +19,22 @@ const FormWithResetOnSuccessfulSubmit = () => {
         alert(JSON.stringify(data, null, 2));
       }}
       resetOnSuccessfulSubmit
+      defaultValues={{
+        example: "",
+        number: 0,
+      }}
     >
-      <StringField name="example" label="Field example" required />
-      <NumberField name="number" label="Number" required />
-
-      <Button type="submit">Submit</Button>
+      <div className="flex flex-col gap-2">
+        <StringField
+          name="example"
+          placeholder="Type something"
+          label="Field example"
+          required
+          autoFocus
+        />
+        <NumberField name="number" label="Number" required />
+        <Button type="submit">Submit</Button>
+      </div>
     </Form>
   );
 };

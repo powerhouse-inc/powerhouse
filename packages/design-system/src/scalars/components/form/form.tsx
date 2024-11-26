@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useEffect, useImperativeHandle } from "react";
 import { FormProvider, useForm, UseFormReturn } from "react-hook-form";
 
 interface FormProps {
@@ -85,13 +85,19 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
     const methods = useForm({ defaultValues });
     useImperativeHandle(ref, () => methods, [methods]);
 
+    useEffect(() => {
+      if (resetOnSuccessfulSubmit && methods.formState.isSubmitSuccessful) {
+        methods.reset({ ...(defaultValues ?? {}) });
+      }
+    }, [resetOnSuccessfulSubmit, methods.formState.isSubmitSuccessful]);
+
     return (
       <FormProvider {...methods}>
         <form
           onSubmit={methods.handleSubmit((data) => {
             onSubmit(data);
             if (resetOnSuccessfulSubmit) {
-              methods.reset();
+              methods.reset({ ...defaultValues });
             }
           })}
           className={className}

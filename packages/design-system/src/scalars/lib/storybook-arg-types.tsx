@@ -27,6 +27,7 @@ export const PrebuiltArgTypes = {
       table: {
         type: { summary: "string" },
         category: StorybookControlCategory.DEFAULT,
+        readonly: true,
       },
     },
   },
