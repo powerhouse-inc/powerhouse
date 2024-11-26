@@ -1,7 +1,7 @@
-import { Meta, Source, Canvas, Controls } from '@storybook/blocks';
+import { Meta, Source, Canvas, Controls } from "@storybook/blocks";
 
-import * as ResetButtonStories from './examples/reset-button/reset-button.stories';
-import * as ResetOnSuccessfulSubmitStories from './examples/reset-on-successful-submit/reset-on-successful-submit.stories'
+import * as ResetButtonStories from "./examples/reset-button/reset-button.stories";
+import * as ResetOnSuccessfulSubmitStories from "./examples/reset-on-successful-submit/reset-on-successful-submit.stories";
 
 <Meta title="Document Engineering/Docs/Forms" />
 
@@ -37,13 +37,15 @@ import { Form } from "@powerhousedao/design-system/scalars"
     <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Submitting" : "Submit"}
     </button>
- )}
+
+)}
+
 </Form>
 `}/>
 
 ### Form reset
 
-In scenarios where a form needs to be reused multiple times for data entry, you may want to automatically clear the form fields after each successful submission. This can be achieved by setting the `resetOnSuccessfulSubmit` prop to `true`. When enabled, all form fields will be reset to their default values immediately after a successful form submission, preparing the form for the next entry.
+In scenarios where a form needs to be reused multiple times for data entry, you may want to automatically clear the form fields after each successful submission. This can be achieved by setting the `resetOnSuccessfulSubmit` prop to `true`, but in order to reset the fields properly, the `defaultValues` need also to be set. When enabled, all form fields will be reset to their default values immediately after a successful form submission, preparing the form for the next entry.
 
 <Canvas of={ResetOnSuccessfulSubmitStories.Default} withToolbar />
 
@@ -51,12 +53,14 @@ The `Form` component provides programmatic access to form methods, including the
 
 <Canvas of={ResetButtonStories.Default} withToolbar />
 
+Alternatively, you can manage form resets manually by leaving `resetOnSuccessfulSubmit` as `false` (or omitting it) and implementing your own reset logic using the methods provided by `react-hook-form`. This gives you more granular control over when and how the form is reset. For detailed information on form reset methods, refer to the [`react-hook-form` reset documentation](https://www.react-hook-form.com/api/useform/reset/).
+
 ### Accessing form state
 
 The Form component provides two ways to access form state and methods:
 
-1. Using the *Render Props* pattern, which gives you direct access to form state and methods within the form's render function
-2. Using *React refs*, which allows you to access form state and methods from anywhere in your component
+1. Using the _Render Props_ pattern, which gives you direct access to form state and methods within the form's render function
+2. Using _React refs_, which allows you to access form state and methods from anywhere in your component
 
 Both approaches give you access to the full range of form functionality provided by `react-hook-form`, including:
 
@@ -87,14 +91,14 @@ import { useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
 
 function FormExample() {
-   const formRef = useRef<UseFormReturn>(null);
+const formRef = useRef<UseFormReturn>(null);
 
-   console.log(ref.current?.formState?.submitCount)
+console.log(ref.current?.formState?.submitCount)
 
-   return (
-      <Form ref={formRef} onSubmit={/* your submit function */}>
-         {/* your fields */}
-      </Form>
-   )
+return (
+<Form ref={formRef} onSubmit={/* your submit function */}>
+{/* your fields */}
+</Form>
+)
 }
 `}/>
