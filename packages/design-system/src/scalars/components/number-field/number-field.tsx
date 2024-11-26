@@ -54,8 +54,17 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints, otherwise sets to "number" for standard numeric input.
     const inputType = isBigInt ? "text" : "number";
 
+    // Prevent to write invalid characters
     const blockInvalidChar = (e: React.KeyboardEvent<HTMLInputElement>) =>
       ["e", "E"].includes(e.key) && e.preventDefault();
+
+    // Prevent pasting invalid characters
+    const blockInvalidPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const pastedData = e.clipboardData.getData("Text");
+      if (/[eE]/.test(pastedData)) {
+        e.preventDefault();
+      }
+    };
 
     const displayValue = getDisplayValue(
       value,
@@ -96,6 +105,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           step={step}
           defaultValue={defaultValue}
           onChange={onChange}
+          onPaste={blockInvalidPaste}
           {...props}
           ref={ref}
         />
