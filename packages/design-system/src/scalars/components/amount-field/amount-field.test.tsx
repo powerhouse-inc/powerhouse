@@ -1,4 +1,3 @@
-import React from "react";
 import { screen } from "@testing-library/react";
 import { AmountField } from "./amount-field";
 import { renderWithForm } from "@/scalars/lib/testing";

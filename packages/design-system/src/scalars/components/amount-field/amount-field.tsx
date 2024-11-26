@@ -1,6 +1,6 @@
 import React, { FC, useId } from "react";
-import { AmountType, InputNumberProps } from "../types";
-import { NumberField, NumberFieldProps } from "../number-field";
+import { AmountCurrency, AmountType, InputNumberProps } from "../types";
+import { NumberFieldProps, NumberFieldRaw } from "../number-field";
 import {
   FormDescription,
   FormGroup,
@@ -8,11 +8,17 @@ import {
   FormMessageList,
   SelectField,
   SelectFieldProps,
+  withFieldValidation,
 } from "../fragments";
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
+import {
+  mapToValidationProps,
+  validatePositive,
+} from "../number-field/numberFieldValidations";
 
-export interface AmountFieldProps extends InputNumberProps {
+export interface AmountFieldProps
+  extends Omit<InputNumberProps, "onChange" | "onBlur"> {
   className?: string;
   name: string;
   pattern?: RegExp;
@@ -23,10 +29,11 @@ export interface AmountFieldProps extends InputNumberProps {
   selectName: string;
   value?: AmountType;
   defaultValue?: AmountType;
+  onChange?: (event: AmountType) => void;
+  onBlur?: (event: AmountType) => void;
 }
 
-const AmountField: FC<AmountFieldProps> = ({
-  name,
+const AmountFieldRaw: FC<AmountFieldProps> = ({
   label,
   value,
   id: propId,
@@ -35,7 +42,8 @@ const AmountField: FC<AmountFieldProps> = ({
   maxValue,
   allowNegative,
   trailingZeros,
-  onChange,
+  onChange = () => {},
+  onBlur,
   disabled,
   className,
   required,
@@ -43,9 +51,7 @@ const AmountField: FC<AmountFieldProps> = ({
   warnings,
   description,
   defaultValue,
-  selectName,
   allowedCurrencies = [],
-  // Disable becasue its WIP, and this are default config
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   allowedTokens = [],
   numberProps,
@@ -62,9 +68,59 @@ const AmountField: FC<AmountFieldProps> = ({
     options,
   } = useAmountField({
     value,
-    allowedCurrencies,
     defaultValue,
+    allowedCurrencies,
   });
+
+  const getNewValue = ({
+    amount,
+    currency,
+  }: {
+    amount?: number;
+    currency?: string;
+  }) => {
+    const { details } = value || {};
+    const newValue = {
+      ...value,
+      details: {
+        ...details,
+        amount: amount || details?.amount,
+        currency: currency || (details as AmountCurrency).currency,
+      },
+    } as AmountType;
+    return newValue;
+  };
+
+  const handleChange = (
+    e: (string | string[]) | React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const newValue = getNewValue({
+      currency: typeof e === "string" ? e : undefined,
+      amount:
+        typeof e !== "string"
+          ? ((e as React.ChangeEvent<HTMLInputElement>).target
+              .value as unknown as number)
+          : undefined,
+    });
+
+    onChange(newValue);
+  };
+
+  const handleBlur = (
+    e: (string | string[]) | React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const newValue = getNewValue({
+      currency: typeof e === "string" ? e : undefined,
+      amount:
+        typeof e !== "string"
+          ? ((e as React.ChangeEvent<HTMLInputElement>).target
+              .value as unknown as number)
+          : undefined,
+    });
+
+    onBlur?.(newValue);
+  };
+
   return (
     <FormGroup>
       {label && (
@@ -80,10 +136,10 @@ const AmountField: FC<AmountFieldProps> = ({
       )}
       <div className={cn("relative flex items-center gap-1")}>
         <div className={cn("relative flex items-center")}>
-          <NumberField
+          <NumberFieldRaw
             required={required}
             disabled={disabled}
-            name={name}
+            name=""
             defaultValue={valueInput}
             value={valueInput}
             id={id}
@@ -92,8 +148,11 @@ const AmountField: FC<AmountFieldProps> = ({
             minValue={minValue}
             allowNegative={allowNegative}
             trailingZeros={trailingZeros}
-            onChange={onChange}
+            onChange={handleChange}
             className={cn("flex-1 pr-6 outline-none", className)}
+            showErrorOnBlur
+            onBlur={handleBlur}
+            showErrorOnChange
             {...(numberProps || {})}
           />
           {isPercent && (
@@ -107,16 +166,17 @@ const AmountField: FC<AmountFieldProps> = ({
             </span>
           )}
         </div>
-        {!isPercent && isCurrency && (
+        {isCurrency && (
           <div>
             <SelectField
               optionsCheckmark="None"
               value={valueCurrency}
               defaultValue={valueCurrency}
               searchable={isSearchable}
-              name={selectName}
+              name=""
               required={required}
               disabled={disabled}
+              onChange={handleChange}
               options={options}
               {...(selectProps || {})}
             />
@@ -130,4 +190,72 @@ const AmountField: FC<AmountFieldProps> = ({
   );
 };
 
-export { AmountField };
+export const AmountField = withFieldValidation<AmountFieldProps>(
+  AmountFieldRaw,
+  {
+    validations: {
+      _positive:
+        ({ allowNegative }: AmountFieldProps) =>
+        (value: AmountType): true | string => {
+          const {
+            details: { amount },
+          } = value;
+          return allowNegative || Number(amount) >= 0
+            ? true
+            : "Value must be a positive value";
+        },
+
+      _isBigInt:
+        ({ isBigInt }: AmountFieldProps) =>
+        (value: AmountType) => {
+          const {
+            details: { amount },
+          } = value;
+          const stringValue = String(amount);
+          const isLargeNumber =
+            Math.abs(Number(stringValue)) > Number.MAX_SAFE_INTEGER;
+          return isLargeNumber && !isBigInt
+            ? "Value is too large for standard integer"
+            : true;
+        },
+      _precision:
+        ({ precision }: AmountFieldProps) =>
+        (value: unknown) => {
+          const stringValue = String(value);
+          if (precision === undefined) {
+            return !stringValue.includes(".")
+              ? true
+              : "Value must be an integer";
+          }
+
+          const decimalPart = stringValue.split(".")[1];
+          if (precision === 0) {
+            return !decimalPart ? true : "Value must be an integer";
+          }
+
+          return decimalPart && decimalPart.length <= precision
+            ? true
+            : `Value must have ${precision} decimal places or fewer`;
+        },
+      _trailingZeros:
+        ({ trailingZeros, precision }: AmountFieldProps) =>
+        (value: unknown) => {
+          const stringValue = String(value);
+          if (!trailingZeros) return true;
+          const hasTrailingZeros =
+            stringValue.split(".")[1]?.length === precision;
+          return hasTrailingZeros
+            ? true
+            : `Value must have exactly ${precision} decimal places`;
+        },
+      _decimalRequired:
+        ({ decimalRequired }: AmountFieldProps) =>
+        (value: unknown) => {
+          const stringValue = String(value);
+          return decimalRequired && !stringValue.includes(".")
+            ? "Value must include a decimal point"
+            : true;
+        },
+    },
+  },
+);

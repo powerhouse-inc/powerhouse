@@ -74,6 +74,22 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Currency: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    allowedCurrencies: ["USD", "EUR"],
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+  },
+};
+
 export const Default: Story = {
   args: {
     selectName: "currency",
@@ -134,21 +150,6 @@ export const PercentWithDisable: Story = {
   },
 };
 
-export const Currency: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    value: {
-      type: "AmountCurrency",
-      details: {
-        amount: 345,
-        currency: "USD",
-      },
-    },
-  },
-};
 export const CurrencyWithDisable: Story = {
   args: {
     selectName: "currency",
@@ -202,5 +203,71 @@ export const HoverWithCurrency: Story = {
     pseudo: {
       hover: true,
     },
+  },
+};
+export const Required: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    allowedCurrencies: ["USD", "EUR"],
+    required: true,
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+  },
+};
+export const WithWarning: Story = {
+  args: {
+    selectName: "currency",
+    name: "Label",
+    label: "Label",
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+    warnings: ["Warning message"],
+  },
+};
+export const WithError: Story = {
+  args: {
+    selectName: "currency",
+    name: "Label",
+    label: "Label",
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+    errors: ["Error message"],
+  },
+};
+export const WithMultipleErrors: Story = {
+  args: {
+    selectName: "currency",
+    name: "Label",
+    label: "Label",
+    value: {
+      type: "AmountCurrency",
+      details: {
+        amount: 345,
+        currency: "USD",
+      },
+    },
+    errors: [
+      "Error message number 1",
+      "Error message number 2",
+      "Error message number 3",
+      "Error message number 4",
+    ],
   },
 };
