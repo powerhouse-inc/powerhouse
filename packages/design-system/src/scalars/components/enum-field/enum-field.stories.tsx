@@ -44,11 +44,12 @@ const meta: Meta<typeof EnumField> = {
 
     options: {
       control: "object",
-      description: "Array of options with label, value, icon, and description",
+      description:
+        "Array of options with label, value, icon, description and disabled",
       table: {
         type: {
           summary:
-            "Array<{ label: string; value: string; icon?: IconComponent; description?: string; disabled?: boolean; }>",
+            "Array<{ label: string; value: string; icon?: IconName | React.ComponentType<{ className?: string }>; description?: string; disabled?: boolean; }>",
         },
         defaultValue: { summary: "[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,

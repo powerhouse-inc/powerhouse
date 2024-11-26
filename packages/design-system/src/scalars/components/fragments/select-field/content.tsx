@@ -11,6 +11,7 @@ import {
 import { Separator } from "@/scalars/components/fragments/separator";
 import { cn } from "@/scalars/lib/utils";
 import { SelectProps } from "@/scalars/components/types";
+import { Icon, type IconName } from "@/powerhouse/components/icon";
 
 interface ContentProps {
   selectedValues: string[];
@@ -31,6 +32,37 @@ export const Content: React.FC<ContentProps> = ({
   toggleOption,
   toggleAll,
 }) => {
+  const renderIcon = (
+    IconComponent:
+      | IconName
+      | React.ComponentType<{ className?: string }>
+      | undefined,
+    disabled: boolean | undefined,
+  ) => {
+    if (typeof IconComponent === "string") {
+      return (
+        <Icon
+          name={IconComponent}
+          size={16}
+          className={cn(
+            "mr-2 text-gray-500 dark:text-gray-400",
+            disabled && "opacity-75",
+          )}
+        />
+      );
+    }
+    return (
+      IconComponent && (
+        <IconComponent
+          className={cn(
+            "mr-2 size-4 text-gray-500 dark:text-gray-400",
+            disabled && "opacity-75",
+          )}
+        />
+      )
+    );
+  };
+
   return (
     <Command
       className={cn(
@@ -89,7 +121,6 @@ export const Content: React.FC<ContentProps> = ({
           )}
           {options.map((option) => {
             const isSelected = selectedValues.includes(option.value);
-            const IconComponent = option.icon;
 
             return (
               <CommandItem
@@ -137,14 +168,7 @@ export const Content: React.FC<ContentProps> = ({
                     )}
                   </>
                 )}
-                {IconComponent && (
-                  <IconComponent
-                    className={cn(
-                      "mr-2 size-4 text-gray-500 dark:text-gray-400",
-                      option.disabled && "opacity-75",
-                    )}
-                  />
-                )}
+                {renderIcon(option.icon, option.disabled)}
                 <span
                   className={cn(
                     "text-gray-900 dark:text-gray-100",
