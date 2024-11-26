@@ -38,7 +38,7 @@ const meta: Meta<typeof SelectField> = {
       table: {
         type: {
           summary:
-            "Array<{ value: string; label: string; icon?: IconComponent; disabled?: boolean }>",
+            "Array<{ value: string; label: string; icon?: IconName | React.ComponentType<{ className?: string }>; disabled?: boolean }>",
         },
         defaultValue: { summary: "[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
@@ -219,5 +219,25 @@ export const WithoutCheckmarks: Story = {
     options: defaultOptions,
     optionsCheckmark: "None",
     placeholder: "Select icons",
+  },
+};
+
+export const WithPredefinedIcons: Story = {
+  args: {
+    label: "Options with predefined icon",
+    description: "Choose your favorite predefined icon",
+    options: [
+      { value: "CircleInfo", label: "CircleInfo", icon: "CircleInfo" },
+      { value: "Calendar", label: "Calendar", icon: "Calendar" },
+      {
+        value: "Settings",
+        label: "Settings",
+        icon: "Settings",
+        disabled: true,
+      },
+      { value: "Trash", label: "Trash", icon: "Trash" },
+      { value: "None", label: "None" },
+    ],
+    placeholder: "Select an icon",
   },
 };
