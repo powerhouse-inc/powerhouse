@@ -209,6 +209,7 @@ export const WithWarning: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
       currency: "USD",
@@ -222,6 +223,7 @@ export const WithError: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
       currency: "USD",
@@ -235,6 +237,7 @@ export const WithMultipleErrors: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
       currency: "USD",

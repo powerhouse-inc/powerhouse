@@ -24,6 +24,8 @@ export const useAmountField = ({
   const isCurrency = type === "AmountCurrency";
 
   const options = getLabelValueCurrenct(allowedCurrencies);
+  const currency =
+    type === "AmountCurrency" ? (currentValue as AmountCurrency).currency : "";
 
   const isSearchable = options.length >= 5;
 
@@ -33,5 +35,6 @@ export const useAmountField = ({
     isSearchable,
     options,
     valueInput,
+    currency,
   };
 };

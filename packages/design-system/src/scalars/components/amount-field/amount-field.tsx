@@ -63,7 +63,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
-  const { isCurrency, isPercent, isSearchable, valueInput, options } =
+  const { isCurrency, isPercent, isSearchable, valueInput, options, currency } =
     useAmountField({
       value,
       defaultValue,
@@ -161,7 +161,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
           <div>
             <SelectField
               optionsCheckmark="None"
-              value={options[0].label}
+              value={currency}
               searchable={isSearchable}
               name=""
               required={required}
