@@ -13,16 +13,13 @@ export type ScalarType = {
 
 export const type = 'string';
 
-export const typedef = 'scalar EthereumAddress';
+export const typedef = 'scalar PHID';
 
-export const schema = z.string().regex(/^0x[a-fA-F0-9]{40}$/, {
-    message: 'Invalid Ethereum address format',
-});
+export const schema = z.string();
 
-export const stringSchema =
-    "z.string().regex(/^0x[a-fA-F0-9]{40}$/, { message: 'Invalid Ethereum address format' })";
+export const stringSchema = 'z.string()';
 
-const addressValidation = (value: unknown): string => {
+const phidlValidation = (value: unknown): string => {
     if (typeof value !== 'string') {
         throw new GraphQLError(`Value is not string: ${JSON.stringify(value)}`);
     }
@@ -34,17 +31,19 @@ const addressValidation = (value: unknown): string => {
 };
 
 export const config: GraphQLScalarTypeConfig<string, string> = {
-    name: 'EthereumAddress',
-    description:
-        'A custom scalar representing an Ethereum address, validated as a 42-character hexadecimal string prefixed with "0x"',
-    serialize: addressValidation,
-    parseValue: addressValidation,
+    name: 'PHID',
+    description: 'A custom scalar that represents a PowerhouseID string',
+    serialize: phidlValidation,
+    parseValue: phidlValidation,
     parseLiteral: value => {
         if (value.kind !== Kind.STRING) {
-            throw new GraphQLError('some error message', { nodes: value });
+            throw new GraphQLError(
+                `Value is not a valid string: ${value.kind}`,
+                { nodes: value },
+            );
         }
 
-        return addressValidation(value.value);
+        return phidlValidation(value.value);
     },
 };
 
