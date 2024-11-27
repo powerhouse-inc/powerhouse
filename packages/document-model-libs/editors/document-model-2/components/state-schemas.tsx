@@ -1,6 +1,5 @@
 import { makeMinimalObjectFromSDL, makeInitialSchemaDoc, cn } from "../utils";
-import { GraphqlEditor } from "./graphql-editor";
-import { JSONEditor } from "./json-editor";
+import { GraphqlEditor } from "./code-editors/graphql-editor";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 import { useState, useCallback } from "react";
 import { useSchemaContext } from "../context/schema-context";
@@ -8,6 +7,7 @@ import { typeDefsDoc } from "../constants";
 import { Button } from "./button";
 import { ensureValidStateSchemaName } from "../utils/linting";
 import { Scope } from "../types";
+import { JSONEditor } from "./code-editors";
 
 type Props = {
   modelName: string;
@@ -125,7 +125,10 @@ function StateEditor({
             </svg>
           </Button>
         </div>
-        <JSONEditor doc={initialValue} updateDoc={handleInitialStateUpdate} />
+        <JSONEditor
+          doc={initialValue}
+          updateDocumentInModel={handleInitialStateUpdate}
+        />
       </div>
     </div>
   );

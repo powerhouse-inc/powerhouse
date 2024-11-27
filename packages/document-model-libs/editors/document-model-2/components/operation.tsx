@@ -1,5 +1,5 @@
 import { Module, Operation } from "document-model/document-model";
-import { GraphqlEditor } from "./graphql-editor";
+import { GraphqlEditor } from "./code-editors/graphql-editor";
 import { OperationDescriptionForm } from "./operation-description-form";
 import { OperationErrors } from "./operation-errors";
 import { OperationForm } from "./operation-form";
