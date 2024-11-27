@@ -87,6 +87,7 @@ export const Radio = React.forwardRef<
           hasError={hasError}
           htmlFor={id}
           required={props.required}
+          inline
         >
           {label}
         </FormLabel>

@@ -43,11 +43,12 @@ export const withFieldValidation = <T extends PossibleProps>(
       formState: { errors: formErrors, defaultValues },
       trigger,
       setValue,
+      getValues,
     } = useFormContext();
     const { submitCount } = useFormState();
 
     const errors = [
-      ...(props.errors ?? []),
+      ...(Array.isArray(props.errors) ? props.errors : []),
       ...(formErrors[name]?.message ? [formErrors[name].message] : []),
     ];
 
@@ -60,16 +61,26 @@ export const withFieldValidation = <T extends PossibleProps>(
     useEffect(() => {
       if (initialized) {
         setValue(name, value);
-        setInitialized(true);
       } else {
         // set default value
         if (value === undefined) {
           setValue(name, props.defaultValue ?? defaultValues?.[name]);
         }
       }
+      setInitialized(true);
       // initialized can not be in the dependencies because it would cause
       // a change of the value on initial render
     }, [value]);
+
+    // Sync form state with external value prop
+    useEffect(() => {
+      const formValue = getValues(name) as unknown;
+      if (formValue !== value && formValue !== undefined && onChangeProp) {
+        onChangeProp({
+          target: { value: formValue },
+        } as unknown as React.ChangeEvent<unknown>);
+      }
+    }, [getValues(name)]);
 
     if (value !== undefined && !onChangeProp) {
       console.warn(
@@ -107,8 +118,15 @@ export const withFieldValidation = <T extends PossibleProps>(
               // update value state
               if (onChangeProp) {
                 // the fields is controlled by the parent
-                const result = onChangeProp(event);
-                setValue(name, result);
+                onChangeProp(event);
+
+                if (Object.hasOwn(event, "target")) {
+                  // it is probably an actual event
+                  setValue(name, event.target.value);
+                } else {
+                  // it is a custom onChange and it pass the value directly
+                  setValue(name, event);
+                }
               } else {
                 // sometimes the onChange is overridden by the parent and use the new value as parameter instead of event
                 let value: unknown = event;

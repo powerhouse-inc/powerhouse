@@ -9,12 +9,12 @@ exports[`TextareaField Component > should match snapshot with props 1`] = `
       class="flex flex-col gap-2"
     >
       <label
-        class="inline-flex items-center text-sm font-medium leading-[22px] text-red-700 group-hover:text-red-900 dark:text-red-700 dark:group-hover:text-red-900"
+        class="inline-flex items-center text-sm font-medium leading-[22px] text-red-700 group-hover:text-red-900 dark:text-red-700 dark:group-hover:text-red-900 mb-[3px]"
         for=":r0:-textarea"
       >
         Default Label
         <span
-          class="ml-1 text-blue-900 group-hover:text-gray-900 dark:group-hover:text-slate-50"
+          class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 !text-red-800 group-hover:!text-red-900"
         >
           *
         </span>
