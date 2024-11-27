@@ -24,13 +24,17 @@ const amountTokensValidation = (value: unknown): number => {
     throw new GraphQLError(`Value is not number: ${JSON.stringify(value)}`);
   }
 
+  if (!Number.isFinite(value)) {
+    throw new GraphQLError(`Value is not a finite number: ${value}`);
+  }
+
   const result = schema.safeParse(value);
 
   if (result.success) return result.data;
   throw new GraphQLError(result.error.message);
 };
 
-export const config: GraphQLScalarTypeConfig<any, any> = {
+export const config: GraphQLScalarTypeConfig<number, number> = {
   name: "Amount_Tokens",
   description: "A custom scalar that represents an amount of tokens",
   serialize: amountTokensValidation,
@@ -40,7 +44,9 @@ export const config: GraphQLScalarTypeConfig<any, any> = {
       throw new GraphQLError("some error message", { nodes: value });
     }
 
-    return amountTokensValidation(value.value);
+    const parsedValue = parseFloat(value.value);
+
+    return amountTokensValidation(parsedValue);
   },
 };
 
