@@ -70,7 +70,6 @@ export const generate: CommandActionType<
   if (command.processor && options.processor) {
     await generateProcessor(
       options.processor,
-      "analytics",
       options.documentTypes?.split(",") ?? [],
       config
     );
