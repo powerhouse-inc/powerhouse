@@ -9,7 +9,7 @@ import {
 } from "@/scalars/lib/storybook-arg-types";
 
 const meta = {
-  title: "Document Engineering/Complex Components/Amount Field",
+  title: "Document Engineering/Simple Components/Amount Field",
   component: AmountField,
   decorators: [withForm],
   parameters: {
