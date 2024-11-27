@@ -8,7 +8,6 @@ exports[`RadioGroupField Component > should match snapshot 1`] = `
     <div
       aria-invalid="false"
       aria-label="Radio group"
-      aria-required="false"
       class="flex flex-col gap-2"
       dir="ltr"
       id=":r0:-radio-group"
