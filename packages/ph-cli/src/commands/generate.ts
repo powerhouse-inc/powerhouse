@@ -61,7 +61,7 @@ export const generate: CommandActionType<
     await generateEditor(
       command.editorName,
       command.documentTypes?.split(/[|,;]/g) ?? [],
-      config
+      config,
     );
 
     return;
@@ -71,7 +71,7 @@ export const generate: CommandActionType<
     await generateProcessor(
       options.processor,
       options.documentTypes?.split(",") ?? [],
-      config
+      config,
     );
     return;
   }
