@@ -106,25 +106,6 @@ export type EnumProps =
       variant: "Select";
     } & SelectProps);
 
-export type CurrencyCode = (typeof currencies)[number];
-
-export interface AmountBase {
-  amount: number | string;
-}
-
-export interface AmountCurrency extends AmountBase {
-  currency: CurrencyCode;
-}
-
-export interface AmountPercentageBase {
-  amount: number;
-}
-
-export type AmountType =
-  | { type: "Amount"; details: AmountBase }
-  | { type: "AmountCurrency"; details: AmountCurrency }
-  | { type: "AmountPercentage"; details: AmountPercentageBase };
-
 export interface InputNumberProps
   extends Omit<
     FieldCommonProps<string | number> &

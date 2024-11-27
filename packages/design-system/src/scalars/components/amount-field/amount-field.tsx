@@ -1,6 +1,6 @@
 import React, { FC, useId } from "react";
-import { AmountType, InputNumberProps } from "../types";
-import { NumberField, NumberFieldProps } from "../number-field";
+import { InputNumberProps } from "../types";
+import { NumberFieldProps, NumberFieldRaw } from "../number-field";
 import {
   FormDescription,
   FormGroup,
@@ -8,25 +8,35 @@ import {
   FormMessageList,
   SelectField,
   SelectFieldProps,
+  withFieldValidation,
 } from "../fragments";
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
+import {
+  validateDecimalRequiredAmount,
+  validateIsBigIntAmount,
+  validatePositiveAmount,
+  validatePrecisionAmount,
+  validateTrailingZerosAmount,
+} from "./amount-field-validations";
+import { AmountFieldPropsGeneric, AmountValue } from "./types";
 
-export interface AmountFieldProps extends InputNumberProps {
-  className?: string;
-  name: string;
-  pattern?: RegExp;
-  numberProps?: Omit<NumberFieldProps, "name">;
-  selectProps?: Omit<SelectFieldProps, "name">;
-  allowedCurrencies?: string[];
-  allowedTokens?: string[];
-  selectName: string;
-  value?: AmountType;
-  defaultValue?: AmountType;
-}
+export type AmountFieldProps = AmountFieldPropsGeneric &
+  Omit<InputNumberProps, "onChange" | "onBlur"> & {
+    className?: string;
+    name: string;
+    pattern?: RegExp;
+    numberProps?: Omit<NumberFieldProps, "name">;
+    selectProps?: Omit<SelectFieldProps, "name">;
+    allowedCurrencies?: string[];
+    allowedTokens?: string[];
+    selectName: string;
+    defaultValue?: AmountValue;
+    onChange?: (event: AmountValue) => void;
+    onBlur?: (event: AmountValue) => void;
+  };
 
-const AmountField: FC<AmountFieldProps> = ({
-  name,
+const AmountFieldRaw: FC<AmountFieldProps> = ({
   label,
   value,
   id: propId,
@@ -35,7 +45,8 @@ const AmountField: FC<AmountFieldProps> = ({
   maxValue,
   allowNegative,
   trailingZeros,
-  onChange,
+  onChange = () => {},
+  onBlur,
   disabled,
   className,
   required,
@@ -43,9 +54,8 @@ const AmountField: FC<AmountFieldProps> = ({
   warnings,
   description,
   defaultValue,
-  selectName,
+  type,
   allowedCurrencies = [],
-  // Disable becasue its WIP, and this are default config
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   allowedTokens = [],
   numberProps,
@@ -53,18 +63,55 @@ const AmountField: FC<AmountFieldProps> = ({
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
-  const {
-    isCurrency,
-    isPercent,
-    isSearchable,
-    valueInput,
-    valueCurrency,
-    options,
-  } = useAmountField({
-    value,
-    allowedCurrencies,
-    defaultValue,
-  });
+  const { isCurrency, isPercent, isSearchable, valueInput, options, currency } =
+    useAmountField({
+      value,
+      defaultValue,
+      type,
+      allowedCurrencies,
+    });
+
+  const handleOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (type === "AmountCurrency" && typeof value === "object") {
+      const newValue = {
+        ...value,
+        amount: e.target.value as unknown as number,
+      } as AmountValue;
+
+      onChange(newValue);
+    }
+    if (type === "Amount" || type === "AmountPercentage") {
+      const newValue = {
+        amount: e.target.value as unknown as number,
+      } as AmountValue;
+      onChange(newValue);
+    }
+  };
+  const handleOnChangeSelect = (e: string | string[]) => {
+    if (type === "AmountCurrency" && typeof value === "object") {
+      const newValue = {
+        ...value,
+        currency: typeof e === "string" ? e : undefined,
+      } as AmountValue;
+
+      onChange(newValue);
+    }
+  };
+  const handleBlur = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (type === "AmountCurrency") {
+      const newValue = {
+        ...value,
+        amount: e.target.value as unknown as number,
+      } as AmountValue;
+
+      onBlur?.(newValue);
+    }
+    if (type === "Amount" || type === "AmountPercentage") {
+      const newValue = e.target.value as unknown as number;
+      onBlur?.(newValue);
+    }
+  };
+
   return (
     <FormGroup>
       {label && (
@@ -80,10 +127,10 @@ const AmountField: FC<AmountFieldProps> = ({
       )}
       <div className={cn("relative flex items-center gap-1")}>
         <div className={cn("relative flex items-center")}>
-          <NumberField
+          <NumberFieldRaw
             required={required}
             disabled={disabled}
-            name={name}
+            name=""
             defaultValue={valueInput}
             value={valueInput}
             id={id}
@@ -92,8 +139,11 @@ const AmountField: FC<AmountFieldProps> = ({
             minValue={minValue}
             allowNegative={allowNegative}
             trailingZeros={trailingZeros}
-            onChange={onChange}
+            onChange={handleOnChange}
             className={cn("flex-1 pr-6 outline-none", className)}
+            showErrorOnBlur
+            showErrorOnChange
+            onBlur={handleBlur}
             {...(numberProps || {})}
           />
           {isPercent && (
@@ -107,16 +157,16 @@ const AmountField: FC<AmountFieldProps> = ({
             </span>
           )}
         </div>
-        {!isPercent && isCurrency && (
+        {isCurrency && (
           <div>
             <SelectField
               optionsCheckmark="None"
-              value={valueCurrency}
-              defaultValue={valueCurrency}
+              value={currency}
               searchable={isSearchable}
-              name={selectName}
+              name=""
               required={required}
               disabled={disabled}
+              onChange={handleOnChangeSelect}
               options={options}
               {...(selectProps || {})}
             />
@@ -130,4 +180,15 @@ const AmountField: FC<AmountFieldProps> = ({
   );
 };
 
-export { AmountField };
+export const AmountField = withFieldValidation<AmountFieldProps>(
+  AmountFieldRaw,
+  {
+    validations: {
+      _positive: validatePositiveAmount,
+      _isBigInt: validateIsBigIntAmount,
+      _precision: validatePrecisionAmount,
+      _trailingZeros: validateTrailingZerosAmount,
+      _decimalRequired: validateDecimalRequiredAmount,
+    },
+  },
+);

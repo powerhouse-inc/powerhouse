@@ -14,7 +14,7 @@ import {
   validatePositive,
   validatePrecision,
   validateTrailingZeros,
-} from "./numberFieldValidations";
+} from "./number-field-validations";
 
 export interface NumberFieldProps extends InputNumberProps {
   className?: string;

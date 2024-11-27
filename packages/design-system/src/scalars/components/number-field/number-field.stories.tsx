@@ -31,8 +31,7 @@ const meta = {
     },
     isBigInt: {
       control: "boolean",
-      description:
-        "Indicates whether the input value should be treated as a BigInt. When true, the value can represent large integers beyond the safe integer limit of JavaScript.",
+      description: "Indicates if the input field should allow BigInt values",
       table: {
         type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
