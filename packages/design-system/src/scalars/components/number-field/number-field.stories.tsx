@@ -38,6 +38,11 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    autoFocus: {
+      table: {
+        disable: true, // Esto ocultará autoFocus de la documentación
+      },
+    },
     numericType: {
       control: "text",
       description:
