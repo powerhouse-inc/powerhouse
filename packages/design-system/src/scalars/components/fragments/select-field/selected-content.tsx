@@ -2,19 +2,18 @@ import React from "react";
 import { ChevronDown, ChevronsUpDown, XIcon } from "lucide-react";
 import { Badge } from "@/scalars/components/fragments/badge";
 import { Button } from "@/scalars/components/fragments/button";
-import { Separator } from "@/scalars/components/fragments/separator";
 import { cn } from "@/scalars/lib/utils";
-import { SelectProps } from "@/scalars/components/types";
+import { SelectProps } from "@/scalars/components/enum-field/types";
 import { Icon, type IconName } from "@/powerhouse/components/icon";
 
 interface SelectedContentProps {
   selectedValues: string[];
   options?: SelectProps["options"];
-  multiple: boolean;
-  searchable: boolean;
+  multiple?: boolean;
+  searchable?: boolean;
   maxSelectedOptionsToShow: number;
   placeholder?: string;
-  disabled: boolean;
+  disabled?: boolean;
   handleClear: () => void;
 }
 
@@ -42,47 +41,49 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
 
   if (selectedValues.length === 0) {
     return (
-      <div className="mx-auto flex w-full items-center justify-between">
-        {placeholder !== undefined && (
-          <span className="mx-3 text-sm text-gray-500 dark:text-gray-400">
+      <div
+        className={cn(
+          "mx-auto flex w-full items-center",
+          placeholder ? "justify-between" : "justify-end",
+        )}
+      >
+        {placeholder && (
+          <span className="text-[14px] font-normal leading-5 text-gray-600 dark:text-gray-500">
             {placeholder}
           </span>
         )}
         {searchable ? (
-          <ChevronsUpDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+          <ChevronsUpDown
+            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            size={16}
+          />
         ) : (
-          <ChevronDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+          <ChevronDown
+            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            size={16}
+          />
         )}
       </div>
     );
   }
 
   return (
-    <div className="flex w-full items-center justify-between">
-      <div className={cn("flex flex-wrap items-center", !multiple && "w-full")}>
+    <div className="flex w-full items-center justify-between gap-3">
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-3",
+          !multiple && "w-full",
+        )}
+      >
         {selectedValues.slice(0, maxSelectedOptionsToShow).map((value) => {
           const option = options.find((o) => o.value === value);
           return (
             <Badge
               key={value}
               className={cn(
-                "m-1 border-gray-200 text-gray-900",
-                "transition duration-200 ease-in-out",
-                multiple
-                  ? [
-                      "bg-white",
-                      "hover:-translate-y-0.5 hover:scale-105",
-                      "hover:bg-gray-50",
-                    ]
-                  : [
-                      "w-full",
-                      "bg-transparent",
-                      "border-none",
-                      "hover:bg-transparent",
-                    ],
-                "dark:border-gray-700 dark:text-gray-100",
-                "dark:hover:bg-gray-700",
-                "rounded-md",
+                !multiple && "w-full",
+                "text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-300",
+                "border-none p-0",
               )}
             >
               {renderIcon(option?.icon)}
@@ -91,46 +92,40 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           );
         })}
         {multiple && selectedValues.length > maxSelectedOptionsToShow && (
-          <Badge
-            className={cn(
-              "m-1",
-              "transition duration-200 ease-in-out",
-              "hover:-translate-y-0.5 hover:scale-105",
-              "border-gray-200 bg-transparent text-gray-700",
-              "hover:border-gray-300 hover:bg-gray-50",
-              "dark:border-gray-700 dark:text-gray-300",
-              "dark:hover:border-gray-600 dark:hover:bg-gray-700",
-              "rounded-md",
-            )}
-          >
+          <Badge className="border-none p-0 text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-300">
             {`+ ${selectedValues.length - maxSelectedOptionsToShow} more`}
           </Badge>
         )}
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         {multiple && selectedValues.length > 0 && (
-          <>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleClear();
-              }}
-              disabled={disabled}
-              className="size-8 p-0 hover:bg-transparent"
-            >
-              <XIcon className="size-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
-            </Button>
-            <Separator orientation="vertical" className="flex h-full min-h-6" />
-          </>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleClear();
+            }}
+            disabled={disabled}
+            className="size-4 p-0"
+          >
+            <XIcon
+              className="cursor-pointer text-gray-700 dark:text-gray-400"
+              size={16}
+            />
+          </Button>
         )}
         {searchable ? (
-          <ChevronsUpDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+          <ChevronsUpDown
+            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            size={16}
+          />
         ) : (
-          <ChevronDown className="mx-2 h-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" />
+          <ChevronDown
+            className="cursor-pointer text-gray-700 dark:text-gray-400"
+            size={16}
+          />
         )}
       </div>
     </div>

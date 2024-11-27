@@ -11,11 +11,8 @@ import { FormDescription } from "@/scalars/components/fragments/form-description
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import { cn } from "@/scalars/lib/utils";
-import {
-  FieldCommonProps,
-  ErrorHandling,
-  SelectProps,
-} from "@/scalars/components/types";
+import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
+import { SelectProps } from "@/scalars/components/enum-field/types";
 import { useSelectField } from "./use-select-field";
 import { SelectedContent } from "./selected-content";
 import { Content } from "./content";
@@ -39,26 +36,26 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
       // core functionality props
       options = [],
       optionsCheckmark = "Auto",
-      multiple = false,
+      multiple,
       defaultValue,
       value,
       onChange,
 
       // form-related props
-      autoFocus = false,
+      autoFocus,
       id: propId,
       name,
       label,
-      required = false,
-      disabled = false,
+      required,
+      disabled,
 
       // validation props
       errors = [],
       warnings = [],
 
       // behavior props
-      asModal = false,
-      searchable = false,
+      asModal,
+      searchable,
 
       // display props
       description,
@@ -97,7 +94,7 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
             required={required}
             disabled={disabled}
             hasError={errors.length > 0}
-            className="mb-1.5"
+            inline={false}
           >
             {label}
           </FormLabel>
@@ -123,19 +120,17 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
               aria-required={required}
               aria-expanded={isPopoverOpen}
               className={cn(
-                "flex h-auto min-h-10 w-full items-center justify-between p-1",
-                "rounded-md border border-gray-200 bg-white",
-                "hover:border-gray-300 hover:bg-gray-50",
-                "dark:border-gray-700 dark:bg-gray-800",
-                "dark:hover:border-gray-600 dark:hover:bg-gray-700",
-                "focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1",
-                "dark:focus:ring-gray-400 dark:focus:ring-offset-gray-900",
+                "flex h-9 w-full items-center justify-between px-3 py-2",
+                "dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white",
+                "hover:border-gray-300 hover:bg-gray-100",
+                "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800",
+                "dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
+                "dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0",
                 disabled && [
                   "opacity-50",
                   "cursor-not-allowed",
-                  "hover:bg-white dark:hover:bg-gray-800",
+                  "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900 hover:border-gray-300 hover:bg-white",
                 ],
-                errors.length > 0 && "border-red-500 dark:border-red-400",
                 className,
               )}
               {...props}
@@ -156,7 +151,11 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
           <PopoverContent
             align="start"
             onEscapeKeyDown={() => setIsPopoverOpen(false)}
-            className="w-[--radix-popover-trigger-width] p-0"
+            className={cn(
+              "w-[--radix-popover-trigger-width] px-0 py-1",
+              "border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
+              "rounded shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
+            )}
           >
             <Content
               selectedValues={selectedValues}
@@ -169,20 +168,12 @@ const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
             />
           </PopoverContent>
         </Popover>
-        {description && (
-          <FormDescription className="mt-1.5 dark:text-gray-400">
-            {description}
-          </FormDescription>
-        )}
+        {description && <FormDescription>{description}</FormDescription>}
         {warnings.length > 0 && (
-          <FormMessageList
-            messages={warnings}
-            type="warning"
-            className="mt-1.5"
-          />
+          <FormMessageList messages={warnings} type="warning" />
         )}
         {errors.length > 0 && (
-          <FormMessageList messages={errors} type="error" className="mt-1.5" />
+          <FormMessageList messages={errors} type="error" />
         )}
       </FormGroup>
     );
