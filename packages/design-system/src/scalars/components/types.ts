@@ -65,7 +65,6 @@ export interface NumberProps {
   allowNegative?: boolean;
   precision?: number;
   trailingZeros?: boolean;
-  decimalRequired?: boolean;
   isBigInt?: boolean;
 }
 

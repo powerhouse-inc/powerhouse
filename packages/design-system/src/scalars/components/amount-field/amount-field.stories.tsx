@@ -70,7 +70,6 @@ const meta = {
     ...PrebuiltArgTypes.allowNegative,
     ...PrebuiltArgTypes.precision,
     ...PrebuiltArgTypes.trailingZeros,
-    ...PrebuiltArgTypes.decimalRequired,
   },
   args: {
     errors: [],
