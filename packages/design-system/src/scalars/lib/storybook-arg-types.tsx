@@ -285,16 +285,6 @@ export const PrebuiltArgTypes = {
       },
     },
   },
-  decimalRequired: {
-    decimalRequired: {
-      control: "boolean",
-      description: "Whether a decimal point is required.",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.VALIDATION,
-      },
-    },
-  },
 } satisfies Record<string, ArgTypes>;
 
 export interface DefaultArgTypesOptions {

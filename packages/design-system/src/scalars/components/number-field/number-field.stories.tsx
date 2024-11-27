@@ -39,11 +39,24 @@ const meta = {
     },
     autoFocus: {
       table: {
-        disable: true, // Esto ocultará autoFocus de la documentación
+        disable: true,
       },
     },
     numericType: {
-      control: "text",
+      control: {
+        type: "select",
+      },
+      options: [
+        "PositiveInt",
+        "NegativeInt",
+        "NonNegativeInt",
+        "NonPositiveInt",
+        "PositiveFloat",
+        "NegativeFloat",
+        "NonNegativeFloat",
+        "NonPositiveFloat",
+        "BigInt",
+      ],
       description:
         "Specifies the numeric type of the input field. Possible values are:\n\n\n" +
         "- PositiveInt: Positive whole numbers (1, 2, 3)\n" +
@@ -70,7 +83,6 @@ const meta = {
     ...PrebuiltArgTypes.allowNegative,
     ...PrebuiltArgTypes.precision,
     ...PrebuiltArgTypes.trailingZeros,
-    ...PrebuiltArgTypes.decimalRequired,
   },
   args: {
     name: "number-field",

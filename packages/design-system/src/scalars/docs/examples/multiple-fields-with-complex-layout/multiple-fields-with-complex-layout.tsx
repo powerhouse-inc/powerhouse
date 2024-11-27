@@ -53,7 +53,6 @@ const MultipleFieldsWithComplexLayout = () => {
               isBigInt={false}
               precision={2}
               trailingZeros
-              decimalRequired
             />
             <StringField
               name="email"
