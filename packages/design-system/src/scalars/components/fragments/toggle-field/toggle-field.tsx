@@ -49,6 +49,7 @@ const ToggleRaw: React.FC<ToggleFieldProps> = ({
             disabled={disabled}
             required={required}
             description={description}
+            inline
             id={`${id}-label`}
           >
             {label}
