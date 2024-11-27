@@ -10,12 +10,7 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={{
-          type: "Amount",
-          details: {
-            amount: 345,
-          },
-        }}
+        value={345}
       />,
     );
     expect(container).toMatchSnapshot();
@@ -27,12 +22,8 @@ describe("AmountField Component", () => {
         selectName="currency"
         label="Amount Label"
         name="amount"
-        value={{
-          type: "Amount",
-          details: {
-            amount: 345,
-          },
-        }}
+        type="Amount"
+        value={345}
       />,
     );
     expect(screen.getByLabelText("Amount Label")).toBeInTheDocument();
@@ -44,12 +35,8 @@ describe("AmountField Component", () => {
         selectName="currency"
         label="Amount Label"
         name="amount"
-        value={{
-          type: "Amount",
-          details: {
-            amount: 345,
-          },
-        }}
+        type="Amount"
+        value={345}
         errors={["Error 1", "Error 2"]}
       />,
     );
@@ -63,12 +50,8 @@ describe("AmountField Component", () => {
         selectName="currency"
         label="Amount Label"
         name="amount"
-        value={{
-          type: "AmountPercentage",
-          details: {
-            amount: 345,
-          },
-        }}
+        type="AmountPercentage"
+        value={345}
       />,
     );
     expect(screen.getByText("%")).toBeInTheDocument();
@@ -80,14 +63,9 @@ describe("AmountField Component", () => {
         selectName="currency"
         label="Amount Label"
         name="amount"
-        value={{
-          type: "Amount",
-          details: {
-            amount: 345,
-          },
-        }}
-        disabled
         type="Amount"
+        value={345}
+        disabled
       />,
     );
     const input = screen.getByRole("spinbutton");
@@ -101,14 +79,9 @@ describe("AmountField Component", () => {
         selectName="currency"
         label="Amount Label"
         name="amount"
-        value={{
-          type: "Amount",
-          details: {
-            amount: 345,
-          },
-        }}
-        required
         type="Amount"
+        value={345}
+        required
       />,
     );
     expect(screen.getByRole("spinbutton")).toHaveAttribute("required");
@@ -120,14 +93,9 @@ describe("AmountField Component", () => {
         selectName="currency"
         label="Amount Label"
         name="amount"
-        value={{
-          type: "Amount",
-          details: {
-            amount: 345,
-          },
-        }}
-        disabled
         type="Amount"
+        value={345}
+        disabled
         description="This is a description"
       />,
     );

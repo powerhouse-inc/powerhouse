@@ -6,49 +6,44 @@ import {
   validateTrailing,
 } from "@/scalars/validations/share-number-validations";
 import { AmountFieldProps } from "./amount-field";
-import { AmountType } from "../types";
+import { AmountCurrency, AmountValue } from "./types";
 
 export const validatePositiveAmount =
-  ({ allowNegative }: AmountFieldProps) =>
-  (value: AmountType): true | string => {
-    const {
-      details: { amount },
-    } = value;
+  ({ allowNegative, type }: AmountFieldProps) =>
+  (value: AmountValue): true | string => {
+    const amount =
+      type === "AmountCurrency" ? (value as AmountCurrency).amount : value;
     return allowNegative || isPositiveOrUndefiend(amount);
   };
 
 export const validateIsBigIntAmount =
-  ({ isBigInt }: AmountFieldProps) =>
-  (value: AmountType) => {
-    const {
-      details: { amount },
-    } = value;
+  ({ isBigInt, type }: AmountFieldProps) =>
+  (value: AmountValue) => {
+    const amount =
+      type === "AmountCurrency" ? (value as AmountCurrency).amount : value;
     return isBigInt || isBigIntNumber(amount);
   };
 
 export const validatePrecisionAmount =
-  ({ precision }: AmountFieldProps) =>
-  (value: AmountType) => {
-    const {
-      details: { amount },
-    } = value;
+  ({ precision, type }: AmountFieldProps) =>
+  (value: AmountValue) => {
+    const amount =
+      type === "AmountCurrency" ? (value as AmountCurrency).amount : value;
     return !precision || isPrecisionZeroOrUndefiend(amount, precision);
   };
 
 export const validateTrailingZerosAmount =
-  ({ trailingZeros, precision }: AmountFieldProps) =>
-  (value: AmountType) => {
-    const {
-      details: { amount },
-    } = value;
+  ({ trailingZeros, precision, type }: AmountFieldProps) =>
+  (value: AmountValue) => {
+    const amount =
+      type === "AmountCurrency" ? (value as AmountCurrency).amount : value;
     return !trailingZeros || validateTrailing(amount, precision);
   };
 
 export const validateDecimalRequiredAmount =
-  ({ decimalRequired }: AmountFieldProps) =>
-  (value: AmountType) => {
-    const {
-      details: { amount },
-    } = value;
+  ({ decimalRequired, type }: AmountFieldProps) =>
+  (value: AmountValue) => {
+    const amount =
+      type === "AmountCurrency" ? (value as AmountCurrency).amount : value;
     return !decimalRequired || hasDecimaPlace(amount);
   };

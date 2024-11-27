@@ -1,22 +1,25 @@
-import { AmountCurrency, AmountType } from "../types";
 import { getLabelValueCurrenct } from "@/scalars/utils/utils";
+import { AmountCurrency, AmountFieldPropsGeneric, AmountValue } from "./types";
 
 interface UseAmountFieldProps {
-  value?: AmountType;
-  defaultValue?: AmountType;
+  value?: AmountValue;
+  defaultValue?: AmountValue;
+  type: AmountFieldPropsGeneric["type"];
   allowedCurrencies?: string[];
 }
 
 export const useAmountField = ({
   value,
-  defaultValue = { type: "Amount", details: { amount: 0 } },
+  defaultValue = 0,
+  type,
   allowedCurrencies = [],
 }: UseAmountFieldProps) => {
-  // Ensure a valid value is always used
-  const currentValue: AmountType = value ?? defaultValue;
+  const currentValue = value ?? defaultValue;
 
-  const { type, details } = currentValue;
-
+  const valueInput =
+    type === "Amount" || type === "AmountPercentage"
+      ? (currentValue as number)
+      : (currentValue as AmountCurrency).amount;
   const isPercent = type === "AmountPercentage";
   const isCurrency = type === "AmountCurrency";
 
@@ -29,7 +32,6 @@ export const useAmountField = ({
     isCurrency,
     isSearchable,
     options,
-    valueInput: details.amount,
-    valueCurrency: (details as AmountCurrency).currency,
+    valueInput,
   };
 };

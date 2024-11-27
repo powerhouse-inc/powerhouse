@@ -1,5 +1,5 @@
 import React, { FC, useId } from "react";
-import { AmountCurrency, AmountType, InputNumberProps } from "../types";
+import { InputNumberProps } from "../types";
 import { NumberFieldProps, NumberFieldRaw } from "../number-field";
 import {
   FormDescription,
@@ -19,22 +19,22 @@ import {
   validatePrecisionAmount,
   validateTrailingZerosAmount,
 } from "./amount-field-validations";
+import { AmountFieldPropsGeneric, AmountValue } from "./types";
 
-export interface AmountFieldProps
-  extends Omit<InputNumberProps, "onChange" | "onBlur"> {
-  className?: string;
-  name: string;
-  pattern?: RegExp;
-  numberProps?: Omit<NumberFieldProps, "name">;
-  selectProps?: Omit<SelectFieldProps, "name">;
-  allowedCurrencies?: string[];
-  allowedTokens?: string[];
-  selectName: string;
-  value?: AmountType;
-  defaultValue?: AmountType;
-  onChange?: (event: AmountType) => void;
-  onBlur?: (event: AmountType) => void;
-}
+export type AmountFieldProps = AmountFieldPropsGeneric &
+  Omit<InputNumberProps, "onChange" | "onBlur"> & {
+    className?: string;
+    name: string;
+    pattern?: RegExp;
+    numberProps?: Omit<NumberFieldProps, "name">;
+    selectProps?: Omit<SelectFieldProps, "name">;
+    allowedCurrencies?: string[];
+    allowedTokens?: string[];
+    selectName: string;
+    defaultValue?: AmountValue;
+    onChange?: (event: AmountValue) => void;
+    onBlur?: (event: AmountValue) => void;
+  };
 
 const AmountFieldRaw: FC<AmountFieldProps> = ({
   label,
@@ -54,6 +54,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   warnings,
   description,
   defaultValue,
+  type,
   allowedCurrencies = [],
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   allowedTokens = [],
@@ -62,65 +63,53 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
-  const {
-    isCurrency,
-    isPercent,
-    isSearchable,
-    valueInput,
-    valueCurrency,
-    options,
-  } = useAmountField({
-    value,
-    defaultValue,
-    allowedCurrencies,
-  });
-
-  const getNewValue = ({
-    amount,
-    currency,
-  }: {
-    amount?: number;
-    currency?: string;
-  }) => {
-    const { details } = value || {};
-    const newValue = {
-      ...value,
-      details: {
-        ...details,
-        amount: amount || details?.amount,
-        currency: currency || (details as AmountCurrency).currency,
-      },
-    } as AmountType;
-    return newValue;
-  };
-
-  const handleChange = (
-    e: (string | string[]) | React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const newValue = getNewValue({
-      currency: typeof e === "string" ? e : undefined,
-      amount:
-        typeof e !== "string"
-          ? ((e as React.ChangeEvent<HTMLInputElement>).target
-              .value as unknown as number)
-          : undefined,
-    });
-    onChange(newValue);
-  };
-
-  const handleBlur = (
-    e: (string | string[]) | React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const newValue = getNewValue({
-      currency: typeof e === "string" ? e : undefined,
-      amount:
-        typeof e !== "string"
-          ? ((e as React.ChangeEvent<HTMLInputElement>).target
-              .value as unknown as number)
-          : undefined,
+  const { isCurrency, isPercent, isSearchable, valueInput, options } =
+    useAmountField({
+      value,
+      defaultValue,
+      type,
+      allowedCurrencies,
     });
 
-    onBlur?.(newValue);
+  const handleOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (type === "AmountCurrency" && typeof value === "object") {
+      const newValue = {
+        ...value,
+        amount: e.target.value as unknown as number,
+      } as AmountValue;
+
+      onChange(newValue);
+    }
+    if (type === "Amount" || type === "AmountPercentage") {
+      const newValue = {
+        amount: e.target.value as unknown as number,
+      } as AmountValue;
+      onChange(newValue);
+    }
+  };
+  const handleOnChangeSelect = (e: string | string[]) => {
+    if (type === "AmountCurrency" && typeof value === "object") {
+      const newValue = {
+        ...value,
+        currency: typeof e === "string" ? e : undefined,
+      } as AmountValue;
+
+      onChange(newValue);
+    }
+  };
+  const handleBlur = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (type === "AmountCurrency") {
+      const newValue = {
+        ...value,
+        amount: e.target.value as unknown as number,
+      } as AmountValue;
+
+      onBlur?.(newValue);
+    }
+    if (type === "Amount" || type === "AmountPercentage") {
+      const newValue = e.target.value as unknown as number;
+      onBlur?.(newValue);
+    }
   };
 
   return (
@@ -150,11 +139,11 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             minValue={minValue}
             allowNegative={allowNegative}
             trailingZeros={trailingZeros}
-            onChange={handleChange}
+            onChange={handleOnChange}
             className={cn("flex-1 pr-6 outline-none", className)}
             showErrorOnBlur
-            onBlur={handleBlur}
             showErrorOnChange
+            onBlur={handleBlur}
             {...(numberProps || {})}
           />
           {isPercent && (
@@ -172,13 +161,12 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
           <div>
             <SelectField
               optionsCheckmark="None"
-              value={valueCurrency}
-              defaultValue={valueCurrency}
+              value={options[0].label}
               searchable={isSearchable}
               name=""
               required={required}
               disabled={disabled}
-              onChange={handleChange}
+              onChange={handleOnChangeSelect}
               options={options}
               {...(selectProps || {})}
             />
