@@ -9,7 +9,7 @@ exports[`NumberField Component > should match snapshot 1`] = `
       class="flex flex-col gap-2"
     >
       <label
-        class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50 mb-[3px]"
+        class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 mb-[3px]"
         for=":r0:"
       >
         Test Label

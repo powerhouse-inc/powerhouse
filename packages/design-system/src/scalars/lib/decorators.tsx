@@ -52,7 +52,10 @@ export const withForm: Decorator = (Story, context) => {
                 setShowFormButtons(checked as boolean)
               }
             />
-            <label className="cursor-pointer" htmlFor={checkboxId}>
+            <label
+              className="cursor-pointer dark:text-gray-400"
+              htmlFor={checkboxId}
+            >
               Show form buttons
             </label>
           </div>
