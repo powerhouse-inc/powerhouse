@@ -24,7 +24,7 @@ export interface NumberFieldProps extends InputNumberProps {
   value?: number | string;
 }
 
-const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
+export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   (
     {
       label,
@@ -81,6 +81,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             required={props.required}
             disabled={props.disabled}
             hasError={!!errors?.length}
+            className="mb-[3px]"
           >
             {label}
           </FormLabel>
@@ -106,8 +107,8 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           defaultValue={defaultValue}
           onChange={onChange}
           onPaste={blockInvalidPaste}
-          {...props}
           ref={ref}
+          {...props}
         />
         {description && <FormDescription>{description}</FormDescription>}
         {warnings && <FormMessageList messages={warnings} type="warning" />}
@@ -117,15 +118,15 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   },
 );
 
-export const NumberField = withFieldValidation<NumberFieldProps>(
-  NumberFieldRaw,
-  {
-    validations: {
-      _positive: validatePositive,
-      _isBigInt: validateIsBigInt,
-      _precision: validatePrecision,
-      _trailingZeros: validateTrailingZeros,
-      _decimalRequired: validateDecimalRequired,
-    },
+const NumberField = withFieldValidation<NumberFieldProps>(NumberFieldRaw, {
+  validations: {
+    _positive: validatePositive,
+    _isBigInt: validateIsBigInt,
+    _precision: validatePrecision,
+    _trailingZeros: validateTrailingZeros,
+    _decimalRequired: validateDecimalRequired,
   },
-);
+});
+NumberField.displayName = "NumberField";
+
+export { NumberField };
