@@ -1129,7 +1129,7 @@ importers:
         specifier: ^0.14.0
         version: 0.14.0
       '@powerhousedao/general-document-indexer':
-        specifier: workspace:^
+        specifier: ^1.3.11
         version: link:../general-document-indexer
       '@powerhousedao/reactor-api':
         specifier: ^1.5.3
