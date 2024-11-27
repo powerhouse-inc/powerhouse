@@ -42,7 +42,7 @@ exports[`EnumField Component > should match snapshot 1`] = `
           value="option1"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
           for=":r0:-radio-0-option1"
         >
           Option 1
@@ -74,7 +74,7 @@ exports[`EnumField Component > should match snapshot 1`] = `
           value="option2"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
           for=":r0:-radio-1-option2"
         >
           Option 2
@@ -106,7 +106,7 @@ exports[`EnumField Component > should match snapshot 1`] = `
           value="option3"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
           for=":r0:-radio-2-option3"
         >
           Option 3
