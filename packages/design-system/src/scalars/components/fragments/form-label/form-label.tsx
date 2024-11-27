@@ -10,6 +10,7 @@ export interface FormLabelProps
   disabled?: boolean;
   description?: string;
   hasError?: boolean;
+  inline?: boolean;
   className?: string;
 }
 
@@ -19,14 +20,17 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   disabled,
   description,
   hasError,
+  inline,
   className,
   ...htmlLabelProps
 }) => {
   const classes = cn(
-    "inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-50 dark:group-hover:text-slate-50",
+    "inline-flex items-center text-sm font-medium leading-[22px]",
+    "text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50",
     hasError &&
       "text-red-700 group-hover:text-red-900 dark:text-red-700 dark:group-hover:text-red-900",
     disabled && "cursor-not-allowed text-gray-600 dark:text-gray-600",
+    !inline && "mb-[3px]",
     className,
   );
 
@@ -43,7 +47,12 @@ export const FormLabel: React.FC<FormLabelProps> = ({
     <label className={classes} {...extraProps}>
       {children}
       {required && (
-        <span className="ml-1 text-blue-900 group-hover:text-gray-900 dark:group-hover:text-slate-50">
+        <span
+          className={cn(
+            "ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50",
+            hasError && "!text-red-800 group-hover:!text-red-900",
+          )}
+        >
           *
         </span>
       )}

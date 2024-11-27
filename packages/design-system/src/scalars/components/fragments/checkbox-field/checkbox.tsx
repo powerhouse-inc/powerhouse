@@ -18,6 +18,7 @@ const Checkbox = React.forwardRef<
 >(({ className, checked, invalid, ...props }, ref) => (
   <CheckboxPrimitive.Root
     ref={ref}
+    // eslint-disable-next-line tailwindcss/no-custom-classname
     className={cn(
       // Base styles
       "peer size-4 shrink-0 rounded",
@@ -33,8 +34,14 @@ const Checkbox = React.forwardRef<
       "data-[state]:border-gray-700 dark:data-[state]:border-gray-400",
       "data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-gray-400 dark:data-[state=indeterminate]:bg-gray-400",
       "data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-gray-900 dark:data-[state=indeterminate]:text-gray-900",
+      // hover states
+      "group-hover:border-gray-900 data-[state=checked]:group-hover:bg-gray-900 data-[state=indeterminate]:group-hover:bg-gray-900",
+      "dark:group-hover:border-slate-50 dark:data-[state=checked]:group-hover:bg-slate-50 dark:data-[state=indeterminate]:group-hover:bg-slate-50",
       // Error state
-      "data-[invalid=true]:data-[state]:border-red-800 data-[invalid=true]:data-[state=checked]:bg-red-800 data-[invalid=true]:data-[state=indeterminate]:bg-red-800",
+      "data-[invalid=true]:data-[state]:!border-red-800 data-[invalid=true]:data-[state=checked]:!bg-red-800 data-[invalid=true]:data-[state=indeterminate]:!bg-red-800",
+      "dark:data-[invalid=true]:data-[state]:!border-red-800 dark:data-[invalid=true]:data-[state=checked]:!bg-red-800 dark:data-[invalid=true]:data-[state=indeterminate]:!bg-red-800",
+      // error hover states
+      "data-[invalid=true]:group-hover:!border-red-900 data-[invalid=true]:data-[state=checked]:group-hover:!bg-red-900 data-[invalid=true]:data-[state=indeterminate]:group-hover:!bg-red-900",
       className,
     )}
     checked={checked}
