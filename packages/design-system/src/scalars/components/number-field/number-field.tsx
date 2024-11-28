@@ -41,7 +41,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       precision = 0,
       ...props
     },
-    ref
+    ref,
   ) => {
     const generatedId = useId();
     const id = propId ?? generatedId;
