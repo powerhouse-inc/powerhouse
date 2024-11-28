@@ -2,6 +2,7 @@ import { Meta, Source, Canvas, Controls } from "@storybook/blocks";
 
 import * as ResetButtonStories from "./examples/reset-button/reset-button.stories";
 import * as ResetOnSuccessfulSubmitStories from "./examples/reset-on-successful-submit/reset-on-successful-submit.stories";
+import * as SubmitChangesOnly from "./examples/submit-changes-only/submit-changes-only.stories";
 
 <Meta title="Document Engineering/Docs/Forms" />
 
@@ -42,6 +43,26 @@ import { Form } from "@powerhousedao/design-system/scalars"
 
 </Form>
 `}/>
+
+### Submissions
+
+The `Form` component requires an `onSubmit` prop, which is a callback function that executes when the form is successfully submitted and passes validation. This callback receives the form data and is typed as follows:
+
+```ts
+function onSubmit(data: Record<string, any>): void
+```
+
+Each key of the the `data` parameter record is going to be the name of each field registered in the `Form`.
+
+> **Important**: For non-required fields, empty values are automatically converted to `null` in the submitted form data. This standardizes the handling of unset fields in the `onSubmit` callback's `data` parameter, making it easier to process form submissions consistently.
+
+#### Submit changes only
+
+The `submitChangesOnly` prop enables selective form submission, where only modified fields are included in the submission data. When enabled, the form automatically compares the current values against the initial `defaultValues` and includes only the changed fields in the `data` parameter passed to the `onSubmit` callback.
+
+Example usage:
+
+<Canvas of={SubmitChangesOnly.Default} withToolbar />
 
 ### Form reset
 
@@ -91,14 +112,14 @@ import { useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
 
 function FormExample() {
-const formRef = useRef<UseFormReturn>(null);
+   const formRef = useRef<UseFormReturn>(null);
 
-console.log(ref.current?.formState?.submitCount)
+   console.log(ref.current?.formState?.submitCount)
 
-return (
-<Form ref={formRef} onSubmit={/* your submit function */}>
-{/* your fields */}
-</Form>
-)
+   return (
+      <Form ref={formRef} onSubmit={/* your submit function */}>
+         {/* your fields */}
+      </Form>
+   )
 }
 `}/>
