@@ -20,6 +20,7 @@ import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import { ListenerFilter } from "document-model-libs/document-drive";
+import { viteReactorDevStudioPlugin } from "./vite-plugin";
 
 const dirname =
   import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
@@ -127,6 +128,7 @@ const startServer = async (
             input: [],
           },
         },
+        plugins: [viteReactorDevStudioPlugin(true)],
       });
       app.use(vite.middlewares);
 
