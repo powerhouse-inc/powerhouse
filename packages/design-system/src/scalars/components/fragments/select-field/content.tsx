@@ -44,7 +44,7 @@ export const Content: React.FC<ContentProps> = ({
           name={IconComponent}
           size={16}
           className={cn(
-            "text-gray-800 dark:text-gray-400",
+            "text-gray-700 dark:text-gray-400",
             disabled && "opacity-50",
           )}
         />
@@ -55,7 +55,7 @@ export const Content: React.FC<ContentProps> = ({
         <IconComponent
           className={cn(
             "size-4",
-            "text-gray-800 dark:text-gray-400",
+            "text-gray-700 dark:text-gray-400",
             disabled && "opacity-50",
           )}
         />
@@ -162,7 +162,7 @@ export const Content: React.FC<ContentProps> = ({
                 <span
                   className={cn(
                     "text-[14px] font-medium leading-[22px]",
-                    "text-gray-800 dark:text-gray-400",
+                    "text-gray-700 dark:text-gray-400",
                     option.disabled && "text-gray-600 dark:text-gray-600",
                   )}
                 >
