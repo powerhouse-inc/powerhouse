@@ -129,7 +129,7 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
           value="on"
         />
         <label
-          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 ml-2"
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 ml-2"
           for=":r0:"
           id=":r0:-label"
         >

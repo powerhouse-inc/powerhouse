@@ -96,9 +96,6 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
         <form
           onSubmit={methods.handleSubmit((data) => {
             onSubmit(data);
-            if (resetOnSuccessfulSubmit) {
-              methods.reset({ ...defaultValues });
-            }
           })}
           className={className}
           noValidate

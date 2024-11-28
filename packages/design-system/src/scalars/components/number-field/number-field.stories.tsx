@@ -31,15 +31,32 @@ const meta = {
     },
     isBigInt: {
       control: "boolean",
-      description:
-        "Indicates whether the input value should be treated as a BigInt. When true, the value can represent large integers beyond the safe integer limit of JavaScript.",
+      description: "Indicates if the input field should allow BigInt values",
       table: {
         type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    autoFocus: {
+      table: {
+        disable: true,
+      },
+    },
     numericType: {
-      control: "text",
+      control: {
+        type: "select",
+      },
+      options: [
+        "PositiveInt",
+        "NegativeInt",
+        "NonNegativeInt",
+        "NonPositiveInt",
+        "PositiveFloat",
+        "NegativeFloat",
+        "NonNegativeFloat",
+        "NonPositiveFloat",
+        "BigInt",
+      ],
       description:
         "Specifies the numeric type of the input field. Possible values are:\n\n\n" +
         "- PositiveInt: Positive whole numbers (1, 2, 3)\n" +
@@ -66,7 +83,6 @@ const meta = {
     ...PrebuiltArgTypes.allowNegative,
     ...PrebuiltArgTypes.precision,
     ...PrebuiltArgTypes.trailingZeros,
-    ...PrebuiltArgTypes.decimalRequired,
   },
   args: {
     name: "number-field",

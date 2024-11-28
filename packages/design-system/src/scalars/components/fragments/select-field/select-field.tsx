@@ -30,7 +30,10 @@ export interface SelectFieldProps
     ErrorHandling,
     SelectProps {}
 
-const SelectFieldRaw = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
+export const SelectFieldRaw = React.forwardRef<
+  HTMLButtonElement,
+  SelectFieldProps
+>(
   (
     {
       // core functionality props
