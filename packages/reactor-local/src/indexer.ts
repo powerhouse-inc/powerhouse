@@ -29,9 +29,9 @@ export async function addDocumentIndexer(options: DocumentIndexerOptions) {
   await addSubgraph({
     getSchema: () =>
       createSchema(
-        options.reactor,
-        searchListener.resolvers as GraphQLResolverMap,
+        options.reactor.getDocumentModels(),
         searchListener.typeDefs,
+        searchListener.resolvers as GraphQLResolverMap,
       ),
     name: "search/:drive",
   });

@@ -1,6 +1,5 @@
 import express from "express";
 import { describe, expect, it } from "vitest";
-import { buildSubgraphSchema } from "@apollo/subgraph";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
@@ -10,7 +9,7 @@ import {
 } from "../../document-drive/src/server";
 import { addSubgraph } from "../src/index";
 import { initReactorRouter, reactorRouter } from "../src/router";
-import { getDocumentModelTypeDefs } from "../src/utils/create-schema";
+import { createSchema } from "../src/utils/create-schema";
 
 const documentModels = [
   DocumentModelLib,
@@ -34,19 +33,14 @@ describe("Reactor Router", () => {
     const newSubgraph = {
       name: "newSubgraph",
       getSchema: (documentDriveServer: IDocumentDriveServer) =>
-        buildSubgraphSchema([
-          {
-            typeDefs: getDocumentModelTypeDefs(
-              documentDriveServer,
-              `
-              type Query {
-                hello: String
-              }
-            `,
-            ),
-            resolvers: { Query: { hello: () => "world" } },
-          },
-        ]),
+        createSchema(
+          documentDriveServer.getDocumentModels(),
+          `type Query {
+              hello: String
+            }
+          `,
+          { Query: { hello: () => "world" } },
+        ),
     };
 
     await addSubgraph(newSubgraph);

@@ -16,9 +16,9 @@ import {
   DocumentModelInput,
   DocumentModelState,
 } from "document-model/document-model";
-import { Context } from "../types";
+import { Context, ResolverMap } from "../types";
 
-export const resolvers = {
+export const resolvers: ResolverMap = {
   Query: {
     drive: async (_: unknown, args: unknown, ctx: Context) => {
       if (!ctx.driveId) throw new Error("Drive ID is required");

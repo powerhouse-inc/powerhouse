@@ -11,7 +11,7 @@ export default defineConfig({
   platform: "node",
   target: "node20",
   loader: {
-    ".graphql": "file",
+    ".graphql": "text",
   },
   dts: true,
 });

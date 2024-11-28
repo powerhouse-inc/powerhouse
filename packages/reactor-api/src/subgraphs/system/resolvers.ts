@@ -1,7 +1,7 @@
 import { DriveInput } from "document-drive";
-import { Context } from "../types";
+import { Context, ResolverMap } from "../types";
 
-export const resolvers = {
+export const resolvers: ResolverMap = {
   Query: {
     drives: async (parent: unknown, args: unknown, ctx: Context) => {
       const drives = await ctx.driveServer.getDrives();

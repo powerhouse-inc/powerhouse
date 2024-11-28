@@ -114,6 +114,15 @@ enum UpdateStatus {
   ERROR
 }
 
+type Listener {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: ListenerFilter!
+  callInfo: ListenerCallInfo
+}
+
 input ListenerRevisionInput {
   driveId: String!
   documentId: String!
