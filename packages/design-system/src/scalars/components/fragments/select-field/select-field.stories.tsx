@@ -50,7 +50,6 @@ const meta: Meta<typeof SelectField> = {
       description: "Whether to enable search functionality",
       table: {
         type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -60,7 +59,6 @@ const meta: Meta<typeof SelectField> = {
       description: "Whether multiple options can be selected",
       table: {
         type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },

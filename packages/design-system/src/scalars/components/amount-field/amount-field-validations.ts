@@ -1,5 +1,4 @@
 import {
-  hasDecimaPlace,
   isBigIntNumber,
   isPositiveOrUndefiend,
   isPrecisionZeroOrUndefiend,
@@ -38,12 +37,4 @@ export const validateTrailingZerosAmount =
     const amount =
       type === "AmountCurrency" ? (value as AmountCurrency).amount : value;
     return !trailingZeros || validateTrailing(amount, precision);
-  };
-
-export const validateDecimalRequiredAmount =
-  ({ decimalRequired, type }: AmountFieldProps) =>
-  (value: AmountValue) => {
-    const amount =
-      type === "AmountCurrency" ? (value as AmountCurrency).amount : value;
-    return !decimalRequired || hasDecimaPlace(amount);
   };

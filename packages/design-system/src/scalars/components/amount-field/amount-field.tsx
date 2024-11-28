@@ -13,7 +13,6 @@ import {
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
 import {
-  validateDecimalRequiredAmount,
   validateIsBigIntAmount,
   validatePositiveAmount,
   validatePrecisionAmount,
@@ -188,7 +187,6 @@ export const AmountField = withFieldValidation<AmountFieldProps>(
       _isBigInt: validateIsBigIntAmount,
       _precision: validatePrecisionAmount,
       _trailingZeros: validateTrailingZerosAmount,
-      _decimalRequired: validateDecimalRequiredAmount,
     },
   },
 );

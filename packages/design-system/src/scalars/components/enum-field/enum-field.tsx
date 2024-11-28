@@ -1,11 +1,8 @@
 import React from "react";
 import { RadioGroupField } from "@/scalars/components/fragments/radio-group-field";
 import { SelectField } from "@/scalars/components/fragments/select-field";
-import {
-  FieldCommonProps,
-  ErrorHandling,
-  EnumProps,
-} from "@/scalars/components/types";
+import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
+import { EnumProps } from "./types";
 
 export type EnumFieldProps = FieldCommonProps<string | string[]> &
   ErrorHandling &

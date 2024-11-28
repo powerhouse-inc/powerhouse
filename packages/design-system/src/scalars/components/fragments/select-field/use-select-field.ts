@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { SelectProps } from "@/scalars/components/types";
+import { SelectProps } from "@/scalars/components/enum-field/types";
 
 interface UseSelectFieldProps {
   options?: SelectProps["options"];

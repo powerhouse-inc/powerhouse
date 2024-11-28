@@ -3,11 +3,8 @@ import { cn } from "@/scalars/lib/utils";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import {
-  FieldCommonProps,
-  ErrorHandling,
-  RadioGroupProps,
-} from "@/scalars/components/types";
+import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
+import { RadioGroupProps } from "@/scalars/components/enum-field/types";
 import { Radio } from "./radio";
 import { RadioGroup } from "./radio-group";
 
@@ -22,11 +19,11 @@ const RadioGroupFieldRaw = React.forwardRef<
 >(
   (
     {
-      autoFocus = false,
+      autoFocus,
       className,
       defaultValue,
       description,
-      disabled = false,
+      disabled,
       warnings = [],
       errors = [],
       id: propId,
@@ -34,7 +31,7 @@ const RadioGroupFieldRaw = React.forwardRef<
       name,
       onChange,
       options = [],
-      required = false,
+      required,
       value,
       ...props
     },

@@ -8,13 +8,7 @@ import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { getDisplayValue, regex } from "@/scalars/utils/utils";
 import { withFieldValidation } from "../fragments/with-field-validation";
-import {
-  validateDecimalRequired,
-  validateIsBigInt,
-  validatePositive,
-  validatePrecision,
-  validateTrailingZeros,
-} from "./number-field-validations";
+import { validateIsBigInt, validatePositive } from "./number-field-validations";
 
 export interface NumberFieldProps extends InputNumberProps {
   className?: string;
@@ -122,9 +116,6 @@ const NumberField = withFieldValidation<NumberFieldProps>(NumberFieldRaw, {
   validations: {
     _positive: validatePositive,
     _isBigInt: validateIsBigInt,
-    _precision: validatePrecision,
-    _trailingZeros: validateTrailingZeros,
-    _decimalRequired: validateDecimalRequired,
   },
 });
 NumberField.displayName = "NumberField";
