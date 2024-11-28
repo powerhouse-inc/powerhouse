@@ -2,10 +2,11 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/src/resolvers.ts"
 force: true
 ---
-import { and, like } from "drizzle-orm";
-import { PgDatabase } from "drizzle-orm/pg-core";
-import { exampleTable } from "./schema";
+import { exampleTable } from "./db-schema";
 
+/**
+ * The resolvers for the processor.
+ */
 export const resolvers = {
   Query: {
     example: async (root, args, ctx, info) => {

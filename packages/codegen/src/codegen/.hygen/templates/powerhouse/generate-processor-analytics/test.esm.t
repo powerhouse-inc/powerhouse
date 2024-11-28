@@ -2,8 +2,8 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/test/example.test.ts"
 force: true
 ---
-import { transmit } from "../src/listener";
-import { actions } from "../../../document-models/document-drive";
+import { transmit } from "../src/transmit";
+import { actions } from "document-model-libs/document-drive";
 import { describe, it } from "vitest";
 import get from "../src/service";
 

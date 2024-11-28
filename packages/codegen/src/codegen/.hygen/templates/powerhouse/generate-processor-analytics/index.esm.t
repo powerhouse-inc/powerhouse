@@ -6,6 +6,7 @@ import {
   AnalyticsResolvers as resolvers,
   typedefs as typeDefs,
 } from "@powerhousedao/analytics-engine-graphql";
-import { options, transmit } from "./listener";
+import { transmit } from "./transmit";
+import { options } from "./options";
 
 export { options, resolvers, transmit, typeDefs };

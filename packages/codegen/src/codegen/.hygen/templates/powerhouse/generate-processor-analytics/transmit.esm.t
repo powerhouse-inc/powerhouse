@@ -1,28 +1,11 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/src/listener.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/src/transmit.ts"
 force: true
 ---
-import { InternalTransmitterUpdate, Listener } from "document-drive";
+import { InternalTransmitterUpdate } from "document-drive";
 import get from "./service";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import { DateTime } from "luxon";
-
-export const options: Omit<Listener, "driveId"> = {
-  listenerId: "<%= h.changeCase.param(name) %>",
-  filter: {
-    branch: ["main"],
-    documentId: ["*"],
-    documentType: [
-      <% documentTypes.forEach(type => { _%>
-      "<%= type %>",
-      <% }); _%>
-    ],
-    scope: ["global"],
-  },
-  block: false,
-  label: "<%= h.changeCase.param(name) %>",
-  system: true,
-};
 
 export async function transmit(strands: InternalTransmitterUpdate[]) {
   for (const strand of strands) {
