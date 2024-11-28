@@ -2,7 +2,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
-import { startAPI } from "@powerhousedao/reactor-api";
+import {
+  startAPI,
+  addSubgraph,
+  registerInternalListener,
+  createSchema,
+} from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
@@ -58,7 +63,7 @@ export type LocalReactor = {
       label: string;
       block: boolean;
       filter: ListenerFilter;
-    },
+    }
   ) => Promise<InternalTransmitter>;
 };
 
@@ -68,7 +73,7 @@ const baseDocumentModels = [
 ] as DocumentModel[];
 
 const startServer = async (
-  options?: StartServerOptions,
+  options?: StartServerOptions
 ): Promise<LocalReactor> => {
   const { port, storagePath, drive, dev } = {
     ...DefaultStartServerOptions,
@@ -79,7 +84,7 @@ const startServer = async (
   // start document drive server with all available document models & filesystem storage
   const driveServer = new DocumentDriveServer(
     baseDocumentModels,
-    new FilesystemStorage(storagePath),
+    new FilesystemStorage(storagePath)
   );
 
   // init drive server
@@ -135,6 +140,32 @@ const startServer = async (
         ...baseDocumentModels,
         ...Object.values(localDMs),
       ]);
+
+      // load processors
+      const processorsPath = path.join(process.cwd(), "./processors");
+      console.log("Loading processors from", processorsPath);
+      const localProcessors = (await vite.ssrLoadModule(
+        processorsPath
+      )) as Record<string, any>;
+
+      for (const [name, processor] of Object.entries(localProcessors)) {
+        await Promise.all([
+          addSubgraph({
+            name,
+            getSchema: (driveServer) =>
+              createSchema(
+                driveServer,
+                processor.resolvers,
+                processor.typeDefs
+              ),
+          }),
+          registerInternalListener({
+            name,
+            options: processor.options,
+            transmit: processor.transmit,
+          }),
+        ]);
+      }
     }
   } catch (e) {
     console.error("App crashed", e);
@@ -153,7 +184,7 @@ const startServer = async (
         label: string;
         block: boolean;
         filter: ListenerFilter;
-      },
+      }
     ) => driveServer.addInternalListener(driveId, receiver, options),
   };
 };

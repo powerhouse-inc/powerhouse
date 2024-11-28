@@ -18,13 +18,15 @@ function parseCommand(argv: string[]) {
     "-e": "--editor",
     "--processor": String,
     "--document-types": String,
+    "--processor-type": String,
   });
   const editorName = args["--editor"];
   const processorName = args["--processor"];
-
+  const processorType = args["--processor-type"];
   return {
     processor: !!processorName,
     processorName,
+    processorType,
     editor: !!editorName,
     editorName,
     documentTypes: args["--document-types"],
@@ -58,8 +60,12 @@ async function main() {
       throw new Error("processor name is required (--processor)");
     }
 
+    const type =
+      command.processorType === "analytics" ? "analytics" : "operational";
+
     await generateProcessor(
       command.processorName,
+      type,
       command.documentTypes?.split(/[|,;]/g) ?? [],
       config,
     );
