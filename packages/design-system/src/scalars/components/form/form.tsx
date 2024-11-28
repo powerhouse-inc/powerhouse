@@ -1,4 +1,6 @@
-import { forwardRef, useEffect, useImperativeHandle } from "react";
+import { deepEqual } from "@/scalars/lib/deep-equal";
+import { isEmpty } from "@/scalars/lib/is-empty";
+import { forwardRef, useCallback, useEffect, useImperativeHandle } from "react";
 import { FormProvider, useForm, UseFormReturn } from "react-hook-form";
 
 interface FormProps {
@@ -23,6 +25,16 @@ interface FormProps {
    * @default false
    */
   resetOnSuccessfulSubmit?: boolean;
+
+  /**
+   * Whether to submit only changed values.
+   *
+   * When enabled, the `onSubmit` callback will only receive fields whose values differ from their
+   * corresponding `defaultValues`.
+   *
+   * @default false
+   */
+  submitChangesOnly?: boolean;
 
   /**
    * Initial values for the form fields. Keys should match the 'name' props of your form fields.
@@ -77,6 +89,7 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
       children,
       onSubmit,
       resetOnSuccessfulSubmit = false,
+      submitChangesOnly = false,
       defaultValues,
       className,
     },
@@ -91,15 +104,42 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
       }
     }, [resetOnSuccessfulSubmit, methods.formState.isSubmitSuccessful]);
 
+    const wrappedOnSubmit = useCallback((rawData: Record<string, any>) => {
+      let data = rawData;
+      // we should make sure that empty fields are submitted as `null`
+      // react-hook-form doesn't submit fields with `undefined` values
+      // so we need to add them to the data as `null`
+      Object.keys(methods.control._fields).forEach((fieldName) => {
+        if (!Object.keys(data).includes(fieldName)) {
+          data[fieldName] = null;
+        }
+      });
+
+      if (submitChangesOnly && !!defaultValues) {
+        // remove fields that didn't change it's value
+        data = Object.fromEntries(
+          Object.entries(rawData).filter(
+            ([fieldName, value]) => !deepEqual(value, defaultValues[fieldName]),
+          ),
+        );
+      }
+
+      // at this point all the fields that need to be submitted are in the data
+      // we just need to make sure that "empty" values are submitted as `null`
+      data = Object.fromEntries(
+        Object.entries(data).map(([fieldName, value]) => [
+          fieldName,
+          isEmpty(value) ? null : value,
+        ]),
+      );
+
+      onSubmit(data);
+    }, []);
+
     return (
       <FormProvider {...methods}>
         <form
-          onSubmit={methods.handleSubmit((data) => {
-            onSubmit(data);
-            if (resetOnSuccessfulSubmit) {
-              methods.reset({ ...defaultValues });
-            }
-          })}
+          onSubmit={methods.handleSubmit(wrappedOnSubmit)}
           className={className}
           noValidate
         >
