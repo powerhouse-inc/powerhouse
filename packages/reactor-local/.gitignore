@@ -37,6 +37,5 @@ next-env.d.ts
 
 .env
 
-dev.db
 file-storage
 drizzle
