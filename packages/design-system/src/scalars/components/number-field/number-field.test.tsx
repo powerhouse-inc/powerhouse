@@ -106,4 +106,99 @@ describe("NumberField Component", () => {
 
     expect(input).toHaveValue(5);
   });
+
+  // Test for the steps prop
+  it("should increment value when increment button is clicked", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <NumberField
+        label="Test Label"
+        name="Label"
+        defaultValue={5}
+        step={1}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const incrementButton = screen.getAllByRole("button")[0];
+
+    await user.click(incrementButton);
+
+    expect(mockOnChange).toHaveBeenCalledWith(6);
+  });
+
+  it("should decrement value when decrement button is clicked", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <NumberField
+        label="Test Label"
+        name="Label"
+        defaultValue={5}
+        step={1}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const decrementButton = screen.getAllByRole("button")[1];
+    await user.click(decrementButton);
+    expect(mockOnChange).toHaveBeenCalledWith(4);
+  });
+
+  it("should not exceed maxValue when increment button is clicked", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <NumberField
+        label="Test Label"
+        name="Label"
+        defaultValue={10}
+        maxValue={10}
+        step={1}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const incrementButton = screen.getAllByRole("button")[0]; // Botón de incremento
+    await user.click(incrementButton);
+    expect(mockOnChange).toHaveBeenCalledWith(10);
+  });
+
+  it("should not go below minValue when decrement button is clicked", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <NumberField
+        label="Test Label"
+        name="Label"
+        defaultValue={0}
+        minValue={0}
+        step={1}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const decrementButton = screen.getAllByRole("button")[1];
+    await user.click(decrementButton);
+    expect(mockOnChange).toHaveBeenCalledWith(0);
+  });
+
+  it("should increment or decrement based on step prop", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <NumberField
+        label="Test Label"
+        name="Label"
+        defaultValue={0}
+        step={5}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const incrementButton = screen.getAllByRole("button")[0];
+    const decrementButton = screen.getAllByRole("button")[1];
+
+    await user.click(incrementButton);
+    expect(mockOnChange).toHaveBeenCalledWith(5);
+
+    await user.click(decrementButton);
+    expect(mockOnChange).toHaveBeenCalledWith(0);
+  });
 });
