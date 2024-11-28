@@ -144,7 +144,7 @@ export async function generateProcessor(
     name,
     documentTypes,
     docummentTypesMap,
-    config.editorsDir,
+    config.processorsDir,
     config.documentModelsDir,
     type,
     { skipFormat }
