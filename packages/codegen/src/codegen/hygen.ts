@@ -38,7 +38,7 @@ async function run(args: string[], { watch = false, skipFormat = false } = {}) {
       .forEach((action) => {
         execa.$`prettier --ignore-path --write ${action.subject.replace(
           ".",
-          process.cwd(),
+          process.cwd()
         )}`.catch((err: unknown) => {
           console.log(err);
         });
@@ -50,14 +50,14 @@ async function run(args: string[], { watch = false, skipFormat = false } = {}) {
 
 export async function generateAll(
   dir: string,
-  { watch = false, skipFormat = false } = {},
+  { watch = false, skipFormat = false } = {}
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
   for (const directory of files.filter((f) => f.isDirectory())) {
     const documentModelPath = path.join(
       dir,
       directory.name,
-      `${directory.name}.json`,
+      `${directory.name}.json`
     );
     if (!fs.existsSync(documentModelPath)) {
       continue;
@@ -75,7 +75,7 @@ export async function generateAll(
 export async function generateDocumentModel(
   documentModel: DocumentModel.DocumentModelState,
   dir: string,
-  { watch = false, skipFormat = false } = {},
+  { watch = false, skipFormat = false } = {}
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -87,7 +87,7 @@ export async function generateDocumentModel(
       "--root-dir",
       dir,
     ],
-    { watch, skipFormat },
+    { watch, skipFormat }
   );
 
   // Generate the module-specific files for the document model logic
@@ -105,7 +105,7 @@ export async function generateDocumentModel(
         "--module",
         module.name,
       ],
-      { watch, skipFormat },
+      { watch, skipFormat }
     );
   }
 }
@@ -116,7 +116,7 @@ export async function generateEditor(
   documentTypesMap: Record<string, string>,
   dir: string,
   documentModelsDir: string,
-  { skipFormat = false } = {},
+  { skipFormat = false } = {}
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -134,6 +134,37 @@ export async function generateEditor(
       "--document-models-dir",
       documentModelsDir,
     ],
-    { skipFormat },
+    { skipFormat }
+  );
+}
+
+export async function generateProcessor(
+  name: string,
+  documentTypes: string[],
+  documentTypesMap: Record<string, string>,
+  dir: string,
+  documentModelsDir: string,
+  type: string = "analytics",
+  { skipFormat = false } = {}
+) {
+  // Generate the singular files for the document model logic
+  const processorType = type === "analytics" ? "analytics" : "operational";
+
+  await run(
+    [
+      "powerhouse",
+      `generate-processor-${processorType}`,
+      "--name",
+      name,
+      "--root-dir",
+      dir,
+      "--document-types",
+      documentTypes.join(","),
+      "--document-types-map",
+      JSON.stringify(documentTypesMap),
+      "--document-models-dir",
+      documentModelsDir,
+    ],
+    { skipFormat }
   );
 }
