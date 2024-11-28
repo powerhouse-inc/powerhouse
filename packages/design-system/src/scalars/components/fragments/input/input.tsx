@@ -5,7 +5,7 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 const inputBaseStyles = cn(
   // Base styles
-  "flex h-10 w-full rounded-md text-sm text-gray-900 dark:text-gray-50",
+  "flex h-10 w-full rounded-md text-sm text-gray-900 dark:text-gray-700",
   // Border & Background
   "border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900",
   // Padding

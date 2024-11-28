@@ -8,13 +8,7 @@ import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { getDisplayValue, regex } from "@/scalars/utils/utils";
 import { withFieldValidation } from "../fragments/with-field-validation";
-import {
-  validateDecimalRequired,
-  validateIsBigInt,
-  validatePositive,
-  validatePrecision,
-  validateTrailingZeros,
-} from "./numberFieldValidations";
+import { validateIsBigInt, validatePositive } from "./number-field-validations";
 
 export interface NumberFieldProps extends InputNumberProps {
   className?: string;
@@ -24,7 +18,7 @@ export interface NumberFieldProps extends InputNumberProps {
   value?: number | string;
 }
 
-const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
+export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   (
     {
       label,
@@ -81,6 +75,7 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             required={props.required}
             disabled={props.disabled}
             hasError={!!errors?.length}
+            className="mb-[3px]"
           >
             {label}
           </FormLabel>
@@ -106,8 +101,8 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           defaultValue={defaultValue}
           onChange={onChange}
           onPaste={blockInvalidPaste}
-          {...props}
           ref={ref}
+          {...props}
         />
         {description && <FormDescription>{description}</FormDescription>}
         {warnings && <FormMessageList messages={warnings} type="warning" />}
@@ -117,15 +112,12 @@ const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   },
 );
 
-export const NumberField = withFieldValidation<NumberFieldProps>(
-  NumberFieldRaw,
-  {
-    validations: {
-      _positive: validatePositive,
-      _isBigInt: validateIsBigInt,
-      _precision: validatePrecision,
-      _trailingZeros: validateTrailingZeros,
-      _decimalRequired: validateDecimalRequired,
-    },
+const NumberField = withFieldValidation<NumberFieldProps>(NumberFieldRaw, {
+  validations: {
+    _positive: validatePositive,
+    _isBigInt: validateIsBigInt,
   },
-);
+});
+NumberField.displayName = "NumberField";
+
+export { NumberField };

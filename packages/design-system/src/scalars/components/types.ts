@@ -6,7 +6,7 @@ export type ValidatorResult = ErrorMessage | boolean;
 
 export type ValidatorHandler = (
   value: any,
-  formState: Record<string, any>,
+  formState: Record<string, any>
 ) => ValidatorResult | Promise<ValidatorResult>;
 
 export interface FormFieldProps {
@@ -64,28 +64,8 @@ export interface NumberProps {
   allowNegative?: boolean;
   precision?: number;
   trailingZeros?: boolean;
-  decimalRequired?: boolean;
   isBigInt?: boolean;
 }
-
-export type CurrencyCode = (typeof currencies)[number];
-
-export interface AmountBase {
-  amount: number | string;
-}
-
-export interface AmountCurrency extends AmountBase {
-  currency: CurrencyCode;
-}
-
-export interface AmountPercentageBase {
-  amount: number;
-}
-
-export type AmountType =
-  | { type: "Amount"; details: AmountBase }
-  | { type: "AmountCurrency"; details: AmountCurrency }
-  | { type: "AmountPercentage"; details: AmountPercentageBase };
 
 export interface InputNumberProps
   extends Omit<
