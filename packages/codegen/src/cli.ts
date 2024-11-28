@@ -53,7 +53,7 @@ async function main() {
     await generateEditor(
       command.editorName,
       command.documentTypes?.split(/[|,;]/g) ?? [],
-      config
+      config,
     );
   } else if (command.processor) {
     if (!command.processorName) {
@@ -67,7 +67,7 @@ async function main() {
       command.processorName,
       type,
       command.documentTypes?.split(/[|,;]/g) ?? [],
-      config
+      config,
     );
   } else if (command.arg.length === 2) {
     await generateFromFile(command.arg[1], config);
