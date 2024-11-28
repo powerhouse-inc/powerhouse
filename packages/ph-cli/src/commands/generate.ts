@@ -1,12 +1,12 @@
-import { Command } from "commander";
 import {
-  getConfig,
   generate as generateCode,
   generateEditor,
   generateFromFile,
-  promptDirectories,
   generateProcessor,
+  getConfig,
+  promptDirectories,
 } from "@powerhousedao/codegen";
+import { Command } from "commander";
 import { CommandActionType } from "../types.js";
 
 export const generate: CommandActionType<
@@ -22,6 +22,7 @@ export const generate: CommandActionType<
       editor?: string;
       processor?: string;
       documentTypes?: string;
+      processorType?: "analytics" | "operational";
     },
   ]
 > = async (filePath, options) => {
@@ -47,6 +48,7 @@ export const generate: CommandActionType<
     documentTypes: options.documentTypes,
     processor: !!options.processor,
     processorName: options.processor,
+    processorType: options.processorType,
   };
 
   if (config.interactive) {
@@ -68,8 +70,11 @@ export const generate: CommandActionType<
   }
 
   if (command.processor && options.processor) {
+    const processorType =
+      options.processorType === "operational" ? "operational" : "analytics";
     await generateProcessor(
       options.processor,
+      processorType,
       options.documentTypes?.split(",") ?? [],
       config,
     );
@@ -94,6 +99,7 @@ export function generateCommand(program: Command) {
     .option("-e, --editor <type>", "Editor Name")
     .option("--processors <type>", "Path to the processors directory")
     .option("-p, --processor <type>", "Processor Name")
+    .option("--processor-type <type>", "Processor Type")
     .option("--document-models <type>", "Path to the document models directory")
     .option("--document-types <type>", "Supported document types by the editor")
     .option("-sf, --skip-format", "Skip formatting the generated code")

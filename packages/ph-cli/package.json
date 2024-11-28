@@ -35,12 +35,14 @@
     "@powerhousedao/analytics-engine-graphql": "^0.2.0",
     "@powerhousedao/analytics-engine-pg": "^0.3.0",
     "document-drive": "1.4.2",
+    "drizzle-kit": "^0.25.0",
+    "drizzle-orm": "^0.34.1",
     "luxon": "^3.5.0",
     "tsup": "^8.3.0",
     "tsx": "^4.19.1"
   },
   "dependencies": {
-    "@powerhousedao/codegen": "0.16.0",
+    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/connect": "develop",
     "@powerhousedao/design-system": "^1.9.2",
     "@powerhousedao/reactor-local": "workspace:*",
