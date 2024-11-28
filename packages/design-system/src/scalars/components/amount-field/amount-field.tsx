@@ -167,6 +167,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
               disabled={disabled}
               onChange={handleOnChangeSelect}
               options={options}
+              className="flex h-10"
               {...(selectProps || {})}
             />
           </div>

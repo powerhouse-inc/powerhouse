@@ -6,10 +6,10 @@ import { FormGroup } from "../fragments/form-group";
 import { InputNumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
-import { getDisplayValue, regex } from "@/scalars/utils/utils";
 import { withFieldValidation } from "../fragments/with-field-validation";
 import { validateIsBigInt, validatePositive } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
+import { getDisplayValue, regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
   className?: string;
@@ -41,7 +41,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       precision = 0,
       ...props
     },
-    ref,
+    ref
   ) => {
     const generatedId = useId();
     const id = propId ?? generatedId;
@@ -127,8 +127,8 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
               >
                 <Icon
                   size={10}
-                  name="CaretIputUp"
-                  className={cn(" text-gray-700")}
+                  name="ChevronDown"
+                  className={cn("rotate-180 text-gray-700")}
                 />
               </button>
               <button
@@ -137,10 +137,8 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
               >
                 <Icon
                   size={10}
-                  name="CaretIputUp"
-                  className={cn(
-                    "rotate-180 items-center justify-center text-gray-700",
-                  )}
+                  name="ChevronDown"
+                  className={cn(" items-center justify-center text-gray-700")}
                 />
               </button>
             </div>

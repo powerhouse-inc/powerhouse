@@ -1,6 +1,3 @@
-import { currencies } from "../lib/currency-list";
-
-// Allows only numbers, optionally including a negative sign at the beginning and a decimal point.
 export const regex = /^-?\d*\.?\d*$/;
 
 export function getDisplayValue(
@@ -22,9 +19,3 @@ export function getDisplayValue(
 
   return value;
 }
-
-export const getLabelValueCurrenct = (subCurrency: string[]) =>
-  subCurrency.map((item) => ({
-    value: currencies[item],
-    label: currencies[item],
-  }));
