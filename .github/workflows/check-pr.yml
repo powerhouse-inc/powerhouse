@@ -17,7 +17,24 @@ jobs:
     runs-on: ubuntu-latest
     container: node:22
 
-    # First determine if document-drive is affected
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,28 +50,6 @@ jobs:
             echo "document_drive_changed=false" >> $GITHUB_OUTPUT
           fi
 
-    # Conditionally include services
-    services:
-      postgres:
-        if: steps.check-changes.outputs.document_drive_changed == 'true'
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        if: steps.check-changes.outputs.document_drive_changed == 'true'
-        image: redis
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -70,14 +65,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      # Set environment variables only if document-drive is affected
       - name: Set DB environment variables
         if: steps.check-changes.outputs.document_drive_changed == 'true'
         run: |
           echo "DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90" >> $GITHUB_ENV
           echo "REDIS_TLS_URL=redis://redis:6379" >> $GITHUB_ENV
 
-      # Special setup for document-drive
       - name: Setup Prisma
         if: steps.check-changes.outputs.document_drive_changed == 'true'
         run: |
@@ -85,7 +78,6 @@ jobs:
           pnpm prisma db push
         working-directory: packages/document-drive
 
-      # First: Build and Generate
       - name: Build and Generate
         run: |
           echo "Building affected packages..."
@@ -94,7 +86,6 @@ jobs:
           echo "Running generate on affected packages..."
           pnpm nx affected --target=generate --parallel=3
 
-      # Then: Other checks that depend on build
       - name: Run Other Checks
         run: |
           echo "Running lint on affected packages..."
