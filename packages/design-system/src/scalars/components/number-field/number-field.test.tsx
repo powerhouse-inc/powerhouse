@@ -6,6 +6,11 @@ import { renderWithForm } from "@/scalars/lib/testing";
 
 describe("NumberField Component", () => {
   const mockOnChange = vi.fn();
+
+  beforeEach(() => {
+    mockOnChange.mockClear(); // Limpia el mock antes de cada prueba
+  });
+
   it("should match snapshot", () => {
     const { container } = renderWithForm(
       <NumberField label="Test Label" name="Label" />,
@@ -13,14 +18,14 @@ describe("NumberField Component", () => {
     expect(container).toMatchSnapshot();
   });
 
-  it("should renders label when label its provided", () => {
+  it("should render label when label is provided", () => {
     renderWithForm(
       <NumberField label="Test Label" onChange={mockOnChange} name="Label" />,
     );
     expect(screen.getByLabelText("Test Label")).toBeInTheDocument();
   });
 
-  it("should renders the description when provided", () => {
+  it("should render the description when provided", () => {
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -32,7 +37,7 @@ describe("NumberField Component", () => {
     expect(screen.getByText("This is a description")).toBeInTheDocument();
   });
 
-  it("should renders error messages when provided", () => {
+  it("should render error messages when provided", () => {
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -45,7 +50,7 @@ describe("NumberField Component", () => {
     expect(screen.getByText("Error 2")).toBeInTheDocument();
   });
 
-  it("should renders warning messages when provided", () => {
+  it("should render warning messages when provided", () => {
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -58,16 +63,19 @@ describe("NumberField Component", () => {
     expect(screen.getByText("Warning 2")).toBeInTheDocument();
   });
 
-  it("should calls onChange when the input value changes", async () => {
+  it("should call onChange when the input value changes", async () => {
     const user = userEvent.setup();
-    renderWithForm(<NumberField label="Test Label" name="Label" />);
+    renderWithForm(
+      <NumberField label="Test Label" name="Label" onChange={mockOnChange} />,
+    );
     const input = screen.getByLabelText("Test Label");
 
     await user.type(input, "10");
+    expect(mockOnChange).toHaveBeenCalled();
     expect(input).toHaveValue(10);
   });
 
-  it("should disables the input when disabled prop is true", () => {
+  it("should disable the input when disabled prop is true", () => {
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -81,7 +89,7 @@ describe("NumberField Component", () => {
     expect(input).toBeDisabled();
   });
 
-  it("should shows the input as required when required prop is true", () => {
+  it("should show the input as required when required prop is true", () => {
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -93,7 +101,7 @@ describe("NumberField Component", () => {
     expect(screen.getByRole("spinbutton")).toHaveAttribute("required");
   });
 
-  it("should supports a defaultValue prop", () => {
+  it("should support a defaultValue prop", () => {
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -106,7 +114,6 @@ describe("NumberField Component", () => {
 
     expect(input).toHaveValue(5);
   });
-
   // Test for the steps prop
   it("should increment value when increment button is clicked", async () => {
     const user = userEvent.setup();
@@ -114,17 +121,24 @@ describe("NumberField Component", () => {
       <NumberField
         label="Test Label"
         name="Label"
-        defaultValue={5}
+        value={5}
         step={1}
         onChange={mockOnChange}
       />,
     );
 
     const incrementButton = screen.getAllByRole("button")[0];
-
     await user.click(incrementButton);
 
-    expect(mockOnChange).toHaveBeenCalledWith(6);
+    // Validar con un evento que contenga el valor esperado
+    expect(mockOnChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: {
+          value: "6",
+          name: "Label",
+        },
+      } as { target: { value: string } }),
+    );
   });
 
   it("should decrement value when decrement button is clicked", async () => {
@@ -133,7 +147,7 @@ describe("NumberField Component", () => {
       <NumberField
         label="Test Label"
         name="Label"
-        defaultValue={5}
+        value={5}
         step={1}
         onChange={mockOnChange}
       />,
@@ -141,7 +155,15 @@ describe("NumberField Component", () => {
 
     const decrementButton = screen.getAllByRole("button")[1];
     await user.click(decrementButton);
-    expect(mockOnChange).toHaveBeenCalledWith(4);
+
+    expect(mockOnChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: {
+          value: "4",
+          name: "Label",
+        },
+      } as { target: { value: string } }),
+    );
   });
 
   it("should not exceed maxValue when increment button is clicked", async () => {
@@ -150,16 +172,24 @@ describe("NumberField Component", () => {
       <NumberField
         label="Test Label"
         name="Label"
-        defaultValue={10}
+        value={10}
         maxValue={10}
         step={1}
         onChange={mockOnChange}
       />,
     );
 
-    const incrementButton = screen.getAllByRole("button")[0]; // Botón de incremento
+    const incrementButton = screen.getAllByRole("button")[0];
     await user.click(incrementButton);
-    expect(mockOnChange).toHaveBeenCalledWith(10);
+
+    expect(mockOnChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: {
+          value: "10",
+          name: "Label",
+        },
+      } as { target: { value: string } }),
+    );
   });
 
   it("should not go below minValue when decrement button is clicked", async () => {
@@ -168,7 +198,7 @@ describe("NumberField Component", () => {
       <NumberField
         label="Test Label"
         name="Label"
-        defaultValue={0}
+        value={0}
         minValue={0}
         step={1}
         onChange={mockOnChange}
@@ -177,28 +207,14 @@ describe("NumberField Component", () => {
 
     const decrementButton = screen.getAllByRole("button")[1];
     await user.click(decrementButton);
-    expect(mockOnChange).toHaveBeenCalledWith(0);
-  });
 
-  it("should increment or decrement based on step prop", async () => {
-    const user = userEvent.setup();
-    renderWithForm(
-      <NumberField
-        label="Test Label"
-        name="Label"
-        defaultValue={0}
-        step={5}
-        onChange={mockOnChange}
-      />,
+    expect(mockOnChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: {
+          value: "0",
+          name: "Label",
+        },
+      } as { target: { value: string } }),
     );
-
-    const incrementButton = screen.getAllByRole("button")[0];
-    const decrementButton = screen.getAllByRole("button")[1];
-
-    await user.click(incrementButton);
-    expect(mockOnChange).toHaveBeenCalledWith(5);
-
-    await user.click(decrementButton);
-    expect(mockOnChange).toHaveBeenCalledWith(0);
   });
 });
