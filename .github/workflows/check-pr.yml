@@ -1,9 +1,12 @@
 name: Check PR
 
 on:
+  workflow_dispatch:
   push:
+    branches: ["main"]
   pull_request:
-    types: [opened]
+    branches: ["main"]
+    types: [opened, synchronize]
 
 env:
   NX_ISOLATE_PLUGINS: false
