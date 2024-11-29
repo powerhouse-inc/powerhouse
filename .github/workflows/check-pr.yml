@@ -56,11 +56,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build
+      - name: Build affected projects
         run: pnpm nx affected --target=build --parallel=3
 
-      - name: Test and Lint
+      - name: Run checks
         run: |
-          pnpm nx affected --target=lint --parallel=3
-          pnpm nx affected --target=test --parallel=3
-          pnpm nx affected --target=build-storybook --parallel=3
+          pnpm nx affected --target=lint --parallel=3 --skip-nx-cache=false
+          pnpm nx affected --target=test --parallel=3 --skip-nx-cache=false
+          pnpm nx affected --target=build-storybook --parallel=3 --skip-nx-cache=false
