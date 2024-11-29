@@ -15,6 +15,9 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     container: node:22
 
     services:
