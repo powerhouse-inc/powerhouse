@@ -1,8 +1,8 @@
 name: Check PR
 
 on:
-  push:
-  pull_request:
+  - push
+  - pull_request
 
 env:
   NX_ISOLATE_PLUGINS: false
@@ -39,17 +39,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 9
+          run_install: false
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
 
-      - name: Install PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: true
+      - name: Install dependencies
+        run: pnpm install
 
       # Special setup for document-drive
       - name: Setup Prisma
