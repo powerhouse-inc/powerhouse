@@ -1,7 +1,6 @@
 import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
 import { Document, Operation } from 'document-model/document';
-import { atom, useAtom, useAtomValue } from 'jotai';
-import { selectAtom } from 'jotai/utils';
+import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
 import { IReadModeContext } from 'src/context/read-mode';
 import { documentToHash } from 'src/hooks/useDocumentDrives';
@@ -110,9 +109,18 @@ const fileNodeDocumentAtom = atom(
     },
 );
 
-const selectedDocumentAtom = selectAtom(
-    fileNodeDocumentAtom,
-    fileNode => fileNode?.document,
+const selectedDocumentAtom = atom(
+    get => get(fileNodeDocumentAtom)?.document,
+    (get, set, document: Document | undefined) => {
+        const fileNodeDocument = get(fileNodeDocumentAtom);
+        if (!fileNodeDocument) {
+            throw new Error('fileNodeDocument is undefined');
+        } else if (!document) {
+            set(fileNodeDocumentAtom, undefined);
+        } else {
+            set(fileNodeDocumentAtom, { ...fileNodeDocument, document });
+        }
+    },
 );
 
 export function useFileNodeDocument(
@@ -137,19 +145,8 @@ export function useFileNodeDocument(
     const documentType =
         kind === 'FILE' ? selectedNode?.documentType : undefined;
 
-    const selectedDocument = useAtomValue(selectedDocumentAtom);
-    const setSelectedDocument = useMemo(() => {
-        function setSelectedDocument(document: Document | undefined) {
-            if (!document) {
-                setFileNodeDocument(undefined);
-            } else if (fileNodeDocument) {
-                setFileNodeDocument({ ...fileNodeDocument, document });
-            } else {
-                throw new Error('fileNodeDocument is undefined');
-            }
-        }
-        return setSelectedDocument;
-    }, [fileNodeDocument, setFileNodeDocument]);
+    const [selectedDocument, setSelectedDocument] =
+        useAtom(selectedDocumentAtom);
 
     const fetchDocument = useCallback(
         async (driveId: string, id: string, documentType: string) => {
@@ -187,56 +184,39 @@ export function useFileNodeDocument(
                 status: 'LOADING',
             });
 
-            // if the selected file node didn't change then does nothing
-            if (!changed) {
-                return;
-            }
-            fetchDocument(driveId, documentId, documentType)
-                .then(document =>
-                    setFileNodeDocument(
-                        document
-                            ? {
-                                  driveId,
-                                  documentId,
-                                  documentType,
-                                  document,
-                                  status: 'LOADED',
-                              }
-                            : {
-                                  driveId,
-                                  documentId,
-                                  documentType,
-                                  document,
-                                  status: 'ERROR',
-                              },
-                    ),
-                )
-                .catch(error => {
-                    logger.error(error);
-                    setFileNodeDocument({
-                        driveId,
-                        documentId,
-                        documentType,
-                        document: undefined,
-                        status: 'ERROR',
+            // if the selected file node changed then fetches the new document
+            if (changed) {
+                fetchDocument(driveId, documentId, documentType)
+                    .then(document =>
+                        setFileNodeDocument(
+                            document
+                                ? {
+                                      driveId,
+                                      documentId,
+                                      documentType,
+                                      document,
+                                      status: 'LOADED',
+                                  }
+                                : {
+                                      driveId,
+                                      documentId,
+                                      documentType,
+                                      document,
+                                      status: 'ERROR',
+                                  },
+                        ),
+                    )
+                    .catch(error => {
+                        logger.error(error);
+                        setFileNodeDocument({
+                            driveId,
+                            documentId,
+                            documentType,
+                            document: undefined,
+                            status: 'ERROR',
+                        });
                     });
-                });
-
-            // watches for strand updates to update the document
-            const handler = onStrandUpdate(strand => {
-                if (
-                    strand.driveId === driveId &&
-                    strand.documentId === documentId
-                ) {
-                    fetchDocument(driveId, documentId, documentType)
-                        .then(setSelectedDocument)
-                        .catch(logger.error);
-                }
-            });
-
-            return () => {
-                handler();
-            };
+            }
         }
     }, [
         selectedNode,
@@ -245,8 +225,41 @@ export function useFileNodeDocument(
         driveId,
         fetchDocument,
         fileNodeDocument,
-        onStrandUpdate,
         setFileNodeDocument,
+    ]);
+
+    useEffect(() => {
+        if (
+            !fileNodeDocument?.driveId ||
+            !fileNodeDocument.documentId ||
+            !fileNodeDocument.documentType
+        ) {
+            return;
+        }
+
+        // watches for strand updates to update the document
+        const removeListener = onStrandUpdate(strand => {
+            if (
+                strand.driveId === fileNodeDocument.driveId &&
+                strand.documentId === fileNodeDocument.documentId
+            ) {
+                fetchDocument(
+                    fileNodeDocument.driveId,
+                    fileNodeDocument.documentId,
+                    fileNodeDocument.documentType,
+                )
+                    .then(setSelectedDocument)
+                    .catch(logger.error);
+            }
+        });
+
+        return removeListener;
+    }, [
+        fileNodeDocument?.driveId,
+        fileNodeDocument?.documentId,
+        fileNodeDocument?.documentType,
+        onStrandUpdate,
+        fetchDocument,
         setSelectedDocument,
     ]);
 
