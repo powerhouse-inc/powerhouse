@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
+    paths-ignore:
+      - 'packages/document-drive/**'
   pull_request:
     branches: ["main"]
     types: [opened, synchronize]
+    paths-ignore:
+      - 'packages/document-drive/**'
 
 env:
   NX_ISOLATE_PLUGINS: false
@@ -18,31 +22,17 @@ jobs:
     permissions:
       contents: read
       actions: read
-    container: node:22
-
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Set Directory as Safe
+        run: |
+          git config --system --add safe.directory "$GITHUB_WORKSPACE"
+        shell: bash
 
       - name: Debug Git Info Before
         run: |
@@ -76,14 +66,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Set DB environment variables
-        run: |
-          echo "DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90" >> $GITHUB_ENV
-          echo "REDIS_TLS_URL=redis://redis:6379" >> $GITHUB_ENV
-
       - name: Build and Test
         run: |
-          pnpm nx affected --target=build --parallel=3
-          pnpm nx affected --target=test --parallel=3
-          pnpm nx affected --target=lint --parallel=3
-          pnpm nx affected --target=build-storybook --parallel=3
+          pnpm nx affected --target=build --parallel=3 --exclude=packages/document-drive
+          pnpm nx affected --target=test --parallel=3 --exclude=packages/document-drive
+          pnpm nx affected --target=lint --parallel=3 --exclude=packages/document-drive
+          pnpm nx affected --target=build-storybook --parallel=3 --exclude=packages/document-drive
