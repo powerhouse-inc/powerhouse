@@ -1,3 +1,10 @@
+# [1.0.0-dev.173](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.172...v1.0.0-dev.173) (2024-11-29)
+
+
+### Bug Fixes
+
+* updates editor when opened document receives a new strand ([a5a429f](https://github.com/powerhouse-inc/document-model-electron/commit/a5a429fb2f696b72b1a96262d064685ddee9cef0))
+
 # [1.0.0-dev.172](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.171...v1.0.0-dev.172) (2024-11-22)
 
 
