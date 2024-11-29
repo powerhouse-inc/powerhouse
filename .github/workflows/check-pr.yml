@@ -10,8 +10,6 @@ on:
 
 env:
   NX_ISOLATE_PLUGINS: false
-  DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90
-  REDIS_TLS_URL: redis://redis:6379
 
 jobs:
   verify:
@@ -19,8 +17,26 @@ jobs:
     runs-on: ubuntu-latest
     container: node:22
 
+    # First determine if document-drive is affected
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for document-drive changes
+        id: check-changes
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^packages/document-drive/"; then
+            echo "document_drive_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "document_drive_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+    # Conditionally include services
     services:
       postgres:
+        if: steps.check-changes.outputs.document_drive_changed == 'true'
         image: postgres
         env:
           POSTGRES_PASSWORD: postgres
@@ -30,6 +46,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
+        if: steps.check-changes.outputs.document_drive_changed == 'true'
         image: redis
         options: >-
           --health-cmd "redis-cli ping"
@@ -38,11 +55,6 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -58,9 +70,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # Set environment variables only if document-drive is affected
+      - name: Set DB environment variables
+        if: steps.check-changes.outputs.document_drive_changed == 'true'
+        run: |
+          echo "DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90" >> $GITHUB_ENV
+          echo "REDIS_TLS_URL=redis://redis:6379" >> $GITHUB_ENV
+
       # Special setup for document-drive
       - name: Setup Prisma
-        if: ${{ contains(fromJSON(steps.changes.outputs.all), 'packages/document-drive') }}
+        if: steps.check-changes.outputs.document_drive_changed == 'true'
         run: |
           pnpm prisma generate
           pnpm prisma db push
