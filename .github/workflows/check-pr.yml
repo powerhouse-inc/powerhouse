@@ -41,15 +41,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for document-drive changes
-        id: check-changes
-        run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^packages/document-drive/"; then
-            echo "document_drive_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "document_drive_changed=false" >> $GITHUB_OUTPUT
-          fi
-
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -66,33 +57,13 @@ jobs:
         run: pnpm install
 
       - name: Set DB environment variables
-        if: steps.check-changes.outputs.document_drive_changed == 'true'
         run: |
           echo "DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90" >> $GITHUB_ENV
           echo "REDIS_TLS_URL=redis://redis:6379" >> $GITHUB_ENV
 
-      - name: Setup Prisma
-        if: steps.check-changes.outputs.document_drive_changed == 'true'
+      - name: Build and Test
         run: |
-          pnpm prisma generate
-          pnpm prisma db push
-        working-directory: packages/document-drive
-
-      - name: Build and Generate
-        run: |
-          echo "Building affected packages..."
           pnpm nx affected --target=build --parallel=3
-          
-          echo "Running generate on affected packages..."
-          pnpm nx affected --target=generate --parallel=3
-
-      - name: Run Other Checks
-        run: |
-          echo "Running lint on affected packages..."
-          pnpm nx affected --target=lint --parallel=3
-          
-          echo "Running tests on affected packages..."
           pnpm nx affected --target=test --parallel=3
-          
-          echo "Building Storybook for affected packages..."
+          pnpm nx affected --target=lint --parallel=3
           pnpm nx affected --target=build-storybook --parallel=3
