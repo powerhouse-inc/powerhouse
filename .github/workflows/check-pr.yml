@@ -62,5 +62,5 @@ jobs:
       - name: Test and Lint
         run: |
           pnpm nx affected --target=lint --parallel=3
-          # pnpm nx affected --target=test --parallel=3
+          pnpm nx affected --target=test --parallel=3
           pnpm nx affected --target=build-storybook --parallel=3
