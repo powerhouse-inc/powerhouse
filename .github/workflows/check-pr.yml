@@ -2,11 +2,8 @@ name: Check PR
 
 on:
   push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
+    types: [opened]
 
 env:
   NX_ISOLATE_PLUGINS: false
