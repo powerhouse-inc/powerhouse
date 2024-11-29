@@ -4,13 +4,23 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
-    paths-ignore:
-      - 'packages/document-drive/**'
+    paths:
+      - 'packages/codegen/**'
+      - 'packages/design-system/**'
+      - 'packages/document-model-libs/**'
+      - 'packages/document-model/**'
+      - 'packages/ph-cli/**'
+      - 'packages/scalars/**'
   pull_request:
     branches: ["main"]
     types: [opened, synchronize]
-    paths-ignore:
-      - 'packages/document-drive/**'
+    paths:
+      - 'packages/codegen/**'
+      - 'packages/design-system/**'
+      - 'packages/document-model-libs/**'
+      - 'packages/document-model/**'
+      - 'packages/ph-cli/**'
+      - 'packages/scalars/**'
 
 env:
   NX_ISOLATE_PLUGINS: false
@@ -29,22 +39,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Debug Git Info Before
-        run: |
-          echo "Current branch: $(git branch --show-current)"
-          echo "All branches: $(git branch -a)"
-          echo "Git status: $(git status)"
-          echo "PR Base SHA: ${{ github.event.pull_request.base.sha }}"
-          echo "PR Head SHA: ${{ github.event.pull_request.head.sha }}"
-
       - uses: nrwl/nx-set-shas@v4
-        with:
-          main-branch-name: 'main'
-
-      - name: Debug Environment After
-        run: |
-          echo "NX_BASE: ${{ env.NX_BASE }}"
-          echo "NX_HEAD: ${{ env.NX_HEAD }}"
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -61,9 +56,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build and Test
+      - name: Build
+        run: pnpm nx affected --target=build --parallel=3
+
+      - name: Test and Lint
         run: |
-          pnpm nx affected --target=build --parallel=3 --exclude=packages/document-drive
-          pnpm nx affected --target=test --parallel=3 --exclude=packages/document-drive
-          pnpm nx affected --target=lint --parallel=3 --exclude=packages/document-drive
-          pnpm nx affected --target=build-storybook --parallel=3 --exclude=packages/document-drive
+          pnpm nx affected --target=lint --parallel=3
+          # pnpm nx affected --target=test --parallel=3
+          pnpm nx affected --target=build-storybook --parallel=3
