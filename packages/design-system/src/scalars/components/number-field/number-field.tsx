@@ -27,7 +27,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       description,
       value,
       defaultValue,
-      onChange = () => {},
+      onChange,
       errors,
       warnings,
       className,
@@ -83,7 +83,30 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         newValue = minValue;
       }
 
-      onChange(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
+      const inputElement = {
+        name,
+        value: String(newValue),
+      } as HTMLInputElement;
+
+      // Create the event for calling onChange
+      const changeEvent: React.ChangeEvent<HTMLInputElement> = {
+        target: inputElement,
+        currentTarget: inputElement,
+        bubbles: true,
+        cancelable: true,
+        defaultPrevented: false,
+        eventPhase: 0,
+        isTrusted: false,
+        nativeEvent: new Event("input"),
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        persist: () => {},
+        isDefaultPrevented: () => false,
+        isPropagationStopped: () => false,
+        timeStamp: Date.now(),
+        type: "input",
+      };
+      onChange?.(changeEvent);
     };
     return (
       <FormGroup>
