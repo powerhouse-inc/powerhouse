@@ -44,7 +44,22 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Debug Git Info Before
+        run: |
+          echo "Current branch: $(git branch --show-current)"
+          echo "All branches: $(git branch -a)"
+          echo "Git status: $(git status)"
+          echo "PR Base SHA: ${{ github.event.pull_request.base.sha }}"
+          echo "PR Head SHA: ${{ github.event.pull_request.head.sha }}"
+
       - uses: nrwl/nx-set-shas@v4
+        with:
+          main-branch-name: 'main'
+
+      - name: Debug Environment After
+        run: |
+          echo "NX_BASE: ${{ env.NX_BASE }}"
+          echo "NX_HEAD: ${{ env.NX_HEAD }}"
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
