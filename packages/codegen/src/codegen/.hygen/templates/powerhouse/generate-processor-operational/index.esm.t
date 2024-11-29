@@ -6,5 +6,6 @@ import { transmit } from "./transmit";
 import { resolvers } from "./resolvers";
 import { typeDefs } from "./graphql-definitions";
 import { options } from "./options";
+import * as dbSchema from "./db-schema";
 
-export { options, resolvers, transmit, typeDefs };
+export { options, resolvers, transmit, typeDefs, dbSchema };
