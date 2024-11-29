@@ -41,6 +41,8 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: nrwl/nx-set-shas@v4
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -63,7 +65,7 @@ jobs:
 
       - name: Build and Test
         run: |
-          pnpm nx affected --base=${{ github.event.pull_request.base.sha }} --head=${{ github.event.pull_request.head.sha }} --target=build --parallel=3
-          pnpm nx affected --base=${{ github.event.pull_request.base.sha }} --head=${{ github.event.pull_request.head.sha }} --target=test --parallel=3
-          pnpm nx affected --base=${{ github.event.pull_request.base.sha }} --head=${{ github.event.pull_request.head.sha }} --target=lint --parallel=3
-          pnpm nx affected --base=${{ github.event.pull_request.base.sha }} --head=${{ github.event.pull_request.head.sha }} --target=build-storybook --parallel=3
+          pnpm nx affected --target=build --parallel=3
+          pnpm nx affected --target=test --parallel=3
+          pnpm nx affected --target=lint --parallel=3
+          pnpm nx affected --target=build-storybook --parallel=3
