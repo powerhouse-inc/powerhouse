@@ -1,32 +1,81 @@
-name: Check PR Monorepo Build
+name: Check PR
 
 on:
-  workflow_dispatch:
   push:
-    branches: ["main"]
   pull_request:
-    branches: ["main"]
-    types: [opened, synchronize]
 
 env:
   NX_ISOLATE_PLUGINS: false
+  DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90
+  REDIS_TLS_URL: redis://redis:6379
 
 jobs:
-  build:
-    name: Build Monorepo
+  verify:
+    name: Verify
     runs-on: ubuntu-latest
     container: node:22
 
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
 
       - name: Install PNPM
         uses: pnpm/action-setup@v4
         with:
-          run_install: false
+          version: 9
+          run_install: true
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      # Special setup for document-drive
+      - name: Setup Prisma
+        if: ${{ contains(fromJSON(steps.changes.outputs.all), 'packages/document-drive') }}
+        run: |
+          pnpm prisma generate
+          pnpm prisma db push
+        working-directory: packages/document-drive
 
-      - name: Build Monorepo
-        run: npx nx run-many --target=build --all --skip-nx-cache
+      # First: Build and Generate
+      - name: Build and Generate
+        run: |
+          echo "Building affected packages..."
+          pnpm nx affected --target=build --parallel=3
+          
+          echo "Running generate on affected packages..."
+          pnpm nx affected --target=generate --parallel=3
+
+      # Then: Other checks that depend on build
+      - name: Run Other Checks
+        run: |
+          echo "Running lint on affected packages..."
+          pnpm nx affected --target=lint --parallel=3
+          
+          echo "Running tests on affected packages..."
+          pnpm nx affected --target=test --parallel=3
+          
+          echo "Building Storybook for affected packages..."
+          pnpm nx affected --target=build-storybook --parallel=3
