@@ -64,6 +64,5 @@
     "jackspeak": "2.1.1",
     "graphql": "^16.8.1",
     "whatwg-url": "^14.0.0"
-  },
-  "packageManager": "pnpm@8.15.9+sha256.daa27a0b541bc635323ff96c2ded995467ff9fe6d69ff67021558aa9ad9dcc36"
+  }
 }

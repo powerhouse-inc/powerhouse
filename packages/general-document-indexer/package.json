@@ -13,10 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "document-drive": "^1.4.6",
-    "document-model": "^2.7.1",
-    "document-model-libs": "^1.116.0",
-    "@powerhousedao/scalars": "^1.9.0",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1"
   },

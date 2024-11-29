@@ -42,13 +42,13 @@
     "@types/node": "^20.11.2",
     "arg": "^5.0.2",
     "change-case": "^4.1.2",
-    "document-model": "^2.7.1",
+    "document-model": "workspace:*",
     "enquirer": "^2.4.1",
     "execa": "^8.0.1",
     "hygen": "^6.2.11"
   },
   "devDependencies": {
-    "@powerhousedao/scalars": "1.9.0",
+    "@powerhousedao/scalars": "workspace:*",
     "copyfiles": "^2.4.1",
     "esbuild-fix-imports-plugin": "^1.0.6",
     "graphql": "^16.8.1",
@@ -58,7 +58,7 @@
     "tsx": "^4.19.1"
   },
   "peerDependencies": {
-    "@powerhousedao/scalars": "latest",
+    "@powerhousedao/scalars": "workspace:*",
     "graphql": "^16.8.1"
   }
 }
