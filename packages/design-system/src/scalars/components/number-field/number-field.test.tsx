@@ -114,8 +114,9 @@ describe("NumberField Component", () => {
 
     expect(input).toHaveValue(5);
   });
-  // Test for the steps prop
-  it("should increment value when increment button is clicked", async () => {
+
+  // Test for step
+  it("should increment the value when increment arrow button is clicked", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <NumberField
@@ -127,18 +128,19 @@ describe("NumberField Component", () => {
       />,
     );
 
-    const incrementButton = screen.getAllByRole("button")[0];
-    await user.click(incrementButton);
+    const decrementButton = screen.getAllByRole("button")[0];
+    await user.click(decrementButton);
 
-    // Validar con un evento que contenga el valor esperado
-    expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: {
-          value: "6",
-          name: "Label",
-        },
-      } as { target: { value: string } }),
-    );
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
+
+    const eventArg = mockOnChange.mock
+      .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
+
+    expect(eventArg).toBeInstanceOf(Event);
+
+    expect(eventArg.target).toMatchObject({
+      value: 6,
+    });
   });
 
   it("should decrement value when decrement button is clicked", async () => {
@@ -147,26 +149,23 @@ describe("NumberField Component", () => {
       <NumberField
         label="Test Label"
         name="Label"
-        value={5}
-        step={1}
+        value={10}
+        step={2}
         onChange={mockOnChange}
       />,
     );
 
     const decrementButton = screen.getAllByRole("button")[1];
     await user.click(decrementButton);
+    const eventArg = mockOnChange.mock
+      .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
 
-    expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: {
-          value: "4",
-          name: "Label",
-        },
-      } as { target: { value: string } }),
-    );
+    expect(eventArg.target).toMatchObject({
+      value: 8,
+    });
   });
 
-  it("should not exceed maxValue when increment button is clicked", async () => {
+  it("should not exceed maxValue when increment button is clicked, and should not invoke onChange if the value does not change", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <NumberField
@@ -182,24 +181,35 @@ describe("NumberField Component", () => {
     const incrementButton = screen.getAllByRole("button")[0];
     await user.click(incrementButton);
 
-    expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: {
-          value: "10",
-          name: "Label",
-        },
-      } as { target: { value: string } }),
-    );
+    expect(mockOnChange).not.toHaveBeenCalled();
   });
 
-  it("should not go below minValue when decrement button is clicked", async () => {
+  it("should not go up of  maxValue when increment button is clicked and should not invoke onChange if the value does not change", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <NumberField
         label="Test Label"
         name="Label"
-        value={0}
-        minValue={0}
+        value={30}
+        maxValue={30}
+        step={1}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const decrementButton = screen.getAllByRole("button")[0];
+    await user.click(decrementButton);
+
+    expect(mockOnChange).not.toHaveBeenCalled();
+  });
+  it("should not go below minValue when decrement button is clicked and should not invoke onChange if the value does not change", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <NumberField
+        label="Test Label"
+        name="Label"
+        value={1}
+        minValue={1}
         step={1}
         onChange={mockOnChange}
       />,
@@ -208,13 +218,6 @@ describe("NumberField Component", () => {
     const decrementButton = screen.getAllByRole("button")[1];
     await user.click(decrementButton);
 
-    expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: {
-          value: "0",
-          name: "Label",
-        },
-      } as { target: { value: string } }),
-    );
+    expect(mockOnChange).not.toHaveBeenCalled();
   });
 });

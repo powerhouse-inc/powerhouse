@@ -34,7 +34,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       id: propId,
       minValue,
       maxValue,
-      step,
+      step = 1,
       pattern,
       isBigInt = false,
       trailingZeros = false,
@@ -49,6 +49,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints,
     // Otherwise sets to "number" for standard numeric input.
     const inputType = isBigInt ? "text" : "number";
+    const showSteps = step !== 0 && inputType !== "text";
 
     // Prevent to write invalid characters
     const blockInvalidChar = (e: React.KeyboardEvent<HTMLInputElement>) =>
@@ -68,46 +69,43 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       trailingZeros,
       precision,
     );
+
     const handleChange = (
       e: React.MouseEvent<HTMLButtonElement>,
       operation: "increment" | "decrement",
     ) => {
       e.preventDefault();
-      const currentValue = Number(displayValue || defaultValue || 0);
+      const currentValue = Number(displayValue ?? defaultValue ?? 0);
+
       const adjustment = (operation === "increment" ? 1 : -1) * (step || 1);
-      let newValue = currentValue + adjustment;
+      const newValue = currentValue + adjustment;
 
-      if (maxValue !== undefined && newValue > maxValue) {
-        newValue = maxValue;
-      } else if (minValue !== undefined && newValue < minValue) {
-        newValue = minValue;
+      if (
+        (maxValue !== undefined && newValue > maxValue) ||
+        (minValue !== undefined && newValue < minValue)
+      ) {
+        return;
       }
-
-      const inputElement = {
-        name,
-        value: String(newValue),
-      } as HTMLInputElement;
-
-      // Create the event for calling onChange
-      const changeEvent: React.ChangeEvent<HTMLInputElement> = {
-        target: inputElement,
-        currentTarget: inputElement,
+      if (newValue === currentValue) {
+        return;
+      }
+      const nativeEvent = new Event("input", {
         bubbles: true,
         cancelable: true,
-        defaultPrevented: false,
-        eventPhase: 0,
-        isTrusted: false,
-        nativeEvent: new Event("input"),
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        persist: () => {},
-        isDefaultPrevented: () => false,
-        isPropagationStopped: () => false,
-        timeStamp: Date.now(),
-        type: "input",
-      };
-      onChange?.(changeEvent);
+      });
+
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: newValue },
+        writable: false,
+      });
+
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     };
+    // Determinar si los botones de incremento y decremento deben estar deshabilitados
+    const isIncrementDisabled =
+      maxValue !== undefined && Number(displayValue) >= maxValue;
+    const isDecrementDisabled =
+      minValue !== undefined && Number(displayValue) <= minValue;
     return (
       <FormGroup>
         {label && (
@@ -137,31 +135,36 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             value={displayValue}
             defaultValue={defaultValue}
             onChange={onChange}
-            step={step}
             onPaste={blockInvalidPaste}
             ref={ref}
             {...props}
           />
-          {step && (
+          {showSteps && (
             <div className="absolute inset-y-2 right-3 flex flex-col justify-center">
               <button
+                disabled={isDecrementDisabled}
                 type="button"
                 onClick={(e) => handleChange(e, "increment")}
               >
                 <Icon
                   size={10}
                   name="ChevronDown"
-                  className={cn("rotate-180 text-gray-700")}
+                  className={cn("rotate-180 text-gray-700", {
+                    "cursor-not-allowed": isDecrementDisabled,
+                  })}
                 />
               </button>
               <button
+                disabled={isDecrementDisabled}
                 type="button"
                 onClick={(e) => handleChange(e, "decrement")}
               >
                 <Icon
                   size={10}
                   name="ChevronDown"
-                  className={cn(" items-center justify-center text-gray-700")}
+                  className={cn(" items-center justify-center text-gray-700", {
+                    "cursor-not-allowed": isDecrementDisabled,
+                  })}
                 />
               </button>
             </div>
