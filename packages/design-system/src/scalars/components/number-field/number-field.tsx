@@ -89,7 +89,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       if (newValue === currentValue) {
         return;
       }
-      const nativeEvent = new Event("input", {
+      const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
@@ -142,16 +142,17 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           {showSteps && (
             <div className="absolute inset-y-2 right-3 flex flex-col justify-center">
               <button
-                disabled={isDecrementDisabled}
+                disabled={isIncrementDisabled}
                 type="button"
                 onClick={(e) => handleChange(e, "increment")}
               >
                 <Icon
                   size={10}
                   name="ChevronDown"
-                  className={cn("rotate-180 text-gray-700", {
-                    "cursor-not-allowed": isDecrementDisabled,
-                  })}
+                  className={cn(
+                    "rotate-180 text-gray-700",
+                    isIncrementDisabled && "cursor-not-allowed",
+                  )}
                 />
               </button>
               <button
@@ -162,9 +163,10 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                 <Icon
                   size={10}
                   name="ChevronDown"
-                  className={cn(" items-center justify-center text-gray-700", {
-                    "cursor-not-allowed": isDecrementDisabled,
-                  })}
+                  className={cn(
+                    " items-center justify-center text-gray-700",
+                    isDecrementDisabled && "cursor-not-allowed",
+                  )}
                 />
               </button>
             </div>
