@@ -26,11 +26,13 @@ export const FormLabel: React.FC<FormLabelProps> = ({
 }) => {
   const classes = cn(
     "inline-flex items-center text-sm font-medium leading-[22px]",
-    "text-gray-900 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50",
+    "text-gray-900  dark:text-gray-400 ",
     hasError &&
-      "text-red-700 group-hover:text-red-900 dark:text-red-700 dark:group-hover:text-red-900",
-    disabled && "cursor-not-allowed text-gray-600 dark:text-gray-600",
-    !inline && "mb-[3px]",
+      "text-red-800 group-hover:!text-red-900 dark:text-red-800 dark:group-hover:!text-red-900",
+    disabled && "cursor-not-allowed text-gray-700 dark:text-gray-600",
+    inline
+      ? !disabled && "group-hover:text-gray-900 dark:group-hover:text-slate-50"
+      : "mb-[3px]",
     className,
   );
 
