@@ -84,6 +84,14 @@ export default tseslint.config(
   ...tailwind.configs["flat/recommended"],
   eslintPluginPrettierRecommended,
   {
+    rules: {
+      "prettier/prettier": [
+        "error",
+        {
+          endOfLine: "auto",
+        },
+      ],
+    },
     ignores: [
       "node_modules/",
       "dist/",
