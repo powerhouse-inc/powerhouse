@@ -6,9 +6,10 @@ import { FormGroup } from "../fragments/form-group";
 import { InputNumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
-import { getDisplayValue, regex } from "@/scalars/utils/utils";
 import { withFieldValidation } from "../fragments/with-field-validation";
 import { validateIsBigInt, validatePositive } from "./number-field-validations";
+import { Icon } from "@/powerhouse/components/icon";
+import { getDisplayValue, regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
   className?: string;
@@ -33,7 +34,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       id: propId,
       minValue,
       maxValue,
-      step,
+      step = 1,
       pattern,
       isBigInt = false,
       trailingZeros = false,
@@ -45,8 +46,10 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     const generatedId = useId();
     const id = propId ?? generatedId;
 
-    // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints, otherwise sets to "number" for standard numeric input.
+    // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints,
+    // Otherwise sets to "number" for standard numeric input.
     const inputType = isBigInt ? "text" : "number";
+    const showSteps = step !== 0 && inputType !== "text";
 
     // Prevent to write invalid characters
     const blockInvalidChar = (e: React.KeyboardEvent<HTMLInputElement>) =>
@@ -67,6 +70,42 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       precision,
     );
 
+    const handleChange = (
+      e: React.MouseEvent<HTMLButtonElement>,
+      operation: "increment" | "decrement",
+    ) => {
+      e.preventDefault();
+      const currentValue = Number(displayValue ?? defaultValue ?? 0);
+
+      const adjustment = (operation === "increment" ? 1 : -1) * (step || 1);
+      const newValue = currentValue + adjustment;
+
+      if (
+        (maxValue !== undefined && newValue > maxValue) ||
+        (minValue !== undefined && newValue < minValue)
+      ) {
+        return;
+      }
+      if (newValue === currentValue) {
+        return;
+      }
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: newValue },
+        writable: false,
+      });
+
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+    };
+    // Determinar si los botones de incremento y decremento deben estar deshabilitados
+    const isIncrementDisabled =
+      maxValue !== undefined && Number(displayValue) >= maxValue;
+    const isDecrementDisabled =
+      minValue !== undefined && Number(displayValue) <= minValue;
     return (
       <FormGroup>
         {label && (
@@ -80,30 +119,59 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             {label}
           </FormLabel>
         )}
-        <Input
-          id={id}
-          name={name}
-          className={cn(
-            // Allow the arrows step
-            step && "show-arrows",
-            className,
+        <div className="relative flex items-center">
+          <Input
+            id={id}
+            name={name}
+            className={className}
+            pattern={isBigInt ? regex.toString() : pattern?.toString()}
+            type={inputType}
+            min={minValue}
+            max={maxValue}
+            aria-valuemin={minValue}
+            aria-valuemax={maxValue}
+            aria-invalid={!!errors?.length}
+            onKeyDown={blockInvalidChar}
+            value={displayValue}
+            defaultValue={defaultValue}
+            onChange={onChange}
+            onPaste={blockInvalidPaste}
+            ref={ref}
+            {...props}
+          />
+          {showSteps && (
+            <div className="absolute inset-y-2 right-3 flex flex-col justify-center">
+              <button
+                disabled={isIncrementDisabled}
+                type="button"
+                onClick={(e) => handleChange(e, "increment")}
+              >
+                <Icon
+                  size={10}
+                  name="ChevronDown"
+                  className={cn(
+                    "rotate-180 text-gray-700",
+                    isIncrementDisabled && "cursor-not-allowed",
+                  )}
+                />
+              </button>
+              <button
+                disabled={isDecrementDisabled}
+                type="button"
+                onClick={(e) => handleChange(e, "decrement")}
+              >
+                <Icon
+                  size={10}
+                  name="ChevronDown"
+                  className={cn(
+                    " items-center justify-center text-gray-700",
+                    isDecrementDisabled && "cursor-not-allowed",
+                  )}
+                />
+              </button>
+            </div>
           )}
-          pattern={isBigInt ? regex.toString() : pattern?.toString()}
-          type={inputType}
-          min={minValue}
-          max={maxValue}
-          aria-valuemin={minValue}
-          aria-valuemax={maxValue}
-          aria-invalid={!!errors?.length}
-          onKeyDown={blockInvalidChar}
-          value={displayValue}
-          step={step}
-          defaultValue={defaultValue}
-          onChange={onChange}
-          onPaste={blockInvalidPaste}
-          ref={ref}
-          {...props}
-        />
+        </div>
         {description && <FormDescription>{description}</FormDescription>}
         {warnings && <FormMessageList messages={warnings} type="warning" />}
         {errors && <FormMessageList messages={errors} type="error" />}

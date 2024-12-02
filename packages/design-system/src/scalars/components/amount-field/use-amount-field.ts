@@ -1,5 +1,5 @@
-import { getLabelValueCurrenct } from "@/scalars/utils/utils";
 import { AmountCurrency, AmountFieldPropsGeneric, AmountValue } from "./types";
+import { getLabelValueCurrenct } from "./utils";
 
 interface UseAmountFieldProps {
   value?: AmountValue;

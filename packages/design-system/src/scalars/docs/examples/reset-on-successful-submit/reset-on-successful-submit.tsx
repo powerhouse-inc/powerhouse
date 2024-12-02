@@ -19,7 +19,6 @@ const FormWithResetOnSuccessfulSubmit = () => {
           placeholder="Type something"
           label="Field example"
           required
-          autoFocus
         />
         <NumberField name="number" label="Number" required />
 

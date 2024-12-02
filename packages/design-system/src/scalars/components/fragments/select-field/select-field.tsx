@@ -130,7 +130,7 @@ export const SelectFieldRaw = React.forwardRef<
                 "dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                 "dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0",
                 disabled && [
-                  "cursor-not-allowed !pointer-events-auto",
+                  "!pointer-events-auto cursor-not-allowed",
                   "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900 hover:border-gray-300 hover:bg-white",
                 ],
                 className,

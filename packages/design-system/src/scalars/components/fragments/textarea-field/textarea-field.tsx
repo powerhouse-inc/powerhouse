@@ -46,9 +46,9 @@ const textareaBaseStyles = cn(
 const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
     {
-      autoComplete = false,
-      autoExpand = false,
-      multiline = true,
+      autoComplete,
+      autoExpand,
+      multiline,
       className,
       defaultValue,
       description,
@@ -99,7 +99,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       // Prevent line breaks if multiline is false
       let newValue = e.target.value;
-      if (!multiline) {
+      if (multiline === false) {
         newValue = newValue.replace(/\n/g, "");
       }
 
@@ -124,7 +124,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Prevent Enter key if multiline is false
-      if (!multiline && e.key === "Enter") {
+      if (multiline === false && e.key === "Enter") {
         e.preventDefault();
       }
 
@@ -199,7 +199,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             defaultValue={defaultValue}
             minLength={minLength}
             placeholder={placeholder}
-            rows={rows}
+            rows={multiline === false ? 1 : rows}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             {...props}

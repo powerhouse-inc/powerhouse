@@ -100,6 +100,7 @@ export const Default: Story = {
     label: "Label",
     placeholder: "0",
     showErrorOnBlur: true,
+    step: 0,
   },
 };
 export const Active: Story = {
@@ -107,6 +108,7 @@ export const Active: Story = {
     name: "Label",
     label: "Label",
     autoFocus: true,
+    step: 0,
   },
   parameters: {
     pseudo: { focus: true },
@@ -118,6 +120,7 @@ export const Disable: Story = {
     label: "Label",
     value: 1234,
     disabled: true,
+    step: 0,
   },
 };
 export const Required: Story = {
@@ -126,6 +129,7 @@ export const Required: Story = {
     label: "Label",
     value: 345,
     required: true,
+    step: 0,
   },
 };
 export const WithWarning: Story = {
@@ -133,6 +137,7 @@ export const WithWarning: Story = {
     name: "Label",
     label: "Label",
     value: 23,
+    step: 0,
     warnings: ["Warning message"],
   },
 };
@@ -141,6 +146,7 @@ export const WithError: Story = {
     name: "Label",
     label: "Label",
     value: 23,
+    step: 0,
     errors: ["Error message"],
   },
 };
@@ -149,6 +155,7 @@ export const WithMultipleErrors: Story = {
     name: "Label",
     label: "Label",
     value: 23,
+    step: 0,
     errors: [
       "Error message number 1",
       "Error message number 2",
@@ -160,6 +167,7 @@ export const WithMultipleErrors: Story = {
 
 export const WithValue: Story = {
   args: {
+    step: 0,
     name: "Label",
     label: "Label",
     value: 23,
@@ -168,6 +176,7 @@ export const WithValue: Story = {
 
 export const WithDescription: Story = {
   args: {
+    step: 0,
     name: "Label",
     label: "Label",
     value: 0,
@@ -178,10 +187,9 @@ export const WithDescription: Story = {
 // Float Stories
 export const WithFloatNumber: Story = {
   args: {
+    step: 0,
     label: "Label",
     name: "Label",
-    // Allow trailing zeros after the decimal point for clarity in displaying fractional values.
-
     value: 0.0,
     precision: 2,
     trailingZeros: true,
