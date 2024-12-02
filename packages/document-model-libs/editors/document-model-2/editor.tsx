@@ -1,8 +1,7 @@
-import { useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import {
-  getDocumentMetadata,
-  hiddenQueryTypeDefDoc,
-  makeInitialSchemaDoc,
+  compareStringsWithoutWhitespace,
+  initializeModelSchema,
   makeOperationInitialDoc,
   Scope,
 } from ".";
@@ -12,20 +11,12 @@ import {
   DocumentModelLocalState,
   actions,
 } from "document-model/document-model";
-import { EditorProps, OperationScope, utils } from "document-model/document";
-import { DocumentModelEditor } from "./document-model-editor";
-import {
-  renameType,
-  mapSchema,
-  MapperKind,
-  astFromObjectType,
-} from "@graphql-tools/utils";
-import { pascalCase } from "change-case";
-import { buildSchema, isObjectType, print } from "graphql";
-import {
-  MetadataFormValues,
-  ModelMetadataForm,
-} from "./components/model-metadata-form";
+import { EditorProps, utils } from "document-model/document";
+import { ModelMetadata } from "./components/model-metadata-form";
+import { SchemaContextProvider } from "./context/schema-context";
+import { Divider } from "./components/divider";
+import { Modules } from "./components/modules";
+import { StateSchemas } from "./components/state-schemas";
 
 export default function Editor(
   props: EditorProps<
@@ -34,14 +25,14 @@ export default function Editor(
     DocumentModelLocalState
   >,
 ) {
-  const { document, dispatch } = props;
+  const { document, documentNodeName, dispatch } = props;
   const {
     name: modelName,
-    documentType,
+    id: documentType,
     extension,
     description,
-    author,
-  } = useMemo(() => getDocumentMetadata(document), [document]);
+    author: { name: authorName, website: authorWebsite },
+  } = useMemo(() => document.state.global, [document.state.global]);
   const {
     state: {
       global: {
@@ -53,251 +44,361 @@ export default function Editor(
     modules,
   } = useMemo(
     () => document.state.global.specifications[0],
-    [
-      document.state.global.specifications[0].state.global,
-      document.state.global.specifications[0].state.local,
-      document.state.global.specifications[0].modules,
-    ],
+    [document.state.global.specifications[0]],
+  );
+  const operations = useMemo(
+    () => modules.flatMap((module) => module.operations),
+    [modules],
+  );
+  const shouldSetInitialName = useRef(
+    !modelName && !!documentNodeName && operations.length === 0,
   );
 
-  const schema = buildSchema(`
-    ${hiddenQueryTypeDefDoc}
-    ${globalStateSchema}
-    ${localStateSchema}
-    ${modules
-      .flatMap((module) =>
-        module.operations.map((operation) => operation.schema),
-      )
-      .filter(Boolean)
-      .join("\n")}
-  `);
+  useEffect(() => {
+    if (!shouldSetInitialName.current || !documentNodeName) return;
 
-  const setModelId = useCallback((id: string) => {
-    dispatch(actions.setModelId({ id }));
-  }, []);
+    dispatch(actions.setModelName({ name: documentNodeName }));
 
-  const setModuleDescription = useCallback((description: string) => {
-    dispatch(actions.setModelDescription({ description }));
-  }, []);
+    // Initialize schema if it's the first time setting the name
+    initializeModelSchema({
+      modelName: documentNodeName,
+      setStateSchema: (schema: string, scope: Scope) => {
+        dispatch(actions.setStateSchema({ schema, scope }));
+      },
+    });
 
-  const setModelExtension = useCallback((extension: string) => {
-    dispatch(actions.setModelExtension({ extension }));
-  }, []);
+    shouldSetInitialName.current = false;
+  }, [documentNodeName]);
 
-  const setModelName = useCallback((name: string) => {
-    dispatch(actions.setName(name));
-    dispatch(actions.setModelName({ name }));
-  }, []);
+  const operationSchemasSdl = useMemo(
+    () => operations.flatMap((operation) => operation.schema ?? []).join("\n"),
+    [operations],
+  );
 
-  const setAuthorName = useCallback((authorName: string) => {
-    dispatch(actions.setAuthorName({ authorName }));
-  }, []);
-
-  const setAuthorWebsite = useCallback((authorWebsite: string) => {
-    dispatch(actions.setAuthorWebsite({ authorWebsite }));
-  }, []);
-
-  const setStateSchema = useCallback((schema: string, scope: Scope) => {
-    dispatch(actions.setStateSchema({ schema, scope }));
-  }, []);
-
-  const setInitialState = useCallback((initialValue: string, scope: Scope) => {
-    dispatch(actions.setInitialState({ initialValue, scope }));
-  }, []);
-
-  const addModule = useCallback((name: string) => {
-    dispatch(actions.addModule({ id: utils.hashKey(), name }));
-  }, []);
-
-  const updateModuleName = useCallback((id: string, name: string) => {
-    dispatch(actions.setModuleName({ id, name }));
-  }, []);
-
-  const updateModuleDescription = useCallback(
-    (id: string, description: string) => {
-      dispatch(actions.setModuleDescription({ id, description }));
+  const setModelId = useCallback(
+    (id: string) => {
+      if (compareStringsWithoutWhitespace(id, documentType)) return;
+      dispatch(actions.setModelId({ id }));
     },
-    [],
+    [documentType],
   );
 
-  const deleteModule = useCallback((id: string) => {
-    dispatch(actions.deleteModule({ id }));
-  }, []);
+  const setModelDescription = useCallback(
+    (newDescription: string) => {
+      if (compareStringsWithoutWhitespace(newDescription, description)) return;
+      dispatch(actions.setModelDescription({ description: newDescription }));
+    },
+    [description],
+  );
 
-  const addOperation = useCallback(
-    (moduleId: string, name: string): Promise<string> => {
+  const setModelExtension = useCallback(
+    (newExtension: string) => {
+      if (compareStringsWithoutWhitespace(newExtension, extension)) return;
+      dispatch(actions.setModelExtension({ extension: newExtension }));
+    },
+    [extension],
+  );
+
+  const setModelName = useCallback(
+    (newName: string) => {
+      if (compareStringsWithoutWhitespace(newName, modelName)) return;
+      dispatch(actions.setModelName({ name: newName }));
+    },
+    [modelName],
+  );
+
+  const setAuthorName = useCallback(
+    (newAuthorName: string) => {
+      if (compareStringsWithoutWhitespace(newAuthorName, authorName)) return;
+      dispatch(actions.setAuthorName({ authorName: newAuthorName }));
+    },
+    [authorName],
+  );
+
+  const setAuthorWebsite = useCallback(
+    (newAuthorWebsite: string) => {
+      if (
+        compareStringsWithoutWhitespace(newAuthorWebsite, authorWebsite ?? "")
+      )
+        return;
+      dispatch(actions.setAuthorWebsite({ authorWebsite: newAuthorWebsite }));
+    },
+    [authorWebsite],
+  );
+
+  const setStateSchema = useCallback(
+    (newSchema: string, scope: Scope) => {
+      const oldSchema =
+        scope === "global" ? globalStateSchema : localStateSchema;
+      if (compareStringsWithoutWhitespace(newSchema, oldSchema)) return;
+      dispatch(actions.setStateSchema({ schema: newSchema, scope }));
+    },
+    [globalStateSchema, localStateSchema],
+  );
+
+  const setInitialState = useCallback(
+    (newInitialValue: string, scope: Scope) => {
+      const oldInitialValue =
+        scope === "global" ? globalStateInitialValue : localStateInitialValue;
+      if (compareStringsWithoutWhitespace(newInitialValue, oldInitialValue))
+        return;
+      dispatch(
+        actions.setInitialState({ initialValue: newInitialValue, scope }),
+      );
+    },
+    [globalStateInitialValue, localStateInitialValue],
+  );
+
+  const addModule = useCallback(
+    (name: string): Promise<string | undefined> => {
       return new Promise((resolve) => {
-        const id = utils.hashKey();
-        dispatch(actions.addOperation({ id, moduleId, name }));
-        resolve(id);
+        try {
+          if (
+            modules.some((module) =>
+              compareStringsWithoutWhitespace(module.name, name),
+            )
+          ) {
+            resolve(undefined);
+            return;
+          }
+          const id = utils.hashKey();
+          dispatch(actions.addModule({ id, name }));
+          resolve(id);
+        } catch (error) {
+          console.error("Failed to add module:", error);
+          resolve(undefined);
+        }
       });
     },
+    [modules],
+  );
+
+  const updateModuleName = useCallback(
+    (id: string, name: string) => {
+      if (
+        modules.some((module) =>
+          compareStringsWithoutWhitespace(module.name, name),
+        )
+      )
+        return;
+      dispatch(actions.setModuleName({ id, name }));
+    },
+    [modules],
+  );
+
+  const deleteModule = useCallback(
+    (id: string) => dispatch(actions.deleteModule({ id })),
     [],
   );
 
-  const updateOperationName = useCallback((id: string, name: string) => {
-    dispatch(actions.setOperationName({ id, name }));
-  }, []);
+  const addOperation = useCallback(
+    (moduleId: string, name: string): Promise<string | undefined> => {
+      return new Promise((resolve) => {
+        try {
+          const moduleOperationNames =
+            modules
+              .find((module) => module.id === moduleId)
+              ?.operations.map((operation) => operation.name)
+              .filter(Boolean) ?? [];
+          if (
+            moduleOperationNames.some((opName) =>
+              compareStringsWithoutWhitespace(opName, name),
+            )
+          ) {
+            resolve(undefined);
+            return;
+          }
+          const id = utils.hashKey();
+          dispatch(actions.addOperation({ id, moduleId, name }));
+          resolve(id);
+        } catch (error) {
+          console.error("Failed to add operation:", error);
+          resolve(undefined);
+        }
+      });
+    },
+    [modules],
+  );
 
-  const updateOperationSchema = useCallback((id: string, schema: string) => {
-    dispatch(actions.setOperationSchema({ id, schema }));
-  }, []);
+  const updateOperationName = useCallback(
+    (id: string, name: string) => {
+      const operationModule = modules.find((module) =>
+        module.operations.some((operation) => operation.id === id),
+      );
+      const operationNames =
+        operationModule?.operations
+          .map((operation) => operation.name)
+          .filter(Boolean) ?? [];
+      if (
+        operationNames.some((opName) =>
+          compareStringsWithoutWhitespace(opName, name),
+        )
+      )
+        return;
+      dispatch(actions.setOperationName({ id, name }));
+    },
+    [modules],
+  );
+
+  const updateOperationSchema = useCallback(
+    (id: string, newSchema: string) => {
+      const operation = operations.find((operation) => operation.id === id);
+      if (
+        operation?.schema &&
+        compareStringsWithoutWhitespace(newSchema, operation.schema)
+      )
+        return;
+      dispatch(actions.setOperationSchema({ id, schema: newSchema }));
+    },
+    [operations],
+  );
+
+  const setOperationDescription = useCallback(
+    (id: string, newDescription: string) => {
+      const operationDescription =
+        operations.find((operation) => operation.id === id)?.description ?? "";
+      if (compareStringsWithoutWhitespace(operationDescription, newDescription))
+        return;
+      dispatch(
+        actions.setOperationDescription({ id, description: newDescription }),
+      );
+    },
+    [operations],
+  );
+
+  const deleteOperation = useCallback(
+    (id: string) => dispatch(actions.deleteOperation({ id })),
+    [],
+  );
+
+  const addOperationError = useCallback(
+    (operationId: string, errorName: string): Promise<string | undefined> => {
+      return new Promise((resolve) => {
+        try {
+          const operation = operations.find(
+            (operation) => operation.id === operationId,
+          );
+          const operationErrorNames =
+            operation?.errors.map((error) => error.name).filter(Boolean) ?? [];
+          if (
+            operationErrorNames.some((name) =>
+              compareStringsWithoutWhitespace(name, errorName),
+            )
+          ) {
+            resolve(undefined);
+            return;
+          }
+          const id = utils.hashKey();
+          dispatch(actions.addOperationError({ id, operationId, errorName }));
+          resolve(id);
+        } catch (error) {
+          console.error("Failed to add operation error:", error);
+          resolve(undefined);
+        }
+      });
+    },
+    [operations],
+  );
+
+  const deleteOperationError = useCallback(
+    (id: string) => dispatch(actions.deleteOperationError({ id })),
+    [],
+  );
+
+  const setOperationErrorName = useCallback(
+    (operationId: string, errorId: string, errorName: string) => {
+      const operation = operations.find(
+        (operation) => operation.id === operationId,
+      );
+      const operationErrorNames =
+        operation?.errors.map((error) => error.name).filter(Boolean) ?? [];
+      if (
+        operationErrorNames.some((name) =>
+          compareStringsWithoutWhitespace(name, errorName),
+        )
+      )
+        return;
+      dispatch(actions.setOperationErrorName({ id: errorId, errorName }));
+    },
+    [operations],
+  );
 
   const addOperationAndInitialSchema = useCallback(
-    async (moduleId: string, name: string) => {
-      const id = await addOperation(moduleId, name);
-      updateOperationSchema(id, makeOperationInitialDoc(name));
-    },
-    [],
-  );
-
-  const updateOperationScope = useCallback(
-    (id: string, scope: OperationScope) => {
-      dispatch(actions.setOperationScope({ id, scope }));
-    },
-    [],
-  );
-
-  const deleteOperation = useCallback((id: string) => {
-    dispatch(actions.deleteOperation({ id }));
-  }, []);
-
-  const handlers = useMemo(
-    () => ({
-      setModelId,
-      setModelExtension,
-      setModelName,
-      setAuthorName,
-      setAuthorWebsite,
-      setStateSchema,
-      setInitialState,
-      addModule,
-      setModuleDescription,
-      updateModuleName,
-      updateModuleDescription,
-      deleteModule,
-      addOperation,
-      addOperationAndInitialSchema,
-      updateOperationName,
-      updateOperationSchema,
-      updateOperationScope,
-      deleteOperation,
-    }),
-    [],
-  );
-  function onSubmit(values: MetadataFormValues) {
-    const { name, documentType, description, extension, author } = values;
-    if (name) {
-      handlers.setModelName(name);
-      if (!globalStateSchema) {
-        const initialSchemaDoc = makeInitialSchemaDoc(
-          globalStateSchema,
-          name,
-          "global",
-        );
-        handlers.setStateSchema(initialSchemaDoc, "global");
-
-        if (!globalStateInitialValue) {
-          const initialStateDoc = "{}";
-          handlers.setInitialState(initialStateDoc, "global");
+    async (moduleId: string, name: string): Promise<string | undefined> => {
+      try {
+        const id = await addOperation(moduleId, name);
+        if (!id) return undefined;
+        try {
+          updateOperationSchema(id, makeOperationInitialDoc(name));
+          return id;
+        } catch (error) {
+          console.error("Failed to update operation schema:", error);
+          return undefined;
         }
-      } else {
-        const oldGlobalStateType = schema.getType(
-          `${pascalCase(modelName)}State`,
-        );
-        if (!oldGlobalStateType) {
-          throw new Error("Expected global state type");
-        }
-        const newGlobalStateType = renameType(
-          oldGlobalStateType,
-          `${pascalCase(name)}State`,
-        );
-        const schemaWithNewType = mapSchema(schema, {
-          [MapperKind.TYPE]: (type) => {
-            if (type.name === oldGlobalStateType.name) {
-              return newGlobalStateType;
-            }
-            return type;
-          },
-        });
-        if (!isObjectType(newGlobalStateType)) {
-          throw new Error("Expected object type");
-        }
-        handlers.setStateSchema(
-          print(astFromObjectType(newGlobalStateType, schemaWithNewType)),
-          "global",
-        );
-        const oldLocalStateType = schema.getType(
-          `${pascalCase(modelName)}LocalState`,
-        );
-        if (!oldLocalStateType) {
-          return;
-        }
-        const newLocalStateType = renameType(
-          oldLocalStateType,
-          `${pascalCase(name)}LocalState`,
-        );
-        const schemaWithNewLocalStateType = mapSchema(schema, {
-          [MapperKind.TYPE]: (type) => {
-            if (type.name === oldLocalStateType.name) {
-              return newLocalStateType;
-            }
-            return type;
-          },
-        });
-        if (!isObjectType(newLocalStateType)) {
-          throw new Error("Expected object type");
-        }
-        handlers.setStateSchema(
-          print(
-            astFromObjectType(newLocalStateType, schemaWithNewLocalStateType),
-          ),
-          "local",
-        );
+      } catch (error) {
+        console.error("Failed to add operation and schema:", error);
+        return undefined;
       }
-    }
-
-    if (documentType) {
-      handlers.setModelId(documentType);
-    }
-
-    if (description) {
-      handlers.setModuleDescription(description);
-    }
-
-    if (extension) {
-      handlers.setModelExtension(extension);
-    }
-
-    if (author?.name) {
-      handlers.setAuthorName(author.name);
-    }
-
-    if (author?.website) {
-      handlers.setAuthorWebsite(author.website);
-    }
-  }
+    },
+    [addOperation, updateOperationSchema],
+  );
 
   return (
-    <main className="mx-auto min-h-dvh max-w-screen-xl px-4 pt-8">
-      <ModelMetadataForm
-        onSubmit={onSubmit}
-        name={modelName}
-        documentType={documentType}
-        extension={extension}
-        description={description}
-        author={author as MetadataFormValues["author"]}
-      />
-      <DocumentModelEditor
-        schema={schema}
-        modelName={modelName}
-        globalStateSchema={globalStateSchema}
-        globalStateInitialValue={globalStateInitialValue}
-        localStateSchema={localStateSchema}
-        localStateInitialValue={localStateInitialValue}
-        handlers={handlers}
-        modules={modules}
-      />
+    <main className="min-h-dvh bg-gray-50">
+      <SchemaContextProvider
+        globalStateSchemaSdl={globalStateSchema}
+        localStateSchemaSdl={localStateSchema}
+        operationSchemasSdl={operationSchemasSdl}
+      >
+        <div className="mx-auto max-w-6xl px-4 pt-8">
+          <ModelMetadata
+            name={modelName}
+            documentType={documentType}
+            extension={extension}
+            description={description}
+            authorName={authorName}
+            authorWebsite={authorWebsite ?? ""}
+            globalStateSchema={globalStateSchema}
+            localStateSchema={localStateSchema}
+            setModelId={setModelId}
+            setModelDescription={setModelDescription}
+            setModelExtension={setModelExtension}
+            setModelName={setModelName}
+            setAuthorName={setAuthorName}
+            setAuthorWebsite={setAuthorWebsite}
+            setStateSchema={setStateSchema}
+          />
+          <Divider />
+          <div>
+            <StateSchemas
+              modelName={modelName}
+              globalStateSchema={globalStateSchema}
+              globalStateInitialValue={globalStateInitialValue}
+              localStateSchema={localStateSchema}
+              localStateInitialValue={localStateInitialValue}
+              setStateSchema={setStateSchema}
+              setInitialState={setInitialState}
+            />
+            <Divider />
+            <h3 className="mb-6 text-lg">Global Operations</h3>
+            <Modules
+              modules={modules}
+              allOperations={operations}
+              addModule={addModule}
+              updateModuleName={updateModuleName}
+              deleteModule={deleteModule}
+              updateOperationName={updateOperationName}
+              updateOperationSchema={updateOperationSchema}
+              setOperationDescription={setOperationDescription}
+              deleteOperation={deleteOperation}
+              addOperationError={addOperationError}
+              deleteOperationError={deleteOperationError}
+              setOperationErrorName={setOperationErrorName}
+              addOperationAndInitialSchema={addOperationAndInitialSchema}
+            />
+          </div>
+        </div>
+      </SchemaContextProvider>
     </main>
   );
 }

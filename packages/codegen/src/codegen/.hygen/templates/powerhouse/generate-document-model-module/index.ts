@@ -30,6 +30,7 @@ export default {
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             scope: a.scope || "global",
             state: a.scope === "global" ? "" : a.scope, // the state this action affects
+            errors: a.errors,
           }))
         : [];
 

@@ -4,10 +4,11 @@ import { typeDefs } from "@powerhousedao/scalars";
 import {
   generateAll,
   generateEditor as _generateEditor,
+  generateProcessor as _generateProcessor,
   generateDocumentModel,
 } from "./hygen";
 import { generateSchemas, generateSchema } from "./graphql";
-import type { PowerhouseConfig } from "../utils";
+import type { PowerhouseConfig } from "../utils/index";
 import fs from "node:fs";
 import { join, resolve } from "path";
 import { paramCase, pascalCase } from "change-case";
@@ -65,9 +66,9 @@ function getDocumentTypesMap(dir: string) {
 }
 
 export async function generate(config: PowerhouseConfig) {
-  const { format, watch } = config;
-  await generateSchemas(config.documentModelsDir, { format, watch });
-  await generateAll(config.documentModelsDir, { format, watch });
+  const { skipFormat, watch } = config;
+  await generateSchemas(config.documentModelsDir, { skipFormat, watch });
+  await generateAll(config.documentModelsDir, { skipFormat, watch });
 }
 
 export async function generateFromFile(path: string, config: PowerhouseConfig) {
@@ -105,7 +106,7 @@ export async function generateEditor(
   documentTypes: string[],
   config: PowerhouseConfig,
 ) {
-  const { documentModelsDir, format } = config;
+  const { documentModelsDir, skipFormat } = config;
   const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
 
   const invalidType = documentTypes.find(
@@ -120,6 +121,32 @@ export async function generateEditor(
     docummentTypesMap,
     config.editorsDir,
     config.documentModelsDir,
-    { format },
+    { skipFormat },
+  );
+}
+
+export async function generateProcessor(
+  name: string,
+  type: "analytics" | "operational",
+  documentTypes: string[],
+  config: PowerhouseConfig,
+) {
+  const { documentModelsDir, skipFormat } = config;
+  const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
+
+  const invalidType = documentTypes.find(
+    (type) => !Object.keys(docummentTypesMap).includes(type),
+  );
+  if (invalidType) {
+    throw new Error(`Document model for ${invalidType} not found`);
+  }
+  return _generateProcessor(
+    name,
+    documentTypes,
+    docummentTypesMap,
+    config.processorsDir,
+    config.documentModelsDir,
+    type,
+    { skipFormat },
   );
 }

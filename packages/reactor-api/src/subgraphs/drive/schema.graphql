@@ -33,23 +33,16 @@ type OperationSignerApp {
   key: String!
 }
 
-input InputListenerFilter {
-  documentType: [String!]
-  documentId: [String!]
-  scope: [String!]
-  branch: [String!]
-}
-
 type OperationSigner {
   app: OperationSignerApp
   user: OperationSignerUser
-  signatures: [String!]!
+  signatures: [[String!]]!
 }
 
 input InputOperationSigner {
   app: InputOperationSignerApp
   user: InputOperationSignerUser
-  signatures: [String!]!
+  signatures: [[String!]]!
 }
 
 type OperationContext {
@@ -100,7 +93,7 @@ input InputStrandUpdate {
   operations: [InputOperationUpdate!]!
 }
 
-input ListenerFilterInput {
+input InputListenerFilter {
   documentType: [String!]
   documentId: [String!]
   scope: [String!]

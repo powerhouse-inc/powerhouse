@@ -15,13 +15,9 @@
     "preserveWatchOutput": true,
     "skipLibCheck": true,
     "experimentalDecorators": true,
-    "declaration": true,
+    "declaration": false,
     "resolveJsonModule": true
   },
-  "include": [
-    "src/**/*.ts",
-    "reset.d.ts",
-    "*.config.ts"
-  ],
+  "include": ["src/**/*.ts", "reset.d.ts", "*.config.ts"],
   "exclude": ["**/*.esm.t"]
 }

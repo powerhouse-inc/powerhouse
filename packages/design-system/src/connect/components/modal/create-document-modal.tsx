@@ -12,11 +12,23 @@ export type CreateDocumentModalProps = ComponentPropsWithoutRef<
   readonly onContinue: (nodeName: string) => void;
 };
 
+const CLOSE_ANIMATION_DURATION = 300;
+
 export function CreateDocumentModal(props: CreateDocumentModalProps) {
   const { onOpenChange, onContinue, overlayProps, contentProps, ...restProps } =
     props;
 
   const [nodeName, setNodeName] = useState("");
+
+  const handleCancel = () => {
+    onOpenChange?.(false);
+    setTimeout(() => setNodeName(""), CLOSE_ANIMATION_DURATION);
+  };
+
+  const handleCreate = () => {
+    onContinue(nodeName);
+    setTimeout(() => setNodeName(""), CLOSE_ANIMATION_DURATION);
+  };
 
   return (
     <Modal
@@ -50,13 +62,13 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
               buttonStyles,
               "flex-1 bg-slate-50 text-slate-800",
             )}
-            onClick={() => onOpenChange?.(false)}
+            onClick={handleCancel}
           >
             Cancel
           </button>
           <Button
             className={twMerge(buttonStyles, "flex-1 bg-gray-800 text-gray-50")}
-            onClick={() => onContinue(nodeName)}
+            onClick={handleCreate}
           >
             Create
           </Button>

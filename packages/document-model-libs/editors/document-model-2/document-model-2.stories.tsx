@@ -1,68 +1,26 @@
 import { reducer, utils } from "document-model/document-model";
 import Editor from "./editor";
 import { createDocumentStory } from "document-model-libs/utils";
+import { v7 as uuidv7 } from "uuid";
+const { meta, CreateDocumentStory: Empty } = createDocumentStory(
+  Editor,
+  reducer,
+  utils.createExtendedState(),
+);
 
-const mockDocument = {
-  name: "test",
-  documentType: "powerhouse/document-model",
-  revision: {
-    global: 3,
-    local: 0,
-  },
-  created: "2024-10-28T09:33:47.282Z",
-  lastModified: "2021-03-10T08:00:00.000Z",
-  attachments: {},
-  state: {
-    global: {
-      id: "",
-      name: "test",
-      extension: ".test.ph",
-      description: "my description",
-      author: {
-        name: "my name",
-        website: "https://www.example.com",
-      },
-      specifications: [
-        {
-          version: 1,
-          changeLog: [],
-          state: {
-            global: {
-              schema: "",
-              initialValue: "",
-              examples: [],
-            },
-            local: {
-              schema: "",
-              initialValue: "",
-              examples: [],
-            },
-          },
-          modules: [],
-        },
-      ],
-    },
-    local: {},
-  },
-  initialState: {
-    name: "",
-    documentType: "powerhouse/document-model",
-    revision: {
-      global: 0,
-      local: 0,
-    },
-    created: "2024-10-28T09:33:47.282Z",
-    lastModified: "2024-10-28T09:33:47.282Z",
-    attachments: {},
+const { CreateDocumentStory: WithData } = createDocumentStory(
+  Editor,
+  reducer,
+  utils.createExtendedState({
     state: {
       global: {
-        id: "",
-        name: "",
-        extension: "",
-        description: "",
+        id: "test type",
+        name: "test",
+        extension: ".test.ph",
+        description: "test description",
         author: {
-          name: "",
-          website: "",
+          name: "test user",
+          website: "https://test.com",
         },
         specifications: [
           {
@@ -70,113 +28,265 @@ const mockDocument = {
             changeLog: [],
             state: {
               global: {
-                schema: "",
-                initialValue: "",
+                schema:
+                  'type TestState {\n  "Add your global state fields here"\n  _placeholder: String\n  something: Int\n  another: Boolean\n}',
+                initialValue:
+                  '{\n  "_placeholder": "",\n  "something": 0,\n  "another": false\n}',
                 examples: [],
               },
               local: {
-                schema: "",
-                initialValue: "",
+                schema:
+                  'type TestLocalState {\n  "Add your local state fields here"\n  _placeholder: String\n  test: String\n  another: Int\n}',
+                initialValue:
+                  '{\n  "_placeholder": "",\n  "test": "",\n  "another": 0\n}',
                 examples: [],
               },
             },
-            modules: [],
+            modules: [
+              {
+                id: "TuKeTdrcoKwzZe0ZJQCrWLr4pGw=",
+                name: "test_module",
+                description: "",
+                operations: [
+                  {
+                    id: "NEYEmynbmVnx5ZlESaoVx18pl38=",
+                    name: "TEST_OPERATION",
+                    description: "test operation description",
+                    schema:
+                      'input TestOperationInput {\n  "Add your inputs here"\n  _placeholder: String\n  test: TestInput\n}\n\ninput TestInput {\n  test: String\n}',
+                    template: "",
+                    reducer: "",
+                    errors: [
+                      {
+                        id: "FwZyM4KAxRO+GurVuSRxgaENKSk=",
+                        name: "TestException",
+                        code: "",
+                        description: "",
+                        template: "",
+                      },
+                    ],
+                    examples: [],
+                    scope: "global",
+                  },
+                ],
+              },
+              {
+                id: "Uix/waNZU0L0Q6bryt7QFnf3aoA=",
+                name: "another_test_module",
+                description: "",
+                operations: [
+                  {
+                    id: "iDXCKGVaDPPCyTVxv8vQ2h7SVvw=",
+                    name: "ANOTHER_TEST_OPERATION",
+                    description: "another description",
+                    schema:
+                      'input AnotherTestOperationInput {\n  "Add your inputs here"\n  _placeholder: String\n  test: Int\n}',
+                    template: "",
+                    reducer: "",
+                    errors: [],
+                    examples: [],
+                    scope: "global",
+                  },
+                  {
+                    id: "N2Flem5MW4dnLd0y21si2J0ZA9E=",
+                    name: "ONE_MORE_OPERATION",
+                    description: "one more description",
+                    schema:
+                      'input OneMoreOperationInput {\n  "Add your inputs here"\n  _placeholder: String\n}',
+                    template: "",
+                    reducer: "",
+                    errors: [],
+                    examples: [],
+                    scope: "global",
+                  },
+                ],
+              },
+            ],
           },
         ],
       },
       local: {},
     },
-  },
-  operations: {
-    global: [
-      {
-        type: "SET_MODEL_NAME",
-        input: {
-          name: "test",
-        },
-        scope: "global",
-        context: {
-          signer: {
-            user: {
-              address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
-              networkId: "eip155",
-              chainId: 1,
-            },
-            app: {
-              name: "storybook",
-              key: "storybook",
-            },
-            signatures: [],
-          },
-        },
-        id: "984c3a8d-0779-4613-a806-7e59e4adb8e7",
-        index: 0,
-        timestamp: "2021-03-10T08:00:00.000Z",
-        hash: "nWKpqR6ns0l8C/Khwrl+SyKy0sA=",
-        skip: 0,
-      },
-      {
-        type: "SET_NAME",
-        input: "test",
-        scope: "global",
-        context: {
-          signer: {
-            user: {
-              address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
-              networkId: "eip155",
-              chainId: 1,
-            },
-            app: {
-              name: "storybook",
-              key: "storybook",
-            },
-            signatures: [],
-          },
-        },
-        id: "9b7bc444-6308-4566-8fd9-6474d02fd592",
-        index: 1,
-        timestamp: "2021-03-10T08:00:00.000Z",
-        hash: "nWKpqR6ns0l8C/Khwrl+SyKy0sA=",
-        skip: 0,
-      },
-      {
-        type: "SET_MODEL_EXTENSION",
-        input: {
-          extension: ".test.ph",
-        },
-        scope: "global",
-        context: {
-          signer: {
-            user: {
-              address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
-              networkId: "eip155",
-              chainId: 1,
-            },
-            app: {
-              name: "storybook",
-              key: "storybook",
-            },
-            signatures: [],
-          },
-        },
-        id: "5e88e12c-380c-471a-a961-79fc49cd3065",
-        index: 2,
-        timestamp: "2021-03-10T08:00:00.000Z",
-        hash: "8nMiCxVFnYGv30xXM0tusiEYcic=",
-        skip: 0,
-      },
-    ],
-    local: [],
-  },
-  clipboard: [],
-};
-const { meta, CreateDocumentStory: DocumentModel2 } = createDocumentStory(
+  }),
+);
+
+const { CreateDocumentStory: WithBackgroundUpdates } = createDocumentStory(
   Editor,
   reducer,
-  // mockDocument,
-  utils.createExtendedState(),
+  utils.createExtendedState({
+    state: {
+      global: {
+        id: "test type",
+        name: "test",
+        extension: ".test.ph",
+        description: "test description",
+        author: {
+          name: "test user",
+          website: "https://test.com",
+        },
+        specifications: [
+          {
+            version: 1,
+            changeLog: [],
+            state: {
+              global: {
+                schema:
+                  'type TestState {\n  "Add your global state fields here"\n  _placeholder: String\n  something: Int\n  another: Boolean\n}',
+                initialValue:
+                  '{\n  "_placeholder": "",\n  "something": 0,\n  "another": false\n}',
+                examples: [],
+              },
+              local: {
+                schema:
+                  'type TestLocalState {\n  "Add your local state fields here"\n  _placeholder: String\n  test: String\n  another: Int\n}',
+                initialValue:
+                  '{\n  "_placeholder": "",\n  "test": "",\n  "another": 0\n}',
+                examples: [],
+              },
+            },
+            modules: [
+              {
+                id: "TuKeTdrcoKwzZe0ZJQCrWLr4pGw=",
+                name: "test_module",
+                description: "",
+                operations: [
+                  {
+                    id: "NEYEmynbmVnx5ZlESaoVx18pl38=",
+                    name: "TEST_OPERATION",
+                    description: "test operation description",
+                    schema:
+                      'input TestOperationInput {\n  "Add your inputs here"\n  _placeholder: String\n  test: TestInput\n}\n\ninput TestInput {\n  test: String\n}',
+                    template: "",
+                    reducer: "",
+                    errors: [
+                      {
+                        id: "FwZyM4KAxRO+GurVuSRxgaENKSk=",
+                        name: "TestException",
+                        code: "",
+                        description: "",
+                        template: "",
+                      },
+                    ],
+                    examples: [],
+                    scope: "global",
+                  },
+                ],
+              },
+              {
+                id: "Uix/waNZU0L0Q6bryt7QFnf3aoA=",
+                name: "another_test_module",
+                description: "",
+                operations: [
+                  {
+                    id: "iDXCKGVaDPPCyTVxv8vQ2h7SVvw=",
+                    name: "ANOTHER_TEST_OPERATION",
+                    description: "another description",
+                    schema:
+                      'input AnotherTestOperationInput {\n  "Add your inputs here"\n  _placeholder: String\n  test: Int\n}',
+                    template: "",
+                    reducer: "",
+                    errors: [],
+                    examples: [],
+                    scope: "global",
+                  },
+                  {
+                    id: "N2Flem5MW4dnLd0y21si2J0ZA9E=",
+                    name: "ONE_MORE_OPERATION",
+                    description: "one more description",
+                    schema:
+                      'input OneMoreOperationInput {\n  "Add your inputs here"\n  _placeholder: String\n}',
+                    template: "",
+                    reducer: "",
+                    errors: [],
+                    examples: [],
+                    scope: "global",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      local: {},
+    },
+  }),
+  {
+    simulateBackgroundUpdates: {
+      backgroundUpdateRate: 1000,
+      backgroundUpdateActions: [
+        (document) => {
+          const id = uuidv7().split("-").at(-1);
+          const oldStateSchema =
+            document.state.global.specifications[0].state.global.schema;
+          const newTypeDef = `
+type TestDefinition${id} {
+  test: String
+}`;
+
+          const newStateSchema = `${oldStateSchema}\n${newTypeDef}`;
+
+          return {
+            type: "SET_STATE_SCHEMA" as const,
+            input: {
+              schema: newStateSchema,
+              scope: "global",
+            },
+            scope: "global",
+          };
+        },
+        (document) => {
+          const id = uuidv7().split("-").at(-1);
+          const oldStateSchema =
+            document.state.global.specifications[0].state.local.schema;
+          const newTypeDef = `
+type TestLocalDefinition${id} {
+  test: String
+}`;
+
+          const newStateSchema = `${oldStateSchema}\n${newTypeDef}`;
+
+          return {
+            type: "SET_STATE_SCHEMA" as const,
+            input: {
+              schema: newStateSchema,
+              scope: "local",
+            },
+            scope: "global",
+          };
+        },
+        (document) => {
+          const moduleIndex =
+            document.state.global.specifications[0].modules.length + 1;
+
+          return {
+            type: "ADD_MODULE" as const,
+            input: {
+              id: uuidv7(),
+              name: `test_module_${moduleIndex}`,
+            },
+            scope: "global",
+          };
+        },
+        (document) => {
+          const modules = document.state.global.specifications[0].modules;
+          const module = modules[0];
+          const operationIndex = module.operations.length + 1;
+
+          return {
+            type: "ADD_OPERATION" as const,
+            input: {
+              id: uuidv7(),
+              name: `test_operation_${operationIndex}`,
+              moduleId: module.id,
+            },
+            scope: "global",
+          };
+        },
+      ],
+    },
+  },
 );
 
 export default { ...meta, title: "Document Model 2" };
 
-export { DocumentModel2 };
+export { Empty, WithData, WithBackgroundUpdates };

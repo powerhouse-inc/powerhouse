@@ -34,6 +34,7 @@ export const createZip = async (document: Document) => {
   };
   zip.file("header.json", JSON.stringify(header, null, 2));
   zip.file("state.json", JSON.stringify(document.initialState || {}, null, 2));
+  zip.file("current-state.json", JSON.stringify(document.state || {}, null, 2));
   zip.file(
     "operations.json",
     JSON.stringify(

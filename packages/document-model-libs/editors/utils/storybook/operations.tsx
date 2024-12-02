@@ -63,7 +63,7 @@ addons.register(ADDON_ID, (api) => {
   addons.add(PANEL_ID, {
     type: types.PANEL,
     title: "Operations",
-    render: ({ active }) => {
+    render: function Wrapper({ active }) {
       const [budgetStatement, setBudgetStatement] = React.useState<Document>();
       React.useEffect(() => {
         channel?.addListener("DOCUMENT", setBudgetStatement);

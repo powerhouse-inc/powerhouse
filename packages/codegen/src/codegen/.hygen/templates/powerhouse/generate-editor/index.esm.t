@@ -15,6 +15,7 @@ export const module: <% if(!documentTypes.length){ %>ExtendedEditor<unknown, Act
         id: 'editor-id',
         disableExternalControls: true,
         documentToolbarEnabled: true,
+        showSwitchboardLink: true,
     },
 };
 

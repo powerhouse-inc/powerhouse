@@ -5,6 +5,7 @@ export type EditorConfig = {
   id: string;
   disableExternalControls: boolean;
   documentToolbarEnabled?: boolean;
+  showSwitchboardLink?: boolean;
 };
 
 export type EditorContextProps = {

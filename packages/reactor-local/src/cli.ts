@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 import { Command } from "commander";
-import { startServer } from "./server";
+import { startServer } from "./server.js";
 
 type ReactorLocalOptions = {
   port?: string;

@@ -1,3 +1,87 @@
+## 2.7.1 (2024-11-21)
+
+### 🩹 Fixes
+
+- **document-model:** do not generate a new timestamp for operations ([#544](https://github.com/powerhouse-inc/powerhouse/pull/544))
+
+### ❤️  Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 2.7.0 (2024-11-21)
+
+### 🚀 Features
+
+- **monorepo:** regenerate lockfile ([869134c5](https://github.com/powerhouse-inc/powerhouse/commit/869134c5))
+- **codegen:** generate actions exceptions ([#499](https://github.com/powerhouse-inc/powerhouse/pull/499))
+- **document-model-libs:** remove unused deps ([f102bd86](https://github.com/powerhouse-inc/powerhouse/commit/f102bd86))
+- **document-model-libs:** move error handling to linter ([4eed29d6](https://github.com/powerhouse-inc/powerhouse/commit/4eed29d6))
+- **document-model-libs:** leverage codemirror linting ([a5dca60a](https://github.com/powerhouse-inc/powerhouse/commit/a5dca60a))
+- **document-model-libs:** update name in type ([3fa1bd41](https://github.com/powerhouse-inc/powerhouse/commit/3fa1bd41))
+- **design-system:** extract entry time label to component ([032be787](https://github.com/powerhouse-inc/powerhouse/commit/032be787))
+- **design-system:** use intl format for datetime inputs ([d51f8099](https://github.com/powerhouse-inc/powerhouse/commit/d51f8099))
+- **reactor-api, reactor-local:** support local document models on local reactor ([a9a2d27f](https://github.com/powerhouse-inc/powerhouse/commit/a9a2d27f))
+- **ph-cli,reactor-local:** integrate local reactor into ph-cli ([92f2f530](https://github.com/powerhouse-inc/powerhouse/commit/92f2f530))
+- **codegen:** regenerate lockfile ([31c2d0c5](https://github.com/powerhouse-inc/powerhouse/commit/31c2d0c5))
+- **scalars, design-system:** added EthereumAddress and AmountTokens scalars ([e5124e19](https://github.com/powerhouse-inc/powerhouse/commit/e5124e19))
+- **ph-cli:** update cli to format by default ([7418e777](https://github.com/powerhouse-inc/powerhouse/commit/7418e777))
+- **codegen:** remove format generated from action ([5d7e1c48](https://github.com/powerhouse-inc/powerhouse/commit/5d7e1c48))
+- **codegen:** use prettier api to format typescript from gql ([8896d86e](https://github.com/powerhouse-inc/powerhouse/commit/8896d86e))
+
+### 🩹 Fixes
+
+- **design-system:** fix scalars import ([#506](https://github.com/powerhouse-inc/powerhouse/pull/506))
+
+### ❤️  Thank You
+
+- acaldas
+- Guillermo Puente Sandoval
+- ryanwolhuter
+
+## 2.6.0 (2024-11-06)
+
+### 🚀 Features
+
+- **document-model-libs:** regenerate lockfile ([0effee2e](https://github.com/powerhouse-inc/powerhouse/commit/0effee2e))
+- qa updates 4 ([50ac4eb5](https://github.com/powerhouse-inc/powerhouse/commit/50ac4eb5))
+
+### ❤️  Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 2.5.0 (2024-11-06)
+
+### 🚀 Features
+
+- **document-model:** include resulting state into zip file ([#491](https://github.com/powerhouse-inc/powerhouse/pull/491))
+- **document-model-libs:** add more inputs ([37db4561](https://github.com/powerhouse-inc/powerhouse/commit/37db4561))
+- **document-model-libs:** regenerate lockfile ([cf76e91d](https://github.com/powerhouse-inc/powerhouse/commit/cf76e91d))
+- **document-model-libs:** address initial QA feedback ([7513155e](https://github.com/powerhouse-inc/powerhouse/commit/7513155e))
+
+### ❤️  Thank You
+
+- Guillermo Puente Sandoval @gpuente
+- ryanwolhuter @ryanwolhuter
+
+## 2.4.1 (2024-11-01)
+
+### 🚀 Features
+
+- **codegen:** changed bundle to esm ([24b33b50](https://github.com/powerhouse-inc/powerhouse/commit/24b33b50))
+
+### 🩹 Fixes
+
+- **ph-cli:** bundle cli as esm package and added missing dependencies ([a5a665ef](https://github.com/powerhouse-inc/powerhouse/commit/a5a665ef))
+- **codegen:** fixed bad import ([eefb7b2f](https://github.com/powerhouse-inc/powerhouse/commit/eefb7b2f))
+- bad package reference was breaking build -- also a readme update ([4121e51b](https://github.com/powerhouse-inc/powerhouse/commit/4121e51b))
+- **switchboard:** startup ([#469](https://github.com/powerhouse-inc/powerhouse/pull/469))
+
+### ❤️  Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- frankp.eth @froid1911
+
 ## 2.4.0 (2024-10-29)
 
 ### 🚀 Features

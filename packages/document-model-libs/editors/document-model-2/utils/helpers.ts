@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { pascalCase } from "change-case";
 import { Author } from "document-model/document-model";
 import {
+  buildASTSchema,
   extendSchema,
   getNullableType,
   GraphQLScalarType,
@@ -17,6 +16,7 @@ import {
   ObjectTypeDefinitionNode,
   parse,
   print,
+  visit,
 } from "graphql";
 import { DocumentModelDocument, Scope } from "../types";
 import * as customScalars from "@powerhousedao/scalars";
@@ -90,12 +90,7 @@ export function makeOperationInitialDoc(name: string) {
   return inputObject;
 }
 
-export function makeInitialSchemaDoc(
-  stateSchema: string,
-  modelName: string,
-  scope: Scope,
-) {
-  if (stateSchema) return stateSchema;
+export function makeInitialSchemaDoc(modelName: string, scope: Scope) {
   const stateObject = makeStateObject(modelName, scope);
   return stateObject;
 }
@@ -111,8 +106,8 @@ export function getDocumentMetadata(document: DocumentModelDocument) {
     website: globalState.author.website,
   };
   return {
-    name: document.name,
-    documentType: document.documentType,
+    name: globalState.name,
+    documentType: globalState.id,
     description: globalState.description,
     extension: globalState.extension,
     author,
@@ -210,6 +205,7 @@ function getMinimalValue(
       existingValue !== undefined &&
       isValidScalarValue(typeName, existingValue)
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return existingValue;
     }
     switch (typeName) {
@@ -228,10 +224,13 @@ function getMinimalValue(
   }
 
   if (isEnumType(nullableType)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const enumValues = nullableType.getValues().map((v) => v.value);
     if (existingValue !== undefined && enumValues.includes(existingValue)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return existingValue;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return enumValues[0] || null;
   }
 
@@ -249,9 +248,11 @@ function getMinimalValue(
     const _existingValue = existingValue as Record<string, any> | undefined;
     for (const fieldName in fields) {
       const field = fields[fieldName];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const existingFieldValue = _existingValue
         ? _existingValue[fieldName]
         : undefined;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       result[fieldName] = getMinimalValue(
         field.type,
         schema,
@@ -266,10 +267,11 @@ function getMinimalValue(
 }
 
 export function makeMinimalObjectFromSDL(
-  schema: GraphQLSchema,
+  schemaSdl: string,
   sdl: string,
   existingValue?: any,
 ) {
+  const schema = buildASTSchema(parse(schemaSdl));
   const typeAST = parse(sdl);
 
   // Extract the type names from the SDL
@@ -303,6 +305,106 @@ export function makeMinimalObjectFromSDL(
     throw new Error(`Type "${typeName}" is not a valid ObjectType.`);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const minimalObject = getMinimalValue(type, effectiveSchema, existingValue);
   return JSON.stringify(minimalObject, null, 2);
+}
+
+function removeWhitespace(str: string) {
+  return str.replace(/\s+|\\n|\\t/g, "").toLowerCase();
+}
+
+export function compareStringsWithoutWhitespace(str1: string, str2: string) {
+  return removeWhitespace(str1) === removeWhitespace(str2);
+}
+
+export function renameSchemaType(
+  sdl: string,
+  oldName: string,
+  newName: string,
+  scope: Scope,
+): string {
+  const typeSuffix = scope === "global" ? "State" : "LocalState";
+  const oldTypeName = `${pascalCase(oldName)}${typeSuffix}`;
+  const newTypeName = `${pascalCase(newName)}${typeSuffix}`;
+
+  const ast = parse(sdl);
+
+  const updatedAst = visit(ast, {
+    ObjectTypeDefinition: (node) => {
+      if (node.name.value === oldTypeName) {
+        return {
+          ...node,
+          name: {
+            ...node.name,
+            value: newTypeName,
+          },
+        };
+      }
+    },
+  });
+
+  return print(updatedAst);
+}
+
+export function initializeModelSchema(params: {
+  modelName: string;
+  setStateSchema: (schema: string, scope: Scope) => void;
+}) {
+  const { modelName, setStateSchema } = params;
+  const initialSchemaDoc = makeInitialSchemaDoc(modelName, "global");
+  setStateSchema(initialSchemaDoc, "global");
+}
+
+export function updateModelSchemaNames(params: {
+  oldName: string;
+  newName: string;
+  globalStateSchema: string;
+  localStateSchema: string;
+  setStateSchema: (schema: string, scope: Scope) => void;
+}) {
+  const {
+    oldName,
+    newName,
+    globalStateSchema,
+    localStateSchema,
+    setStateSchema,
+  } = params;
+
+  const newSchema = renameSchemaType(
+    globalStateSchema,
+    oldName,
+    newName,
+    "global",
+  );
+  setStateSchema(newSchema, "global");
+
+  if (localStateSchema) {
+    const newLocalStateSchema = renameSchemaType(
+      localStateSchema,
+      oldName,
+      newName,
+      "local",
+    );
+    setStateSchema(newLocalStateSchema, "local");
+  }
+}
+
+export function handleModelNameChange(params: {
+  oldName: string;
+  newName: string;
+  globalStateSchema: string;
+  localStateSchema: string;
+  setStateSchema: (schema: string, scope: Scope) => void;
+}) {
+  const { oldName, newName, globalStateSchema, setStateSchema } = params;
+
+  const hasExistingSchema = !!globalStateSchema;
+
+  if (!hasExistingSchema) {
+    initializeModelSchema({ modelName: newName, setStateSchema });
+    return;
+  }
+
+  updateModelSchemaNames(params);
 }

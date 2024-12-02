@@ -1,77 +1,47 @@
 import { Module } from "document-model/document-model";
-import { DocumentActionHandlers } from "../types";
 import { toLowercaseSnakeCase } from "../schemas";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "./form";
-import { Input } from "./input";
-import { useCallback } from "react";
+import { TextField } from "./text-field";
 
-const ModuleFormSchema = z.object({
-  name: z.string(),
-});
 type Props = {
-  handlers: DocumentActionHandlers;
+  modules?: Module[];
   module?: Module;
+  onAddModule: (name: string) => Promise<string | undefined>;
+  updateModuleName: (id: string, name: string) => void;
 };
-export function ModuleForm(props: Props) {
-  const { module, handlers } = props;
+
+export function ModuleForm({
+  module,
+  onAddModule,
+  updateModuleName,
+  modules = [],
+}: Props) {
   const isEdit = !!module;
+  const moduleNames = modules.map((m) => m.name);
 
-  const form = useForm<z.infer<typeof ModuleFormSchema>>({
-    resolver: zodResolver(ModuleFormSchema),
-    defaultValues: {
-      name: module?.name ?? "",
-    },
-  });
-
-  function onSubmit(values: z.infer<typeof ModuleFormSchema>) {
-    const name = toLowercaseSnakeCase(values.name);
-    if (!name.length) return;
+  const handleSubmit = async (name: string) => {
+    const formattedName = toLowercaseSnakeCase(name);
+    if (!formattedName.length) return;
 
     if (isEdit) {
-      if (name !== module.name) {
-        handlers.updateModuleName(module.id, name);
+      if (formattedName !== module.name) {
+        updateModuleName(module.id, formattedName);
       }
     } else {
-      handlers.addModule(name);
+      await onAddModule(formattedName);
     }
-    form.reset({ name });
-  }
-
-  // Handle form submission on blur
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form]);
+  };
 
   return (
-    <Form {...form}>
-      <form className="w-1/2">
-        <FormField
-          control={form.control}
-          name="name"
-          rules={{ required: "Module name is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Input
-                  placeholder="Add module"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      form.handleSubmit(onSubmit)();
-                    }
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
-    </Form>
+    <TextField
+      key={module?.id ?? "new"}
+      name="name"
+      label={isEdit ? "Module name" : "Add module"}
+      value={module?.name}
+      onSubmit={handleSubmit}
+      placeholder="Add module"
+      unique={moduleNames}
+      shouldReset={!isEdit}
+      required
+    />
   );
 }

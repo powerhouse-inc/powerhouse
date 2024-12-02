@@ -1,5 +1,5 @@
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
-import { BaseDocumentDriveServer } from "document-drive";
+import { IDocumentDriveServer } from "document-drive";
 import { readFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -12,5 +12,5 @@ const __dirname =
 
 const typeDefs = readFileSync(resolve(__dirname, schemaPath), "utf8");
 
-export const getSchema = (driveServer: BaseDocumentDriveServer) =>
+export const getSchema = (driveServer: IDocumentDriveServer) =>
   createSchema(driveServer, resolvers as GraphQLResolverMap, typeDefs);

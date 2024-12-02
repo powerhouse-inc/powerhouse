@@ -15,7 +15,8 @@ export const module: ExtendedEditor<
   documentTypes: ["powerhouse/document-model"],
   config: {
     id: "document-model-editor-v2",
-    disableExternalControls: false,
+    disableExternalControls: true,
+    documentToolbarEnabled: true,
   },
 };
 

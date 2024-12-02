@@ -1,6 +1,8 @@
 import { getSchema as getSystemSchema } from "./system/subgraph";
 import { getSchema as getDriveSchema } from "./drive/subgraph";
 
+export * from "./types";
+
 export const SUBGRAPH_REGISTRY = [
   {
     name: "system",

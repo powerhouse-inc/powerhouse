@@ -3,7 +3,7 @@ import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { BaseDocumentDriveServer } from "document-drive";
+import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
 import {
   InternalListenerManager,
@@ -18,9 +18,7 @@ const getLocalSubgraphConfig = (subgraphName: string) =>
 
 let listenerManager: InternalListenerManager | undefined;
 
-export const getListenerManager = async (
-  driveServer: BaseDocumentDriveServer
-) => {
+export const getListenerManager = async (driveServer: IDocumentDriveServer) => {
   if (!listenerManager) {
     listenerManager = new InternalListenerManager(driveServer);
     await listenerManager.init();
@@ -28,7 +26,7 @@ export const getListenerManager = async (
   return listenerManager;
 };
 
-export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
+export const updateRouter = async (driveServer: IDocumentDriveServer) => {
   const newRouter = Router();
   newRouter.use(cors());
   newRouter.use(bodyParser.json());
@@ -54,6 +52,7 @@ export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
     const path = `/${subgraphConfig.name}`;
     newRouter.use(
       path,
+      // @ts-ignore
       expressMiddleware(server, {
         context: ({ req }): Promise<Context> =>
           Promise.resolve({
@@ -72,11 +71,11 @@ export const updateRouter = async (driveServer: BaseDocumentDriveServer) => {
   console.log("All subgraphs started.");
 };
 
-let docDriveServer: BaseDocumentDriveServer;
+let docDriveServer: IDocumentDriveServer;
 export const initReactorRouter = async (
   path: string,
   app: express.Express,
-  driveServer: BaseDocumentDriveServer
+  driveServer: IDocumentDriveServer
 ) => {
   docDriveServer = driveServer;
   const models = driveServer.getDocumentModels();
@@ -89,8 +88,9 @@ export const initReactorRouter = async (
   }
 
   await updateRouter(driveServer);
+
   driveServer.on("documentModels", () => {
-    updateRouter(driveServer);
+    updateRouter(driveServer).catch((error: unknown) => console.error(error));
   });
 
   app.use(path, (req, res, next) => reactorRouter(req, res, next));

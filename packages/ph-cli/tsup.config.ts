@@ -5,19 +5,11 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  format: "cjs",
+  format: "esm",
   treeshake: true,
   bundle: false,
   platform: "node",
   target: "node20",
-  legacyOutput: true,
-  loader: {
-    ".esm.t": "copy",
-  },
-  dts: {
-    entry: {
-      index: "src/index.ts",
-      cli: "src/cli.ts",
-    },
-  },
+  cjsInterop: true,
+  dts: true,
 });

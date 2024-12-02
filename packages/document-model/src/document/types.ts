@@ -373,6 +373,7 @@ export type EditorProps<S, A extends Action, L> = {
   ) => void;
   context: EditorContext;
   error?: unknown;
+  documentNodeName?: string;
 };
 
 export type Editor<S = unknown, A extends Action = Action, L = unknown> = {

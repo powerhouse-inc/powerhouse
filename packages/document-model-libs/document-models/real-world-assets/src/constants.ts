@@ -14,23 +14,23 @@ export const FIXED_INCOME_TRANSACTION = "fixedIncomeTransaction";
 export const principalGroupTransactionTypes = [
   PRINCIPAL_DRAW,
   PRINCIPAL_RETURN,
-];
+] as const;
 
-export const assetGroupTransactionTypes = [ASSET_PURCHASE, ASSET_SALE];
+export const assetGroupTransactionTypes = [ASSET_PURCHASE, ASSET_SALE] as const;
 
 export const interestGroupTransactionTypes = [
   INTEREST_INCOME,
   INTEREST_PAYMENT,
-];
+] as const;
 
-export const feeGroupTransactionTypes = [FEES_PAYMENT, FEES_INCOME];
+export const feeGroupTransactionTypes = [FEES_PAYMENT, FEES_INCOME] as const;
 
 export const allGroupTransactionTypes = [
   ...assetGroupTransactionTypes,
   ...principalGroupTransactionTypes,
   ...interestGroupTransactionTypes,
   ...feeGroupTransactionTypes,
-];
+] as const;
 
 export const cashTransactionSignByTransactionType: Record<
   GroupTransactionType,

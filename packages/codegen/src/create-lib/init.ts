@@ -92,6 +92,7 @@ export async function init(_args?: arg.Result<typeof configSpec>) {
         name: "projectName",
         message: "What is the project name?",
         required: true,
+        result: (value) => value.toLowerCase().trim().replace(/\s+/g, "-"),
       },
     ]);
     if (!result.projectName) {

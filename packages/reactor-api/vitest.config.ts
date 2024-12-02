@@ -10,7 +10,7 @@ export default defineConfig({
           // Resolve the path relative to the the file that imports the .graphql file
           return resolve(
             dirname(importer || ""),
-            `${source.startsWith("/") ? `.${source}` : source}.graphql`
+            `${source.startsWith("/") ? `.${source}` : source}.graphql`,
           );
         }
         return null; // Let other resolvers handle other imports

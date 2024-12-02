@@ -40,7 +40,7 @@ export const config: GraphQLScalarTypeConfig<number, number> = {
             throw new GraphQLError('some error message', { nodes: value });
         }
 
-        return amountPercentageValidation(value);
+        return amountPercentageValidation(value.value);
     },
 };
 

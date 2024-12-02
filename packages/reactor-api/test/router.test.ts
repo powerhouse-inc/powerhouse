@@ -1,16 +1,16 @@
+import express from "express";
+import { describe, expect, it } from "vitest";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
-import { describe, expect, it } from "vitest";
 import {
-  BaseDocumentDriveServer,
+  IDocumentDriveServer,
   DocumentDriveServer,
 } from "../../document-drive/src/server";
 import { addSubgraph } from "../src/index";
-import { initReactorRouter, reactorRouter, updateRouter } from "../src/router";
-import { getDocumentModelTypeDefs } from "../src/utils/gen-doc-model-type-defs";
-import express from "express";
+import { initReactorRouter, reactorRouter } from "../src/router";
+import { getDocumentModelTypeDefs } from "../src/utils/create-schema";
 
 const documentModels = [
   DocumentModelLib,
@@ -33,7 +33,7 @@ describe("Reactor Router", () => {
     await driveServer.initialize();
     const newSubgraph = {
       name: "newSubgraph",
-      getSchema: (documentDriveServer: BaseDocumentDriveServer) =>
+      getSchema: (documentDriveServer: IDocumentDriveServer) =>
         buildSubgraphSchema([
           {
             typeDefs: getDocumentModelTypeDefs(
@@ -42,7 +42,7 @@ describe("Reactor Router", () => {
               type Query {
                 hello: String
               }
-            `
+            `,
             ),
             resolvers: { Query: { hello: () => "world" } },
           },

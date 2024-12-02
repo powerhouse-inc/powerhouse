@@ -15,8 +15,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["vite/client", "vitest/globals"],
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "allowJs": true
-  },
-  "types": ["@testing-library/jest-dom"],
+  }
 }

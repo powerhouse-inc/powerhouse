@@ -1,22 +1,28 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.2.4",
+  "version": "0.7.1",
   "description": "",
   "license": "AGPL-3.0-only",
-  "types": "dist/index.d.ts",
+  "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "publishConfig": {
     "access": "public"
   },
   "bin": {
     "ph": "dist/cli.js"
   },
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli.js",
+    "./utils": "./dist/utils.js"
+  },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "ts-node src/cli.ts",
+    "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
@@ -25,14 +31,27 @@
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "ts-node": "^10.9.2",
-    "tsup": "^8.3.0"
+    "@powerhousedao/analytics-engine-core": "^0.3.0",
+    "@powerhousedao/analytics-engine-graphql": "^0.2.0",
+    "@powerhousedao/analytics-engine-pg": "^0.3.0",
+    "document-drive": "workspace:*",
+    "drizzle-kit": "^0.25.0",
+    "drizzle-orm": "^0.34.1",
+    "luxon": "^3.5.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.1"
   },
   "dependencies": {
-    "@powerhousedao/codegen": "0.10.0",
+    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/connect": "develop",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor-local": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
-    "graphql": "^16.8.1"
+    "document-model-libs": "workspace:*",
+    "graphql": "^16.8.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

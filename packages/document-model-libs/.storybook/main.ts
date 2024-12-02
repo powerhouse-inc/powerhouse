@@ -1,10 +1,7 @@
-import { getConfig } from "@powerhousedao/codegen";
 import type { StorybookConfig } from "@storybook/react-vite";
 
-const { editorsDir } = getConfig();
-
 const config: StorybookConfig = {
-  stories: [`../${editorsDir}/**/*.stories.tsx`],
+  stories: [`../editors/**/*.stories.tsx`],
   addons: [
     "@storybook/addon-links",
     "@storybook/addon-essentials",
@@ -21,5 +18,20 @@ const config: StorybookConfig = {
   typescript: {
     reactDocgen: false,
   },
+  core: {
+    builder: {
+      name: "@storybook/builder-vite",
+      options: {
+        viteConfigPath: "vite.config.ts",
+        rollupOptions: {
+          external: [
+            /@codemirror\/.*/,
+            'thememirror',
+            'cm6-graphql'
+          ]
+        }
+      }
+    }
+  }
 };
 export default config;

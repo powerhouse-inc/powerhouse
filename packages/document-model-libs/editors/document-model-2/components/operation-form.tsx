@@ -1,78 +1,82 @@
 import { Module, Operation } from "document-model/document-model";
-import { DocumentActionHandlers } from "../types";
 import { toConstantCase } from "../schemas";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "./form";
-import { Input } from "./input";
+import { TextField } from "./text-field";
 import { useCallback } from "react";
 
-const OperationFormSchema = z.object({
-  name: z.string(),
-});
 type Props = {
-  handlers: DocumentActionHandlers;
   module: Module;
   operation?: Operation;
+  focusOnMount?: boolean;
+  allOperationNames: string[];
+  onAddOperationAndInitialSchema: (
+    moduleId: string,
+    name: string,
+  ) => Promise<string | undefined>;
+  updateOperationName: (id: string, name: string) => void;
+  deleteOperation: (id: string) => void;
 };
-export function OperationForm(props: Props) {
-  const { operation, module, handlers } = props;
+
+export function OperationForm({
+  operation,
+  module,
+  focusOnMount,
+  allOperationNames,
+  onAddOperationAndInitialSchema,
+  updateOperationName,
+  deleteOperation,
+}: Props) {
   const isEdit = !!operation;
 
-  const form = useForm<z.infer<typeof OperationFormSchema>>({
-    resolver: zodResolver(OperationFormSchema),
-    defaultValues: {
-      name: operation?.name ?? "",
-    },
-  });
-
-  function onSubmit(values: z.infer<typeof OperationFormSchema>) {
-    const name = toConstantCase(values.name);
-    if (!name.length) return;
-
-    if (isEdit) {
-      if (name !== operation.name) {
-        handlers.updateOperationName(operation.id, name);
+  const handleSubmit = useCallback(
+    async (name: string) => {
+      if (isEdit && name === "") {
+        deleteOperation(operation.id);
+        return;
       }
-    } else {
-      handlers.addOperationAndInitialSchema(module.id, name);
-    }
-    form.reset({ name });
-  }
 
-  // Handle form submission on blur
-  const handleBlur = useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form]);
+      const formattedName = toConstantCase(name);
+
+      if (isEdit) {
+        if (formattedName !== operation.name) {
+          updateOperationName(operation.id, formattedName);
+        }
+      } else {
+        await onAddOperationAndInitialSchema(module.id, formattedName);
+      }
+    },
+    [
+      isEdit,
+      operation?.id,
+      operation?.name,
+      module.id,
+      deleteOperation,
+      updateOperationName,
+      onAddOperationAndInitialSchema,
+    ],
+  );
+
+  const handleChange = useCallback(
+    (value: string) => {
+      if (isEdit && value === "") {
+        deleteOperation(operation.id);
+      }
+    },
+    [isEdit, operation?.id, deleteOperation],
+  );
 
   return (
-    <Form {...form}>
-      <form className="w-1/2">
-        <FormField
-          control={form.control}
-          name="name"
-          rules={{ required: "Operation name is required" }}
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Input
-                  placeholder="Add operation"
-                  {...field}
-                  onBlur={handleBlur}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      form.handleSubmit(onSubmit)();
-                    }
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
-    </Form>
+    <TextField
+      name="name"
+      value={operation?.name}
+      label={isEdit ? "Operation name" : "Add operation"}
+      onSubmit={handleSubmit}
+      onChange={handleChange}
+      placeholder="Add operation"
+      required={!isEdit}
+      allowEmpty={!isEdit}
+      shouldReset={!isEdit}
+      focusOnMount={focusOnMount}
+      unique={allOperationNames}
+    />
   );
 }
