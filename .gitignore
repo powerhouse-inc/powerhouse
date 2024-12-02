@@ -4,3 +4,4 @@ node_modules/
 **/dist/
 .pnpm-store/
 .next
+dev.db

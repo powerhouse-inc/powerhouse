@@ -131,6 +131,10 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
       focus: () => textareaRef.current?.focus(),
     }));
 
+    useEffect(() => {
+      form.reset({ [name]: value ?? "" });
+    }, [form, name, value]);
+
     return (
       <Form {...form}>
         <FormField

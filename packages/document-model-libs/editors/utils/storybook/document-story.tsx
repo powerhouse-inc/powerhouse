@@ -13,8 +13,9 @@ import {
 } from "document-model/document";
 import React, { useState } from "react";
 import { useDocumentReducer } from "../reducer";
+import { useInterval } from "usehooks-ts";
 
-type EditorStoryArgs = Partial<{
+type EditorStoryArgs<S, A extends Action, L> = Partial<{
   isAllowedToCreateDocuments: boolean;
   isAllowedToEditDocuments: boolean;
   canUndo: boolean;
@@ -23,10 +24,14 @@ type EditorStoryArgs = Partial<{
   onExport: () => void;
   onClose: () => void;
   onShowRevisionHistory: () => void;
+  simulateBackgroundUpdates?: {
+    backgroundUpdateRate: number;
+    backgroundUpdateActions: ((document: Document<S, A, L>) => A)[];
+  };
 }>;
 
 type EditorStoryProps<S, A extends Action, L = unknown> = EditorProps<S, A, L> &
-  EditorStoryArgs;
+  EditorStoryArgs<S, A, L>;
 
 export type EditorStoryComponent<S, A extends Action, L = unknown> = (
   props: EditorStoryProps<S, A, L>,
@@ -40,7 +45,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
   Editor: EditorStoryComponent<S, A, L>,
   reducer: Reducer<S, A, L>,
   initialState: ExtendedState<PartialState<S>, PartialState<L>>,
-  additionalStoryArgs?: EditorStoryArgs,
+  additionalStoryArgs?: EditorStoryArgs<S, A, L>,
 ): { meta: Meta<typeof Editor>; CreateDocumentStory: DocumentStory<S, A, L> } {
   const meta = {
     component: Editor,
@@ -83,7 +88,6 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
           setError(error);
         },
       );
-
       function dispatch(action: A | BaseAction) {
         const context: ActionContext = {};
         if (args.context.user) {
@@ -113,6 +117,15 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
         }
         setError(undefined);
       }, [document, emit]);
+
+      useInterval(() => {
+        if (args.simulateBackgroundUpdates) {
+          const { backgroundUpdateActions } = args.simulateBackgroundUpdates;
+          backgroundUpdateActions.forEach((createAction) => {
+            dispatch(createAction(document));
+          });
+        }
+      }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
       return (
         <Editor

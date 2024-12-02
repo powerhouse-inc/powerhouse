@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.9.1-canary.43",
+  "version": "1.10.0",
   "description": "",
   "files": [
     "/dist"
@@ -55,7 +55,6 @@
   "homepage": "https://github.com/powerhouse-inc/design-system#readme",
   "devDependencies": {
     "@hookform/devtools": "^4.3.1",
-    "@powerhousedao/scalars": "1.9.0",
     "@storybook/addon-actions": "^8.3.4",
     "@storybook/addon-docs": "8.3.5",
     "@storybook/addon-essentials": "^8.3.4",
@@ -80,7 +79,7 @@
     "camelcase": "^8.0.0",
     "chromatic": "^11.11.0",
     "cross-env": "^7.0.3",
-    "document-model": "2.6.0",
+    "document-model": "workspace:*",
     "fast-xml-parser": "^4.3.4",
     "jsdom": "^24.0.0",
     "lightningcss": "^1.27.0",
@@ -90,17 +89,17 @@
     "rollup-plugin-visualizer": "^5.12.0",
     "storybook": "^8.3.4",
     "storybook-addon-pseudo-states": "^4.0.2",
-    "tsx": "^4.19.1"
+    "tsx": "^4.19.1",
+    "@powerhousedao/scalars": "workspace:*"
   },
   "peerDependencies": {
-    "@powerhousedao/scalars": "1.8.0",
-    "document-model": "^2.3.1",
+    "document-model": "workspace:*",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@powerhousedao/scalars": "workspace:*"
   },
   "dependencies": {
     "@internationalized/date": "^3.5.6",
-    "@powerhousedao/scalars": "workspace:*",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.2",

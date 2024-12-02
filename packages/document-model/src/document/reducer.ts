@@ -111,6 +111,8 @@ function updateOperations<T extends Document>(
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
+  let timestamp = new Date().toISOString();
+
   if ("index" in action) {
     if (action.index - skip > nextIndex) {
       throw new Error(
@@ -120,6 +122,8 @@ function updateOperations<T extends Document>(
 
     nextIndex = action.index;
     operationId = action.id;
+
+    timestamp = action.timestamp;
   } else {
     operationId = "id" in action ? (action.id as string) : uuid();
   }
@@ -128,7 +132,7 @@ function updateOperations<T extends Document>(
     ...action,
     id: operationId,
     index: nextIndex,
-    timestamp: new Date().toISOString(),
+    timestamp,
     hash: "",
     scope,
     skip,
