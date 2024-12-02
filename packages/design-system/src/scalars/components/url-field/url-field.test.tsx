@@ -112,7 +112,9 @@ describe("UrlField", () => {
     const input = screen.getByTestId("url-field");
     await user.type(input, "not-a-url{enter}");
 
-    expect(await screen.findByText("Invalid URL")).toBeInTheDocument();
+    expect(
+      await screen.findByText("not-a-url must be a valid URL"),
+    ).toBeInTheDocument();
   });
 
   it("should be valid when valid", async () => {

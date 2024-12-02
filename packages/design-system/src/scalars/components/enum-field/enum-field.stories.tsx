@@ -1,6 +1,6 @@
 import React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { CircleIcon, HomeIcon, StarIcon } from "lucide-react";
+import { Icon, type IconName } from "@/powerhouse/components/icon";
 import { withForm } from "@/scalars/lib/decorators";
 import { EnumField } from "./enum-field";
 import {
@@ -92,10 +92,31 @@ type EnumFieldArgs = {
 
 type Story = StoryObj<EnumFieldArgs>;
 
+const IconComponent = (
+  name: IconName,
+): React.ComponentType<{ className?: string }> => {
+  return ({ className }) => (
+    <Icon name={name} size={16} className={className} />
+  );
+};
+
 const defaultOptions = [
-  { value: "home", label: "Home", icon: HomeIcon },
-  { value: "star", label: "Star", icon: StarIcon },
-  { value: "circle", label: "Circle", icon: CircleIcon },
+  {
+    value: "Briefcase",
+    label: "Briefcase",
+    icon: IconComponent("Briefcase"),
+  },
+  {
+    value: "Drive",
+    label: "Drive",
+    icon: IconComponent("Drive"),
+  },
+  {
+    value: "Globe",
+    label: "Globe",
+    icon: IconComponent("Globe"),
+  },
+  { value: "None", label: "None" },
 ];
 
 export const Default: Story = {
@@ -132,7 +153,7 @@ export const WithDefaultValue: Story = {
     label: "Preset selection",
     variant: "RadioGroup",
     options: defaultOptions,
-    defaultValue: "star",
+    defaultValue: "Drive",
   },
 };
 
@@ -142,7 +163,7 @@ export const Disabled: Story = {
     disabled: true,
     variant: "RadioGroup",
     options: defaultOptions,
-    value: "home",
+    value: "Drive",
   },
 };
 
@@ -152,7 +173,7 @@ export const WithError: Story = {
     label: "With error",
     variant: "RadioGroup",
     options: defaultOptions,
-    value: "home",
+    value: "Drive",
     errors: ["Please select a different option"],
   },
 };
@@ -162,7 +183,7 @@ export const WithWarning: Story = {
     label: "With warning",
     variant: "RadioGroup",
     options: defaultOptions,
-    value: "star",
+    value: "Drive",
     warnings: ["This option may be deprecated soon"],
   },
 };
@@ -193,7 +214,7 @@ export const MultiSelect: Story = {
     variant: "Select",
     options: defaultOptions,
     placeholder: "Select options",
-    defaultValue: ["home", "star"],
+    defaultValue: ["Drive", "Globe"],
     multiple: true,
   },
 };

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.9.1-canary.41",
+  "version": "1.9.1-canary.43",
   "description": "",
   "files": [
     "/dist"
@@ -120,7 +120,6 @@
     "cmdk": "^1.0.4",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "lucide-react": "^0.453.0",
     "mathjs": "^13.1.1",
     "natural-orderby": "^4.0.0",
     "react-hook-form": "^7.53.0",
