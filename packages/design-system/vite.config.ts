@@ -91,6 +91,7 @@ export default defineConfig(() => {
         fileName(_format, entryName) {
           return `${entryName}.js`;
         },
+        cssFileName: "style",
       },
     },
   } as UserConfig;

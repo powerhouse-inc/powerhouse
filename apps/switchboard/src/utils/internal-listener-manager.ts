@@ -40,9 +40,9 @@ export class InternalListenerManager {
               return Promise.resolve();
             },
           },
-          { ...module.options, label: module.options.label ?? "" }
-        )
-      )
+          { ...module.options, label: module.options.label ?? "" },
+        ),
+      ),
     );
   }
 
@@ -61,7 +61,7 @@ export class InternalListenerManager {
           const drive = await this.driveServer.getDrive(driveId);
           const moduleRegistered =
             drive.state.local.listeners.filter(
-              (l) => l.listenerId === listenerId
+              (l) => l.listenerId === listenerId,
             ).length > 0;
           if (!moduleRegistered) {
             continue;
@@ -69,7 +69,7 @@ export class InternalListenerManager {
 
           const transmitter = await this.driveServer.getTransmitter(
             driveId,
-            listenerId
+            listenerId,
           );
           if (transmitter instanceof InternalTransmitter) {
             transmitter.setReceiver({
@@ -86,7 +86,7 @@ export class InternalListenerManager {
         } catch (e) {
           console.error(
             `Error while initializing listener ${options.listenerId} for drive ${driveId}`,
-            e
+            e,
           );
         }
       }
