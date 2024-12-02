@@ -5,7 +5,7 @@ import { FormMessageList } from "../fragments/form-message";
 import { FormGroup } from "../fragments/form-group";
 import { InputNumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
-import { cn, dispatchNativeChangeEvent } from "@/scalars/lib";
+import { cn } from "@/scalars/lib";
 import { withFieldValidation } from "../fragments/with-field-validation";
 import { validateIsBigInt, validatePositive } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
@@ -92,9 +92,15 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         if (maxValue !== undefined && Number(newValue) > maxValue) return;
         if (minValue !== undefined && Number(newValue) < minValue) return;
       }
-
-      const newEvent = dispatchNativeChangeEvent(newValue, "change");
-      onChange?.(newEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: value },
+        writable: false,
+      });
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -103,8 +109,15 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         trailingZeros,
         precision,
       });
-      const newEvent = dispatchNativeChangeEvent(displayValue, "change");
-      onChange?.(newEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: displayValue },
+        writable: false,
+      });
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
       onBlur?.(e);
     };
 
