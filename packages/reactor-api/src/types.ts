@@ -19,4 +19,5 @@ export type Processor = {
   typeDefs: string;
   options?: Omit<Listener, "driveId">;
   transmit?: (strands: InternalTransmitterUpdate[]) => Promise<void>;
+  dbSchema?: Record<string, unknown>;
 };

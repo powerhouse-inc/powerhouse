@@ -43,16 +43,16 @@ const main = async () => {
 
     await reactorRouterManager.registerProcessor({
       ...searchListener,
+      name: "search/:drive",
       transmit(strands) {
         return searchListener.transmit(strands, db);
       },
-      // name: "search/:drive",
     });
 
-    // @TODO: add auth listener
-    await reactorRouterManager.addSubgraph({
-      ...authListener,
-    });
+    // // @TODO: add auth listener
+    // await reactorRouterManager.addSubgraph({
+    //   ...authListener,
+    // });
 
     // load switchboard-gui
     app.use(

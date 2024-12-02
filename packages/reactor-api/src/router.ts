@@ -17,7 +17,7 @@ import {
 import { driveSubgraph, systemSubgraph } from "./subgraphs";
 import { Context, Processor } from "./types";
 import { createSchema } from "./utils/create-schema";
-import { GraphQLSchema } from "graphql";
+import { pushSchema } from "drizzle-kit/api";
 
 export class ReactorRouterManager {
   private database: PgDatabase<any, any, any> | undefined;
@@ -91,6 +91,11 @@ export class ReactorRouterManager {
         });
       }
 
+      // @TODO: doesnt work right now: https://github.com/drizzle-team/drizzle-orm/issues/2853
+      // if (subgraph.dbSchema) {
+      //   await pushSchema(subgraph.dbSchema, this.database!);
+      // }
+
       const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
       if (!subgraphConfig) continue;
       console.log(`Setting up subgraph ${subgraphConfig.name}`);
@@ -139,12 +144,20 @@ export class ReactorRouterManager {
       processor.typeDefs
     );
 
-    this.registry.unshift({
-      ...processor,
-    });
+    if (!this.registry.find((e) => e.name === processor.name)) {
+      console.log(`Registering [${processor.name}] processor.`);
+      this.registry.unshift({
+        ...processor,
+      });
+    } else {
+      console.log(
+        `Processor [${processor.name}] already registered. Replacing...`
+      );
+      const index = this.registry.findIndex((e) => e.name === processor.name);
+      this.registry[index] = processor;
+    }
 
     // update router
-    console.log(`Registering [${processor.name}] processor.`);
     await this.updateRouter();
   }
 
