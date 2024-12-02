@@ -29,7 +29,7 @@ const CommandInput = React.forwardRef<
       "hover:border hover:border-gray-300 dark:hover:border-gray-900",
       "hover:bg-gray-100 dark:hover:bg-gray-900",
       "focus-within:border focus-within:border-gray-300 dark:focus-within:border-gray-900",
-      "has-[input:focus]:bg-gray-100 dark:has-[input:focus]:bg-gray-900",
+      "focus-within:bg-gray-100 dark:focus-within:bg-gray-900",
     )}
     cmdk-input-wrapper=""
   >

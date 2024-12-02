@@ -6,7 +6,7 @@ export type ValidatorResult = ErrorMessage | boolean;
 
 export type ValidatorHandler = (
   value: any,
-  formState: Record<string, any>
+  formState: Record<string, any>,
 ) => ValidatorResult | Promise<ValidatorResult>;
 
 export interface FormFieldProps {
