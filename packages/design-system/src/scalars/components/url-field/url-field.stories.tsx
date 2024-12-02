@@ -29,6 +29,15 @@ const meta: Meta<typeof UrlField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    showIcon: {
+      control: "boolean",
+      description: "Show the protocol icon",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
 
     ...getValidationArgTypes(),
   },

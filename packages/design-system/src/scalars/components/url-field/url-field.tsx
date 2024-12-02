@@ -9,6 +9,8 @@ import {
 } from "../fragments";
 import { ErrorHandling, FieldCommonProps } from "../types";
 import { cn } from "@/scalars/lib";
+import { Icon } from "@/powerhouse";
+import { getIconName } from "./utils";
 
 interface UrlFieldProps
   extends FieldCommonProps<string>,
@@ -18,6 +20,7 @@ interface UrlFieldProps
       "pattern" | "value" | "defaultValue" | "name"
     > {
   allowedProtocols?: string[];
+  showIcon?: boolean;
 }
 
 const UrlFieldRaw: React.FC<UrlFieldProps> = ({
@@ -25,14 +28,11 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = ({
   description,
   warnings,
   errors,
-  allowedProtocols = ["http", "https"],
+  showIcon = false,
   ...props
 }) => {
   const idGenerated = useId();
   const id = props.id ?? idGenerated;
-
-  const showProtocol = allowedProtocols.length > 1;
-  const protocol = `${allowedProtocols[0] ?? "https"}://`;
 
   return (
     <FormGroup>
@@ -44,23 +44,19 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = ({
       >
         {label}
       </FormLabel>
-      <div className={"flex items-center"}>
-        {showProtocol && (
-          <Input
-            value={protocol}
-            readOnly
-            // tailwind does not support dynamic classes
-            style={{ width: `${(protocol.length + 1) * 8}px` }}
-            className={`w-auto rounded-r-none border-r-0 focus:z-10`}
-          />
-        )}
+      <div className="relative">
         <Input
           id={id}
           type="url"
           {...props}
-          value={props.value ?? ""} // make sure it doesn't change from uncontrolled to controlled
-          className={cn("focus:z-10", showProtocol && "rounded-l-none")}
+          value={props.value ?? ""}
+          className={cn(showIcon && "pl-8")}
         />
+        {showIcon && (
+          <div className="absolute left-2.5 top-0 flex h-full items-center justify-center text-gray-900">
+            <Icon name={getIconName(props.value ?? "")} size={18} />
+          </div>
+        )}
       </div>
       {description && <FormDescription>{description}</FormDescription>}
       {warnings && <FormMessageList messages={warnings} type="warning" />}
@@ -77,7 +73,7 @@ export const UrlField = withFieldValidation<UrlFieldProps>(UrlFieldRaw, {
         new URL(value as string);
         return true;
       } catch {
-        return "Invalid URL";
+        return `${value} must be a valid URL`;
       }
     },
     _allowedProtocols:
@@ -87,7 +83,17 @@ export const UrlField = withFieldValidation<UrlFieldProps>(UrlFieldRaw, {
 
         const url = new URL(value as string);
         const isAllowed = allowedProtocols.includes(url.protocol.slice(0, -1));
-        return isAllowed ? true : "Invalid protocol";
+        if (isAllowed) return true;
+
+        let allowedProtocolsString = allowedProtocols.join(", ");
+        if (allowedProtocols.length > 1) {
+          allowedProtocolsString = allowedProtocolsString.replace(
+            /,\s(?=[^,]*$)/,
+            " or ",
+          );
+        }
+
+        return `The URL must start with ${allowedProtocolsString}`;
       },
   },
 });
