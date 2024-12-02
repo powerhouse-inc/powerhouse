@@ -13,8 +13,8 @@
   "module": "dist/es/src/index.js",
   "scripts": {
     "check-types": "tsc",
-    "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "postlint": "npm run check-types",
     "build": "NODE_ENV=production vite build",
     "build:watch": "vite build --watch",
