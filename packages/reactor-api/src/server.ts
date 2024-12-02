@@ -29,5 +29,5 @@ export async function startAPI(
 
   app.listen(port);
 
-  return { app };
+  return { app, reactorRouterManager };
 }

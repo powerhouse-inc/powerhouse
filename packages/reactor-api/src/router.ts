@@ -81,7 +81,7 @@ export class ReactorRouterManager {
     newRouter.use(bodyParser.json());
     // Run each subgraph on the same http server, but at different paths
     for (const subgraph of this.subgraphRegistry) {
-      const subgraphConfig = this.getLocalSubgraphConfig(subgraph.name);
+      const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
       if (!subgraphConfig) continue;
 
       // get schema
@@ -130,7 +130,7 @@ export class ReactorRouterManager {
       getSchema: () => schema,
     });
 
-    await this.registerInternalListener({
+    await this.#registerInternalListener({
       name: processor.options.label ?? "",
       options: processor.options,
       transmit: processor.transmit,
@@ -141,16 +141,11 @@ export class ReactorRouterManager {
     await this.updateRouter();
   }
 
-  private getLocalSubgraphConfig(subgraphName: string) {
+  #getLocalSubgraphConfig(subgraphName: string) {
     return this.subgraphRegistry.find((it) => it.name === subgraphName);
   }
 
-  async addSubgraph(subgraph: (typeof this.subgraphRegistry)[number]) {
-    this.subgraphRegistry.unshift(subgraph);
-    await this.updateRouter();
-  }
-
-  async registerInternalListener(module: InternalListenerModule) {
+  async #registerInternalListener(module: InternalListenerModule) {
     if (!this.listenerManager) {
       throw new Error("Listener manager not initialized");
     }
