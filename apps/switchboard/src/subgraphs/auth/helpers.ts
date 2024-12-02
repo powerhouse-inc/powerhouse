@@ -6,7 +6,7 @@ import ms from "ms";
 import wildcard from "wildcard-match";
 import z from "zod";
 import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from "./env";
-import { sessionTable } from "./schema";
+import { sessionTable } from "./db-schema";
 import { SessionInput } from "./types";
 import { PgDatabase } from "drizzle-orm/pg-core";
 const jwtSchema = z.object({
