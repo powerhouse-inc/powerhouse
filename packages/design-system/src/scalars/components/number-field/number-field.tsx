@@ -5,7 +5,7 @@ import { FormMessageList } from "../fragments/form-message";
 import { FormGroup } from "../fragments/form-group";
 import { InputNumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
-import { cn } from "@/scalars/lib";
+import { cn, dispatchNativeChangeEvent } from "@/scalars/lib";
 import { withFieldValidation } from "../fragments/with-field-validation";
 import { validateIsBigInt, validatePositive } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
@@ -45,6 +45,10 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   ) => {
     const generatedId = useId();
     const id = propId ?? generatedId;
+    const isIncrementDisabled =
+      maxValue !== undefined && Number(value) >= maxValue;
+    const isDecrementDisabled =
+      minValue !== undefined && Number(value) <= minValue;
 
     // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints,
     // Otherwise sets to "number" for standard numeric input.
@@ -89,23 +93,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         if (minValue !== undefined && Number(newValue) < minValue) return;
       }
 
-      // Crear el evento nativo para disparar onChange
-      const nativeEvent = new Event("change", {
-        bubbles: true,
-        cancelable: true,
-      });
-      Object.defineProperty(nativeEvent, "target", {
-        value: { value: newValue },
-        writable: false,
-      });
-
-      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+      const newEvent = dispatchNativeChangeEvent(newValue, "change");
+      onChange?.(newEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     };
-
-    const isIncrementDisabled =
-      maxValue !== undefined && Number(value) >= maxValue;
-    const isDecrementDisabled =
-      minValue !== undefined && Number(value) <= minValue;
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
       const displayValue = getDisplayValue(String(value), {
@@ -113,33 +103,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         trailingZeros,
         precision,
       });
-
-      // //Create event for onBlur
-      const syntheticEvent = new CustomEvent("blur", {
-        bubbles: true,
-        cancelable: true,
-        detail: {
-          value: displayValue,
-          name: e.target.name,
-        },
-      });
-      Object.defineProperty(syntheticEvent, "target", {
-        value: { ...e.target, value: displayValue },
-        writable: false,
-      });
-
-      //Create event for onChange
-      const nativeEvent = new Event("change", {
-        bubbles: true,
-        cancelable: true,
-      });
-      Object.defineProperty(nativeEvent, "target", {
-        value: { value: displayValue },
-        writable: false,
-      });
-
-      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
-      onBlur?.(syntheticEvent as unknown as React.FocusEvent<HTMLInputElement>);
+      const newEvent = dispatchNativeChangeEvent(displayValue, "change");
+      onChange?.(newEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+      onBlur?.(e);
     };
 
     return (
@@ -217,12 +183,13 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   },
 );
 
-const NumberField = withFieldValidation<NumberFieldProps>(NumberFieldRaw, {
-  validations: {
-    _positive: validatePositive,
-    _isBigInt: validateIsBigInt,
+export const NumberField = withFieldValidation<NumberFieldProps>(
+  NumberFieldRaw,
+  {
+    validations: {
+      _positive: validatePositive,
+      _isBigInt: validateIsBigInt,
+    },
   },
-});
+);
 NumberField.displayName = "NumberField";
-
-export { NumberField };

@@ -1,8 +1,8 @@
 import {
+  applyBigInt,
+  applyMaxSafeInteger,
   applyPrecision,
   applyTransformations,
-  enforceBigInt,
-  enforceMaxSafeInteger,
   Transformation,
 } from "./transformations";
 
@@ -30,10 +30,10 @@ export function getDisplayValue(
   const transformations: Transformation[] = [];
 
   if (isBigInt) {
-    transformations.push(enforceBigInt);
+    transformations.push(applyBigInt);
   }
 
-  transformations.push(enforceMaxSafeInteger);
+  transformations.push(applyMaxSafeInteger);
 
   if (precision !== undefined) {
     transformations.push(applyPrecision(precision, trailingZeros));

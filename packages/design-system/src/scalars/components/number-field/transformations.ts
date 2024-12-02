@@ -7,13 +7,13 @@ export const applyTransformations = (
   return transformations.reduce((acc, transform) => transform(acc), value);
 };
 
-export const enforceBigInt = (value: string | number): string | number => {
+export const applyBigInt = (value: string | number): string | number => {
   const stringValue = value.toString().replace(/[^-\d.]/g, "");
   const integerPart = stringValue.split(".")[0];
   return validNumber.test(integerPart) ? BigInt(integerPart).toString() : "";
 };
 
-export const enforceMaxSafeInteger = (
+export const applyMaxSafeInteger = (
   value: string | number,
 ): string | number => {
   const numericValue = parseFloat(value.toString());

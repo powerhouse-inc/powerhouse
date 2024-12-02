@@ -3,7 +3,7 @@ import {
   isPositiveOrUndefiend,
   isPrecisionZeroOrUndefiend,
   validateTrailing,
-} from "@/scalars/validations/share-number-validations";
+} from "@/scalars/lib/share-number-validations";
 import { AmountFieldProps } from "./amount-field";
 import { AmountCurrency, AmountValue } from "./types";
 
