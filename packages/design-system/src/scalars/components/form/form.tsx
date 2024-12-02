@@ -133,7 +133,9 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
         ]),
       );
 
-      onSubmit(data);
+      // we need to return the promise from the onSubmit callback if there is one
+      // so react-hook-form can wait for it to resolve and update the form state correctly
+      return onSubmit(data);
     }, []);
 
     return (
