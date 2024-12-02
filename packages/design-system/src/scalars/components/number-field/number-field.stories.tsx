@@ -101,6 +101,7 @@ export const Default: Story = {
     placeholder: "0",
     showErrorOnBlur: true,
     step: 0,
+    value: 1234,
   },
 };
 export const Active: Story = {
@@ -108,6 +109,7 @@ export const Active: Story = {
     name: "Label",
     label: "Label",
     autoFocus: true,
+    defaultValue: 45,
     step: 0,
   },
   parameters: {
