@@ -92,12 +92,13 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         if (maxValue !== undefined && Number(newValue) > maxValue) return;
         if (minValue !== undefined && Number(newValue) < minValue) return;
       }
+      // Crear el evento nativo para disparar onChange
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: value },
+        value: { value: newValue },
         writable: false,
       });
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
