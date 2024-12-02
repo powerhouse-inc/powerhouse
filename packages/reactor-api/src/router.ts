@@ -14,10 +14,10 @@ import {
   InternalListenerManager,
   InternalListenerModule,
 } from "./internal-listener-manager";
-import { getSchema as getDriveSchema } from "./subgraphs/drive/subgraph";
-import { getSchema as getSystemSchema } from "./subgraphs/system/subgraph";
+import { driveSubgraph, systemSubgraph } from "./subgraphs";
 import { Context, Processor } from "./types";
 import { createSchema } from "./utils/create-schema";
+import { GraphQLSchema } from "graphql";
 
 export class ReactorRouterManager {
   private database: PgDatabase<any, any, any> | undefined;
@@ -25,14 +25,16 @@ export class ReactorRouterManager {
   private contextFields: Record<string, any> = {};
 
   // @todo: need to persist somewhere
-  private subgraphRegistry = [
+  private registry: Processor[] = [
     {
       name: "system",
-      getSchema: getSystemSchema,
+      resolvers: systemSubgraph.resolvers,
+      typeDefs: systemSubgraph.typeDefs,
     },
     {
       name: "d/:drive",
-      getSchema: getDriveSchema,
+      resolvers: driveSubgraph.resolvers,
+      typeDefs: driveSubgraph.typeDefs,
     },
   ];
   constructor(
@@ -80,13 +82,24 @@ export class ReactorRouterManager {
     newRouter.use(cors());
     newRouter.use(bodyParser.json());
     // Run each subgraph on the same http server, but at different paths
-    for (const subgraph of this.subgraphRegistry) {
+    for (const subgraph of this.registry) {
+      if (subgraph.options && subgraph.transmit) {
+        await this.#registerInternalListener({
+          name: subgraph.name,
+          options: subgraph.options,
+          transmit: subgraph.transmit,
+        });
+      }
+
       const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
       if (!subgraphConfig) continue;
-
+      console.log(`Setting up subgraph ${subgraphConfig.name}`);
       // get schema
-      const schema = subgraphConfig.getSchema(this.driveServer);
-
+      const schema = createSchema(
+        this.driveServer,
+        subgraphConfig.resolvers,
+        subgraphConfig.typeDefs
+      );
       // create apollo server
       const server = new ApolloServer({
         schema,
@@ -125,24 +138,18 @@ export class ReactorRouterManager {
       processor.resolvers,
       processor.typeDefs
     );
-    this.subgraphRegistry.unshift({
-      name: processor.options.label ?? "",
-      getSchema: () => schema,
-    });
 
-    await this.#registerInternalListener({
-      name: processor.options.label ?? "",
-      options: processor.options,
-      transmit: processor.transmit,
+    this.registry.unshift({
+      ...processor,
     });
 
     // update router
-    console.log(`Registering [${processor.options.label}] subgraph.`);
+    console.log(`Registering [${processor.name}] processor.`);
     await this.updateRouter();
   }
 
   #getLocalSubgraphConfig(subgraphName: string) {
-    return this.subgraphRegistry.find((it) => it.name === subgraphName);
+    return this.registry.find((it) => it.name === subgraphName);
   }
 
   async #registerInternalListener(module: InternalListenerModule) {
