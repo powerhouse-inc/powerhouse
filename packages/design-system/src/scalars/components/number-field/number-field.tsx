@@ -27,6 +27,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       value,
       defaultValue,
       onChange,
+      onBlur,
       errors,
       warnings,
       className,
@@ -62,12 +63,6 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       }
     };
 
-    const displayValue = getDisplayValue(String(value), {
-      isBigInt,
-      trailingZeros,
-      precision,
-    });
-
     const handleChangeSteps = (
       e: React.MouseEvent<HTMLButtonElement>,
       operation: "increment" | "decrement",
@@ -77,13 +72,13 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       let newValue: string | number;
 
       if (isBigInt) {
-        const currentValue = BigInt(displayValue);
+        const currentValue = BigInt(value ?? 0);
         const adjustment =
           BigInt(step || 1) *
           (operation === "increment" ? BigInt(1) : BigInt(-1));
         newValue = (currentValue + adjustment).toString(); // Convertir a string para el input
       } else {
-        const currentValue = Number(displayValue || defaultValue || 0);
+        const currentValue = Number(value ?? defaultValue ?? 0);
         const adjustment = (step || 1) * (operation === "increment" ? 1 : -1);
         newValue = currentValue + adjustment;
       }
@@ -108,9 +103,44 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     };
 
     const isIncrementDisabled =
-      maxValue !== undefined && Number(displayValue) >= maxValue;
+      maxValue !== undefined && Number(value) >= maxValue;
     const isDecrementDisabled =
-      minValue !== undefined && Number(displayValue) <= minValue;
+      minValue !== undefined && Number(value) <= minValue;
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      const displayValue = getDisplayValue(String(value), {
+        isBigInt,
+        trailingZeros,
+        precision,
+      });
+
+      // //Create event for onBlur
+      const syntheticEvent = new CustomEvent("blur", {
+        bubbles: true,
+        cancelable: true,
+        detail: {
+          value: displayValue,
+          name: e.target.name,
+        },
+      });
+      Object.defineProperty(syntheticEvent, "target", {
+        value: { ...e.target, value: displayValue },
+        writable: false,
+      });
+
+      //Create event for onChange
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: displayValue },
+        writable: false,
+      });
+
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+      onBlur?.(syntheticEvent as unknown as React.FocusEvent<HTMLInputElement>);
+    };
 
     return (
       <FormGroup>
@@ -138,7 +168,8 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
             onKeyDown={blockInvalidChar}
-            value={displayValue}
+            value={value}
+            onBlur={handleBlur}
             defaultValue={defaultValue}
             onChange={onChange}
             onPaste={blockInvalidPaste}
