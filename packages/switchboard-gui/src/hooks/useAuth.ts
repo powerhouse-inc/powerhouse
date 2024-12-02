@@ -191,7 +191,7 @@ const useAuth = () => {
   const createSession = async (
     name: string,
     expiryDurationSeconds: number | null,
-    allowedOrigins: string,
+    allowedOrigins: string
   ): Promise<string> => {
     const { data, errors } = await client.mutate({
       mutation: gql`mutation { createSession(session: {name: "${name}", expiryDurationSeconds: ${expiryDurationSeconds}, allowedOrigins: "${allowedOrigins}"}) { token } }`,
@@ -215,8 +215,8 @@ const useAuth = () => {
     }
 
     if (gqlToken) {
-      const payload = jwtDecode(gqlToken);
-      if (sessionId === payload.sessionId) {
+      const payload = jwtDecode(gqlToken) as { sessionId?: string } | undefined;
+      if (sessionId === payload?.sessionId) {
         setGqlToken(undefined);
         setAddress("");
         setIsAuthorized(false);
@@ -242,8 +242,8 @@ const useAuth = () => {
     if (!gqlToken) {
       throw new Error("No user token provided");
     }
-    const payload = jwtDecode(gqlToken);
-    if (!payload.sessionId) {
+    const payload = jwtDecode(gqlToken) as { sessionId?: string } | undefined;
+    if (!payload || !payload.sessionId) {
       throw new Error("Token has invalid format");
     }
     await revokeSession(payload.sessionId);
