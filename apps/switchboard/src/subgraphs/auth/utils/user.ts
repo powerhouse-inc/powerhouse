@@ -33,7 +33,7 @@ export const upsertUser = async (db: PgDatabase<any, any, any>, user: User) => {
 
 export const getUser = async (
   db: PgDatabase<any, any, any>,
-  address: string
+  address: string,
 ) => {
   const [user] = await db
     .select()

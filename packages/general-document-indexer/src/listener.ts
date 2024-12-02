@@ -28,7 +28,7 @@ export const options: Omit<Listener, "driveId"> = {
 
 export async function transmit(
   strands: InternalTransmitterUpdate[],
-  db: PgDatabase<any, any, any>
+  db: PgDatabase<any, any, any>,
 ) {
   for (const strand of strands) {
     handleStrand(strand, db);
@@ -39,7 +39,7 @@ export async function transmit(
 
 async function handleStrand(
   strand: InternalTransmitterUpdate,
-  db: PgDatabase<any, any, any>
+  db: PgDatabase<any, any, any>,
 ) {
   const firstOp = strand.operations[0];
   if (firstOp?.index === 0) {
@@ -63,8 +63,8 @@ async function handleStrand(
         .where(
           and(
             eq(searchTable.driveId, strand.driveId),
-            eq(searchTable.documentId, (op.input as CopyNodeInput).srcId)
-          )
+            eq(searchTable.documentId, (op.input as CopyNodeInput).srcId),
+          ),
         );
 
       if (!file) {
@@ -90,8 +90,8 @@ async function handleStrand(
         .where(
           and(
             eq(searchTable.driveId, strand.driveId),
-            eq(searchTable.documentId, (op.input as UpdateNodeInput).id)
-          )
+            eq(searchTable.documentId, (op.input as UpdateNodeInput).id),
+          ),
         )
         .returning();
     } else if (op.type === "DELETE_NODE") {
@@ -100,8 +100,8 @@ async function handleStrand(
         .where(
           and(
             eq(searchTable.driveId, strand.driveId),
-            eq(searchTable.documentId, (op.input as DeleteNodeInput).id)
-          )
+            eq(searchTable.documentId, (op.input as DeleteNodeInput).id),
+          ),
         );
     }
   });

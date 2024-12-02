@@ -55,7 +55,7 @@ const main = async () => {
         createSchema(
           driveServer,
           searchListener.resolvers as GraphQLResolverMap,
-          searchListener.typeDefs
+          searchListener.typeDefs,
         ),
     });
 
@@ -78,9 +78,9 @@ const main = async () => {
       express.static(
         path.join(
           __dirname,
-          "../node_modules/@powerhousedao/switchboard-gui/dist"
-        )
-      )
+          "../node_modules/@powerhousedao/switchboard-gui/dist",
+        ),
+      ),
     );
 
     // start http server

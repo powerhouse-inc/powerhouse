@@ -63,7 +63,7 @@ export type LocalReactor = {
       label: string;
       block: boolean;
       filter: ListenerFilter;
-    }
+    },
   ) => Promise<InternalTransmitter>;
 };
 
@@ -73,7 +73,7 @@ const baseDocumentModels = [
 ] as DocumentModel[];
 
 const startServer = async (
-  options?: StartServerOptions
+  options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   const { port, storagePath, drive, dev } = {
     ...DefaultStartServerOptions,
@@ -84,7 +84,7 @@ const startServer = async (
   // start document drive server with all available document models & filesystem storage
   const driveServer = new DocumentDriveServer(
     baseDocumentModels,
-    new FilesystemStorage(storagePath)
+    new FilesystemStorage(storagePath),
   );
 
   // init drive server
@@ -144,9 +144,7 @@ const startServer = async (
       // load processors
       const processorsPath = path.join(process.cwd(), "./processors");
       console.log("Loading processors from", processorsPath);
-      const localProcessors = (await vite.ssrLoadModule(
-        processorsPath
-      )) as Record<string, any>;
+      const localProcessors = await vite.ssrLoadModule(processorsPath);
 
       for (const [name, processor] of Object.entries(localProcessors)) {
         await Promise.all([
@@ -156,7 +154,7 @@ const startServer = async (
               createSchema(
                 driveServer,
                 processor.resolvers,
-                processor.typeDefs
+                processor.typeDefs,
               ),
           }),
           registerInternalListener({
@@ -184,7 +182,7 @@ const startServer = async (
         label: string;
         block: boolean;
         filter: ListenerFilter;
-      }
+      },
     ) => driveServer.addInternalListener(driveId, receiver, options),
   };
 };

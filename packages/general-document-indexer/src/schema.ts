@@ -12,5 +12,5 @@ export const searchTable = pgTable(
     pk: primaryKey({
       columns: [table.driveId, table.documentId],
     }),
-  })
+  }),
 );
