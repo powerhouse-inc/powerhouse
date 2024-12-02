@@ -29,13 +29,13 @@ export interface TextareaProps
 
 const textareaBaseStyles = cn(
   // Base styles
-  "flex w-full rounded-md text-sm leading-normal",
+  "flex w-full rounded-md text-[14px] font-normal leading-5",
   // Colors & Background
-  "border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900",
+  "dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white",
   // Placeholder
   "font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500",
   // Padding & Spacing
-  "px-3 py-2",
+  "px-3 py-[7.2px]",
   // Focus state
   "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 focus-visible:ring-offset-white",
   "dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900",
@@ -185,7 +185,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               autoExpand
                 ? "resize-none overflow-hidden"
                 : [
-                    "min-h-[120px] resize-y",
+                    "resize-y",
                     "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300",
                     "dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600",
                   ],
