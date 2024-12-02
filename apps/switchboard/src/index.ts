@@ -19,7 +19,10 @@ import { getSchema as getAuthSchema } from "./subgraphs/auth/subgraph";
 import { getSchema as getAnalyticsSchema } from "./subgraphs/analytics/subgraph";
 import path from "path";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
-import { transmit as analyticsTransmit, options as analyticsOptions } from "./subgraphs/analytics/listener";
+import {
+  transmit as analyticsTransmit,
+  options as analyticsOptions,
+} from "./subgraphs/analytics/listener";
 import { logger } from "document-drive/logger";
 import get from "./subgraphs/analytics/service";
 import { AnalyticsModel } from "@powerhousedao/analytics-engine-graphql";
