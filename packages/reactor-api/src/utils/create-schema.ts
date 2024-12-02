@@ -3,10 +3,11 @@ import { IDocumentDriveServer } from "document-drive";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 import { parse } from "graphql";
+import { Context } from "src/types";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
-  resolvers: GraphQLResolverMap,
+  resolvers: GraphQLResolverMap<Context>,
   typeDefs: string
 ) =>
   buildSubgraphSchema([

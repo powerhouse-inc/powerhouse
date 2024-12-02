@@ -14,8 +14,9 @@ export interface Context {
 }
 
 export type Processor = {
+  name: string;
   resolvers: any;
   typeDefs: string;
-  options: Omit<Listener, "driveId">;
-  transmit: (strands: InternalTransmitterUpdate[]) => Promise<void>;
+  options?: Omit<Listener, "driveId">;
+  transmit?: (strands: InternalTransmitterUpdate[]) => Promise<void>;
 };
