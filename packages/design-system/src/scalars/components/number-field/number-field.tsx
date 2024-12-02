@@ -12,13 +12,12 @@ import { Icon } from "@/powerhouse/components/icon";
 import { getDisplayValue, regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
-  className?: string;
-  defaultValue?: number | string;
   name: string;
+  value?: string | number;
+  defaultValue?: string | number;
+  className?: string;
   pattern?: RegExp;
-  value?: number | string;
 }
-
 export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   (
     {
@@ -28,6 +27,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       value,
       defaultValue,
       onChange,
+      onBlur,
       errors,
       warnings,
       className,
@@ -45,11 +45,15 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   ) => {
     const generatedId = useId();
     const id = propId ?? generatedId;
+    const isIncrementDisabled =
+      maxValue !== undefined && Number(value) >= maxValue;
+    const isDecrementDisabled =
+      minValue !== undefined && Number(value) <= minValue;
 
     // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints,
     // Otherwise sets to "number" for standard numeric input.
     const inputType = isBigInt ? "text" : "number";
-    const showSteps = step !== 0 && inputType !== "text";
+    const showSteps = step !== 0;
 
     // Prevent to write invalid characters
     const blockInvalidChar = (e: React.KeyboardEvent<HTMLInputElement>) =>
@@ -63,49 +67,61 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       }
     };
 
-    const displayValue = getDisplayValue(
-      value,
-      isBigInt,
-      trailingZeros,
-      precision,
-    );
-
-    const handleChange = (
+    const handleChangeSteps = (
       e: React.MouseEvent<HTMLButtonElement>,
       operation: "increment" | "decrement",
     ) => {
       e.preventDefault();
-      const currentValue = Number(displayValue ?? defaultValue ?? 0);
 
-      const adjustment = (operation === "increment" ? 1 : -1) * (step || 1);
-      const newValue = currentValue + adjustment;
+      let newValue: string | number;
 
-      if (
-        (maxValue !== undefined && newValue > maxValue) ||
-        (minValue !== undefined && newValue < minValue)
-      ) {
-        return;
+      if (isBigInt) {
+        const currentValue = BigInt(value ?? 0);
+        const adjustment =
+          BigInt(step || 1) *
+          (operation === "increment" ? BigInt(1) : BigInt(-1));
+        newValue = (currentValue + adjustment).toString(); // Convertir a string para el input
+      } else {
+        const currentValue = Number(value ?? defaultValue ?? 0);
+        const adjustment = (step || 1) * (operation === "increment" ? 1 : -1);
+        newValue = currentValue + adjustment;
       }
-      if (newValue === currentValue) {
-        return;
+
+      // Validación de límites para valores que no sean BigInt
+      if (!isBigInt) {
+        if (maxValue !== undefined && Number(newValue) > maxValue) return;
+        if (minValue !== undefined && Number(newValue) < minValue) return;
       }
+      // Crear el evento nativo para disparar onChange
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
-
       Object.defineProperty(nativeEvent, "target", {
         value: { value: newValue },
         writable: false,
       });
-
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     };
-    // Determinar si los botones de incremento y decremento deben estar deshabilitados
-    const isIncrementDisabled =
-      maxValue !== undefined && Number(displayValue) >= maxValue;
-    const isDecrementDisabled =
-      minValue !== undefined && Number(displayValue) <= minValue;
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      const displayValue = getDisplayValue(String(value), {
+        isBigInt,
+        trailingZeros,
+        precision,
+      });
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: displayValue },
+        writable: false,
+      });
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+      onBlur?.(e);
+    };
+
     return (
       <FormGroup>
         {label && (
@@ -123,7 +139,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           <Input
             id={id}
             name={name}
-            className={className}
+            className={cn(className, showSteps && "pr-8")}
             pattern={isBigInt ? regex.toString() : pattern?.toString()}
             type={inputType}
             min={minValue}
@@ -132,7 +148,8 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
             onKeyDown={blockInvalidChar}
-            value={displayValue}
+            value={value}
+            onBlur={handleBlur}
             defaultValue={defaultValue}
             onChange={onChange}
             onPaste={blockInvalidPaste}
@@ -144,7 +161,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
               <button
                 disabled={isIncrementDisabled}
                 type="button"
-                onClick={(e) => handleChange(e, "increment")}
+                onClick={(e) => handleChangeSteps(e, "increment")}
               >
                 <Icon
                   size={10}
@@ -158,7 +175,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
               <button
                 disabled={isDecrementDisabled}
                 type="button"
-                onClick={(e) => handleChange(e, "decrement")}
+                onClick={(e) => handleChangeSteps(e, "decrement")}
               >
                 <Icon
                   size={10}
@@ -180,12 +197,13 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   },
 );
 
-const NumberField = withFieldValidation<NumberFieldProps>(NumberFieldRaw, {
-  validations: {
-    _positive: validatePositive,
-    _isBigInt: validateIsBigInt,
+export const NumberField = withFieldValidation<NumberFieldProps>(
+  NumberFieldRaw,
+  {
+    validations: {
+      _positive: validatePositive,
+      _isBigInt: validateIsBigInt,
+    },
   },
-});
+);
 NumberField.displayName = "NumberField";
-
-export { NumberField };

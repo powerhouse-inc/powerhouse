@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { NumberField } from "./number-field";
 import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
@@ -7,6 +6,7 @@ import {
   PrebuiltArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
+import { NumberField } from "./number-field";
 
 const meta = {
   title: "Document Engineering/Simple Components/Number Field",
@@ -101,6 +101,7 @@ export const Default: Story = {
     placeholder: "0",
     showErrorOnBlur: true,
     step: 0,
+    value: 1234,
   },
 };
 export const Active: Story = {
@@ -108,6 +109,7 @@ export const Active: Story = {
     name: "Label",
     label: "Label",
     autoFocus: true,
+    defaultValue: 45,
     step: 0,
   },
   parameters: {

@@ -1,7 +1,7 @@
 import {
   isBigIntNumber,
   isPositiveOrUndefiend,
-} from "@/scalars/validations/share-number-validations";
+} from "@/scalars/lib/share-number-validations";
 import { NumberFieldProps } from "./number-field";
 
 export const validatePositive =

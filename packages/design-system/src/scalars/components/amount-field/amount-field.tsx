@@ -44,7 +44,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   maxValue,
   allowNegative,
   trailingZeros,
-  onChange = () => {},
+  onChange,
   onBlur,
   disabled,
   className,
@@ -77,13 +77,13 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
         amount: e.target.value as unknown as number,
       } as AmountValue;
 
-      onChange(newValue);
+      onChange?.(newValue);
     }
     if (type === "Amount" || type === "AmountPercentage") {
       const newValue = {
         amount: e.target.value as unknown as number,
       } as AmountValue;
-      onChange(newValue);
+      onChange?.(newValue);
     }
   };
   const handleOnChangeSelect = (e: string | string[]) => {
@@ -93,7 +93,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
         currency: typeof e === "string" ? e : undefined,
       } as AmountValue;
 
-      onChange(newValue);
+      onChange?.(newValue);
     }
   };
   const handleBlur = (e: React.ChangeEvent<HTMLInputElement>) => {

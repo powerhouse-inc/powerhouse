@@ -1,21 +1,43 @@
+import {
+  applyBigInt,
+  applyMaxSafeInteger,
+  applyPrecision,
+  applyTransformations,
+  Transformation,
+} from "./transformations";
+
 export const regex = /^-?\d*\.?\d*$/;
 
+type TransformProps = {
+  isBigInt?: boolean;
+  trailingZeros?: boolean;
+  precision?: number;
+};
 export function getDisplayValue(
-  value: number | string | undefined,
-  isBigInt: boolean,
-  trailingZeros: boolean,
-  precision: number,
-): string | number | undefined {
+  value = "",
+  transformProps?: TransformProps,
+): string | number {
+  const {
+    isBigInt = false,
+    precision,
+    trailingZeros = false,
+  } = transformProps || {};
+
+  if (value === "") {
+    return "";
+  }
+
+  const transformations: Transformation[] = [];
+
   if (isBigInt) {
-    if (typeof value === "string") {
-      return value.replace(/\D/g, "");
-    }
-    return BigInt(value ?? 0).toString();
+    transformations.push(applyBigInt);
   }
 
-  if (typeof value === "number") {
-    return trailingZeros ? value.toFixed(precision) : value;
+  transformations.push(applyMaxSafeInteger);
+
+  if (precision !== undefined) {
+    transformations.push(applyPrecision(precision, trailingZeros));
   }
 
-  return value;
+  return applyTransformations(value, transformations);
 }
