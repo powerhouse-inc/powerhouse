@@ -123,15 +123,14 @@ export const SelectFieldRaw = React.forwardRef<
               aria-required={required}
               aria-expanded={isPopoverOpen}
               className={cn(
-                "flex h-9 w-full items-center justify-between px-3 py-2",
+                "flex size-full items-center justify-between px-3 py-[7.2px]",
                 "dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white",
                 "hover:border-gray-300 hover:bg-gray-100",
                 "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800",
                 "dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                 "dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0",
                 disabled && [
-                  "opacity-50",
-                  "cursor-not-allowed",
+                  "cursor-not-allowed !pointer-events-auto",
                   "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900 hover:border-gray-300 hover:bg-white",
                 ],
                 className,
@@ -155,7 +154,7 @@ export const SelectFieldRaw = React.forwardRef<
             align="start"
             onEscapeKeyDown={() => setIsPopoverOpen(false)}
             className={cn(
-              "w-[--radix-popover-trigger-width] px-0 py-1",
+              "w-[--radix-popover-trigger-width] p-0",
               "border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
               "rounded shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
             )}

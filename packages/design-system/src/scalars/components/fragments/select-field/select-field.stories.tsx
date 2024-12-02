@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { CircleIcon, HomeIcon, StarIcon } from "lucide-react";
+import { Icon, type IconName } from "@/powerhouse/components/icon";
 import { withForm } from "@/scalars/lib/decorators";
 import { SelectField } from "./select-field";
 import {
@@ -96,10 +96,31 @@ const meta: Meta<typeof SelectField> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const IconComponent = (
+  name: IconName,
+): React.ComponentType<{ className?: string }> => {
+  return ({ className }) => (
+    <Icon name={name} size={16} className={className} />
+  );
+};
+
 const defaultOptions = [
-  { value: "home", label: "Home", icon: HomeIcon },
-  { value: "star", label: "Star", icon: StarIcon },
-  { value: "circle", label: "Circle", icon: CircleIcon },
+  {
+    value: "Briefcase",
+    label: "Briefcase",
+    icon: IconComponent("Briefcase"),
+  },
+  {
+    value: "Drive",
+    label: "Drive",
+    icon: IconComponent("Drive"),
+  },
+  {
+    value: "Globe",
+    label: "Globe",
+    icon: IconComponent("Globe"),
+  },
+  { value: "None", label: "None" },
 ];
 
 // Basic examples
@@ -133,7 +154,7 @@ export const WithDefaultValue: Story = {
   args: {
     label: "Preset selection",
     options: defaultOptions,
-    defaultValue: ["star"],
+    defaultValue: ["Drive"],
   },
 };
 
@@ -142,7 +163,7 @@ export const Disabled: Story = {
     label: "Disabled field",
     disabled: true,
     options: defaultOptions,
-    value: ["home"],
+    value: ["Drive"],
   },
 };
 
@@ -151,7 +172,7 @@ export const WithError: Story = {
   args: {
     label: "With error",
     options: defaultOptions,
-    value: ["home"],
+    value: ["Drive"],
     multiple: true,
     errors: ["Please select at least two options"],
   },
@@ -161,7 +182,7 @@ export const WithWarning: Story = {
   args: {
     label: "With warning",
     options: defaultOptions,
-    value: ["circle", "star"],
+    value: ["Drive", "Globe"],
     multiple: true,
     warnings: ["Some selected options may not be available in the future"],
   },
@@ -237,5 +258,22 @@ export const WithPredefinedIcons: Story = {
       { value: "None", label: "None" },
     ],
     placeholder: "Select an icon",
+  },
+};
+
+export const WithLongOptionLabel: Story = {
+  args: {
+    label: "With long option label",
+    description: "The Select field handles long option labels",
+    options: [
+      {
+        value: "very-long-option-1",
+        label:
+          "This is a very long option label that might need truncation in the UI",
+        icon: IconComponent("CircleInfo"),
+      },
+      ...defaultOptions,
+    ],
+    placeholder: "Select an option",
   },
 };
