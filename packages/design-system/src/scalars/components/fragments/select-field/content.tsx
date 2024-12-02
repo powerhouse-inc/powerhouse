@@ -1,5 +1,4 @@
 import React from "react";
-import { CheckIcon } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -68,24 +67,18 @@ export const Content: React.FC<ContentProps> = ({
       {searchable && (
         <CommandInput
           placeholder="Search..."
-          className={cn(
-            "h-9 text-[14px] font-normal leading-5",
-            "text-gray-700 dark:text-gray-500",
-          )}
+          className="text-gray-900 dark:text-gray-50"
         />
       )}
       <CommandList>
-        <CommandEmpty className="p-4 text-center text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-500">
+        <CommandEmpty className="p-4 text-center text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-400">
           No results found.
         </CommandEmpty>
         <CommandGroup>
           {multiple && optionsCheckmark === "Auto" && (
             <CommandItem
               onSelect={toggleAll}
-              className={cn(
-                "flex items-center justify-between",
-                "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900",
-              )}
+              className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
             >
               <div className="flex items-center gap-2">
                 <div
@@ -98,9 +91,9 @@ export const Content: React.FC<ContentProps> = ({
                       : "opacity-50 [&_svg]:invisible",
                   )}
                 >
-                  <CheckIcon className="size-4" />
+                  <Icon name="Checkmark" size={16} />
                 </div>
-                <span className="text-[14px] font-semibold leading-[22px] text-gray-900 dark:text-gray-50">
+                <span className="text-[14px] font-semibold leading-4 text-gray-900 dark:text-gray-50">
                   {selectedValues.length ===
                   options.filter((opt) => !opt.disabled).length
                     ? "Deselect All"
@@ -138,7 +131,7 @@ export const Content: React.FC<ContentProps> = ({
                           option.disabled && "opacity-75",
                         )}
                       >
-                        <CheckIcon className="size-4" />
+                        <Icon name="Checkmark" size={16} />
                       </div>
                     ) : (
                       <div
@@ -161,7 +154,7 @@ export const Content: React.FC<ContentProps> = ({
                 {renderIcon(option.icon, option.disabled)}
                 <span
                   className={cn(
-                    "text-[14px] font-medium leading-[22px]",
+                    "flex-1 truncate text-[14px] font-medium leading-4",
                     "text-gray-700 dark:text-gray-400",
                     option.disabled && "text-gray-600 dark:text-gray-600",
                   )}

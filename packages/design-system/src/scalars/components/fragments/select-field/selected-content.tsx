@@ -1,5 +1,4 @@
 import React from "react";
-import { ChevronDown, ChevronsUpDown, XIcon } from "lucide-react";
 import { Badge } from "@/scalars/components/fragments/badge";
 import { Button } from "@/scalars/components/fragments/button";
 import { cn } from "@/scalars/lib/utils";
@@ -34,9 +33,9 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
       | undefined,
   ) => {
     if (typeof IconComponent === "string") {
-      return <Icon name={IconComponent} size={16} className="mr-2" />;
+      return <Icon name={IconComponent} size={16} />;
     }
-    return IconComponent && <IconComponent className="mr-2 size-4" />;
+    return IconComponent && <IconComponent className="size-4" />;
   };
 
   if (selectedValues.length === 0) {
@@ -53,14 +52,16 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
           </span>
         )}
         {searchable ? (
-          <ChevronsUpDown
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+          <Icon
+            name="CaretSort"
             size={16}
+            className="cursor-pointer text-gray-700 dark:text-gray-400"
           />
         ) : (
-          <ChevronDown
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+          <Icon
+            name="ChevronDown"
             size={16}
+            className="cursor-pointer text-gray-700 dark:text-gray-400"
           />
         )}
       </div>
@@ -69,25 +70,21 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
 
   return (
     <div className="flex w-full items-center justify-between gap-3">
-      <div
-        className={cn(
-          "flex flex-wrap items-center gap-3",
-          !multiple && "w-full",
-        )}
-      >
+      <div className="flex w-full flex-wrap items-center gap-3 overflow-hidden">
         {selectedValues.slice(0, maxSelectedOptionsToShow).map((value) => {
           const option = options.find((o) => o.value === value);
           return (
             <Badge
               key={value}
               className={cn(
-                !multiple && "w-full",
+                "max-w-full",
                 "text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-300",
                 "border-none p-0",
+                "flex items-center gap-2",
               )}
             >
               {renderIcon(option?.icon)}
-              {option?.label}
+              <span className="truncate">{option?.label}</span>
             </Badge>
           );
         })}
@@ -101,7 +98,6 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
         {multiple && selectedValues.length > 0 && (
           <Button
             type="button"
-            variant="ghost"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -110,21 +106,24 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
             disabled={disabled}
             className="size-4 p-0"
           >
-            <XIcon
-              className="cursor-pointer text-gray-700 dark:text-gray-400"
+            <Icon
+              name="XmarkLight"
               size={16}
+              className="cursor-pointer text-gray-700 dark:text-gray-400"
             />
           </Button>
         )}
         {searchable ? (
-          <ChevronsUpDown
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+          <Icon
+            name="CaretSort"
             size={16}
+            className="cursor-pointer text-gray-700 dark:text-gray-400"
           />
         ) : (
-          <ChevronDown
-            className="cursor-pointer text-gray-700 dark:text-gray-400"
+          <Icon
+            name="ChevronDown"
             size={16}
+            className="cursor-pointer text-gray-700 dark:text-gray-400"
           />
         )}
       </div>
