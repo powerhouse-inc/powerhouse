@@ -43,6 +43,7 @@
     "pg": "^8.13.0",
     "sanitize-filename": "^1.6.3",
     "uuid": "^11.0.2",
+    "vite": "^6.0.2",
     "vite-node": "^2.1.7"
   },
   "devDependencies": {
@@ -54,7 +55,8 @@
     "@types/node": "^22.7.5",
     "@types/pg": "^8.11.10",
     "document-drive": "workspace:*",
-    "postcss": "^8.4.47"
+    "postcss": "^8.4.47",
+    "tsup": "^8.3.5"
   },
   "peerDependencies": {
     "@powerhousedao/scalars": "workspace:*"
