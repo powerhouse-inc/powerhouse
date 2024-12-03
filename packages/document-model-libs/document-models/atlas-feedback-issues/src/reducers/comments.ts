@@ -5,13 +5,10 @@
  */
 
 import { AtlasFeedbackIssuesCommentsOperations } from "../../gen/comments/operations";
+import { CommentSchema, EditCommentInputSchema } from "../../gen/schema/zod";
 import {
-  CommentSchema,
-  EditCommentInputSchema,
-} from "document-models/atlas-feedback-issues/gen/schema/zod";
-import {
-  makeExistingCommentValidator,
   makeNewCommentValidator,
+  makeExistingCommentValidator,
 } from "../utils";
 
 export const reducer: AtlasFeedbackIssuesCommentsOperations = {
