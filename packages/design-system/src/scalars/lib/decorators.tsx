@@ -12,12 +12,21 @@ export const withForm: Decorator = (Story, context) => {
     alert(JSON.stringify(data, null, 2));
   };
 
+  // override the warnings in the args to avoid breaking the storybook
+  // as storybook set by default an object instead of an array
+  const overrideArgs = {
+    ...context.args,
+    ...(Array.isArray(context.args.warnings)
+      ? { warnings: context.args.warnings }
+      : { warnings: undefined }),
+  };
+
   return (
     <div>
       <Form onSubmit={onSubmit}>
         {({ reset }) => (
           <>
-            <Story />
+            <Story args={overrideArgs} />
 
             {showFormButtons ? (
               <div className="flex gap-2">
