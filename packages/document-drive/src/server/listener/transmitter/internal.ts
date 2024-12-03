@@ -41,9 +41,7 @@ export class InternalTransmitter implements ITransmitter {
     this.drive = drive;
   }
 
-  async transmit(
-    strands: InternalTransmitterUpdate[]
-  ): Promise<ListenerRevision[]> {
+  async transmit(strands: InternalTransmitterUpdate[]): Promise<ListenerRevision[]> {
     if (!this.receiver) {
       return [];
     }
@@ -52,13 +50,13 @@ export class InternalTransmitter implements ITransmitter {
     const updates: InternalTransmitterUpdate[] = [];
     for (const strand of strands) {
       let document = retrievedDocuments.get(
-        `${strand.driveId}:${strand.documentId}`
+        `${strand.driveId}:${strand.documentId}`,
       );
       if (!document) {
         const revisions = buildRevisionsFilter(
           strands,
           strand.driveId,
-          strand.documentId
+          strand.documentId,
         );
         document = await (strand.documentId
           ? this.drive.getDocument(strand.driveId, strand.documentId, {
@@ -67,7 +65,7 @@ export class InternalTransmitter implements ITransmitter {
           : this.drive.getDrive(strand.driveId, { revisions }));
         retrievedDocuments.set(
           `${strand.driveId}:${strand.documentId}`,
-          document!
+          document!,
         );
       }
       updates.push({ ...strand, state: document!.state[strand.scope] });
