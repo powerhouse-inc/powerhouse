@@ -4,4 +4,3 @@ export * from "./powerhouse";
 export * from "./rwa";
 export * from "./services";
 export * from "./shared-tailwind.config";
-export * from "./scalars";

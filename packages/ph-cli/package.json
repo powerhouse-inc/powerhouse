@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.6.1",
+  "version": "0.8.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -22,28 +22,32 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "ts-node src/cli.ts",
+    "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint",
-    "lint:fix": "eslint --fix",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint:fix": "eslint --fix"
   },
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "document-drive": "1.4.2",
-    "ts-node": "^10.9.2",
-    "tsup": "^8.3.0"
+    "@powerhousedao/analytics-engine-core": "^0.3.0",
+    "@powerhousedao/analytics-engine-graphql": "^0.2.0",
+    "@powerhousedao/analytics-engine-pg": "^0.3.0",
+    "document-drive": "workspace:*",
+    "drizzle-kit": "^0.25.0",
+    "drizzle-orm": "^0.34.1",
+    "luxon": "^3.5.0",
+    "tsx": "^4.19.1"
   },
   "dependencies": {
-    "@powerhousedao/codegen": "0.14.1",
+    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/connect": "develop",
-    "@powerhousedao/design-system": "^1.9.0",
-    "@powerhousedao/reactor-local": "^1.5.1",
-    "@powerhousedao/scalars": "^1.9.0",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor-local": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
-    "document-model-libs": "^1.114.0",
+    "document-model-libs": "workspace:*",
     "graphql": "^16.8.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

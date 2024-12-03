@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { Decorator } from "@storybook/react";
 import { Checkbox, Form } from "../components";
 import { Button } from "@/powerhouse";

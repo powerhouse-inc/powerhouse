@@ -2,7 +2,7 @@ import { User } from "document-model/document";
 import { eq } from "drizzle-orm";
 import { PgDatabase } from "drizzle-orm/pg-core";
 import { GraphQLError } from "graphql";
-import { usersTable } from "../schema";
+import { usersTable } from "../db-schema";
 
 export const upsertUser = async (db: PgDatabase<any, any, any>, user: User) => {
   const { AUTH_SIGNUP_DISABLED } = process.env;
@@ -33,7 +33,7 @@ export const upsertUser = async (db: PgDatabase<any, any, any>, user: User) => {
 
 export const getUser = async (
   db: PgDatabase<any, any, any>,
-  address: string
+  address: string,
 ) => {
   const [user] = await db
     .select()

@@ -57,8 +57,10 @@
     "projects": ["packages/*"],
     "projectsRelationship": "independent",
     "version": {
-      "skipLockFileUpdate": true,
-      "conventionalCommits": true
+      "conventionalCommits": true,
+      "generatorOptions": {
+        "preserveLocalDependencyProtocols": true
+      }
     },
     "changelog": {
       "projectChangelogs": {

@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.4.4",
+  "version": "1.6.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "module": "./src/index.ts",
@@ -37,10 +37,10 @@
     "build": "prisma generate"
   },
   "peerDependencies": {
-    "@powerhousedao/scalars": "latest",
+    "@powerhousedao/scalars": "workspace:*",
     "change-case": "^5.4.4",
-    "document-model": "^2.3.1",
-    "document-model-libs": "^1.104.0",
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
@@ -57,12 +57,12 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "@powerhousedao/scalars": "latest",
+    "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",
-    "document-model": "^2.6.0",
-    "document-model-libs": "^1.114.0",
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
     "fake-indexeddb": "^5.0.2",
     "localforage": "^1.10.0",
     "msw": "^2.3.1",

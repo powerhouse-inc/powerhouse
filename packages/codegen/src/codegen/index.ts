@@ -4,6 +4,7 @@ import { typeDefs } from "@powerhousedao/scalars";
 import {
   generateAll,
   generateEditor as _generateEditor,
+  generateProcessor as _generateProcessor,
   generateDocumentModel,
 } from "./hygen";
 import { generateSchemas, generateSchema } from "./graphql";
@@ -120,6 +121,32 @@ export async function generateEditor(
     docummentTypesMap,
     config.editorsDir,
     config.documentModelsDir,
+    { skipFormat },
+  );
+}
+
+export async function generateProcessor(
+  name: string,
+  type: "analytics" | "operational",
+  documentTypes: string[],
+  config: PowerhouseConfig,
+) {
+  const { documentModelsDir, skipFormat } = config;
+  const docummentTypesMap = getDocumentTypesMap(documentModelsDir);
+
+  const invalidType = documentTypes.find(
+    (type) => !Object.keys(docummentTypesMap).includes(type),
+  );
+  if (invalidType) {
+    throw new Error(`Document model for ${invalidType} not found`);
+  }
+  return _generateProcessor(
+    name,
+    documentTypes,
+    docummentTypesMap,
+    config.processorsDir,
+    config.documentModelsDir,
+    type,
     { skipFormat },
   );
 }

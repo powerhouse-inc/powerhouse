@@ -1,10 +1,10 @@
-import { ComponentType } from "react";
+import { ComponentType, ReactNode } from "react";
 import { twJoin } from "tailwind-merge";
 
 type Input = {
   label: string;
   Input: ComponentType;
-  inputLabel?: string | null;
+  inputLabel?: ReactNode;
 };
 type Props = {
   readonly inputs: Input[];

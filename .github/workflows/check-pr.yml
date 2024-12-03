@@ -1,32 +1,63 @@
-name: Check PR Monorepo Build
+name: Check PR
 
 on:
   workflow_dispatch:
   push:
     branches: ["main"]
+    paths:
+      - 'packages/codegen/**'
+      - 'packages/design-system/**'
+      - 'packages/document-model-libs/**'
+      - 'packages/document-model/**'
+      - 'packages/ph-cli/**'
+      - 'packages/scalars/**'
   pull_request:
     branches: ["main"]
     types: [opened, synchronize]
+    paths:
+      - 'packages/codegen/**'
+      - 'packages/design-system/**'
+      - 'packages/document-model-libs/**'
+      - 'packages/document-model/**'
+      - 'packages/ph-cli/**'
+      - 'packages/scalars/**'
 
 env:
   NX_ISOLATE_PLUGINS: false
 
 jobs:
-  build:
-    name: Build Monorepo
+  verify:
+    name: Verify
     runs-on: ubuntu-latest
-    container: node:22
+    permissions:
+      contents: read
+      actions: read
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install PNPM
-        uses: pnpm/action-setup@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+
+      - uses: nrwl/nx-set-shas@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 9
           run_install: false
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
 
-      - name: Build Monorepo
-        run: npx nx run-many --target=build --all --skip-nx-cache
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build affected projects
+        run: pnpm nx affected --target=build --parallel=3
+
+      - name: Run checks
+        run: pnpm affected:check
