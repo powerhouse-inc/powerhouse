@@ -7,6 +7,7 @@ const { prompt } = enquirer;
 export type PowerhouseConfig = {
   documentModelsDir: string;
   editorsDir: string;
+  processorsDir: string;
   interactive?: boolean;
   skipFormat?: boolean;
   watch?: boolean;
@@ -14,10 +15,12 @@ export type PowerhouseConfig = {
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
 const DEFAULT_EDITORS_DIR = "./editors";
+const DEFAULT_PROCESSORS_DIR = "./processors";
 
 export const DEFAULT_CONFIG: PowerhouseConfig = {
   documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,
   editorsDir: DEFAULT_EDITORS_DIR,
+  processorsDir: DEFAULT_PROCESSORS_DIR,
   skipFormat: false,
 };
 
