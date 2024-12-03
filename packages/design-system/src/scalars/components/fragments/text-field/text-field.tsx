@@ -5,9 +5,10 @@ import { FormMessageList } from "../form-message";
 import { FormGroup } from "../form-group";
 import { ErrorHandling, FieldCommonProps, TextProps } from "../../types";
 import { FormDescription } from "../form-description";
-import { applyTransformers } from "@/scalars/lib/transformers";
 import { CharacterCounter } from "../character-counter";
 import { withFieldValidation } from "../with-field-validation";
+import ValueTransformer from "../value-transformer/value-transformer";
+import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
 
 export interface TextFieldProps
   extends Omit<
@@ -44,11 +45,6 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
   ) => {
     const idGenerated = useId();
     const id = props.id ?? idGenerated;
-    const transformedValue = applyTransformers(value, {
-      trim: !!trim,
-      uppercase: !!uppercase,
-      lowercase: !!lowercase,
-    });
     const autoCompleteValue =
       autoComplete === undefined ? undefined : autoComplete ? "on" : "off";
 
@@ -64,16 +60,24 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
             {label}
           </FormLabel>
         )}
-        <Input
-          id={id}
-          value={transformedValue}
-          defaultValue={defaultValue}
-          onChange={onChange}
-          pattern={pattern?.toString()}
-          autoComplete={autoCompleteValue}
-          {...props}
-          ref={ref}
-        />
+        <ValueTransformer
+          transformers={[
+            sharedValueTransformers.trimOnBlur(!!trim),
+            sharedValueTransformers.lowercaseOnChange(!!lowercase),
+            sharedValueTransformers.uppercaseOnChange(!!uppercase),
+          ]}
+        >
+          <Input
+            id={id}
+            value={value ?? ""}
+            defaultValue={defaultValue}
+            onChange={onChange}
+            pattern={pattern?.toString()}
+            autoComplete={autoCompleteValue}
+            {...props}
+            ref={ref}
+          />
+        </ValueTransformer>
         {maxLength && (
           <div className="flex justify-end">
             <CharacterCounter maxLength={maxLength} value={value ?? ""} />
