@@ -1,3 +1,47 @@
+## 2.8.0 (2024-12-03)
+
+### 🚀 Features
+
+- **design-system:** bump storybook deps ([f21d9539](https://github.com/powerhouse-inc/powerhouse/commit/f21d9539))
+- **monorepo:** remove eslint args ([4677e343](https://github.com/powerhouse-inc/powerhouse/commit/4677e343))
+- **monorepo:** readd vite for reactor local ([24a9e56b](https://github.com/powerhouse-inc/powerhouse/commit/24a9e56b))
+- **monorepo:** add linting for switchboard gui ([dc56c561](https://github.com/powerhouse-inc/powerhouse/commit/dc56c561))
+- **monorepo:** gitignore tsbuildinfo files ([d676a703](https://github.com/powerhouse-inc/powerhouse/commit/d676a703))
+- **monorepo:** unify typescript and linting ([24b9a205](https://github.com/powerhouse-inc/powerhouse/commit/24b9a205))
+- **monorepo:** do not skip nx cache ([dfadd970](https://github.com/powerhouse-inc/powerhouse/commit/dfadd970))
+- **monorepo:** uncomment test ([dbd42350](https://github.com/powerhouse-inc/powerhouse/commit/dbd42350))
+- **monorepo:** readd special check pr for document drive ([f1b9f7fe](https://github.com/powerhouse-inc/powerhouse/commit/f1b9f7fe))
+- **monorepo:** use explicit paths ([ce5deb4c](https://github.com/powerhouse-inc/powerhouse/commit/ce5deb4c))
+- **monorepo:** remove set dir as safe ([e8033645](https://github.com/powerhouse-inc/powerhouse/commit/e8033645))
+- **monorepo:** handle document drive separately ([a94d4c26](https://github.com/powerhouse-inc/powerhouse/commit/a94d4c26))
+- **monorepo:** add debug info ([ee1b7cab](https://github.com/powerhouse-inc/powerhouse/commit/ee1b7cab))
+- **monorepo:** add read permissions ([ee6397d2](https://github.com/powerhouse-inc/powerhouse/commit/ee6397d2))
+- **monorepo:** use set shas lib ([769e74a6](https://github.com/powerhouse-inc/powerhouse/commit/769e74a6))
+- **monorepo:** add base ([22a5fffd](https://github.com/powerhouse-inc/powerhouse/commit/22a5fffd))
+- **monorepo:** simplify commands ([75000bb4](https://github.com/powerhouse-inc/powerhouse/commit/75000bb4))
+- **monorepo:** fix yaml syntax error ([5c82fcec](https://github.com/powerhouse-inc/powerhouse/commit/5c82fcec))
+- **monorepo:** use workflow dispatch ([d1b4bde9](https://github.com/powerhouse-inc/powerhouse/commit/d1b4bde9))
+- **monorepo:** still run on pushes ([86998628](https://github.com/powerhouse-inc/powerhouse/commit/86998628))
+- **monorepo:** add if statements to prevent redundant runs ([193c5df5](https://github.com/powerhouse-inc/powerhouse/commit/193c5df5))
+- **monorepo:** prevent duplicate runs ([1ce210b9](https://github.com/powerhouse-inc/powerhouse/commit/1ce210b9))
+- **monorepo:** remove package manager config ([f177433b](https://github.com/powerhouse-inc/powerhouse/commit/f177433b))
+- **monorepo:** install pnpm before doing node cache ([ab1cc5a6](https://github.com/powerhouse-inc/powerhouse/commit/ab1cc5a6))
+- **monorepo:** simplify pr checks ([40d0cb59](https://github.com/powerhouse-inc/powerhouse/commit/40d0cb59))
+- **monorepo:** add dry run version of release package action for testing ([323807f8](https://github.com/powerhouse-inc/powerhouse/commit/323807f8))
+- **monorepo:** update release package manual ([405b6877](https://github.com/powerhouse-inc/powerhouse/commit/405b6877))
+- **monorepo:** use workspace protocol in package deps ([2584e9dd](https://github.com/powerhouse-inc/powerhouse/commit/2584e9dd))
+- **monorepo:** add preserve local dependency protocols to nx config ([b1902311](https://github.com/powerhouse-inc/powerhouse/commit/b1902311))
+- **powerhouse:** regenerate lockfile ([#588](https://github.com/powerhouse-inc/powerhouse/pull/588))
+- **reactor-local:** added automatic loading and activation of proces… ([#574](https://github.com/powerhouse-inc/powerhouse/pull/574))
+- **document-model-libs:** regenerate lockfile ([04f0b0e6](https://github.com/powerhouse-inc/powerhouse/commit/04f0b0e6))
+- **monorepo:** fix eslint config for react files ([019fa584](https://github.com/powerhouse-inc/powerhouse/commit/019fa584))
+
+### ❤️ Thank You
+
+- frankp.eth @froid1911
+- Ryan Wolhuter
+- ryanwolhuter
+
 ## 2.7.1 (2024-11-21)
 
 ### 🩹 Fixes
