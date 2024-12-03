@@ -1,4 +1,4 @@
-type Query {
+export const typeDefs = `type Query {
   me: User
   sessions: [Session!]!
 }
@@ -47,3 +47,4 @@ input SessionInput {
   name: String!
   allowedOrigins: String!
 }
+`;
