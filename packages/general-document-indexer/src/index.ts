@@ -1,12 +1,18 @@
-import { dirname, resolve } from "path";
-import schemaPath from "./schema.graphql";
-import { fileURLToPath } from "url";
-import { readFileSync } from "fs";
+import { options, transmit } from "./listener";
 import { resolvers } from "./resolvers";
-import { transmit, options } from "./listener";
+import * as dbSchema from "./schema";
 
-const __dirname =
-  import.meta.dirname ?? dirname(fileURLToPath(import.meta.url));
-const typeDefs = readFileSync(resolve(__dirname, schemaPath), "utf8");
+const typeDefs = `
+type Query {
+  search(title: String!, type: String!): [SearchResult!]!
+}
 
-export { typeDefs, resolvers, transmit, options };
+type SearchResult {
+  driveId: String!
+  documentId: String!
+  title: String!
+  type: String!
+}
+`;
+
+export { dbSchema, options, resolvers, transmit, typeDefs };

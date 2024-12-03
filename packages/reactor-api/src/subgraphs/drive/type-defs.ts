@@ -1,4 +1,4 @@
-type Query {
+export const typeDefs = `type Query {
   system: System
   drive: DocumentDriveState
   document(id: ID!): IDocument
@@ -133,3 +133,4 @@ type System {
 type Sync {
   strands(listenerId: ID!, since: String): [StrandUpdate!]!
 }
+`;

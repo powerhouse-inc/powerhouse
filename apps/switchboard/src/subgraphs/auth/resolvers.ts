@@ -4,9 +4,8 @@ import { GraphQLError } from "graphql";
 import { SiweMessage } from "siwe";
 import { URL } from "url";
 import { Context } from "../../../types";
-import { getDb } from "../../db";
+import { challengeTable, sessionTable } from "./db-schema";
 import { generateTokenAndSession } from "./helpers";
-import { challengeTable, sessionTable } from "./schema";
 import { SessionInput } from "./types";
 import {
   authenticate,
@@ -21,14 +20,14 @@ const textToHex = (textMessage: string) =>
 export const resolvers = {
   Query: {
     me: async (_: unknown, __: unknown, ctx: Context) => {
+      const db = ctx.db;
       const session = await authenticate(ctx);
-      const db = await getDb();
       const user = await getUser(db, session.createdBy);
       return user;
     },
     sessions: async (_: unknown, __: unknown, ctx: Context) => {
       const session = await authenticate(ctx);
-      const db = await getDb();
+      const db = ctx.db;
       const sessions = await db
         .select()
         .from(sessionTable)
@@ -43,7 +42,7 @@ export const resolvers = {
       { address }: { address: string },
       ctx: Context
     ) => {
-      const db = await getDb();
+      const db = ctx.db;
       const { API_ORIGIN } = process.env;
 
       const origin = API_ORIGIN ?? "http://localhost:3000";
@@ -80,7 +79,7 @@ export const resolvers = {
       { nonce, signature }: { nonce: string; signature: string },
       ctx: Context
     ) => {
-      const db = await getDb();
+      const db = ctx.db;
       return db.transaction(async (tx) => {
         const [challenge] = await tx
           .select()
@@ -137,7 +136,7 @@ export const resolvers = {
       { session }: { session: SessionInput },
       ctx: Context
     ) => {
-      const db = await getDb();
+      const db = ctx.db;
       const sessionAuth = await authenticate(ctx);
       return generateTokenAndSession(
         db,
@@ -152,7 +151,7 @@ export const resolvers = {
       ctx: Context
     ): Promise<{ id: string }> => {
       const user = await authenticate(ctx);
-      const db = await getDb();
+      const db = ctx.db;
       const [session] = await db
         .select()
         .from(sessionTable)
