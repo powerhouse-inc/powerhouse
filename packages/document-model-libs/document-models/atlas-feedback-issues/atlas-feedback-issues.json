@@ -1,0 +1,160 @@
+{
+    "id": "makerdao/feedback-issues",
+    "name": "Atlas Feedback Issues",
+    "extension": ".phdm",
+    "description": "Provide feedback on the data presented in the Atlas in a decentralized way.",
+    "author": {
+        "name": "powerhouse",
+        "website": "https://powerhouse.inc"
+    },
+    "specifications": [
+        {
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "global": {
+                    "schema": "type AtlasFeedbackIssuesState {\n  \"\"\"\n  The list of issues submitted to the Atlas.\n  \"\"\"\n  issues: [Issue!]!\n}\n\n\"\"\"\nAn issue that has been submitted to the Atlas.\n\nHolds a list of comments pertaining to specific items in the Atlas.\n\nUses the same identifiers to register the relevant content as are used in the Atlas itself. These identifiers are the UUID's used by Notion, sometimes with a suffix of a part of the item's parent for cases where multiple parents exist.\n\nThe relevant Notion IDs are separate from the Notion IDs referenced in the Comments themselves, because we might want to determine the scope of the Issue's content before any actual comments are added yet.\n\"\"\"\ntype Issue {\n  phid: PHID!\n  creatorAddress: EthereumAddress!\n  relevantNotionIds: [String!]!\n  createdAt: DateTime!\n  threadUrl: URL!\n  comments: [Comment!]!\n}\n\n\"\"\"\nIssues are comprised of Comments.\n\nWhen an Issue is first created, it is empty and has no comments. Users can then submit comments which are associated with a given issue.\n\nA comment refers to a specific item from the Atlas. This field is required, but can be changed later. \n\"\"\"\ntype Comment {\n  phid: PHID!\n  creatorAddress: EthereumAddress!\n  relevantNotionId: String!\n  content: String!\n  createdAt: DateTime!\n  lastEditedAt: DateTime!\n}",
+                    "initialValue": "{\n  \"issues\": []\n}",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                }
+            },
+            "modules": [
+                {
+                    "id": "YZJPZidNMq9cQt48o60KMbzVZk0=",
+                    "name": "issues",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "S6/a+9eF+PPBQFoCY4m8Ip4KH/Y=",
+                            "name": "CREATE_ISSUE",
+                            "description": "Create a new issue",
+                            "schema": "input CreateIssueInput {\n  phid: PHID!\n  relevantNotionIds: [String]!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [
+                                {
+                                    "id": "dSl06rQMOJJ7oZG2G2B4UieWqy0=",
+                                    "name": "PhidAlreadyExists",
+                                    "code": "",
+                                    "description": "",
+                                    "template": ""
+                                }
+                            ],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "CqeN1/sU6fVP5ZJQ6xrhwlzwd8o=",
+                            "name": "DELETE_ISSUE",
+                            "description": "Delete an issue",
+                            "schema": "input DeleteIssueInput {\n  phid: PHID!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [
+                                {
+                                    "id": "/A0k/icghjoQD68t8EeR6JqHP/Q=",
+                                    "name": "PhidDoesNotExist",
+                                    "code": "",
+                                    "description": "",
+                                    "template": ""
+                                }
+                            ],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                },
+                {
+                    "id": "Z0AAnbI03Ii8Ql4CTOxjHYqC34s=",
+                    "name": "comments",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "eGouUlpibah0LAI8s7kUxz/lh4s=",
+                            "name": "CREATE_COMMENT",
+                            "description": "Add a comment to an issue",
+                            "schema": "input CreateCommentInput {\n  phid: PHID!\n  issuePhid: PHID!\n  relevantNotionId: String!\n  content: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [
+                                {
+                                    "id": "4cJLsSgTu0iKKXJ/F5Lz3tQNcZQ=",
+                                    "name": "PhidAlreadyExists",
+                                    "code": "",
+                                    "description": "",
+                                    "template": ""
+                                },
+                                {
+                                    "id": "JRQB43Go1yter2yBM4w+Y77k+g4=",
+                                    "name": "IssuePhidDoesNotExist",
+                                    "code": "",
+                                    "description": "",
+                                    "template": ""
+                                }
+                            ],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "Rvml7RPRvL9rrLkAwEbVJEbBWTQ=",
+                            "name": "DELETE_COMMENT",
+                            "description": "Delete a comment from an issue",
+                            "schema": "input DeleteCommentInput {\n  phid: PHID!\n  issuePhid: PHID!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [
+                                {
+                                    "id": "h+fX1k+dyUnp+h22Y31OS/uzRIs=",
+                                    "name": "PhidDoesNotExist",
+                                    "code": "",
+                                    "description": "",
+                                    "template": ""
+                                },
+                                {
+                                    "id": "Yg6obzRH7ismUNnB5U6E4BBrRYk=",
+                                    "name": "IssuePhidDoesNotExist",
+                                    "code": "",
+                                    "description": "",
+                                    "template": ""
+                                }
+                            ],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "rJi+/Ju9rwI+k39Q4RrsFAH1lRI=",
+                            "name": "EDIT_COMMENT",
+                            "description": "Edit a comment in an issue",
+                            "schema": "input EditCommentInput {\n  phid: PHID!\n  issuePhid: PHID!\n  relevantNotionId: String\n  content: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [
+                                {
+                                    "id": "P4fCPIEh3PVFsyFE5Lx1wTLTxsU=",
+                                    "name": "PhidDoesNotExist",
+                                    "code": "",
+                                    "description": "",
+                                    "template": ""
+                                },
+                                {
+                                    "id": "UrzfLIra9ZugNTknETBfRC9SciA=",
+                                    "name": "IssuePhidDoesNotExist",
+                                    "code": "",
+                                    "description": "",
+                                    "template": ""
+                                }
+                            ],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

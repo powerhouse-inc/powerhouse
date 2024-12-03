@@ -1,0 +1,86 @@
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar Amount_Percentage
+scalar EmailAddress
+scalar Date
+scalar DateTime
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+type AtlasFeedbackIssuesState {
+  """
+  The list of issues submitted to the Atlas.
+  """
+  issues: [Issue!]!
+}
+
+"""
+An issue that has been submitted to the Atlas.
+
+Holds a list of comments pertaining to specific items in the Atlas.
+
+Uses the same identifiers to register the relevant content as are used in the Atlas itself. These identifiers are the UUID's used by Notion, sometimes with a suffix of a part of the item's parent for cases where multiple parents exist.
+
+The relevant Notion IDs are separate from the Notion IDs referenced in the Comments themselves, because we might want to determine the scope of the Issue's content before any actual comments are added yet.
+"""
+type Issue {
+  phid: PHID!
+  creatorAddress: EthereumAddress!
+  relevantNotionIds: [String!]!
+  createdAt: DateTime!
+  threadUrl: URL!
+  comments: [Comment!]!
+}
+
+"""
+Issues are comprised of Comments.
+
+When an Issue is first created, it is empty and has no comments. Users can then submit comments which are associated with a given issue.
+
+A comment refers to a specific item from the Atlas. This field is required, but can be changed later. 
+"""
+type Comment {
+  phid: PHID!
+  creatorAddress: EthereumAddress!
+  relevantNotionId: String!
+  content: String!
+  createdAt: DateTime!
+  lastEditedAt: DateTime!
+}
+
+
+
+# issues
+
+input CreateIssueInput {
+  phid: PHID!
+  relevantNotionIds: [String]!
+}
+
+input DeleteIssueInput {
+  phid: PHID!
+}
+
+# comments
+
+input CreateCommentInput {
+  phid: PHID!
+  issuePhid: PHID!
+  relevantNotionId: String!
+  content: String!
+}
+
+input DeleteCommentInput {
+  phid: PHID!
+  issuePhid: PHID!
+}
+
+input EditCommentInput {
+  phid: PHID!
+  issuePhid: PHID!
+  relevantNotionId: String
+  content: String
+}
