@@ -26,6 +26,7 @@ const meta = {
       description: "Step value for the input field",
       table: {
         type: { summary: "number" },
+        defaultValue: { summary: "1" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
