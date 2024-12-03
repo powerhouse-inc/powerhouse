@@ -167,7 +167,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                   size={10}
                   name="ChevronDown"
                   className={cn(
-                    "rotate-180 text-gray-700",
+                    "rotate-180 text-gray-700 dark:text-gray-300",
                     isIncrementDisabled && "cursor-not-allowed",
                   )}
                 />
@@ -181,7 +181,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                   size={10}
                   name="ChevronDown"
                   className={cn(
-                    " items-center justify-center text-gray-700",
+                    " items-center justify-center text-gray-700 dark:text-gray-300",
                     isDecrementDisabled && "cursor-not-allowed",
                   )}
                 />
