@@ -20,8 +20,10 @@ Command.displayName = CommandPrimitive.displayName;
 
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input> & {
+    wrapperClassName?: string;
+  }
+>(({ wrapperClassName, className, ...props }, ref) => (
   <div
     className={cn(
       "group mt-1 flex items-center gap-2 rounded-t border-y px-3",
@@ -30,6 +32,7 @@ const CommandInput = React.forwardRef<
       "hover:bg-gray-100 dark:hover:bg-gray-900",
       "focus-within:border focus-within:border-gray-300 dark:focus-within:border-gray-900",
       "focus-within:bg-gray-100 dark:focus-within:bg-gray-900",
+      wrapperClassName,
     )}
     cmdk-input-wrapper=""
   >

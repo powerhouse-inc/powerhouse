@@ -54,6 +54,17 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
+    searchPosition: {
+      control: "radio",
+      options: ["Dropdown", "Input"],
+      description: "Position of the search input",
+      table: {
+        type: { summary: '"Dropdown" | "Input"' },
+        defaultValue: { summary: '"Dropdown"' },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
     multiple: {
       control: "boolean",
       description: "Whether multiple options can be selected",

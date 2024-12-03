@@ -14,6 +14,7 @@ import { cn } from "@/scalars/lib/utils";
 import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
 import { SelectProps } from "@/scalars/components/enum-field/types";
 import { useSelectField } from "./use-select-field";
+import { SearchInput } from "./search-input";
 import { SelectedContent } from "./selected-content";
 import { Content } from "./content";
 
@@ -59,6 +60,7 @@ export const SelectFieldRaw = React.forwardRef<
       // behavior props
       asModal,
       searchable,
+      searchPosition = "Dropdown",
 
       // display props
       description,
@@ -112,7 +114,7 @@ export const SelectFieldRaw = React.forwardRef<
               id={id}
               name={name}
               type="button"
-              role="combobox"
+              role={searchPosition === "Input" ? "button" : "combobox"}
               autoFocus={autoFocus}
               onClick={handleTogglePopover}
               disabled={disabled}
@@ -138,16 +140,25 @@ export const SelectFieldRaw = React.forwardRef<
               {...props}
               ref={ref}
             >
-              <SelectedContent
-                selectedValues={selectedValues}
-                options={options}
-                multiple={multiple}
-                searchable={searchable}
-                maxSelectedOptionsToShow={maxSelectedOptionsToShow}
-                placeholder={placeholder}
-                disabled={disabled}
-                handleClear={handleClear}
-              />
+              {searchable && searchPosition === "Input" ? (
+                <SearchInput
+                  selectedValues={selectedValues}
+                  options={options}
+                  placeholder={placeholder}
+                  disabled={disabled}
+                />
+              ) : (
+                <SelectedContent
+                  selectedValues={selectedValues}
+                  options={options}
+                  multiple={multiple}
+                  searchable={searchable}
+                  maxSelectedOptionsToShow={maxSelectedOptionsToShow}
+                  placeholder={placeholder}
+                  disabled={disabled}
+                  handleClear={handleClear}
+                />
+              )}
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -165,6 +176,7 @@ export const SelectFieldRaw = React.forwardRef<
               optionsCheckmark={optionsCheckmark}
               multiple={multiple}
               searchable={searchable}
+              searchPosition={searchPosition}
               toggleOption={toggleOption}
               toggleAll={toggleAll}
             />

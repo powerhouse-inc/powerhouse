@@ -114,6 +114,22 @@ describe("SelectField Component", () => {
     expect(screen.queryByText("Option 2")).not.toBeInTheDocument();
   });
 
+  // Search Position Tests
+  it("should render search input in combobox when searchPosition is 'Input'", () => {
+    renderWithForm(
+      <SelectField
+        name="select"
+        options={defaultOptions}
+        searchable
+        searchPosition="Input"
+      />,
+    );
+
+    const searchInput = screen.getByRole("combobox");
+    expect(searchInput).toBeInTheDocument();
+    expect(searchInput).toHaveAttribute("type", "text");
+  });
+
   // Validation and Error Handling Tests
   it("should display error messages", () => {
     renderWithForm(

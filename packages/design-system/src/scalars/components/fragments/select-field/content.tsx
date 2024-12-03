@@ -17,6 +17,7 @@ interface ContentProps {
   optionsCheckmark: "Auto" | "None";
   multiple?: boolean;
   searchable?: boolean;
+  searchPosition?: "Dropdown" | "Input";
   toggleOption: (value: string) => void;
   toggleAll: () => void;
 }
@@ -27,6 +28,7 @@ export const Content: React.FC<ContentProps> = ({
   optionsCheckmark,
   multiple,
   searchable,
+  searchPosition,
   toggleOption,
   toggleAll,
 }) => {
@@ -64,7 +66,7 @@ export const Content: React.FC<ContentProps> = ({
 
   return (
     <Command>
-      {searchable && (
+      {searchable && searchPosition === "Dropdown" && (
         <CommandInput
           placeholder="Search..."
           className="text-gray-900 dark:text-gray-50"

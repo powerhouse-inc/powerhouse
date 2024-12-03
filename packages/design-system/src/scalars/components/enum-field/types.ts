@@ -22,6 +22,7 @@ export interface SelectProps {
   maxSelectedOptionsToShow?: number;
   multiple?: boolean;
   searchable?: boolean;
+  searchPosition?: "Dropdown" | "Input";
   asModal?: boolean;
   onChange?: (value: string | string[]) => void;
 }
