@@ -9,7 +9,11 @@ import express from "express";
 import http from "http";
 import path from "path";
 import { Pool } from "pg";
+
 import * as authListener from "./subgraphs/auth";
+import { AnalyticsProcessor } from "./subgraphs/analytics/processor";
+import { get as getAnalyticsService } from "./subgraphs/analytics/service";
+
 dotenv.config();
 
 // start document drive server with all available document models
@@ -47,6 +51,14 @@ const main = async () => {
       transmit(strands) {
         return searchListener.transmit(strands, db);
       },
+    });
+
+    const processor = new AnalyticsProcessor(
+      getAnalyticsService(),
+      driveServer,
+      "analytics/:drive")
+    await reactorRouterManager.registerProcessor({
+      ...processor,
     });
 
     // // @TODO: add auth listener

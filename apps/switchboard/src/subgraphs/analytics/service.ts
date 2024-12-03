@@ -3,14 +3,17 @@ import {PostgresAnalyticsStore} from "@powerhousedao/analytics-engine-pg";
 
 let store:IAnalyticsStore | null = null;
 
-export default function get(): IAnalyticsStore {
+export function get(): IAnalyticsStore {
   if (!store) {
     const connectionString = process.env.PG_CONNECTION_STRING;
     if (!connectionString) {
       throw new Error('PG_CONNECTION_STRING not set');
     }
 
-    store = new PostgresAnalyticsStore(connectionString, (i, q) => console.log(`[PG] ${i}: ${q}`));
+    store = new PostgresAnalyticsStore({
+      connectionString,
+      resultsLogger: (i, q) => console.log(`[PG] ${i}: ${q}`),
+    });
   }
 
   return store;
