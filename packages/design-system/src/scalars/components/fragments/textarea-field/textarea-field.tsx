@@ -147,7 +147,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
                       "dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600",
                     ],
 
-                className
+                className,
               )}
               ref={ref}
               id={id}
