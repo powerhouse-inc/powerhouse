@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "eslint"
   },
   "author": "",
   "license": "ISC",
@@ -19,9 +19,5 @@
     "@powerhousedao/scalars": "workspace:*",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1"
-  },
-  "devDependencies": {
-    "tsup": "^8.3.0",
-    "typescript": "^5.6.3"
   }
 }

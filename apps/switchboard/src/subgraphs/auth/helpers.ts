@@ -23,7 +23,7 @@ export const formatToken = (token: string) =>
  */
 const generateToken = (
   sessionId: string,
-  expiryDurationSeconds?: number | null
+  expiryDurationSeconds?: number | null,
 ): string => {
   if (expiryDurationSeconds === null) {
     return jwt.sign({ sessionId }, JWT_SECRET);
@@ -44,7 +44,7 @@ const getExpiryDateFromToken = (token: string): Date | null => {
 };
 
 export const verifyToken = (
-  token: string
+  token: string,
 ): { sessionId: string } | undefined => {
   const verified = jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {
@@ -52,7 +52,7 @@ export const verifyToken = (
         err.name === "TokenExpiredError"
           ? "Token expired"
           : "Invalid authentication token",
-        { extensions: { code: "AUTHENTICATION_TOKEN_ERROR" } }
+        { extensions: { code: "AUTHENTICATION_TOKEN_ERROR" } },
       );
     }
     return decoded;
@@ -82,7 +82,7 @@ function parseOriginMarkup(originParam: string): string {
 
 export function validateOriginAgainstAllowed(
   allowedOrigins: string,
-  originReceived?: string
+  originReceived?: string,
 ) {
   if (allowedOrigins === "*") {
     return;
@@ -98,7 +98,7 @@ export function validateOriginAgainstAllowed(
       `Access denied due to origin restriction: ${allowedOrigins}, ${originReceived}`,
       {
         extensions: { code: "ORIGIN_FORBIDDEN" },
-      }
+      },
     );
   }
 }
@@ -107,7 +107,7 @@ export const generateTokenAndSession = async (
   db: PgDatabase<any, any, any>,
   session: SessionInput,
   userId: string,
-  isUserCreated: boolean
+  isUserCreated: boolean,
 ) => {
   const sessionId = randomUUID();
   const generatedToken = generateToken(sessionId, Number(session.expiresAt));
@@ -116,7 +116,7 @@ export const generateTokenAndSession = async (
   const allowedOrigins = parseOriginMarkup(
     Array.isArray(session.allowedOrigins)
       ? session.allowedOrigins.join(",")
-      : session.allowedOrigins
+      : session.allowedOrigins,
   );
   const createdSession = await db
     .insert(sessionTable)

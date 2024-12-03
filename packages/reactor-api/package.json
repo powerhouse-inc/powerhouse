@@ -8,7 +8,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "eslint"
   },
   "publishConfig": {
     "access": "public"
@@ -24,8 +25,7 @@
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "esbuild": "^0.24.0",
-    "graphql-tag": "^2.12.6",
-    "tsup": "^8.3.0"
+    "graphql-tag": "^2.12.6"
   },
   "peerDependencies": {
     "@powerhousedao/scalars": "workspace:*",

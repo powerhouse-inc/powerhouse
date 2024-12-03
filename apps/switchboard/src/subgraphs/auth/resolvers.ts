@@ -41,7 +41,7 @@ export const resolvers = {
     createChallenge: async (
       _: unknown,
       { address }: { address: string },
-      ctx: Context
+      ctx: Context,
     ) => {
       const db = await getDb();
       const { API_ORIGIN } = process.env;
@@ -78,7 +78,7 @@ export const resolvers = {
     solveChallenge: async (
       _: unknown,
       { nonce, signature }: { nonce: string; signature: string },
-      ctx: Context
+      ctx: Context,
     ) => {
       const db = await getDb();
       return db.transaction(async (tx) => {
@@ -126,7 +126,7 @@ export const resolvers = {
 
         const tokenAndSession = await createAuthenticationSession(
           db,
-          user.address
+          user.address,
         );
 
         return tokenAndSession;
@@ -135,7 +135,7 @@ export const resolvers = {
     createSession: async (
       _: unknown,
       { session }: { session: SessionInput },
-      ctx: Context
+      ctx: Context,
     ) => {
       const db = await getDb();
       const sessionAuth = await authenticate(ctx);
@@ -143,13 +143,13 @@ export const resolvers = {
         db,
         session,
         sessionAuth.createdBy,
-        sessionAuth.isUserCreated
+        sessionAuth.isUserCreated,
       );
     },
     revokeSession: async (
       _: unknown,
       { sessionId, userId }: { sessionId: string; userId: string },
-      ctx: Context
+      ctx: Context,
     ): Promise<{ id: string }> => {
       const user = await authenticate(ctx);
       const db = await getDb();
@@ -159,8 +159,8 @@ export const resolvers = {
         .where(
           and(
             eq(sessionTable.id, sessionId),
-            eq(sessionTable.createdBy, user.createdBy)
-          )
+            eq(sessionTable.createdBy, user.createdBy),
+          ),
         );
 
       if (!session) {
@@ -182,8 +182,8 @@ export const resolvers = {
         .where(
           and(
             eq(sessionTable.id, sessionId),
-            eq(sessionTable.createdBy, user.createdBy)
-          )
+            eq(sessionTable.createdBy, user.createdBy),
+          ),
         );
 
       return { id: session.id };

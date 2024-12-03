@@ -1,4 +1,10 @@
-export default function GraphQLIframe({ url, query }: { url: string, query?: string }) {
+export default function GraphQLIframe({
+  url,
+  query,
+}: {
+  url: string;
+  query?: string;
+}) {
   return (
     <iframe
       src={`${url}${query ? "?query=" + encodeURIComponent(query) : ""}`}
