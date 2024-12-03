@@ -1,13 +1,14 @@
 import { PGlite } from "@electric-sql/pglite";
 import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
-import { Pool } from "pg";
+import pg from "pg";
+const { Pool } = pg;
 import { ReactorRouterManager } from "./router";
 
 type Options = {
   express?: Express;
   port?: number;
-  client?: PGlite | Pool | undefined;
+  client?: PGlite | typeof Pool | undefined;
 };
 
 const DEFAULT_PORT = 4000;

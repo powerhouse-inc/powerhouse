@@ -9,7 +9,8 @@ import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { PgDatabase } from "drizzle-orm/pg-core";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import express, { IRouter, Router } from "express";
-import { Pool } from "pg";
+import pg from "pg";
+const { Pool } = pg;
 import {
   InternalListenerManager,
   InternalListenerModule,
@@ -41,7 +42,7 @@ export class ReactorRouterManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly driveServer: IDocumentDriveServer,
-    private readonly client: PGlite | Pool = new PGlite(),
+    private readonly client: PGlite | typeof Pool = new PGlite(),
     private listenerManager: InternalListenerManager = new InternalListenerManager(
       driveServer
     )
@@ -51,7 +52,7 @@ export class ReactorRouterManager {
     if (this.client instanceof Pool) {
       this.database = drizzlePg(this.client);
     } else {
-      this.database = drizzlePglite(this.client);
+      this.database = drizzlePglite(this.client as PGlite);
     }
     await this.listenerManager.init();
     const models = this.driveServer.getDocumentModels();
