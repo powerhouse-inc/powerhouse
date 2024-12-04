@@ -11,7 +11,7 @@ import { buildRevisionsFilter } from "../../utils";
 import { ITransmitter } from "./types";
 
 export interface IReceiver {
-  transmit: (strands: InternalTransmitterUpdate[]) => Promise<void>;
+  transmit: (strands: InternalTransmitterUpdate[]) => Promise<ListenerRevision[]>;
   disconnect: () => Promise<void>;
 }
 
@@ -32,9 +32,9 @@ export interface IInternalTransmitter extends ITransmitter {
 }
 
 export class InternalTransmitter implements ITransmitter {
-  private drive: IBaseDocumentDriveServer;
-  private listener: Listener;
-  private receiver: IReceiver | undefined;
+  protected drive: IBaseDocumentDriveServer;
+  protected listener: Listener;
+  protected receiver: IReceiver | undefined;
 
   constructor(listener: Listener, drive: IBaseDocumentDriveServer) {
     this.listener = listener;
@@ -94,5 +94,9 @@ export class InternalTransmitter implements ITransmitter {
 
   async disconnect(): Promise<void> {
     await this.receiver?.disconnect();
+  }
+
+  getListener(): Listener {
+    return this.listener;
   }
 }

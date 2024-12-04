@@ -3,13 +3,14 @@ import {
   InternalTransmitter,
   InternalTransmitterUpdate,
   Listener,
+  ListenerRevision,
 } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
 
 export type InternalListenerModule = {
   name: string;
   options: Omit<Listener, "driveId">;
-  transmit: (strands: InternalTransmitterUpdate[]) => Promise<void>;
+  transmit: (strands: InternalTransmitterUpdate[]) => Promise<ListenerRevision[]>;
 };
 
 export class InternalListenerManager {
@@ -79,8 +80,7 @@ export class InternalListenerManager {
           if (transmitter instanceof InternalTransmitter) {
             transmitter.setReceiver({
               transmit: async (strands: InternalTransmitterUpdate[]) => {
-                await transmit(strands);
-                return Promise.resolve();
+                return await transmit(strands);
               },
               disconnect: () => {
                 console.log(`Disconnecting listener ${options.listenerId}`);

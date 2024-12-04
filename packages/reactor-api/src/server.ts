@@ -1,4 +1,8 @@
 import { PGlite } from "@electric-sql/pglite";
+import {
+  AnalyticsQueryEngine
+} from "@powerhousedao/analytics-engine-core";
+import { AnalyticsModel } from "@powerhousedao/analytics-engine-graphql";
 import { KnexAnalyticsStore, KnexQueryExecutor } from "@powerhousedao/analytics-engine-knex";
 import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
@@ -6,13 +10,6 @@ import pg from "pg";
 import { ReactorRouterManager } from "./router";
 import { getKnexClient } from "./utils/get-knex-client";
 const { Pool } = pg;
-import {
-  AnalyticsGranularity,
-  AnalyticsPath,
-  AnalyticsQuery,
-  AnalyticsQueryEngine,
-} from "@powerhousedao/analytics-engine-core";
-import { AnalyticsModel } from "@powerhousedao/analytics-engine-graphql";
 
 type Options = {
   express?: Express;
@@ -50,10 +47,7 @@ export async function startAPI(
       },
     },
   });
-
   await reactorRouterManager.init();
-
   app.listen(port);
-
   return { app, reactorRouterManager };
 }
