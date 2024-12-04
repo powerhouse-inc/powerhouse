@@ -20,21 +20,14 @@
   "include": ["*.config.js", "*.json", "packages/**/*"],
   "exclude": [
     "node_modules/",
-    "dist/",
-    "build/",
-    "storybook-static/",
-    "coverage/",
+    "**/node_modules/",
+    "**/dist/",
+    "**/build/",
+    "**/storybook-static/",
+    "**/coverage/",
+    "**/gen/",
+    "**/docs/",
     ".nx/",
-    "gen/",
-    "docs/",
-    "coverage/",
-    "browser.js",
-    "packages/*/node_modules/",
-    "packages/*/dist/",
-    "packages/*/build/",
-    "packages/*/storybook-static/",
-    "packages/*/coverage/",
-    "packages/*/gen/",
-    "packages/*/docs/"
+    "browser.js"
   ]
 }

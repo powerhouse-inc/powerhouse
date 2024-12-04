@@ -39,7 +39,6 @@
     "uuid": "^11.0.2"
   },
   "devDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
@@ -47,8 +46,5 @@
     "@types/node": "^22.7.5",
     "document-drive": "workspace:*",
     "tsup": "^8.3.5"
-  },
-  "peerDependencies": {
-    "@powerhousedao/scalars": "workspace:*"
   }
 }

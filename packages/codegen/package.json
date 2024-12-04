@@ -53,9 +53,5 @@
     "esbuild-fix-imports-plugin": "^1.0.6",
     "graphql": "^16.8.1",
     "husky": "^8.0.3"
-  },
-  "peerDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
-    "graphql": "^16.8.1"
   }
 }

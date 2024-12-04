@@ -28,10 +28,6 @@
     "esbuild": "^0.24.0",
     "graphql-tag": "^2.12.6"
   },
-  "peerDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
-    "document-model": "workspace:*"
-  },
   "dependencies": {
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.9.2",

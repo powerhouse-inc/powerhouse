@@ -54,10 +54,10 @@
     "localforage": "^1.10.0",
     "redis": "^4.6.15",
     "sequelize": "^6.37.3",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "@powerhousedao/scalars": "workspace:*"
   },
   "devDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",
