@@ -1,4 +1,4 @@
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { CheckboxField } from "./checkbox-field";
 import { renderWithForm } from "@/scalars/lib/testing";
@@ -61,7 +61,7 @@ describe("CheckboxField", () => {
     expect(checkbox).toBeRequired();
   });
 
-  it("should render with errors", () => {
+  it("should render with errors", async () => {
     renderWithForm(
       <CheckboxField
         name="test"
@@ -69,10 +69,12 @@ describe("CheckboxField", () => {
         errors={["This is an error"]}
       />,
     );
-    expect(screen.getByText("This is an error")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("This is an error")).toBeInTheDocument(),
+    );
   });
 
-  it("should render with warnings and errors", () => {
+  it("should render with warnings and errors", async () => {
     renderWithForm(
       <CheckboxField
         name="test"
@@ -82,6 +84,8 @@ describe("CheckboxField", () => {
       />,
     );
     expect(screen.getByText("This is a warning")).toBeInTheDocument();
-    expect(screen.getByText("This is an error")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("This is an error")).toBeInTheDocument(),
+    );
   });
 });

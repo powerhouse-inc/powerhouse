@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StringField } from "./string-field";
 import { renderWithForm } from "@/scalars/lib/testing";
@@ -25,9 +25,11 @@ describe("StringField", () => {
     expect(screen.getByText("Test description")).toBeInTheDocument();
   });
 
-  it("should render error messages when provided", () => {
+  it("should render error messages when provided", async () => {
     renderWithForm(<StringField name="test" errors={["Error message"]} />);
-    expect(screen.getByText("Error message")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Error message")).toBeInTheDocument(),
+    );
   });
 
   it("should render warning messages when provided", () => {

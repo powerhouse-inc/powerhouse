@@ -1,5 +1,5 @@
 import React from "react";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NumberField } from "./number-field";
 import { renderWithForm } from "@/scalars/lib/testing";
@@ -37,7 +37,7 @@ describe("NumberField Component", () => {
     expect(screen.getByText("This is a description")).toBeInTheDocument();
   });
 
-  it("should render error messages when provided", () => {
+  it("should render error messages when provided", async () => {
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -46,8 +46,10 @@ describe("NumberField Component", () => {
         name="Label"
       />,
     );
-    expect(screen.getByText("Error 1")).toBeInTheDocument();
-    expect(screen.getByText("Error 2")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Error 1")).toBeInTheDocument();
+      expect(screen.getByText("Error 2")).toBeInTheDocument();
+    });
   });
 
   it("should render warning messages when provided", () => {
