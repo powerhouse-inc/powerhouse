@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { SelectProps } from "@/scalars/components/enum-field/types";
 
 interface UseSelectFieldProps {
@@ -16,18 +16,40 @@ export function useSelectField({
   value,
   onChange,
 }: UseSelectFieldProps) {
+  const isInternalChange = useRef(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedValues, setSelectedValues] = useState<string[]>(() => {
     const initialValue = value ?? defaultValue ?? [];
     return Array.isArray(initialValue) ? initialValue : [initialValue];
   });
+  const [searchValue, setSearchValue] = useState("");
+
+  useEffect(() => {
+    // avoid unnecessary re-renders
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
+    const newValue = value ?? defaultValue ?? [];
+    setSelectedValues(Array.isArray(newValue) ? newValue : [newValue]);
+    setSearchValue("");
+  }, [value]);
 
   const handleTogglePopover = useCallback(() => {
     setIsPopoverOpen(!isPopoverOpen);
   }, [isPopoverOpen]);
 
+  const handleSearch = useCallback((value: string) => {
+    setSearchValue(value);
+  }, []);
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    setIsPopoverOpen(open);
+  }, []);
+
   const toggleOption = useCallback(
     (optionValue: string) => {
+      isInternalChange.current = true;
       let newValues: string[];
 
       if (multiple) {
@@ -46,11 +68,13 @@ export function useSelectField({
   );
 
   const handleClear = useCallback(() => {
+    isInternalChange.current = true;
     setSelectedValues([]);
     onChange?.(multiple ? [] : "");
   }, [multiple, onChange]);
 
   const toggleAll = useCallback(() => {
+    isInternalChange.current = true;
     const enabledOptions = options
       .filter((opt) => !opt.disabled)
       .map((opt) => opt.value);
@@ -62,13 +86,28 @@ export function useSelectField({
     onChange?.(multiple ? newValues : newValues[0]);
   }, [options, selectedValues, multiple, onChange]);
 
+  const selectFirstFilteredOption = useCallback(() => {
+    const filteredOptions = options.filter((option) =>
+      option.label.toLowerCase().includes(searchValue.toLowerCase()),
+    );
+
+    const firstOption = filteredOptions.find((opt) => !opt.disabled);
+    if (firstOption) {
+      toggleOption(firstOption.value);
+    }
+  }, [options, searchValue, toggleOption]);
+
   return {
     selectedValues,
     isPopoverOpen,
+    searchValue,
     setIsPopoverOpen,
     toggleOption,
     handleClear,
     toggleAll,
     handleTogglePopover,
+    handleSearch,
+    handleOpenChange,
+    selectFirstFilteredOption,
   };
 }

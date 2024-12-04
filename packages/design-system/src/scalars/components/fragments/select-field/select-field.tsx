@@ -14,6 +14,7 @@ import { cn } from "@/scalars/lib/utils";
 import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
 import { SelectProps } from "@/scalars/components/enum-field/types";
 import { useSelectField } from "./use-select-field";
+import { SearchInput } from "./search-input";
 import { SelectedContent } from "./selected-content";
 import { Content } from "./content";
 
@@ -57,8 +58,8 @@ export const SelectFieldRaw = React.forwardRef<
       warnings = [],
 
       // behavior props
-      asModal,
       searchable,
+      searchPosition = "Dropdown",
 
       // display props
       description,
@@ -70,17 +71,26 @@ export const SelectFieldRaw = React.forwardRef<
     },
     ref,
   ) => {
+    // If not valid configuration, fallback to 'Dropdown'
+    if (searchPosition === "Input" && multiple) {
+      searchPosition = "Dropdown";
+    }
+
     const prefix = useId();
     const id = propId ?? `${prefix}-select`;
 
     const {
       selectedValues,
       isPopoverOpen,
+      searchValue,
       setIsPopoverOpen,
       toggleOption,
       handleClear,
       toggleAll,
       handleTogglePopover,
+      handleSearch,
+      handleOpenChange,
+      selectFirstFilteredOption,
     } = useSelectField({
       options,
       multiple,
@@ -102,17 +112,13 @@ export const SelectFieldRaw = React.forwardRef<
             {label}
           </FormLabel>
         )}
-        <Popover
-          open={isPopoverOpen}
-          onOpenChange={setIsPopoverOpen}
-          modal={asModal}
-        >
+        <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
           <PopoverTrigger asChild={true}>
             <Button
               id={id}
               name={name}
               type="button"
-              role="combobox"
+              role={searchPosition === "Input" ? "button" : "combobox"}
               autoFocus={autoFocus}
               onClick={handleTogglePopover}
               disabled={disabled}
@@ -138,16 +144,30 @@ export const SelectFieldRaw = React.forwardRef<
               {...props}
               ref={ref}
             >
-              <SelectedContent
-                selectedValues={selectedValues}
-                options={options}
-                multiple={multiple}
-                searchable={searchable}
-                maxSelectedOptionsToShow={maxSelectedOptionsToShow}
-                placeholder={placeholder}
-                disabled={disabled}
-                handleClear={handleClear}
-              />
+              {searchable && searchPosition === "Input" ? (
+                <SearchInput
+                  selectedValues={selectedValues}
+                  options={options}
+                  placeholder={placeholder}
+                  disabled={disabled}
+                  onSearch={handleSearch}
+                  onOpenChange={handleOpenChange}
+                  onSelectFirstOption={selectFirstFilteredOption}
+                  handleClear={handleClear}
+                  isPopoverOpen={isPopoverOpen}
+                />
+              ) : (
+                <SelectedContent
+                  selectedValues={selectedValues}
+                  options={options}
+                  multiple={multiple}
+                  searchable={searchable}
+                  maxSelectedOptionsToShow={maxSelectedOptionsToShow}
+                  placeholder={placeholder}
+                  disabled={disabled}
+                  handleClear={handleClear}
+                />
+              )}
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -165,6 +185,8 @@ export const SelectFieldRaw = React.forwardRef<
               optionsCheckmark={optionsCheckmark}
               multiple={multiple}
               searchable={searchable}
+              searchPosition={searchPosition}
+              searchValue={searchValue}
               toggleOption={toggleOption}
               toggleAll={toggleAll}
             />

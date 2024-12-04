@@ -114,6 +114,22 @@ describe("SelectField Component", () => {
     expect(screen.queryByText("Option 2")).not.toBeInTheDocument();
   });
 
+  // Search Position Tests
+  it("should render search input in combobox when searchPosition is 'Input'", () => {
+    renderWithForm(
+      <SelectField
+        name="select"
+        options={defaultOptions}
+        searchable
+        searchPosition="Input"
+      />,
+    );
+
+    const searchInput = screen.getByRole("combobox");
+    expect(searchInput).toBeInTheDocument();
+    expect(searchInput).toHaveAttribute("type", "text");
+  });
+
   // Validation and Error Handling Tests
   it("should display error messages", () => {
     renderWithForm(
@@ -182,17 +198,6 @@ describe("SelectField Component", () => {
     expect(select).toHaveAttribute("aria-required", "true");
     expect(select).toHaveAttribute("aria-invalid", "true");
     expect(select).toHaveAttribute("aria-expanded", "false");
-  });
-
-  // Modal Behavior Tests
-  it("should render as modal when asModal is true", async () => {
-    const user = userEvent.setup();
-    renderWithForm(
-      <SelectField name="select" options={defaultOptions} asModal />,
-    );
-
-    await user.click(screen.getByRole("combobox"));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   // Multiple Selection Tests
