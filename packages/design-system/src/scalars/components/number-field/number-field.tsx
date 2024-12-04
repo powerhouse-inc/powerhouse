@@ -7,13 +7,17 @@ import { InputNumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { withFieldValidation } from "../fragments/with-field-validation";
-import { validateIsBigInt, validatePositive } from "./number-field-validations";
+import {
+  validateIsBigInt,
+  validateNumericType,
+  validatePositive,
+} from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
 import { getDisplayValue, regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
-  value?: string | number;
+  value?: number;
   defaultValue?: string | number;
   className?: string;
   pattern?: RegExp;
@@ -52,7 +56,6 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
 
     // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints,
     // Otherwise sets to "number" for standard numeric input.
-    const inputType = isBigInt ? "text" : "number";
     const showSteps = step !== 0;
 
     // Prevent to write invalid characters
@@ -141,7 +144,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             name={name}
             className={cn(className, showSteps && "pr-8")}
             pattern={isBigInt ? regex.toString() : pattern?.toString()}
-            type={inputType}
+            type="number"
             min={minValue}
             max={maxValue}
             aria-valuemin={minValue}
@@ -203,6 +206,7 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
     validations: {
       _positive: validatePositive,
       _isBigInt: validateIsBigInt,
+      _numericType: validateNumericType,
     },
   },
 );
