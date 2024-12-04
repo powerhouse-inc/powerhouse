@@ -36,9 +36,7 @@
     "ms": "^2.1.3",
     "nanoevents": "^9.0.0",
     "sanitize-filename": "^1.6.3",
-    "uuid": "^11.0.2",
-    "vite": "^6.0.2",
-    "vite-node": "^2.1.7"
+    "uuid": "^11.0.2"
   },
   "devDependencies": {
     "@powerhousedao/scalars": "workspace:*",
@@ -48,7 +46,6 @@
     "@types/ms": "^0.7.34",
     "@types/node": "^22.7.5",
     "document-drive": "workspace:*",
-    "postcss": "^8.4.47",
     "tsup": "^8.3.5"
   },
   "peerDependencies": {

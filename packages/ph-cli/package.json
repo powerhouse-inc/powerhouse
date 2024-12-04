@@ -36,8 +36,7 @@
     "document-drive": "workspace:*",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1",
-    "luxon": "^3.5.0",
-    "tsx": "^4.19.1"
+    "luxon": "^3.5.0"
   },
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",

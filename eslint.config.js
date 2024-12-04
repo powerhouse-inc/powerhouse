@@ -88,6 +88,7 @@ export default tseslint.config(
       "**/dist/",
       "**/build/",
       "**/storybook-static/",
+      "**/.storybook/",
       "**/coverage/",
       "**/gen/",
       "**/docs/",
