@@ -12,6 +12,7 @@
     "noImplicitAny": true,
     "skipLibCheck": true,
     "baseUrl": "./",
+    "rootDir": "./",
     "allowJs": true,
     "paths": {
       "scalar-generator": ["tools/scalar-generator/src/index.ts"]

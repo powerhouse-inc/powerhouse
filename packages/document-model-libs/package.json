@@ -30,6 +30,11 @@
       "require": "./dist/cjs/budget-statement.cjs",
       "import": "./dist/es/budget-statement.js"
     },
+    "./atlas-feedback-issues": {
+      "types": "./dist/atlas-feedback-issues.d.ts",
+      "require": "./dist/cjs/atlas-feedback-issues.cjs",
+      "import": "./dist/es/atlas-feedback-issues.js"
+    },
     "./scope-framework": {
       "types": "./dist/scope-framework.d.ts",
       "require": "./dist/cjs/scope-framework.cjs",

@@ -1,11 +1,10 @@
-import { ExtendedEditor, EditorContextProps } from "document-model-libs";
-import Editor from "./editor";
 import {
   AtlasFeedbackIssuesState,
   AtlasFeedbackIssuesAction,
   AtlasFeedbackIssuesLocalState,
-} from "../../document-models/atlas-feedback-issues";
+} from "document-models/atlas-feedback-issues";
 import { lazyWithPreload } from "document-model-libs/utils";
+import { ExtendedEditor } from "editors/types";
 
 export const module: ExtendedEditor<
   AtlasFeedbackIssuesState,

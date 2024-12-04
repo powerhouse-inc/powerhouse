@@ -52,6 +52,7 @@ export default defineConfig(({ mode }) => {
         crypto: "crypto-browserify",
         "document-model-libs/utils": resolve(__dirname, "./editors/utils"),
         editors: resolve(__dirname, "./editors"),
+        "document-models": path.resolve(__dirname, "./document-models"),
       },
     },
     build: {

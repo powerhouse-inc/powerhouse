@@ -15,10 +15,12 @@
     "jsx": "react-jsx",
     "lib": ["ESNext", "dom", "dom.iterable"],
     "baseUrl": "./",
+    "rootDir": "./",
     "allowJs": true,
     "paths": {
       "document-model-libs/utils": ["./editors/utils"],
-      "document-model-libs/utils/*": ["./editors/utils/*"]
+      "document-model-libs/utils/*": ["./editors/utils/*"],
+      "document-models/*": ["./document-models/*"]
     }
   }
 }

@@ -36,15 +36,7 @@
                             "schema": "input CreateIssueInput {\n  phid: PHID!\n  relevantNotionIds: [String]!\n}",
                             "template": "",
                             "reducer": "",
-                            "errors": [
-                                {
-                                    "id": "dSl06rQMOJJ7oZG2G2B4UieWqy0=",
-                                    "name": "PhidAlreadyExists",
-                                    "code": "",
-                                    "description": "",
-                                    "template": ""
-                                }
-                            ],
+                            "errors": [],
                             "examples": [],
                             "scope": "global"
                         },
@@ -55,15 +47,7 @@
                             "schema": "input DeleteIssueInput {\n  phid: PHID!\n}",
                             "template": "",
                             "reducer": "",
-                            "errors": [
-                                {
-                                    "id": "/A0k/icghjoQD68t8EeR6JqHP/Q=",
-                                    "name": "PhidDoesNotExist",
-                                    "code": "",
-                                    "description": "",
-                                    "template": ""
-                                }
-                            ],
+                            "errors": [],
                             "examples": [],
                             "scope": "global"
                         }
@@ -81,22 +65,7 @@
                             "schema": "input CreateCommentInput {\n  phid: PHID!\n  issuePhid: PHID!\n  relevantNotionId: String!\n  content: String!\n}",
                             "template": "",
                             "reducer": "",
-                            "errors": [
-                                {
-                                    "id": "4cJLsSgTu0iKKXJ/F5Lz3tQNcZQ=",
-                                    "name": "PhidAlreadyExists",
-                                    "code": "",
-                                    "description": "",
-                                    "template": ""
-                                },
-                                {
-                                    "id": "JRQB43Go1yter2yBM4w+Y77k+g4=",
-                                    "name": "IssuePhidDoesNotExist",
-                                    "code": "",
-                                    "description": "",
-                                    "template": ""
-                                }
-                            ],
+                            "errors": [],
                             "examples": [],
                             "scope": "global"
                         },
@@ -107,22 +76,7 @@
                             "schema": "input DeleteCommentInput {\n  phid: PHID!\n  issuePhid: PHID!\n}",
                             "template": "",
                             "reducer": "",
-                            "errors": [
-                                {
-                                    "id": "h+fX1k+dyUnp+h22Y31OS/uzRIs=",
-                                    "name": "PhidDoesNotExist",
-                                    "code": "",
-                                    "description": "",
-                                    "template": ""
-                                },
-                                {
-                                    "id": "Yg6obzRH7ismUNnB5U6E4BBrRYk=",
-                                    "name": "IssuePhidDoesNotExist",
-                                    "code": "",
-                                    "description": "",
-                                    "template": ""
-                                }
-                            ],
+                            "errors": [],
                             "examples": [],
                             "scope": "global"
                         },
@@ -133,22 +87,7 @@
                             "schema": "input EditCommentInput {\n  phid: PHID!\n  issuePhid: PHID!\n  relevantNotionId: String\n  content: String\n}",
                             "template": "",
                             "reducer": "",
-                            "errors": [
-                                {
-                                    "id": "P4fCPIEh3PVFsyFE5Lx1wTLTxsU=",
-                                    "name": "PhidDoesNotExist",
-                                    "code": "",
-                                    "description": "",
-                                    "template": ""
-                                },
-                                {
-                                    "id": "UrzfLIra9ZugNTknETBfRC9SciA=",
-                                    "name": "IssuePhidDoesNotExist",
-                                    "code": "",
-                                    "description": "",
-                                    "template": ""
-                                }
-                            ],
+                            "errors": [],
                             "examples": [],
                             "scope": "global"
                         }

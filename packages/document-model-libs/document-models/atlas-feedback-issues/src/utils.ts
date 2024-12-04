@@ -1,4 +1,7 @@
-import { makeStringExistsValidator, makeUniqueStringValidator } from "utils";
+import {
+  makeStringExistsValidator,
+  makeUniqueStringValidator,
+} from "document-model-libs/utils";
 import { z } from "zod";
 import { AtlasFeedbackIssuesState } from "../gen";
 
@@ -8,7 +11,7 @@ export function makeIssueValidator(state: AtlasFeedbackIssuesState) {
       state.issues.map((issue) => issue.phid),
       "Issue with this phid already exists",
     ),
-  })
+  });
 }
 
 export function makeDeleteIssueValidator(state: AtlasFeedbackIssuesState) {
