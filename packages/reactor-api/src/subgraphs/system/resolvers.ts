@@ -5,6 +5,7 @@ import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 export const resolvers: GraphQLResolverMap<Context> = {
   Query: {
     drives: async (parent: unknown, args: unknown, ctx: Context) => {
+      console.log(ctx);
       const drives = await ctx.driveServer.getDrives();
       return drives;
     },
