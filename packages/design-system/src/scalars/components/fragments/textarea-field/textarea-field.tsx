@@ -162,7 +162,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               {...props}
             />
           </ValueTransformer>
-          {maxLength && (
+          {typeof maxLength === "number" && maxLength > 0 && (
             <div className="mt-0.5 flex justify-end">
               <CharacterCounter maxLength={maxLength} value={value ?? ""} />
             </div>
