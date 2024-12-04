@@ -35,10 +35,6 @@ const meta: Meta<typeof StringField> = {
       control: "boolean",
       description:
         "Whether textarea should automatically expand as content grows",
-      if: {
-        arg: "multiline",
-        eq: true,
-      },
       table: {
         type: { summary: "boolean" },
         defaultValue: { summary: "false" },
