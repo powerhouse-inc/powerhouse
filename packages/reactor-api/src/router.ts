@@ -14,7 +14,7 @@ import {
   InternalListenerManager,
   InternalListenerModule,
 } from "./internal-listener-manager";
-import { driveSubgraph, systemSubgraph } from "./subgraphs";
+import { driveSubgraph, systemSubgraph, analyticsSubgraph } from "./subgraphs";
 import { Context, Processor } from "./types";
 import { createSchema } from "./utils/create-schema";
 const { Pool } = pg;
@@ -35,6 +35,11 @@ export class ReactorRouterManager {
       name: "d/:drive",
       resolvers: driveSubgraph.resolvers,
       typeDefs: driveSubgraph.typeDefs,
+    },
+    {
+      name: "analytics",
+      resolvers: analyticsSubgraph.resolvers,
+      typeDefs: analyticsSubgraph.typeDefs,
     },
   ];
   constructor(
