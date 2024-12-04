@@ -9,7 +9,9 @@ export type RWACreateItemModalProps = ComponentPropsWithoutRef<typeof Modal> & {
   readonly onOpenChange: (open: boolean) => void;
 };
 
-export function _RWACreateItemModal(props: RWACreateItemModalProps) {
+export const RWACreateItemModal = memo(function RWACreateItemModal(
+  props: RWACreateItemModalProps,
+) {
   const { tableName, open, onOpenChange } = props;
 
   const {
@@ -84,6 +86,4 @@ export function _RWACreateItemModal(props: RWACreateItemModalProps) {
       </div>
     </Modal>
   );
-}
-
-export const RWACreateItemModal = memo(_RWACreateItemModal);
+});

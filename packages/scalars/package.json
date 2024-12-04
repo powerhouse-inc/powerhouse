@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/scalars",
-  "version": "1.9.1-canary.39",
+  "version": "1.9.1-canary.51",
   "license": "AGPL-3.0-only",
   "publishConfig": {
     "access": "public"
@@ -13,8 +13,8 @@
   "module": "dist/es/src/index.js",
   "scripts": {
     "check-types": "tsc",
-    "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "postlint": "npm run check-types",
     "build": "NODE_ENV=production vite build",
     "build:watch": "vite build --watch",
@@ -23,11 +23,8 @@
     "clean:node_modules": "rimraf node_modules"
   },
   "devDependencies": {
-    "@typescript-eslint/parser": "^6.19.0",
     "@vitest/coverage-v8": "^2.0.5",
     "glob": "^11.0.0",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.11",
     "vite-plugin-dts": "^3.7.1",
     "vite-plugin-generate-file": "^0.1.1",
     "vitest": "^2.0.5",

@@ -2,5 +2,6 @@ node_modules/
 .nx/cache
 .nx/workspace-data
 **/dist/
-.pnpm-store/
 .next
+*.tsbuildinfo
+dev.db
