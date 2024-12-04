@@ -23,7 +23,6 @@ export interface SelectProps {
   multiple?: boolean;
   searchable?: boolean;
   searchPosition?: "Dropdown" | "Input";
-  asModal?: boolean;
   onChange?: (value: string | string[]) => void;
 }
 

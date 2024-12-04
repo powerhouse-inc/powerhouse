@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Command,
   CommandEmpty,
@@ -18,6 +18,7 @@ interface ContentProps {
   multiple?: boolean;
   searchable?: boolean;
   searchPosition?: "Dropdown" | "Input";
+  searchValue?: string;
   toggleOption: (value: string) => void;
   toggleAll: () => void;
 }
@@ -29,9 +30,17 @@ export const Content: React.FC<ContentProps> = ({
   multiple,
   searchable,
   searchPosition,
+  searchValue = "",
   toggleOption,
   toggleAll,
 }) => {
+  const filteredOptions = useMemo(() => {
+    if (!searchValue) return options;
+    return options.filter((option) =>
+      option.label.toLowerCase().includes(searchValue.toLowerCase()),
+    );
+  }, [options, searchValue]);
+
   const renderIcon = (
     IconComponent:
       | IconName
@@ -88,7 +97,7 @@ export const Content: React.FC<ContentProps> = ({
                     "flex size-4 items-center justify-center rounded border",
                     "border-gray-700 dark:border-gray-400",
                     selectedValues.length ===
-                      options.filter((opt) => !opt.disabled).length
+                      filteredOptions.filter((opt) => !opt.disabled).length
                       ? "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black"
                       : "opacity-50 [&_svg]:invisible",
                   )}
@@ -97,14 +106,14 @@ export const Content: React.FC<ContentProps> = ({
                 </div>
                 <span className="text-[14px] font-semibold leading-4 text-gray-900 dark:text-gray-50">
                   {selectedValues.length ===
-                  options.filter((opt) => !opt.disabled).length
+                  filteredOptions.filter((opt) => !opt.disabled).length
                     ? "Deselect All"
                     : "Select All"}
                 </span>
               </div>
             </CommandItem>
           )}
-          {options.map((option) => {
+          {filteredOptions.map((option) => {
             const isSelected = selectedValues.includes(option.value);
 
             return (

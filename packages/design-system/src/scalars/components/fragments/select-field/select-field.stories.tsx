@@ -57,7 +57,8 @@ const meta: Meta<typeof SelectField> = {
     searchPosition: {
       control: "radio",
       options: ["Dropdown", "Input"],
-      description: "Position of the search input",
+      description:
+        "Position of the search input. Note: 'Input' is only available when multiple=false",
       table: {
         type: { summary: '"Dropdown" | "Input"' },
         defaultValue: { summary: '"Dropdown"' },
@@ -165,7 +166,7 @@ export const WithDefaultValue: Story = {
   args: {
     label: "Preset selection",
     options: defaultOptions,
-    defaultValue: ["Drive"],
+    defaultValue: "Drive",
   },
 };
 
@@ -174,7 +175,7 @@ export const Disabled: Story = {
     label: "Disabled field",
     disabled: true,
     options: defaultOptions,
-    value: ["Drive"],
+    value: "Drive",
   },
 };
 
@@ -207,6 +208,23 @@ export const Searchable: Story = {
     options: defaultOptions,
     placeholder: "Select an icon",
     searchable: true,
+  },
+};
+
+export const WithSearchInInput: Story = {
+  args: {
+    label: "Select country",
+    description: "Type to search through options",
+    options: [
+      { value: "US", label: "United States" },
+      { value: "GB", label: "United Kingdom" },
+      { value: "FR", label: "France" },
+      { value: "DE", label: "Germany" },
+    ],
+    optionsCheckmark: "None",
+    placeholder: "Search...",
+    searchable: true,
+    searchPosition: "Input",
   },
 };
 

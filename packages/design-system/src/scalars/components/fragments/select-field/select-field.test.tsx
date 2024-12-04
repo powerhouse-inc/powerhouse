@@ -200,17 +200,6 @@ describe("SelectField Component", () => {
     expect(select).toHaveAttribute("aria-expanded", "false");
   });
 
-  // Modal Behavior Tests
-  it("should render as modal when asModal is true", async () => {
-    const user = userEvent.setup();
-    renderWithForm(
-      <SelectField name="select" options={defaultOptions} asModal />,
-    );
-
-    await user.click(screen.getByRole("combobox"));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
   // Multiple Selection Tests
   it("should allow multiple selections when multiple is true", async () => {
     const onChangeMock = vi.fn();

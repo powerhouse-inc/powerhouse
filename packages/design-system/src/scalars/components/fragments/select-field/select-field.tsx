@@ -58,7 +58,6 @@ export const SelectFieldRaw = React.forwardRef<
       warnings = [],
 
       // behavior props
-      asModal,
       searchable,
       searchPosition = "Dropdown",
 
@@ -72,17 +71,26 @@ export const SelectFieldRaw = React.forwardRef<
     },
     ref,
   ) => {
+    // If not valid configuration, fallback to 'Dropdown'
+    if (searchPosition === "Input" && multiple) {
+      searchPosition = "Dropdown";
+    }
+
     const prefix = useId();
     const id = propId ?? `${prefix}-select`;
 
     const {
       selectedValues,
       isPopoverOpen,
+      searchValue,
       setIsPopoverOpen,
       toggleOption,
       handleClear,
       toggleAll,
       handleTogglePopover,
+      handleSearch,
+      handleOpenChange,
+      selectFirstFilteredOption,
     } = useSelectField({
       options,
       multiple,
@@ -104,11 +112,7 @@ export const SelectFieldRaw = React.forwardRef<
             {label}
           </FormLabel>
         )}
-        <Popover
-          open={isPopoverOpen}
-          onOpenChange={setIsPopoverOpen}
-          modal={asModal}
-        >
+        <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
           <PopoverTrigger asChild={true}>
             <Button
               id={id}
@@ -146,6 +150,11 @@ export const SelectFieldRaw = React.forwardRef<
                   options={options}
                   placeholder={placeholder}
                   disabled={disabled}
+                  onSearch={handleSearch}
+                  onOpenChange={handleOpenChange}
+                  onSelectFirstOption={selectFirstFilteredOption}
+                  handleClear={handleClear}
+                  isPopoverOpen={isPopoverOpen}
                 />
               ) : (
                 <SelectedContent
@@ -177,6 +186,7 @@ export const SelectFieldRaw = React.forwardRef<
               multiple={multiple}
               searchable={searchable}
               searchPosition={searchPosition}
+              searchValue={searchValue}
               toggleOption={toggleOption}
               toggleAll={toggleAll}
             />
