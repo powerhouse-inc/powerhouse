@@ -10,7 +10,6 @@ import { withFieldValidation } from "../fragments/with-field-validation";
 import {
   validateIsBigInt,
   validateNumericType,
-  validatePositive,
 } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
 import { getDisplayValue, regex } from "./utils";
@@ -204,7 +203,6 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
   NumberFieldRaw,
   {
     validations: {
-      _positive: validatePositive,
       _isBigInt: validateIsBigInt,
       _numericType: validateNumericType,
     },
