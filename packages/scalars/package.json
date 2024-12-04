@@ -37,29 +37,29 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/types/src/index.d.ts",
       "require": "./dist/cjs/src/index.js",
-      "import": "./dist/es/src/index.js",
-      "types": "./dist/types/src/index.d.ts"
+      "import": "./dist/es/src/index.js"
     },
     "./EthereumAddress": {
+      "types": "./dist/types/src/scalars/EthereumAddress.d.ts",
       "require": "./dist/cjs/src/scalars/EthereumAddress.js",
-      "import": "./dist/es/src/scalars/EthereumAddress.js",
-      "types": "./dist/types/src/scalars/EthereumAddress.d.ts"
+      "import": "./dist/es/src/scalars/EthereumAddress.js"
     },
     "./EmailAddress": {
+      "types": "./dist/types/src/scalars/EmailAddress.d.ts",
       "require": "./dist/cjs/src/scalars/EmailAddress.js",
-      "import": "./dist/es/src/scalars/EmailAddress.js",
-      "types": "./dist/types/src/scalars/EmailAddress.d.ts"
+      "import": "./dist/es/src/scalars/EmailAddress.js"
     },
     "./AmountTokens": {
+      "types": "./dist/types/src/scalars/AmountTokens.d.ts",
       "require": "./dist/cjs/src/scalars/AmountTokens.js",
-      "import": "./dist/es/src/scalars/AmountTokens.js",
-      "types": "./dist/types/src/scalars/AmountTokens.d.ts"
+      "import": "./dist/es/src/scalars/AmountTokens.js"
     },
     "./AmountPercentage": {
+      "types": "./dist/types/src/scalars/AmountPercentage.d.ts",
       "require": "./dist/cjs/src/scalars/AmountPercentage.js",
-      "import": "./dist/es/src/scalars/AmountPercentage.js",
-      "types": "./dist/types/src/scalars/AmountPercentage.d.ts"
+      "import": "./dist/es/src/scalars/AmountPercentage.js"
     }
   }
 }

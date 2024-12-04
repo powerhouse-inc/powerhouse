@@ -26,33 +26,33 @@
   "exports": {
     ".": {
       "node": {
-        "import": "./dist/node/es/index.js",
+        "types": "./dist/node/index.d.ts",
         "require": "./dist/node/cjs/index.js",
-        "types": "./dist/node/index.d.ts"
+        "import": "./dist/node/es/index.js"
       },
-      "import": "./dist/browser/es/index.js",
+      "types": "./dist/browser/index.d.ts",
       "require": "./dist/browser/cjs/index.js",
-      "types": "./dist/browser/index.d.ts"
+      "import": "./dist/browser/es/index.js"
     },
     "./document": {
       "node": {
-        "import": "./dist/node/es/document.js",
+        "types": "./dist/node/document.d.ts",
         "require": "./dist/node/cjs/document.js",
-        "types": "./dist/node/document.d.ts"
+        "import": "./dist/node/es/document.js"
       },
-      "import": "./dist/browser/es/document.js",
+      "types": "./dist/browser/document.d.ts",
       "require": "./dist/browser/cjs/document.js",
-      "types": "./dist/browser/document.d.ts"
+      "import": "./dist/browser/es/document.js"
     },
     "./document-model": {
       "node": {
-        "import": "./dist/node/es/document-model.js",
+        "types": "./dist/node/document-model.d.ts",
         "require": "./dist/node/cjs/document-model.js",
-        "types": "./dist/node/document-model.d.ts"
+        "import": "./dist/node/es/document-model.js"
       },
-      "import": "./dist/browser/es/document-model.js",
+      "types": "./dist/browser/document-model.d.ts",
       "require": "./dist/browser/cjs/document-model.js",
-      "types": "./dist/browser/document-model.d.ts"
+      "import": "./dist/browser/es/document-model.js"
     }
   },
   "devDependencies": {
