@@ -113,11 +113,9 @@ const startServer = async (
 
   try {
     // start api
-    const client = new PGlite(options?.dbPath ?? process.cwd() + "/dev.db");
-
     const { app, reactorRouterManager } = await startAPI(driveServer, {
       port: serverPort,
-      client,
+      dbConnection: options?.dbPath ?? process.cwd() + "/dev.db",
     });
     driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
     console.log(`  ➜  Reactor:   ${driveUrl}`);
