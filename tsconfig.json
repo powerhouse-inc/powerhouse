@@ -17,7 +17,7 @@
       "scalar-generator": ["tools/scalar-generator/src/index.ts"]
     }
   },
-  "include": ["*.config.js", "*.json", "packages/**/*"],
+  "include": ["*.config.js", "*.config.ts", "*.json", "packages/**/*"],
   "exclude": [
     "node_modules/",
     "**/node_modules/",

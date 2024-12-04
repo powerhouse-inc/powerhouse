@@ -78,7 +78,6 @@
   "dependencies": {
     "@powerhousedao/scalars": "workspace:*",
     "document-model": "workspace:*",
-    "tailwindcss": "^3.4.16",
     "@internationalized/date": "^3.5.6",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.1.2",

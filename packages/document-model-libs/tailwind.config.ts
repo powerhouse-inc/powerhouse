@@ -1,4 +1,4 @@
-import { designSystemPreset } from "@powerhousedao/design-system";
+import { designSystemPreset } from "../../shared-tailwind.config";
 import type { Config } from "tailwindcss";
 
 const config: Config = {
