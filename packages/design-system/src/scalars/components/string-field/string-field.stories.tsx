@@ -102,10 +102,10 @@ export const Disabled: Story = {
 
 export const WithError: Story = {
   args: {
-    label: "Password",
+    label: "Username",
     value: "123",
     required: true,
-    errors: ["Password must be at least 8 characters long"],
+    errors: ["Username must be at least 8 characters long"],
   },
 };
 

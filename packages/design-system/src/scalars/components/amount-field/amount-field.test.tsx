@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { AmountField } from "./amount-field";
 import { renderWithForm } from "@/scalars/lib/testing";
 
@@ -29,7 +29,7 @@ describe("AmountField Component", () => {
     expect(screen.getByLabelText("Amount Label")).toBeInTheDocument();
   });
 
-  it("should render error messages when provided", () => {
+  it("should render error messages when provided", async () => {
     renderWithForm(
       <AmountField
         selectName="currency"
@@ -40,8 +40,10 @@ describe("AmountField Component", () => {
         errors={["Error 1", "Error 2"]}
       />,
     );
-    expect(screen.getByText("Error 1")).toBeInTheDocument();
-    expect(screen.getByText("Error 2")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Error 1")).toBeInTheDocument();
+      expect(screen.getByText("Error 2")).toBeInTheDocument();
+    });
   });
 
   it("should render the percentage sign if the type is percent", () => {
