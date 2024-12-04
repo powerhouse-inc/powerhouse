@@ -41,7 +41,7 @@ export class InternalTransmitter implements ITransmitter {
     this.drive = drive;
   }
 
-  async transmit(strands: StrandUpdate[]): Promise<ListenerRevision[]> {
+  async transmit(strands: InternalTransmitterUpdate[]): Promise<ListenerRevision[]> {
     if (!this.receiver) {
       return [];
     }

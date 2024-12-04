@@ -1,7 +1,8 @@
 import { DriveInput } from "document-drive";
 import { Context } from "../types";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 
-export const resolvers = {
+export const resolvers: GraphQLResolverMap<Context> = {
   Query: {
     drives: async (parent: unknown, args: unknown, ctx: Context) => {
       const drives = await ctx.driveServer.getDrives();

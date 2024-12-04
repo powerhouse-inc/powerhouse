@@ -8,6 +8,7 @@ const config: StorybookConfig = {
     "@storybook/addon-interactions",
     "@storybook/addon-themes",
     "storybook-addon-pseudo-states",
+    "@chromatic-com/storybook"
   ],
   framework: {
     name: "@storybook/react-vite",
@@ -17,9 +18,7 @@ const config: StorybookConfig = {
   typescript: {
     reactDocgen: false,
   },
-  docs: {
-    autodocs: false,
-  },
+  docs: {},
   viteFinal(config) {
     return {
       ...config,

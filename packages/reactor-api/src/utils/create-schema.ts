@@ -3,11 +3,12 @@ import { IDocumentDriveServer } from "document-drive";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 import { parse } from "graphql";
+import { Context } from "src/types";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
-  resolvers: GraphQLResolverMap,
-  typeDefs: string,
+  resolvers: GraphQLResolverMap<Context>,
+  typeDefs: string
 ) =>
   buildSubgraphSchema([
     {
@@ -18,7 +19,7 @@ export const createSchema = (
 
 export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
-  typeDefs: string,
+  typeDefs: string
 ) => {
   const documentModels = documentDriveServer.getDocumentModels();
   let dmSchema = "";
@@ -31,7 +32,7 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll(`: Account`, `: ${documentModel.name}Account`)
                 .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
                 .replaceAll("scalar DateTime", "")
-                .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
+                .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
             )
             .join("\n")};
   
@@ -45,7 +46,7 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
                 .replaceAll("type AccountSnapshotLocalState", "")
                 .replaceAll("type BudgetStatementLocalState", "")
-                .replaceAll("type ScopeFrameworkLocalState", ""),
+                .replaceAll("type ScopeFrameworkLocalState", "")
             )
             .join("\n")};
   

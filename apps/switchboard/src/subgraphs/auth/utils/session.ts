@@ -1,18 +1,17 @@
 import { and, eq } from "drizzle-orm";
 import { DrizzleD1Database } from "drizzle-orm/d1";
+import { PgDatabase } from "drizzle-orm/pg-core";
 import { GraphQLError } from "graphql";
 import ms from "ms";
 import { SiweMessage } from "siwe";
+import { Context } from "../../../../types";
+import { sessionTable } from "../db-schema";
 import { JWT_EXPIRATION_PERIOD } from "../env";
 import {
   generateTokenAndSession,
   validateOriginAgainstAllowed,
   verifyToken,
 } from "../helpers";
-import { sessionTable } from "../schema";
-import { getDb } from "../../../db";
-import { PgDatabase } from "drizzle-orm/pg-core";
-import { Context } from "../../../../types";
 
 export const createAuthenticationSession = async (
   db: PgDatabase<any, any, any>,
@@ -88,7 +87,7 @@ export const revoke = async (
 
 export const authenticate = async (context: Context) => {
   const authorization = context.headers.authorization;
-  const db = await getDb();
+  const db = context.db;
   if (!authorization) {
     throw new GraphQLError("Not authenticated", {
       extensions: { code: "NOT_AUTHENTICATED" },

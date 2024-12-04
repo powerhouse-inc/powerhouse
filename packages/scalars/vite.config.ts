@@ -32,9 +32,9 @@ const mappedExports = glob
     return {
       ...acc,
       [`./${key}`]: {
+        types: `./dist/types/src/scalars/${filePath}.d.ts`,
         require: `./dist/cjs/src/scalars/${filePath}.js`,
         import: `./dist/es/src/scalars/${filePath}.js`,
-        types: `./dist/types/src/scalars/${filePath}.d.ts`,
       },
     };
   }, {});

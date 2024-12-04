@@ -1,13 +1,5 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
-import { createServer as createViteServer } from "vite";
-import {
-  startAPI,
-  addSubgraph,
-  registerInternalListener,
-  createSchema,
-} from "@powerhousedao/reactor-api";
+import { PGlite } from "@electric-sql/pglite";
+import { startAPI } from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
@@ -16,10 +8,17 @@ import {
   IReceiver,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
+import {
+  DocumentDriveDocument,
+  ListenerFilter,
+} from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
-import { ListenerFilter } from "document-model-libs/document-drive";
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createServer as createViteServer } from "vite";
 
 const dirname =
   import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
@@ -30,12 +29,14 @@ export type StartServerOptions = {
   dev?: boolean;
   port?: string | number;
   storagePath?: string;
+  dbPath?: string;
   drive?: DriveInput;
 };
 
 export const DefaultStartServerOptions = {
   port: 4001,
   storagePath: path.join(dirname, "./file-storage"),
+  dbPath: path.join(dirname, "./dev.db"),
   drive: {
     global: {
       id: "powerhouse",
@@ -100,9 +101,9 @@ const startServer = async (
     if (e instanceof DriveAlreadyExistsError) {
       console.info("Default drive already exists. Skipping...");
       if (driveId) {
-        const driveDoc = await (drive.global.slug
+        const driveDoc = (await (drive.global.slug
           ? driveServer.getDriveBySlug(drive.global.slug)
-          : driveServer.getDrive(driveId));
+          : driveServer.getDrive(driveId))) as DocumentDriveDocument;
         driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
       }
     } else {
@@ -112,8 +113,11 @@ const startServer = async (
 
   try {
     // start api
-    const app = await startAPI(driveServer, {
+    const client = new PGlite(options?.dbPath ?? process.cwd() + "/dev.db");
+
+    const { app, reactorRouterManager } = await startAPI(driveServer, {
       port: serverPort,
+      client,
     });
     driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
     console.log(`  ➜  Reactor:   ${driveUrl}`);
@@ -149,22 +153,9 @@ const startServer = async (
       )) as Record<string, any>;
 
       for (const [name, processor] of Object.entries(localProcessors)) {
-        await Promise.all([
-          addSubgraph({
-            name,
-            getSchema: (driveServer) =>
-              createSchema(
-                driveServer,
-                processor.resolvers,
-                processor.typeDefs,
-              ),
-          }),
-          registerInternalListener({
-            name,
-            options: processor.options,
-            transmit: processor.transmit,
-          }),
-        ]);
+        await reactorRouterManager.registerProcessor({
+          ...processor,
+        });
       }
     }
   } catch (e) {
