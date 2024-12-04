@@ -10,15 +10,14 @@ import { PgDatabase } from "drizzle-orm/pg-core";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import express, { IRouter, Router } from "express";
 import pg from "pg";
-const { Pool } = pg;
 import {
   InternalListenerManager,
   InternalListenerModule,
 } from "./internal-listener-manager";
-import { driveSubgraph, systemSubgraph } from "./subgraphs";
+import { driveSubgraph, systemSubgraph, analyticsSubgraph } from "./subgraphs";
 import { Context, Processor } from "./types";
 import { createSchema } from "./utils/create-schema";
-import { GraphQLSchema } from "graphql";
+const { Pool } = pg;
 
 export class ReactorRouterManager {
   private database: PgDatabase<any, any, any> | undefined;
@@ -36,6 +35,11 @@ export class ReactorRouterManager {
       name: "d/:drive",
       resolvers: driveSubgraph.resolvers,
       typeDefs: driveSubgraph.typeDefs,
+    },
+    {
+      name: "analytics",
+      resolvers: analyticsSubgraph.resolvers,
+      typeDefs: analyticsSubgraph.typeDefs,
     },
   ];
   constructor(
