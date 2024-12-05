@@ -1,11 +1,11 @@
-import { schema } from "@powerhousedao/scalars/EmailAddress";
+import { EmailAddress as EmailAddressScalar } from "@powerhousedao/scalars";
 
 export interface ScalarDemoProps {
   name: string;
 }
 
 export const ScalarDemo: React.FC<ScalarDemoProps> = ({ name }) => {
-  const result = schema.safeParse(name);
+  const result = EmailAddressScalar.schema.safeParse(name);
   console.log(result);
 
   return (
