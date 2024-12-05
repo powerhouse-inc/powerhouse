@@ -59,5 +59,8 @@
   "peerDependencies": {
     "@powerhousedao/scalars": "workspace:*",
     "graphql": "^16.8.1"
+  },
+  "optionalDependencies": {
+    "document-model-libs": "workspace:*"
   }
 }

@@ -56,7 +56,7 @@ function getDocumentTypesMap(dir: string) {
       try {
         const spec = JSON.parse(specRaw) as DocumentModelState;
         if (spec.id) {
-          documentTypesMap[spec.id] = pascalCase(name);
+          documentTypesMap[spec.id] = "../document-models/" + pascalCase(name);
         }
       } catch {
         console.error(`Failed to parse ${specPath}`);
@@ -137,9 +137,12 @@ export async function generateProcessor(
   const invalidType = documentTypes.find(
     (type) => !Object.keys(docummentTypesMap).includes(type),
   );
-  if (invalidType) {
-    throw new Error(`Document model for ${invalidType} not found`);
-  }
+  // if (invalidType) {
+  //   throw new Error(`Document model for ${invalidType} not found`);
+  // }
+
+  documentTypes.filter(dT => docummentTypesMap[dT])
+
   return _generateProcessor(
     name,
     documentTypes,
@@ -149,4 +152,13 @@ export async function generateProcessor(
     type,
     { skipFormat },
   );
+}
+
+async function findDocumentModelLibs(type: string) {
+  try {
+    const lib = await import("document-model-libs");
+    return lib.documentModels.find((dm) => dm.documentModel.id === type);
+  } catch {
+    return null;
+  }
 }
