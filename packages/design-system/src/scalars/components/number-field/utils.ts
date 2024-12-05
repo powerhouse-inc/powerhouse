@@ -1,15 +1,14 @@
 export const regex = /^-?\d*\.?\d*$/;
-
 type TransformProps = {
   isBigInt?: boolean;
   trailingZeros?: boolean;
   precision?: number;
 };
-const validNumber = /^-?\d+$/;
+
 export function getDisplayValue(
-  value = "",
+  value?: bigint | number,
   transformProps?: TransformProps,
-): string | number {
+) {
   const {
     isBigInt = false,
     precision,
@@ -17,38 +16,30 @@ export function getDisplayValue(
   } = transformProps || {};
 
   // Return an empty string if value is empty
-  if (value === "") {
+  if (!value) {
     return "";
   }
 
   // Handle the case when isBigInt is true
   if (isBigInt) {
-    const newValue = value.toString().replace(/[^-\d.]/g, "");
-    // Remove the decimal part if it exists and keep only the integer part
-    const integerPart = newValue.split(".")[0];
-
-    if (!validNumber.test(integerPart)) {
-      return "";
+    if (typeof value === "number" && !Number.isInteger(value)) {
+      // If the value is a number with decimals, return it as-is without converting to BigInt
+      return value;
     }
-    return BigInt(integerPart).toString();
-  }
 
-  // Check if the value exceeds MAX_SAFE_INTEGER  or MIN_SAFE_INTEGER  and is not BigInt
-  const numericValue = parseFloat(value);
-  if (
-    numericValue > Number.MAX_SAFE_INTEGER ||
-    numericValue < Number.MIN_SAFE_INTEGER
-  ) {
-    const newValue = value.toString().replace(/[^-\d.]/g, "");
-    return newValue; // Return the value as a string without conversion
-  }
+    return BigInt(value);
+  } else {
+    if (Math.abs(Number(value)) > Number.MAX_SAFE_INTEGER) {
+      //Remove the decimal places becasuse its a bigInt
+      return BigInt(value);
+    }
+    if (precision !== undefined) {
+      const formattedValue = parseFloat(String(value)).toFixed(precision);
+      return trailingZeros
+        ? formattedValue // keep the zeros
+        : parseFloat(formattedValue); // delete the zeros and convert to number
+    }
 
-  // Handle precision and trailing zeros if specified
-  if (precision !== undefined) {
-    const formattedValue = numericValue.toFixed(precision);
-    return trailingZeros
-      ? formattedValue
-      : parseFloat(formattedValue).toString();
+    return Number(value);
   }
-  return numericValue.toString();
 }

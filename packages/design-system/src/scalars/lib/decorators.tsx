@@ -14,6 +14,7 @@ export const withForm: Decorator = (Story, context) => {
   const { viewMode } = context;
 
   const onSubmit = useCallback((data: any) => {
+    console.log("datattt", data.Label, typeof data.Label);
     alert(JSON.stringify(data, null, 2));
   }, []);
 
@@ -26,7 +27,7 @@ export const withForm: Decorator = (Story, context) => {
       Object.keys(formRef.current?.control._fields ?? {}).map((fieldName) => [
         fieldName,
         "",
-      ]),
+      ])
     );
     formRef.current?.reset(defaultValues);
   }, []);
