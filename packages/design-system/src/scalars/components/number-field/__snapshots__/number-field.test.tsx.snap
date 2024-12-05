@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`NumberField Component > should match snapshot 1`] = `
+exports[`NumberField > should match snapshot 1`] = `
 <div>
   <form
     novalidate=""
@@ -23,7 +23,7 @@ exports[`NumberField Component > should match snapshot 1`] = `
           id=":r0:"
           name="Label"
           type="number"
-          value=""
+          value="345"
         />
         <div
           class="absolute inset-y-2 right-3 flex flex-col justify-center"
