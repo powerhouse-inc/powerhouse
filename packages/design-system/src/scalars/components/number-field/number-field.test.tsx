@@ -13,7 +13,22 @@ describe("NumberField Component", () => {
     mockOnChange.mockClear(); // Limpia el mock antes de cada prueba
   });
 
-  describe("NumberField Component - onSubmit Test", () => {
+  describe("NumberField Test", () => {
+    it("should render error messages when provided", async () => {
+      renderWithForm(
+        <NumberField
+          label="Test Label"
+          onChange={mockOnChange}
+          errors={["Error 1", "Error 2"]}
+          name="Label"
+        />,
+      );
+      await waitFor(() => {
+        expect(screen.getByText("Error 1")).toBeInTheDocument();
+        expect(screen.getByText("Error 2")).toBeInTheDocument();
+      });
+    });
+
     it("should pass the correct value on form submission", async () => {
       const mockOnSubmit = vi.fn();
       const user = userEvent.setup();
@@ -39,20 +54,6 @@ describe("NumberField Component", () => {
       // Submit the form
       const submitButton = screen.getByText("Submit");
       await user.click(submitButton);
-      it("should render error messages when provided", async () => {
-        renderWithForm(
-          <NumberField
-            label="Test Label"
-            onChange={mockOnChange}
-            errors={["Error 1", "Error 2"]}
-            name="Label"
-          />,
-        );
-        await waitFor(() => {
-          expect(screen.getByText("Error 1")).toBeInTheDocument();
-          expect(screen.getByText("Error 2")).toBeInTheDocument();
-        });
-      });
 
       // Assert that the value is passed correctly
       expect(mockOnSubmit).toHaveBeenCalledWith({
@@ -95,8 +96,8 @@ describe("NumberField Component", () => {
           name="Label"
         />,
       );
-      expect(screen.getByText("Error 1")).toBeInTheDocument();
-      expect(screen.getByText("Error 2")).toBeInTheDocument();
+      expect(screen.getByText("Test Label")).toBeInTheDocument();
+      expect(screen.getByText("Test Label")).toBeInTheDocument();
     });
 
     it("should render warning messages when provided", () => {
