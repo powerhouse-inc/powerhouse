@@ -1,5 +1,5 @@
 import React from "react";
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NumberField } from "./number-field";
 import { renderWithForm } from "@/scalars/lib/testing";
@@ -15,9 +15,52 @@ describe("NumberField", () => {
 
   it("should match snapshot", () => {
     const { container } = renderWithForm(
-      <NumberField label="Test Label" name="Label" value={345} />,
+      <NumberField
+        label="Test Label"
+        name="Label"
+        value={345}
+        trailingZeros
+        precision={2}
+      />,
     );
     expect(container).toMatchSnapshot();
+  });
+
+  it("should pass the correct BigInt value on form submission", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    renderWithForm(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField label="BigInt Field" name="BigInt Field" isBigInt />
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit"}
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    // We need to mock the data beforehand to avoid loss of precision
+    const bigIntString = "9007199254740993";
+    const bigIntValue = BigInt(bigIntString);
+
+    // Simulate user input by directly setting the value
+    const input = screen.getByLabelText("BigInt Field");
+    fireEvent.change(input, { target: { value: bigIntString } });
+    fireEvent.blur(input);
+
+    // Submit the form
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        "BigInt Field": bigIntValue,
+      });
+    });
   });
 
   it("should render error messages when provided", () => {
