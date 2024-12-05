@@ -1,3 +1,10 @@
+# [1.0.0-dev.175](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.174...v1.0.0-dev.175) (2024-12-05)
+
+
+### Features
+
+* **connect:** update deps ([b947e6b](https://github.com/powerhouse-inc/document-model-electron/commit/b947e6b3b2cbd19de30122c6e812b25b5353e556))
+
 # [1.0.0-dev.174](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.173...v1.0.0-dev.174) (2024-12-02)
 
 
