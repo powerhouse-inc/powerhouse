@@ -14,10 +14,6 @@ const meta = {
   decorators: [withForm],
   parameters: {
     layout: "centered",
-    controls: {
-      sort: "requiredFirst",
-      expanded: true,
-    },
   },
   tags: ["autodocs"],
   argTypes: {
