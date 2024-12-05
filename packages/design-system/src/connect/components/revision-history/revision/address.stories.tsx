@@ -1,5 +1,6 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { Address } from "./address";
+import { TooltipProvider } from "@/connect";
 
 const meta = {
   title: "Connect/Components/Revision History/Revision/Address",
@@ -15,4 +16,9 @@ export const Default: Story = {
     address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
     chainId: 1,
   },
+  render: (props) => (
+    <TooltipProvider>
+      <Address {...props} />
+    </TooltipProvider>
+  ),
 };
