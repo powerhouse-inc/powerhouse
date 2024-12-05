@@ -27,23 +27,22 @@ export async function startAPI(
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 
+  const knex = await getKnexClient(options.dbConnection ?? "./dev.db");
+  const analyticsStore = new KnexAnalyticsStore({
+    executor: new KnexQueryExecutor(),
+    knex,
+  });
   const reactorRouterManager = new ReactorRouterManager(
     "/",
     app,
     reactor,
-    options.client
+    analyticsStore
   );
 
-  // add analytics endpoints
-  const knex = await getKnexClient(options.dbConnection ?? "./dev.db");
   reactorRouterManager.setAdditionalContextFields({
     dataSources: {
       db: {
-        Analytics: new AnalyticsModel(new AnalyticsQueryEngine(new KnexAnalyticsStore({
-          executor: new KnexQueryExecutor(),
-            knex,
-          })),
-        ),
+        Analytics: new AnalyticsModel(new AnalyticsQueryEngine(analyticsStore)),
       },
     },
   });

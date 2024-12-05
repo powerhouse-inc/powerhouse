@@ -1,26 +1,19 @@
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { PGlite } from "@electric-sql/pglite";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { IDocumentDriveServer, InternalTransmitter } from "document-drive";
-import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
-import { PgDatabase } from "drizzle-orm/pg-core";
-import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
+import { IDocumentDriveServer, Listener } from "document-drive";
 import express, { IRouter, Router } from "express";
-import pg from "pg";
-import {
-  InternalListenerManager,
-  InternalListenerModule,
-} from "./internal-listener-manager";
+import { ProcessorManager } from "./processor-manager";
+import { AnalyticsProcessor, Processor } from "./processors/analytics-processor";
+import { ProcessorFactory } from "./processors/processor-factory";
 import { analyticsSubgraph, driveSubgraph, systemSubgraph } from "./subgraphs";
-import { Context, Subgraph } from "./types";
+import { Context, ProcessorType, Subgraph } from "./types";
 import { createSchema } from "./utils/create-schema";
-const { Pool } = pg;
 
 export class ReactorRouterManager {
-  private database: PgDatabase<any, any, any> | undefined;
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
 
@@ -43,25 +36,24 @@ export class ReactorRouterManager {
     },
   ];
 
-  private processors: InternalTransmitter[] = [];
+  private processorFactory: ProcessorFactory;
+  private processorManager: ProcessorManager;
 
   constructor(
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-    private readonly client: PGlite | typeof Pool = new PGlite(),
-    private listenerManager: InternalListenerManager = new InternalListenerManager(
-      reactor
+    private readonly analyticsStore: IAnalyticsStore,
+  ) {
+    this.processorFactory = new ProcessorFactory(this.reactor, this.analyticsStore);
+    this.processorManager = new ProcessorManager(
+      this.reactor,
+      this.processorFactory
     )
-  ) {}
+  }
 
   async init() {
-    // if (this.client instanceof Pool) {
-    //   this.database = drizzlePg(this.client);
-    // } else {
-    //   this.database = drizzlePglite(this.client as PGlite);
-    // }
-    await this.listenerManager.init();
+    await this.processorManager.init();
     const models = this.reactor.getDocumentModels();
     const driveModel = models.find(
       (it) => it.documentModel.name === "DocumentDrive"
@@ -87,7 +79,6 @@ export class ReactorRouterManager {
     newRouter.use(bodyParser.json());
     // Run each subgraph on the same http server, but at different paths
     for (const subgraph of this.subgraphs) {
-      
       const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
       if (!subgraphConfig) continue;
       console.log(`Setting up subgraph ${subgraphConfig.name}`);
@@ -133,31 +124,12 @@ export class ReactorRouterManager {
     console.log(`Registered [${subgraph.name}] subgraph.`);
   }
 
-  async registerProcessor(processor: InternalTransmitter) {
-    // new processor(this.reactor)
-    this.processors.push(processor);
-    // const listener = processor.getListener();
-    // const drives = await this.reactor.getDrives();
-    // for (const drive of drives) {
-    //   this.reactor.addInternalListener(drive, {
-    //     transmit: processor.transmit,
-    //     disconnect: () => Promise.resolve(),
-    //   },{...listener, label: listener.label ?? ""})
-    // }
-    // // update router
-    // console.log(`Registered [${listener.listenerId}] processor.`);
-    // await this.updateRouter();
+  async registerProcessor(processor: ProcessorType<AnalyticsProcessor>) {
+    this.processorManager.registerProcessorType(processor);
   }
 
   #getLocalSubgraphConfig(subgraphName: string) {
     return this.subgraphs.find((it) => it.name === subgraphName);
-  }
-
-  async #registerInternalListener(module: InternalListenerModule) {
-    if (!this.listenerManager) {
-      throw new Error("Listener manager not initialized");
-    }
-    await this.listenerManager.registerInternalListener(module);
   }
 
   getAdditionalContextFields = () => {
