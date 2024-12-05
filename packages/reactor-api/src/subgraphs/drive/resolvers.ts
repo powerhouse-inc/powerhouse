@@ -38,7 +38,7 @@ export const resolvers: GraphQLResolverMap<Context> = {
       const dms = ctx.driveServer.getDocumentModels();
       const dm = dms.find(
         ({ documentModel }: { documentModel: DocumentModelState }) =>
-          documentModel.id === document.documentType
+          documentModel.id === document.documentType,
       );
       const globalState = document.state.global;
       if (!globalState) throw new Error("Document not found");
@@ -63,7 +63,7 @@ export const resolvers: GraphQLResolverMap<Context> = {
     registerPullResponderListener: async (
       _: unknown,
       { filter }: { filter: ListenerFilter },
-      ctx: Context
+      ctx: Context,
     ) => {
       if (!ctx.driveId) throw new Error("Drive ID is required");
       const uuid = generateUUID();
@@ -87,12 +87,12 @@ export const resolvers: GraphQLResolverMap<Context> = {
 
       const result = await ctx.driveServer.queueDriveAction(
         ctx.driveId,
-        actions.addListener({ listener })
+        actions.addListener({ listener }),
       );
 
       if (result.status !== "SUCCESS" && result.error) {
         throw new Error(
-          `Listener couldn't be registered: ${result.error.message}`
+          `Listener couldn't be registered: ${result.error.message}`,
         );
       }
 
@@ -101,7 +101,7 @@ export const resolvers: GraphQLResolverMap<Context> = {
     pushUpdates: async (
       _: unknown,
       { strands }: { strands: StrandUpdateGraphQL[] },
-      ctx: Context
+      ctx: Context,
     ) => {
       if (!ctx.driveId) throw new Error("Drive ID is required");
       const listenerRevisions: ListenerRevision[] = await Promise.all(
@@ -119,11 +119,11 @@ export const resolvers: GraphQLResolverMap<Context> = {
             ? ctx.driveServer.queueOperations(
                 s.driveId,
                 s.documentId,
-                operations
+                operations,
               )
             : ctx.driveServer.queueDriveOperations(
                 s.driveId,
-                operations as Operation<DocumentDriveAction | BaseAction>[]
+                operations as Operation<DocumentDriveAction | BaseAction>[],
               ));
 
           const scopeOperations = result.document?.operations[s.scope] ?? [];
@@ -148,7 +148,7 @@ export const resolvers: GraphQLResolverMap<Context> = {
             status: result.status,
             error: result.error?.message || undefined,
           };
-        })
+        }),
       );
 
       return listenerRevisions;
@@ -159,7 +159,7 @@ export const resolvers: GraphQLResolverMap<Context> = {
         listenerId,
         revisions,
       }: { listenerId: string; revisions: ListenerRevision[] },
-      ctx: Context
+      ctx: Context,
     ) => {
       if (!listenerId || !revisions) return false;
       if (!ctx.driveId) throw new Error("Drive ID is required");
@@ -176,12 +176,12 @@ export const resolvers: GraphQLResolverMap<Context> = {
 
       const transmitter = (await ctx.driveServer.getTransmitter(
         ctx.driveId,
-        listenerId
+        listenerId,
       )) as PullResponderTransmitter;
       const result = await transmitter.processAcknowledge(
         ctx.driveId ?? "1",
         listenerId,
-        validEntries
+        validEntries,
       );
 
       return result;
@@ -192,12 +192,12 @@ export const resolvers: GraphQLResolverMap<Context> = {
     strands: async (
       _: unknown,
       { listenerId, since }: { listenerId: string; since: string | undefined },
-      ctx: Context
+      ctx: Context,
     ) => {
       if (!ctx.driveId) throw new Error("Drive ID is required");
       const listener = (await ctx.driveServer.getTransmitter(
         ctx.driveId,
-        listenerId
+        listenerId,
       )) as PullResponderTransmitter;
       const strands = await listener.getStrands({ since });
       return strands.map((e) => ({

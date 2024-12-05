@@ -1,36 +1,28 @@
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { IDocumentDriveServer, InternalTransmitterUpdate } from "document-drive";
-import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import { OperationScope } from "document-model/document";
-import { ProcessorOptions } from "src/types";
+import { RealWorldAssetsDocument } from "document-model-libs/real-world-assets";
 import { AnalyticsProcessor } from "./analytics-processor";
+import { ProcessorUpdate } from "./processor";
 
-export class RWAAnalyticsProcessor extends AnalyticsProcessor {
+export class RWAAnalyticsProcessor extends AnalyticsProcessor<
+  RealWorldAssetsDocument,
+  "global"
+> {
+  processorOptions = {
+    listenerId: "rwa-analytics-processor",
+    filter: {
+      branch: ["main"],
+      documentId: ["*"],
+      documentType: ["*"],
+      scope: ["global"],
+    },
+    block: false,
+    label: "rwa-analytics-processor",
+    system: true,
+  };
+  async onStrands(
+    strands: ProcessorUpdate<RealWorldAssetsDocument, "global">[],
+  ): Promise<void> {}
 
-    static OPTIONS: ProcessorOptions = {
-        listenerId: "rwa-analytics-processor",
-        filter: {
-            branch: ["main"],
-            documentId: ["*"],
-            documentType: ["*"],
-            scope: ["global"],
-        },
-        block: false,
-        label: "rwa-analytics-processor",
-        system: true,
-    };
-
-    constructor(protected reactor: IDocumentDriveServer, protected analyticsStore: IAnalyticsStore) {
-        super(reactor, analyticsStore, RWAAnalyticsProcessor.OPTIONS);
-    }
-
-    async transmit(strands: InternalTransmitterUpdate<DocumentDriveDocument, OperationScope>[]) {
-        console.log(strands.map(s => s.operations.map(o => o.type)));
-        // this.analyticsStore.addSeriesValue....
-        return [];
-    }
-
-    disconnect() {
-        return Promise.resolve();
-    }
+  async onDisconnect() {
+    return Promise.resolve();
+  }
 }

@@ -1,11 +1,11 @@
 import {
   IDocumentDriveServer,
   InternalTransmitterUpdate,
+  IReceiver,
   Listener,
   ListenerRevision,
 } from "document-drive";
-import { ListenerFilter } from "document-model-libs/document-drive";
-import { PgDatabase } from "drizzle-orm/pg-core";
+import { Document, OperationScope } from "document-model/document";
 import { IncomingHttpHeaders } from "http";
 
 export interface Context {
@@ -24,19 +24,20 @@ export type Subgraph = {
   ) => Promise<ListenerRevision[]>;
 };
 
-export type IProcessor = {
-  getOptions: () => any;
-  // new: (listener: Listener, reactor: IDocumentDriveServer) => void;
-  transmit: (strands: InternalTransmitterUpdate[]) => Promise<ListenerRevision[]>;
-  disconnect: () => Promise<void>;
-}
+export type ProcessorType = "analytics" | "operational";
 
-export interface ProcessorType<T> extends Function { new(...args: any[]): T; TYPE: string; OPTIONS: ProcessorOptions; }
-
-export type ProcessorOptions = {
-  listenerId: string;
-  filter: ListenerFilter;
-  block: boolean;
-  label: string;
-  system: boolean;
+export type IProcessor<
+  D extends Document = Document,
+  S extends OperationScope = OperationScope,
+> = IReceiver<D, S> & {
+  getOptions: () => ProcessorOptions;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+// export interface ProcessorType<T> extends Function {
+//   new (...args: any[]): T;
+//   TYPE: string;
+//   OPTIONS: ProcessorOptions;
+// }
+
+export type ProcessorOptions = Omit<Listener, "driveId"> & { label: string };

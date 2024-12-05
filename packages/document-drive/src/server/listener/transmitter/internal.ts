@@ -1,4 +1,4 @@
-import { Document, OperationScope } from "document-model/document";
+import { Document, Operation, OperationScope } from "document-model/document";
 import { logger } from "../../../utils/logger";
 import {
   IBaseDocumentDriveServer,
@@ -8,12 +8,24 @@ import {
   StrandUpdate,
 } from "../../types";
 import { buildRevisionsFilter } from "../../utils";
-import { ITransmitter } from "./types";
+import { ITransmitter, StrandUpdateSource } from "./types";
+import { InferDocumentOperation } from "../../../read-mode/types";
 
-export interface IReceiver {
-  transmit: (strands: InternalTransmitterUpdate[]) => Promise<ListenerRevision[]>;
-  disconnect: () => Promise<void>;
+export interface IReceiver<
+  T extends Document = Document,
+  S extends OperationScope = OperationScope,
+> {
+  onStrands: (strands: InternalTransmitterUpdate<T, S>[]) => Promise<void>;
+  onDisconnect: () => Promise<void>;
 }
+
+export type InternalOperationUpdate<
+  D extends Document = Document,
+  S extends OperationScope = OperationScope,
+> = Omit<Operation<InferDocumentOperation<D>>, "scope"> & {
+  state: D["state"][S];
+  previousState: D["state"][S];
+};
 
 export type InternalTransmitterUpdate<
   T extends Document = Document,
@@ -23,7 +35,7 @@ export type InternalTransmitterUpdate<
   documentId: string;
   scope: S;
   branch: string;
-  operations: OperationUpdate[];
+  operations: InternalOperationUpdate<T, S>[];
   state: T["state"][S];
 };
 
@@ -41,7 +53,10 @@ export class InternalTransmitter implements ITransmitter {
     this.drive = drive;
   }
 
-  async transmit(strands: InternalTransmitterUpdate[]): Promise<ListenerRevision[]> {
+  async transmit(
+    strands: StrandUpdate[],
+    source: StrandUpdateSource,
+  ): Promise<ListenerRevision[]> {
     if (!this.receiver) {
       return [];
     }
@@ -63,6 +78,7 @@ export class InternalTransmitter implements ITransmitter {
               revisions,
             })
           : this.drive.getDrive(strand.driveId, { revisions }));
+
         retrievedDocuments.set(
           `${strand.driveId}:${strand.documentId}`,
           document,
@@ -71,11 +87,11 @@ export class InternalTransmitter implements ITransmitter {
       updates.push({ ...strand, state: document.state[strand.scope] });
     }
     try {
-      await this.receiver.transmit(updates);
+      await this.receiver.onStrands(updates);
       return strands.map(({ operations, ...s }) => ({
         ...s,
         status: "SUCCESS",
-        revision: operations[operations.length - 1]?.index ?? -1,
+        revision: operations.at(operations.length - 1)?.index ?? -1,
       }));
     } catch (error) {
       logger.error(error);
@@ -83,7 +99,7 @@ export class InternalTransmitter implements ITransmitter {
       return strands.map(({ operations, ...s }) => ({
         ...s,
         status: "ERROR",
-        revision: (operations[0]?.index ?? 0) - 1,
+        revision: (operations.at(0)?.index ?? 0) - 1,
       }));
     }
   }
@@ -93,7 +109,7 @@ export class InternalTransmitter implements ITransmitter {
   }
 
   async disconnect(): Promise<void> {
-    await this.receiver?.disconnect();
+    await this.receiver?.onDisconnect();
   }
 
   getListener(): Listener {

@@ -151,9 +151,7 @@ const startServer = async (
       )) as Record<string, any>;
 
       for (const [name, processor] of Object.entries(localProcessors)) {
-        await reactorRouterManager.registerProcessor({
-          ...processor,
-        });
+        await reactorRouterManager.registerProcessor(processor);
       }
     }
   } catch (e) {

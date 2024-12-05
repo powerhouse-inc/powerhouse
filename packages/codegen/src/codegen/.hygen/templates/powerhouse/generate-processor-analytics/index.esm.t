@@ -2,21 +2,25 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/src/index.ts"
 force: true
 ---
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { ProcessorOptions } from "@powerhousedao/reactor-api";
-import { AnalyticsProcessor } from "@powerhousedao/reactor-api";
-import { IDocumentDriveServer, InternalTransmitterUpdate } from "document-drive";
-import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import { OperationScope } from "document-model/document";
+import {
+    AnalyticsProcessor,
+    ProcessorOptions,
+    ProcessorUpdate
+  } from "@powerhousedao/reactor-api";
+<% documentTypes.forEach(type => { _%>
+import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
+%><% }); _%>
 
-export class RWAAnalyticsProcessor extends AnalyticsProcessor {
+<% if(documentTypes.length) { %>type DocumentType = <%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } %>;
 
-    static ANALYTICS_PROCESSOR_OPTIONS: ProcessorOptions = {
+export class RWAAnalyticsProcessor extends AnalyticsProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
+
+    protected processorOptions: ProcessorOptions = {
         listenerId: "rwa-analytics-processor",
         filter: {
             branch: ["main"],
             documentId: ["*"],
-            documentType: ["*"],
+            documentType: [<%- documentTypes.map(type => `"${type}"`).join(", ") %>],
             scope: ["global"],
         },
         block: false,
@@ -24,17 +28,9 @@ export class RWAAnalyticsProcessor extends AnalyticsProcessor {
         system: true,
     };
 
-    constructor(protected reactor: IDocumentDriveServer, protected analyticsStore: IAnalyticsStore) {
-        super(reactor, analyticsStore, RWAAnalyticsProcessor.ANALYTICS_PROCESSOR_OPTIONS);
-    }
-
-    async transmit(strands: InternalTransmitterUpdate<DocumentDriveDocument, OperationScope>[]) {
-        console.log(strands.map(s => s.operations.map(o => o.type)));
-        // this.analyticsStore.addSeriesValue....
-        return [];
-    }
-
-    disconnect() {
-        return Promise.resolve();
-    }
+    async onStrands(
+        strands: ProcessorUpdate<DocumentType>[],
+    ): Promise<void> {}
+    
+    async onDisconnect() {}
 }
