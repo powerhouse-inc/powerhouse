@@ -48,14 +48,22 @@ export const withFieldValidation = <T extends PossibleProps>(
     const { submitCount } = useFormState();
 
     const errors = [
-      ...(Array.isArray(props.errors) ? props.errors : []),
-      ...(formErrors[name]?.message ? [formErrors[name].message] : []),
+      ...(formErrors[name]?.types
+        ? (Object.values(formErrors[name].types ?? []) as string[])
+        : []),
     ];
-
     if (errors.length === 0 && !!formErrors[name]) {
       // the field is invalid but no error message was provided
       errors.push("Invalid value");
     }
+
+    useEffect(() => {
+      // if custom errors are provided, then we need to trigger the validation
+      // otherwise the errors will not be shown till the form is submitted
+      if (props.errors && props.errors.length > 0) {
+        void trigger(name);
+      }
+    }, [name, props.errors, trigger]);
 
     const [initialized, setInitialized] = useState(false);
     useEffect(() => {
@@ -70,7 +78,8 @@ export const withFieldValidation = <T extends PossibleProps>(
       setInitialized(true);
       // initialized can not be in the dependencies because it would cause
       // a change of the value on initial render
-    }, [value]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [name, value]);
 
     // Sync form state with external value prop
     useEffect(() => {
@@ -197,6 +206,16 @@ export const withFieldValidation = <T extends PossibleProps>(
             },
           }),
           validate: {
+            // custom errors provided as props
+            ...(props.errors
+              ? Object.fromEntries(
+                  props.errors.map((error, index) => [
+                    `_propError${index}`,
+                    () => error,
+                  ]),
+                )
+              : {}),
+            // built in validations by the field in the library
             ...(options?.validations
               ? Object.fromEntries(
                   Object.entries(options.validations).map(
@@ -213,6 +232,7 @@ export const withFieldValidation = <T extends PossibleProps>(
                   ),
                 )
               : {}),
+            // custom validations by the user/developer
             ...(customValidators !== undefined
               ? Object.fromEntries(
                   (Array.isArray(customValidators)

@@ -78,7 +78,7 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
             ref={ref}
           />
         </ValueTransformer>
-        {maxLength && (
+        {typeof maxLength === "number" && maxLength > 0 && (
           <div className="flex justify-end">
             <CharacterCounter maxLength={maxLength} value={value ?? ""} />
           </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { withFieldValidation } from "./with-field-validation";
 import { Form } from "../../form";
@@ -132,8 +132,12 @@ describe("withFieldValidation", () => {
     expect(await screen.findByTestId("error-message")).toBeInTheDocument();
   });
 
-  it("should pass through custom error messages", () => {
-    renderWithForm(<WrappedComponent name="test" errors={["Custom error"]} />);
+  it("should pass through custom error messages", async () => {
+    await act(() =>
+      renderWithForm(
+        <WrappedComponent name="test" errors={["Custom error"]} />,
+      ),
+    );
 
     expect(screen.getByTestId("error-message")).toHaveTextContent(
       "Custom error",

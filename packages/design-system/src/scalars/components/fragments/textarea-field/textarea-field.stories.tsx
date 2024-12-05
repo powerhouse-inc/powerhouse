@@ -32,6 +32,7 @@ const meta = {
         "Whether the textarea should automatically expand with content",
       table: {
         type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -41,6 +42,7 @@ const meta = {
       description: "Whether the textarea should accept multiple lines of text",
       table: {
         type: { summary: "boolean" },
+        defaultValue: { summary: "true" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },

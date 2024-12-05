@@ -1,5 +1,5 @@
 import React from "react";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NumberField } from "./number-field";
 import { renderWithForm } from "@/scalars/lib/testing";
@@ -39,6 +39,20 @@ describe("NumberField Component", () => {
       // Submit the form
       const submitButton = screen.getByText("Submit");
       await user.click(submitButton);
+      it("should render error messages when provided", async () => {
+        renderWithForm(
+          <NumberField
+            label="Test Label"
+            onChange={mockOnChange}
+            errors={["Error 1", "Error 2"]}
+            name="Label"
+          />,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Error 1")).toBeInTheDocument();
+          expect(screen.getByText("Error 2")).toBeInTheDocument();
+        });
+      });
 
       // Assert that the value is passed correctly
       expect(mockOnSubmit).toHaveBeenCalledWith({
