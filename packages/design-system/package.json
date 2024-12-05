@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.9.1-canary.56",
+  "version": "1.9.1-canary.60",
   "description": "",
   "files": [
     "/dist"
@@ -58,7 +58,7 @@
     "@powerhousedao/scalars": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@storybook/addon-actions": "^8.4.6",
-    "@storybook/addon-docs": "8.3.5",
+    "@storybook/addon-docs": "^8.4.6",
     "@storybook/addon-essentials": "^8.4.6",
     "@storybook/addon-interactions": "^8.4.6",
     "@storybook/addon-links": "^8.4.6",
