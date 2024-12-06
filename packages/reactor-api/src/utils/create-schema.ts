@@ -49,11 +49,12 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll("type ScopeFrameworkLocalState", ""),
             )
             .join("\n")};
-  
-          type ${documentModel.name} implements IDocument {
+
+    type ${documentModel.name} implements IDocument {
               id: ID!
               name: String!
               documentType: String!
+              operations: [Operation!]!
               revision: Int!
               created: DateTime!
               lastModified: DateTime!
@@ -65,13 +66,21 @@ export const getDocumentModelTypeDefs = (
   const schema = `
       ${scalarsTypeDefs.join("\n")}
       
+
+
+      type Operation {
+        type: String!
+        index: Int!
+        timestamp: DateTime!
+        hash: String!
+      }
       interface IDocument {
           name: String!
           documentType: String!
           revision: Int!
           created: DateTime!
           lastModified: DateTime!
-          
+          operations: [Operation!]!
       }
       ${dmSchema}
   
