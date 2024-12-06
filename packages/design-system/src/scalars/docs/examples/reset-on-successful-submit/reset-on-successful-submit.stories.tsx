@@ -25,6 +25,7 @@ const FormWithResetOnSuccessfulSubmit = () => {
       }}
     >
       <div className="flex flex-col gap-2">
+        <IdField />
         <StringField
           name="example"
           placeholder="Type something"

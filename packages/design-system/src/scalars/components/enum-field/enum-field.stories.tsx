@@ -22,10 +22,6 @@ const meta: Meta<typeof EnumField> = {
   ],
   parameters: {
     layout: "padded",
-    controls: {
-      sort: "requiredFirst",
-      expanded: true,
-    },
   },
   tags: ["autodocs"],
   argTypes: {
@@ -34,7 +30,12 @@ const meta: Meta<typeof EnumField> = {
     variant: {
       control: "radio",
       options: ["Auto", "RadioGroup", "Select"],
-      description: "Enum field variant",
+      description:
+        "Enum field variant. " +
+        "Auto: uses the most appropriate variant based on the number of options " +
+        "(less than 6 options -> RadioGroup, 6 options or more -> Select). " +
+        "RadioGroup: displays options in a group of radio buttons. " +
+        "Select: displays options in a dropdown menu.",
       table: {
         type: { summary: '"Auto" | "RadioGroup" | "Select"' },
         defaultValue: { summary: "Auto" },
@@ -123,6 +124,7 @@ export const Default: Story = {
   args: {
     label: "Select an option",
     options: defaultOptions,
+    placeholder: "Choose from the list",
   },
 };
 
@@ -136,15 +138,17 @@ export const WithDescription: Story = {
       description:
         index === 2 ? `Description for ${opt.label} option` : undefined,
     })),
+    placeholder: "Choose from the list",
   },
 };
 
 export const Required: Story = {
   args: {
     label: "Required field",
-    required: true,
     variant: "RadioGroup",
     options: defaultOptions,
+    placeholder: "Choose from the list",
+    required: true,
   },
 };
 
@@ -153,6 +157,7 @@ export const WithDefaultValue: Story = {
     label: "Preset selection",
     variant: "RadioGroup",
     options: defaultOptions,
+    placeholder: "Choose from the list",
     defaultValue: "Drive",
   },
 };
@@ -160,10 +165,11 @@ export const WithDefaultValue: Story = {
 export const Disabled: Story = {
   args: {
     label: "Disabled field",
-    disabled: true,
     variant: "RadioGroup",
     options: defaultOptions,
+    placeholder: "Choose from the list",
     value: "Drive",
+    disabled: true,
   },
 };
 
@@ -173,6 +179,7 @@ export const WithError: Story = {
     label: "With error",
     variant: "RadioGroup",
     options: defaultOptions,
+    placeholder: "Choose from the list",
     value: "Drive",
     errors: ["Please select a different option"],
   },
@@ -183,6 +190,7 @@ export const WithWarning: Story = {
     label: "With warning",
     variant: "RadioGroup",
     options: defaultOptions,
+    placeholder: "Choose from the list",
     value: "Drive",
     warnings: ["This option may be deprecated soon"],
   },
