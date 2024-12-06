@@ -150,6 +150,7 @@ export const SelectFieldRaw = React.forwardRef<
                   options={options}
                   placeholder={placeholder}
                   disabled={disabled}
+                  searchValue={searchValue}
                   onSearch={handleSearch}
                   onOpenChange={handleOpenChange}
                   onSelectFirstOption={selectFirstFilteredOption}
