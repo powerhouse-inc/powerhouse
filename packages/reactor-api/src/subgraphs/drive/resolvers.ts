@@ -1,3 +1,4 @@
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import {
   generateUUID,
   ListenerRevision,
@@ -7,19 +8,30 @@ import {
 import {
   actions,
   DocumentDriveAction,
+  FileNode,
   Listener,
   ListenerFilter,
   TransmitterType,
 } from "document-model-libs/document-drive";
+import { Asset } from "document-model-libs/real-world-assets";
 import { BaseAction, Operation } from "document-model/document";
 import {
   DocumentModelInput,
   DocumentModelState,
 } from "document-model/document-model";
 import { Context } from "../types";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 
 export const resolvers: GraphQLResolverMap<Context> = {
+  Asset: {
+    __resolveType: (obj: Asset) => {
+      return obj.type;
+    },
+  },
+  Node: {
+    __resolveType: (obj: FileNode) => {
+      return obj.documentType ? "FileNode" : "FolderNode";
+    },
+  },
   Query: {
     drive: async (_: unknown, args: unknown, ctx: Context) => {
       if (!ctx.driveId) throw new Error("Drive ID is required");
