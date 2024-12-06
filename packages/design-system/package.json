@@ -21,6 +21,11 @@
     "./style.css": {
       "import": "./dist/style.css",
       "require": "./dist/style.css"
+    },
+    "./scalars": {
+      "types": "./dist/scalars/index.d.ts",
+      "require": "./dist/scalars/index.js",
+      "import": "./dist/scalars/index.js"
     }
   },
   "scripts": {
@@ -58,12 +63,13 @@
   "homepage": "https://github.com/powerhouse-inc/design-system#readme",
   "devDependencies": {
     "@hookform/devtools": "^4.3.1",
+    "@powerhousedao/config": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
     "@total-typescript/ts-reset": "^0.6.1",
-    "@powerhousedao/config": "workspace:*",
     "@types/jest": "^29.5.14",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
@@ -81,9 +87,8 @@
     "react-dom": "^18.3.1"
   },
   "dependencies": {
-    "@powerhousedao/scalars": "workspace:*",
-    "document-model": "workspace:*",
     "@internationalized/date": "^3.5.6",
+    "@powerhousedao/scalars": "workspace:*",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
     "@radix-ui/react-tabs": "^1.1.1",
@@ -92,8 +97,10 @@
     "@tanstack/react-query": "^5.49.2",
     "@tanstack/react-virtual": "^3.8.1",
     "change-case": "^5.4.4",
+    "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "document-model": "workspace:*",
     "mathjs": "^13.1.1",
     "natural-orderby": "^4.0.0",
     "react-hook-form": "^7.53.0",
@@ -106,6 +113,14 @@
     "usehooks-ts": "^3.1.0",
     "viem": "^2.16.1",
     "wagmi": "^2.12.17",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@radix-ui/react-checkbox": "^1.1.2",
+    "@radix-ui/react-popover": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.1",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.1",
+    "class-variance-authority": "^0.7.0",
+    "cmdk": "^1.0.4"
   }
 }
