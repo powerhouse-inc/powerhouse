@@ -7,11 +7,11 @@ import {
 } from "@powerhousedao/analytics-engine-knex";
 import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
-import pg from "pg";
+import { Pool } from "pg";
 import { ReactorRouterManager } from "./router";
 import { getKnexClient } from "./utils/get-knex-client";
 import { ProcessorManager } from "./processor-manager";
-const { Pool } = pg;
+import { API } from "./types";
 
 type Options = {
   express?: Express;
@@ -25,7 +25,7 @@ const DEFAULT_PORT = 4000;
 export async function startAPI(
   reactor: IDocumentDriveServer,
   options: Options,
-) {
+): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 

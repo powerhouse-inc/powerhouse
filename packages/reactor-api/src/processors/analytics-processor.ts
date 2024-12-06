@@ -1,22 +1,21 @@
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { IBaseDocumentDriveServer } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
 import { Processor } from "./processor";
-import { AnalyticsProcessorSetupArgs } from "src/types";
+import { ProcessorOptions, ProcessorSetupArgs } from "src/types";
 
 export abstract class AnalyticsProcessor<
   D extends Document = Document,
   S extends OperationScope = OperationScope,
 > extends Processor<D, S> {
-  constructor(
-    protected reactor: IBaseDocumentDriveServer,
-    protected analyticsStore: IAnalyticsStore,
-  ) {
-    super(reactor);
+  protected analyticsStore: IAnalyticsStore;
+
+  constructor(args: ProcessorSetupArgs, options?: ProcessorOptions) {
+    super(args, options);
+    this.analyticsStore = args.dataSources.analyticsStore;
   }
 
-  onSetup(args: AnalyticsProcessorSetupArgs) {
+  onSetup(args: ProcessorSetupArgs) {
     super.onSetup(args);
-    this.analyticsStore = args.analyticsStore;
+    this.analyticsStore = args.dataSources.analyticsStore;
   }
 }

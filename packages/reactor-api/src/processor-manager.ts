@@ -1,24 +1,25 @@
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import { IProcessor, ProcessorSetupArgs } from "./types";
+import { IProcessor, IProcessorManager, ProcessorSetupArgs } from "./types";
+import { ProcessorClass, isProcessorClass } from "./processors";
 
-export class ProcessorManager {
-  private driveServer: IDocumentDriveServer;
-  private modules: IProcessor[] = [];
+export class ProcessorManager implements IProcessorManager {
+  private reactor: IDocumentDriveServer;
+  private processors: IProcessor[] = [];
 
   constructor(
     driveServer: IDocumentDriveServer,
     private analyticsStore: IAnalyticsStore,
   ) {
-    this.driveServer = driveServer;
+    this.reactor = driveServer;
     driveServer.on("driveAdded", this.#onDriveAdded.bind(this));
   }
 
   async #onDriveAdded(drive: DocumentDriveDocument) {
     await Promise.all(
-      this.modules.map((module) =>
-        this.driveServer.addInternalListener(
+      this.processors.map((module) =>
+        this.reactor.addInternalListener(
           drive.state.global.id,
           {
             onStrands: (strands) => module.onStrands(strands),
@@ -31,11 +32,12 @@ export class ProcessorManager {
   }
 
   async #onProcessorAdded(processor: IProcessor) {
-    const drives = await this.driveServer.getDrives();
+    const drives = await this.reactor.getDrives();
+
     const options = processor.getOptions();
     await Promise.all(
       drives.map((drive) =>
-        this.driveServer.addInternalListener(
+        this.reactor.addInternalListener(
           drive,
           {
             onStrands: (strands) => processor.onStrands(strands),
@@ -47,14 +49,19 @@ export class ProcessorManager {
     );
   }
 
-  async registerProcessor(module: IProcessor) {
-    // @ts-ignore
-    module.onSetup({
-      reactor: this.driveServer,
-      analyticsStore: this.analyticsStore,
-    } as ProcessorSetupArgs);
+  async registerProcessor(module: IProcessor | ProcessorClass) {
+    const args: ProcessorSetupArgs = {
+      reactor: this.reactor,
+      dataSources: {
+        analyticsStore: this.analyticsStore,
+      },
+    };
 
-    this.#onProcessorAdded(module);
-    this.modules.push(module);
+    const processor = isProcessorClass(module) ? new module(args) : module;
+    processor.onSetup?.(args);
+
+    await this.#onProcessorAdded(processor);
+    this.processors.push(processor);
+    return processor;
   }
 }

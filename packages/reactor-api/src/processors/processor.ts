@@ -1,5 +1,5 @@
 import {
-  IBaseDocumentDriveServer,
+  IDocumentDriveServer,
   InternalTransmitterUpdate,
 } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
@@ -15,6 +15,7 @@ export abstract class Processor<
   S extends OperationScope = OperationScope,
 > implements IProcessor<D, S>
 {
+  protected reactor: IDocumentDriveServer;
   protected processorOptions: ProcessorOptions = {
     listenerId: "processor",
     filter: {
@@ -28,13 +29,15 @@ export abstract class Processor<
     system: true,
   };
 
-  constructor(
-    protected reactor: IBaseDocumentDriveServer,
-    options?: ProcessorOptions,
-  ) {
+  constructor(args: ProcessorSetupArgs, options?: ProcessorOptions) {
+    this.reactor = args.reactor;
     if (options) {
-      this.processorOptions = options;
+      this.processorOptions = { ...this.processorOptions, ...options };
     }
+  }
+
+  onSetup(args: ProcessorSetupArgs): void {
+    this.reactor = args.reactor;
   }
 
   abstract onStrands(strands: ProcessorUpdate<D, S>[]): Promise<void>;
@@ -44,8 +47,29 @@ export abstract class Processor<
   getOptions() {
     return this.processorOptions;
   }
+}
 
-  onSetup(args: ProcessorSetupArgs) {
-    this.reactor = args.reactor;
+export class BaseProcessor extends Processor {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async onStrands(strands: ProcessorUpdate[]): Promise<void> {}
+  async onDisconnect(): Promise<void> {}
+}
+
+export type ProcessorClass = typeof BaseProcessor;
+
+// checks if the provided candidate is a descendant of the Processor class.
+export function isProcessorClass(
+  candidate: unknown,
+): candidate is ProcessorClass {
+  if (typeof candidate !== "function") return false;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  let proto = Object.getPrototypeOf(candidate);
+
+  while (proto) {
+    if (Object.prototype.isPrototypeOf.call(proto, Processor)) return true;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    proto = Object.getPrototypeOf(proto);
   }
+
+  return false;
 }
