@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { startAPI } from "@powerhousedao/reactor-api";
+import { IProcessor, startAPI } from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
@@ -101,9 +101,9 @@ const startServer = async (
     if (e instanceof DriveAlreadyExistsError) {
       console.info("Default drive already exists. Skipping...");
       if (driveId) {
-        const driveDoc = (await (drive.global.slug
+        const driveDoc = await (drive.global.slug
           ? driveServer.getDriveBySlug(drive.global.slug)
-          : driveServer.getDrive(driveId))) as DocumentDriveDocument;
+          : driveServer.getDrive(driveId));
         driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
       }
     } else {
@@ -113,7 +113,7 @@ const startServer = async (
 
   try {
     // start api
-    const { app, reactorRouterManager } = await startAPI(driveServer, {
+    const api = await startAPI(driveServer, {
       port: serverPort,
       dbConnection: options?.dbPath ?? process.cwd() + "/dev.db",
     });
@@ -130,7 +130,7 @@ const startServer = async (
           },
         },
       });
-      app.use(vite.middlewares);
+      api.app.use(vite.middlewares);
 
       const documentModelsPath = path.join(process.cwd(), "./document-models");
       console.log("Loading document models from", documentModelsPath);
@@ -146,12 +146,14 @@ const startServer = async (
       // load processors
       const processorsPath = path.join(process.cwd(), "./processors");
       console.log("Loading processors from", processorsPath);
-      const localProcessors = (await vite.ssrLoadModule(
-        processorsPath,
-      )) as Record<string, any>;
+      const localProcessors = await vite.ssrLoadModule(processorsPath);
 
       for (const [name, processor] of Object.entries(localProcessors)) {
-        await reactorRouterManager.registerProcessor(processor);
+        console.log(processor);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+        const processorInstance: IProcessor = new processor.default();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        await api.processorManager.registerProcessor(processorInstance);
       }
     }
   } catch (e) {
