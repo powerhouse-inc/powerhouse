@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CharacterCounter > should match snapshot 1`] = `
+<div>
+  <div
+    class="flex items-center text-[10px]"
+  >
+    <span
+      class="text-gray-500"
+    >
+      5
+    </span>
+    <span
+      class="text-gray-300"
+    >
+      /
+      10
+    </span>
+  </div>
+</div>
+`;

@@ -134,6 +134,13 @@ export default tseslint.config(
           "mergeClassNameProps",
           "cn",
         ],
+        whitelist: [
+          "scrollbar-thin",
+          "scrollbar-thumb-gray-300",
+          "scrollbar-thumb-gray-600",
+          "scrollbar-track-transparent",
+          "scrollbar-track-gray-900",
+        ],
       },
     },
     rules: {
@@ -159,5 +166,5 @@ export default tseslint.config(
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,
     },
-  },
+  }
 );
