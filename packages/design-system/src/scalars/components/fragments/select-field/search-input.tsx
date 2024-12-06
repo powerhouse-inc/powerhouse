@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Command, CommandInput } from "@/scalars/components/fragments/command";
 import { cn } from "@/scalars/lib/utils";
 import { SelectProps } from "@/scalars/components/enum-field/types";
@@ -9,6 +9,7 @@ interface SearchInputProps {
   options?: SelectProps["options"];
   placeholder?: string;
   disabled?: boolean;
+  searchValue?: string;
   onSearch?: (value: string) => void;
   onOpenChange?: (open: boolean) => void;
   onSelectFirstOption?: () => void;
@@ -21,6 +22,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   options = [],
   placeholder,
   disabled,
+  searchValue,
   onSearch,
   onOpenChange,
   onSelectFirstOption,
@@ -28,13 +30,11 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   isPopoverOpen,
 }) => {
   const selectedOption = options.find((o) => o.value === selectedValues[0]);
-  const [value, setValue] = useState(selectedOption?.label || "");
 
   const handleChange = (value: string) => {
-    if (value !== selectedOption?.label) {
+    if (selectedOption && selectedOption.label !== value) {
       handleClear?.();
     }
-    setValue(value);
     onSearch?.(value);
     onOpenChange?.(true);
   };
@@ -51,10 +51,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   };
 
   useEffect(() => {
-    if (selectedValues.length > 0) {
-      setValue(selectedOption?.label || "");
-    }
-  }, [selectedValues, selectedOption]);
+    onSearch?.(selectedOption?.label ?? "");
+  }, [onSearch, selectedOption]);
 
   useEffect(() => {
     if (isPopoverOpen) {
@@ -72,7 +70,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       <div className="flex w-full items-center">
         <Command>
           <CommandInput
-            value={value}
+            value={searchValue}
             onValueChange={handleChange}
             placeholder={placeholder}
             onClick={(e) => {

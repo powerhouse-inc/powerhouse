@@ -129,39 +129,36 @@ export const Content: React.FC<ContentProps> = ({
                     "bg-gray-300 dark:bg-gray-700",
                 )}
               >
-                {optionsCheckmark === "Auto" && (
-                  <>
-                    {multiple ? (
-                      <div
-                        className={cn(
-                          "flex size-4 items-center justify-center rounded border",
-                          "border-gray-700 dark:border-gray-400",
-                          isSelected
-                            ? "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black"
-                            : "opacity-50 [&_svg]:invisible",
-                          option.disabled && "opacity-75",
-                        )}
-                      >
-                        <Icon name="Checkmark" size={16} />
-                      </div>
-                    ) : (
-                      <div
-                        className={cn(
-                          "relative size-4 rounded-full border",
-                          isSelected
-                            ? "border-gray-900 dark:border-gray-400"
-                            : "border-gray-800 dark:border-gray-400",
-                          "bg-transparent dark:bg-transparent",
-                          option.disabled && "opacity-75",
-                        )}
-                      >
-                        {isSelected && (
-                          <div className="absolute left-1/2 top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-900 dark:bg-gray-400" />
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+                {optionsCheckmark === "Auto" &&
+                  (multiple ? (
+                    <div
+                      className={cn(
+                        "flex size-4 items-center justify-center rounded border",
+                        "border-gray-700 dark:border-gray-400",
+                        isSelected
+                          ? "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black"
+                          : "opacity-50 [&_svg]:invisible",
+                        option.disabled && "opacity-75",
+                      )}
+                    >
+                      <Icon name="Checkmark" size={16} />
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "relative size-4 rounded-full border",
+                        isSelected
+                          ? "border-gray-900 dark:border-gray-400"
+                          : "border-gray-800 dark:border-gray-400",
+                        "bg-transparent dark:bg-transparent",
+                        option.disabled && "opacity-75",
+                      )}
+                    >
+                      {isSelected && (
+                        <div className="absolute left-1/2 top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-900 dark:bg-gray-400" />
+                      )}
+                    </div>
+                  ))}
                 {renderIcon(option.icon, option.disabled)}
                 <span
                   className={cn(
