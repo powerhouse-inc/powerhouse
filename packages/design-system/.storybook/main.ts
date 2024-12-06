@@ -8,6 +8,7 @@ const config: StorybookConfig = {
     "@storybook/addon-interactions",
     "@storybook/addon-themes",
     "storybook-addon-pseudo-states",
+    "@chromatic-com/storybook"
     "@storybook/addon-docs",
   ],
   framework: {
@@ -19,8 +20,7 @@ const config: StorybookConfig = {
     reactDocgen: false,
   },
   docs: {
-    autodocs: 'tag',
-    defaultName: '_Readme'
+    autodocs: false,
   },
   viteFinal(config) {
     return {
