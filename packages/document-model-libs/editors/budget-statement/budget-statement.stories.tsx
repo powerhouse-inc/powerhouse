@@ -1,6 +1,7 @@
 import Editor from "./editor";
 import { createDocumentStory } from "document-model-libs/utils";
 import { reducer, utils } from "../../document-models/budget-statement";
+import { Meta } from "@storybook/react";
 
 const initialAccount = utils.createAccount({
   address: "eth:0xb5eB779cE300024EDB3dF9b6C007E312584f6F4f",
@@ -54,6 +55,6 @@ const { meta, CreateDocumentStory: BudgetStatement } = createDocumentStory(
   budgetStatementState,
 );
 
-export default { ...meta, title: "Budget Statement" };
+export default { ...meta, title: "Budget Statement" } as Meta<typeof Editor>;
 
 export { BudgetStatement };

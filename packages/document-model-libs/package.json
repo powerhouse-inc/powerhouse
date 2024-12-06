@@ -57,9 +57,9 @@
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
-    "lint": "eslint",
+    "lint": "eslint .",
     "generate": "powerhouse generate",
     "build": "npm run generate && vite build",
     "build:watch": "npm run generate && vite build --watch",
@@ -90,6 +90,7 @@
     "@monaco-editor/react": "^4.6.0",
     "@mui/material": "^5.15.5",
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@prettier/sync": "^0.5.2",

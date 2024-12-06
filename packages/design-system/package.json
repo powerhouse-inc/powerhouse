@@ -13,16 +13,20 @@
   },
   "sideEffects": false,
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
     "./style.css": {
       "import": "./dist/style.css",
       "require": "./dist/style.css"
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
-    "lint": "eslint",
+    "lint": "eslint .",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
     "prepare": "npm run create-icon-components",
     "prepublish": "npm run create-icon-components",
@@ -59,6 +63,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
     "@total-typescript/ts-reset": "^0.6.1",
+    "@powerhousedao/config": "workspace:*",
     "@types/jest": "^29.5.14",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

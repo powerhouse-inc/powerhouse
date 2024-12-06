@@ -84,6 +84,14 @@ export default tseslint.config(
   eslintPluginPrettierRecommended,
   {
     ignores: [
+      "node_modules/",
+      "dist/",
+      "build/",
+      "storybook-static/",
+      ".storybook/",
+      "coverage/",
+      "gen/",
+      "docs/",
       "**/node_modules/",
       "**/dist/",
       "**/build/",
@@ -93,6 +101,11 @@ export default tseslint.config(
       "**/gen/",
       "**/docs/",
       "**/browser.js",
+      "**/src/assets/**/*",
+      "**/postcss.config.js",
+      "**/postcss.config.cjs",
+      "**/postcss.config.mjs",
+      "**/create-require.js",
       ".nx/",
       "packages/document-drive/test/*",
     ],
@@ -130,8 +143,8 @@ export default tseslint.config(
   },
   {
     files: ["**/*.tsx"],
-    ...reactPlugin.configs.flat.all,
-    ...reactPlugin.configs.flat["jsx-runtime"],
+    ...reactPlugin.configs.flat?.all,
+    ...reactPlugin.configs.flat?.["jsx-runtime"],
     settings: {
       react: {
         version: "detect",

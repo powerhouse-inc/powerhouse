@@ -24,7 +24,7 @@
     "build": "tsup",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
-    "lint": "eslint",
+    "lint": "eslint .",
     "lint:fix": "eslint --fix"
   },
   "keywords": [],

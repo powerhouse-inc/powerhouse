@@ -12,9 +12,9 @@
   "browser": "dist/browser/es/index.js",
   "type": "module",
   "scripts": {
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
-    "lint": "eslint",
+    "lint": "eslint .",
     "build": "NODE_ENV=production npm run build:browser && npm run build:node",
     "build:watch": "NODE_ENV=production npm run build:browser -- --watch && npm run build:node -- --watch",
     "build:browser": "vite build --mode browser",

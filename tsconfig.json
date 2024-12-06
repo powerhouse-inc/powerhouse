@@ -1,33 +1,26 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "types": ["node"],
-    "outDir": "./dist",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "skipLibCheck": true,
-    "baseUrl": "./",
-    "allowJs": true,
-    "paths": {
-      "scalar-generator": ["tools/scalar-generator/src/index.ts"]
-    }
-  },
-  "include": ["*.config.js", "*.config.ts", "*.json", "packages/**/*"],
-  "exclude": [
-    "node_modules/",
-    "**/node_modules/",
-    "**/dist/",
-    "**/build/",
-    "**/storybook-static/",
-    "**/coverage/",
-    "**/gen/",
-    "**/docs/",
-    ".nx/",
-    "browser.js"
+  "extends": "./tsconfig.options.json",
+  "files": [
+    "eslint.config.js"
+  ],
+  "references": [
+    {
+      "path": "./packages/config"
+    },
+    {
+      "path": "./packages/design-system"
+    },
+    {
+      "path": "./packages/document-drive"
+    },
+    {
+      "path": "./packages/document-model"
+    },
+    {
+      "path": "./packages/document-model-libs"
+    },
+    {
+      "path": "./packages/scalars"
+    },
   ]
 }
