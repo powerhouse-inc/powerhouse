@@ -35,7 +35,7 @@ export type InternalTransmitterUpdate<
   documentId: string;
   scope: S;
   branch: string;
-  operations: InternalOperationUpdate<T, S>[];
+  operations: OperationUpdate[];
   state: T["state"][S];
 };
 
