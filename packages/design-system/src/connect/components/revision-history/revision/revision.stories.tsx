@@ -1,6 +1,5 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { Revision } from "./revision";
-import { TooltipProvider } from "@/connect";
 
 const meta = {
   title: "Connect/Components/Revision History/Revision",
@@ -48,11 +47,6 @@ export const Verified: Story = {
     ],
     errors: [],
   },
-  render: (props) => (
-    <TooltipProvider>
-      <Revision {...props} />
-    </TooltipProvider>
-  ),
 };
 
 export const PartiallyVerified: Story = {
@@ -92,11 +86,6 @@ export const PartiallyVerified: Story = {
     ],
     errors: ["Data mismatch detected"],
   },
-  render: (props) => (
-    <TooltipProvider>
-      <Revision {...props} />
-    </TooltipProvider>
-  ),
 };
 
 export const NotVerified: Story = {
@@ -136,9 +125,4 @@ export const NotVerified: Story = {
     ],
     errors: ["Data mismatch detected"],
   },
-  render: (props) => (
-    <TooltipProvider>
-      <Revision {...props} />
-    </TooltipProvider>
-  ),
 };
