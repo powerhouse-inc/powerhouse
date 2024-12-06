@@ -1,21 +1,17 @@
-import {
-  IDocumentDriveServer,
-  InternalTransmitter,
-  InternalTransmitterUpdate
-} from "document-drive";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { IDocumentDriveServer } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import { Processor, ProcessorFactory } from "./processors";
-import { ProcessorType } from "./types";
-
+import { IProcessor, ProcessorSetupArgs } from "./types";
 
 export class ProcessorManager {
   private driveServer: IDocumentDriveServer;
-  private modules: Processor[] = [];
-  private processorFactory: ProcessorFactory;
+  private modules: IProcessor[] = [];
 
-  constructor(driveServer: IDocumentDriveServer, processorFactory: ProcessorFactory) {
+  constructor(
+    driveServer: IDocumentDriveServer,
+    private analyticsStore: IAnalyticsStore,
+  ) {
     this.driveServer = driveServer;
-    this.processorFactory = processorFactory;
     driveServer.on("driveAdded", this.#onDriveAdded.bind(this));
   }
 
@@ -25,10 +21,8 @@ export class ProcessorManager {
         this.driveServer.addInternalListener(
           drive.state.global.id,
           {
-            transmit: (strands) => module.transmit(strands),
-            disconnect: async () => {
-              return Promise.resolve();
-            },
+            onStrands: (strands) => module.onStrands(strands),
+            onDisconnect: () => module.onDisconnect(),
           },
           { ...module.getOptions() },
         ),
@@ -36,13 +30,31 @@ export class ProcessorManager {
     );
   }
 
-  async init() {
-    // @todo: init all processors
+  async #onProcessorAdded(processor: IProcessor) {
+    const drives = await this.driveServer.getDrives();
+    const options = processor.getOptions();
+    await Promise.all(
+      drives.map((drive) =>
+        this.driveServer.addInternalListener(
+          drive,
+          {
+            onStrands: (strands) => processor.onStrands(strands),
+            onDisconnect: () => processor.onDisconnect(),
+          },
+          options,
+        ),
+      ),
+    );
   }
 
-  async registerProcessorType(module: ProcessorType<Processor>) {
-    const processor = await this.processorFactory.create(module);
-    this.modules = this.modules.filter((m) => m.getOptions().listenerId !== module.OPTIONS.listenerId);
-    this.modules.push(processor);
+  async registerProcessor(module: IProcessor) {
+    // @ts-ignore
+    module.onSetup({
+      reactor: this.driveServer,
+      analyticsStore: this.analyticsStore,
+    } as ProcessorSetupArgs);
+
+    this.#onProcessorAdded(module);
+    this.modules.push(module);
   }
 }

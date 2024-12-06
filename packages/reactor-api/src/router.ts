@@ -1,16 +1,13 @@
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { IDocumentDriveServer, Listener } from "document-drive";
+import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
-import { ProcessorManager } from "./processor-manager";
-import { AnalyticsProcessor, Processor } from "./processors/analytics-processor";
-import { ProcessorFactory } from "./processors/processor-factory";
 import { analyticsSubgraph, driveSubgraph, systemSubgraph } from "./subgraphs";
-import { Context, ProcessorType, Subgraph } from "./types";
+import { Context, Subgraph } from "./types";
 import { createSchema } from "./utils/create-schema";
 
 export class ReactorRouterManager {
@@ -31,32 +28,21 @@ export class ReactorRouterManager {
     },
     {
       name: "analytics",
-      resolvers: analyticsSubgraph.resolvers,
+      resolvers: analyticsSubgraph.resolvers as GraphQLResolverMap<Context>,
       typeDefs: analyticsSubgraph.typeDefs,
     },
   ];
-
-  private processorFactory: ProcessorFactory;
-  private processorManager: ProcessorManager;
 
   constructor(
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-    private readonly analyticsStore: IAnalyticsStore,
-  ) {
-    this.processorFactory = new ProcessorFactory(this.reactor, this.analyticsStore);
-    this.processorManager = new ProcessorManager(
-      this.reactor,
-      this.processorFactory
-    )
-  }
+  ) {}
 
   async init() {
-    await this.processorManager.init();
     const models = this.reactor.getDocumentModels();
     const driveModel = models.find(
-      (it) => it.documentModel.name === "DocumentDrive"
+      (it) => it.documentModel.name === "DocumentDrive",
     );
     if (!driveModel) {
       throw new Error("DocumentDrive model required");
@@ -67,7 +53,7 @@ export class ReactorRouterManager {
     });
 
     this.app.use(this.path, (req, res, next) =>
-      this.reactorRouter(req, res, next)
+      this.reactorRouter(req, res, next),
     );
 
     await this.updateRouter();
@@ -85,8 +71,8 @@ export class ReactorRouterManager {
       // get schema
       const schema = createSchema(
         this.reactor,
-        subgraphConfig.resolvers,
-        subgraphConfig.typeDefs
+        subgraphConfig.resolvers as GraphQLResolverMap<Context>,
+        subgraphConfig.typeDefs,
       );
       // create apollo server
       const server = new ApolloServer({
@@ -111,7 +97,7 @@ export class ReactorRouterManager {
             // analyticStore: undefined, // TODO: add analytic store
             ...this.getAdditionalContextFields(),
           }),
-        })
+        }),
       );
     }
 
@@ -122,10 +108,6 @@ export class ReactorRouterManager {
   async registerSubgraph(subgraph: Subgraph) {
     this.subgraphs.unshift(subgraph);
     console.log(`Registered [${subgraph.name}] subgraph.`);
-  }
-
-  async registerProcessor(processor: ProcessorType<AnalyticsProcessor>) {
-    this.processorManager.registerProcessorType(processor);
   }
 
   #getLocalSubgraphConfig(subgraphName: string) {

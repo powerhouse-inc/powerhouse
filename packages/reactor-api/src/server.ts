@@ -1,14 +1,16 @@
 import { PGlite } from "@electric-sql/pglite";
-import {
-  AnalyticsQueryEngine
-} from "@powerhousedao/analytics-engine-core";
+import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsModel } from "@powerhousedao/analytics-engine-graphql";
-import { KnexAnalyticsStore, KnexQueryExecutor } from "@powerhousedao/analytics-engine-knex";
+import {
+  KnexAnalyticsStore,
+  KnexQueryExecutor,
+} from "@powerhousedao/analytics-engine-knex";
 import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
 import pg from "pg";
 import { ReactorRouterManager } from "./router";
 import { getKnexClient } from "./utils/get-knex-client";
+import { ProcessorManager } from "./processor-manager";
 const { Pool } = pg;
 
 type Options = {
@@ -22,23 +24,17 @@ const DEFAULT_PORT = 4000;
 
 export async function startAPI(
   reactor: IDocumentDriveServer,
-  options: Options
+  options: Options,
 ) {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 
-  const knex = await getKnexClient(options.dbConnection ?? "./dev.db");
+  const knex = getKnexClient(options.dbConnection ?? "./dev.db");
   const analyticsStore = new KnexAnalyticsStore({
     executor: new KnexQueryExecutor(),
     knex,
   });
-  const reactorRouterManager = new ReactorRouterManager(
-    "/",
-    app,
-    reactor,
-    analyticsStore
-  );
-
+  const reactorRouterManager = new ReactorRouterManager("/", app, reactor);
   reactorRouterManager.setAdditionalContextFields({
     dataSources: {
       db: {
@@ -47,6 +43,8 @@ export async function startAPI(
     },
   });
   await reactorRouterManager.init();
+  const processorManager = new ProcessorManager(reactor, analyticsStore);
+
   app.listen(port);
-  return { app, reactorRouterManager };
+  return { app, reactorRouterManager, processorManager };
 }

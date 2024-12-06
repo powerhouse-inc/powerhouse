@@ -1,4 +1,5 @@
 import {
+  IBaseDocumentDriveServer,
   IDocumentDriveServer,
   InternalTransmitterUpdate,
   IReceiver,
@@ -7,6 +8,8 @@ import {
 } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
 import { IncomingHttpHeaders } from "http";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { Processor } from "./processors";
 
 export interface Context {
   headers: IncomingHttpHeaders;
@@ -26,14 +29,23 @@ export type Subgraph = {
 
 export type ProcessorType = "analytics" | "operational";
 
+export type ProcessorSetupArgs = {
+  reactor: IBaseDocumentDriveServer;
+};
+
+export type AnalyticsProcessorSetupArgs = {
+  reactor: IBaseDocumentDriveServer;
+  analyticsStore: IAnalyticsStore;
+};
+
 export type IProcessor<
   D extends Document = Document,
   S extends OperationScope = OperationScope,
 > = IReceiver<D, S> & {
   getOptions: () => ProcessorOptions;
+  onSetup: (args: ProcessorSetupArgs) => void;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 // export interface ProcessorType<T> extends Function {
 //   new (...args: any[]): T;
 //   TYPE: string;

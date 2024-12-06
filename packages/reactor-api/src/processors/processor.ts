@@ -3,7 +3,7 @@ import {
   InternalTransmitterUpdate,
 } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
-import { IProcessor, ProcessorOptions } from "src/types";
+import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "src/types";
 
 export type ProcessorUpdate<
   D extends Document = Document,
@@ -35,26 +35,7 @@ export abstract class Processor<
     if (options) {
       this.processorOptions = options;
     }
-    // this.#registerProcessor().catch((e: unknown) => {
-    //   throw e;
-    // });
   }
-
-  //   async #registerProcessor() {
-  //     const drives = await this.reactor.getDrives();
-  //     for (const drive of drives) {
-  //       const transmitter = await this.reactor.getTransmitter(
-  //         drive,
-  //         this.processorOptions.listenerId,
-  //       );
-  //       if (transmitter) continue;
-  //       await this.reactor.addInternalListener(
-  //         drive,
-  //         this,
-  //         this.processorOptions,
-  //       );
-  //     }
-  //   }
 
   abstract onStrands(strands: ProcessorUpdate<D, S>[]): Promise<void>;
 
@@ -62,5 +43,9 @@ export abstract class Processor<
 
   getOptions() {
     return this.processorOptions;
+  }
+
+  onSetup(args: ProcessorSetupArgs) {
+    this.reactor = args.reactor;
   }
 }
