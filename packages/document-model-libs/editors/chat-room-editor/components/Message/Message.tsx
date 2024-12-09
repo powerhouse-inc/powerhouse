@@ -1,5 +1,3 @@
-/* eslint-disable react/jsx-no-bind */
-/* eslint-disable react/jsx-max-depth */
 import { ReactionType, Reaction } from "../Reaction";
 
 export interface MessageReaction extends Omit<ReactionType, "quantity"> {
