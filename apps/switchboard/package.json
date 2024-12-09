@@ -6,6 +6,7 @@
   "scripts": {
     "start": "vite-node src/index.ts",
     "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "codegen": "gql-gen --config codegen.yml"
   },
   "author": "",

@@ -25,6 +25,7 @@
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "lint:fix": "eslint --fix"
   },
   "keywords": [],

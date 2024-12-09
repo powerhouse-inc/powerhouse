@@ -1,8 +1,6 @@
 {
+  "include": [],
   "extends": "./tsconfig.options.json",
-  "files": [
-    "eslint.config.js"
-  ],
   "references": [
     {
       "path": "./packages/config"

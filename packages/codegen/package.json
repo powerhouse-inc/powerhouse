@@ -24,6 +24,7 @@
     "check-types": "tsc --build",
     "postlint": "npm run check-types",
     "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "clean": "rimraf dist/",
     "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
     "build": "tsup",

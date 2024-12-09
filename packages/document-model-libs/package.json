@@ -60,6 +60,7 @@
     "check-types": "tsc --build",
     "postlint": "npm run check-types",
     "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "generate": "powerhouse generate",
     "build": "npm run generate && vite build",
     "build:watch": "npm run generate && vite build --watch",

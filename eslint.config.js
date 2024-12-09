@@ -88,7 +88,6 @@ export default tseslint.config(
       "dist/",
       "build/",
       "storybook-static/",
-      ".storybook/",
       "coverage/",
       "gen/",
       "docs/",
@@ -166,5 +165,5 @@ export default tseslint.config(
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,
     },
-  }
+  },
 );
