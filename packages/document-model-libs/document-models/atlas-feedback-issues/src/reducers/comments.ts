@@ -6,6 +6,7 @@
 
 import { AtlasFeedbackIssuesCommentsOperations } from "../../gen/comments/operations";
 import { CommentSchema, EditCommentInputSchema } from "../../gen/schema/zod";
+import { ADDRESS_ALLOW_LIST } from "../constants";
 import {
   makeNewCommentValidator,
   makeExistingCommentValidator,
@@ -13,12 +14,19 @@ import {
 
 export const reducer: AtlasFeedbackIssuesCommentsOperations = {
   createCommentOperation(state, action, dispatch) {
+    const creatorAddress = action.context?.signer?.user.address;
+    if (!creatorAddress) {
+      throw new Error("User is not signed in");
+    }
+    if (!ADDRESS_ALLOW_LIST.includes(creatorAddress)) {
+      throw new Error("User is not allowed to submit comments");
+    }
     const validator = CommentSchema().merge(makeNewCommentValidator(state));
     const input = {
       ...action.input,
       createdAt: new Date().toISOString(),
       lastEditedAt: new Date().toISOString(),
-      creatorAddress: action.context?.signer?.user.address,
+      creatorAddress,
     };
     const result = validator.safeParse(input);
     if (!result.success) {
@@ -36,6 +44,13 @@ export const reducer: AtlasFeedbackIssuesCommentsOperations = {
     );
   },
   deleteCommentOperation(state, action, dispatch) {
+    const creatorAddress = action.context?.signer?.user.address;
+    if (!creatorAddress) {
+      throw new Error("User is not signed in");
+    }
+    if (!ADDRESS_ALLOW_LIST.includes(creatorAddress)) {
+      throw new Error("User is not allowed to delete comments");
+    }
     const validator = CommentSchema().merge(
       makeExistingCommentValidator(state),
     );
@@ -49,12 +64,26 @@ export const reducer: AtlasFeedbackIssuesCommentsOperations = {
     if (!issue) {
       throw new Error("Issue not found");
     }
-    issue.comments = issue.comments.filter((c) => c.phid !== action.input.phid);
+    const comment = issue.comments.find((c) => c.phid === action.input.phid);
+    if (!comment) {
+      throw new Error("Comment not found");
+    }
+    if (comment.creatorAddress !== creatorAddress) {
+      throw new Error("User is not allowed to delete this comment");
+    }
+    issue.comments = issue.comments.filter((c) => c.phid !== comment.phid);
     state.issues = state.issues.map((issue) =>
       issue.phid === action.input.issuePhid ? issue : issue,
     );
   },
   editCommentOperation(state, action, dispatch) {
+    const creatorAddress = action.context?.signer?.user.address;
+    if (!creatorAddress) {
+      throw new Error("User is not signed in");
+    }
+    if (!ADDRESS_ALLOW_LIST.includes(creatorAddress)) {
+      throw new Error("User is not allowed to edit comments");
+    }
     const validator = EditCommentInputSchema().merge(
       makeExistingCommentValidator(state),
     );
@@ -73,6 +102,9 @@ export const reducer: AtlasFeedbackIssuesCommentsOperations = {
     );
     if (!comment) {
       throw new Error("Comment not found");
+    }
+    if (comment.creatorAddress !== creatorAddress) {
+      throw new Error("User is not allowed to edit this comment");
     }
     comment.content = result.data.content ?? comment.content;
     comment.relevantNotionId =

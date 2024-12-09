@@ -31,7 +31,6 @@ type Issue {
   creatorAddress: EthereumAddress!
   relevantNotionIds: [String!]!
   createdAt: DateTime!
-  threadUrl: URL!
   comments: [Comment!]!
 }
 

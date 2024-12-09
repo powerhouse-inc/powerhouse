@@ -1,6 +1,7 @@
+import { Meta } from "@storybook/react";
 import Editor from "./editor";
-import { createDocumentStory } from "utils";
-import { reducer, utils } from "../../document-models/atlas-feedback-issues";
+import { createDocumentStory } from "document-model-libs/utils";
+import { reducer, utils } from "document-models/atlas-feedback-issues";
 const { meta, CreateDocumentStory: AtlasFeedbackIssues } = createDocumentStory(
   Editor,
   reducer,
@@ -22,4 +23,6 @@ const { meta, CreateDocumentStory: AtlasFeedbackIssues } = createDocumentStory(
 );
 export { AtlasFeedbackIssues };
 
-export default { ...meta, title: "Atlas Feedback Issues" };
+export default { ...meta, title: "Atlas Feedback Issues" } as Meta<
+  typeof Editor
+>;
