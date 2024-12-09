@@ -12,6 +12,7 @@ import { ReactorRouterManager } from "./router";
 import { getKnexClient } from "./utils/get-knex-client";
 import { ProcessorManager } from "./processor-manager";
 import { API } from "./types";
+import { initialize } from "./subgraphs/analytics";
 
 type Options = {
   express?: Express;
@@ -30,6 +31,8 @@ export async function startAPI(
   const app = options.express ?? express();
 
   const knex = getKnexClient(options.dbConnection ?? "./dev.db");
+  await initialize(knex);
+
   const analyticsStore = new KnexAnalyticsStore({
     executor: new KnexQueryExecutor(),
     knex,
