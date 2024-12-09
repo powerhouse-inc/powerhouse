@@ -1,6 +1,5 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { Signature } from "./signature";
-import { TooltipProvider } from "@/connect";
 
 const meta = {
   title: "Connect/Components/Revision History/Revision/Signature",
@@ -30,11 +29,6 @@ export const NotVerified: Story = {
       },
     ],
   },
-  render: (props) => (
-    <TooltipProvider>
-      <Signature {...props} />
-    </TooltipProvider>
-  ),
 };
 
 export const PartiallyVerified: Story = {
@@ -56,11 +50,6 @@ export const PartiallyVerified: Story = {
       },
     ],
   },
-  render: (props) => (
-    <TooltipProvider>
-      <Signature {...props} />
-    </TooltipProvider>
-  ),
 };
 
 export const Verified: Story = {
@@ -82,9 +71,4 @@ export const Verified: Story = {
       },
     ],
   },
-  render: (props) => (
-    <TooltipProvider>
-      <Signature {...props} />
-    </TooltipProvider>
-  ),
 };
