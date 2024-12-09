@@ -22,7 +22,7 @@ export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(document
     filter: {
       branch: ["main"],
       documentId: ["*"],
-      documentType: ["frank/test"],
+      documentType: [<%- documentTypes.map(type => `"${type}"`).join(", ") %>],
       scope: ["global"],
     },
     block: false,
