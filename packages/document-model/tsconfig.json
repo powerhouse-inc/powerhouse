@@ -1,18 +1,13 @@
 {
+  "extends": "../../tsconfig.options.json",
     "compilerOptions": {
-        "module": "ESNext",
-        "moduleResolution": "Bundler",
-        "target": "esnext",
         "types": ["node", "vitest/globals", "jest"],
-        "declaration": true,
         "outDir": "./dist",
-        "esModuleInterop": true,
-        "forceConsistentCasingInFileNames": true,
-        "strict": true,
-        "noImplicitAny": true,
-        "skipLibCheck": true,
-        "emitDeclarationOnly": true,
-        "baseUrl": "."
-    },
-    "exclude": ["src/document/utils/browser.ts"],
+    "emitDeclarationOnly": true,
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "*.ts",
+  ]
 }

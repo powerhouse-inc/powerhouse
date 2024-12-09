@@ -1,0 +1,152 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EnumField Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <form
+    novalidate=""
+  >
+    <div
+      aria-invalid="false"
+      aria-label="Radio group"
+      class="flex flex-col gap-2"
+      dir="ltr"
+      id=":r0:-radio-group"
+      role="radiogroup"
+      style="outline: none;"
+      tabindex="0"
+    >
+      <div
+        class="flex items-center gap-2"
+        role="presentation"
+      >
+        <button
+          aria-checked="false"
+          aria-disabled="false"
+          aria-invalid="false"
+          class="group peer aspect-square size-4 rounded-full border border-gray-800 dark:border-gray-400 hover:border-gray-900 dark:hover:border-gray-50"
+          data-radix-collection-item=""
+          data-state="unchecked"
+          id=":r0:-radio-0-option1"
+          role="radio"
+          tabindex="-1"
+          type="button"
+          value="option1"
+        />
+        <input
+          aria-hidden="true"
+          name="enum"
+          style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 0px; height: 0px;"
+          tabindex="-1"
+          type="radio"
+          value="option1"
+        />
+        <label
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
+          for=":r0:-radio-0-option1"
+        >
+          Option 1
+        </label>
+      </div>
+      <div
+        class="flex items-center gap-2"
+        role="presentation"
+      >
+        <button
+          aria-checked="false"
+          aria-disabled="false"
+          aria-invalid="false"
+          class="group peer aspect-square size-4 rounded-full border border-gray-800 dark:border-gray-400 hover:border-gray-900 dark:hover:border-gray-50"
+          data-radix-collection-item=""
+          data-state="unchecked"
+          id=":r0:-radio-1-option2"
+          role="radio"
+          tabindex="-1"
+          type="button"
+          value="option2"
+        />
+        <input
+          aria-hidden="true"
+          name="enum"
+          style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 0px; height: 0px;"
+          tabindex="-1"
+          type="radio"
+          value="option2"
+        />
+        <label
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
+          for=":r0:-radio-1-option2"
+        >
+          Option 2
+        </label>
+      </div>
+      <div
+        class="flex items-center gap-2"
+        role="presentation"
+      >
+        <button
+          aria-checked="false"
+          aria-disabled="false"
+          aria-invalid="false"
+          class="group peer aspect-square size-4 rounded-full border border-gray-800 dark:border-gray-400 hover:border-gray-900 dark:hover:border-gray-50"
+          data-radix-collection-item=""
+          data-state="unchecked"
+          id=":r0:-radio-2-option3"
+          role="radio"
+          tabindex="-1"
+          type="button"
+          value="option3"
+        />
+        <input
+          aria-hidden="true"
+          name="enum"
+          style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 0px; height: 0px;"
+          tabindex="-1"
+          type="radio"
+          value="option3"
+        />
+        <label
+          class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
+          for=":r0:-radio-2-option3"
+        >
+          Option 3
+        </label>
+      </div>
+    </div>
+  </form>
+</DocumentFragment>
+`;
+
+exports[`EnumField Component > should match snapshot with Select variant 1`] = `
+<DocumentFragment>
+  <form
+    novalidate=""
+  >
+    <div
+      class="flex flex-col gap-2"
+    >
+      <button
+        aria-controls="radix-:r9:"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-invalid="false"
+        aria-label="Select"
+        class="gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 flex size-full items-center justify-between px-3 py-[7.2px] dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white hover:border-gray-300 hover:bg-gray-100 dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800 dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0"
+        data-state="closed"
+        id=":r8:-select"
+        name="enum"
+        role="combobox"
+        type="button"
+      >
+        <div
+          class="mx-auto flex w-full items-center justify-end"
+        >
+          <div
+            data-testid="icon-fallback"
+            style="width: 16px; height: 16px;"
+          />
+        </div>
+      </button>
+    </div>
+  </form>
+</DocumentFragment>
+`;

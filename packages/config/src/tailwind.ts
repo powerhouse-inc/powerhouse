@@ -2,6 +2,7 @@ import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
 import defaultTheme from "tailwindcss/defaultTheme";
 import plugin from "tailwindcss/plugin";
+import scrollbar from "tailwind-scrollbar";
 
 const theme = {
   fontFamily: {
@@ -90,6 +91,15 @@ const theme = {
     "orange-700": "hsl(var(--color-orange-700) / <alpha-value>)",
     "orange-800": "hsl(var(--color-orange-800) / <alpha-value>)",
     "orange-900": "hsl(var(--color-orange-900) / <alpha-value>)",
+    "charcoal-100": "hsl(var(--color-charcoal-100) / <alpha-value>)",
+    "charcoal-200": "hsl(var(--color-charcoal-200) / <alpha-value>)",
+    "charcoal-300": "hsl(var(--color-charcoal-300) / <alpha-value>)",
+    "charcoal-400": "hsl(var(--color-charcoal-400) / <alpha-value>)",
+    "charcoal-500": "hsl(var(--color-charcoal-500) / <alpha-value>)",
+    "charcoal-600": "hsl(var(--color-charcoal-600) / <alpha-value>)",
+    "charcoal-700": "hsl(var(--color-charcoal-700) / <alpha-value>)",
+    "charcoal-800": "hsl(var(--color-charcoal-800) / <alpha-value>)",
+    "charcoal-900": "hsl(var(--color-charcoal-900) / <alpha-value>)",
   },
   boxShadow: {
     ...defaultTheme.boxShadow,
@@ -132,6 +142,7 @@ const theme = {
 
 const plugins = [
   animate,
+  scrollbar({ nocompatible: true }),
   plugin(function ({ addVariant }) {
     addVariant("collapsed", ":merge(.group).collapsed &");
     addVariant("collapsing", ":merge(.group).collapsing &");

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.8.0",
+  "version": "0.9.1",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -24,7 +24,8 @@
     "build": "tsup",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "lint:fix": "eslint --fix"
   },
   "keywords": [],

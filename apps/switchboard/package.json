@@ -1,11 +1,12 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.1.131",
+  "version": "2.1.145",
   "main": "index.js",
   "scripts": {
     "start": "vite-node src/index.ts",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "codegen": "gql-gen --config codegen.yml"
   },
   "author": "",
@@ -20,8 +21,8 @@
     "@libsql/client": "^0.14.0",
     "@powerhousedao/general-document-indexer": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
-    "@powerhousedao/switchboard-gui": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
+    "@powerhousedao/switchboard-gui": "workspace:*",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "document-drive": "workspace:*",
@@ -62,6 +63,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
-    "graphql-codegen-typescript-common": "0.18.2"
+    "graphql-codegen-typescript-common": "0.18.2",
+    "vite-node": "^2.1.8"
   }
 }

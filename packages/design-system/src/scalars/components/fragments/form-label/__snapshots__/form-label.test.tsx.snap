@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FormLabel Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <label
+    class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-400 mb-[3px]"
+    data-testid="form-label"
+  >
+    label
+  </label>
+</DocumentFragment>
+`;

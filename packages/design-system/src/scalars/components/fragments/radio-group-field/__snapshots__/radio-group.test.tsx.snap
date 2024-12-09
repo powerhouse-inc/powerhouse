@@ -1,0 +1,54 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RadioGroup Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    aria-required="false"
+    class=""
+    dir="ltr"
+    id=":r0:-radio-group"
+    role="radiogroup"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-checked="false"
+      aria-disabled="false"
+      aria-invalid="false"
+      class="group peer aspect-square size-4 rounded-full border border-gray-800 dark:border-gray-400 hover:border-gray-900 dark:hover:border-gray-50"
+      data-radix-collection-item=""
+      data-state="unchecked"
+      id=":r1:-radio"
+      role="radio"
+      tabindex="-1"
+      type="button"
+      value="1"
+    />
+    <label
+      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
+      for=":r1:-radio"
+    >
+      Option 1
+    </label>
+    <button
+      aria-checked="false"
+      aria-disabled="false"
+      aria-invalid="false"
+      class="group peer aspect-square size-4 rounded-full border border-gray-800 dark:border-gray-400 hover:border-gray-900 dark:hover:border-gray-50"
+      data-radix-collection-item=""
+      data-state="unchecked"
+      id=":r3:-radio"
+      role="radio"
+      tabindex="-1"
+      type="button"
+      value="2"
+    />
+    <label
+      class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-slate-50 cursor-pointer peer-hover:text-gray-900 dark:peer-hover:text-gray-50"
+      for=":r3:-radio"
+    >
+      Option 2
+    </label>
+  </div>
+</DocumentFragment>
+`;

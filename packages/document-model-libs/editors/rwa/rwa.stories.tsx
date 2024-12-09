@@ -16,6 +16,7 @@ import {
   mockStateWithData,
 } from "../../document-models/real-world-assets/mock-data/initial-state";
 import { v7 as uuidv7 } from "uuid";
+import { Meta } from "@storybook/react";
 
 const { meta, CreateDocumentStory: Empty } = createDocumentStory(
   Editor as EditorStoryComponent<
@@ -173,6 +174,6 @@ const { CreateDocumentStory: WithBackgroundUpdates } = createDocumentStory(
 export default {
   ...meta,
   title: "Real World Assets",
-};
+} as Meta<typeof Editor>;
 
 export { Empty, WithData, WithBackgroundUpdates };

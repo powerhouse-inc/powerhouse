@@ -1,3 +1,17 @@
+## 1.11.0 (2024-12-05)
+
+### 🚀 Features
+
+- merge dspot-scalars into main ([5ca898fc](https://github.com/powerhouse-inc/powerhouse/commit/5ca898fc))
+
+### 🩹 Fixes
+
+- **switchboard-gui:** restore prev vite version ([#614](https://github.com/powerhouse-inc/powerhouse/pull/614))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.10.0 (2024-12-03)
 
 ### 🚀 Features
