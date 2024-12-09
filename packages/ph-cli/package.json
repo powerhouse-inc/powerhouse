@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
     "@powerhousedao/connect": "develop",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
