@@ -8,7 +8,7 @@ const config: StorybookConfig = {
     "@storybook/addon-interactions",
     "@storybook/addon-themes",
     "storybook-addon-pseudo-states",
-    "@chromatic-com/storybook"
+    "@chromatic-com/storybook",
     "@storybook/addon-docs",
   ],
   framework: {
