@@ -30,7 +30,33 @@ export class RWAAnalyticsProcessor extends AnalyticsProcessor<% if(documentTypes
 
     async onStrands(
         strands: ProcessorUpdate<DocumentType>[],
-    ): Promise<void> {}
+    ): Promise<void> {
+        if(strands.length === 0) {
+            return;
+        }
+    
+        for (const strand of strands) {
+            if(strand.operations.length === 0) {
+                continue;
+            }
+
+            const firstOp = strand.operations[0];
+            if(firstOp.index === 0) {
+                await this.clearSource(strand.documentId);
+            }
+
+            for (const operation of strand.operations) {
+                console.log(">>> ", operation.type);
+            }
+        }
+    }
     
     async onDisconnect() {}
+
+    private async clearSource(documentId: string) {
+        await this.analyticsStore.clearSeriesBySource(
+            AnalyticsPath.fromString(`sky/rwa/portfolios/${documentId}`),
+            true,
+        );
+    }
 }
