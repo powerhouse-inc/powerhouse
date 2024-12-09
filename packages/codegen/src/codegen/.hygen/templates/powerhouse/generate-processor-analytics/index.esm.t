@@ -15,7 +15,7 @@ import { <%= documentTypesMap[type].name %>Document } from "../../<%= documentTy
 
 <% if(documentTypes.length) { %>type DocumentType = <%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } %>;
 
-export class <%= pascalName %>AnalyticsProcessor extends AnalyticsProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
+export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
 
     protected processorOptions: ProcessorOptions = {
     listenerId: generateUUID(),
