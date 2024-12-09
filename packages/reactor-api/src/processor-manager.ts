@@ -57,7 +57,6 @@ export class ProcessorManager implements IProcessorManager {
       },
     };
 
-    console.log(">>> ", module);
     const processor = isProcessorClass(module) ? new module(args) : module;
     processor.onSetup?.(args);
 

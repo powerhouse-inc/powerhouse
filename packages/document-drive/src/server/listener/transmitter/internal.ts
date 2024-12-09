@@ -4,10 +4,8 @@ import {
   IBaseDocumentDriveServer,
   Listener,
   ListenerRevision,
-  OperationUpdate,
   StrandUpdate,
 } from "../../types";
-import { buildRevisionsFilter } from "../../utils";
 import { ITransmitter, StrandUpdateSource } from "./types";
 import { InferDocumentOperation } from "../../../read-mode/types";
 
@@ -28,15 +26,15 @@ export type InternalOperationUpdate<
 };
 
 export type InternalTransmitterUpdate<
-  T extends Document = Document,
+  D extends Document = Document,
   S extends OperationScope = OperationScope,
 > = {
   driveId: string;
   documentId: string;
   scope: S;
   branch: string;
-  operations: OperationUpdate[];
-  state: T["state"][S];
+  operations: InternalOperationUpdate<D, S>[];
+  state: D["state"][S];
 };
 
 export interface IInternalTransmitter extends ITransmitter {
@@ -53,6 +51,41 @@ export class InternalTransmitter implements ITransmitter {
     this.drive = drive;
   }
 
+  async #buildInternalOperationUpdate(strand: StrandUpdate) {
+    const operations: InternalOperationUpdate[] = [];
+    const stateByIndex = new Map<number, unknown>();
+    const getStateByIndex = async (index: number) => {
+      const state = stateByIndex.get(index);
+      if (state) {
+        return state;
+      }
+      const document = await this.drive.getDocument(
+        strand.driveId,
+        strand.documentId,
+        {
+          revisions: {
+            [strand.scope]: index,
+          },
+          checkHashes: false,
+        },
+      );
+      if (index < 0) {
+        stateByIndex.set(index, document.initialState.state[strand.scope]);
+      } else {
+        stateByIndex.set(index, document.state[strand.scope]);
+      }
+      return stateByIndex.get(index);
+    };
+    for (const operation of strand.operations) {
+      operations.push({
+        ...operation,
+        state: await getStateByIndex(operation.index),
+        previousState: await getStateByIndex(operation.index - 1),
+      });
+    }
+    return operations;
+  }
+
   async transmit(
     strands: StrandUpdate[],
     source: StrandUpdateSource,
@@ -61,30 +94,15 @@ export class InternalTransmitter implements ITransmitter {
       return [];
     }
 
-    const retrievedDocuments = new Map<string, Document>();
     const updates: InternalTransmitterUpdate[] = [];
     for (const strand of strands) {
-      let document = retrievedDocuments.get(
-        `${strand.driveId}:${strand.documentId}`,
-      );
-      if (!document) {
-        const revisions = buildRevisionsFilter(
-          strands,
-          strand.driveId,
-          strand.documentId,
-        );
-        document = await (strand.documentId
-          ? this.drive.getDocument(strand.driveId, strand.documentId, {
-              revisions,
-            })
-          : this.drive.getDrive(strand.driveId, { revisions }));
-
-        retrievedDocuments.set(
-          `${strand.driveId}:${strand.documentId}`,
-          document,
-        );
-      }
-      updates.push({ ...strand, state: document.state[strand.scope] });
+      const operations = await this.#buildInternalOperationUpdate(strand);
+      const state = operations.at(-1)?.state ?? {};
+      updates.push({
+        ...strand,
+        operations,
+        state,
+      });
     }
     try {
       await this.receiver.onStrands(updates);

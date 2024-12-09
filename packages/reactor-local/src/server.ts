@@ -168,7 +168,7 @@ const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
 
   // load local processors
   const processorsPath = path.join(process.cwd(), "./processors"); // TODO get path from powerhouse config
-  loadProcessors(processorsPath, vite, api.processorManager);
+  await loadProcessors(processorsPath, vite, api.processorManager);
 
   /**
    * TODO: watch code changes on processors and document models
@@ -198,12 +198,10 @@ async function loadProcessors(
 ) {
   console.log("Loading processors from", path);
   const localProcessors = await vite.ssrLoadModule(path);
-  console.log("localProcessors", localProcessors);
   for (const [name, processor] of Object.entries(localProcessors)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const ProcessorClass = processor[name];
-    console.log("ProcessorClass", ProcessorClass);
     if (isProcessorClass(ProcessorClass)) {
-      console.log("Registering processor", name);
       await processorManager.registerProcessor(ProcessorClass);
     }
   }
