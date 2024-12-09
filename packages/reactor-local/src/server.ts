@@ -101,9 +101,9 @@ const startServer = async (
     if (e instanceof DriveAlreadyExistsError) {
       console.info("Default drive already exists. Skipping...");
       if (driveId) {
-        const driveDoc = (await (drive.global.slug
+        const driveDoc = await (drive.global.slug
           ? driveServer.getDriveBySlug(drive.global.slug)
-          : driveServer.getDrive(driveId))) as DocumentDriveDocument;
+          : driveServer.getDrive(driveId));
         driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
       }
     } else {
@@ -148,9 +148,7 @@ const startServer = async (
       // load processors
       const processorsPath = path.join(process.cwd(), "./processors");
       console.log("Loading processors from", processorsPath);
-      const localProcessors = (await vite.ssrLoadModule(
-        processorsPath,
-      )) as Record<string, any>;
+      const localProcessors = await vite.ssrLoadModule(processorsPath);
 
       for (const [name, processor] of Object.entries(localProcessors)) {
         await reactorRouterManager.registerProcessor({

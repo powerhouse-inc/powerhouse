@@ -1,11 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "emitDeclarationOnly": true,
     "outDir": "./dist",
   },
-  "include": [
-    "src/**/*.ts",
-    "*.ts",
-  ]
-}
+  "include": ["*.ts", "src/**/*"]
+} 

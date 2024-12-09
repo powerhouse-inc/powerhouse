@@ -3,7 +3,7 @@ import {
   RealWorldAssetsAction,
   RealWorldAssetsLocalState,
   RealWorldAssetsState,
-} from "../../document-models/real-world-assets";
+} from "document-models/real-world-assets";
 import { useEditorDispatcher } from "./hooks/useEditorDispatcher";
 import { useCallback } from "react";
 import {
