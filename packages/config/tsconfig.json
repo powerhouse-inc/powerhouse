@@ -1,7 +1,25 @@
 {
-  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "lib": ["es2017"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
     "outDir": "./dist",
+    "composite": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "isolatedModules": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "declaration": true,
+    "resolveJsonModule": true
   },
-  "include": ["*.ts", "src/**/*"]
-} 
+  "include": [
+    "src/**/*.ts",
+  ],
+  "exclude": ["**/*.esm.t"]
+}
