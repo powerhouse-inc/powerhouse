@@ -1,24 +1,26 @@
-import { PGlite } from "@electric-sql/pglite";
-import { startAPI } from "@powerhousedao/reactor-api";
+import {
+  isProcessorClass,
+  API,
+  startAPI,
+  IProcessorManager,
+} from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
   DriveInput,
+  IDocumentDriveServer,
   InternalTransmitter,
   IReceiver,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
-import {
-  DocumentDriveDocument,
-  ListenerFilter,
-} from "document-model-libs/document-drive";
+import { ListenerFilter } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createServer as createViteServer } from "vite";
+import { createServer as createViteServer, ViteDevServer } from "vite";
 
 const dirname =
   import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
@@ -113,51 +115,18 @@ const startServer = async (
 
   try {
     // start api
-    const client = new PGlite(options?.dbPath ?? process.cwd() + "/dev.db");
-
-    const { app, reactorRouterManager } = await startAPI(driveServer, {
+    const api = await startAPI(driveServer, {
       port: serverPort,
-      client,
+      dbConnection: options?.dbPath ?? process.cwd() + "/dev.db",
     });
     driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
     console.log(`  ➜  Reactor:   ${driveUrl}`);
 
     if (dev) {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "custom",
-        build: {
-          rollupOptions: {
-            input: [],
-          },
-        },
-      });
-      app.use(vite.middlewares);
-
-      const documentModelsPath = path.join(process.cwd(), "./document-models");
-      console.log("Loading document models from", documentModelsPath);
-      const localDMs = (await vite.ssrLoadModule(documentModelsPath)) as Record<
-        string,
-        DocumentModel
-      >;
-      driveServer.setDocumentModels([
-        ...baseDocumentModels,
-        ...Object.values(localDMs),
-      ]);
-
-      // load processors
-      const processorsPath = path.join(process.cwd(), "./processors");
-      console.log("Loading processors from", processorsPath);
-      const localProcessors = await vite.ssrLoadModule(processorsPath);
-
-      for (const [name, processor] of Object.entries(localProcessors)) {
-        await reactorRouterManager.registerProcessor({
-          ...processor,
-        });
-      }
+      await startDevMode(api, driveServer);
     }
   } catch (e) {
-    console.error("App crashed", e);
+    console.error("Error starting API", e);
   }
 
   return {
@@ -177,5 +146,62 @@ const startServer = async (
     ) => driveServer.addInternalListener(driveId, receiver, options),
   };
 };
+
+const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
+  const vite = await createViteServer({
+    server: { middlewareMode: true, watch: null },
+    appType: "custom",
+    build: {
+      rollupOptions: {
+        input: [],
+      },
+    },
+  });
+  api.app.use(vite.middlewares);
+
+  // load local document models
+  const documentModelsPath = path.join(process.cwd(), "./document-models"); // TODO get path from powerhouse config
+  await loadDocumentModels(documentModelsPath, vite, driveServer);
+
+  // load local processors
+  const processorsPath = path.join(process.cwd(), "./processors"); // TODO get path from powerhouse config
+  await loadProcessors(processorsPath, vite, api.processorManager);
+
+  /**
+   * TODO: watch code changes on processors and document models
+   */
+};
+
+async function loadDocumentModels(
+  path: string,
+  vite: ViteDevServer,
+  driveServer: IDocumentDriveServer,
+) {
+  console.log("Loading document models from", path);
+  const localDMs = (await vite.ssrLoadModule(path)) as Record<
+    string,
+    DocumentModel
+  >;
+  driveServer.setDocumentModels([
+    ...baseDocumentModels,
+    ...Object.values(localDMs),
+  ]);
+}
+
+async function loadProcessors(
+  path: string,
+  vite: ViteDevServer,
+  processorManager: IProcessorManager,
+) {
+  console.log("Loading processors from", path);
+  const localProcessors = await vite.ssrLoadModule(path);
+  for (const [name, processor] of Object.entries(localProcessors)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const ProcessorClass = processor[name];
+    if (isProcessorClass(ProcessorClass)) {
+      await processorManager.registerProcessor(ProcessorClass);
+    }
+  }
+}
 
 export { startServer };

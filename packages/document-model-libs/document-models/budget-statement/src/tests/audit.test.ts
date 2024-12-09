@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
+import { generateMock } from "@powerhousedao/ph-cli/utils";
 import { Operation, utils as baseUtils } from "document-model/document";
 import fs from "fs";
 import JSZip from "jszip";

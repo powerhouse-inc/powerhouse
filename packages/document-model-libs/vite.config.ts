@@ -1,4 +1,4 @@
-import { getConfig } from "@powerhousedao/codegen";
+import { getConfig } from "@powerhousedao/ph-cli/utils";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { resolve } from "path";
