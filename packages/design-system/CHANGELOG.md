@@ -1,3 +1,17 @@
+## 1.13.1 (2024-12-09)
+
+### 🩹 Fixes
+
+- **config:** added build ([b18b0c5c](https://github.com/powerhouse-inc/powerhouse/commit/b18b0c5c))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/config to 1.1.1
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 1.11.1 (2024-12-09)
 
 ### 🚀 Features
