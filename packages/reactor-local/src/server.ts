@@ -196,11 +196,14 @@ async function loadProcessors(
   vite: ViteDevServer,
   processorManager: IProcessorManager,
 ) {
+  console.log("Loading processors from", path);
   const localProcessors = await vite.ssrLoadModule(path);
-
+  console.log("localProcessors", localProcessors);
   for (const [name, processor] of Object.entries(localProcessors)) {
     const ProcessorClass = processor[name];
+    console.log("ProcessorClass", ProcessorClass);
     if (isProcessorClass(ProcessorClass)) {
+      console.log("Registering processor", name);
       await processorManager.registerProcessor(ProcessorClass);
     }
   }
