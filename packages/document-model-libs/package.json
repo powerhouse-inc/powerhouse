@@ -50,6 +50,11 @@
       "require": "./dist/cjs/real-world-assets.cjs",
       "import": "./dist/es/real-world-assets.js"
     },
+    "./chat-room": {
+      "types": "./dist/chat-room.d.ts",
+      "require": "./dist/cjs/chat-room.cjs",
+      "import": "./dist/es/chat-room.js"
+    },
     "./utils": {
       "types": "./dist/utils.d.ts",
       "require": "./dist/cjs/utils.cjs",
