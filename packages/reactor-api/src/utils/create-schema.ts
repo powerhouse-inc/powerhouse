@@ -8,7 +8,7 @@ import { Context } from "src/types";
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
   resolvers: GraphQLResolverMap<Context>,
-  typeDefs: string
+  typeDefs: string,
 ) =>
   buildSubgraphSchema([
     {
@@ -19,7 +19,7 @@ export const createSchema = (
 
 export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
-  typeDefs: string
+  typeDefs: string,
 ) => {
   const documentModels = documentDriveServer.getDocumentModels();
   let dmSchema = "";
@@ -32,7 +32,7 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll(`: Account`, `: ${documentModel.name}Account`)
                 .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
                 .replaceAll("scalar DateTime", "")
-                .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
+                .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
             )
             .join("\n")};
   
@@ -46,14 +46,15 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
                 .replaceAll("type AccountSnapshotLocalState", "")
                 .replaceAll("type BudgetStatementLocalState", "")
-                .replaceAll("type ScopeFrameworkLocalState", "")
+                .replaceAll("type ScopeFrameworkLocalState", ""),
             )
             .join("\n")};
-  
-          type ${documentModel.name} implements IDocument {
+
+    type ${documentModel.name} implements IDocument {
               id: ID!
               name: String!
               documentType: String!
+              operations: [Operation!]!
               revision: Int!
               created: DateTime!
               lastModified: DateTime!
@@ -65,13 +66,21 @@ export const getDocumentModelTypeDefs = (
   const schema = `
       ${scalarsTypeDefs.join("\n")}
       
+
+
+      type Operation {
+        type: String!
+        index: Int!
+        timestamp: DateTime!
+        hash: String!
+      }
       interface IDocument {
           name: String!
           documentType: String!
           revision: Int!
           created: DateTime!
           lastModified: DateTime!
-          
+          operations: [Operation!]!
       }
       ${dmSchema}
   

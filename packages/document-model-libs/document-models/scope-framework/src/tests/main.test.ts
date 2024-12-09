@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
+import { generateMock } from "@powerhousedao/ph-cli/utils";
 
 import * as creators from "../../gen/main/creators";
 import { reducer } from "../../gen/reducer";
