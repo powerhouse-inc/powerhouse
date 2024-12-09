@@ -18,4 +18,8 @@ export type AmountFieldPropsGeneric =
   | { type: "AmountCurrency"; value?: AmountCurrency }
   | { type: "AmountPercentage"; value?: AmountPercentage };
 
-export type AmountValue = Amount | AmountPercentage | AmountCurrency;
+export type AmountValue =
+  | Amount
+  | AmountPercentage
+  | AmountCurrency
+  | AmountToken;
