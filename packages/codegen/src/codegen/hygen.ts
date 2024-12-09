@@ -6,6 +6,7 @@ import { Logger, runner } from "hygen";
 import { DocumentModel } from "document-model";
 import { loadDocumentModel } from "./utils";
 import { DocumentTypesMap } from ".";
+import { pascalCase } from "change-case";
 
 const require = createRequire(import.meta.url);
 
@@ -151,12 +152,15 @@ export async function generateProcessor(
   // Generate the singular files for the document model logic
   const processorType = type === "analytics" ? "analytics" : "operational";
 
+  console.log(">>> ", pascalCase(name));
   await run(
     [
       "powerhouse",
       `generate-processor-${processorType}`,
       "--name",
       name,
+      "--pascalName",
+      pascalCase(name),
       "--root-dir",
       dir,
       "--document-types",
