@@ -1,7 +1,6 @@
 import { createDocumentStory } from "document-model-libs/utils";
 import { reducer, utils } from "../../document-models/scope-framework";
 import Editor from "./editor";
-import { Meta } from "@storybook/react";
 
 const { meta, CreateDocumentStory: ScopeFramework } = createDocumentStory(
   Editor,
@@ -17,6 +16,6 @@ export default {
   parameters: {
     date: new Date("March 10, 2021 10:00:00"),
   },
-} as Meta<typeof Editor>;
+};
 
 export { ScopeFramework };

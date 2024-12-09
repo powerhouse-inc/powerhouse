@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { Logger, runner } from "hygen";
 import { DocumentModel } from "document-model";
 import { loadDocumentModel } from "./utils";
+import { DocumentTypesMap } from ".";
+import { pascalCase } from "change-case";
 
 const require = createRequire(import.meta.url);
 
@@ -113,7 +115,7 @@ export async function generateDocumentModel(
 export async function generateEditor(
   name: string,
   documentTypes: string[],
-  documentTypesMap: Record<string, string>,
+  documentTypesMap: DocumentTypesMap,
   dir: string,
   documentModelsDir: string,
   { skipFormat = false } = {},
@@ -141,7 +143,7 @@ export async function generateEditor(
 export async function generateProcessor(
   name: string,
   documentTypes: string[],
-  documentTypesMap: Record<string, string>,
+  documentTypesMap: DocumentTypesMap,
   dir: string,
   documentModelsDir: string,
   type = "analytics",
@@ -150,12 +152,15 @@ export async function generateProcessor(
   // Generate the singular files for the document model logic
   const processorType = type === "analytics" ? "analytics" : "operational";
 
+  console.log(">>> ", pascalCase(name));
   await run(
     [
       "powerhouse",
       `generate-processor-${processorType}`,
       "--name",
       name,
+      "--pascalName",
+      pascalCase(name),
       "--root-dir",
       dir,
       "--document-types",

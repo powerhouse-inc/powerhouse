@@ -11,19 +11,6 @@ const preview: Preview = {
         date: /Date$/,
       },
     },
-    options: {
-      storySort: {
-        order: [
-          "Connect",
-          "Powerhouse",
-          "RWA",
-          "Document Engineering", 
-          ["Simple Components", "Complex Components", "Layout Components", "Fragments"],
-        ],
-        method: "alphabetical",
-        includeNames: true,
-      },
-    },
   },
   decorators: [
     (Story) => (
@@ -33,11 +20,11 @@ const preview: Preview = {
     ),
     withThemeByDataAttribute<ReactRenderer>({
       themes: {
-        light: "light",
-        dark: "dark",
+        light: "ph-light",
+        dark: "ph-dark",
       },
       defaultTheme: "light",
-      attributeName: 'data-mode',
+      attributeName: "data-theme",
     }),
   ],
 };

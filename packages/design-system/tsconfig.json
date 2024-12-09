@@ -1,23 +1,21 @@
 {
-  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM"],
-    "emitDeclarationOnly": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "declaration": true,
     "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "emitDeclarationOnly": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
+    "baseUrl": "./",
     "paths": {
       "@/*": ["./src/*"]
     },
-    "resolveJsonModule": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.json",
-    "scripts/**/*.ts",
-    "*.ts",
-    "package.json"
-  ]
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "allowJs": true
+  }
 }

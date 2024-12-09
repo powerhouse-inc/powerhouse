@@ -86,10 +86,7 @@ export default defineConfig(() => {
         },
       },
       lib: {
-        entry: [
-          resolve("src", "index.ts"),
-          resolve("src", "scalars", "index.ts"),
-        ],
+        entry: [resolve("src", "index.ts")],
         formats: ["es"],
         fileName(_format, entryName) {
           return `${entryName}.js`;

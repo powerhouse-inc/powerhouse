@@ -140,11 +140,7 @@ describe("Crypto utils", () => {
       },
       async (data) =>
         new Uint8Array(
-          await crypto.subtle.sign(
-            algorithm,
-            keyPair.privateKey,
-            data.buffer as ArrayBuffer,
-          ),
+          await crypto.subtle.sign(algorithm, keyPair.privateKey, data.buffer),
         ),
     );
     expect(operation.context?.signer).toStrictEqual({
@@ -204,11 +200,7 @@ describe("Crypto utils", () => {
       },
       async (data) =>
         new Uint8Array(
-          await crypto.subtle.sign(
-            algorithm,
-            keyPair.privateKey,
-            data.buffer as ArrayBuffer,
-          ),
+          await crypto.subtle.sign(algorithm, keyPair.privateKey, data.buffer),
         ),
     );
     const signer = operation.context!.signer!;
@@ -265,11 +257,7 @@ describe("Crypto utils", () => {
       },
       async (data) =>
         new Uint8Array(
-          await crypto.subtle.sign(
-            algorithm,
-            keyPair.privateKey,
-            data.buffer as ArrayBuffer,
-          ),
+          await crypto.subtle.sign(algorithm, keyPair.privateKey, data.buffer),
         ),
     );
     const signer = operation.context!.signer!;

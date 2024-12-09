@@ -1,34 +1,3 @@
-## 2.10.0 (2024-12-09)
-
-### 🚀 Features
-
-- **monorepo:** simplify check action ([a22745f4](https://github.com/powerhouse-inc/powerhouse/commit/a22745f4))
-- **monorepo:** simplify parallel task execution ([0ed8df13](https://github.com/powerhouse-inc/powerhouse/commit/0ed8df13))
-- **monorepo:** handle merge conflicts ([bfa6f0a0](https://github.com/powerhouse-inc/powerhouse/commit/bfa6f0a0))
-- **monorepo:** handle project references ([3b6c046f](https://github.com/powerhouse-inc/powerhouse/commit/3b6c046f))
-- **document-model-libs:** move tailwind config to workspace root ([74b9869a](https://github.com/powerhouse-inc/powerhouse/commit/74b9869a))
-- **document-model-libs:** remove wrong peer deps ([5fd7ef67](https://github.com/powerhouse-inc/powerhouse/commit/5fd7ef67))
-- use unified deps ([38c759a9](https://github.com/powerhouse-inc/powerhouse/commit/38c759a9))
-- **monorepo:** fix export declarations ([58908779](https://github.com/powerhouse-inc/powerhouse/commit/58908779))
-
-### ❤️ Thank You
-
-- ryanwolhuter
-
-## 2.9.0 (2024-12-05)
-
-### 🚀 Features
-
-- merge dspot-scalars into main ([5ca898fc](https://github.com/powerhouse-inc/powerhouse/commit/5ca898fc))
-
-### 🩹 Fixes
-
-- **switchboard-gui:** restore prev vite version ([#614](https://github.com/powerhouse-inc/powerhouse/pull/614))
-
-### ❤️ Thank You
-
-- Guillermo Puente Sandoval
-
 ## 2.8.0 (2024-12-03)
 
 ### 🚀 Features
