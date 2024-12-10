@@ -1,3 +1,10 @@
+# [1.0.0-dev.177](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.176...v1.0.0-dev.177) (2024-12-10)
+
+
+### Features
+
+* **connect:** added chatroom document model ([7958fcf](https://github.com/powerhouse-inc/document-model-electron/commit/7958fcfed8aa3c6da458d250f1016d0b4753dde5))
+
 # [1.0.0-dev.176](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.175...v1.0.0-dev.176) (2024-12-09)
 
 
