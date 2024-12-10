@@ -1,0 +1,1 @@
+export { designSystemPreset } from "./tailwind";

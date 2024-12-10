@@ -11,6 +11,7 @@ export default defineConfig({
   platform: "node",
   target: "node20",
   noExternal: ["document-drive"],
+  external: ["lightningcss"],
   shims: true,
   cjsInterop: true,
   dts: true,
