@@ -49,13 +49,11 @@ export const reducer: AtlasFeedbackIssuesIssuesOperations = {
       (issue) => issue.phid === action.input.phid,
     );
     if (!issue) {
-      throw new Error("Issue not found");
+      throw new Error("Issue with this phid does not exist");
     }
     if (issue.creatorAddress !== creatorAddress) {
       throw new Error("User is not the creator of this issue");
     }
-    state.issues = state.issues.filter(
-      (issue) => issue.phid !== action.input.phid,
-    );
+    state.issues = state.issues.filter((i) => i.phid !== issue.phid);
   },
 };

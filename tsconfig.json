@@ -1,5 +1,8 @@
 {
   "include": [],
+  "files": [
+    "vitest.workspace.ts"
+  ],
   "extends": "./tsconfig.options.json",
   "references": [
     {

@@ -42,9 +42,6 @@ export default defineConfig(({ mode }) => {
   ];
 
   return {
-    test: {
-      globals: true,
-    },
     resolve: {
       alias: {
         module: "./create-require.js",
@@ -121,5 +118,5 @@ export default defineConfig(({ mode }) => {
       "process.env.NODE_ENV": JSON.stringify(mode),
       __vite_process_env_NODE_ENV: JSON.stringify(mode),
     },
-  } as UserConfig;
+  };
 });
