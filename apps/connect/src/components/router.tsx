@@ -1,10 +1,14 @@
 import connectConfig from 'connect-config';
+import React, { Suspense } from 'react';
 import {
     RouteObject,
     RouterProvider,
     createBrowserRouter,
     createMemoryRouter,
 } from 'react-router-dom';
+
+const Root = React.lazy(() => import('./root'));
+const Content = React.lazy(() => import('src/pages/content'));
 
 async function createRouter(routes: RouteObject[]) {
     const isPackaged = await window.electronAPI?.isPackaged();
@@ -16,18 +20,28 @@ const RouterAsync = async () => {
     const router = await createRouter([
         {
             path: '/',
-            lazy: () => import('./root'),
-            loader: () => <></>, // TODO loading
+            element: (
+                <Suspense>
+                    <Root />
+                </Suspense>
+            ),
             children: [
                 {
                     path: 'd?/:driveId?/*?',
-                    lazy: () => import('src/pages/content'),
+                    element: (
+                        <Suspense>
+                            <Content />
+                        </Suspense>
+                    ),
                 },
             ],
         },
         {
-            lazy: () => import('./root'),
-            loader: () => <></>, // TODO loading
+            element: (
+                <Suspense>
+                    <Root />
+                </Suspense>
+            ),
         },
     ]);
 

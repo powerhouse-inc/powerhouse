@@ -8,7 +8,7 @@ import { isElectron, isMac } from 'src/hooks/utils';
 import { logger } from 'src/services/logger';
 import Sidebar from './sidebar';
 
-const Root = () => {
+export default function Root() {
     useLoadInitialData();
     const navigate = useNavigate();
     const { login } = useLogin();
@@ -65,7 +65,4 @@ const Root = () => {
             </div>
         </div>
     );
-};
-
-export const element = <Root />;
-export const errorElement = <Root />;
+}
