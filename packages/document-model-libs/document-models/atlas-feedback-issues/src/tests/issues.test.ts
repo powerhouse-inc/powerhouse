@@ -17,7 +17,7 @@ import { AtlasFeedbackIssuesDocument } from "document-models/atlas-feedback-issu
 describe("Issues Operations", () => {
   let document: AtlasFeedbackIssuesDocument;
 
-  beforeEach(({ task }) => {
+  beforeEach(() => {
     document = utils.createDocument(
       utils.createExtendedState({
         state: {
@@ -27,12 +27,6 @@ describe("Issues Operations", () => {
           local: {},
         },
       }),
-    );
-    const otherDocument = utils.createDocument();
-    console.log(
-      task.name,
-      document.state.global.issues.length,
-      otherDocument.state.global.issues.length,
     );
   });
 
@@ -53,10 +47,12 @@ describe("Issues Operations", () => {
       signer: undefined,
     };
     const action = { ...creator, context };
+    const previousIssueCount = document.state.global.issues.length;
     const updatedDocument = reducer(document, action);
     const operation = updatedDocument.operations.global[0];
     expect(operation.error).toBeDefined();
     expect(operation.error).toContain("User is not signed in");
+    expect(document.state.global.issues.length).toBe(previousIssueCount);
   });
   it("should require user address to be on allow list to create issue", () => {
     const input: CreateIssueInput = generateMock(z.CreateIssueInputSchema());
@@ -76,10 +72,12 @@ describe("Issues Operations", () => {
       },
     };
     const action = { ...creator, context };
+    const previousIssueCount = document.state.global.issues.length;
     const updatedDocument = reducer(document, action);
     const operation = updatedDocument.operations.global[0];
     expect(operation.error).toBeDefined();
     expect(operation.error).toContain("User is not allowed to submit issues");
+    expect(document.state.global.issues.length).toBe(previousIssueCount);
   });
   it("should create issue when user address is on allow list", () => {
     const input: CreateIssueInput = generateMock(z.CreateIssueInputSchema());
@@ -99,17 +97,19 @@ describe("Issues Operations", () => {
       },
     };
     const action = { ...creator, context };
+    const previousIssueCount = document.state.global.issues.length;
     const updatedDocument = reducer(document, action);
     const operation = updatedDocument.operations.global[0];
     expect(operation.error).toBeUndefined();
-    expect(updatedDocument.state.global.issues).toHaveLength(1);
+    expect(updatedDocument.state.global.issues.length).toBe(
+      previousIssueCount + 1,
+    );
     expect(updatedDocument.state.global.issues[0].creatorAddress).toBe(
       ADDRESS_ALLOW_LIST[0],
     );
   });
   it("should handle deleteIssue operation", () => {
     const input: DeleteIssueInput = generateMock(z.DeleteIssueInputSchema());
-
     const updatedDocument = reducer(document, creators.deleteIssue(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -124,10 +124,12 @@ describe("Issues Operations", () => {
       signer: undefined,
     };
     const action = { ...creator, context };
+    const previousIssueCount = document.state.global.issues.length;
     const updatedDocument = reducer(document, action);
     const operation = updatedDocument.operations.global[0];
     expect(operation.error).toBeDefined();
     expect(operation.error).toContain("User is not signed in");
+    expect(document.state.global.issues.length).toBe(previousIssueCount);
   });
   it("should require user address to be on allow list to delete issue", () => {
     const input: DeleteIssueInput = generateMock(z.DeleteIssueInputSchema());
@@ -147,10 +149,12 @@ describe("Issues Operations", () => {
       },
     };
     const action = { ...creator, context };
+    const previousIssueCount = document.state.global.issues.length;
     const updatedDocument = reducer(document, action);
     const operation = updatedDocument.operations.global[0];
     expect(operation.error).toBeDefined();
     expect(operation.error).toContain("User is not allowed to delete issues");
+    expect(document.state.global.issues.length).toBe(previousIssueCount);
   });
   it("should require issue with input phid to be found in document", () => {
     const input: DeleteIssueInput = generateMock(z.DeleteIssueInputSchema());
@@ -170,10 +174,12 @@ describe("Issues Operations", () => {
       },
     };
     const action = { ...creator, context };
+    const previousIssueCount = document.state.global.issues.length;
     const updatedDocument = reducer(document, action);
     const operation = updatedDocument.operations.global[0];
     expect(operation.error).toBeDefined();
     expect(operation.error).toContain("Issue with this phid does not exist");
+    expect(document.state.global.issues.length).toBe(previousIssueCount);
   });
   it("should require user to be the creator of the issue to delete it", () => {
     const issue = generateMock(z.IssueSchema());
@@ -196,18 +202,20 @@ describe("Issues Operations", () => {
       },
     };
     const action = { ...creator, context };
+    const previousIssueCount = document.state.global.issues.length;
     const updatedDocument = reducer(document, action);
     const operation = updatedDocument.operations.global[0];
     expect(operation.error).toBeDefined();
     expect(operation.error).toContain("User is not the creator of this issue");
+    expect(document.state.global.issues.length).toBe(previousIssueCount);
   });
   it("should delete issue when user is the creator of the issue", () => {
     const issue = generateMock(z.IssueSchema());
     issue.creatorAddress = ADDRESS_ALLOW_LIST[0];
     document.state.global.issues.push(issue);
 
-    const initialIssueCount = document.state.global.issues.length;
-    expect(initialIssueCount).toBe(1);
+    const previousIssueCount = document.state.global.issues.length;
+    expect(previousIssueCount).toBe(1);
 
     const input: DeleteIssueInput = generateMock(z.DeleteIssueInputSchema());
     input.phid = issue.phid;

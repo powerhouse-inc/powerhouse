@@ -5,7 +5,11 @@
  */
 
 import { AtlasFeedbackIssuesCommentsOperations } from "../../gen/comments/operations";
-import { CommentSchema, EditCommentInputSchema } from "../../gen/schema/zod";
+import {
+  CommentSchema,
+  DeleteCommentInputSchema,
+  EditCommentInputSchema,
+} from "../../gen/schema/zod";
 import { ADDRESS_ALLOW_LIST } from "../constants";
 import {
   makeNewCommentValidator,
@@ -36,7 +40,7 @@ export const reducer: AtlasFeedbackIssuesCommentsOperations = {
       (issue) => issue.phid === action.input.issuePhid,
     );
     if (!issue) {
-      throw new Error("Issue not found");
+      throw new Error("Issue with this phid does not exist");
     }
     issue.comments.push(result.data);
     state.issues = state.issues.map((issue) =>
@@ -51,7 +55,7 @@ export const reducer: AtlasFeedbackIssuesCommentsOperations = {
     if (!ADDRESS_ALLOW_LIST.includes(creatorAddress)) {
       throw new Error("User is not allowed to delete comments");
     }
-    const validator = CommentSchema().merge(
+    const validator = DeleteCommentInputSchema().merge(
       makeExistingCommentValidator(state),
     );
     const result = validator.safeParse(action.input);
@@ -72,9 +76,7 @@ export const reducer: AtlasFeedbackIssuesCommentsOperations = {
       throw new Error("User is not allowed to delete this comment");
     }
     issue.comments = issue.comments.filter((c) => c.phid !== comment.phid);
-    state.issues = state.issues.map((issue) =>
-      issue.phid === action.input.issuePhid ? issue : issue,
-    );
+    state.issues = state.issues.map((i) => (i.phid === issue.phid ? issue : i));
   },
   editCommentOperation(state, action, dispatch) {
     const creatorAddress = action.context?.signer?.user.address;
@@ -95,7 +97,7 @@ export const reducer: AtlasFeedbackIssuesCommentsOperations = {
       (issue) => issue.phid === action.input.issuePhid,
     );
     if (!issue) {
-      throw new Error("Issue not found");
+      throw new Error("Comment with this phid does not exist");
     }
     const comment = issue.comments.find(
       (comment) => comment.phid === action.input.phid,
