@@ -1,3 +1,10 @@
+# [1.0.0-dev.179](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.178...v1.0.0-dev.179) (2024-12-10)
+
+
+### Features
+
+* **connect:** bump deps ([#627](https://github.com/powerhouse-inc/document-model-electron/issues/627)) ([cb8f2c2](https://github.com/powerhouse-inc/document-model-electron/commit/cb8f2c2d3ac13acb72283971a7f73dc4b14f326e))
+
 # [1.0.0-dev.178](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.177...v1.0.0-dev.178) (2024-12-10)
 
 
