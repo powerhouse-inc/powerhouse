@@ -1,27 +1,45 @@
 import { Operation } from "document-model/document-model";
-import { DocumentActionHandlers } from "../types";
 import { OperationErrorForm } from "./operation-error-form";
-import { useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 
 type Props = {
   operation: Operation;
-  handlers: DocumentActionHandlers;
+  addOperationError: (
+    operationId: string,
+    errorName: string,
+  ) => Promise<string | undefined>;
+  deleteOperationError: (id: string) => void;
+  setOperationErrorName: (
+    operationId: string,
+    errorId: string,
+    name: string,
+  ) => void;
 };
 
-export function OperationErrors({ operation, handlers }: Props) {
+export function OperationErrors({
+  operation,
+  addOperationError,
+  deleteOperationError,
+  setOperationErrorName,
+}: Props) {
   const addErrorFormId = useId();
   const [shouldFocusAddForm, setShouldFocusAddForm] = useState(false);
 
-  const wrappedHandlers = {
-    ...handlers,
-    addOperationError: async (operationId: string, error: string) => {
-      const errorId = await handlers.addOperationError(operationId, error);
+  const onAddOperationError = useCallback(
+    async (operationId: string, error: string) => {
+      const errorId = await addOperationError(operationId, error);
       if (errorId) {
         setShouldFocusAddForm(true);
       }
       return errorId;
     },
-  };
+    [addOperationError, setShouldFocusAddForm],
+  );
+
+  const onAddOperationErrorSubmit = useCallback(
+    () => setShouldFocusAddForm(false),
+    [setShouldFocusAddForm],
+  );
 
   return (
     <ul className="ml-4 list-disc">
@@ -30,17 +48,21 @@ export function OperationErrors({ operation, handlers }: Props) {
           <OperationErrorForm
             error={error}
             operation={operation}
-            handlers={wrappedHandlers}
+            onAddOperationError={onAddOperationError}
+            deleteOperationError={deleteOperationError}
+            setOperationErrorName={setOperationErrorName}
           />
         </li>
       ))}
       <li>
         <OperationErrorForm
           operation={operation}
-          handlers={wrappedHandlers}
+          onAddOperationError={onAddOperationError}
+          deleteOperationError={deleteOperationError}
+          setOperationErrorName={setOperationErrorName}
           key={`${addErrorFormId}-${shouldFocusAddForm}`}
           focusOnMount={shouldFocusAddForm}
-          onSubmit={() => setShouldFocusAddForm(false)}
+          onSubmit={onAddOperationErrorSubmit}
         />
       </li>
     </ul>

@@ -64,7 +64,7 @@ import { PgQueryResultHKT, PgTransaction } from "drizzle-orm/pg-core";
 function storageToOperation(
   op: typeof operationsTable.$inferSelect & {
     attachments?: AttachmentInput[];
-  }
+  },
 ): Operation {
   const operation: Operation = {
     id: op.opId || undefined,
@@ -92,7 +92,7 @@ export type DrizzleStorageOptions = {
 
 function getRetryTransactionsClient<T extends NodePgDatabase>(
   db: T,
-  backOffOptions?: Partial<IBackOffOptions>
+  backOffOptions?: Partial<IBackOffOptions>,
 ) {
   return db;
 }
@@ -125,7 +125,7 @@ export class DrizzleStorage implements IDriveStorage {
   async addDriveOperations(
     id: string,
     operations: Operation[],
-    header: DocumentHeader
+    header: DocumentHeader,
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);
   }
@@ -135,19 +135,19 @@ export class DrizzleStorage implements IDriveStorage {
     callback: (document: DocumentDriveStorage) => Promise<{
       operations: Operation<DocumentDriveAction | BaseAction>[];
       header: DocumentHeader;
-    }>
+    }>,
   ) {
     return this.addDocumentOperationsWithTransaction(
       "drives",
       drive,
-      (document) => callback(document as DocumentDriveStorage)
+      (document) => callback(document as DocumentDriveStorage),
     );
   }
 
   async createDocument(
     drive: string,
     id: string,
-    document: DocumentStorage
+    document: DocumentStorage,
   ): Promise<void> {
     await createDocumentQuery(this.db, drive, id, document);
   }
@@ -161,7 +161,7 @@ export class DrizzleStorage implements IDriveStorage {
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader
+    header: DocumentHeader,
   ): Promise<void> {
     try {
       await tx.insert(operationsTable).values(
@@ -182,7 +182,7 @@ export class DrizzleStorage implements IDriveStorage {
           resultingState: op.resultingState
             ? Buffer.from(JSON.stringify(op.resultingState))
             : undefined,
-        }))
+        })),
       );
 
       await tx
@@ -192,7 +192,7 @@ export class DrizzleStorage implements IDriveStorage {
           revision: JSON.stringify(header.revision),
         })
         .where(
-          and(eq(documentsTable.id, id), eq(documentsTable.driveId, drive))
+          and(eq(documentsTable.id, id), eq(documentsTable.driveId, drive)),
         );
 
       await Promise.all(
@@ -211,10 +211,10 @@ export class DrizzleStorage implements IDriveStorage {
               .where(
                 and(
                   eq(operationsTable.documentId, id),
-                  eq(operationsTable.driveId, drive)
-                )
+                  eq(operationsTable.driveId, drive),
+                ),
               );
-          })
+          }),
       );
     } catch (e) {
       // P2002: Unique constraint failed
@@ -260,7 +260,7 @@ export class DrizzleStorage implements IDriveStorage {
       operations: Operation[];
       header: DocumentHeader;
       newState?: State<any, any> | undefined;
-    }>
+    }>,
   ) {
     let result: {
       operations: Operation[];
@@ -273,7 +273,7 @@ export class DrizzleStorage implements IDriveStorage {
         const document = await this.getDocument(
           drive,
           id,
-          tx as unknown as NodePgDatabase<Record<string, never>>
+          tx as unknown as NodePgDatabase<Record<string, never>>,
         );
         if (!document) {
           throw new Error(`Document with id ${id} not found`);
@@ -286,7 +286,7 @@ export class DrizzleStorage implements IDriveStorage {
       {
         accessMode: "read write",
         isolationLevel: "serializable",
-      }
+      },
     );
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -301,7 +301,7 @@ export class DrizzleStorage implements IDriveStorage {
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader
+    header: DocumentHeader,
   ): Promise<void> {
     return this._addDocumentOperations(
       this.db as PgTransaction<
@@ -312,7 +312,7 @@ export class DrizzleStorage implements IDriveStorage {
       drive,
       id,
       operations,
-      header
+      header,
     );
   }
   async getDocuments(drive: string): Promise<string[]> {
@@ -329,7 +329,7 @@ export class DrizzleStorage implements IDriveStorage {
       .select({ count: count() })
       .from(documentsTable)
       .where(
-        and(eq(documentsTable.id, id), eq(documentsTable.driveId, driveId))
+        and(eq(documentsTable.id, id), eq(documentsTable.driveId, driveId)),
       );
     if (!result) {
       return false;
@@ -340,14 +340,14 @@ export class DrizzleStorage implements IDriveStorage {
   async getDocument(
     driveId: string,
     id: string,
-    tx?: NodePgDatabase<Record<string, never>>
+    tx?: NodePgDatabase<Record<string, never>>,
   ) {
     const db = tx ?? this.db;
     const [result] = await db
       .select()
       .from(documentsTable)
       .where(
-        and(eq(documentsTable.id, id), eq(documentsTable.driveId, driveId))
+        and(eq(documentsTable.id, id), eq(documentsTable.driveId, driveId)),
       )
       .limit(1);
 
@@ -357,7 +357,7 @@ export class DrizzleStorage implements IDriveStorage {
 
     const cachedOperations = (await this.delegate?.getCachedOperations(
       driveId,
-      id
+      id,
     )) ?? {
       global: [],
       local: [],
@@ -371,16 +371,16 @@ export class DrizzleStorage implements IDriveStorage {
         acc[scope] = lastIndex;
         return acc;
       },
-      { global: -1, local: -1 }
+      { global: -1, local: -1 },
     );
 
     const conditions = Object.entries(scopeIndex).map(
-      ([scope, index]) => `("scope" = '${scope}' AND "index" > ${index})`
+      ([scope, index]) => `("scope" = '${scope}' AND "index" > ${index})`,
     );
     conditions.push(
       `("scope" NOT IN (${Object.keys(cachedOperations)
         .map((s) => `'${s}'`)
-        .join(", ")}))`
+        .join(", ")}))`,
     );
 
     // retrieves operations with resulting state
@@ -413,7 +413,7 @@ export class DrizzleStorage implements IDriveStorage {
             WHERE "driveId" = ${driveId} AND "documentId" = ${id}
             AND (${conditions.join(" OR ")})
             ORDER BY scope, index;
-        `
+        `,
     );
     const operationIds = queryOperations.map((o: Operation) => o.id);
     const attachments = await this.db
@@ -429,7 +429,7 @@ export class DrizzleStorage implements IDriveStorage {
     >(
       (
         acc: Record<string, Operation[]>,
-        operation: typeof operationsTable.$inferSelect
+        operation: typeof operationsTable.$inferSelect,
       ) => {
         const scope = operation.scope as OperationScope;
         if (!acc[scope]) {
@@ -437,7 +437,7 @@ export class DrizzleStorage implements IDriveStorage {
         }
         const result = storageToOperation(operation);
         result.attachments = attachments.filter(
-          (a) => a.operationId === operation.id
+          (a) => a.operationId === operation.id,
         );
         result.attachments.forEach(({ hash, ...file }) => {
           fileRegistry[hash] = file;
@@ -445,7 +445,7 @@ export class DrizzleStorage implements IDriveStorage {
         acc[scope].push(result);
         return acc;
       },
-      cachedOperations
+      cachedOperations,
     );
 
     const dbDoc = result;
@@ -476,7 +476,7 @@ export class DrizzleStorage implements IDriveStorage {
       await this.db
         .delete(documentsTable)
         .where(
-          and(eq(documentsTable.driveId, drive), eq(documentsTable.id, id))
+          and(eq(documentsTable.driveId, drive), eq(documentsTable.id, id)),
         );
     } catch (e: unknown) {
       console.error(e);
@@ -524,7 +524,7 @@ export class DrizzleStorage implements IDriveStorage {
     documentId: string,
     index: number,
     scope: string,
-    branch: string
+    branch: string,
   ): Promise<unknown> {
     const [operation] = await this.db
       .select()
@@ -535,8 +535,8 @@ export class DrizzleStorage implements IDriveStorage {
           eq(operationsTable.documentId, documentId),
           eq(operationsTable.index, index),
           eq(operationsTable.scope, scope),
-          eq(operationsTable.branch, branch)
-        )
+          eq(operationsTable.branch, branch),
+        ),
       );
 
     return operation?.resultingState?.toString();
@@ -546,19 +546,19 @@ export class DrizzleStorage implements IDriveStorage {
     drive: string,
     index: number,
     scope: string,
-    branch: string
+    branch: string,
   ): Promise<unknown> {
     return this.getOperationResultingState(
       "drives",
       drive,
       index,
       scope,
-      branch
+      branch,
     );
   }
 
   async getSynchronizationUnitsRevision(
-    units: SynchronizationUnitQuery[]
+    units: SynchronizationUnitQuery[],
   ): Promise<
     {
       driveId: string;

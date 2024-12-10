@@ -26,6 +26,7 @@ const meta = {
       description: "Step value for the input field",
       table: {
         type: { summary: "number" },
+        defaultValue: { summary: "1" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -99,7 +100,6 @@ export const Default: Story = {
     name: "Label",
     label: "Label",
     placeholder: "0",
-    showErrorOnBlur: true,
     step: 0,
     value: 1234,
   },
@@ -202,8 +202,9 @@ export const WithBigInt: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: "9999999999999999999",
+    value: 999999,
     isBigInt: true,
+    step: 0,
   },
 };
 

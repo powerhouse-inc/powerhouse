@@ -1,23 +1,33 @@
 import { Operation, OperationError } from "document-model/document-model";
-import { DocumentActionHandlers } from "../types";
 import { TextField } from "./text-field";
 import { pascalCase } from "change-case";
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 
 type Props = {
-  handlers: DocumentActionHandlers;
   operation: Operation;
   error?: OperationError;
   focusOnMount?: boolean;
   onSubmit?: () => void;
+  onAddOperationError: (
+    operationId: string,
+    errorName: string,
+  ) => Promise<string | undefined>;
+  deleteOperationError: (id: string) => void;
+  setOperationErrorName: (
+    operationId: string,
+    errorId: string,
+    name: string,
+  ) => void;
 };
 
 export function OperationErrorForm({
   operation,
   error,
-  handlers,
   focusOnMount,
   onSubmit,
+  onAddOperationError,
+  deleteOperationError,
+  setOperationErrorName,
 }: Props) {
   const textFieldRef = useRef<{ focus: () => void } | null>(null);
   const isEdit = !!error;
@@ -25,27 +35,41 @@ export function OperationErrorForm({
     .map((o) => o.name)
     .filter(Boolean);
 
-  const handleSubmit = (name: string) => {
-    if (isEdit && name === "") {
-      handlers.deleteOperationError(error.id);
-      return;
-    }
+  const handleSubmit = useCallback(
+    (name: string) => {
+      if (isEdit && name === "") {
+        deleteOperationError(error.id);
+        return;
+      }
 
-    const formattedName = pascalCase(name);
+      const formattedName = pascalCase(name);
 
-    if (isEdit) {
-      handlers.setOperationErrorName(operation.id, error.id, formattedName);
-    } else {
-      handlers.addOperationError(operation.id, formattedName);
-    }
-    onSubmit?.();
-  };
+      if (isEdit) {
+        setOperationErrorName(operation.id, error.id, formattedName);
+      } else {
+        onAddOperationError(operation.id, formattedName);
+      }
+      onSubmit?.();
+    },
+    [
+      isEdit,
+      error?.id,
+      operation.id,
+      deleteOperationError,
+      setOperationErrorName,
+      onAddOperationError,
+      onSubmit,
+    ],
+  );
 
-  const handleChange = (value: string) => {
-    if (isEdit && value === "") {
-      handlers.deleteOperation(operation.id);
-    }
-  };
+  const handleChange = useCallback(
+    (value: string) => {
+      if (isEdit && value === "") {
+        deleteOperationError(error.id);
+      }
+    },
+    [isEdit, error?.id, deleteOperationError],
+  );
 
   return (
     <TextField

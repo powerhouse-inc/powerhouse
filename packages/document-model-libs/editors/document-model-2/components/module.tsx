@@ -4,16 +4,33 @@ import type {
 } from "document-model/document-model";
 import { ModuleForm } from "./module-form";
 import { Operations } from "./operations";
-import { DocumentActionHandlers } from "../types";
 import { Icon } from "@powerhousedao/design-system";
 type Props = {
   module?: TModule;
   modules?: TModule[];
   allOperations: Operation[];
   lastCreatedModuleId: string | null;
-  wrappedHandlers: DocumentActionHandlers & {
-    addModule: (name: string) => Promise<string | undefined>;
-  };
+  onAddModule: (name: string) => Promise<string | undefined>;
+  updateModuleName: (id: string, name: string) => void;
+  deleteModule: (id: string) => void;
+  updateOperationName: (id: string, name: string) => void;
+  deleteOperation: (id: string) => void;
+  addOperationAndInitialSchema: (
+    moduleId: string,
+    name: string,
+  ) => Promise<string | undefined>;
+  updateOperationSchema: (id: string, newDoc: string) => void;
+  setOperationDescription: (id: string, description: string) => void;
+  addOperationError: (
+    operationId: string,
+    errorName: string,
+  ) => Promise<string | undefined>;
+  deleteOperationError: (id: string) => void;
+  setOperationErrorName: (
+    operationId: string,
+    errorId: string,
+    name: string,
+  ) => void;
 };
 export function Module(props: Props) {
   const {
@@ -21,15 +38,26 @@ export function Module(props: Props) {
     modules,
     allOperations,
     lastCreatedModuleId,
-    wrappedHandlers,
+    onAddModule,
+    updateModuleName,
+    deleteModule,
+    updateOperationName,
+    deleteOperation,
+    addOperationAndInitialSchema,
+    updateOperationSchema,
+    setOperationDescription,
+    addOperationError,
+    deleteOperationError,
+    setOperationErrorName,
   } = props;
   return (
     <div className="relative rounded-3xl bg-gray-100 p-6">
       <div className="mb-2 w-1/2 pr-6">
         <ModuleForm
           modules={modules}
-          handlers={wrappedHandlers}
           module={module}
+          onAddModule={onAddModule}
+          updateModuleName={updateModuleName}
         />
         {!!module && (
           <button
@@ -37,7 +65,7 @@ export function Module(props: Props) {
             tabIndex={-1}
             className="absolute right-1 top-1 p-2 text-gray-800 transition-colors hover:text-gray-500"
             onClick={() => {
-              wrappedHandlers.deleteModule(module.id);
+              deleteModule(module.id);
             }}
           >
             <Icon name="Xmark" size={32} />
@@ -47,9 +75,16 @@ export function Module(props: Props) {
       {!!module && (
         <Operations
           module={module}
-          handlers={wrappedHandlers}
           allOperations={allOperations}
           shouldFocusNewOperation={module.id === lastCreatedModuleId}
+          updateOperationName={updateOperationName}
+          deleteOperation={deleteOperation}
+          addOperationAndInitialSchema={addOperationAndInitialSchema}
+          updateOperationSchema={updateOperationSchema}
+          setOperationDescription={setOperationDescription}
+          addOperationError={addOperationError}
+          deleteOperationError={deleteOperationError}
+          setOperationErrorName={setOperationErrorName}
         />
       )}
     </div>

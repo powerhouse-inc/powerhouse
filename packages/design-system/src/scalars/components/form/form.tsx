@@ -95,48 +95,60 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
     },
     ref,
   ) => {
-    const methods = useForm({ defaultValues });
+    const methods = useForm({
+      defaultValues,
+      criteriaMode: "all", // display all errors at once
+    });
     useImperativeHandle(ref, () => methods, [methods]);
 
     useEffect(() => {
       if (resetOnSuccessfulSubmit && methods.formState.isSubmitSuccessful) {
         methods.reset({ ...(defaultValues ?? {}) });
       }
-    }, [resetOnSuccessfulSubmit, methods.formState.isSubmitSuccessful]);
+    }, [
+      resetOnSuccessfulSubmit,
+      methods,
+      methods.formState.isSubmitSuccessful,
+      defaultValues,
+    ]);
 
-    const wrappedOnSubmit = useCallback((rawData: Record<string, any>) => {
-      let data = rawData;
-      // we should make sure that empty fields are submitted as `null`
-      // react-hook-form doesn't submit fields with `undefined` values
-      // so we need to add them to the data as `null`
-      Object.keys(methods.control._fields).forEach((fieldName) => {
-        if (!Object.keys(data).includes(fieldName)) {
-          data[fieldName] = null;
+    const wrappedOnSubmit = useCallback(
+      (rawData: Record<string, any>) => {
+        let data = rawData;
+        // we should make sure that empty fields are submitted as `null`
+        // react-hook-form doesn't submit fields with `undefined` values
+        // so we need to add them to the data as `null`
+        Object.keys(methods.control._fields).forEach((fieldName) => {
+          if (!Object.keys(data).includes(fieldName)) {
+            data[fieldName] = null;
+          }
+        });
+
+        if (submitChangesOnly && !!defaultValues) {
+          // remove fields that didn't change it's value
+          data = Object.fromEntries(
+            Object.entries(rawData).filter(
+              ([fieldName, value]) =>
+                !deepEqual(value, defaultValues[fieldName]),
+            ),
+          );
         }
-      });
 
-      if (submitChangesOnly && !!defaultValues) {
-        // remove fields that didn't change it's value
+        // at this point all the fields that need to be submitted are in the data
+        // we just need to make sure that "empty" values are submitted as `null`
         data = Object.fromEntries(
-          Object.entries(rawData).filter(
-            ([fieldName, value]) => !deepEqual(value, defaultValues[fieldName]),
-          ),
+          Object.entries(data).map(([fieldName, value]) => [
+            fieldName,
+            isEmpty(value) ? null : value,
+          ]),
         );
-      }
 
-      // at this point all the fields that need to be submitted are in the data
-      // we just need to make sure that "empty" values are submitted as `null`
-      data = Object.fromEntries(
-        Object.entries(data).map(([fieldName, value]) => [
-          fieldName,
-          isEmpty(value) ? null : value,
-        ]),
-      );
-
-      // we need to return the promise from the onSubmit callback if there is one
-      // so react-hook-form can wait for it to resolve and update the form state correctly
-      return onSubmit(data);
-    }, []);
+        // we need to return the promise from the onSubmit callback if there is one
+        // so react-hook-form can wait for it to resolve and update the form state correctly
+        return onSubmit(data);
+      },
+      [methods, defaultValues, submitChangesOnly, onSubmit],
+    );
 
     return (
       <FormProvider {...methods}>

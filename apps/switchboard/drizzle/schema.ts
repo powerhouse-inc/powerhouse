@@ -17,5 +17,5 @@ export const searchTable = pgTable(
         name: "searchTable_driveId_documentId_objectId_pk",
       }),
     };
-  }
+  },
 );

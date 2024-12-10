@@ -80,7 +80,6 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.stylisticTypeChecked,
   ...tseslint.configs.strictTypeChecked,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
   ...tailwind.configs["flat/recommended"],
   eslintPluginPrettierRecommended,
   {
@@ -139,15 +138,13 @@ export default tseslint.config(
         ],
       },
     },
-  },
-  {
     rules: {
       ...typescriptRuleOverrides.disabled,
       ...typescriptRuleOverrides.warn,
     },
   },
   {
-    files: ["**/*.{tsx}"],
+    files: ["**/*.tsx"],
     ...reactPlugin.configs.flat.all,
     ...reactPlugin.configs.flat["jsx-runtime"],
     settings: {
@@ -156,12 +153,10 @@ export default tseslint.config(
       },
     },
     plugins: {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      react: reactPlugin,
       "react-hooks": reactHooksPlugin,
     },
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     rules: {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       ...reactHooksPlugin.configs.recommended.rules,
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,

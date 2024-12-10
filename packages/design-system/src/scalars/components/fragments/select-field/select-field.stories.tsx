@@ -14,10 +14,6 @@ const meta: Meta<typeof SelectField> = {
   component: SelectField,
   parameters: {
     layout: "padded",
-    controls: {
-      sort: "requiredFirst",
-      expanded: true,
-    },
   },
   decorators: [
     withForm,
@@ -50,6 +46,18 @@ const meta: Meta<typeof SelectField> = {
       description: "Whether to enable search functionality",
       table: {
         type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    searchPosition: {
+      control: "radio",
+      options: ["Dropdown", "Input"],
+      description:
+        "Position of the search input. Note: 'Input' is only available when multiple=false",
+      table: {
+        type: { summary: '"Dropdown" | "Input"' },
+        defaultValue: { summary: '"Dropdown"' },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -154,16 +162,18 @@ export const WithDefaultValue: Story = {
   args: {
     label: "Preset selection",
     options: defaultOptions,
-    defaultValue: ["Drive"],
+    placeholder: "Select an icon",
+    defaultValue: "Drive",
   },
 };
 
 export const Disabled: Story = {
   args: {
     label: "Disabled field",
-    disabled: true,
     options: defaultOptions,
-    value: ["Drive"],
+    placeholder: "Select an icon",
+    value: "Drive",
+    disabled: true,
   },
 };
 
@@ -172,6 +182,7 @@ export const WithError: Story = {
   args: {
     label: "With error",
     options: defaultOptions,
+    placeholder: "Select icons",
     value: ["Drive"],
     multiple: true,
     errors: ["Please select at least two options"],
@@ -182,6 +193,7 @@ export const WithWarning: Story = {
   args: {
     label: "With warning",
     options: defaultOptions,
+    placeholder: "Select icons",
     value: ["Drive", "Globe"],
     multiple: true,
     warnings: ["Some selected options may not be available in the future"],
@@ -196,6 +208,23 @@ export const Searchable: Story = {
     options: defaultOptions,
     placeholder: "Select an icon",
     searchable: true,
+  },
+};
+
+export const WithSearchInInput: Story = {
+  args: {
+    label: "Select country",
+    description: "Type to search through options",
+    options: [
+      { value: "US", label: "United States" },
+      { value: "GB", label: "United Kingdom" },
+      { value: "FR", label: "France" },
+      { value: "DE", label: "Germany" },
+    ],
+    placeholder: "Search...",
+    optionsCheckmark: "None",
+    searchable: true,
+    searchPosition: "Input",
   },
 };
 
@@ -236,8 +265,8 @@ export const WithoutCheckmarks: Story = {
     label: "No checkmarks",
     description: "Options without checkmark indicators",
     options: defaultOptions,
-    optionsCheckmark: "None",
     placeholder: "Select icons",
+    optionsCheckmark: "None",
   },
 };
 

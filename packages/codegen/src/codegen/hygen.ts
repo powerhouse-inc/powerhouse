@@ -137,3 +137,34 @@ export async function generateEditor(
     { skipFormat },
   );
 }
+
+export async function generateProcessor(
+  name: string,
+  documentTypes: string[],
+  documentTypesMap: Record<string, string>,
+  dir: string,
+  documentModelsDir: string,
+  type = "analytics",
+  { skipFormat = false } = {},
+) {
+  // Generate the singular files for the document model logic
+  const processorType = type === "analytics" ? "analytics" : "operational";
+
+  await run(
+    [
+      "powerhouse",
+      `generate-processor-${processorType}`,
+      "--name",
+      name,
+      "--root-dir",
+      dir,
+      "--document-types",
+      documentTypes.join(","),
+      "--document-types-map",
+      JSON.stringify(documentTypesMap),
+      "--document-models-dir",
+      documentModelsDir,
+    ],
+    { skipFormat },
+  );
+}

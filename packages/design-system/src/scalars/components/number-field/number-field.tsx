@@ -7,14 +7,17 @@ import { InputNumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { withFieldValidation } from "../fragments/with-field-validation";
-import { validateIsBigInt, validatePositive } from "./number-field-validations";
+import {
+  validateIsBigInt,
+  validateNumericType,
+} from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
 import { getDisplayValue, regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
-  value?: string | number;
-  defaultValue?: string | number;
+  value?: number | bigint;
+  defaultValue?: number | bigint;
   className?: string;
   pattern?: RegExp;
 }
@@ -46,13 +49,17 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     const generatedId = useId();
     const id = propId ?? generatedId;
     const isIncrementDisabled =
-      maxValue !== undefined && Number(value) >= maxValue;
-    const isDecrementDisabled =
-      minValue !== undefined && Number(value) <= minValue;
+      maxValue !== undefined &&
+      (typeof value === "bigint"
+        ? value >= BigInt(maxValue)
+        : Number(value) >= maxValue);
 
-    // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints,
-    // Otherwise sets to "number" for standard numeric input.
-    const inputType = isBigInt ? "text" : "number";
+    const isDecrementDisabled =
+      minValue !== undefined &&
+      (typeof value === "bigint"
+        ? value <= BigInt(minValue)
+        : Number(value) <= minValue);
+
     const showSteps = step !== 0;
 
     // Prevent to write invalid characters
@@ -66,62 +73,87 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         e.preventDefault();
       }
     };
-
     const handleChangeSteps = (
       e: React.MouseEvent<HTMLButtonElement>,
       operation: "increment" | "decrement",
     ) => {
       e.preventDefault();
 
-      let newValue: string | number;
+      let newValue: number | bigint;
 
       if (isBigInt) {
         const currentValue = BigInt(value ?? 0);
         const adjustment =
           BigInt(step || 1) *
           (operation === "increment" ? BigInt(1) : BigInt(-1));
-        newValue = (currentValue + adjustment).toString(); // Convertir a string para el input
+        newValue = currentValue + adjustment;
       } else {
         const currentValue = Number(value ?? defaultValue ?? 0);
         const adjustment = (step || 1) * (operation === "increment" ? 1 : -1);
         newValue = currentValue + adjustment;
       }
 
-      // Validación de límites para valores que no sean BigInt
       if (!isBigInt) {
         if (maxValue !== undefined && Number(newValue) > maxValue) return;
         if (minValue !== undefined && Number(newValue) < minValue) return;
       }
-      // Crear el evento nativo para disparar onChange
+
+      const formattedValue = isBigInt
+        ? BigInt(newValue)
+        : getDisplayValue(newValue, {
+            isBigInt,
+            trailingZeros,
+            precision,
+          });
+
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
+
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: newValue },
+        value: { value: formattedValue },
         writable: false,
       });
+
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      const displayValue = getDisplayValue(String(value), {
-        isBigInt,
-        trailingZeros,
-        precision,
-      });
+      let numericValue: number | bigint;
+      const inputValue = e.target.value;
+
+      if (isBigInt) {
+        const normalizedValue = inputValue.replace(/[^\d-]/g, ""); // Elimina caracteres no numéricos
+        numericValue = BigInt(normalizedValue);
+      } else {
+        numericValue = Number(inputValue);
+        // Keep the value
+        if (isNaN(numericValue)) {
+          numericValue = value || 0;
+        }
+      }
+
+      //Format the value for BigInt y precisión
+      const formattedValue = isBigInt
+        ? BigInt(numericValue)
+        : getDisplayValue(numericValue, {
+            isBigInt,
+            trailingZeros,
+            precision,
+          });
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: displayValue },
+        value: { value: formattedValue },
         writable: false,
       });
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+
       onBlur?.(e);
     };
-
     return (
       <FormGroup>
         {label && (
@@ -141,16 +173,16 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             name={name}
             className={cn(className, showSteps && "pr-8")}
             pattern={isBigInt ? regex.toString() : pattern?.toString()}
-            type={inputType}
+            type="number"
             min={minValue}
             max={maxValue}
             aria-valuemin={minValue}
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
             onKeyDown={blockInvalidChar}
-            value={value}
+            value={isBigInt ? value?.toString() : Number(value)}
             onBlur={handleBlur}
-            defaultValue={defaultValue}
+            defaultValue={isBigInt ? value?.toString() : Number(value)}
             onChange={onChange}
             onPaste={blockInvalidPaste}
             ref={ref}
@@ -167,7 +199,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                   size={10}
                   name="ChevronDown"
                   className={cn(
-                    "rotate-180 text-gray-700",
+                    "rotate-180 text-gray-700 dark:text-gray-300",
                     isIncrementDisabled && "cursor-not-allowed",
                   )}
                 />
@@ -181,7 +213,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                   size={10}
                   name="ChevronDown"
                   className={cn(
-                    " items-center justify-center text-gray-700",
+                    " items-center justify-center text-gray-700 dark:text-gray-300",
                     isDecrementDisabled && "cursor-not-allowed",
                   )}
                 />
@@ -201,8 +233,8 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
   NumberFieldRaw,
   {
     validations: {
-      _positive: validatePositive,
       _isBigInt: validateIsBigInt,
+      _numericType: validateNumericType,
     },
   },
 );

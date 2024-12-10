@@ -1,11 +1,12 @@
 {
   "name": "@powerhousedao/switchboard-gui",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "lint": "eslint",
     "preview": "vite preview",
     "prepack": "npm run build"
   },
@@ -22,7 +23,6 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.1",
-    "typescript": "^5.5.3",
     "vite": "^5.4.8"
   }
 }

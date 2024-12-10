@@ -7,7 +7,9 @@ export type RWADeleteItemModalProps = ComponentPropsWithoutRef<typeof Modal> & {
   readonly dependentItemProps: DependentItemProps;
 };
 
-export function _RWADeleteItemModal(props: RWADeleteItemModalProps) {
+export const RWADeleteItemModal = memo(function RWADeleteItemModal(
+  props: RWADeleteItemModalProps,
+) {
   const { tableName, dependentItemProps, onOpenChange, open } = props;
 
   const tableLabel = tableLabels[tableName].toLowerCase();
@@ -62,6 +64,4 @@ export function _RWADeleteItemModal(props: RWADeleteItemModalProps) {
       </div>
     </Modal>
   );
-}
-
-export const RWADeleteItemModal = memo(_RWADeleteItemModal);
+});

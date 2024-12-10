@@ -1,15 +1,20 @@
 import { Module } from "document-model/document-model";
-import { DocumentActionHandlers } from "../types";
 import { toLowercaseSnakeCase } from "../schemas";
 import { TextField } from "./text-field";
 
 type Props = {
-  handlers: DocumentActionHandlers;
   modules?: Module[];
   module?: Module;
+  onAddModule: (name: string) => Promise<string | undefined>;
+  updateModuleName: (id: string, name: string) => void;
 };
 
-export function ModuleForm({ module, handlers, modules = [] }: Props) {
+export function ModuleForm({
+  module,
+  onAddModule,
+  updateModuleName,
+  modules = [],
+}: Props) {
   const isEdit = !!module;
   const moduleNames = modules.map((m) => m.name);
 
@@ -19,10 +24,10 @@ export function ModuleForm({ module, handlers, modules = [] }: Props) {
 
     if (isEdit) {
       if (formattedName !== module.name) {
-        handlers.updateModuleName(module.id, formattedName);
+        updateModuleName(module.id, formattedName);
       }
     } else {
-      await handlers.addModule(formattedName);
+      await onAddModule(formattedName);
     }
   };
 

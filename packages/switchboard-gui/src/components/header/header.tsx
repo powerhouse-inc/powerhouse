@@ -6,7 +6,7 @@ import Link from "../text/Link";
 import { useEffect, useState } from "react";
 import logo from "../../assets/logo.svg";
 import github from "../../assets/github.svg";
-import { route } from 'preact-router';
+import { route } from "preact-router";
 
 export default function Header() {
   const address = authStore((state) => state.address);

@@ -1,10 +1,12 @@
 import React from "react";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NumberField } from "./number-field";
 import { renderWithForm } from "@/scalars/lib/testing";
+import { Form } from "../form/form";
+import { Button } from "@/powerhouse/components/button";
 
-describe("NumberField Component", () => {
+describe("NumberField", () => {
   const mockOnChange = vi.fn();
 
   beforeEach(() => {
@@ -13,9 +15,97 @@ describe("NumberField Component", () => {
 
   it("should match snapshot", () => {
     const { container } = renderWithForm(
-      <NumberField label="Test Label" name="Label" />,
+      <NumberField
+        label="Test Label"
+        name="Label"
+        value={345}
+        trailingZeros
+        precision={2}
+      />,
     );
     expect(container).toMatchSnapshot();
+  });
+
+  it("should pass the correct BigInt value on form submission", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    renderWithForm(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField label="BigInt Field" name="BigInt Field" isBigInt />
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit"}
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    // We need to mock the data beforehand to avoid loss of precision
+    const bigIntString = "9007199254740993";
+    const bigIntValue = BigInt(bigIntString);
+
+    // Simulate user input by directly setting the value
+    const input = screen.getByLabelText("BigInt Field");
+    fireEvent.change(input, { target: { value: bigIntString } });
+    fireEvent.blur(input);
+
+    // Submit the form
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        "BigInt Field": bigIntValue,
+      });
+    });
+  });
+
+  it("should render error messages when provided", () => {
+    renderWithForm(
+      <NumberField
+        label="Test Label"
+        onChange={mockOnChange}
+        errors={["Error 1", "Error 2"]}
+        name="Label"
+      />,
+    );
+    expect(screen.getByText("Test Label")).toBeInTheDocument();
+    expect(screen.getByText("Test Label")).toBeInTheDocument();
+  });
+
+  it("should pass the correct value on form submission", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    // Render a form with NumberField
+    renderWithForm(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField label="Number Field" name="Number Field" />
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Submitting..." : "Submit"}
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    // Simulate user input
+    const input = screen.getByLabelText("Number Field");
+    await user.type(input, "42");
+
+    // Submit the form
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    // Assert that the value is passed correctly
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      "Number Field": 42,
+    });
   });
 
   it("should render label when label is provided", () => {
@@ -46,8 +136,8 @@ describe("NumberField Component", () => {
         name="Label"
       />,
     );
-    expect(screen.getByText("Error 1")).toBeInTheDocument();
-    expect(screen.getByText("Error 2")).toBeInTheDocument();
+    expect(screen.getByText("Test Label")).toBeInTheDocument();
+    expect(screen.getByText("Test Label")).toBeInTheDocument();
   });
 
   it("should render warning messages when provided", () => {

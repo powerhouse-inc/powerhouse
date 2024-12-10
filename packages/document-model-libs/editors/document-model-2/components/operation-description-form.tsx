@@ -1,18 +1,17 @@
 import { Operation } from "document-model/document-model";
-import { DocumentActionHandlers } from "../types";
 import { TextField } from "./text-field";
 import { useEffect, useRef } from "react";
 
 type Props = {
   operation: Operation;
-  handlers: DocumentActionHandlers;
   focusOnMount?: boolean;
+  setOperationDescription: (id: string, description: string) => void;
 };
 
 export function OperationDescriptionForm({
   operation,
-  handlers,
   focusOnMount,
+  setOperationDescription,
 }: Props) {
   const textFieldRef = useRef<{ focus: () => void } | null>(null);
 
@@ -28,7 +27,7 @@ export function OperationDescriptionForm({
       name="description"
       value={operation.description}
       onSubmit={(newDescription) =>
-        handlers.setOperationDescription(operation.id, newDescription)
+        setOperationDescription(operation.id, newDescription)
       }
       label="Operation description"
       allowEmpty

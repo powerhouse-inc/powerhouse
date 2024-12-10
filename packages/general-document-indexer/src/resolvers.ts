@@ -7,7 +7,7 @@ export const resolvers = {
     search: async (
       _: null,
       { title, type }: { title: string; type: string },
-      { db }: { db: PgDatabase<any, any, any> }
+      { db }: { db: PgDatabase<any, any, any> },
     ) => {
       const results = await db
         .select()
@@ -15,8 +15,8 @@ export const resolvers = {
         .where(
           or(
             like(searchTable.title, `%${title}%`),
-            like(searchTable.type, `%${type}%`)
-          )
+            like(searchTable.type, `%${type}%`),
+          ),
         );
 
       return results.map((result) => ({

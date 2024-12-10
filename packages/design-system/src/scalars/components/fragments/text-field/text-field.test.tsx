@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TextField } from "./text-field";
 import { renderWithForm } from "../../../lib/testing";
@@ -45,11 +45,13 @@ describe("TextField", () => {
     expect(screen.getByRole("textbox")).toBeDisabled();
   });
 
-  it("should display error messages", () => {
+  it("should display error messages", async () => {
     renderWithForm(
       <TextField name="name" label="Name" errors={["Name is required"]} />,
     );
-    expect(screen.getByText("Name is required")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Name is required")).toBeInTheDocument(),
+    );
   });
 
   it("should display warning messages", () => {

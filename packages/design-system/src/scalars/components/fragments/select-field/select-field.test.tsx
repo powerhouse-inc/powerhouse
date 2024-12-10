@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
 import { SelectField } from "./select-field";
@@ -114,8 +114,24 @@ describe("SelectField Component", () => {
     expect(screen.queryByText("Option 2")).not.toBeInTheDocument();
   });
 
+  // Search Position Tests
+  it("should render search input in combobox when searchPosition is 'Input'", () => {
+    renderWithForm(
+      <SelectField
+        name="select"
+        options={defaultOptions}
+        searchable
+        searchPosition="Input"
+      />,
+    );
+
+    const searchInput = screen.getByRole("combobox");
+    expect(searchInput).toBeInTheDocument();
+    expect(searchInput).toHaveAttribute("type", "text");
+  });
+
   // Validation and Error Handling Tests
-  it("should display error messages", () => {
+  it("should display error messages", async () => {
     renderWithForm(
       <SelectField
         name="select"
@@ -123,7 +139,9 @@ describe("SelectField Component", () => {
         errors={["This field is required"]}
       />,
     );
-    expect(screen.getByText("This field is required")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("This field is required")).toBeInTheDocument(),
+    );
   });
 
   it("should display warning messages", () => {
@@ -167,7 +185,7 @@ describe("SelectField Component", () => {
   });
 
   // Accessibility Tests
-  it("should have correct ARIA attributes", () => {
+  it("should have correct ARIA attributes", async () => {
     renderWithForm(
       <SelectField
         name="select"
@@ -180,19 +198,8 @@ describe("SelectField Component", () => {
 
     const select = screen.getByRole("combobox");
     expect(select).toHaveAttribute("aria-required", "true");
-    expect(select).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() => expect(select).toHaveAttribute("aria-invalid", "true"));
     expect(select).toHaveAttribute("aria-expanded", "false");
-  });
-
-  // Modal Behavior Tests
-  it("should render as modal when asModal is true", async () => {
-    const user = userEvent.setup();
-    renderWithForm(
-      <SelectField name="select" options={defaultOptions} asModal />,
-    );
-
-    await user.click(screen.getByRole("combobox"));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   // Multiple Selection Tests

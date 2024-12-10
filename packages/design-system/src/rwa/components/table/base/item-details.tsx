@@ -14,7 +14,7 @@ import { memo, useCallback } from "react";
 type Props = {
   readonly tableName: TableName;
 };
-function _ItemDetails(props: Props) {
+export const ItemDetails = memo(function ItemDetails(props: Props) {
   const { tableName } = props;
   const { showModal, closeModal } = useModal();
 
@@ -182,6 +182,4 @@ function _ItemDetails(props: Props) {
       {additionalInputs}
     </div>
   );
-}
-
-export const ItemDetails = memo(_ItemDetails);
+});

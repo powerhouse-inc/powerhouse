@@ -15,7 +15,7 @@ const TokenForm = () => {
   const { createSession } = useAuth();
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     if (!e.target) {
       return;
@@ -34,8 +34,8 @@ const TokenForm = () => {
       await createSession(
         formData.name !== "" ? formData.name : "Default Token",
         parseInt(formData.duration !== "" ? formData.duration : "60"),
-        formData.allowedOrigin !== "" ? formData.allowedOrigin : "*"
-      )
+        formData.allowedOrigin !== "" ? formData.allowedOrigin : "*",
+      ),
     );
     setShowModal(true);
   };

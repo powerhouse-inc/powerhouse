@@ -13,7 +13,7 @@ export const getDriveBySlug = async (db: NodePgDatabase, slug: string) => {
 export const upsertDrive = async (
   db: NodePgDatabase,
   id: string,
-  drive: DocumentDriveStorage
+  drive: DocumentDriveStorage,
 ) => {
   const [result] = await db
     .update(drivesTable)
@@ -37,7 +37,7 @@ export const createDocumentQuery = async (
   db: NodePgDatabase,
   driveId: string,
   documentId: string,
-  document: DocumentStorage
+  document: DocumentStorage,
 ) => {
   return db.insert(documentsTable).values({
     name: document.name,

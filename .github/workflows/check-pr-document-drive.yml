@@ -73,14 +73,15 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v4
         with:
+          version: 9
           run_install: false
 
       - name: Install Dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install
 
       - name: Prisma
         run: pnpm prisma generate && pnpm prisma db push
         working-directory: packages/document-drive
 
       - name: Test
-        run: npx nx run document-drive:test
+        run: pnpm nx run document-drive:test

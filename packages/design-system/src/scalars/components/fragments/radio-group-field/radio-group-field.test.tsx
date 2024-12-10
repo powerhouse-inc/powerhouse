@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
 import { RadioGroupField } from "./radio-group-field";
@@ -100,7 +100,7 @@ describe("RadioGroupField Component", () => {
     expect(screen.getByText("Warning message")).toBeInTheDocument();
   });
 
-  it("should show an error when provided", () => {
+  it("should show an error when provided", async () => {
     renderWithForm(
       <RadioGroupField
         name="radio-group"
@@ -110,8 +110,12 @@ describe("RadioGroupField Component", () => {
       />,
     );
     const radioGroup = screen.getByRole("radiogroup");
-    expect(radioGroup).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByText("Error message")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(radioGroup).toHaveAttribute("aria-invalid", "true"),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("Error message")).toBeInTheDocument(),
+    );
   });
 
   it("should have aria-label when no label is provided", () => {
@@ -218,7 +222,7 @@ describe("RadioGroupField Component", () => {
     expect(screen.getByText("Warning 2")).toBeInTheDocument();
   });
 
-  it("should handle multiple errors", () => {
+  it("should handle multiple errors", async () => {
     renderWithForm(
       <RadioGroupField
         name="radio-group"
@@ -227,11 +231,13 @@ describe("RadioGroupField Component", () => {
         options={[{ label: "Option 1", value: "1" }]}
       />,
     );
-    expect(screen.getByText("Error 1")).toBeInTheDocument();
-    expect(screen.getByText("Error 2")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Error 1")).toBeInTheDocument();
+      expect(screen.getByText("Error 2")).toBeInTheDocument();
+    });
   });
 
-  it("should show both warnings and errors when provided", () => {
+  it("should show both warnings and errors when provided", async () => {
     renderWithForm(
       <RadioGroupField
         name="radio-group"
@@ -242,6 +248,8 @@ describe("RadioGroupField Component", () => {
       />,
     );
     expect(screen.getByText("Warning message")).toBeInTheDocument();
-    expect(screen.getByText("Error message")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Error message")).toBeInTheDocument(),
+    );
   });
 });

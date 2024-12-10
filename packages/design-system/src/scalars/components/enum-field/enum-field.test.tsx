@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
 import { EnumField } from "./enum-field";
@@ -51,9 +51,11 @@ describe("EnumField Component", () => {
     expect(screen.getByText("Warning message")).toBeInTheDocument();
   });
 
-  it("should render error messages when provided", () => {
+  it("should render error messages when provided", async () => {
     renderWithForm(<EnumField {...defaultProps} errors={["Error message"]} />);
-    expect(screen.getByText("Error message")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Error message")).toBeInTheDocument(),
+    );
   });
 
   it("should handle value changes in RadioGroup variant", async () => {

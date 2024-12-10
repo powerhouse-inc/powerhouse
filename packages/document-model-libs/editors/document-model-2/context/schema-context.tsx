@@ -1,173 +1,172 @@
-import { Operation } from "document-model/document-model";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import {
   hiddenQueryTypeDefDoc,
-  typeDefsDoc,
   initialSchema,
-  specialDocIds,
+  typeDefsDoc,
 } from "../constants/documents";
-import { buildSchema, GraphQLSchema, parse } from "graphql";
-import { isDocumentString } from "@graphql-tools/utils";
-import { validateSDL } from "graphql/validation/validate";
+import {
+  buildASTSchema,
+  buildSchema,
+  DefinitionNode,
+  DocumentNode,
+  GraphQLSchema,
+  Kind,
+  parse,
+  printSchema,
+  validate,
+} from "graphql";
+import { createDefaultRules, isDocumentString } from "@graphql-tools/utils";
 
-type TSchemaContext = {
-  sharedSchema: GraphQLSchema;
-  getDocument: (id: string) => string;
-  updateSharedSchema: (
-    id: string,
-    newDoc: string,
-  ) =>
-    | {
-        success: true;
-      }
-    | {
-        success: false;
-        errors: string;
-      };
-  handleSchemaErrors: (
-    id: string,
-    newDoc: string,
-  ) =>
-    | {
-        success: true;
-        schema: GraphQLSchema;
-      }
-    | {
-        success: false;
-        errors: string;
-      };
-};
+/* Required to make the schema "count" as an actual schema */
+const hiddenQueryTypeDefinitions = parse(hiddenQueryTypeDefDoc).definitions;
+/* Scalar definitions from the Powerhouse standard library */
+const standardLibCustomScalarDefinitions = parse(typeDefsDoc).definitions;
+/* These are always included when updating the shared schema, because they do not change */
+const alwaysIncludedDefinitions = [
+  ...hiddenQueryTypeDefinitions,
+  ...standardLibCustomScalarDefinitions,
+];
+/* We use almost all of the standard graphql rules, but not the ExecutableDefinitionsRule because our schemas are not intended to be executed */
+const rules = createDefaultRules().filter(
+  (rule) => rule.name !== "ExecutableDefinitionsRule",
+);
+
+/* The shared schema is just a string to make memoization easier */
+type TSchemaContext = string;
 
 type TSchemaContextProps = {
-  globalStateSchema: string;
-  localStateSchema: string;
-  operations: Operation[];
+  globalStateSchemaSdl: string;
+  localStateSchemaSdl: string;
+  operationSchemasSdl: string;
   children: React.ReactNode;
 };
 
-export const SchemaContext = createContext<TSchemaContext>({
-  sharedSchema: initialSchema,
-  getDocument: () => "",
-  updateSharedSchema: () => ({ success: true }),
-  handleSchemaErrors: () => ({ success: true, schema: initialSchema }),
-});
-export function SchemaContextProvider(props: TSchemaContextProps) {
-  const { children, globalStateSchema, localStateSchema, operations } = props;
-  const [sharedSchema, setSharedSchema] = useState(initialSchema);
-  const [documents, setDocuments] = useState(() => {
-    const newDocuments = new Map<string, string>();
-    newDocuments.set(specialDocIds.hiddenQueryTypeDef, hiddenQueryTypeDefDoc);
-    newDocuments.set(specialDocIds.standardLib, typeDefsDoc);
-    newDocuments.set(specialDocIds.global, globalStateSchema);
-    newDocuments.set(specialDocIds.local, localStateSchema);
-    for (const operation of operations) {
-      if (operation.schema) {
-        newDocuments.set(operation.id, operation.schema);
+/* 
+ Makes one SDL string from all of the definitions in the state and operation schemas
+ Uses try catch to prevent errors from breaking the editor
+*/
+function makeSharedSchemaSdl(
+  existingSchemaSdl: string,
+  globalStateSchemaSdl?: string,
+  localStateSchemaSdl?: string,
+  operationSchemasSdl?: string,
+) {
+  try {
+    const existingSchema = buildSchema(existingSchemaSdl);
+    const sdls = [
+      globalStateSchemaSdl,
+      localStateSchemaSdl,
+      operationSchemasSdl,
+    ].filter(Boolean);
+    const asts = sdls.map((sdl) => safeParseSdl(sdl)).filter(Boolean);
+    const documentNode = makeSafeDocumentNode(existingSchema, asts);
+    const schemaSdl = printSchema(buildASTSchema(documentNode));
+    return schemaSdl;
+  } catch (error) {
+    console.debug("in make shared schema", error);
+    return existingSchemaSdl;
+  }
+}
+
+/* 
+ Combines all of the definitions in the state and operation schemas into one document node
+ Uses try catch to prevent errors from breaking the editor
+*/
+function makeSafeDocumentNode(schema: GraphQLSchema, asts: DocumentNode[]) {
+  try {
+    const definitions: DefinitionNode[] = [...alwaysIncludedDefinitions];
+    for (const ast of asts) {
+      for (const definition of ast.definitions) {
+        const definitionDocumentNode: DocumentNode = {
+          kind: Kind.DOCUMENT,
+          definitions: [definition],
+        };
+        if (safeValidateAst(schema, definitionDocumentNode)) {
+          definitions.push(definition);
+        }
       }
     }
-    return newDocuments;
-  });
+    const documentNode: DocumentNode = {
+      kind: Kind.DOCUMENT,
+      definitions,
+    };
+    return documentNode;
+  } catch (error) {
+    console.debug("in make safe document node", error);
+    return {
+      kind: Kind.DOCUMENT,
+      definitions: alwaysIncludedDefinitions,
+    } as DocumentNode;
+  }
+}
+
+/* 
+ Validates an ast against the schema
+ Uses try catch to prevent errors from breaking the editor
+*/
+function safeValidateAst(schema: GraphQLSchema, ast: DocumentNode) {
+  try {
+    const errors = validate(schema, ast, rules);
+    return !errors.length;
+  } catch (error) {
+    console.debug("in safe validate", error);
+    return false;
+  }
+}
+
+/* 
+ Parses an SDL string into an ast
+ Uses try catch abd checks if the SDL is a valid document string to prevent errors from breaking the editor
+*/
+function safeParseSdl(sdl: string) {
+  try {
+    if (!sdl || !isDocumentString(sdl)) return null;
+    return parse(sdl);
+  } catch (error) {
+    console.debug("in safe parse", error);
+    return null;
+  }
+}
+
+export const SchemaContext = createContext<TSchemaContext>(
+  printSchema(initialSchema),
+);
+
+/* 
+ Provides the shared schema to the editor
+ We use the sdl string form to make memoization easier
+*/
+export function SchemaContextProvider(props: TSchemaContextProps) {
+  const {
+    children,
+    globalStateSchemaSdl,
+    localStateSchemaSdl,
+    operationSchemasSdl,
+  } = props;
+  const [sharedSchemaSdl, setSharedSchemaSdl] = useState(() =>
+    makeSharedSchemaSdl(
+      printSchema(initialSchema),
+      globalStateSchemaSdl,
+      localStateSchemaSdl,
+      operationSchemasSdl,
+    ),
+  );
 
   useEffect(() => {
-    setDocuments((prev) => {
-      const newDocuments = new Map<string, string>(prev);
-      newDocuments.set(specialDocIds.hiddenQueryTypeDef, hiddenQueryTypeDefDoc);
-      newDocuments.set(specialDocIds.standardLib, typeDefsDoc);
-      newDocuments.set(specialDocIds.global, globalStateSchema);
-      newDocuments.set(specialDocIds.local, localStateSchema);
-      for (const operation of operations) {
-        if (operation.schema) {
-          newDocuments.set(operation.id, operation.schema);
-        }
-      }
-      return newDocuments;
-    });
-  }, [globalStateSchema, localStateSchema, operations]);
-
-  const handleSchemaErrors: TSchemaContext["handleSchemaErrors"] = useCallback(
-    (id: string, newDoc: string) => {
-      if (!isDocumentString(newDoc))
-        return { success: false, errors: "Invalid document string" };
-      const newDocuments = new Map(documents);
-      newDocuments.set(id, newDoc);
-
-      try {
-        // Track starting line of the document we're validating
-        let targetDocStartLine = 1;
-        for (const [docId, content] of newDocuments.entries()) {
-          if (docId === id) break;
-          targetDocStartLine += content.split("\n").length;
-        }
-        const targetDocEndLine = targetDocStartLine + newDoc.split("\n").length;
-
-        const newSchemaString = Array.from(newDocuments.values()).join("\n");
-        const documentNode = parse(newSchemaString);
-
-        const errors = validateSDL(documentNode);
-        if (errors.length > 0) {
-          // Filter errors to only those within our document's line range
-          const relevantErrors = errors.filter((error) => {
-            const errorLine = error.locations?.[0]?.line;
-            return (
-              errorLine != null &&
-              errorLine >= targetDocStartLine &&
-              errorLine < targetDocEndLine
-            );
-          });
-
-          return {
-            success: false,
-            errors: relevantErrors.map((e) => e.message).join("\n"),
-          };
-        }
-
-        const newSharedSchema = buildSchema(newSchemaString);
-        return {
-          success: true,
-          schema: newSharedSchema,
-        };
-      } catch (e) {
-        return {
-          success: false,
-          errors: (e as Error).message,
-        };
-      }
-    },
-    [documents],
-  );
-
-  const updateSharedSchema: TSchemaContext["updateSharedSchema"] = useCallback(
-    (id: string, newDoc: string) => {
-      const result = handleSchemaErrors(id, newDoc);
-
-      if (result.success) {
-        setSharedSchema(result.schema);
-      }
-      return result;
-    },
-    [handleSchemaErrors],
-  );
-
-  const value = useMemo(
-    () => ({
-      sharedSchema,
-      documents,
-      getDocument: (id: string) => documents.get(id) ?? "",
-      handleSchemaErrors,
-      updateSharedSchema,
-    }),
-    [sharedSchema, documents, handleSchemaErrors],
-  );
+    setSharedSchemaSdl((prev) =>
+      makeSharedSchemaSdl(
+        prev,
+        globalStateSchemaSdl,
+        localStateSchemaSdl,
+        operationSchemasSdl,
+      ),
+    );
+  }, [globalStateSchemaSdl, localStateSchemaSdl, operationSchemasSdl]);
 
   return (
-    <SchemaContext.Provider value={value}>{children}</SchemaContext.Provider>
+    <SchemaContext.Provider value={sharedSchemaSdl}>
+      {children}
+    </SchemaContext.Provider>
   );
 }
 

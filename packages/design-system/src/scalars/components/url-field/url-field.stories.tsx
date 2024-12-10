@@ -29,6 +29,14 @@ const meta: Meta<typeof UrlField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    maxURLLength: {
+      control: "number",
+      description: "Maximum length of the URL",
+      table: {
+        type: { summary: "number" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     showIcon: {
       control: "boolean",
       description: "Show the protocol icon",

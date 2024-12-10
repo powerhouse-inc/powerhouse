@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Command,
   CommandEmpty,
@@ -17,6 +17,8 @@ interface ContentProps {
   optionsCheckmark: "Auto" | "None";
   multiple?: boolean;
   searchable?: boolean;
+  searchPosition?: "Dropdown" | "Input";
+  searchValue?: string;
   toggleOption: (value: string) => void;
   toggleAll: () => void;
 }
@@ -27,9 +29,18 @@ export const Content: React.FC<ContentProps> = ({
   optionsCheckmark,
   multiple,
   searchable,
+  searchPosition,
+  searchValue = "",
   toggleOption,
   toggleAll,
 }) => {
+  const filteredOptions = useMemo(() => {
+    if (!searchValue) return options;
+    return options.filter((option) =>
+      option.label.toLowerCase().includes(searchValue.toLowerCase()),
+    );
+  }, [options, searchValue]);
+
   const renderIcon = (
     IconComponent:
       | IconName
@@ -64,7 +75,7 @@ export const Content: React.FC<ContentProps> = ({
 
   return (
     <Command>
-      {searchable && (
+      {searchable && searchPosition === "Dropdown" && (
         <CommandInput
           placeholder="Search..."
           className="text-gray-900 dark:text-gray-50"
@@ -86,7 +97,7 @@ export const Content: React.FC<ContentProps> = ({
                     "flex size-4 items-center justify-center rounded border",
                     "border-gray-700 dark:border-gray-400",
                     selectedValues.length ===
-                      options.filter((opt) => !opt.disabled).length
+                      filteredOptions.filter((opt) => !opt.disabled).length
                       ? "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black"
                       : "opacity-50 [&_svg]:invisible",
                   )}
@@ -95,14 +106,14 @@ export const Content: React.FC<ContentProps> = ({
                 </div>
                 <span className="text-[14px] font-semibold leading-4 text-gray-900 dark:text-gray-50">
                   {selectedValues.length ===
-                  options.filter((opt) => !opt.disabled).length
+                  filteredOptions.filter((opt) => !opt.disabled).length
                     ? "Deselect All"
                     : "Select All"}
                 </span>
               </div>
             </CommandItem>
           )}
-          {options.map((option) => {
+          {filteredOptions.map((option) => {
             const isSelected = selectedValues.includes(option.value);
 
             return (
@@ -118,39 +129,36 @@ export const Content: React.FC<ContentProps> = ({
                     "bg-gray-300 dark:bg-gray-700",
                 )}
               >
-                {optionsCheckmark === "Auto" && (
-                  <>
-                    {multiple ? (
-                      <div
-                        className={cn(
-                          "flex size-4 items-center justify-center rounded border",
-                          "border-gray-700 dark:border-gray-400",
-                          isSelected
-                            ? "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black"
-                            : "opacity-50 [&_svg]:invisible",
-                          option.disabled && "opacity-75",
-                        )}
-                      >
-                        <Icon name="Checkmark" size={16} />
-                      </div>
-                    ) : (
-                      <div
-                        className={cn(
-                          "relative size-4 rounded-full border",
-                          isSelected
-                            ? "border-gray-900 dark:border-gray-400"
-                            : "border-gray-800 dark:border-gray-400",
-                          "bg-transparent dark:bg-transparent",
-                          option.disabled && "opacity-75",
-                        )}
-                      >
-                        {isSelected && (
-                          <div className="absolute left-1/2 top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-900 dark:bg-gray-400" />
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+                {optionsCheckmark === "Auto" &&
+                  (multiple ? (
+                    <div
+                      className={cn(
+                        "flex size-4 items-center justify-center rounded border",
+                        "border-gray-700 dark:border-gray-400",
+                        isSelected
+                          ? "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black"
+                          : "opacity-50 [&_svg]:invisible",
+                        option.disabled && "opacity-75",
+                      )}
+                    >
+                      <Icon name="Checkmark" size={16} />
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "relative size-4 rounded-full border",
+                        isSelected
+                          ? "border-gray-900 dark:border-gray-400"
+                          : "border-gray-800 dark:border-gray-400",
+                        "bg-transparent dark:bg-transparent",
+                        option.disabled && "opacity-75",
+                      )}
+                    >
+                      {isSelected && (
+                        <div className="absolute left-1/2 top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-900 dark:bg-gray-400" />
+                      )}
+                    </div>
+                  ))}
                 {renderIcon(option.icon, option.disabled)}
                 <span
                   className={cn(

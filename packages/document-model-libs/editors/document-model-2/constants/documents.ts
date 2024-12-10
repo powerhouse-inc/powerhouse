@@ -18,3 +18,5 @@ export const specialDocIds = {
   global: "global",
   local: "local",
 } as const;
+
+export const updateTimeout = 5000;

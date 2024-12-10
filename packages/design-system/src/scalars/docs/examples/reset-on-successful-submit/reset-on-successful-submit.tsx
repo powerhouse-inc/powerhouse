@@ -1,5 +1,6 @@
 import { Button } from "@/powerhouse/components/button";
 import { Form, NumberField, StringField } from "../../../components";
+import { IdField } from "@/scalars/components/id-field";
 
 const FormWithResetOnSuccessfulSubmit = () => {
   return (
@@ -14,6 +15,7 @@ const FormWithResetOnSuccessfulSubmit = () => {
       }}
     >
       <div className="flex flex-col gap-2">
+        <IdField />
         <StringField
           name="example"
           placeholder="Type something"

@@ -1,12 +1,13 @@
 import { makeMinimalObjectFromSDL, makeInitialSchemaDoc, cn } from "../utils";
-import { GraphqlEditor } from "./graphql-editor";
-import { JSONEditor } from "./json-editor";
+import { GraphqlEditor } from "./code-editors/graphql-editor";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
-import { DocumentActionHandlers } from "../types";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSchemaContext } from "../context/schema-context";
-import { specialDocIds, typeDefsDoc } from "../constants";
+import { typeDefsDoc } from "../constants";
 import { Button } from "./button";
+import { ensureValidStateSchemaName } from "../utils/linting";
+import { Scope } from "../types";
+import { JSONEditor } from "./code-editors";
 
 type Props = {
   modelName: string;
@@ -14,31 +15,64 @@ type Props = {
   localStateSchema: string;
   globalStateInitialValue: string;
   localStateInitialValue: string;
-  handlers: DocumentActionHandlers;
+  setStateSchema: (doc: string, scope: Scope) => void;
+  setInitialState: (doc: string, scope: Scope) => void;
 };
 
 type StateEditorProps = {
+  modelName: string;
   stateSchema: string;
   initialValue: string;
-  handlers: DocumentActionHandlers;
-  scope: "global" | "local";
+  setStateSchema: (doc: string, scope: Scope) => void;
+  setInitialState: (doc: string, scope: Scope) => void;
+  scope: Scope;
 };
 
 function StateEditor({
+  modelName,
   stateSchema,
   initialValue,
-  handlers,
+  setStateSchema,
+  setInitialState,
   scope,
 }: StateEditorProps) {
-  const { sharedSchema } = useSchemaContext();
+  const sharedSchemaSdl = useSchemaContext();
   const [showStandardLib, setShowStandardLib] = useState(false);
+
+  const customLinter = useCallback(
+    (doc: string) => ensureValidStateSchemaName(doc, modelName, scope),
+    [modelName, scope],
+  );
+
+  const handleToggleStandardLib = useCallback(() => {
+    setShowStandardLib((prev) => !prev);
+  }, []);
+
+  const handleSchemaUpdate = useCallback(
+    (newDoc: string) => setStateSchema(newDoc, scope),
+    [setStateSchema, scope],
+  );
+
+  const handleInitialStateUpdate = useCallback(
+    (newDoc: string) => setInitialState(newDoc, scope),
+    [setInitialState, scope],
+  );
+
+  const handleSyncWithSchema = useCallback(() => {
+    const updatedStateDoc = makeMinimalObjectFromSDL(
+      sharedSchemaSdl,
+      stateSchema,
+      initialValue ? JSON.parse(initialValue) : {},
+    );
+    setInitialState(updatedStateDoc, scope);
+  }, [sharedSchemaSdl, stateSchema, initialValue, setInitialState, scope]);
 
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
         <h3 className="mb-2 text-lg capitalize">{scope} state schema</h3>
         <Button
-          onClick={() => setShowStandardLib(!showStandardLib)}
+          onClick={handleToggleStandardLib}
           className="mb-2 flex w-fit items-center gap-2"
         >
           {showStandardLib ? "Hide" : "Show"} standard library
@@ -59,20 +93,11 @@ function StateEditor({
             />
           </svg>
         </Button>
-        {showStandardLib && (
-          <GraphqlEditor
-            doc={typeDefsDoc}
-            id={specialDocIds.standardLib}
-            readonly
-            updateDocumentInModel={() => {}}
-          />
-        )}
+        {showStandardLib && <GraphqlEditor doc={typeDefsDoc} readonly />}
         <GraphqlEditor
           doc={stateSchema}
-          id={specialDocIds[scope]}
-          updateDocumentInModel={(newDoc) =>
-            handlers.setStateSchema(newDoc, scope)
-          }
+          updateDocumentInModel={handleSchemaUpdate}
+          customLinter={customLinter}
         />
       </div>
       <div>
@@ -81,14 +106,7 @@ function StateEditor({
             {scope} state initial value
           </h3>
           <Button
-            onClick={() => {
-              const updatedStateDoc = makeMinimalObjectFromSDL(
-                sharedSchema,
-                stateSchema,
-                initialValue ? JSON.parse(initialValue) : {},
-              );
-              handlers.setInitialState(updatedStateDoc, scope);
-            }}
+            onClick={handleSyncWithSchema}
             className="mb-2 flex w-fit items-center gap-2"
           >
             Sync with schema{" "}
@@ -109,22 +127,27 @@ function StateEditor({
         </div>
         <JSONEditor
           doc={initialValue}
-          updateDoc={(newDoc) => handlers.setInitialState(newDoc, scope)}
+          updateDocumentInModel={handleInitialStateUpdate}
         />
       </div>
     </div>
   );
 }
 
-export function StateSchemas(props: Props) {
-  const {
-    modelName,
-    globalStateSchema,
-    localStateSchema,
-    handlers,
-    globalStateInitialValue,
-    localStateInitialValue,
-  } = props;
+export function StateSchemas({
+  modelName,
+  globalStateSchema,
+  localStateSchema,
+  globalStateInitialValue,
+  localStateInitialValue,
+  setStateSchema,
+  setInitialState,
+}: Props) {
+  const handleAddLocalState = useCallback(() => {
+    const initialDoc = makeInitialSchemaDoc(modelName, "local");
+    setStateSchema(initialDoc, "local");
+    setInitialState("", "local");
+  }, [modelName, setStateSchema, setInitialState]);
 
   return (
     <Tabs className="pb-8" activationMode="manual" defaultValue="global">
@@ -137,9 +160,11 @@ export function StateSchemas(props: Props) {
 
       <TabsContent value="global" tabIndex={-1}>
         <StateEditor
+          modelName={modelName}
           stateSchema={globalStateSchema}
           initialValue={globalStateInitialValue}
-          handlers={handlers}
+          setStateSchema={setStateSchema}
+          setInitialState={setInitialState}
           scope="global"
         />
       </TabsContent>
@@ -148,21 +173,15 @@ export function StateSchemas(props: Props) {
         {!localStateSchema ? (
           <div className="">
             <h3 className="mb-2 text-lg capitalize">local state schema</h3>
-            <Button
-              onClick={() => {
-                const initialDoc = makeInitialSchemaDoc(modelName, "local");
-                handlers.setStateSchema(initialDoc, "local");
-                handlers.setInitialState("", "local");
-              }}
-            >
-              Add local state
-            </Button>
+            <Button onClick={handleAddLocalState}>Add local state</Button>
           </div>
         ) : (
           <StateEditor
+            modelName={modelName}
             stateSchema={localStateSchema}
             initialValue={localStateInitialValue}
-            handlers={handlers}
+            setStateSchema={setStateSchema}
+            setInitialState={setInitialState}
             scope="local"
           />
         )}

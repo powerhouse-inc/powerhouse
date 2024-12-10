@@ -1,30 +1,63 @@
-import { DocumentActionHandlers } from "../types";
 import { Module as TModule, Operation } from "document-model/document-model";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Module } from "./module";
 
 type Props = {
   modules: TModule[];
   allOperations: Operation[];
-  handlers: DocumentActionHandlers;
+  addModule: (name: string) => Promise<string | undefined>;
+  updateModuleName: (id: string, name: string) => void;
+  deleteModule: (id: string) => void;
+  updateOperationName: (id: string, name: string) => void;
+  deleteOperation: (id: string) => void;
+  addOperationAndInitialSchema: (
+    moduleId: string,
+    name: string,
+  ) => Promise<string | undefined>;
+  updateOperationSchema: (id: string, newDoc: string) => void;
+  setOperationDescription: (id: string, description: string) => void;
+  addOperationError: (
+    operationId: string,
+    errorName: string,
+  ) => Promise<string | undefined>;
+  deleteOperationError: (id: string) => void;
+  setOperationErrorName: (
+    operationId: string,
+    errorId: string,
+    name: string,
+  ) => void;
 };
-export function Modules({ modules, allOperations, handlers }: Props) {
+export function Modules({
+  modules,
+  allOperations,
+  addModule,
+  updateModuleName,
+  deleteModule,
+  updateOperationName,
+  deleteOperation,
+  addOperationAndInitialSchema,
+  updateOperationSchema,
+  setOperationDescription,
+  addOperationError,
+  deleteOperationError,
+  setOperationErrorName,
+}: Props) {
   const [lastCreatedModuleId, setLastCreatedModuleId] = useState<string | null>(
     null,
   );
   const focusTrapRef = useRef<HTMLDivElement>(null);
 
-  const wrappedHandlers = {
-    ...handlers,
-    addModule: async (name: string) => {
-      const moduleId = await handlers.addModule(name);
+  const onAddModule = useCallback(
+    async (name: string) => {
+      const moduleId = await addModule(name);
       if (moduleId) {
         setLastCreatedModuleId(moduleId);
         focusTrapRef.current?.focus();
       }
       return moduleId;
     },
-  };
+    [addModule, setLastCreatedModuleId],
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -35,7 +68,17 @@ export function Modules({ modules, allOperations, handlers }: Props) {
           modules={modules}
           allOperations={allOperations}
           lastCreatedModuleId={lastCreatedModuleId}
-          wrappedHandlers={wrappedHandlers}
+          onAddModule={onAddModule}
+          updateModuleName={updateModuleName}
+          deleteModule={deleteModule}
+          updateOperationName={updateOperationName}
+          deleteOperation={deleteOperation}
+          addOperationAndInitialSchema={addOperationAndInitialSchema}
+          updateOperationSchema={updateOperationSchema}
+          setOperationDescription={setOperationDescription}
+          addOperationError={addOperationError}
+          deleteOperationError={deleteOperationError}
+          setOperationErrorName={setOperationErrorName}
         />
       ))}
       <Module
@@ -43,7 +86,17 @@ export function Modules({ modules, allOperations, handlers }: Props) {
         modules={modules}
         allOperations={allOperations}
         lastCreatedModuleId={lastCreatedModuleId}
-        wrappedHandlers={wrappedHandlers}
+        onAddModule={onAddModule}
+        updateModuleName={updateModuleName}
+        deleteModule={deleteModule}
+        updateOperationName={updateOperationName}
+        deleteOperation={deleteOperation}
+        addOperationAndInitialSchema={addOperationAndInitialSchema}
+        updateOperationSchema={updateOperationSchema}
+        setOperationDescription={setOperationDescription}
+        addOperationError={addOperationError}
+        deleteOperationError={deleteOperationError}
+        setOperationErrorName={setOperationErrorName}
       />
       {/* Focus trap to prevent tabbing out of the editor */}
       <div

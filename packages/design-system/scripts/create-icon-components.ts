@@ -7,6 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import prettier from "@prettier/sync";
 
 const iconsDir = join("public/icons");
 const outputDirPath = join("src/assets/icon-components");
@@ -51,9 +52,12 @@ readdir(iconsDir, (err, files) => {
     iconContent += `export default function ${componentName}(props: Props) {\n`;
     iconContent += `  return (\n${svgDataWithProps}\n  );\n`;
     iconContent += `}\n\n`;
+    const formattedIconContent = prettier.format(iconContent, {
+      parser: "typescript",
+    });
     writeFileSync(
       join(outputDirPath, `${componentName}.tsx`),
-      iconContent,
+      formattedIconContent,
       "utf8",
     );
     iconNames.push(componentName);
@@ -64,7 +68,10 @@ readdir(iconsDir, (err, files) => {
   typesContent += "export type Props = ComponentPropsWithoutRef<'svg'>;\n\n";
   typesContent += `export const iconNames = ${JSON.stringify(iconNames, null, 2)} as const;\n\n`;
   typesContent += `export type IconName = (typeof iconNames)[number];\n`;
-  writeFileSync(join(outputDirPath, "types.ts"), typesContent);
+  const formattedTypesContent = prettier.format(typesContent, {
+    parser: "typescript",
+  });
+  writeFileSync(join(outputDirPath, "types.ts"), formattedTypesContent);
 
   console.log(`Generated icon components at: ${outputDirPath}`);
 });
