@@ -14,7 +14,7 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.js"
     },
@@ -23,7 +23,7 @@
       "require": "./dist/style.css"
     },
     "./scalars": {
-      "types": "./dist/scalars/index.d.ts",
+      "types": "./dist/src/scalars/index.d.ts",
       "require": "./dist/scalars/index.js",
       "import": "./dist/scalars/index.js"
     }
