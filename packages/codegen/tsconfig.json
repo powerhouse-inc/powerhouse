@@ -16,7 +16,12 @@
     "skipLibCheck": true,
     "experimentalDecorators": true,
     "declaration": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "document-model-libs/document-models": [
+        "../document-model-libs/document-models"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts",
@@ -24,5 +29,10 @@
     "reset.d.ts",
     "*.config.ts"
   ],
-  "exclude": ["**/*.esm.t"]
+  "exclude": ["**/*.esm.t"],
+  "references": [
+    {
+      "path": "./packages/document-model-libs"
+    }
+  ]
 }

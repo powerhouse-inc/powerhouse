@@ -8,12 +8,12 @@ import {
   generateDocumentModel,
 } from "./hygen";
 import { generateSchemas, generateSchema } from "./graphql";
-import type { PowerhouseConfig } from "../utils/index";
 import fs from "node:fs";
 import { join, resolve } from "path";
 import { paramCase, pascalCase } from "change-case";
 import { loadDocumentModel } from "./utils";
 import { DocumentModel } from "document-model/document";
+import { PowerhouseConfig } from "@powerhousedao/config";
 
 function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =

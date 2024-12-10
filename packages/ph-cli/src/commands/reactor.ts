@@ -5,8 +5,9 @@ import {
   StartServerOptions,
   LocalReactor,
 } from "@powerhousedao/reactor-local";
-import { getConfig, generateFromFile } from "@powerhousedao/codegen";
+import { generateFromFile } from "@powerhousedao/codegen";
 import { CommandActionType } from "../types.js";
+import { getConfig } from "@powerhousedao/config";
 
 export type ReactorOptions = StartServerOptions & {
   generate?: boolean;
@@ -27,7 +28,7 @@ async function startLocalReactor(reactorOptions: ReactorOptions) {
     const generateTransmitter = await reactor.addListener(
       "powerhouse",
       {
-        transmit: async function (strands) {
+        onStrands: async function (strands) {
           const documentPaths = new Set<string>();
           for (const strand of strands) {
             documentPaths.add(
@@ -39,7 +40,7 @@ async function startLocalReactor(reactorOptions: ReactorOptions) {
           }
           return Promise.resolve();
         },
-        disconnect: () => Promise.resolve(),
+        onDisconnect: () => Promise.resolve(),
       },
       {
         filter: {

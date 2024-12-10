@@ -3,13 +3,9 @@ import { execSync } from "child_process";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
-import {
-  DEFAULT_CONFIG,
-  configSpec,
-  parseArgs,
-  promptDirectories,
-} from "../utils/cli";
+import { configSpec, parseArgs, promptDirectories } from "../utils/cli";
 import { getPackageManager } from "./command";
+import { DEFAULT_CONFIG } from "@powerhousedao/config";
 
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";

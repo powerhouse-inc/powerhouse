@@ -31,3 +31,7 @@ export function getConfig() {
   }
   return config;
 }
+
+export function writeConfig(config: PowerhouseConfig) {
+  writeFileSync("./powerhouse.config.json", JSON.stringify(config, null, 4));
+}

@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/ph-cli/utils";
+import { generateMock } from "@powerhousedao/codegen";
 import { copy } from "copy-anything";
 import { addDays } from "date-fns";
 import { RealWorldAssetsDocument } from "../../gen";

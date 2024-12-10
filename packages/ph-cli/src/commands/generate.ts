@@ -3,11 +3,11 @@ import {
   generateEditor,
   generateFromFile,
   generateProcessor,
-  getConfig,
   promptDirectories,
 } from "@powerhousedao/codegen";
 import { Command } from "commander";
 import { CommandActionType } from "../types.js";
+import { getConfig } from "@powerhousedao/config";
 
 export const generate: CommandActionType<
   [
