@@ -23,7 +23,7 @@ const getDocumentModelName = (name: string) => {
     return name;
 };
 
-const Content = () => {
+export default function Content() {
     const [connectConfig] = useConnectConfig();
     const { t } = useTranslation();
     const uiNodes = useUiNodes();
@@ -213,7 +213,4 @@ const Content = () => {
             </div>
         </div>
     );
-};
-
-export const element = <Content />;
-export default Content;
+}
