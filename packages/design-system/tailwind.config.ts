@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss";
-import { designSystemPreset } from "./src/shared-tailwind.config";
+import { designSystemPreset } from "@powerhousedao/config";
 
 const config = {
   darkMode: ["class", '[data-mode="dark"]'],
@@ -7,5 +7,4 @@ const config = {
   theme: designSystemPreset.theme,
   plugins: designSystemPreset.plugins,
 } satisfies Config;
-
 export default config;

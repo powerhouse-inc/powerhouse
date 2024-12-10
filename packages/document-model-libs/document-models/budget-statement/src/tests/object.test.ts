@@ -165,6 +165,7 @@ describe("Budget Statement Class", () => {
 
   it("should load from stream", async () => {
     const file = fs.readFileSync("./test/budget-statement/temp/march.phbs.zip");
+    // @ts-expect-error - env difference, can be ignored
     const budgetStatement = await utils.loadFromInput(file.buffer);
     expect(budgetStatement.name).toBe("march");
     expect(budgetStatement.state.global.month).toBe("03/2023");

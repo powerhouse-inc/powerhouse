@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { ConnectUpgradeDriveModal } from "./upgrade-drive-modal";
-
+import { it, vi } from "vitest";
 describe("UpgradeDriveModal Component", () => {
   it("should match snapshot", () => {
     render(

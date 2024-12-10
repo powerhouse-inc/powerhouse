@@ -139,6 +139,19 @@ describe("UrlField", () => {
     ).toBeInTheDocument();
   });
 
+  it("should show warning when the URL could be truncated", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <UrlField data-testid="url-field" name="test-url" label="Website URL" />,
+    );
+
+    const input = screen.getByTestId("url-field");
+    await user.type(input, "https://example.com/test...");
+    await user.tab(); // trigger blur
+
+    expect(await screen.findByText("URL may be truncated")).toBeInTheDocument();
+  });
+
   it("should be valid when valid", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
