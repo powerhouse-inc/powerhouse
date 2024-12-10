@@ -1,3 +1,10 @@
+# [1.0.0-dev.178](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.177...v1.0.0-dev.178) (2024-12-10)
+
+
+### Bug Fixes
+
+* use react lazy instead of react router lazy ([e5836e0](https://github.com/powerhouse-inc/document-model-electron/commit/e5836e065556f13289fa70c4344855f64c6a3b36))
+
 # [1.0.0-dev.177](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.176...v1.0.0-dev.177) (2024-12-10)
 
 
