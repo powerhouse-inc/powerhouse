@@ -119,6 +119,26 @@ describe("UrlField", () => {
     ).toBeInTheDocument();
   });
 
+  it("should be invalid if URL is to long", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <UrlField
+        data-testid="url-field"
+        name="test-url"
+        label="Website URL"
+        maxURLLength={10}
+      />,
+    );
+
+    const input = screen.getByTestId("url-field");
+    await user.type(input, "https://example.com/{enter}"); // 20 characters (including protocol and domain)
+
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(
+      await screen.findByText("Website URL must not exceed 10 characters"),
+    ).toBeInTheDocument();
+  });
+
   it("should be valid when valid", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
