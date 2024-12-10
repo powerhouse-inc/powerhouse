@@ -142,7 +142,12 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         const normalizedValue = inputValue.replace(/[^\d-]/g, "");
         numericValue = BigInt(normalizedValue);
       } else {
-        numericValue = value?.toString() ?? "";
+        // keep the value if its greater than MAX_SAFE_INTEGER
+        if (Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER) {
+          numericValue = inputValue;
+        } else {
+          numericValue = value?.toString() ?? "";
+        }
       }
 
       //Check if the value is a number and if its greater than the max safe integer
@@ -161,9 +166,11 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         onChange?.(
           nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>,
         );
-
         onBlur?.(e);
+        // Add return to avoid the conversion after
+        return;
       }
+
       //This case its safe to convert to bigInt or number
       const finalValue = isBigInt ? BigInt(numericValue) : Number(numericValue);
       const nativeEvent = new Event("change", {
