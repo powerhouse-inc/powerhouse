@@ -19,7 +19,6 @@
     "@electric-sql/pglite": "^0.2.12",
     "@heroicons/react": "^2.1.5",
     "@libsql/client": "^0.14.0",
-    "@powerhousedao/general-document-indexer": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@powerhousedao/switchboard-gui": "workspace:*",

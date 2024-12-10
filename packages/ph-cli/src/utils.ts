@@ -1,1 +1,1 @@
-export { getConfig } from "@powerhousedao/codegen";
+export { getConfig } from "@powerhousedao/config/powerhouse";

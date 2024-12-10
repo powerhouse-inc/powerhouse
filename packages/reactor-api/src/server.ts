@@ -1,13 +1,23 @@
 import { PGlite } from "@electric-sql/pglite";
+import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
+import { AnalyticsModel } from "@powerhousedao/analytics-engine-graphql";
+import {
+  KnexAnalyticsStore,
+  KnexQueryExecutor,
+} from "@powerhousedao/analytics-engine-knex";
 import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
-import pg from "pg";
-const { Pool } = pg;
+import { Pool } from "pg";
 import { ReactorRouterManager } from "./router";
+import { getKnexClient } from "./utils/get-knex-client";
+import { ProcessorManager } from "./processor-manager";
+import { API } from "./types";
+import { initialize } from "./subgraphs/analytics";
 
 type Options = {
   express?: Express;
   port?: number;
+  dbConnection: string | undefined;
   client?: PGlite | typeof Pool | undefined;
 };
 
@@ -15,20 +25,29 @@ const DEFAULT_PORT = 4000;
 
 export async function startAPI(
   reactor: IDocumentDriveServer,
-  options: Options
-) {
+  options: Options,
+): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 
-  const reactorRouterManager = new ReactorRouterManager(
-    "/",
-    app,
-    reactor,
-    options.client
-  );
+  const knex = getKnexClient(options.dbConnection ?? "./dev.db");
+  await initialize(knex);
+
+  const analyticsStore = new KnexAnalyticsStore({
+    executor: new KnexQueryExecutor(),
+    knex,
+  });
+  const reactorRouterManager = new ReactorRouterManager("/", app, reactor);
+  reactorRouterManager.setAdditionalContextFields({
+    dataSources: {
+      db: {
+        Analytics: new AnalyticsModel(new AnalyticsQueryEngine(analyticsStore)),
+      },
+    },
+  });
   await reactorRouterManager.init();
+  const processorManager = new ProcessorManager(reactor, analyticsStore);
 
   app.listen(port);
-
-  return { app, reactorRouterManager };
+  return { app, reactorRouterManager, processorManager };
 }

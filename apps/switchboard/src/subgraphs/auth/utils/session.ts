@@ -77,7 +77,7 @@ export const revoke = async (
       extensions: { code: "SESSION_ALREADY_REVOKED" },
     });
   }
-  return db
+  await db
     .update(sessionTable)
     .set({
       revokedAt: new Date().toISOString(),

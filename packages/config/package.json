@@ -7,6 +7,11 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./powerhouse": "./dist/powerhouse.js",
+    "./tailwind": "./dist/tailwind.js"
+  },
   "publishConfig": {
     "access": "public"
   },
