@@ -30,8 +30,8 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     selectName: string;
     defaultValue?: AmountValue;
     value?: AmountValue;
-    onChange?: (event: AmountValue) => void;
-    onBlur?: (event: AmountValue) => void;
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
     currencyPosition?: "left" | "right";
   };
 
@@ -64,7 +64,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
-  const { isCurrency, isPercent, isSearchable, valueInput, options, currency } =
+  const { isCurrency, isPercent, isSearchable, options, currency } =
     useAmountField({
       value,
       defaultValue,
@@ -76,8 +76,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
     if (type === "AmountCurrency" && typeof value === "object") {
       const newValue = {
         ...value,
-        amount: parseFloat(e.target.value),
-        // amount: e.target.value as unknown as number,
+        amount: Number(e.target.value),
       } as AmountValue;
 
       //Create the event
@@ -89,16 +88,23 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
         value: { value: newValue },
         writable: false,
       });
-      console.log("value", valueInput);
-      onChange?.(newValue);
+      onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
     }
     if (
       type === "Amount" ||
       (type === "AmountPercentage" && typeof value === "number")
     ) {
-      const newValue = e.target.value as unknown as number;
-
-      onChange?.(newValue);
+      const newValue = Number(e.target.value);
+      //Create the event
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: newValue },
+        writable: false,
+      });
+      onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
   const handleOnChangeSelect = (e: string | string[]) => {
@@ -118,7 +124,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
         writable: false,
       });
 
-      onChange?.(newValue);
+      onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
   const handleBlur = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,11 +134,11 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
         amount: e.target.value as unknown as number,
       } as AmountValue;
 
-      onBlur?.(newValue);
+      onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
     if (type === "Amount" || type === "AmountPercentage") {
       const newValue = e.target.value as unknown as number;
-      onBlur?.(newValue);
+      onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
   };
 
@@ -165,7 +171,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
                 "border border-gray-300 rounded-l-md rounded-r-none",
                 "border-r-[0.5px] focus:border-r-[1px] focus:ring-1 focus:ring-gray-900",
                 "focus:outline-none",
-                selectProps?.className
+                selectProps?.className,
               )}
               {...(selectProps || {})}
             />
@@ -175,7 +181,6 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             required={required}
             disabled={disabled}
             name=""
-            // defaultValue={type==="Amount"?v}
             value={
               type === "Amount" || type === "AmountPercentage"
                 ? value
@@ -193,10 +198,9 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
                 "border border-gray-300 rounded-l-none border-l-[0.5px]",
               currencyPosition === "right" &&
                 "border border-gray-300 rounded-r-none border-r-[0.5px]",
-              className
+              isPercent && "pr-7", // Añadido padding derecho cuando es porcentaje
+              className,
             )}
-            // showErrorOnBlur
-            // showErrorOnChange
             onBlur={handleBlur}
             {...(numberProps || {})}
           />
@@ -204,7 +208,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             <span
               className={cn(
                 "pointer-events-none absolute inset-y-0 right-2 ml-2 flex items-center",
-                disabled ? "text-gray-400" : "text-gray-900"
+                disabled ? "text-gray-400" : "text-gray-900",
               )}
             >
               %
@@ -225,7 +229,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
               className={cn(
                 "border border-gray-300 rounded-r-md rounded-l-none",
                 "border-l-[0.5px] focus:border-l-[1px] focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
-                "focus:outline-none"
+                "focus:outline-none",
               )}
               {...(selectProps || {})}
             />
@@ -246,5 +250,5 @@ export const AmountField = withFieldValidation<AmountFieldProps>(
       _positive: validatePositiveAmount,
       _isBigInt: validateIsBigIntAmount,
     },
-  }
+  },
 );
