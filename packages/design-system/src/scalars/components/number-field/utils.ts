@@ -35,7 +35,6 @@ export function getDisplayValue(
     }
     if (precision !== undefined) {
       const formattedValue = parseFloat(value).toFixed(precision);
-      // console.log("formattedValue", formattedValue);
 
       return trailingZeros
         ? formattedValue // keep the zeros
