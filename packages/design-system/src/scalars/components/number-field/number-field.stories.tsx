@@ -101,7 +101,7 @@ export const Default: Story = {
     label: "Label",
     placeholder: "0",
     step: 0,
-    value: 1234,
+    value: "1234",
   },
 };
 export const Active: Story = {
@@ -109,7 +109,7 @@ export const Active: Story = {
     name: "Label",
     label: "Label",
     autoFocus: true,
-    defaultValue: 45,
+    defaultValue: "45",
     step: 0,
   },
   parameters: {
@@ -120,7 +120,7 @@ export const Disable: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 1234,
+    value: "1234",
     disabled: true,
     step: 0,
   },
@@ -129,7 +129,7 @@ export const Required: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 345,
+    value: "345",
     required: true,
     step: 0,
   },
@@ -138,7 +138,7 @@ export const WithWarning: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 23,
+    value: "23",
     step: 0,
     warnings: ["Warning message"],
   },
@@ -147,7 +147,7 @@ export const WithError: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 23,
+    value: "23",
     step: 0,
     errors: ["Error message"],
   },
@@ -156,7 +156,7 @@ export const WithMultipleErrors: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 23,
+    value: "23",
     step: 0,
     errors: [
       "Error message number 1",
@@ -172,7 +172,7 @@ export const WithValue: Story = {
     step: 0,
     name: "Label",
     label: "Label",
-    value: 23,
+    value: "23",
   },
 };
 
@@ -181,7 +181,7 @@ export const WithDescription: Story = {
     step: 0,
     name: "Label",
     label: "Label",
-    value: 0,
+    value: "0",
     description: "This is the field description",
   },
 };
@@ -192,7 +192,7 @@ export const WithFloatNumber: Story = {
     step: 0,
     label: "Label",
     name: "Label",
-    value: 0.0,
+    value: "0.0",
     precision: 2,
     trailingZeros: true,
   },
@@ -202,7 +202,7 @@ export const WithBigInt: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 999999,
+    value: "999999",
     isBigInt: true,
     step: 0,
   },
@@ -213,7 +213,7 @@ export const WithStep: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 456,
+    value: "456",
     step: 10,
     minValue: 20,
   },

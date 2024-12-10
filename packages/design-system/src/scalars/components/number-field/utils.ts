@@ -6,7 +6,7 @@ type TransformProps = {
 };
 
 export function getDisplayValue(
-  value?: bigint | number,
+  value?: string,
   transformProps?: TransformProps,
 ) {
   const {
@@ -22,24 +22,24 @@ export function getDisplayValue(
 
   // Handle the case when isBigInt is true
   if (isBigInt) {
-    if (typeof value === "number" && !Number.isInteger(value)) {
-      // If the value is a number with decimals, return it as-is without converting to BigInt
+    if (!Number.isInteger(Number(value))) {
+      // If the value is a number with decimals, return it as-is
       return value;
     }
 
     return BigInt(value);
   } else {
     if (Math.abs(Number(value)) > Number.MAX_SAFE_INTEGER) {
-      //Remove the decimal places becasuse its a bigInt
-      return BigInt(value);
+      //Remove the decimal places because its a bigInt
+      return value;
     }
     if (precision !== undefined) {
-      const formattedValue = parseFloat(String(value)).toFixed(precision);
+      const formattedValue = parseFloat(value).toFixed(precision);
+
       return trailingZeros
         ? formattedValue // keep the zeros
-        : parseFloat(formattedValue); // delete the zeros and convert to number
+        : parseFloat(formattedValue).toString(); // delete the zeros and convert to string
     }
-
-    return Number(value);
+    return value;
   }
 }
