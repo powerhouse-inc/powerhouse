@@ -16,8 +16,8 @@ import { getDisplayValue, regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
-  value?: string;
-  defaultValue?: string;
+  value?: number;
+  defaultValue?: number;
   className?: string;
   pattern?: RegExp;
 }
@@ -183,7 +183,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
             onKeyDown={blockInvalidChar}
-            value={isBigInt ? value?.toString() : value === "" ? "" : value}
+            value={isBigInt ? value?.toString() : value}
             onBlur={handleBlur}
             defaultValue={defaultValue}
             onChange={onChange}
