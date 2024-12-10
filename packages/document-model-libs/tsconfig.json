@@ -22,5 +22,10 @@
     "scripts/**/*.ts",
     "*.ts",
     "*.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../design-system"
+    }
   ]
 }

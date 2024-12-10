@@ -1,1 +1,1 @@
-export { getConfig } from "@powerhousedao/config";
+export { getConfig } from "@powerhousedao/config/powerhouse";

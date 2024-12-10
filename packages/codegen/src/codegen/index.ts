@@ -13,7 +13,7 @@ import { join, resolve } from "path";
 import { paramCase, pascalCase } from "change-case";
 import { loadDocumentModel } from "./utils";
 import { DocumentModel } from "document-model/document";
-import { PowerhouseConfig } from "@powerhousedao/config";
+import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 
 function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
@@ -82,6 +82,8 @@ async function getDocumentTypesMap(
 
   // add documents from document-model-libs if lib is installed
   try {
+    /* eslint-disable */
+    // @ts-ignore-error TS2307 this import is expected to fail if document-model-libs is not available
     const documentModels = await import("document-model-libs/document-models");
     Object.keys(documentModels).forEach((name) => {
       const documentModel = documentModels[
@@ -92,6 +94,7 @@ async function getDocumentTypesMap(
         importPath: `document-model-libs/${paramCase(name)}`,
       };
     });
+    /* eslint-enable */
   } catch {
     /* document-model-libs is not available */
   }

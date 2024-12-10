@@ -5,7 +5,9 @@ import fs from "node:fs";
 import path from "path";
 import { configSpec, parseArgs, promptDirectories } from "../utils/cli";
 import { getPackageManager } from "./command";
-import { DEFAULT_CONFIG } from "@powerhousedao/config";
+// eslint-disable-next-line
+// @ts-ignore-error
+import { DEFAULT_CONFIG } from "@powerhousedao/config/powerhouse";
 
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
@@ -98,6 +100,7 @@ export async function init(_args?: arg.Result<typeof configSpec>) {
     projectName = result.projectName;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const { documentModelsDir, editorsDir } = args["--interactive"]
     ? await promptDirectories()
     : DEFAULT_CONFIG;
@@ -119,6 +122,7 @@ export async function init(_args?: arg.Result<typeof configSpec>) {
     process.exit(1);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   createProject(projectName, documentModelsDir, editorsDir);
 }
 
