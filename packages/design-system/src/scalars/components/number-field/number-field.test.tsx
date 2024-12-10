@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NumberField } from "./number-field";
 import { renderWithForm } from "@/scalars/lib/testing";
@@ -30,10 +30,10 @@ describe("NumberField", () => {
     const mockOnSubmit = vi.fn();
     const user = userEvent.setup();
 
-    renderWithForm(
+    render(
       <Form onSubmit={mockOnSubmit}>
         {({ formState: { isSubmitting } }) => (
-          <div className="flex w-[400px] flex-col gap-4">
+          <div>
             <NumberField label="BigInt Field" name="BigInt Field" isBigInt />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Submitting..." : "Submit"}
@@ -316,7 +316,7 @@ describe("NumberField", () => {
     const mockOnSubmit = vi.fn();
     const user = userEvent.setup();
 
-    renderWithForm(
+    render(
       <Form onSubmit={mockOnSubmit}>
         {({ formState: { isSubmitting } }) => (
           <div className="flex w-[400px] flex-col gap-4">
@@ -349,7 +349,7 @@ describe("NumberField", () => {
     const mockOnSubmit = vi.fn();
     const user = userEvent.setup();
 
-    renderWithForm(
+    render(
       <Form onSubmit={mockOnSubmit}>
         {({ formState: { isSubmitting } }) => (
           <div className="flex w-[400px] flex-col gap-4">
@@ -432,7 +432,7 @@ describe("NumberField", () => {
     const mockOnSubmit = vi.fn();
     const user = userEvent.setup();
 
-    renderWithForm(
+    render(
       <Form onSubmit={mockOnSubmit}>
         {({ formState: { isSubmitting } }) => (
           <div className="flex w-[400px] flex-col gap-4">

@@ -1,5 +1,3 @@
-import { currencies } from "../lib/currency-list";
-
 export type ErrorMessage = string;
 
 export type ValidatorResult = ErrorMessage | boolean;
@@ -54,11 +52,10 @@ export type NumericType =
   | "PositiveFloat" // Positive float values
   | "NonNegativeFloat" // Non-negative float values (>= 0.0)
   | "NonPositiveFloat" // Non-positive float values (<= 0.0)
-  | "BigInt"
-  | undefined;
+  | "BigInt";
 
 export interface NumberProps {
-  numericType?: NumericType;
+  numericType?: NumericType | undefined;
   minValue?: number;
   maxValue?: number;
   step?: number;
