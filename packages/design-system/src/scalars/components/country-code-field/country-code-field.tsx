@@ -2,6 +2,7 @@ import React from "react";
 import { SelectFieldRaw } from "@/scalars/components/fragments/select-field";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import { countries } from "country-data-list";
+import { CircleFlag } from "react-circle-flags";
 import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
 import { CountryCodeProps } from "./types";
 
@@ -28,6 +29,15 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = ({
     .map((country) => ({
       value: country.alpha2,
       label: country.name,
+      icon: showFlagIcons
+        ? () => (
+            <CircleFlag
+              className="size-4"
+              countryCode={country.alpha2.toLowerCase()}
+              height={16}
+            />
+          )
+        : undefined,
     }))
     .sort((a, b) => (a.label > b.label ? 1 : a.label < b.label ? -1 : 0));
 
@@ -53,7 +63,41 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = ({
   );
 };
 
-export const CountryCodeField =
-  withFieldValidation<CountryCodeFieldProps>(CountryCodeFieldRaw);
+export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
+  CountryCodeFieldRaw,
+  {
+    validations: {
+      _validOption:
+        ({ allowedCountries, excludedCountries }) =>
+        (value: string) => {
+          if (!value) {
+            return "Please select a valid country";
+          }
+
+          const validCountries = countries.all
+            .filter(
+              (country) =>
+                country.alpha2 && country.emoji && country.status !== "deleted",
+            )
+            .map((country) => country.alpha2);
+
+          // First check if it's a valid country code
+          if (!validCountries.includes(value)) {
+            return "Please select a valid country";
+          }
+          // Check if country is in allowed list
+          if (allowedCountries && !allowedCountries.includes(value)) {
+            return "Please select a valid country";
+          }
+          // Check if country is in excluded list
+          if (excludedCountries?.includes(value)) {
+            return "Please select a valid country";
+          }
+
+          return true;
+        },
+    },
+  },
+);
 
 CountryCodeField.displayName = "CountryCodeField";

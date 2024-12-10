@@ -51,8 +51,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   };
 
   useEffect(() => {
-    onSearch?.(selectedOption?.label ?? "");
-  }, [onSearch, selectedOption]);
+    onSearch?.(selectedOption?.label ?? searchValue ?? "");
+  }, [onSearch, selectedOption, searchValue]);
 
   useEffect(() => {
     if (isPopoverOpen) {
@@ -60,7 +60,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       if (input) {
         setTimeout(() => {
           (input as HTMLInputElement).focus();
-        }, 100);
+        }, 0);
       }
     }
   }, [isPopoverOpen]);
@@ -79,8 +79,15 @@ export const SearchInput: React.FC<SearchInputProps> = ({
               onOpenChange?.(true);
             }}
             onKeyDown={handleKeyDown}
-            wrapperClassName={cn("group mt-0 border-0 border-none px-0")}
-            className={cn("py-0")}
+            wrapperClassName={cn(
+              "group mt-0 border-0 border-none px-0",
+              "hover:bg-gray-100! dark:hover:bg-charcoal-800!",
+              "focus-within:bg-white! dark:focus-within:bg-charcoal-900!",
+            )}
+            className={cn(
+              "py-0 text-gray-900 dark:text-gray-50",
+              "group-hover:bg-gray-100! dark:group-hover:bg-charcoal-800!",
+            )}
             disabled={disabled}
           />
         </Command>
