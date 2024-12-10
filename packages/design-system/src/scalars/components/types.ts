@@ -1,5 +1,3 @@
-import { currencies } from "../lib/currency-list";
-
 export type ErrorMessage = string;
 
 export type ValidatorResult = ErrorMessage | boolean;
@@ -57,7 +55,7 @@ export type NumericType =
   | "BigInt";
 
 export interface NumberProps {
-  numericType?: NumericType;
+  numericType?: NumericType | undefined;
   minValue?: number;
   maxValue?: number;
   step?: number;
