@@ -16,8 +16,8 @@ import { getDisplayValue, regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
-  value?: number | bigint;
-  defaultValue?: number | bigint;
+  value?: string;
+  defaultValue?: string;
   className?: string;
   pattern?: RegExp;
 }
@@ -100,19 +100,18 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
 
       const formattedValue = isBigInt
         ? BigInt(newValue)
-        : getDisplayValue(newValue, {
+        : getDisplayValue(newValue.toString(), {
             isBigInt,
             trailingZeros,
             precision,
           });
-
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
 
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: formattedValue },
+        value: { value: Number(formattedValue) },
         writable: false,
       });
 
@@ -122,36 +121,40 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
       let numericValue: number | bigint;
       const inputValue = e.target.value;
-
-      if (isBigInt) {
-        const normalizedValue = inputValue.replace(/[^\d-]/g, ""); // Elimina caracteres no numéricos
-        numericValue = BigInt(normalizedValue);
-      } else {
-        numericValue = Number(inputValue);
-        // Keep the value
-        if (isNaN(numericValue)) {
-          numericValue = value || 0;
-        }
+      // if its empty, keep it empty
+      if (!inputValue || inputValue === "") {
+        onBlur?.(e);
+        return;
       }
 
-      //Format the value for BigInt y precisión
+      if (isBigInt) {
+        const normalizedValue = inputValue.replace(/[^\d-]/g, "");
+        numericValue = BigInt(normalizedValue);
+      } else {
+        numericValue = Number(value);
+      }
+
       const formattedValue = isBigInt
         ? BigInt(numericValue)
-        : getDisplayValue(numericValue, {
+        : getDisplayValue(numericValue.toString(), {
             isBigInt,
             trailingZeros,
             precision,
           });
+
+      const finalValue = isBigInt
+        ? BigInt(numericValue)
+        : Number(formattedValue);
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
+      // If the value is will be acept send string the use formattedValue instead of finalValue
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: formattedValue },
+        value: { value: finalValue },
         writable: false,
       });
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
-
       onBlur?.(e);
     };
     return (
@@ -180,9 +183,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
             onKeyDown={blockInvalidChar}
-            value={isBigInt ? value?.toString() : Number(value)}
+            value={isBigInt ? value?.toString() : value}
             onBlur={handleBlur}
-            defaultValue={isBigInt ? value?.toString() : Number(value)}
+            defaultValue={isBigInt ? value?.toString() : value}
             onChange={onChange}
             onPaste={blockInvalidPaste}
             ref={ref}
