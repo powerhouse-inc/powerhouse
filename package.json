@@ -31,6 +31,7 @@
     "@nx/eslint": "20.1.4",
     "@nx/js": "20.1.4",
     "@storybook/addon-actions": "^8.4.6",
+    "@storybook/addon-docs": "^8.4.6",
     "@storybook/addon-essentials": "^8.4.6",
     "@storybook/addon-interactions": "^8.4.6",
     "@storybook/addon-links": "^8.4.6",
