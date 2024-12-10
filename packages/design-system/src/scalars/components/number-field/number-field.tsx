@@ -88,7 +88,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           (operation === "increment" ? BigInt(1) : BigInt(-1));
         newValue = currentValue + adjustment;
       } else {
-        const currentValue = Number(value ?? defaultValue ?? 0);
+        const currentValue = Number(value ?? 0);
         const adjustment = (step || 1) * (operation === "increment" ? 1 : -1);
         newValue = currentValue + adjustment;
       }
@@ -183,9 +183,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
             onKeyDown={blockInvalidChar}
-            value={isBigInt ? value?.toString() : value}
+            value={isBigInt ? value?.toString() : value === "" ? "" : value}
             onBlur={handleBlur}
-            defaultValue={isBigInt ? value?.toString() : value}
+            defaultValue={defaultValue}
             onChange={onChange}
             onPaste={blockInvalidPaste}
             ref={ref}
