@@ -10,16 +10,19 @@ import {
   utils,
   Document,
   PartialState,
+  User,
 } from "document-model/document";
 import React, { useState } from "react";
 import { useDocumentReducer } from "../reducer";
 import { useInterval } from "usehooks-ts";
+import { defaultMockUser } from "./mocks";
 
 type EditorStoryArgs<S, A extends Action, L> = Partial<{
   isAllowedToCreateDocuments: boolean;
   isAllowedToEditDocuments: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  user: User;
   onSwitchboardLinkClick: (() => void) | undefined;
   onExport: () => void;
   onClose: () => void;
@@ -165,16 +168,10 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
       document: utils.createDocument(initialState),
       context: {
         theme: "light",
-        user: {
-          address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
-          networkId: "eip155",
-          chainId: 1,
-          ens: {
-            name: "vitalik.eth",
-            avatarUrl:
-              "https://ipfs.io/ipfs/QmSP4nq9fnN9dAiCj42ug9Wa79rqmQerZXZch82VqpiH7U/image.gif",
-          },
-        },
+        user:
+          !!additionalStoryArgs && "user" in additionalStoryArgs
+            ? additionalStoryArgs.user
+            : defaultMockUser,
       },
       ...additionalStoryArgs,
     },
