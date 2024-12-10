@@ -7,7 +7,7 @@ export default defineConfig({
   clean: true,
   format: "esm",
   treeshake: true,
-  bundle: true,
+  bundle: false,
   platform: "node",
   target: "node20",
   cjsInterop: true,

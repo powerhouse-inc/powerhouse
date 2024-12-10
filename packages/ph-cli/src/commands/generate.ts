@@ -7,7 +7,7 @@ import {
 } from "@powerhousedao/codegen";
 import { Command } from "commander";
 import { CommandActionType } from "../types.js";
-import { getConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/powerhouse";
 
 export const generate: CommandActionType<
   [

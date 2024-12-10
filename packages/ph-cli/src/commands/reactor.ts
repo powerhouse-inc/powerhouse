@@ -7,7 +7,7 @@ import {
 } from "@powerhousedao/reactor-local";
 import { generateFromFile } from "@powerhousedao/codegen";
 import { CommandActionType } from "../types.js";
-import { getConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/powerhouse";
 
 export type ReactorOptions = StartServerOptions & {
   generate?: boolean;
