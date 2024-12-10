@@ -20,6 +20,7 @@ interface UrlFieldProps
       "pattern" | "value" | "defaultValue" | "name"
     > {
   allowedProtocols?: string[];
+  maxURLLength?: number;
   showIcon?: boolean;
 }
 
@@ -33,6 +34,7 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = ({
 }) => {
   const idGenerated = useId();
   const id = props.id ?? idGenerated;
+  const hasError = !!errors?.length;
 
   return (
     <FormGroup>
@@ -50,6 +52,7 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = ({
           type="url"
           {...props}
           value={props.value ?? ""}
+          aria-invalid={hasError}
           className={cn(showIcon && "pl-8")}
         />
         {showIcon && (
@@ -94,6 +97,15 @@ export const UrlField = withFieldValidation<UrlFieldProps>(UrlFieldRaw, {
         }
 
         return `The URL must start with ${allowedProtocolsString}`;
+      },
+    _maxURLLength:
+      ({ maxURLLength, label }) =>
+      (value) => {
+        if (!maxURLLength) return true;
+        return (
+          (value as string).length <= maxURLLength ||
+          `${typeof label === "string" ? label : "URL"} must not exceed ${maxURLLength} characters`
+        );
       },
   },
 });
